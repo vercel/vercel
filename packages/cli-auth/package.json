@@ -1,9 +1,14 @@
 {
   "name": "@vercel/cli-auth",
   "description": "Used by Vercel's CLIs to handle authentication",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/cli-auth"
   },
   "private": false,
   "files": [

@@ -1,24 +1,5 @@
 # vercel
 
-## 48.3.0
-
-### Minor Changes
-
-- Add vc dev support for NestJS ([#14091](https://github.com/vercel/vercel/pull/14091))
-
-### Patch Changes
-
-- Fix vc init express ([#14091](https://github.com/vercel/vercel/pull/14091))
-
-- Updated dependencies [[`3599f087bbb79a3609a350500024924ca8f9601b`](https://github.com/vercel/vercel/commit/3599f087bbb79a3609a350500024924ca8f9601b), [`c8006b01d99a1687c5ce977c7924cafa5eac48c4`](https://github.com/vercel/vercel/commit/c8006b01d99a1687c5ce977c7924cafa5eac48c4), [`c8006b01d99a1687c5ce977c7924cafa5eac48c4`](https://github.com/vercel/vercel/commit/c8006b01d99a1687c5ce977c7924cafa5eac48c4), [`c8006b01d99a1687c5ce977c7924cafa5eac48c4`](https://github.com/vercel/vercel/commit/c8006b01d99a1687c5ce977c7924cafa5eac48c4)]:
-  - @vercel/python@5.0.10
-  - @vercel/build-utils@12.1.3
-  - @vercel/node@5.4.0
-  - @vercel/express@0.0.25
-  - @vercel/h3@0.1.5
-  - @vercel/hono@0.1.6
-  - @vercel/static-build@2.7.26
-
 ## 48.2.9
 
 ### Patch Changes
