@@ -1,6 +1,6 @@
 module.exports = {
   experimental: {
-    cacheComponents: true,
+    ppr: true,
   },
   basePath: '/chat',
 };

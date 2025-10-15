@@ -1,5 +1,5 @@
 module.exports = {
   experimental: {
-    cacheComponents: true,
+    ppr: true,
   },
 };

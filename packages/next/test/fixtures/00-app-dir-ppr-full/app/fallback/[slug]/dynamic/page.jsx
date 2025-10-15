@@ -1,8 +1,8 @@
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
 
-function Agent() {
-  return <div data-agent>{headers().get('user-agent')}</div>;
+async function Agent() {
+  return <div data-agent>{(await headers()).get('user-agent')}</div>;
 }
 
 export default async function Page(props) {

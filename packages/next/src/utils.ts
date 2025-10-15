@@ -2706,13 +2706,15 @@ export const onPrerenderRoute =
     function normalizeDataRoute(route: string) {
       let normalized = path.posix.join(entryDirectory, route);
 
-      normalized = normalized.replace(
-        new RegExp(`${escapeStringRegexp(routeFileNoExt)}.json$`),
-        // ensure we escape "$" correctly while replacing as "$" is a special
-        // character, we need to do double escaping as first is for the initial
-        // replace on the routeFile and then the second on the outputPath
-        `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
-      );
+      if (nonDynamicSsg || isFallback || isOmitted) {
+        normalized = normalized.replace(
+          new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+          // ensure we escape "$" correctly while replacing as "$" is a special
+          // character, we need to do double escaping as first is for the initial
+          // replace on the routeFile and then the second on the outputPath
+          `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
+        );
+      }
 
       return normalized;
     }
