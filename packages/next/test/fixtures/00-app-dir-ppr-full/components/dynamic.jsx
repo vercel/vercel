@@ -1,14 +1,14 @@
 import React from 'react'
 import { headers } from 'next/headers'
 
-export const Dynamic = async ({ pathname, fallback }) => {
+export const Dynamic = ({ pathname, fallback }) => {
   if (fallback) {
     return <div>Loading...</div>
   }
 
   const messages = [];
   const names = ['x-test-input', 'user-agent'];
-  const list = await headers();
+  const list = headers();
 
   for (const name of names) {
     messages.push({ name, value: list.get(name) });

@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 
 export async function DELETE(_request, { params }) {
-  const pathname = `/${(await params).pathname.join("/")}`;
+  const pathname = `/${params.pathname.join("/")}`;
 
   let type;
   if (pathname.includes("[") && pathname.includes("]")) {

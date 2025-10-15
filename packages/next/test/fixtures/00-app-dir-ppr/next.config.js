@@ -2,7 +2,7 @@ module.exports = {
   experimental: {
     appDir: true,
     runtime: 'nodejs',
-    cacheComponents: true,
+    ppr: true,
   },
   rewrites: async () => {
     return [

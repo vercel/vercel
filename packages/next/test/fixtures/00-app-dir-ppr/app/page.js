@@ -1,7 +1,5 @@
-import { headers } from 'next/headers';
+export const dynamic = 'force-dynamic'
 
-export default async function Page() {
-  await headers();
-
+export default function Page() {
   return <p>index app page {Date.now()}</p>;
 }
