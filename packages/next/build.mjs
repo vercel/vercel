@@ -49,7 +49,7 @@ await copyFile(
 await copyFile(
   require.resolve('./adapter.js'),
   join(process.cwd(), 'dist/adapter.js')
-)
+);
 
 await esbuild({
   bundle: true,
