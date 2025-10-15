@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-8ldcodoik-vtest314-ijjk-testing.vercel.app",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   }
