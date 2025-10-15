@@ -1,16 +1,5 @@
 # @vercel/node
 
-## 5.4.0
-
-### Minor Changes
-
-- Add vc dev support for NestJS ([#14091](https://github.com/vercel/vercel/pull/14091))
-
-### Patch Changes
-
-- Updated dependencies [[`c8006b01d99a1687c5ce977c7924cafa5eac48c4`](https://github.com/vercel/vercel/commit/c8006b01d99a1687c5ce977c7924cafa5eac48c4)]:
-  - @vercel/build-utils@12.1.3
-
 ## 5.3.26
 
 ### Patch Changes

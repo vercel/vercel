@@ -1,11 +1,5 @@
 # @vercel/oidc
 
-## 3.0.3
-
-### Patch Changes
-
-- fix(oidc): add `"workflow"` as export condition ([#14091](https://github.com/vercel/vercel/pull/14091))
-
 ## 3.0.2
 
 ### Patch Changes
