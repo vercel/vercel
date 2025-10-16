@@ -102,7 +102,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
       });
     } catch (error) {
       console.error(`Failed to handle ${req.url}`, error);
-      process.exit(1);
+      throw error;
     }
   };
 }).toString()})()`.replace(
