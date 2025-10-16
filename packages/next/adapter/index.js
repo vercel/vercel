@@ -34564,6 +34564,19 @@ async function handleNodeOutputs(nodeOutputs, {
   const fsSema = new import_async_sema5.Sema(16, { capacity: nodeOutputs.length });
   const functionsDir = import_node_path.default.join(vercelOutputDir, "functions");
   const handlerRelativeDir = import_node_path.default.posix.relative(repoRoot, projectDir);
+  let pages404Output;
+  let pagesErrorOutput;
+  for (const item of nodeOutputs) {
+    if (item.pathname === import_node_path.default.posix.join("/", config.basePath || "", "/404")) {
+      pages404Output = item;
+    }
+    if (item.pathname === import_node_path.default.posix.join("/", config.basePath || "", "/_error")) {
+      pagesErrorOutput = item;
+    }
+    if (pages404Output && pagesErrorOutput) {
+      break;
+    }
+  }
   await Promise.all(
     nodeOutputs.map(async (output) => {
       await fsSema.acquire();
@@ -34577,6 +34590,17 @@ async function handleNodeOutputs(nodeOutputs, {
         files[relPath] = import_node_path.default.posix.relative(repoRoot, fsPath);
       }
       files[import_node_path.default.posix.relative(projectDir, output.filePath)] = import_node_path.default.posix.relative(repoRoot, output.filePath);
+      if (output.type === import_constants2.AdapterOutputType.PAGES) {
+        const notFoundOutput = pages404Output || pagesErrorOutput;
+        if (notFoundOutput) {
+          for (const [relPath, fsPath] of Object.entries(
+            notFoundOutput.assets
+          )) {
+            files[relPath] = import_node_path.default.posix.relative(repoRoot, fsPath);
+          }
+          files[import_node_path.default.posix.relative(projectDir, notFoundOutput.filePath)] = import_node_path.default.posix.relative(repoRoot, notFoundOutput.filePath);
+        }
+      }
       const handlerFilePath = import_node_path.default.join(
         functionDir,
         handlerRelativeDir,
