@@ -224,4 +224,4 @@ process.on('SIGTERM', async () => {
     await onExit();
   }
   process.exit(0);
-})
+});
