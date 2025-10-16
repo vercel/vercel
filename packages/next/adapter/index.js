@@ -34569,7 +34569,7 @@ async function handleNodeOutputs(nodeOutputs, {
       await fsSema.acquire();
       const functionDir = import_node_path.default.join(
         functionsDir,
-        `${output.pathname === "/" ? "/index" : output.pathname}.func`
+        `${(output.pathname === "/" ? "/index" : output.pathname).replace}.func`
       );
       await import_fs_extra10.default.mkdir(functionDir, { recursive: true });
       const files = {};
