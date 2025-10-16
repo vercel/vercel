@@ -32697,12 +32697,20 @@ var myAdapter = {
     });
     let nodeOutputs = [];
     const edgeOutputs = [];
+    let has404Output = false;
+    let has500Output = false;
     for (const output of [
       ...outputs.appPages,
       ...outputs.appRoutes,
       ...outputs.pages,
       ...outputs.pagesApi
     ]) {
+      if (output.pathname.endsWith("/404")) {
+        has404Output = true;
+      }
+      if (output.pathname.endsWith("/500")) {
+        has500Output = true;
+      }
       if (output.runtime === "nodejs") {
         nodeOutputs.push(output);
       } else if (output.runtime === "edge") {
@@ -32817,105 +32825,110 @@ var myAdapter = {
         shouldHandleMiddlewareDataResolving,
         true
       ),
-      // i18n prefixing routes - placeholder for i18n configuration
-      ...config.i18n && config.i18n.localeDetection !== false ? [
-        // Handle auto-adding current default locale to path based on $wildcard
+      ...config.i18n ? [
+        // Handle auto-adding current default locale to path based on
+        // $wildcard
+        // This is split into two rules to avoid matching the `/index` route as it causes issues with trailing slash redirect
         {
           src: `^${import_node_path2.default.posix.join(
             "/",
             config.basePath,
             "/"
-          )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => locale.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?:/.*|$))$`,
-          dest: `${config.basePath !== "/" ? import_node_path2.default.posix.join("/", config.basePath) : ""}$wildcard${config.trailingSlash ? "/" : ""}`,
+          )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(?:/.*|$))$`,
+          // we aren't able to ensure trailing slash mode here
+          // so ensure this comes after the trailing slash redirect
+          dest: `${config.basePath !== "." ? import_node_path2.default.posix.join("/", config.basePath) : ""}$wildcard${config.trailingSlash ? "/" : ""}`,
           continue: true
         },
-        {
-          src: `^${import_node_path2.default.posix.join(
-            "/",
-            config.basePath,
-            "/"
-          )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => locale.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?:/.*|$))(.*)$`,
-          dest: `${config.basePath !== "/" ? import_node_path2.default.posix.join("/", config.basePath) : ""}$wildcard/$1`,
-          continue: true
-        }
-      ] : [],
-      // Handle redirecting to locale specific domains
-      ...config.i18n?.domains && config.i18n.domains.length > 0 && config.i18n.localeDetection !== false ? [
-        {
-          src: `^${import_node_path2.default.posix.join(
-            "/",
-            config.basePath
-          )}/?(?:${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})?/?$`,
-          locale: {
-            redirect: config.i18n.domains.reduce(
-              (prev, item) => {
-                prev[item.defaultLocale] = `http${item.http ? "" : "s"}://${item.domain}/`;
-                if (item.locales) {
-                  item.locales.map((locale) => {
-                    prev[locale] = `http${item.http ? "" : "s"}://${item.domain}/${locale}`;
-                  });
-                }
-                return prev;
-              },
-              {}
-            ),
-            cookie: "NEXT_LOCALE"
-          },
-          continue: true
-        }
-      ] : [],
-      // Handle redirecting to locale paths
-      ...config.i18n && config.i18n.localeDetection !== false ? [
-        {
-          // TODO: if default locale is included in this src it won't
-          // be visitable by users who prefer another language since a
-          // cookie isn't set signaling the default locale is
-          // preferred on redirect currently, investigate adding this
-          src: "/",
-          locale: {
-            redirect: config.i18n.locales.reduce(
-              (prev, locale) => {
-                prev[locale] = locale === config.i18n?.defaultLocale ? `/` : `/${locale}`;
-                return prev;
-              },
-              {}
-            ),
-            cookie: "NEXT_LOCALE"
-          },
-          continue: true
-        }
-      ] : [],
-      // We only want to add these rewrites before user redirects
-      // when `skipDefaultLocaleRewrite` is not flagged on
-      // and when localeDetection is enabled.
-      ...config.i18n && config.i18n.localeDetection !== false ? [
-        {
-          src: `^${import_node_path2.default.posix.join("/", config.basePath)}$`,
-          dest: `${import_node_path2.default.posix.join(
-            "/",
-            config.basePath,
-            config.i18n.defaultLocale
-          )}`,
-          continue: true
-        },
-        // Auto-prefix non-locale path with default locale
-        // note for prerendered pages this will cause
-        // x-now-route-matches to contain the path minus the locale
-        // e.g. for /de/posts/[slug] x-now-route-matches would have
-        // 1=posts%2Fpost-1
         {
           src: `^${import_node_path2.default.posix.join(
             "/",
             config.basePath,
             "/"
           )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(?:/.*|$))(.*)$`,
-          dest: `${import_node_path2.default.posix.join(
-            "/",
-            config.basePath,
-            config.i18n.defaultLocale
-          )}/$1`,
+          // we aren't able to ensure trailing slash mode here
+          // so ensure this comes after the trailing slash redirect
+          dest: `${config.basePath !== "." ? import_node_path2.default.posix.join("/", config.basePath) : ""}$wildcard/$1`,
           continue: true
-        }
+        },
+        // Handle redirecting to locale specific domains
+        ...config.i18n.domains && config.i18n.domains.length > 0 && config.i18n.localeDetection !== false ? [
+          {
+            src: `^${import_node_path2.default.posix.join(
+              "/",
+              config.basePath
+            )}/?(?:${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})?/?$`,
+            locale: {
+              redirect: config.i18n.domains.reduce(
+                (prev, item) => {
+                  prev[item.defaultLocale] = `http${item.http ? "" : "s"}://${item.domain}/`;
+                  if (item.locales) {
+                    item.locales.map((locale) => {
+                      prev[locale] = `http${item.http ? "" : "s"}://${item.domain}/${locale}`;
+                    });
+                  }
+                  return prev;
+                },
+                {}
+              ),
+              cookie: "NEXT_LOCALE"
+            },
+            continue: true
+          }
+        ] : [],
+        // Handle redirecting to locale paths
+        ...config.i18n.localeDetection !== false ? [
+          {
+            // TODO: if default locale is included in this src it won't
+            // be visitable by users who prefer another language since a
+            // cookie isn't set signaling the default locale is
+            // preferred on redirect currently, investigate adding this
+            src: "/",
+            locale: {
+              redirect: config.i18n.locales.reduce(
+                (prev, locale) => {
+                  prev[locale] = locale === config.i18n?.defaultLocale ? `/` : `/${locale}`;
+                  return prev;
+                },
+                {}
+              ),
+              cookie: "NEXT_LOCALE"
+            },
+            continue: true
+          }
+        ] : [],
+        // We only want to add these rewrites before user redirects
+        // when `skipDefaultLocaleRewrite` is not flagged on
+        // and when localeDetection is enabled.
+        ...config.i18n.localeDetection !== false ? [
+          {
+            src: `^${import_node_path2.default.posix.join("/", config.basePath)}$`,
+            dest: `${import_node_path2.default.posix.join(
+              "/",
+              config.basePath,
+              config.i18n.defaultLocale
+            )}`,
+            continue: true
+          },
+          // Auto-prefix non-locale path with default locale
+          // note for prerendered pages this will cause
+          // x-now-route-matches to contain the path minus the locale
+          // e.g. for /de/posts/[slug] x-now-route-matches would have
+          // 1=posts%2Fpost-1
+          {
+            src: `^${import_node_path2.default.posix.join(
+              "/",
+              config.basePath,
+              "/"
+            )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(?:/.*|$))(.*)$`,
+            dest: `${import_node_path2.default.posix.join(
+              "/",
+              config.basePath,
+              config.i18n.defaultLocale
+            )}/$1`,
+            continue: true
+          }
+        ] : []
       ] : [],
       ...headers,
       ...redirects,
@@ -33201,7 +33214,12 @@ var myAdapter = {
             config.basePath,
             "/"
           )}(?<nextLocale>${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(/.*|$)`,
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale/404"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            "/$nextLocale",
+            has404Output ? "404" : "_error"
+          ),
           status: 404,
           caseSensitive: true
         },
@@ -33210,7 +33228,8 @@ var myAdapter = {
           dest: import_node_path2.default.posix.join(
             "/",
             config.basePath,
-            `/${config.i18n.defaultLocale}/404`
+            `/${config.i18n.defaultLocale}/`,
+            has404Output ? "404" : "_error"
           ),
           status: 404
         }
@@ -33224,7 +33243,11 @@ var myAdapter = {
             // that the entryDirectory (basePath) itself matches
             `.*`
           ),
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/404"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            has404Output ? "404" : "_error"
+          ),
           status: 404
         }
       ],
@@ -33236,7 +33259,12 @@ var myAdapter = {
             config.basePath,
             "/"
           )}(?<nextLocale>${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(/.*|$)`,
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale/500"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            "/$nextLocale/",
+            has500Output ? "500" : "_error"
+          ),
           status: 500,
           caseSensitive: true
         },
@@ -33245,14 +33273,19 @@ var myAdapter = {
           dest: import_node_path2.default.posix.join(
             "/",
             config.basePath,
-            `/${config.i18n.defaultLocale}/500`
+            `/${config.i18n.defaultLocale}/`,
+            has500Output ? "500" : "_error"
           ),
           status: 500
         }
       ] : [
         {
           src: import_node_path2.default.posix.join("/", config.basePath, `.*`),
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/500"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            has500Output ? "500" : "_error"
+          ),
           status: 500
         }
       ]

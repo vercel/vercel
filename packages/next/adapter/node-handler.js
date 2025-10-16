@@ -3,7 +3,9 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   const path = require("path");
   globalThis.AsyncLocalStorage = require("async_hooks").AsyncLocalStorage;
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
-  const { dynamicRoutes: dynamicRoutesRaw, staticRoutes: staticRoutesRaw } = require("./" + path.posix.join(relativeDistDir, "routes-manifest.json"));
+  const { dynamicRoutes: dynamicRoutesRaw, staticRoutes: staticRoutesRaw } = require(
+    "./" + path.posix.join(relativeDistDir, "routes-manifest.json")
+  );
   const hydrateRoutesManifestItem = (item) => {
     return {
       ...item,
@@ -14,18 +16,20 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   const staticRoutes = staticRoutesRaw.map(hydrateRoutesManifestItem);
   let appPathRoutesManifest = {};
   try {
-    appPathRoutesManifest = require("./" + path.posix.join(
-      relativeDistDir,
-      "app-path-routes-manifest.json"
-    ));
+    appPathRoutesManifest = require(
+      "./" + path.posix.join(relativeDistDir, "app-path-routes-manifest.json")
+    );
   } catch (_) {
   }
   const inversedAppRoutesManifest = Object.entries(
     appPathRoutesManifest
-  ).reduce((manifest, [originalKey, normalizedKey]) => {
-    manifest[normalizedKey] = originalKey;
-    return manifest;
-  }, {});
+  ).reduce(
+    (manifest, [originalKey, normalizedKey]) => {
+      manifest[normalizedKey] = originalKey;
+      return manifest;
+    },
+    {}
+  );
   function normalizeDataPath(pathname) {
     if (!(pathname || "/").startsWith("/_next/data")) {
       return pathname;
@@ -71,12 +75,14 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
       }
       const page = matchUrlToPage(urlPathname);
       const isAppDir = page.match(/\/(page|route)$/);
-      const mod = require("./" + path.posix.join(
-        relativeDistDir,
-        "server",
-        isAppDir ? "app" : "pages",
-        `${page}.js`
-      ));
+      const mod = require(
+        "./" + path.posix.join(
+          relativeDistDir,
+          "server",
+          isAppDir ? "app" : "pages",
+          `${page}.js`
+        )
+      );
       await mod.handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
