@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.13.4
+
+### Patch Changes
+
+- Update locale in prerender-manifest dataRoute ([#14101](https://github.com/vercel/vercel/pull/14101))
+
 ## 4.13.3
 
 ### Patch Changes

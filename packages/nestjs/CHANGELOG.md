@@ -1,5 +1,11 @@
 # @vercel/nestjs
 
+## 0.2.0
+
+### Minor Changes
+
+- Add root main as entrypoint for NestJS ([#14105](https://github.com/vercel/vercel/pull/14105))
+
 ## 0.1.5
 
 ### Patch Changes
