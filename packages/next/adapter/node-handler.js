@@ -130,6 +130,6 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   "process.env.__PRIVATE_RELATIVE_DIST_DIR",
   `"${ctx.projectRelativeDistDir}"`
 ).replace(
-  "process.env.__PRIVATE_RELATIVE_DIST_DIR",
+  "process.env.__PRIVATE_RELATIVE_PROJECT_DIR",
   `"${ctx.relativeProjectDir}"`
 );
