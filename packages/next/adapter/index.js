@@ -34204,8 +34204,8 @@ function modifyWithRewriteHeaders(rewrites, {
       }
       const rscSuffix = parts.join("|");
       rewrite.src = rewrite.src.replace(
-        "(?:\\/)?$",
-        `(?:/)?(?<rscsuff>${rscSuffix})?$`
+        /(\\\/(\?)?)?\(\?:\\\/\)\?\$$/,
+        `(?:/)?(?<rscsuff>${rscSuffix})?`
       );
       const destQueryIndex = rewrite.dest.indexOf("?");
       if (destQueryIndex === -1) {
