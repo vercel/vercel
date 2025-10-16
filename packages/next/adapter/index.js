@@ -32717,6 +32717,18 @@ var myAdapter = {
         edgeOutputs.push(output);
       }
     }
+    for (const output of outputs.staticFiles) {
+      if (output.pathname.endsWith("/404")) {
+        has404Output = true;
+      }
+      if (output.pathname.endsWith("/500")) {
+        has500Output = true;
+      }
+    }
+    console.log({
+      has404Output,
+      has500Output
+    });
     await handleEdgeOutputs(edgeOutputs, {
       config,
       distDir,
