@@ -32388,6 +32388,7 @@ async function handlePublicFiles(publicFolder, vercelOutputDir) {
   );
 }
 async function handleStaticOutputs(outputs, {
+  config,
   vercelConfig,
   vercelOutputDir
 }) {
@@ -32415,7 +32416,12 @@ async function handleStaticOutputs(outputs, {
     })
   );
   await import_promises4.default.writeFile(
-    import_node_path.default.posix.join(vercelOutputDir, "static", "_next/static/not-found.txt"),
+    import_node_path.default.posix.join(
+      vercelOutputDir,
+      "static",
+      config.basePath || "",
+      "_next/static/not-found.txt"
+    ),
     "Not Found"
   );
 }
@@ -32434,7 +32440,10 @@ async function handleNodeOutputs(nodeOutputs, {
   await Promise.all(
     nodeOutputs.map(async (output) => {
       await fsSema.acquire();
-      const functionDir = import_node_path.default.join(functionsDir, `${output.pathname}.func`);
+      const functionDir = import_node_path.default.join(
+        functionsDir,
+        `${output.pathname === "/" ? "/index" : output.pathname}.func`
+      );
       await import_promises4.default.mkdir(functionDir, { recursive: true });
       const files = {};
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
@@ -32503,13 +32512,11 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
       try {
         const prerenderConfigPath = import_node_path.default.join(
           functionsDir,
-          `${output.pathname}.prerender-config.json`
+          `${output.pathname === "/" ? "/index" : output.pathname}.prerender-config.json`
         );
         const prerenderFallbackPath = output.fallback?.filePath ? import_node_path.default.join(
           functionsDir,
-          `${output.pathname}.prerender-fallback${import_node_path.default.extname(
-            output.fallback.filePath
-          )}`
+          `${output.pathname === "/" ? "/index" : output.pathname}.prerender-fallback${import_node_path.default.extname(output.fallback.filePath)}`
         ) : void 0;
         const { parentOutputId } = output;
         prerenderParentIds.add(parentOutputId);
@@ -32692,6 +32699,7 @@ var myAdapter = {
     };
     await handlePublicFiles(import_node_path2.default.join(projectDir, "public"), vercelOutputDir);
     await handleStaticOutputs(outputs.staticFiles, {
+      config,
       vercelConfig,
       vercelOutputDir
     });
@@ -32725,10 +32733,6 @@ var myAdapter = {
         has500Output = true;
       }
     }
-    console.log({
-      has404Output,
-      has500Output
-    });
     await handleEdgeOutputs(edgeOutputs, {
       config,
       distDir,
