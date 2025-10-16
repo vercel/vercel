@@ -28096,9 +28096,9 @@ var require_interop_require_default = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
+// ../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
 var require_modern_browserslist_target = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
     "use strict";
     var MODERN_BROWSERSLIST_TARGET = [
       "chrome 111",
@@ -28110,9 +28110,9 @@ var require_modern_browserslist_target = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
+// ../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
 var require_entry_constants = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
+  "../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -28144,9 +28144,9 @@ var require_entry_constants = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
+// ../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
 var require_constants2 = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -34749,10 +34749,9 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
   return nodeOutputs.filter((output) => !prerenderParentIds.has(output.id));
 }
 async function handleEdgeOutputs(edgeOutputs, {
-  config,
-  distDir,
   repoRoot,
   projectDir,
+  nextVersion,
   vercelOutputDir
 }) {
   const fsSema = new import_async_sema5.Sema(16, { capacity: edgeOutputs.length });
@@ -34806,7 +34805,11 @@ async function handleEdgeOutputs(edgeOutputs, {
         ),
         files,
         environment: output.config.env || {},
-        regions: output.config.preferredRegion
+        regions: output.config.preferredRegion,
+        framework: {
+          slug: "nextjs",
+          version: nextVersion
+        }
       };
       await import_fs_extra10.default.writeFile(
         import_node_path.default.join(functionDir, ".vc-config.json"),
@@ -34815,6 +34818,29 @@ async function handleEdgeOutputs(edgeOutputs, {
       fsSema.release();
     })
   );
+}
+async function handleMiddleware(output, ctx) {
+  if (output.runtime === "nodejs") {
+    await handleNodeOutputs([output], ctx);
+  } else if (output.runtime === "edge") {
+    await handleEdgeOutputs([output], ctx);
+  } else {
+    throw new Error(`Invalid middleware output ${JSON.stringify(output)}`);
+  }
+  const routes = [];
+  for (const matcher of output.config.matchers || []) {
+    const route = {
+      continue: true,
+      has: matcher.has,
+      src: matcher.sourceRegex,
+      missing: matcher.missing
+    };
+    route.middlewarePath = "/_middleware";
+    route.middlewareRawSrc = matcher.source ? [matcher.source] : [];
+    route.override = true;
+    routes.push(route);
+  }
+  return routes;
 }
 
 // src/index.ts
@@ -34886,12 +34912,22 @@ var myAdapter = {
       }
     }
     await handleEdgeOutputs(edgeOutputs, {
-      config,
-      distDir,
       repoRoot,
       projectDir,
-      vercelOutputDir
+      vercelOutputDir,
+      nextVersion
     });
+    let middlewareRoutes = [];
+    if (outputs.middleware) {
+      middlewareRoutes = await handleMiddleware(outputs.middleware, {
+        config,
+        distDir,
+        repoRoot,
+        projectDir,
+        vercelOutputDir,
+        nextVersion
+      });
+    }
     nodeOutputs = await handlePrerenderOutputs(
       nodeOutputs,
       outputs.prerenders,
@@ -34957,6 +34993,7 @@ var myAdapter = {
       headers.push({
         src: route.sourceRegex,
         headers: route.headers,
+        continue: true,
         has: route.has,
         missing: route.missing,
         ...route.priority ? {
@@ -35102,6 +35139,7 @@ var myAdapter = {
       ...redirects,
       // server actions name meta routes - placeholder for server actions
       // middleware route - placeholder for middleware configuration
+      ...middlewareRoutes,
       ...convertedRewrites.beforeFiles,
       // add 404 handling if /404 or locale variants are requested literally
       ...config.i18n ? [
