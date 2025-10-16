@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.13.0
+
+### Minor Changes
+
+- Add root main as entrypoint for NestJS ([#14105](https://github.com/vercel/vercel/pull/14105))
+
 ## 3.12.0
 
 ### Minor Changes
