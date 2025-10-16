@@ -3,9 +3,11 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   const path = require("path");
   globalThis.AsyncLocalStorage = require("async_hooks").AsyncLocalStorage;
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
-  const { dynamicRoutes: dynamicRoutesRaw, staticRoutes: staticRoutesRaw, i18n } = require(
-    "./" + path.posix.join(relativeDistDir, "routes-manifest.json")
-  );
+  const {
+    dynamicRoutes: dynamicRoutesRaw,
+    staticRoutes: staticRoutesRaw,
+    i18n
+  } = require("./" + path.posix.join(relativeDistDir, "routes-manifest.json"));
   const hydrateRoutesManifestItem = (item) => {
     return {
       ...item,
@@ -16,20 +18,18 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   const staticRoutes = staticRoutesRaw.map(hydrateRoutesManifestItem);
   let appPathRoutesManifest = {};
   try {
-    appPathRoutesManifest = require(
-      "./" + path.posix.join(relativeDistDir, "app-path-routes-manifest.json")
-    );
+    appPathRoutesManifest = require("./" + path.posix.join(
+      relativeDistDir,
+      "app-path-routes-manifest.json"
+    ));
   } catch (_) {
   }
   const inversedAppRoutesManifest = Object.entries(
     appPathRoutesManifest
-  ).reduce(
-    (manifest, [originalKey, normalizedKey]) => {
-      manifest[normalizedKey] = originalKey;
-      return manifest;
-    },
-    {}
-  );
+  ).reduce((manifest, [originalKey, normalizedKey]) => {
+    manifest[normalizedKey] = originalKey;
+    return manifest;
+  }, {});
   function normalizeLocalePath(pathname, locales) {
     if (!locales) return { pathname };
     const lowercasedLocales = locales.map((locale) => locale.toLowerCase());
@@ -80,6 +80,29 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
     const fromSymbol = globalThis;
     return fromSymbol[SYMBOL_FOR_REQ_CONTEXT]?.get?.() ?? {};
   }
+  const RouterServerContextSymbol = Symbol.for("@next/router-server-methods");
+  const routerServerGlobal = globalThis;
+  if (!routerServerGlobal[RouterServerContextSymbol]) {
+    routerServerGlobal[RouterServerContextSymbol] = {};
+  }
+  routerServerGlobal[RouterServerContextSymbol][process.env.__PRIVATE_RELATIVE_PROJECT_DIR || ""] = {
+    async render404(req, res) {
+      let mod;
+      try {
+        mod = require("./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`));
+      } catch (_) {
+        mod = require("./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`));
+      }
+      res.statusCode = 404;
+      if (mod) {
+        await mod.handler(req, res, {
+          waitUntil: getRequestContext().waitUntil
+        });
+      } else {
+        res.end("This page could not be found");
+      }
+    }
+  };
   return async function handler(req, res) {
     try {
       let urlPathname = req.headers["x-matched-path"];
@@ -89,14 +112,12 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
       }
       const page = matchUrlToPage(urlPathname);
       const isAppDir = page.match(/\/(page|route)$/);
-      const mod = require(
-        "./" + path.posix.join(
-          relativeDistDir,
-          "server",
-          isAppDir ? "app" : "pages",
-          `${page === "/" ? "index" : page}.js`
-        )
-      );
+      const mod = require("./" + path.posix.join(
+        relativeDistDir,
+        "server",
+        isAppDir ? "app" : "pages",
+        `${page === "/" ? "index" : page}.js`
+      ));
       await mod.handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
@@ -108,4 +129,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
 }).toString()})()`.replace(
   "process.env.__PRIVATE_RELATIVE_DIST_DIR",
   `"${ctx.projectRelativeDistDir}"`
+).replace(
+  "process.env.__PRIVATE_RELATIVE_DIST_DIR",
+  `"${ctx.relativeProjectDir}"`
 );
