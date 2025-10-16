@@ -51,6 +51,12 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
     if (index < 0) return pathname;
     const detectedLocale = locales[index];
     pathname = pathname.slice(detectedLocale.length + 1) || "/";
+    console.log({
+      detectedLocale,
+      pathname,
+      url: req.url,
+      matchedPath: req.headers["x-matched-path"]
+    });
     addRequestMeta(req, "locale", detectedLocale);
     return pathname;
   }
@@ -125,6 +131,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
     try {
       let urlPathname = req.headers["x-matched-path"];
       if (typeof urlPathname !== "string") {
+        console.log("no x-matched-path", { url: req.url });
         const parsedUrl = new URL(req.url || "/", "http://n");
         urlPathname = parsedUrl.pathname || "/";
       }
