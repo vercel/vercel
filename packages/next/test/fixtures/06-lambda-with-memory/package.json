@@ -3,7 +3,7 @@
   "dependencies": {
     "@types/node": "^12.12.56",
     "@types/react": "^16.9.49",
-    "next": "https://files-47i57mg8f-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-a11trumrv-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "4.9.5"
