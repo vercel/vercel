@@ -112,10 +112,12 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
         mod = require(
           "./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`)
         );
+        console.log("using 404.js for render404");
       } catch (_) {
         mod = require(
           "./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`)
         );
+        console.log("using _error for render404");
       }
       res.statusCode = 404;
       if (mod) {
