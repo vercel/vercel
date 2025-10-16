@@ -35346,8 +35346,8 @@ var myAdapter = {
         // user-emitted files which may be missing a hash in their filename.
         src: import_node_path2.default.posix.join(
           "/",
-          config.basePath,
-          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+`
+          config.basePath || "",
+          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
@@ -35358,7 +35358,7 @@ var myAdapter = {
         important: true
       },
       {
-        src: import_node_path2.default.posix.join("/", config.basePath, "/index(?:/)?"),
+        src: config.basePath && config.basePath !== "/" ? import_node_path2.default.posix.join("/", config.basePath, "/?(?:index)?(?:/)?$") : `/(?:index)?(?:/)?$`,
         headers: {
           "x-matched-path": "/"
         },
@@ -35366,7 +35366,11 @@ var myAdapter = {
         important: true
       },
       {
-        src: import_node_path2.default.posix.join("/", config.basePath, `/((?!index$).*?)(?:/)?`),
+        src: import_node_path2.default.posix.join(
+          "/",
+          config.basePath || "",
+          `/((?!index$).*?)(?:/)?$`
+        ),
         headers: {
           "x-matched-path": "/$1"
         },
