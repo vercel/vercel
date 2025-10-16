@@ -88,7 +88,7 @@ export class AppService {
             <a href="https://vercel.com/docs/frameworks/nestjs" target="_blank" rel="noreferrer">Vercel docs</a>
           </div>
           <div class="feature">
-            <a href="https://nestjs.com" target="_blank" rel="noreferrer">NestJS docs</a>
+            <a href="https://docs.nestjs.com" target="_blank" rel="noreferrer">NestJS docs</a>
           </div>
         </div>
       </div>
