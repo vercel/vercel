@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "next": "https://files-hddbezu2o-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-cm0thn9gu-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   },
   "scripts": {
-    "build": "next build && cp .next/server/server-reference-manifest.json public/"
+    "build": "next build && cp .next/output/static/server-reference-manifest.json public/"
   }
 }
