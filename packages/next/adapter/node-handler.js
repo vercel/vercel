@@ -3,7 +3,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   const path = require("path");
   globalThis.AsyncLocalStorage = require("async_hooks").AsyncLocalStorage;
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
-  const { dynamicRoutes: dynamicRoutesRaw, staticRoutes: staticRoutesRaw } = require(
+  const { dynamicRoutes: dynamicRoutesRaw, staticRoutes: staticRoutesRaw, i18n } = require(
     "./" + path.posix.join(relativeDistDir, "routes-manifest.json")
   );
   const hydrateRoutesManifestItem = (item) => {
@@ -30,11 +30,24 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
     },
     {}
   );
+  function normalizeLocalePath(pathname, locales) {
+    if (!locales) return { pathname };
+    const lowercasedLocales = locales.map((locale) => locale.toLowerCase());
+    const segments = pathname.split("/", 2);
+    if (!segments[1]) return { pathname };
+    const segment = segments[1].toLowerCase();
+    const index = lowercasedLocales.indexOf(segment);
+    if (index < 0) return { pathname };
+    const detectedLocale = locales[index];
+    pathname = pathname.slice(detectedLocale.length + 1) || "/";
+    return { pathname, detectedLocale };
+  }
   function normalizeDataPath(pathname) {
     if (!(pathname || "/").startsWith("/_next/data")) {
       return pathname;
     }
     pathname = pathname.replace(/\/_next\/data\/[^/]{1,}/, "").replace(/\.json$/, "");
+    pathname = normalizeLocalePath(pathname, i18n?.locales).pathname;
     if (pathname === "/index") {
       return "/";
     }
@@ -50,6 +63,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
     ]) {
       urlPathname = urlPathname.replace(suffixRegex, "");
     }
+    urlPathname = normalizeLocalePath(urlPathname, i18n?.locales).pathname;
     console.log("after normalize", urlPathname);
     const getPathnameNoSlash = (urlPathname2) => urlPathname2.replace(/\/$/, "") || "/";
     for (const route of [...staticRoutes, ...dynamicRoutes]) {
