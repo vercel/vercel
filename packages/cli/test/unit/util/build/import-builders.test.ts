@@ -230,8 +230,8 @@ describe('resolveBuilders()', () => {
     if (!('builders' in result)) {
       throw new Error('Expected `builders` to be defined');
     }
-    expect(result.builders.has('@vercel/node')).toEqual(true);
-    expect(result.builders.get('@vercel/node')?.pkg).toMatchObject(
+    expect(result.builders.has('@vercel/bun')).toEqual(true);
+    expect(result.builders.get('@vercel/bun')?.pkg).toMatchObject(
       vercelNodePkg
     );
   });
