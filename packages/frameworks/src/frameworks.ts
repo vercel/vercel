@@ -3080,6 +3080,36 @@ export const frameworks = [
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
         },
         {
+          path: 'main.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
           path: 'app.js',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
