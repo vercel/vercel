@@ -34835,7 +34835,7 @@ async function handleMiddleware(output, ctx) {
       src: matcher.sourceRegex,
       missing: matcher.missing
     };
-    route.middlewarePath = "/_middleware";
+    route.middlewarePath = output.pathname;
     route.middlewareRawSrc = matcher.source ? [matcher.source] : [];
     route.override = true;
     routes.push(route);
@@ -34983,6 +34983,7 @@ var myAdapter = {
         missing: redirect.missing
       };
       if (redirect.priority) {
+        route.continue = true;
         priorityRedirects.push(route);
       } else {
         redirects.push(route);
