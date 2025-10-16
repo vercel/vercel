@@ -1,7 +1,13 @@
-import { FileBlob, FileFsRef, walkParentDirs } from '@vercel/build-utils';
+import {
+  FileBlob,
+  FileFsRef,
+  walkParentDirs,
+  debug,
+} from '@vercel/build-utils';
 import { BuildV2, Files } from '@vercel/build-utils/dist/types';
 import { nodeFileTrace } from '@vercel/nft';
 import { existsSync, lstatSync, readFileSync } from 'fs';
+import { rm } from 'fs/promises';
 import { extname, join, relative } from 'path';
 import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
 
@@ -136,12 +142,20 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   if (typeof handler !== 'string') {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
+  debug(`[@vercel/express] Handler: ${handler}`);
+
+  debug('[@vercel/express] Tracing dependencies...');
+  const traceStart = Date.now();
   const nftResult = await nodeFileTrace([join(outputDir, handler)], {
     // This didn't work as I expected it to, didn't find node_modules
     // base: outputDir,
     // processCwd: outputDir,
     ignore: args.config.excludeFiles,
   });
+  debug(
+    `[@vercel/express] Traced ${nftResult.fileList.size} files [${Date.now() - traceStart}ms]`
+  );
+
   for (const file of nftResult.fileList) {
     if (file.startsWith(relativeOutputDir)) {
       const stats = lstatSync(file);
@@ -155,10 +169,18 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
       files[file] = new FileFsRef({ fsPath: file, mode: stats.mode });
     }
   }
+
+  const cleanup = async () => {
+    await rm(outputDir, { recursive: true, force: true });
+  };
+
   return {
-    files,
-    shouldAddSourcemapSupport,
-    handler,
-    outputDir,
+    result: {
+      files,
+      shouldAddSourcemapSupport,
+      handler,
+      outputDir,
+    },
+    cleanup,
   };
 };

@@ -14,6 +14,7 @@ import type { BuildV2 } from '@vercel/build-utils';
 export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
   const { entrypoint, files, workPath, meta, config } = args;
   await download(files, workPath, meta);
+
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
@@ -21,6 +22,7 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     config,
     meta
   );
+
   const spawnOpts = getSpawnOptions(meta || {}, nodeVersion);
 
   const {
