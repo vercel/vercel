@@ -6,7 +6,7 @@
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
     "firebase": "8.3.0",
-    "next": "https://files-oz7fz38yy-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-2mz4wedaw-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   }
