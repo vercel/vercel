@@ -80,7 +80,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
           relativeDistDir,
           "server",
           isAppDir ? "app" : "pages",
-          `${page}.js`
+          `${page === "/" ? "index" : page}.js`
         )
       );
       await mod.handler(req, res, {
