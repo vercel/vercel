@@ -37,7 +37,8 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   function addRequestMeta(req, key, value) {
     const NEXT_REQUEST_META = Symbol.for("NextInternalRequestMeta");
     const meta = req[NEXT_REQUEST_META] || {};
-    meta[key] = value(req)[NEXT_REQUEST_META] = meta;
+    meta[key] = value;
+    req[NEXT_REQUEST_META] = meta;
     return meta;
   }
   function normalizeLocalePath(req, pathname, locales) {
