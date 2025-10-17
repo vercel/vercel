@@ -515,6 +515,7 @@ export const build: BuildV2 = async buildOptions => {
   ) {
     console.log('setting adapter env variable');
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
+    env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
   }
   console.log({
     nextVersion,

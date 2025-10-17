@@ -13038,7 +13038,7 @@ var require_dist2 = __commonJS2({
             eocdrBuffer
           ]);
         }
-        function validateMetadataPath(metadataPath, isDirectory2) {
+        function validateMetadataPath(metadataPath, isDirectory22) {
           if (metadataPath === "")
             throw new Error("empty metadataPath");
           metadataPath = metadataPath.replace(/\\/g, "/");
@@ -13047,7 +13047,7 @@ var require_dist2 = __commonJS2({
           if (metadataPath.split("/").indexOf("..") !== -1)
             throw new Error("invalid relative path: " + metadataPath);
           var looksLikeDirectory = /\/$/.test(metadataPath);
-          if (isDirectory2) {
+          if (isDirectory22) {
             if (!looksLikeDirectory)
               metadataPath += "/";
           } else {
@@ -13057,19 +13057,19 @@ var require_dist2 = __commonJS2({
           return metadataPath;
         }
         var EMPTY_BUFFER = bufferAlloc(0);
-        function Entry(metadataPath, isDirectory2, options) {
+        function Entry(metadataPath, isDirectory22, options) {
           this.utf8FileName = bufferFrom(metadataPath);
           if (this.utf8FileName.length > 65535)
             throw new Error("utf8 file name too long. " + utf8FileName.length + " > 65535");
-          this.isDirectory = isDirectory2;
+          this.isDirectory = isDirectory22;
           this.state = Entry.WAITING_FOR_METADATA;
           this.setLastModDate(options.mtime != null ? options.mtime : /* @__PURE__ */ new Date());
           if (options.mode != null) {
             this.setFileAttributesMode(options.mode);
           } else {
-            this.setFileAttributesMode(isDirectory2 ? 16893 : 33204);
+            this.setFileAttributesMode(isDirectory22 ? 16893 : 33204);
           }
-          if (isDirectory2) {
+          if (isDirectory22) {
             this.crcAndFileSizeKnown = true;
             this.crc32 = 0;
             this.uncompressedSize = 0;
@@ -13082,7 +13082,7 @@ var require_dist2 = __commonJS2({
             if (options.size != null)
               this.uncompressedSize = options.size;
           }
-          if (isDirectory2) {
+          if (isDirectory22) {
             this.compress = false;
           } else {
             this.compress = true;
@@ -28096,9 +28096,9 @@ var require_interop_require_default = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
+// ../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
 var require_modern_browserslist_target = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
     "use strict";
     var MODERN_BROWSERSLIST_TARGET = [
       "chrome 111",
@@ -28110,9 +28110,9 @@ var require_modern_browserslist_target = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
+// ../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
 var require_entry_constants = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
+  "../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -28144,9 +28144,9 @@ var require_entry_constants = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
+// ../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
 var require_constants2 = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-dr8xwlk2z-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -34126,6 +34126,7 @@ var prettyBytes = (n) => (0, import_bytes.default)(n, { unitSeparator: " " });
 // src/constants.ts
 var MAX_AGE_ONE_YEAR = 31536e3;
 var EDGE_FUNCTION_SIZE_LIMIT = 1024 * 1024;
+var INTERNAL_PAGES = ["_app.js", "_error.js", "_document.js"];
 
 // src/utils.ts
 var import_picomatch = __toESM2(require_picomatch2());
@@ -34516,7 +34517,7 @@ async function handlePublicFiles(publicFolder, vercelOutputDir) {
 }
 async function handleStaticOutputs(outputs, {
   config,
-  vercelConfig,
+  vercelConfig: vercelConfig2,
   vercelOutputDir
 }) {
   const fsSema = new import_async_sema5.Sema(16, { capacity: outputs.length });
@@ -34526,7 +34527,7 @@ async function handleStaticOutputs(outputs, {
       const srcExtension = import_node_path.default.extname(output.filePath);
       const isHtml = srcExtension === ".html";
       if (isHtml) {
-        vercelConfig.overrides[import_node_path.default.posix.join("./", output.pathname + ".html")] = {
+        vercelConfig2.overrides[import_node_path.default.posix.join("./", output.pathname + ".html")] = {
           contentType: "text/html; charset=utf-8",
           path: import_node_path.default.posix.join("./", output.pathname)
         };
@@ -34552,6 +34553,7 @@ async function handleStaticOutputs(outputs, {
     "Not Found"
   );
 }
+var vercelConfig = JSON.parse(process.env.NEXT_ADAPTER_VERCEL_CONFIG || "{}");
 async function handleNodeOutputs(nodeOutputs, {
   config,
   distDir,
@@ -34615,11 +34617,21 @@ async function handleNodeOutputs(nodeOutputs, {
         })
       );
       const operationType = output.type === import_constants2.AdapterOutputType.APP_PAGE || import_constants2.AdapterOutputType.PAGES ? "PAGE" : "API";
+      const sourceFile = await getSourceFilePathFromPage({
+        workPath: projectDir,
+        page: output.sourcePage,
+        pageExtensions: config.pageExtensions || []
+      });
+      const vercelConfigOpts = await (0, import_build_utils.getLambdaOptionsFromFunction)({
+        sourceFile,
+        config: vercelConfig
+      });
       await import_fs_extra10.default.writeFile(
         import_node_path.default.join(functionDir, `.vc-config.json`),
         JSON.stringify(
           // TODO: strongly type this
           {
+            ...vercelConfigOpts,
             filePathMap: files,
             operationType,
             framework: {
@@ -34842,6 +34854,98 @@ async function handleMiddleware(output, ctx) {
   }
   return routes;
 }
+var _usesSrcCache;
+async function usesSrcDirectory(workPath) {
+  if (!_usesSrcCache) {
+    const sourcePages = import_node_path.default.join(workPath, "src", "pages");
+    try {
+      if ((await import_fs_extra10.default.stat(sourcePages)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+  if (!_usesSrcCache) {
+    const sourceAppdir = import_node_path.default.join(workPath, "src", "app");
+    try {
+      if ((await import_fs_extra10.default.stat(sourceAppdir)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+  return Boolean(_usesSrcCache);
+}
+function isDirectory2(path3) {
+  return import_fs_extra10.default.existsSync(path3) && import_fs_extra10.default.lstatSync(path3).isDirectory();
+}
+async function getSourceFilePathFromPage({
+  workPath,
+  page,
+  pageExtensions
+}) {
+  const usesSrcDir = await usesSrcDirectory(workPath);
+  const extensionsToTry = pageExtensions || ["js", "jsx", "ts", "tsx"];
+  for (const pageType of [
+    // middleware is not nested in pages/app
+    ...page === "middleware" ? [""] : ["pages", "app"]
+  ]) {
+    let fsPath = import_node_path.default.join(workPath, pageType, page);
+    if (usesSrcDir) {
+      fsPath = import_node_path.default.join(workPath, "src", pageType, page);
+    }
+    if (import_fs_extra10.default.existsSync(fsPath)) {
+      return import_node_path.default.relative(workPath, fsPath);
+    }
+    const extensionless = fsPath.replace(import_node_path.default.extname(fsPath), "");
+    for (const ext of extensionsToTry) {
+      fsPath = `${extensionless}.${ext}`;
+      if (pageType === "app" && extensionless === import_node_path.default.join(workPath, `${usesSrcDir ? "src/" : ""}app/index`)) {
+        fsPath = `${extensionless.replace(/index$/, "page")}.${ext}`;
+      }
+      if (import_fs_extra10.default.existsSync(fsPath)) {
+        return import_node_path.default.relative(workPath, fsPath);
+      }
+    }
+    if (isDirectory2(extensionless)) {
+      if (pageType === "pages") {
+        for (const ext of extensionsToTry) {
+          fsPath = import_node_path.default.join(extensionless, `index.${ext}`);
+          if (import_fs_extra10.default.existsSync(fsPath)) {
+            return import_node_path.default.relative(workPath, fsPath);
+          }
+        }
+      } else {
+        for (const ext of extensionsToTry) {
+          fsPath = import_node_path.default.join(extensionless, `page.${ext}`);
+          if (import_fs_extra10.default.existsSync(fsPath)) {
+            return import_node_path.default.relative(workPath, fsPath);
+          }
+          fsPath = import_node_path.default.join(extensionless, `route.${ext}`);
+          if (import_fs_extra10.default.existsSync(fsPath)) {
+            return import_node_path.default.relative(workPath, fsPath);
+          }
+        }
+      }
+    }
+  }
+  if (page === "/_not-found/page") {
+    return "";
+  }
+  if (page === "/_global-error/page") {
+    return "";
+  }
+  if (!INTERNAL_PAGES.includes(page)) {
+    console.log(
+      `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
+        ", "
+      )}, this can cause functions config from \`vercel.json\` to not be applied`
+    );
+  }
+  return "";
+}
 
 // src/index.ts
 var myAdapter = {
@@ -34864,7 +34968,7 @@ var myAdapter = {
     const hasPagesDir = outputs.pages.length > 0 || outputs.pagesApi.length > 0;
     const shouldHandleMiddlewareDataResolving = hasPagesDir && hasMiddleware;
     const i18nConfig = config.i18n;
-    const vercelConfig = {
+    const vercelConfig2 = {
       version: 3,
       overrides: {},
       wildcard: i18nConfig?.domains ? i18nConfig.domains.map((item) => {
@@ -34878,7 +34982,7 @@ var myAdapter = {
     await handlePublicFiles(import_node_path2.default.join(projectDir, "public"), vercelOutputDir);
     await handleStaticOutputs(outputs.staticFiles, {
       config,
-      vercelConfig,
+      vercelConfig: vercelConfig2,
       vercelOutputDir
     });
     let nodeOutputs = [];
@@ -35012,7 +35116,7 @@ var myAdapter = {
         missing: route.missing
       });
     }
-    vercelConfig.routes = [
+    vercelConfig2.routes = [
       /*
         Desired routes order
         - Runtime headers
@@ -35497,7 +35601,7 @@ var myAdapter = {
       ]
     ];
     const outputConfigPath = import_node_path2.default.join(vercelOutputDir, "config.json");
-    await import_promises4.default.writeFile(outputConfigPath, JSON.stringify(vercelConfig, null, 2));
+    await import_promises4.default.writeFile(outputConfigPath, JSON.stringify(vercelConfig2, null, 2));
   }
 };
 module.exports = myAdapter;
