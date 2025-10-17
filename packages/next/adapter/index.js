@@ -34617,8 +34617,7 @@ async function handleNodeOutputs(nodeOutputs, {
       await import_fs_extra10.default.writeFile(
         handlerFilePath,
         (0, import_node_handler.getHandlerSource)({
-          projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir),
-          relativeProjectDir: import_node_path.default.posix.relative(repoRoot, projectDir)
+          projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir)
         })
       );
       const operationType = output.type === import_constants2.AdapterOutputType.APP_PAGE || import_constants2.AdapterOutputType.PAGES ? "PAGE" : "API";

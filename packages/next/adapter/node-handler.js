@@ -1,7 +1,13 @@
 "use strict";
-export const getHandlerSource = (ctx) => `module.exports = (${(() => {
+export const getHandlerSource = (ctx) => `
+  process.chdir(__dirname);
+  
+  module.exports = (${(() => {
   const path = require("path");
-  globalThis.AsyncLocalStorage = require("async_hooks").AsyncLocalStorage;
+  if (typeof globalThis.AsyncLocalStorage !== "function") {
+    const { AsyncLocalStorage } = require("async_hooks");
+    globalThis.AsyncLocalStorage = AsyncLocalStorage;
+  }
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
   const {
     dynamicRoutes: dynamicRoutesRaw,
@@ -51,12 +57,6 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
     if (index < 0) return pathname;
     const detectedLocale = locales[index];
     pathname = pathname.slice(detectedLocale.length + 1) || "/";
-    console.log({
-      detectedLocale,
-      pathname,
-      url: req.url,
-      matchedPath: req.headers["x-matched-path"]
-    });
     addRequestMeta(req, "locale", detectedLocale);
     return pathname;
   }
@@ -105,7 +105,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   if (!routerServerGlobal[RouterServerContextSymbol]) {
     routerServerGlobal[RouterServerContextSymbol] = {};
   }
-  routerServerGlobal[RouterServerContextSymbol][process.env.__PRIVATE_RELATIVE_PROJECT_DIR || ""] = {
+  routerServerGlobal[RouterServerContextSymbol]["."] = {
     async render404(req, res) {
       let mod;
       try {
@@ -131,11 +131,7 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   };
   return async function handler(req, res) {
     try {
-      addRequestMeta(
-        req,
-        "relativeProjectDir",
-        process.env.__PRIVATE_RELATIVE_PROJECT_DIR
-      );
+      addRequestMeta(req, "relativeProjectDir", ".");
       let urlPathname = req.headers["x-matched-path"];
       if (typeof urlPathname !== "string") {
         console.log("no x-matched-path", { url: req.url });
@@ -163,7 +159,4 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
 }).toString()})()`.replaceAll(
   "process.env.__PRIVATE_RELATIVE_DIST_DIR",
   `"${ctx.projectRelativeDistDir}"`
-).replaceAll(
-  "process.env.__PRIVATE_RELATIVE_PROJECT_DIR",
-  `"${ctx.relativeProjectDir}"`
 );
