@@ -50,7 +50,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         `${ctx.deploymentUrl}/${locale}/preview-only-not-found`
       );
       expect(res.status).toBe(404);
-      expect(await res.text()).toContain('{\"notFound\":true}');
+      expect(await res.text()).toContain('This page could not be found');
 
       const previewRes = await fetch(
         `${ctx.deploymentUrl}/${locale}/preview-only-not-found`,
