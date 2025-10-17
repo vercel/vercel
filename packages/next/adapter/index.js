@@ -34126,7 +34126,7 @@ var prettyBytes = (n) => (0, import_bytes.default)(n, { unitSeparator: " " });
 // src/constants.ts
 var MAX_AGE_ONE_YEAR = 31536e3;
 var EDGE_FUNCTION_SIZE_LIMIT = 1024 * 1024;
-var INTERNAL_PAGES = ["_app.js", "_error.js", "_document.js"];
+var INTERNAL_PAGES = ["_app", "_error", "_document"];
 
 // src/utils.ts
 var import_picomatch = __toESM2(require_picomatch2());
@@ -34591,7 +34591,7 @@ async function handleNodeOutputs(nodeOutputs, {
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
         files[relPath] = import_node_path.default.posix.relative(repoRoot, fsPath);
       }
-      files[import_node_path.default.posix.relative(projectDir, output.filePath)] = import_node_path.default.posix.relative(repoRoot, output.filePath);
+      files[import_node_path.default.posix.relative(repoRoot, output.filePath)] = import_node_path.default.posix.relative(repoRoot, output.filePath);
       if (output.type === import_constants2.AdapterOutputType.PAGES) {
         const notFoundOutput = pages404Output || pagesErrorOutput;
         if (notFoundOutput) {
@@ -34600,7 +34600,7 @@ async function handleNodeOutputs(nodeOutputs, {
           )) {
             files[relPath] = import_node_path.default.posix.relative(repoRoot, fsPath);
           }
-          files[import_node_path.default.posix.relative(projectDir, notFoundOutput.filePath)] = import_node_path.default.posix.relative(repoRoot, notFoundOutput.filePath);
+          files[import_node_path.default.posix.relative(repoRoot, notFoundOutput.filePath)] = import_node_path.default.posix.relative(repoRoot, notFoundOutput.filePath);
         }
       }
       const handlerFilePath = import_node_path.default.join(
