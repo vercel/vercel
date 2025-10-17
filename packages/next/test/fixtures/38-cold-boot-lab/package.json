@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "https://files-idtukg22b-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-cvyic5gzn-vtest314-ijjk-testing.vercel.app",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   }

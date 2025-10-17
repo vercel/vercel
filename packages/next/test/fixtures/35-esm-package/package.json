@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "https://files-idtukg22b-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-cvyic5gzn-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   }
