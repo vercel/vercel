@@ -138,7 +138,7 @@ const fixtures: Record<
     handler: ['out', 'index.js'],
     moduleType: 'esm',
     projectSettings: {
-      outputDirectory: 'dist',
+      outputDirectory: 'out',
     },
   },
 };
