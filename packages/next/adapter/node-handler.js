@@ -69,7 +69,6 @@ export const getHandlerSource = (ctx) => `
       return pathname;
     }
     pathname = pathname.replace(/\/_next\/data\/[^/]{1,}/, "").replace(/\.json$/, "");
-    pathname = normalizeLocalePath(req, pathname, i18n?.locales);
     if (pathname === "/index") {
       return "/";
     }
@@ -85,16 +84,19 @@ export const getHandlerSource = (ctx) => `
     ]) {
       urlPathname = urlPathname.replace(suffixRegex, "");
     }
+    const urlPathnameWithLocale = urlPathname;
     urlPathname = normalizeLocalePath(req, urlPathname, i18n?.locales);
     console.log("after normalize", urlPathname);
     urlPathname = urlPathname.replace(/\/$/, "") || "/";
     for (const route of [...staticRoutes, ...dynamicRoutes]) {
       if (route.regex.test(urlPathname)) {
         const fallbackFalseMap = prerenderFallbackFalseMap[route.page];
-        if (fallbackFalseMap && !fallbackFalseMap.includes(urlPathname)) {
+        if (fallbackFalseMap && !(fallbackFalseMap.includes(urlPathname) || fallbackFalseMap.includes(urlPathnameWithLocale))) {
           console.log("fallback: false but not prerendered", {
             page: route.page,
-            urlPathname
+            urlPathname,
+            urlPathnameWithLocale,
+            paths: Object.values(fallbackFalseMap)
           });
           continue;
         }
