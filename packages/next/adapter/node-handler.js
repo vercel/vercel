@@ -4,6 +4,8 @@ export const getHandlerSource = (ctx) => `
   require('next/dist/server/node-polyfill-crypto');
   
   try {
+    // this can fail to install if styled-jsx is not discoverable
+    // but this is tolerable as the require-hook is handling edge cases
     require('next/dist/server/require-hook');
   } catch (_) {}
   
