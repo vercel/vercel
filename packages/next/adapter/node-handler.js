@@ -155,6 +155,11 @@ export const getHandlerSource = (ctx) => `
       }
       const page = matchUrlToPage(req, urlPathname);
       const isAppDir = page.match(/\/(page|route)$/);
+      console.log("invoking handler", {
+        page,
+        url: req.url,
+        matchedPath: req.headers["x-matched-path"]
+      });
       const mod = require(
         "./" + path.posix.join(
           relativeDistDir,
