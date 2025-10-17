@@ -34761,6 +34761,7 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
   return nodeOutputs.filter((output) => !prerenderParentIds.has(output.id));
 }
 async function handleEdgeOutputs(edgeOutputs, {
+  config,
   repoRoot,
   projectDir,
   nextVersion,
@@ -34787,13 +34788,12 @@ async function handleEdgeOutputs(edgeOutputs, {
       ];
       const params = {
         name: "middleware",
-        // This would typically come from the output config
         staticRoutes: [],
-        // These would come from Next.js routing info
         dynamicRoutes: [],
-        // These would come from Next.js routing info
-        nextConfig: null
-        // This would come from next.config.js
+        nextConfig: {
+          basePath: config.basePath,
+          i18n: config.i18n
+        }
       };
       const edgeSourceObj = await getNextjsEdgeFunctionSource(
         filePaths,
@@ -35019,7 +35019,8 @@ var myAdapter = {
       repoRoot,
       projectDir,
       vercelOutputDir,
-      nextVersion
+      nextVersion,
+      config
     });
     let middlewareRoutes = [];
     if (outputs.middleware) {
