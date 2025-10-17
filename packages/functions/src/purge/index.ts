@@ -20,3 +20,11 @@ export const dangerouslyDeleteByTag = (
   }
   return Promise.resolve();
 };
+
+export const addCacheTag = (tag: string | string[]) => {
+  const api = getContext().purge;
+  if (api) {
+    return api.addCacheTag(tag);
+  }
+  return Promise.resolve();
+};

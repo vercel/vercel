@@ -19,6 +19,7 @@
 - [getCache](index.md#getcache)
 - [getEnv](index.md#getenv)
 - [invalidateByTag](index.md#invalidatebytag)
+- [addCacheTag] (index.md#addcachetag)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
@@ -255,6 +256,26 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 #### Defined in
 
 [packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L5)
+
+---
+
+### addCacheTag
+
+▸ **addCacheTag**(`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name  | Type                   |
+| :---- | :--------------------- |
+| `tag` | `string` \| `string`[] |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L24)
 
 ---
 
