@@ -8,6 +8,7 @@ export const getHandlerSource = (ctx) => `
   module.exports = (${(() => {
   const path = require("path");
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
+  const prerenderFallbackFalseMap = process.env.__PRIVATE_PRERENDER_FALLBACK_MAP;
   const {
     dynamicRoutes: dynamicRoutesRaw,
     staticRoutes: staticRoutesRaw,
@@ -82,15 +83,22 @@ export const getHandlerSource = (ctx) => `
     }
     urlPathname = normalizeLocalePath(req, urlPathname, i18n?.locales);
     console.log("after normalize", urlPathname);
-    const getPathnameNoSlash = (urlPathname2) => urlPathname2.replace(/\/$/, "") || "/";
+    urlPathname = urlPathname.replace(/\/$/, "") || "/";
     for (const route of [...staticRoutes, ...dynamicRoutes]) {
       if (route.regex.test(urlPathname)) {
+        const fallbackFalseMap = prerenderFallbackFalseMap[route.page];
+        if (fallbackFalseMap && !fallbackFalseMap.includes(urlPathname)) {
+          console.log("fallback: false but not prerendered", {
+            page: route.page,
+            urlPathname
+          });
+          continue;
+        }
         console.log("matched route", route, urlPathname);
         return inversedAppRoutesManifest[route.page] || route.page;
       }
     }
-    const pathnameNoSlash = getPathnameNoSlash(urlPathname);
-    return inversedAppRoutesManifest[pathnameNoSlash] || pathnameNoSlash;
+    return inversedAppRoutesManifest[urlPathname] || urlPathname;
   }
   const SYMBOL_FOR_REQ_CONTEXT = Symbol.for("@vercel/request-context");
   function getRequestContext() {
@@ -158,4 +166,7 @@ export const getHandlerSource = (ctx) => `
 }).toString()})()`.replaceAll(
   "process.env.__PRIVATE_RELATIVE_DIST_DIR",
   `"${ctx.projectRelativeDistDir}"`
+).replaceAll(
+  "process.env.__PRIVATE_PRERENDER_FALLBACK_MAP",
+  JSON.stringify(ctx.prerenderFallbackFalseMap)
 );

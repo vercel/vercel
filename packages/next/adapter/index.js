@@ -28096,9 +28096,9 @@ var require_interop_require_default = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
+// ../../node_modules/.pnpm/next@https+++files-jx5qedrzw-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
 var require_modern_browserslist_target = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-jx5qedrzw-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
     "use strict";
     var MODERN_BROWSERSLIST_TARGET = [
       "chrome 111",
@@ -28110,9 +28110,9 @@ var require_modern_browserslist_target = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
+// ../../node_modules/.pnpm/next@https+++files-jx5qedrzw-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
 var require_entry_constants = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
+  "../../node_modules/.pnpm/next@https+++files-jx5qedrzw-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -28144,9 +28144,9 @@ var require_entry_constants = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
+// ../../node_modules/.pnpm/next@https+++files-jx5qedrzw-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
 var require_constants2 = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-idtukg22b-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-jx5qedrzw-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -34565,6 +34565,7 @@ async function handleNodeOutputs(nodeOutputs, {
   repoRoot,
   projectDir,
   nextVersion,
+  prerenderFallbackFalseMap,
   vercelOutputDir
 }) {
   const nodeVersion = await (0, import_build_utils.getNodeVersion)(projectDir, void 0, {}, {});
@@ -34617,7 +34618,8 @@ async function handleNodeOutputs(nodeOutputs, {
       await import_fs_extra10.default.writeFile(
         handlerFilePath,
         (0, import_node_handler.getHandlerSource)({
-          projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir)
+          projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir),
+          prerenderFallbackFalseMap
         })
       );
       const operationType = output.type === import_constants2.AdapterOutputType.APP_PAGE || import_constants2.AdapterOutputType.PAGES ? "PAGE" : "API";
@@ -34665,7 +34667,8 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
   repoRoot,
   projectDir,
   nextVersion,
-  vercelOutputDir
+  vercelOutputDir,
+  prerenderFallbackFalseMap
 }) {
   const nodeOutputsParentMap = /* @__PURE__ */ new Map();
   const prerenderParentIds = /* @__PURE__ */ new Set();
@@ -34702,7 +34705,8 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
           repoRoot,
           projectDir,
           nextVersion,
-          vercelOutputDir
+          vercelOutputDir,
+          prerenderFallbackFalseMap
         });
         const initialHeaders = Object.assign(
           {},
@@ -34993,7 +34997,7 @@ var myAdapter = {
       vercelConfig: vercelConfig2,
       vercelOutputDir
     });
-    let nodeOutputs = [];
+    const nodeOutputsMap = {};
     const edgeOutputs = [];
     let has404Output = false;
     let has500Output = false;
@@ -35010,11 +35014,12 @@ var myAdapter = {
         has500Output = true;
       }
       if (output.runtime === "nodejs") {
-        nodeOutputs.push(output);
+        nodeOutputsMap[output.id] = output;
       } else if (output.runtime === "edge") {
         edgeOutputs.push(output);
       }
     }
+    let nodeOutputs = Object.values(nodeOutputsMap);
     for (const output of outputs.staticFiles) {
       if (output.pathname.endsWith("/404")) {
         has404Output = true;
@@ -35030,6 +35035,25 @@ var myAdapter = {
       nextVersion,
       config
     });
+    const prerenderFallbackFalseMap = {};
+    for (const prerender of outputs.prerenders) {
+      if (prerender.parentFallbackMode === false && !prerender.pathname.includes("_next/data") && !prerender.pathname.endsWith(".rsc")) {
+        const parentOutput = nodeOutputsMap[prerender.parentOutputId];
+        if (!parentOutput) {
+          throw new Error(
+            `Invariant: missing parent output ${prerender.parentOutputId} for prerender ${JSON.stringify(prerender)}`
+          );
+        }
+        const parentPage = parentOutput.pathname.substring(
+          config.basePath.length
+        );
+        let currentMap = prerenderFallbackFalseMap[parentPage];
+        if (!currentMap) {
+          currentMap = prerenderFallbackFalseMap[parentPage] = [];
+        }
+        currentMap.push(prerender.pathname.substring(config.basePath.length));
+      }
+    }
     let middlewareRoutes = [];
     if (outputs.middleware) {
       middlewareRoutes = await handleMiddleware(outputs.middleware, {
@@ -35038,7 +35062,8 @@ var myAdapter = {
         repoRoot,
         projectDir,
         vercelOutputDir,
-        nextVersion
+        nextVersion,
+        prerenderFallbackFalseMap
       });
     }
     nodeOutputs = await handlePrerenderOutputs(
@@ -35050,7 +35075,8 @@ var myAdapter = {
         repoRoot,
         projectDir,
         nextVersion,
-        vercelOutputDir
+        vercelOutputDir,
+        prerenderFallbackFalseMap
       }
     );
     await handleNodeOutputs(nodeOutputs, {
@@ -35059,7 +35085,8 @@ var myAdapter = {
       repoRoot,
       projectDir,
       nextVersion,
-      vercelOutputDir
+      vercelOutputDir,
+      prerenderFallbackFalseMap
     });
     const shouldHandlePrefetchRsc = Boolean(
       config.experimental.cacheComponents
