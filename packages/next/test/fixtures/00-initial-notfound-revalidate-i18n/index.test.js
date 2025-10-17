@@ -44,13 +44,13 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const dataRes = await fetch(
         `${ctx.deploymentUrl}/_next/data/testing-build-id/${locale}/preview-only-not-found.json`
       );
-      expect(await dataRes.text()).toContain('This page could not be found');
+      expect(await dataRes.text()).toContain('{\"notFound\":true}');
 
       const res = await fetch(
         `${ctx.deploymentUrl}/${locale}/preview-only-not-found`
       );
       expect(res.status).toBe(404);
-      expect(await res.text()).toContain('This page could not be found');
+      expect(await res.text()).toContain('{\"notFound\":true}');
 
       const previewRes = await fetch(
         `${ctx.deploymentUrl}/${locale}/preview-only-not-found`,

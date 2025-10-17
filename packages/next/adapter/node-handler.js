@@ -131,6 +131,11 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
   };
   return async function handler(req, res) {
     try {
+      addRequestMeta(
+        req,
+        "relativeProjectDir",
+        process.env.__PRIVATE_RELATIVE_PROJECT_DIR
+      );
       let urlPathname = req.headers["x-matched-path"];
       if (typeof urlPathname !== "string") {
         console.log("no x-matched-path", { url: req.url });
@@ -155,10 +160,10 @@ export const getHandlerSource = (ctx) => `module.exports = (${(() => {
       throw error;
     }
   };
-}).toString()})()`.replace(
+}).toString()})()`.replaceAll(
   "process.env.__PRIVATE_RELATIVE_DIST_DIR",
   `"${ctx.projectRelativeDistDir}"`
-).replace(
+).replaceAll(
   "process.env.__PRIVATE_RELATIVE_PROJECT_DIR",
   `"${ctx.relativeProjectDir}"`
 );
