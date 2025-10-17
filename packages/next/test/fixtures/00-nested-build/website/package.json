@@ -2,7 +2,7 @@
   "name": "website",
   "private": true,
   "dependencies": {
-    "next": "https://files-4245qz879-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-m97fdcgub-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   },
