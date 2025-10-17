@@ -34795,7 +34795,7 @@ async function handleEdgeOutputs(edgeOutputs, {
         )
       ];
       const params = {
-        name: output.id,
+        name: output.id.replace(/\.rsc$/, ""),
         staticRoutes: [],
         dynamicRoutes: [],
         nextConfig: {
@@ -35460,21 +35460,51 @@ var myAdapter = {
         }
       },
       // if i18n is enabled attempt removing locale prefix to check public files
-      ...config.i18n && config.i18n.localeDetection !== false ? [
+      // remove locale prefixes to check public files and
+      // to allow checking non-prefixed lambda outputs
+      ...config.i18n ? [
+        // When `skipDefaultLocaleRewrite` is flagged on and localeDetection is disabled,
+        // we only want to add the rewrite as the fallback case once routing is complete.
+        ...config.i18n?.localeDetection === false ? [
+          {
+            src: `^${import_node_path2.default.posix.join("/", config.basePath)}$`,
+            dest: `${import_node_path2.default.posix.join(
+              "/",
+              config.basePath,
+              config.i18n.defaultLocale
+            )}`,
+            check: true
+          },
+          // Auto-prefix non-locale path with default locale
+          // note for prerendered pages this will cause
+          // x-now-route-matches to contain the path minus the locale
+          // e.g. for /de/posts/[slug] x-now-route-matches would have
+          // 1=posts%2Fpost-1
+          {
+            src: `^${import_node_path2.default.posix.join(
+              "/",
+              config.basePath,
+              "/"
+            )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(?:/.*|$))(.*)$`,
+            dest: `${import_node_path2.default.posix.join(
+              "/",
+              config.basePath,
+              config.i18n.defaultLocale
+            )}/$1`,
+            check: true
+          }
+        ] : [],
         {
           src: import_node_path2.default.posix.join(
             "/",
             config.basePath,
-            config.i18n.defaultLocale.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+            escapeStringRegexp(config.i18n.defaultLocale)
           ),
           dest: "/",
           check: true
         },
         {
-          src: `^${import_node_path2.default.posix.join(
-            "/",
-            config.basePath
-          )}/?(?:${config.i18n.locales.map((locale) => locale.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})/(.*)`,
+          src: `^${import_node_path2.default.posix.join("/", config.basePath)}/?(?:${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})/(.*)`,
           dest: `${import_node_path2.default.posix.join("/", config.basePath, "/")}$1`,
           check: true
         }
