@@ -1,9 +1,9 @@
 {
   "functions": {
-    "pages/api/pages/bun.ts": {
+    "pages/api/pages/bun.js": {
       "runtime": "@vercel/bun"
     },
-    "app/api/app/bun/route.ts": {
+    "app/api/app/bun/route.js": {
       "runtime": "@vercel/bun"
     }
   },
