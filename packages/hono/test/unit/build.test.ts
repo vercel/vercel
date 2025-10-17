@@ -63,7 +63,17 @@ const readDirectoryRecursively = (dirPath: string, basePath = ''): string[] => {
   return files;
 };
 
-const fixtures = {
+const fixtures: Record<
+  string,
+  {
+    handler: string[];
+    moduleType: 'cjs' | 'esm';
+    projectSettings?: {
+      outputDirectory?: string;
+    };
+    routes?: { dest: string }[];
+  }
+> = {
   '01-index-js-no-module': {
     handler: ['index.js'],
     moduleType: 'cjs',
@@ -124,6 +134,13 @@ const fixtures = {
     handler: ['index.cjs'],
     moduleType: 'cjs',
   },
+  '15-output-dir-indirect-import': {
+    handler: ['out', 'index.js'],
+    moduleType: 'esm',
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
@@ -139,7 +156,13 @@ describe('build', () => {
       const result = await build({
         files,
         workPath,
-        config,
+        config: {
+          ...config,
+          projectSettings: {
+            ...config.projectSettings,
+            ...fixtureConfig.projectSettings,
+          },
+        },
         meta,
         // Entrypoint is just used as the BOA function name
         entrypoint: 'this value is not used',
