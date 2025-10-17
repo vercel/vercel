@@ -1,8 +1,12 @@
 "use strict";
 export const getHandlerSource = (ctx) => `
   require('next/dist/server/node-environment');
-  require('next/dist/server/require-hook');
   require('next/dist/server/node-polyfill-crypto');
+  
+  try {
+    require('next/dist/server/require-hook');
+  } catch (_) {}
+  
   process.chdir(__dirname);
   
   module.exports = (${(() => {
