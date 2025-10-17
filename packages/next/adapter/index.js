@@ -35108,7 +35108,19 @@ var myAdapter = {
       });
     }
     const dynamicRoutes = [];
+    let addedNextData404Route = false;
     for (const route of routes.dynamicRoutes) {
+      if (hasPagesDir && !hasMiddleware) {
+        if (!route.sourceRegex.includes("_next/data") && !addedNextData404Route) {
+          addedNextData404Route = true;
+          dynamicRoutes.push({
+            src: import_node_path2.default.posix.join("/", config.basePath || "", "_next/data/(.*)"),
+            dest: import_node_path2.default.posix.join("/", config.basePath || "", "404"),
+            status: 404,
+            check: true
+          });
+        }
+      }
       dynamicRoutes.push({
         src: route.sourceRegex,
         dest: route.destination,
@@ -35360,6 +35372,8 @@ var myAdapter = {
         false
       ),
       ...!hasMiddleware ? [
+        // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
+        // if no match to prevent rewriting _next/data unexpectedly
         {
           src: import_node_path2.default.posix.join("/", config.basePath, "_next/data/(.*)"),
           dest: import_node_path2.default.posix.join("/", config.basePath, "_next/data/$1"),
