@@ -1,13 +1,12 @@
 "use strict";
 export const getHandlerSource = (ctx) => `
+  require('next/dist/server/node-environment');
+  require('next/dist/server/require-hook');
+  require('next/dist/server/node-polyfill-crypto');
   process.chdir(__dirname);
   
   module.exports = (${(() => {
   const path = require("path");
-  if (typeof globalThis.AsyncLocalStorage !== "function") {
-    const { AsyncLocalStorage } = require("async_hooks");
-    globalThis.AsyncLocalStorage = AsyncLocalStorage;
-  }
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
   const {
     dynamicRoutes: dynamicRoutesRaw,
