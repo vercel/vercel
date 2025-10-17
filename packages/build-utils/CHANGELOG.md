@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Revert the prebuilt archive split from 20MB back to 100MB ([#14087](https://github.com/vercel/vercel/pull/14087))
+- Revert the prebuilt archive split from 20MB back to 100MB ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ## 12.1.2
 

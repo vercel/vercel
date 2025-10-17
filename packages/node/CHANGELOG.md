@@ -4,11 +4,11 @@
 
 ### Minor Changes
 
-- Add vc dev support for NestJS ([#14080](https://github.com/vercel/vercel/pull/14080))
+- Add vc dev support for NestJS ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ### Patch Changes
 
-- Updated dependencies [[`a16adfbf0ed1b9272951b01923080990e558ac2d`](https://github.com/vercel/vercel/commit/a16adfbf0ed1b9272951b01923080990e558ac2d)]:
+- Updated dependencies [[`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c)]:
   - @vercel/build-utils@12.1.3
 
 ## 5.3.26

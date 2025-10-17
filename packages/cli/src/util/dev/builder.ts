@@ -433,7 +433,10 @@ export async function getBuildMatches(
       src = 'package.json';
     }
 
-    if (buildConfig.config?.framework === 'fastapi') {
+    if (
+      buildConfig.config?.framework === 'fastapi' ||
+      buildConfig.config?.framework === 'flask'
+    ) {
       // Mirror @vercel/python's entrypoint candidates
       const candidateDirs = ['', 'src', 'app'];
       const candidateNames = ['app', 'index', 'server', 'main'];

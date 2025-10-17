@@ -1,16 +1,29 @@
 # vercel
 
+## 48.4.0
+
+### Minor Changes
+
+- Add nestjs example ([#14063](https://github.com/vercel/vercel/pull/14063))
+
+### Patch Changes
+
+- Collect contact information when purchasing domains ([#14106](https://github.com/vercel/vercel/pull/14106))
+
+- Updated dependencies [[`71b1f42168ea4a9fdd9b312d76b9ec79e3155e91`](https://github.com/vercel/vercel/commit/71b1f42168ea4a9fdd9b312d76b9ec79e3155e91)]:
+  - @vercel/next@4.13.4
+
 ## 48.3.0
 
 ### Minor Changes
 
-- Add vc dev support for NestJS ([#14080](https://github.com/vercel/vercel/pull/14080))
+- Add vc dev support for NestJS ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ### Patch Changes
 
-- Fix vc init express ([#14088](https://github.com/vercel/vercel/pull/14088))
+- Fix vc init express ([#14103](https://github.com/vercel/vercel/pull/14103))
 
-- Updated dependencies [[`cb6bd5a1e180847994964e0a3f44f765083deec5`](https://github.com/vercel/vercel/commit/cb6bd5a1e180847994964e0a3f44f765083deec5), [`a16adfbf0ed1b9272951b01923080990e558ac2d`](https://github.com/vercel/vercel/commit/a16adfbf0ed1b9272951b01923080990e558ac2d), [`444cd480027bd38815f55075e2dac400493faee2`](https://github.com/vercel/vercel/commit/444cd480027bd38815f55075e2dac400493faee2)]:
+- Updated dependencies [[`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c), [`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c), [`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c), [`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c)]:
   - @vercel/python@5.0.10
   - @vercel/build-utils@12.1.3
   - @vercel/node@5.4.0

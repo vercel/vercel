@@ -2333,7 +2333,7 @@ export const frameworks = [
       'Nitro lets you create web servers that run on multiple platforms.',
     website: 'https://nitro.build/',
     detectors: {
-      every: [{ matchPackage: 'nitropack' }],
+      some: [{ matchPackage: 'nitropack' }, { matchPackage: 'nitro' }],
     },
     settings: {
       installCommand: {
@@ -2351,7 +2351,6 @@ export const frameworks = [
         value: 'dist',
       },
     },
-    dependency: 'nitropack',
     getOutputDirName: async () => 'public',
   },
   {
@@ -3077,6 +3076,36 @@ export const frameworks = [
         },
         {
           path: 'src/main.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'main.mts',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
         },
