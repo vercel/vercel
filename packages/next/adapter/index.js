@@ -35232,35 +35232,33 @@ var myAdapter = {
         // We only want to add these rewrites before user redirects
         // when `skipDefaultLocaleRewrite` is not flagged on
         // and when localeDetection is enabled.
-        ...config.i18n.localeDetection !== false ? [
-          {
-            src: `^${import_node_path2.default.posix.join("/", config.basePath)}$`,
-            dest: `${import_node_path2.default.posix.join(
-              "/",
-              config.basePath,
-              config.i18n.defaultLocale
-            )}`,
-            continue: true
-          },
-          // Auto-prefix non-locale path with default locale
-          // note for prerendered pages this will cause
-          // x-now-route-matches to contain the path minus the locale
-          // e.g. for /de/posts/[slug] x-now-route-matches would have
-          // 1=posts%2Fpost-1
-          {
-            src: `^${import_node_path2.default.posix.join(
-              "/",
-              config.basePath,
-              "/"
-            )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(?:/.*|$))(.*)$`,
-            dest: `${import_node_path2.default.posix.join(
-              "/",
-              config.basePath,
-              config.i18n.defaultLocale
-            )}/$1`,
-            continue: true
-          }
-        ] : []
+        {
+          src: `^${import_node_path2.default.posix.join("/", config.basePath)}$`,
+          dest: `${import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            config.i18n.defaultLocale
+          )}`,
+          continue: true
+        },
+        // Auto-prefix non-locale path with default locale
+        // note for prerendered pages this will cause
+        // x-now-route-matches to contain the path minus the locale
+        // e.g. for /de/posts/[slug] x-now-route-matches would have
+        // 1=posts%2Fpost-1
+        {
+          src: `^${import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            "/"
+          )}(?!(?:_next/.*|${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(?:/.*|$))(.*)$`,
+          dest: `${import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            config.i18n.defaultLocale
+          )}/$1`,
+          continue: true
+        }
       ] : [],
       ...headers,
       ...redirects,
