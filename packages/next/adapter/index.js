@@ -34501,13 +34501,18 @@ var copy = async (src, dest) => {
   await import_fs_extra10.default.remove(dest);
   await import_fs_extra10.default.copy(src, dest);
 };
-async function handlePublicFiles(publicFolder, vercelOutputDir) {
+async function handlePublicFiles(publicFolder, vercelOutputDir, config) {
   const topLevelItems = await import_fs_extra10.default.readdir(publicFolder).catch(() => []);
   const fsSema = new import_async_sema5.Sema(16, { capacity: topLevelItems.length });
   await Promise.all(
     topLevelItems.map(async (item) => {
       await fsSema.acquire();
-      const destination = import_node_path.default.join(vercelOutputDir, "static", item);
+      const destination = import_node_path.default.join(
+        vercelOutputDir,
+        "static",
+        config.basePath || "",
+        item
+      );
       const destDirectory = import_node_path.default.dirname(destination);
       await import_fs_extra10.default.mkdir(destDirectory, { recursive: true });
       await copy(import_node_path.default.join(publicFolder, item), destination);
@@ -34979,7 +34984,11 @@ var myAdapter = {
       }) : void 0,
       images: getImagesConfig(config)
     };
-    await handlePublicFiles(import_node_path2.default.join(projectDir, "public"), vercelOutputDir);
+    await handlePublicFiles(
+      import_node_path2.default.join(projectDir, "public"),
+      vercelOutputDir,
+      config
+    );
     await handleStaticOutputs(outputs.staticFiles, {
       config,
       vercelConfig: vercelConfig2,
