@@ -34787,7 +34787,7 @@ async function handleEdgeOutputs(edgeOutputs, {
         )
       ];
       const params = {
-        name: "middleware",
+        name: output.id,
         staticRoutes: [],
         dynamicRoutes: [],
         nextConfig: {
