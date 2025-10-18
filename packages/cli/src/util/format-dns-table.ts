@@ -1,7 +1,7 @@
 import table from './output/table';
-import { gray } from 'chalk';
+import chalk from 'chalk';
 
-const HEADER = ['name', 'type', 'value'].map(v => gray(v));
+const HEADER = ['name', 'type', 'value'].map(v => chalk.gray(v));
 
 export default function formatDNSTable(rows: string[][]) {
   return table([HEADER, ...rows], { hsep: 8 });
