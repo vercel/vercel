@@ -3,5 +3,8 @@
     "next": "https://files-5c61x91ii-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
+  },
+  "scripts": {
+    "build": "next build --webpack"
   }
 }
