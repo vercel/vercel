@@ -8,6 +8,7 @@ import {
   getNextConfig,
   getServerlessPages,
   normalizePrefetches,
+  shouldUseBunRuntime,
 } from '../../src/utils';
 import { FileFsRef, FileRef } from '@vercel/build-utils';
 import { genDir } from '../utils';
@@ -439,5 +440,73 @@ describe('normalizePrefetches', () => {
       'foo/index.prefetch.rsc',
       'foo/bar/baz.prefetch.rsc',
     ]);
+  });
+});
+
+describe('shouldUseBunRuntime', () => {
+  it('should return false when no functions config', () => {
+    const sourceFile = 'api/index.ts';
+    const config = {};
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(false);
+  });
+
+  it('should return false when functions config exists but no matching pattern', () => {
+    const sourceFile = 'api/index.ts';
+    const config = {
+      functions: {
+        'api/other.ts': { runtime: '@vercel/bun' },
+      },
+    };
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(false);
+  });
+
+  it('should return true when exact match with @vercel/bun runtime', () => {
+    const sourceFile = 'api/index.ts';
+    const config = {
+      functions: {
+        'api/index.ts': { runtime: '@vercel/bun' },
+      },
+    };
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(true);
+  });
+
+  it('should return true when glob pattern matches with @vercel/bun runtime', () => {
+    const sourceFile = 'api/user.ts';
+    const config = {
+      functions: {
+        'api/*.ts': { runtime: '@vercel/bun' },
+      },
+    };
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(true);
+  });
+
+  it('should return false when pattern matches but runtime is not @vercel/bun', () => {
+    const sourceFile = 'api/index.ts';
+    const config = {
+      functions: {
+        'api/*.ts': { runtime: 'nodejs20.x' },
+      },
+    };
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(false);
+  });
+
+  it('should return true for middleware with exact match', () => {
+    const sourceFile = 'src/middleware.ts';
+    const config = {
+      functions: {
+        'src/middleware.ts': { runtime: '@vercel/bun' },
+      },
+    };
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(true);
+  });
+
+  it('should return true for root middleware', () => {
+    const sourceFile = 'middleware.ts';
+    const config = {
+      functions: {
+        'middleware.ts': { runtime: '@vercel/bun' },
+      },
+    };
+    expect(shouldUseBunRuntime(sourceFile, config)).toBe(true);
   });
 });

@@ -508,6 +508,13 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
+  const isStaticConfigBun = runtime === 'bun';
+  // The functions config is already filtered to only the current entrypoint
+  const isBuilderBun = Object.values(config.functions ?? {}).some(
+    func => func.runtime === '@vercel/bun'
+  );
+  const isBun = !isEdgeFunction && (isStaticConfigBun || isBuilderBun);
+
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -599,7 +606,7 @@ export const build = async ({
       files: preparedFiles,
       handler,
       architecture: staticConfig?.architecture,
-      runtime: nodeVersion.runtime,
+      runtime: isBun ? 'bun1.x' : nodeVersion.runtime,
       useWebApi: isMiddleware ? true : useWebApi,
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,

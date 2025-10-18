@@ -87,7 +87,7 @@ it('should throw an error for an unsupported runtime', async () => {
       meta: { skipDownload: true },
     })
   ).rejects.toThrow(
-    'middleware.js: unsupported "runtime" value in `config`: "invalid" (must be one of: ["edge","experimental-edge","nodejs"])'
+    'middleware.js: unsupported "runtime" value in `config`: "invalid" (must be one of: ["edge","experimental-edge","nodejs","bun"])'
   );
 });
 

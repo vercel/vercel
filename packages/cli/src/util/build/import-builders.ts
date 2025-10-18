@@ -76,12 +76,17 @@ export async function resolveBuilders(
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
 
-    const { name } = parsed;
+    let { name } = parsed;
     if (!name) {
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file
       buildersToAdd.add(spec);
       continue;
+    }
+
+    // `@vercel/bun` is a special builder that transparently maps to `@vercel/node`
+    if (name === '@vercel/bun') {
+      name = '@vercel/node';
     }
 
     if (isStaticRuntime(name)) {

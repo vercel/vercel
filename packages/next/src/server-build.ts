@@ -1362,7 +1362,7 @@ export async function serverBuild({
         ),
         operationType,
         memory: group.memory,
-        runtime: nodeVersion.runtime,
+        runtime: group.runtime === 'bun' ? 'bun1.x' : nodeVersion.runtime,
         maxDuration: group.maxDuration,
         supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,

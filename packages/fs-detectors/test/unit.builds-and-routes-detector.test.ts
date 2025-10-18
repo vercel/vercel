@@ -591,6 +591,18 @@ describe('Test `detectBuilders`', () => {
     expect(errors[0].code).toBe('invalid_function_runtime');
   });
 
+  it('use @vercel/bun runtime', async () => {
+    const functions = { 'api/index.ts': { runtime: '@vercel/bun' } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toHaveLength(1);
+    expect(builders[0].use).toBe('@vercel/bun');
+    expect(errors).toHaveLength(0);
+  });
+
   it('use a custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
@@ -1952,6 +1964,19 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toHaveLength(0);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_runtime');
+  });
+
+  it('use @vercel/bun runtime', async () => {
+    const functions = { 'api/index.ts': { runtime: '@vercel/bun' } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+      featHandleMiss,
+    });
+
+    expect(builders).toHaveLength(1);
+    expect(builders[0].use).toBe('@vercel/bun');
+    expect(errors).toHaveLength(0);
   });
 
   it('use a custom runtime', async () => {
