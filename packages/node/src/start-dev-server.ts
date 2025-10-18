@@ -186,12 +186,18 @@ export const startDevServer: StartDevServer = async opts => {
         }
       } else {
         // For Node.js runtime using fork(), use IPC
-        child.send('shutdown', async err => {
-          if (err) {
-            // The process might have already exited, for example, if the application
-            // handler threw an error. Try terminating the process to be sure.
-            await treeKill(pid);
-          }
+        await new Promise<void>((resolve, reject) => {
+          child.send('shutdown', err => {
+            if (err) {
+              // The process might have already exited, for example, if the application
+              // handler threw an error. Try terminating the process to be sure.
+              treeKill(pid)
+                .then(() => resolve())
+                .catch(killErr => reject(killErr));
+            } else {
+              resolve();
+            }
+          });
         });
       }
     };

@@ -64,8 +64,8 @@ export async function forkDevServer(options: {
         if (portMatch) {
           const port = parseInt(portMatch[1], 10);
           child.emit('message', { port }, null);
-          buffer = '';
         }
+        buffer = '';
       } else {
         // Still log other stdout data
         console.log(output);
