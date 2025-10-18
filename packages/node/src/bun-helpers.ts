@@ -79,5 +79,19 @@ export async function getOrCreateBunBinary(): Promise<string> {
     throw new Error(`Failed to install Bun: ${error}`);
   }
 
-  return installPath;
+  try {
+    const exitCode = await spawnAsync(installPath, ['--version'], {
+      stdio: 'ignore',
+    });
+    if (exitCode === 0) {
+      debug('Bun was installed successfully');
+      return installPath;
+    }
+  } catch {
+    // Handled below
+  }
+
+  throw new Error(
+    'Bun installation failed. Please install manually and try again.'
+  );
 }
