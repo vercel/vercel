@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-j4mkvbuj0-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   },
@@ -10,6 +10,6 @@
     "typescript": "^5.9.2"
   },
   "scripts": {
-    "vercel-build": "next build --webpack"
+    "vercel-build": "next build"
   }
 }
