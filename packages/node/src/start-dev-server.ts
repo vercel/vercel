@@ -144,7 +144,7 @@ export const startDevServer: StartDevServer = async opts => {
     tsConfig.compilerOptions.noEmit = true;
   }
 
-  const child = forkDevServer({
+  const child = await forkDevServer({
     workPath,
     config,
     entrypoint,

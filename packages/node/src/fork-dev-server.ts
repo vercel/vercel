@@ -10,8 +10,9 @@ import {
 } from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';
+import { getOrCreateBunBinary } from './bun-helpers';
 
-export function forkDevServer(options: {
+export async function forkDevServer(options: {
   tsConfig: any;
   config: Config;
   maybeTranspile: boolean;
@@ -29,13 +30,14 @@ export function forkDevServer(options: {
    * A path to the dev-server path. This is used in tests.
    */
   devServerPath?: string;
-}) {
+}): Promise<ChildProcess> {
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.mjs');
 
   let child: ChildProcess;
 
   if (options.runtime === 'bun') {
+    const bun = await getOrCreateBunBinary();
     const spawnOptions: SpawnOptions = {
       cwd: options.workPath,
       env: cloneEnv(process.env, options.meta.env, {
@@ -47,7 +49,7 @@ export function forkDevServer(options: {
       stdio: ['pipe', 'pipe', 'pipe'],
     };
 
-    child = spawn('bun', ['--bun', devServerPath], spawnOptions);
+    child = spawn(bun, ['--bun', devServerPath], spawnOptions);
 
     // Parse stdout to get the port to send requests to, since we can't use IPC with Bun. We
     // buffer the output until we find the port, then emit it back as a message
