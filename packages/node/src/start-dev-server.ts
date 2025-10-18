@@ -171,6 +171,10 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
+    if (!pid) {
+      throw new Error(`Child process exited`);
+    }
+
     // An optional callback for graceful shutdown.
     const shutdown = async () => {
       // Send a "shutdown" message to the child process. Ideally we'd use a signal
