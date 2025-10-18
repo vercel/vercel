@@ -34781,7 +34781,10 @@ async function handleEdgeOutputs(edgeOutputs, {
   await Promise.all(
     edgeOutputs.map(async (output) => {
       await fsSema.acquire();
-      const functionDir = import_node_path.default.join(functionsDir, `${output.pathname}.func`);
+      const functionDir = import_node_path.default.join(
+        functionsDir,
+        `${output.pathname === "/" ? "index" : output.pathname}.func`
+      );
       await import_fs_extra10.default.mkdir(functionDir, { recursive: true });
       const files = {};
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
@@ -34999,6 +35002,7 @@ var myAdapter = {
     });
     const nodeOutputsMap = {};
     const edgeOutputs = [];
+    let hasNotFoundOutput = false;
     let has404Output = false;
     let has500Output = false;
     for (const output of [
@@ -35007,6 +35011,9 @@ var myAdapter = {
       ...outputs.pages,
       ...outputs.pagesApi
     ]) {
+      if (output.pathname.endsWith("/_not-found")) {
+        hasNotFoundOutput = true;
+      }
       if (output.pathname.endsWith("/404")) {
         has404Output = true;
       }
@@ -35021,6 +35028,9 @@ var myAdapter = {
     }
     let nodeOutputs = Object.values(nodeOutputsMap);
     for (const output of outputs.staticFiles) {
+      if (output.pathname.endsWith("/_not-found")) {
+        hasNotFoundOutput = true;
+      }
       if (output.pathname.endsWith("/404")) {
         has404Output = true;
       }
@@ -35028,6 +35038,7 @@ var myAdapter = {
         has500Output = true;
       }
     }
+    const notFoundPath = hasNotFoundOutput ? "/_not-found" : has404Output ? "/404" : "/_error";
     await handleEdgeOutputs(edgeOutputs, {
       repoRoot,
       projectDir,
@@ -35600,14 +35611,14 @@ var myAdapter = {
       },
       { handle: "error" },
       // Custom Next.js 404 page
-      ...config.i18n && has404Output ? [
+      ...config.i18n ? [
         {
           src: `${import_node_path2.default.posix.join(
             "/",
             config.basePath,
             "/"
           )}(?<nextLocale>${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(/.*|$)`,
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale/404"),
+          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale", notFoundPath),
           status: 404,
           caseSensitive: true
         },
@@ -35616,7 +35627,8 @@ var myAdapter = {
           dest: import_node_path2.default.posix.join(
             "/",
             config.basePath,
-            `/${config.i18n.defaultLocale}/404`
+            `/${config.i18n.defaultLocale}`,
+            notFoundPath
           ),
           status: 404
         }
@@ -35633,7 +35645,7 @@ var myAdapter = {
           dest: import_node_path2.default.posix.join(
             "/",
             config.basePath,
-            has404Output ? "/404" : "/_error"
+            notFoundPath
           ),
           status: 404
         }

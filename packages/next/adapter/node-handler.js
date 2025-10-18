@@ -1,5 +1,27 @@
 "use strict";
-export const getHandlerSource = (ctx) => `
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var node_handler_exports = {};
+__export(node_handler_exports, {
+  getHandlerSource: () => getHandlerSource
+});
+module.exports = __toCommonJS(node_handler_exports);
+const getHandlerSource = (ctx) => `
   require('next/dist/server/node-environment');
   require('next/dist/server/node-polyfill-crypto');
   
@@ -19,9 +41,7 @@ export const getHandlerSource = (ctx) => `
     dynamicRoutes: dynamicRoutesRaw,
     staticRoutes: staticRoutesRaw,
     i18n
-  } = require(
-    "./" + path.posix.join(relativeDistDir, "routes-manifest.json")
-  );
+  } = require("./" + path.posix.join(relativeDistDir, "routes-manifest.json"));
   const hydrateRoutesManifestItem = (item) => {
     return {
       ...item,
@@ -32,9 +52,7 @@ export const getHandlerSource = (ctx) => `
   const staticRoutes = staticRoutesRaw.map(hydrateRoutesManifestItem);
   let appPathRoutesManifest = {};
   try {
-    appPathRoutesManifest = require(
-      "./" + path.posix.join(relativeDistDir, "app-path-routes-manifest.json")
-    );
+    appPathRoutesManifest = require("./" + path.posix.join(relativeDistDir, "app-path-routes-manifest.json"));
   } catch (_) {
   }
   const inversedAppRoutesManifest = Object.entries(
@@ -124,14 +142,10 @@ export const getHandlerSource = (ctx) => `
     async render404(req, res) {
       let mod;
       try {
-        mod = require(
-          "./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`)
-        );
+        mod = require("./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`));
         console.log("using 404.js for render404");
       } catch (_) {
-        mod = require(
-          "./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`)
-        );
+        mod = require("./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`));
         console.log("using _error for render404");
       }
       res.statusCode = 404;
@@ -160,14 +174,12 @@ export const getHandlerSource = (ctx) => `
         url: req.url,
         matchedPath: req.headers["x-matched-path"]
       });
-      const mod = require(
-        "./" + path.posix.join(
-          relativeDistDir,
-          "server",
-          isAppDir ? "app" : "pages",
-          `${page === "/" ? "index" : page}.js`
-        )
-      );
+      const mod = require("./" + path.posix.join(
+        relativeDistDir,
+        "server",
+        isAppDir ? "app" : "pages",
+        `${page === "/" ? "index" : page}.js`
+      ));
       await mod.handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
@@ -183,3 +195,7 @@ export const getHandlerSource = (ctx) => `
   "process.env.__PRIVATE_PRERENDER_FALLBACK_MAP",
   JSON.stringify(ctx.prerenderFallbackFalseMap)
 );
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  getHandlerSource
+});
