@@ -346,7 +346,7 @@ importers:
         specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.25
+        specifier: 0.0.26
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -355,10 +355,10 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/h3':
-        specifier: 0.1.5
+        specifier: 0.1.6
         version: link:../h3
       '@vercel/hono':
-        specifier: 0.1.6
+        specifier: 0.1.7
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.4
@@ -367,7 +367,7 @@ importers:
         specifier: 4.13.4
         version: link:../next
       '@vercel/node':
-        specifier: 5.4.0
+        specifier: 5.4.1
         version: link:../node
       '@vercel/python':
         specifier: 5.0.10
@@ -964,7 +964,7 @@ importers:
         specifier: 0.30.1
         version: 0.30.1
       '@vercel/node':
-        specifier: 5.4.0
+        specifier: 5.4.1
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1300,7 +1300,7 @@ importers:
   packages/h3:
     dependencies:
       '@vercel/node':
-        specifier: 5.4.0
+        specifier: 5.4.1
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1337,7 +1337,7 @@ importers:
         specifier: 0.30.1
         version: 0.30.1
       '@vercel/node':
-        specifier: 5.4.0
+        specifier: 5.4.1
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1416,7 +1416,7 @@ importers:
   packages/nestjs:
     dependencies:
       '@vercel/node':
-        specifier: 5.4.0
+        specifier: 5.4.1
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
