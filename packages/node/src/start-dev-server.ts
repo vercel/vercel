@@ -23,7 +23,6 @@ import { getRegExpFromMatchers } from './utils';
 
 const require_ = createRequire(__filename);
 const treeKill = promisify(_treeKill);
-const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 type TypescriptModule = typeof import('typescript');
 
@@ -195,6 +194,30 @@ async function doTypeCheck(
 ): Promise<void> {
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
+
+  // Resolve TypeScript compiler path using the same logic as typescript.ts
+  const resolveTypescript = (p: string): string => {
+    try {
+      return require_.resolve('typescript', {
+        paths: [p],
+      });
+    } catch (_) {
+      return '';
+    }
+  };
+
+  // Use the project's version of TypeScript if available
+  let compiler = resolveTypescript(workPath);
+  if (!compiler) {
+    // Otherwise fall back to using the copy that `@vercel/node` uses
+    compiler = resolveTypescript(join(__dirname, '..'));
+  }
+  if (!compiler) {
+    // Final fallback to global typescript
+    compiler = require_.resolve('typescript');
+  }
+
+  const tscPath = resolve(dirname(compiler), '../bin/tsc');
 
   // In order to type-check a single file, a standalone tsconfig
   // file needs to be created that inherits from the base one :(
