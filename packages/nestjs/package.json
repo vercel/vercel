@@ -1,6 +1,6 @@
 {
   "name": "@vercel/nestjs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -24,7 +24,7 @@
   ],
   "dependencies": {
     "@vercel/static-config": "3.1.2",
-    "@vercel/node": "5.4.0"
+    "@vercel/node": "5.4.1"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",

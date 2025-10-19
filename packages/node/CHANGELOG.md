@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.4.1
+
+### Patch Changes
+
+- Ensure `vc dev` uses project-level ts when available ([#14115](https://github.com/vercel/vercel/pull/14115))
+
 ## 5.4.0
 
 ### Minor Changes
