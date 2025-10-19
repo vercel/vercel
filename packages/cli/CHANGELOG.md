@@ -1,5 +1,15 @@
 # vercel
 
+## 48.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`ff370d874863bb2a00a19de4bdef3a707296b9f2`](https://github.com/vercel/vercel/commit/ff370d874863bb2a00a19de4bdef3a707296b9f2)]:
+  - @vercel/node@5.4.1
+  - @vercel/express@0.0.26
+  - @vercel/h3@0.1.6
+  - @vercel/hono@0.1.7
+
 ## 48.4.0
 
 ### Minor Changes
