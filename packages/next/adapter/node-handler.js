@@ -33,7 +33,106 @@ const getHandlerSource = (ctx) => `
   
   process.chdir(__dirname);
   
-  module.exports = (${(() => {
+  module.exports = (${ctx.isMiddleware ? () => {
+  const path = require("path");
+  const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
+  function toPlainHeaders(headers) {
+    const result = {};
+    if (!headers) return result;
+    headers.forEach((value, key) => {
+      result[key] = value;
+      if (key.toLowerCase() === "set-cookie") {
+        result[key] = splitCookiesString(value);
+      }
+    });
+    return result;
+  }
+  function splitCookiesString(cookiesString) {
+    const cookiesStrings = [];
+    let pos = 0;
+    let start;
+    let ch;
+    let lastComma;
+    let nextStart;
+    let cookiesSeparatorFound;
+    function skipWhitespace() {
+      while (pos < cookiesString.length && /\s/.test(cookiesString.charAt(pos)))
+        pos += 1;
+      return pos < cookiesString.length;
+    }
+    function notSpecialChar() {
+      ch = cookiesString.charAt(pos);
+      return ch !== "=" && ch !== ";" && ch !== ",";
+    }
+    while (pos < cookiesString.length) {
+      start = pos;
+      cookiesSeparatorFound = false;
+      while (skipWhitespace()) {
+        ch = cookiesString.charAt(pos);
+        if (ch === ",") {
+          lastComma = pos;
+          pos += 1;
+          skipWhitespace();
+          nextStart = pos;
+          while (pos < cookiesString.length && notSpecialChar()) {
+            pos += 1;
+          }
+          if (pos < cookiesString.length && cookiesString.charAt(pos) === "=") {
+            cookiesSeparatorFound = true;
+            pos = nextStart;
+            cookiesStrings.push(
+              cookiesString.substring(start, lastComma)
+            );
+            start = pos;
+          } else {
+            pos = lastComma + 1;
+          }
+        } else {
+          pos += 1;
+        }
+      }
+      if (!cookiesSeparatorFound || pos >= cookiesString.length) {
+        cookiesStrings.push(
+          cookiesString.substring(start, cookiesString.length)
+        );
+      }
+    }
+    return cookiesStrings;
+  }
+  const SYMBOL_FOR_REQ_CONTEXT = Symbol.for("@vercel/request-context");
+  function getRequestContext() {
+    const fromSymbol = globalThis;
+    return fromSymbol[SYMBOL_FOR_REQ_CONTEXT]?.get?.() ?? {};
+  }
+  return async function handler(request) {
+    function addRequestMeta(req, key, value) {
+      const NEXT_REQUEST_META = Symbol.for("NextInternalRequestMeta");
+      const meta = req[NEXT_REQUEST_META] || {};
+      meta[key] = value;
+      req[NEXT_REQUEST_META] = meta;
+      return meta;
+    }
+    addRequestMeta(request, "relativeProjectDir", ".");
+    let middlewareHandler = await require("./" + path.posix.join(relativeDistDir, "server", "middleware.js"));
+    middlewareHandler = middlewareHandler.default || middlewareHandler;
+    const context = getRequestContext();
+    const result = await middlewareHandler({
+      request: {
+        url: request.url,
+        method: request.method,
+        headers: toPlainHeaders(request.headers),
+        nextConfig: process.env.__PRIVATE_NEXT_CONFIG,
+        page: "/middleware",
+        body: request.method !== "GET" && request.method !== "HEAD" ? request.body : void 0,
+        waitUntil: context.waitUntil
+      }
+    });
+    if (result.waitUntil && context.waitUntil) {
+      context.waitUntil(result.waitUntil);
+    }
+    return result.response;
+  };
+} : (() => {
   const path = require("path");
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
   const prerenderFallbackFalseMap = process.env.__PRIVATE_PRERENDER_FALLBACK_MAP;
@@ -52,7 +151,10 @@ const getHandlerSource = (ctx) => `
   const staticRoutes = staticRoutesRaw.map(hydrateRoutesManifestItem);
   let appPathRoutesManifest = {};
   try {
-    appPathRoutesManifest = require("./" + path.posix.join(relativeDistDir, "app-path-routes-manifest.json"));
+    appPathRoutesManifest = require("./" + path.posix.join(
+      relativeDistDir,
+      "app-path-routes-manifest.json"
+    ));
   } catch (_) {
   }
   const inversedAppRoutesManifest = Object.entries(
@@ -73,7 +175,9 @@ const getHandlerSource = (ctx) => `
   }
   function normalizeLocalePath(req, pathname, locales) {
     if (!locales) return pathname;
-    const lowercasedLocales = locales.map((locale) => locale.toLowerCase());
+    const lowercasedLocales = locales.map(
+      (locale) => locale.toLowerCase()
+    );
     const segments = pathname.split("/", 2);
     if (!segments[1]) return pathname;
     const segment = segments[1].toLowerCase();
@@ -142,10 +246,20 @@ const getHandlerSource = (ctx) => `
     async render404(req, res) {
       let mod;
       try {
-        mod = await require("./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`));
+        mod = await require("./" + path.posix.join(
+          relativeDistDir,
+          "server",
+          "pages",
+          `404.js`
+        ));
         console.log("using 404.js for render404");
       } catch (_) {
-        mod = await require("./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`));
+        mod = await require("./" + path.posix.join(
+          relativeDistDir,
+          "server",
+          "pages",
+          `_error.js`
+        ));
         console.log("using _error for render404");
       }
       res.statusCode = 404;
@@ -174,12 +288,12 @@ const getHandlerSource = (ctx) => `
         url: req.url,
         matchedPath: req.headers["x-matched-path"]
       });
-      const mod = await require("./" + (Boolean(process.env.__PRIVATE_IS_MIDDLEWARE) ? path.posix.join(relativeDistDir, "server", "middleware.js") : path.posix.join(
+      const mod = await require("./" + path.posix.join(
         relativeDistDir,
         "server",
         isAppDir ? "app" : "pages",
         `${page === "/" ? "index" : page}.js`
-      )));
+      ));
       await mod.handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
@@ -195,8 +309,8 @@ const getHandlerSource = (ctx) => `
   "process.env.__PRIVATE_PRERENDER_FALLBACK_MAP",
   JSON.stringify(ctx.prerenderFallbackFalseMap)
 ).replaceAll(
-  "process.env.__PRIVATE_IS_MIDDLEWARE",
-  JSON.stringify(ctx.isMiddleware)
+  "process.env.__PRIVATE_NEXT_CONFIG",
+  JSON.stringify(ctx.nextConfig)
 );
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

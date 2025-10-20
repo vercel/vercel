@@ -34621,7 +34621,8 @@ async function handleNodeOutputs(nodeOutputs, {
         (0, import_node_handler.getHandlerSource)({
           projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir),
           prerenderFallbackFalseMap,
-          isMiddleware
+          isMiddleware,
+          nextConfig: config
         })
       );
       const operationType = output.type === import_constants2.AdapterOutputType.APP_PAGE || import_constants2.AdapterOutputType.PAGES ? "PAGE" : "API";
@@ -34653,7 +34654,10 @@ async function handleNodeOutputs(nodeOutputs, {
             runtime: nodeVersion.runtime,
             maxDuration: output.config.maxDuration,
             supportsResponseStreaming: true,
-            experimentalAllowBundling: true
+            experimentalAllowBundling: true,
+            ...isMiddleware ? {
+              useWebApi: true
+            } : {}
           },
           null,
           2
