@@ -34698,8 +34698,10 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           functionsDir,
           `${output.pathname === "/" ? "/index" : output.pathname}.func`
         );
-        await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), { recursive: true });
-        await import_fs_extra10.default.symlink(parentFunctionDir, prerenderFunctionDir);
+        if (output.pathname !== parentNodeOutput.pathname) {
+          await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), { recursive: true });
+          await import_fs_extra10.default.symlink(parentFunctionDir, prerenderFunctionDir);
+        }
         const initialHeaders = Object.assign(
           {},
           output.fallback?.initialHeaders
