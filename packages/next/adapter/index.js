@@ -34661,7 +34661,7 @@ async function handleNodeOutputs(nodeOutputs, {
           },
           null,
           2
-        )
+        ).replace(/\0/g, "")
       );
       fsSema.release();
     })
@@ -34848,7 +34848,7 @@ async function handleEdgeOutputs(edgeOutputs, {
       };
       await import_fs_extra10.default.writeFile(
         import_node_path.default.join(functionDir, ".vc-config.json"),
-        JSON.stringify(edgeConfig, null, 2)
+        JSON.stringify(edgeConfig, null, 2).replace(/\0/g, "")
       );
       fsSema.release();
     })
