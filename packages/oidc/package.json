@@ -10,10 +10,10 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "browser": "./dist/index-browser.js",
-      "react-native": "./dist/index-browser.js",
-      "workflow": "./dist/index-browser.js",
-      "import": "./dist/index.js",
+      "browser": "./dist/index-browser.mjs",
+      "react-native": "./dist/index-browser.mjs",
+      "workflow": "./dist/index-browser.mjs",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
   },
@@ -42,7 +42,7 @@
     "pretest": "pnpm run build:code",
     "test": "vitest",
     "build": "pnpm run build:code && pnpm run build:docs",
-    "build:code": "node ../../utils/build.mjs",
+    "build:code": "node ../../utils/build.mjs --esm",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
   "license": "Apache-2.0",
