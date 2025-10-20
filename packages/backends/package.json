@@ -21,6 +21,7 @@
   },
   "files": [
     "dist",
+    "package.json",
     "express-loader.js",
     "express-loader.mjs",
     "express-loader-register.mjs",
