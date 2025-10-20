@@ -26,15 +26,15 @@ export async function load(
 
   if (expressUrl === url) {
     const pathToExpressExtract = new URL(
-      '../introspection/express/capture-express-app.js',
+      '../express/handle.js',
       import.meta.url
     );
     // Create a shim that captures the Express app instance
     const shimSource = `
-import { captureExpressApp } from ${JSON.stringify(pathToExpressExtract.toString())};
+import { handle} from ${JSON.stringify(pathToExpressExtract.toString())};
 import originalExpress from ${JSON.stringify(url + '?original')};
 
-const extendedExpress = captureExpressApp(originalExpress);
+const extendedExpress = handle(originalExpress);
 
 export * from ${JSON.stringify(url + '?original')};
 export default extendedExpress;
@@ -47,16 +47,13 @@ export default extendedExpress;
     };
   }
   if (honoUrl === url) {
-    const pathToHonoExtract = new URL(
-      '../introspection/hono/capture-hono-app.js',
-      import.meta.url
-    );
+    const pathToHonoExtract = new URL('../hono/handle.js', import.meta.url);
     const shimSource = `
-import { captureHonoApp } from ${JSON.stringify(pathToHonoExtract.toString())};
+import { handle } from ${JSON.stringify(pathToHonoExtract.toString())};
 import * as originalHono from ${JSON.stringify(url + '?original')};
 
 export * from ${JSON.stringify(url + '?original')};
-export const Hono = captureHonoApp(originalHono);
+export const Hono = handle(originalHono);
 `;
 
     return {

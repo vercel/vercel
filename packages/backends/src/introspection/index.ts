@@ -39,6 +39,7 @@ export const introspectApp = async (
       );
 
       child.stdout?.on('data', data => {
+        // console.log('[LOADER]', data.toString());
         try {
           const introspection = JSON.parse(data.toString());
           const introspectionSchema = z.object({

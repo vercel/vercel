@@ -3,7 +3,7 @@ import { pathToRegexp } from 'path-to-regexp';
 
 let app: Express | null = null;
 
-export const extendExpress = (expressModule: any) => {
+export const handle = (expressModule: any) => {
   if (typeof expressModule === 'function') {
     const originalCreateApp = expressModule;
     const createApp = (...args: any[]) => {
@@ -18,12 +18,12 @@ export const extendExpress = (expressModule: any) => {
 
 process.on('beforeExit', () => {
   if (app) {
-    const routes = extractRoutesFromApp(app);
+    const routes = extractRoutes(app);
     console.log(JSON.stringify({ routes }));
   }
 });
 
-const extractRoutesFromApp = (app: Express) => {
+const extractRoutes = (app: Express) => {
   const routes: { src: string; dest: string; methods: string[] }[] = [];
   const methods = [
     'all',

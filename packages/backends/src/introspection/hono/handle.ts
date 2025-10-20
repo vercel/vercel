@@ -3,8 +3,8 @@ import { pathToRegexp } from 'path-to-regexp';
 
 let app: Hono | null = null;
 
-export const extendHono = (honoModule: any) => {
-  const TrackedHono = class extends honoModule {
+export const handle = (honoModule: any) => {
+  const TrackedHono = class extends honoModule.Hono {
     constructor(...args: any[]) {
       super(...args);
 
@@ -17,12 +17,12 @@ export const extendHono = (honoModule: any) => {
 
 process.on('beforeExit', () => {
   if (app) {
-    const routes = extractRoutesFromApp(app);
+    const routes = extractRoutes(app);
     console.log(JSON.stringify({ routes }));
   }
 });
 
-function extractRoutesFromApp(app: Hono) {
+function extractRoutes(app: Hono) {
   const routes: { src: string; dest: string; methods: string[] }[] = [];
   if (!app || !app.routes) {
     return [];

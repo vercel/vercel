@@ -1,6 +1,6 @@
 import Module from 'module';
-import { extendHono } from '../hono/index.js';
-import { extendExpress } from '../express/index.js';
+import { handle as handleHono } from '../hono/handle.js';
+import { handle as handleExpress } from '../express/handle.js';
 
 const originalRequire = Module.prototype.require;
 
@@ -12,12 +12,12 @@ const originalRequire = Module.prototype.require;
   const result = originalRequire.apply(this, [id, ...args] as [string]);
 
   if (id === 'express') {
-    return extendExpress(result);
+    return handleExpress(result);
   }
   if (id === 'hono') {
     return {
       ...result,
-      Hono: extendHono(result.Hono),
+      Hono: handleHono(result),
     };
   }
 
