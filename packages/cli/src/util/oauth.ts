@@ -321,7 +321,7 @@ export async function refreshTokenRequest(options: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
@@ -412,7 +412,7 @@ export async function inspectTokenRequest(token: string): Promise<Response> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({ token }),
   });

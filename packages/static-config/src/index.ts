@@ -20,6 +20,9 @@ export const BaseFunctionConfigSchema = {
     runtime: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
+    supportsCancellation: {
+      type: 'boolean',
+    },
     regions: {
       oneOf: [
         {

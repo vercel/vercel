@@ -1,5 +1,41 @@
 # @vercel/oidc
 
+## 3.0.3
+
+### Patch Changes
+
+- fix(oidc): add `"workflow"` as export condition ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+## 3.0.2
+
+### Patch Changes
+
+- fix(oidc): add `"react-native"` as export condition ([#14066](https://github.com/vercel/vercel/pull/14066))
+
+## 3.0.1
+
+### Patch Changes
+
+- feat(oidc): export `getContext()` method ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- feat(oidc): add conditional export for browsers ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+  Introduces a browser export with mock methods that don't require access to a file system or environment variables. This makes `@vercel/oidc` usable for universal libraries that are run in both frontend and backend.
+
+- fix(oidc): remove `ms` dependency ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+## 3.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
+## 2.0.2
+
+### Patch Changes
+
+- fix "Cannot find module" error caused by dynamically importing files without their extensions ([#13815](https://github.com/vercel/vercel/pull/13815))
+
 ## 2.0.1
 
 ### Patch Changes

@@ -1,9 +1,9 @@
-export default function IdLayout({ children, params }) {
+export default async function IdLayout({ children, params }) {
   return (
     <>
       <h3>
         Id Layout. Params:{' '}
-        <span id="id-layout-params">{JSON.stringify(params)}</span>
+        <span id="id-layout-params">{JSON.stringify(await params)}</span>
       </h3>
       {children}
     </>

@@ -8,7 +8,7 @@ const { PCRE } = require('pcre-to-regexp');
 // See: https://github.com/TypeStrong/ts-node/issues/903
 class P extends PCRE {}
 
-export default (req, res) => {
+module.exports = (req, res) => {
   const p = new P('hi'); // This line should not throw an error
   console.log(p);
   res.send({ ok: true });

@@ -127,5 +127,97 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
 
       await testWithCheck(check);
     });
+
+    test('Should forward _vercel_jwt cookie when present', async () => {
+      const { rateLimited } = await checkRateLimit('test-rule1', {
+        firewallHostForDevelopment: HOST,
+        rateLimitKey: '123' + rand,
+        headers: new Headers({
+          cookie: '_vercel_jwt=test-jwt-token; other=value',
+        }),
+      });
+
+      expect(rateLimited).toBe(false);
+      expect(fetchCalls).toHaveLength(1);
+
+      const headers = new Headers(fetchCalls[0].init?.headers);
+      expect(headers.get('cookie')).toBe('_vercel_jwt=test-jwt-token');
+    });
+
+    test('Should not add cookie header when _vercel_jwt is not present', async () => {
+      const { rateLimited } = await checkRateLimit('test-rule1', {
+        firewallHostForDevelopment: HOST,
+        rateLimitKey: '123' + rand,
+        headers: new Headers({
+          cookie: 'other=value; session=abc123',
+        }),
+      });
+
+      expect(rateLimited).toBe(false);
+      expect(fetchCalls).toHaveLength(1);
+
+      const headers = new Headers(fetchCalls[0].init?.headers);
+      expect(headers.get('cookie')).toBeNull();
+    });
+
+    test('Should handle empty cookie header', async () => {
+      const { rateLimited } = await checkRateLimit('test-rule1', {
+        firewallHostForDevelopment: HOST,
+        rateLimitKey: '123' + rand,
+        headers: new Headers(),
+      });
+
+      expect(rateLimited).toBe(false);
+      expect(fetchCalls).toHaveLength(1);
+
+      const headers = new Headers(fetchCalls[0].init?.headers);
+      expect(headers.get('cookie')).toBeNull();
+    });
+
+    test('Should use headers from SYMBOL_FOR_REQ_CONTEXT when no headers provided', async () => {
+      const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+      const originalGlobalThis = globalThis as any;
+      const mockContext = {
+        headers: {
+          'x-real-ip': '10.0.0.1' + rand,
+          host: HOST,
+          cookie: '_vercel_jwt=context-jwt-token',
+        },
+      };
+
+      originalGlobalThis[SYMBOL_FOR_REQ_CONTEXT] = {
+        get: () => mockContext,
+      };
+
+      try {
+        const { rateLimited } = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: 'ignore-for-testing',
+          rateLimitKey: '123' + rand,
+        });
+
+        expect(rateLimited).toBe(false);
+        expect(fetchCalls).toHaveLength(1);
+
+        const headers = new Headers(fetchCalls[0].init?.headers);
+        expect(headers.get('x-real-ip')).toBe('10.0.0.1' + rand);
+        expect(headers.get('cookie')).toBe('_vercel_jwt=context-jwt-token');
+        expect(headers.get('x-rr-host')).toBe(HOST);
+      } finally {
+        delete originalGlobalThis[SYMBOL_FOR_REQ_CONTEXT];
+      }
+    });
+
+    test('Should handle missing context when no headers provided', async () => {
+      const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+      const originalGlobalThis = globalThis as any;
+      delete originalGlobalThis[SYMBOL_FOR_REQ_CONTEXT];
+
+      await expect(
+        checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+        })
+      ).rejects.toThrow('`headers` or `request` options are required');
+    });
   };
 }

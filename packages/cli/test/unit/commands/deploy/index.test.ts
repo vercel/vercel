@@ -558,7 +558,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '18.x',
+        nodeVersion: '22.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -1107,6 +1107,16 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:logs', value: 'TRUE' },
+      ]);
+    });
+    it('--guidance', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--guidance');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:guidance', value: 'TRUE' },
       ]);
     });
     it('--name', async () => {

@@ -100,6 +100,7 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -1484,6 +1485,11 @@ export const build: BuildV2 = async buildOptions => {
     const isAppClientParamParsingEnabled =
       routesManifest?.rsc?.clientParamParsing ?? false;
 
+    const clientParamParsingOrigins = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental
+          ?.clientParamParsingOrigins
+      : undefined;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1543,6 +1549,8 @@ export const build: BuildV2 = async buildOptions => {
         isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
         isAppClientParamParsingEnabled,
+        clientParamParsingOrigins,
+        files,
       });
     }
 
@@ -1987,6 +1995,7 @@ export const build: BuildV2 = async buildOptions => {
             memory?: number;
             maxDuration?: number;
             experimentalTriggers?: TriggerEvent[];
+            supportsCancellation?: boolean;
           } = {};
 
           if (config && config.functions) {
@@ -2304,6 +2313,7 @@ export const build: BuildV2 = async buildOptions => {
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
       isAppClientParamParsingEnabled: false,
+      appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
     });
 
     await Promise.all(
@@ -2904,9 +2914,19 @@ export const diagnostics: Diagnostics = async ({
       'trace',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
+    // Collect `.next/trace-build` file
+    ...(await glob(
+      'trace-build',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
     // Collect `.next/turbopack` file
     ...(await glob(
       'turbopack',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
+    // Collect `.next/trace-turbopack` file
+    ...(await glob(
+      'trace-turbopack',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
   };

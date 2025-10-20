@@ -51,17 +51,25 @@ describe('domains buy', () => {
   describe('[name]', () => {
     it('should track redacted domain name positional argument', async () => {
       useUser();
-      client.scenario.get('/v3/domains/price', (req, res) => {
-        return res.json({
-          price: 100,
-          period: 1,
-        });
-      });
-      client.scenario.get('/v3/domains/status', (req, res) => {
-        return res.json({
-          available: true,
-        });
-      });
+      client.scenario.get(
+        '/v1/registrar/domains/example.com/price',
+        (req, res) => {
+          return res.json({
+            purchasePrice: 100,
+            renewalPrice: 100,
+            transferPrice: null,
+            years: 1,
+          });
+        }
+      );
+      client.scenario.get(
+        '/v1/registrar/domains/example.com/availability',
+        (req, res) => {
+          return res.json({
+            available: true,
+          });
+        }
+      );
 
       client.setArgv('domains', 'buy', 'example.com');
       const exitCodePromise = domains(client);

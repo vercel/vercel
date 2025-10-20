@@ -46,6 +46,7 @@ interface FunctionConfiguration {
   memory?: number;
   maxDuration?: number;
   experimentalTriggers?: TriggerEvent[];
+  supportsCancellation?: boolean;
 }
 
 export async function writeBuildResult(
@@ -55,16 +56,34 @@ export async function writeBuildResult(
   build: Builder,
   builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
+  standalone: boolean = false
 ) {
-  const { version } = builder;
+  let version = builder.version;
+  if (
+    'experimentalVersion' in builder &&
+    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
+    'name' in builder &&
+    builder.name === 'express'
+  ) {
+    version = builder.experimentalVersion as 2 | 3;
+  }
+  if (
+    'experimentalVersion' in builder &&
+    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
+    'name' in builder &&
+    builder.name === 'hono'
+  ) {
+    version = builder.experimentalVersion as 2 | 3;
+  }
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       repoRootPath,
       outputDir,
       buildResult as BuildResultV2,
       build,
-      vercelConfig
+      vercelConfig,
+      standalone
     );
   } else if (version === 3) {
     return writeBuildResultV3(
@@ -72,7 +91,8 @@ export async function writeBuildResult(
       outputDir,
       buildResult as BuildResultV3,
       build,
-      vercelConfig
+      vercelConfig,
+      standalone
     );
   }
   throw new Error(
@@ -118,7 +138,8 @@ async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
   build: Builder,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
+  standalone: boolean = false
 ) {
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
@@ -149,7 +170,8 @@ async function writeBuildResultV2(
         output,
         normalizedPath,
         undefined,
-        existingFunctions
+        existingFunctions,
+        standalone
       );
     } else if (isPrerender(output)) {
       if (!output.lambda) {
@@ -164,7 +186,8 @@ async function writeBuildResultV2(
         output.lambda,
         normalizedPath,
         undefined,
-        existingFunctions
+        existingFunctions,
+        standalone
       );
 
       // Write the fallback file alongside the Lambda directory
@@ -224,7 +247,8 @@ async function writeBuildResultV2(
         outputDir,
         output,
         normalizedPath,
-        existingFunctions
+        existingFunctions,
+        standalone
       );
     } else {
       throw new Error(
@@ -246,7 +270,8 @@ async function writeBuildResultV3(
   outputDir: string,
   buildResult: BuildResultV3,
   build: Builder,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
+  standalone: boolean = false
 ) {
   const { output } = buildResult;
   const src = build.src;
@@ -271,10 +296,19 @@ async function writeBuildResultV3(
       outputDir,
       output,
       path,
-      functionConfiguration
+      functionConfiguration,
+      undefined,
+      standalone
     );
   } else if (isEdgeFunction(output)) {
-    await writeEdgeFunction(repoRootPath, outputDir, output, path);
+    await writeEdgeFunction(
+      repoRootPath,
+      outputDir,
+      output,
+      path,
+      undefined,
+      standalone
+    );
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
@@ -386,7 +420,8 @@ async function writeEdgeFunction(
   outputDir: string,
   edgeFunction: EdgeFunction,
   path: string,
-  existingFunctions?: Map<Lambda | EdgeFunction, string>
+  existingFunctions?: Map<Lambda | EdgeFunction, string>,
+  standalone: boolean = false
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -406,11 +441,17 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const { files, filePathMap } = filesWithoutFsRefs(
+  const sharedDest = join(outputDir, 'shared');
+  const { files, filePathMap, shared } = filesWithoutFsRefs(
     edgeFunction.files,
-    repoRootPath
+    repoRootPath,
+    sharedDest,
+    standalone
   );
   ops.push(download(files, dest));
+  if (shared) {
+    ops.push(download(shared, sharedDest));
+  }
 
   const config = {
     runtime: 'edge',
@@ -444,7 +485,8 @@ async function writeLambda(
   lambda: Lambda,
   path: string,
   functionConfiguration?: FunctionConfiguration,
-  existingFunctions?: Map<Lambda | EdgeFunction, string>
+  existingFunctions?: Map<Lambda | EdgeFunction, string>,
+  standalone: boolean = false
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -461,10 +503,19 @@ async function writeLambda(
   const ops: Promise<any>[] = [];
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
+    const sharedDest = join(outputDir, 'shared');
     // `files` is defined
-    const f = filesWithoutFsRefs(lambda.files, repoRootPath);
+    const f = filesWithoutFsRefs(
+      lambda.files,
+      repoRootPath,
+      sharedDest,
+      standalone
+    );
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
+    if (f.shared) {
+      ops.push(download(f.shared, sharedDest));
+    }
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
     ops.push(unzip(lambda.zipBuffer, dest));
@@ -478,6 +529,8 @@ async function writeLambda(
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
+  const supportsCancellation =
+    functionConfiguration?.supportsCancellation ?? lambda.supportsCancellation;
 
   const config = {
     ...lambda,
@@ -486,6 +539,7 @@ async function writeLambda(
     memory,
     maxDuration,
     experimentalTriggers,
+    supportsCancellation,
     filePathMap,
     type: undefined,
     files: undefined,
@@ -602,19 +656,29 @@ export async function* findDirs(
  */
 export function filesWithoutFsRefs(
   files: Files,
-  repoRootPath: string
-): { files: Files; filePathMap?: Record<string, string> } {
+  repoRootPath: string,
+  sharedDest?: string,
+  standalone?: boolean
+): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
+  const shared: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
-      filePathMap[normalizePath(path)] = normalizePath(
-        relative(repoRootPath, file.fsPath)
-      );
+      if (standalone && sharedDest) {
+        shared[path] = file;
+        filePathMap[normalizePath(path)] = normalizePath(
+          relative(repoRootPath, join(sharedDest, path))
+        );
+      } else {
+        filePathMap[normalizePath(path)] = normalizePath(
+          relative(repoRootPath, file.fsPath)
+        );
+      }
     } else {
       out[path] = file;
     }
   }
-  return { files: out, filePathMap };
+  return { files: out, filePathMap, shared };
 }

@@ -3,5 +3,8 @@
     "next": "canary",
     "react": "latest",
     "react-dom": "latest"
+  },
+  "scripts": {
+    "build": "next build --webpack"
   }
 }

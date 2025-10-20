@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { login } from '../../../../src/commands/login/future';
+import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { Headers, type Response } from 'node-fetch';
@@ -34,7 +34,7 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-describe('login --future', () => {
+describe('login', () => {
   it('successful login', async () => {
     fetch.mockResolvedValueOnce(
       mockResponse({
@@ -70,14 +70,14 @@ describe('login --future', () => {
       })
     );
 
-    client.setArgv('login', '--future');
+    client.setArgv('login');
     delete client.authConfig.token;
     const teamBefore = client.config.currentTeam;
     expect(teamBefore).toBeUndefined();
     const tokenBefore = client.authConfig.token;
 
-    const exitCodePromise = login(client);
-    expect(await exitCodePromise, 'exit code for "login --future"').toBe(0);
+    const exitCodePromise = login(client, { shouldParseArgs: true });
+    expect(await exitCodePromise, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
     expect(fetch).toHaveBeenCalledTimes(pollCount + 4);

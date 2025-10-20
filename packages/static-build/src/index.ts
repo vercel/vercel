@@ -71,7 +71,7 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(distDir: string) {
+function validateDistDir(distDir: string, workPath: string) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
@@ -80,9 +80,30 @@ function validateDistDir(distDir: string) {
   const link = 'https://vercel.link/missing-public-directory';
 
   if (!exists()) {
+    const vercelJsonPath = path.join(workPath, 'vercel.json');
+    const vercelJsonExists = existsSync(vercelJsonPath);
+    let buildCommandExists = false;
+
+    if (vercelJsonExists) {
+      try {
+        const vercelJson = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
+        buildCommandExists = vercelJson.buildCommand !== undefined;
+      } catch (e) {
+        // Ignore JSON parse errors, fallback to default messaging
+      }
+    }
+
+    let message = `No Output Directory named "${distDirName}" found after the Build completed.`;
+
+    if (vercelJsonExists && buildCommandExists) {
+      message += ` Update vercel.json#outputDirectory to ensure the correct output directory is generated.`;
+    } else {
+      message += ` Configure the Output Directory in your Project Settings. Alternatively, configure vercel.json#outputDirectory.`;
+    }
+
     throw new NowBuildError({
       code: 'STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your Project Settings.`,
+      message,
       link,
     });
   }
@@ -789,7 +810,7 @@ export const build: BuildV2 = async ({
       } else {
         // No need to verify the dist dir if there are other output files.
         if (!extraOutputs.functions) {
-          validateDistDir(distPath);
+          validateDistDir(distPath, workPath);
         }
 
         if (framework && !extraOutputs.routes) {
@@ -834,7 +855,7 @@ export const build: BuildV2 = async ({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath);
+    validateDistDir(distPath, workPath);
 
     const output = await glob('**', distPath, mountpoint);
 

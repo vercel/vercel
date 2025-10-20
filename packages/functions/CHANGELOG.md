@@ -1,5 +1,62 @@
 # @vercel/functions
 
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c)]:
+  - @vercel/oidc@3.0.3
+
+## 3.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`29c2da6ff0118254bf9f6a5aa436cf95267d2d0a`](https://github.com/vercel/vercel/commit/29c2da6ff0118254bf9f6a5aa436cf95267d2d0a)]:
+  - @vercel/oidc@3.0.2
+
+## 3.1.2
+
+### Patch Changes
+
+- Add configurable timeout to RuntimeCache with sensible default to fail faster on gateway timeouts ([#14036](https://github.com/vercel/vercel/pull/14036))
+
+  The RuntimeCache client now includes a configurable timeout (default 500ms) for all fetch requests to prevent indefinite hangs on 502/504 gateway timeouts.
+  The timeout can be configured at build time via the `RUNTIME_CACHE_TIMEOUT` environment variable. When a timeout occurs, the request is aborted and the
+  error is logged via the onError callback.
+
+## 3.1.1
+
+### Patch Changes
+
+- Stronger detection of Vercel Runtime to reduce warnings ([#13776](https://github.com/vercel/vercel/pull/13776))
+
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/oidc@3.0.1
+
+## 3.1.0
+
+### Minor Changes
+
+- Introduces Vercel Purge APIs: invalidateByTag, dangerouslyDeleteByTag ([#13867](https://github.com/vercel/vercel/pull/13867))
+
+## 3.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
+### Patch Changes
+
+- Updated dependencies [[`d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e`](https://github.com/vercel/vercel/commit/d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e)]:
+  - @vercel/oidc@3.0.0
+
+## 2.2.13
+
+### Patch Changes
+
+- Updated dependencies [[`821e4b8e8eded000b3d4e864594730e8741ef522`](https://github.com/vercel/vercel/commit/821e4b8e8eded000b3d4e864594730e8741ef522)]:
+  - @vercel/oidc@2.0.2
+
 ## 2.2.12
 
 ### Patch Changes

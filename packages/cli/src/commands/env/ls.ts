@@ -22,6 +22,8 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
+import { determineAgent } from '@vercel/detect-agent';
+import { suggestNextCommands } from '../../util/suggest-next-commands';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
@@ -38,7 +40,7 @@ export default async function ls(client: Client, argv: string[]) {
     printError(err);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
 
   if (args.length > 2) {
     output.error(
@@ -52,6 +54,7 @@ export default async function ls(client: Client, argv: string[]) {
   const [envTarget, envGitBranch] = args;
   telemetryClient.trackCliArgumentEnvironment(envTarget);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagGuidance(flags['--guidance']);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -91,6 +94,16 @@ export default async function ls(client: Client, argv: string[]) {
       `Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
     client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
+  }
+
+  const { isAgent } = await determineAgent();
+  const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
+  if (guidanceMode) {
+    suggestNextCommands([
+      getCommandName(`env add`),
+      getCommandName('env rm'),
+      getCommandName(`env pull`),
+    ]);
   }
 
   return 0;

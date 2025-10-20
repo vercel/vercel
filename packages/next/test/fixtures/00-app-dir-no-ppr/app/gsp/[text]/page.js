@@ -2,7 +2,7 @@ export default async function DynamicPage({ params }) {
   return (
     <main>
       <h1>Dynamic page</h1>
-      <p>Param: {params.text}</p>
+      <p>Param: {(await params).text}</p>
     </main>
   );
 }

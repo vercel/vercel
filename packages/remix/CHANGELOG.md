@@ -1,5 +1,24 @@
 # @vercel/remix-builder
 
+## 5.4.13
+
+### Patch Changes
+
+- Add support for using routes() helper for top-level index routes ([#13933](https://github.com/vercel/vercel/pull/13933))
+
+## 5.4.12
+
+### Patch Changes
+
+- Updated dependencies [[`6260486192ca407fc2d91f317ed81533548b8629`](https://github.com/vercel/vercel/commit/6260486192ca407fc2d91f317ed81533548b8629)]:
+  - @vercel/static-config@3.1.2
+
+## 5.4.11
+
+### Patch Changes
+
+- [next][node][redwood][remix] bump `@vercel/nft@0.30.1` ([#13818](https://github.com/vercel/vercel/pull/13818))
+
 ## 5.4.10
 
 ### Patch Changes

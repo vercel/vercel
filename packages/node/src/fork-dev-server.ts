@@ -16,6 +16,7 @@ export function forkDevServer(options: {
   entrypoint: string;
   meta: Meta;
   printLogs?: boolean;
+  publicDir?: string;
 
   /**
    * A path to the dev-server path. This is used in tests.
@@ -54,6 +55,7 @@ export function forkDevServer(options: {
       VERCEL_DEV_ENTRYPOINT: options.entrypoint,
       VERCEL_DEV_CONFIG: JSON.stringify(options.config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
+      VERCEL_DEV_PUBLIC_DIR: options.publicDir || '',
       TS_NODE_TRANSPILE_ONLY: '1',
       TS_NODE_COMPILER_OPTIONS: options.tsConfig?.compilerOptions
         ? JSON.stringify(options.tsConfig.compilerOptions)

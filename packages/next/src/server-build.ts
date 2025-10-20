@@ -67,6 +67,7 @@ import resolveFrom from 'resolve-from';
 import fs, { lstat } from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -112,6 +113,7 @@ export async function serverBuild({
   config = {},
   functionsConfigManifest,
   privateOutputs,
+  files,
   baseDir,
   workPath,
   entryPath,
@@ -151,6 +153,7 @@ export async function serverBuild({
   isAppFullPPREnabled,
   isAppClientSegmentCacheEnabled,
   isAppClientParamParsingEnabled,
+  clientParamParsingOrigins,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -193,6 +196,7 @@ export async function serverBuild({
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
+  files: Files;
   /**
    * When this is true, then it means all routes are PPR enabled. PPR is not
    * enabled in incremental mode and all routes will be prerendered.
@@ -200,6 +204,7 @@ export async function serverBuild({
   isAppFullPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
   isAppClientParamParsingEnabled: boolean;
+  clientParamParsingOrigins: string[] | undefined;
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -291,6 +296,30 @@ export async function serverBuild({
           protocol = 'https://';
         }
 
+        let origin: string | null = null;
+        if (protocol) {
+          const urlWithoutProtocol = rewrite.dest.substring(protocol.length);
+
+          // Find the first occurrence of any URL delimiter
+          const delimiters = ['/', '?', '#'];
+          let endIndex = -1;
+
+          for (const delimiter of delimiters) {
+            const index = urlWithoutProtocol.indexOf(delimiter);
+            if (index !== -1) {
+              endIndex = endIndex === -1 ? index : Math.min(endIndex, index);
+            }
+          }
+
+          if (endIndex === -1) {
+            // No delimiters found, the entire URL is the origin
+            origin = rewrite.dest;
+          } else {
+            // Extract up to the first delimiter
+            origin = protocol + urlWithoutProtocol.substring(0, endIndex);
+          }
+        }
+
         // We only support adding rewrite headers to routes that do not have
         // a protocol, so don't bother trying to parse the pathname if there is
         // a protocol.
@@ -352,9 +381,19 @@ export async function serverBuild({
         const { rewriteHeaders } = routesManifest;
         if (!rewriteHeaders) continue;
 
-        // If the rewrite was external or didn't include a pathname or query,
-        // we don't need to add the rewrite headers.
-        if (protocol || (!pathname && !query)) continue;
+        // Check to see if this is a non-relative rewrite. If it is, we need
+        // to check to see if it's an allowed origin to receive the rewritten
+        // headers.
+        const isAllowedOrigin =
+          origin && clientParamParsingOrigins
+            ? clientParamParsingOrigins.some(allowedOrigin =>
+                new RegExp(allowedOrigin).test(origin!)
+              )
+            : false;
+
+        // If the rewrite was external and the origin is not allowed, or
+        // if there is no rewritten pathname or query, skip adding headers.
+        if ((origin && !isAllowedOrigin) || (!pathname && !query)) continue;
 
         (rewrite as RouteWithSrc).headers = {
           ...(rewrite as RouteWithSrc).headers,
@@ -1325,6 +1364,7 @@ export async function serverBuild({
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
@@ -1584,6 +1624,7 @@ export async function serverBuild({
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
     isAppClientParamParsingEnabled,
+    appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
   });
 
   await Promise.all(
@@ -1944,6 +1985,33 @@ export async function serverBuild({
       ...trailingSlashRedirects,
 
       ...privateOutputs.routes,
+
+      ...(isNextDataServerResolving
+        ? [
+            // ensure x-nextjs-data header is always present
+            // if we are doing middleware next data resolving
+            {
+              src: path.posix.join('/', entryDirectory, '/_next/data/(.*)'),
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-nextjs-data',
+                },
+              ],
+              transforms: [
+                {
+                  type: 'request.headers',
+                  op: 'append',
+                  target: {
+                    key: 'x-nextjs-data',
+                  },
+                  args: `1`,
+                },
+              ],
+              continue: true,
+            },
+          ]
+        : []),
 
       // normalize _next/data URL before processing redirects
       ...normalizeNextDataRoute(true),

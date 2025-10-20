@@ -175,7 +175,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(3);
 
     expect(buildResult.output['api/hello']).toBeDefined();
     expect(buildResult.output['api/hello'].type).toBe('Lambda');
@@ -202,7 +202,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(edgeFunctions.size).toBe(3);
+    expect(edgeFunctions.size).toBe(2);
     expect(buildResult.output['edge']).toBeDefined();
     expect(buildResult.output['index']).toBeDefined();
     // expect(buildResult.output['index/index']).toBeDefined();
