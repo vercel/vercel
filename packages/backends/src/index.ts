@@ -1,7 +1,7 @@
 export const version = 2;
 import { BuildV2, NodejsLambda } from '@vercel/build-utils';
 import { downloadInstallAndBundle } from './utils';
-import { introspectApp } from './introspection';
+import { introspectApp } from './introspection/index.js';
 import { nodeFileTrace } from './node-file-trace';
 import { relative, join } from 'path';
 import { doBuild } from './build';
@@ -14,6 +14,7 @@ export const build: BuildV2 = async args => {
   const outputConfig = await doBuild(args, downloadResult);
 
   const { files } = await nodeFileTrace(args, outputConfig);
+
   const { routes } = await introspectApp(args, {
     ...outputConfig,
     files,

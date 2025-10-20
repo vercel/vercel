@@ -85,7 +85,7 @@ const readDirectoryRecursively = async (
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('05')
+    fixtureName => fixtureName.includes('01')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
@@ -110,22 +110,22 @@ describe('successful builds', async () => {
         repoRootPath: workPath,
       })) as BuildResultV2Typical;
 
-      // const expectedFilePath = join(workPath, 'files.json');
-      // if (existsSync(expectedFilePath)) {
-      //   const expectedFiles = await readFile(expectedFilePath, 'utf8');
-      //   const indexOutput = result.output.index;
-      //   if ('type' in indexOutput && indexOutput.type === 'Lambda') {
-      //     if (Array.isArray(files)) {
-      //       expect(files).toEqual(
-      //         expect.arrayContaining(JSON.parse(expectedFiles))
-      //       );
-      //     }
-      //   }
-      // }
+      const expectedFilePath = join(workPath, 'files.json');
+      if (existsSync(expectedFilePath)) {
+        const expectedFiles = await readFile(expectedFilePath, 'utf8');
+        const indexOutput = result.output.index;
+        if ('type' in indexOutput && indexOutput.type === 'Lambda') {
+          if (Array.isArray(files)) {
+            expect(files).toEqual(
+              expect.arrayContaining(JSON.parse(expectedFiles))
+            );
+          }
+        }
+      }
 
-      // expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
-      //   join(workPath, 'routes.json')
-      // );
+      expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
+        join(workPath, 'routes.json')
+      );
     }, 10000);
   }
 });

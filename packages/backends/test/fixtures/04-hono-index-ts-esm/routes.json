@@ -3,6 +3,20 @@
     "handle": "filesystem"
   },
   {
+    "src": "^(?:\\/user\\/([^\\/]+))(?:\\/$)?$",
+    "dest": "/user/:id",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/api\\/data)(?:\\/$)?$",
+    "dest": "/api/data",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
     "src": "/(.*)",
     "dest": "/"
   }
