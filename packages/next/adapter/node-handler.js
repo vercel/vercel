@@ -105,6 +105,7 @@ const getHandlerSource = (ctx) => `
     return fromSymbol[SYMBOL_FOR_REQ_CONTEXT]?.get?.() ?? {};
   }
   return async function handler(request) {
+    console.log("middleware handler", request);
     function addRequestMeta(req, key, value) {
       const NEXT_REQUEST_META = Symbol.for("NextInternalRequestMeta");
       const meta = req[NEXT_REQUEST_META] || {};
