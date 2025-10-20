@@ -34708,7 +34708,11 @@ async function handlePrerenderOutputs(prerenderOutputs, {
               parentFunctionDir
             ),
             prerenderFunctionDir
-          );
+          ).catch((err) => {
+            if (!(typeof err === "object" && err && err.code === "EEXIST")) {
+              throw err;
+            }
+          });
         }
         const initialHeaders = Object.assign(
           {},
