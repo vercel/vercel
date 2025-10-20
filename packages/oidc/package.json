@@ -43,7 +43,7 @@
   },
   "scripts": {
     "pretest": "pnpm run build:code",
-    "test": "vitest",
+    "test": "vitest && node -e \"import * as oidc from '@vercel/oidc'\"",
     "build": "pnpm run build:code && pnpm run build:docs",
     "build:code": "node build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
