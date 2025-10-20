@@ -150,7 +150,7 @@ const getHandlerSource = (ctx) => `
       }
       res.statusCode = 404;
       if (mod) {
-        await mod.handler(req, res, {
+        await (await mod).handler(req, res, {
           waitUntil: getRequestContext().waitUntil
         });
       } else {
@@ -180,7 +180,7 @@ const getHandlerSource = (ctx) => `
         isAppDir ? "app" : "pages",
         `${page === "/" ? "index" : page}.js`
       ));
-      await mod.handler(req, res, {
+      await (await mod).handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
     } catch (error) {

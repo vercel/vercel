@@ -3,7 +3,7 @@
     "build": "next build apps/app"
   },
   "dependencies": {
-    "next": "https://files-j4mkvbuj0-vtest314-ijjk-testing.vercel.app",
+    "next": "https://vercel-packages.vercel.app/next/commits/dd75b8f9abfae45166af6a6196c7981602726969/next",
     "react": "latest",
     "react-dom": "latest"
   }

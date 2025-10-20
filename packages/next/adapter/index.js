@@ -34661,20 +34661,11 @@ async function handleNodeOutputs(nodeOutputs, {
     })
   );
 }
-async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
-  config,
-  distDir,
-  repoRoot,
-  projectDir,
-  nextVersion,
+async function handlePrerenderOutputs(prerenderOutputs, {
   vercelOutputDir,
-  prerenderFallbackFalseMap
+  nodeOutputsParentMap
 }) {
-  const nodeOutputsParentMap = /* @__PURE__ */ new Map();
   const prerenderParentIds = /* @__PURE__ */ new Set();
-  for (const output of nodeOutputs) {
-    nodeOutputsParentMap.set(output.id, output);
-  }
   const fsSema = new import_async_sema5.Sema(16, { capacity: prerenderOutputs.length });
   const functionsDir = import_node_path.default.join(vercelOutputDir, "functions");
   await Promise.all(
@@ -34699,15 +34690,16 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
         }
         const clonedNodeOutput = Object.assign({}, parentNodeOutput);
         clonedNodeOutput.pathname = output.pathname;
-        await handleNodeOutputs([clonedNodeOutput], {
-          config,
-          distDir,
-          repoRoot,
-          projectDir,
-          nextVersion,
-          vercelOutputDir,
-          prerenderFallbackFalseMap
-        });
+        const parentFunctionDir = import_node_path.default.join(
+          functionsDir,
+          `${parentNodeOutput.pathname === "/" ? "/index" : parentNodeOutput.pathname}.func`
+        );
+        const prerenderFunctionDir = import_node_path.default.join(
+          functionsDir,
+          `${output.pathname === "/" ? "/index" : output.pathname}.func`
+        );
+        await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), { recursive: true });
+        await import_fs_extra10.default.symlink(parentFunctionDir, prerenderFunctionDir);
         const initialHeaders = Object.assign(
           {},
           output.fallback?.initialHeaders
@@ -34766,10 +34758,10 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
       fsSema.release();
     })
   );
-  return nodeOutputs.filter((output) => !prerenderParentIds.has(output.id));
 }
 async function handleEdgeOutputs(edgeOutputs, {
   config,
+  distDir,
   repoRoot,
   projectDir,
   nextVersion,
@@ -35000,7 +34992,7 @@ var myAdapter = {
       vercelConfig: vercelConfig2,
       vercelOutputDir
     });
-    const nodeOutputsMap = {};
+    const nodeOutputsParentMap = /* @__PURE__ */ new Map();
     const edgeOutputs = [];
     let hasNotFoundOutput = false;
     let has404Output = false;
@@ -35021,12 +35013,12 @@ var myAdapter = {
         has500Output = true;
       }
       if (output.runtime === "nodejs") {
-        nodeOutputsMap[output.id] = output;
+        nodeOutputsParentMap.set(output.id, output);
       } else if (output.runtime === "edge") {
         edgeOutputs.push(output);
       }
     }
-    let nodeOutputs = Object.values(nodeOutputsMap);
+    const nodeOutputs = Object.values(nodeOutputsParentMap);
     for (const output of outputs.staticFiles) {
       if (output.pathname.endsWith("/_not-found")) {
         hasNotFoundOutput = true;
@@ -35044,12 +35036,13 @@ var myAdapter = {
       projectDir,
       vercelOutputDir,
       nextVersion,
-      config
+      config,
+      distDir
     });
     const prerenderFallbackFalseMap = {};
     for (const prerender of outputs.prerenders) {
       if (prerender.parentFallbackMode === false && !prerender.pathname.includes("_next/data") && !prerender.pathname.endsWith(".rsc")) {
-        const parentOutput = nodeOutputsMap[prerender.parentOutputId];
+        const parentOutput = nodeOutputsParentMap.get(prerender.parentOutputId);
         if (!parentOutput) {
           throw new Error(
             `Invariant: missing parent output ${prerender.parentOutputId} for prerender ${JSON.stringify(prerender)}`
@@ -35077,19 +35070,6 @@ var myAdapter = {
         prerenderFallbackFalseMap
       });
     }
-    nodeOutputs = await handlePrerenderOutputs(
-      nodeOutputs,
-      outputs.prerenders,
-      {
-        config,
-        distDir,
-        repoRoot,
-        projectDir,
-        nextVersion,
-        vercelOutputDir,
-        prerenderFallbackFalseMap
-      }
-    );
     await handleNodeOutputs(nodeOutputs, {
       config,
       distDir,
@@ -35098,6 +35078,10 @@ var myAdapter = {
       nextVersion,
       vercelOutputDir,
       prerenderFallbackFalseMap
+    });
+    await handlePrerenderOutputs(outputs.prerenders, {
+      vercelOutputDir,
+      nodeOutputsParentMap
     });
     const shouldHandlePrefetchRsc = Boolean(
       config.experimental.cacheComponents
@@ -35618,7 +35602,12 @@ var myAdapter = {
             config.basePath,
             "/"
           )}(?<nextLocale>${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(/.*|$)`,
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale", notFoundPath),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            "/$nextLocale",
+            notFoundPath
+          ),
           status: 404,
           caseSensitive: true
         },
@@ -35642,11 +35631,7 @@ var myAdapter = {
             // that the config.basePath (basePath) itself matches
             `${config.basePath && config.basePath !== "/" ? "?" : ""}.*`
           ),
-          dest: import_node_path2.default.posix.join(
-            "/",
-            config.basePath,
-            notFoundPath
-          ),
+          dest: import_node_path2.default.posix.join("/", config.basePath, notFoundPath),
           status: 404
         }
       ],
