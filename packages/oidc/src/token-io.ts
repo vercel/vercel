@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { VercelOidcTokenError } from './token-error';
+import { VercelOidcTokenError } from './token-error.js';
 
 export function findRootDir(): string {
   try {

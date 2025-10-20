@@ -1,5 +1,5 @@
-import { getContext } from './get-context';
-import { VercelOidcTokenError } from './token-error';
+import { getContext } from './get-context.js';
+import { VercelOidcTokenError } from './token-error.js';
 
 /**
  * Gets the current OIDC token from the request context or the environment variable.

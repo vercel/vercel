@@ -7,7 +7,7 @@ import {
   isExpired,
   loadToken,
   saveToken,
-} from './token-util';
+} from './token-util.js';
 
 export async function refreshToken(): Promise<void> {
   const { projectId, teamId } = findProjectInfo();
