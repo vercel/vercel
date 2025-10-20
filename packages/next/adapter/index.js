@@ -34699,8 +34699,16 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           `${output.pathname === "/" ? "/index" : output.pathname}.func`
         );
         if (output.pathname !== parentNodeOutput.pathname) {
-          await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), { recursive: true });
-          await import_fs_extra10.default.symlink(parentFunctionDir, prerenderFunctionDir);
+          await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), {
+            recursive: true
+          });
+          await import_fs_extra10.default.symlink(
+            import_node_path.default.relative(
+              import_node_path.default.dirname(prerenderFunctionDir),
+              parentFunctionDir
+            ),
+            prerenderFunctionDir
+          );
         }
         const initialHeaders = Object.assign(
           {},
@@ -34996,6 +35004,7 @@ var myAdapter = {
     });
     const nodeOutputsParentMap = /* @__PURE__ */ new Map();
     const edgeOutputs = [];
+    const nodeOutputs = [];
     let hasNotFoundOutput = false;
     let has404Output = false;
     let has500Output = false;
@@ -35016,11 +35025,11 @@ var myAdapter = {
       }
       if (output.runtime === "nodejs") {
         nodeOutputsParentMap.set(output.id, output);
+        nodeOutputs.push(output);
       } else if (output.runtime === "edge") {
         edgeOutputs.push(output);
       }
     }
-    const nodeOutputs = Object.values(nodeOutputsParentMap);
     for (const output of outputs.staticFiles) {
       if (output.pathname.endsWith("/_not-found")) {
         hasNotFoundOutput = true;
