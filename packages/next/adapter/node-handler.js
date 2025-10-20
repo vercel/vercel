@@ -174,7 +174,7 @@ const getHandlerSource = (ctx) => `
         url: req.url,
         matchedPath: req.headers["x-matched-path"]
       });
-      const mod = require("./" + path.posix.join(
+      const mod = "./" + Boolean(process.env.__PRIVATE_IS_MIDDLEWARE) ? require(path.posix.join(relativeDistDir, "server", "middleware.js")) : require(path.posix.join(
         relativeDistDir,
         "server",
         isAppDir ? "app" : "pages",
@@ -194,6 +194,9 @@ const getHandlerSource = (ctx) => `
 ).replaceAll(
   "process.env.__PRIVATE_PRERENDER_FALLBACK_MAP",
   JSON.stringify(ctx.prerenderFallbackFalseMap)
+).replaceAll(
+  "process.env.__PRIVATE_IS_MIDDLEWARE",
+  JSON.stringify(ctx.isMiddleware)
 );
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

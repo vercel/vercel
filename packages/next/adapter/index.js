@@ -34565,6 +34565,7 @@ async function handleNodeOutputs(nodeOutputs, {
   repoRoot,
   projectDir,
   nextVersion,
+  isMiddleware,
   prerenderFallbackFalseMap,
   vercelOutputDir
 }) {
@@ -34619,7 +34620,8 @@ async function handleNodeOutputs(nodeOutputs, {
         handlerFilePath,
         (0, import_node_handler.getHandlerSource)({
           projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir),
-          prerenderFallbackFalseMap
+          prerenderFallbackFalseMap,
+          isMiddleware
         })
       );
       const operationType = output.type === import_constants2.AdapterOutputType.APP_PAGE || import_constants2.AdapterOutputType.PAGES ? "PAGE" : "API";
@@ -34850,7 +34852,10 @@ async function handleEdgeOutputs(edgeOutputs, {
 }
 async function handleMiddleware(output, ctx) {
   if (output.runtime === "nodejs") {
-    await handleNodeOutputs([output], ctx);
+    await handleNodeOutputs([output], {
+      ...ctx,
+      isMiddleware: true
+    });
   } else if (output.runtime === "edge") {
     await handleEdgeOutputs([output], ctx);
   } else {
