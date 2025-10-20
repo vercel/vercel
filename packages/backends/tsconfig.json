@@ -7,6 +7,6 @@
     "target": "ES2022"
   },
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*", "express-loader.js"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }

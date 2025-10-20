@@ -14,7 +14,7 @@
     "directory": "packages/backends"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "tsdown",
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
     "type-check": "tsc --noEmit"
