@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022"
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*", "express-loader.js"],

@@ -1,5 +1,5 @@
 import { BuildV2, Files } from '@vercel/build-utils';
-import { introspectApp as introspectExpressApp } from './express';
+import { introspectApp as introspectWithLoader } from './loader.js';
 
 type RolldownResult = {
   dir: string;
@@ -11,28 +11,14 @@ export const introspectApp = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  const map: Record<
-    string,
-    (
-      args: Parameters<BuildV2>[0],
-      rolldownResult: RolldownResult
-    ) => Promise<{
-      routes: {
-        src?: string;
-        dest?: string;
-        methods?: string[];
-      }[];
-      files: Files;
-    }>
-  > = {
-    'express-experimental': introspectExpressApp,
-    // 'hono-experimental': introspectHonoApp,
-  };
-  const introspectApp = map[args.config.projectSettings?.framework ?? ''];
-  if (!introspectApp) {
-    throw new Error(
-      `Unknown framework: ${args.config.projectSettings?.framework}`
-    );
+  const framework = args.config.projectSettings?.framework ?? '';
+
+  // Use the new unified loader for both express and hono
+  if (
+    framework === 'express-experimental' ||
+    framework === 'hono-experimental'
+  ) {
+    return introspectWithLoader(args, rolldownResult);
   }
-  return introspectApp(args, rolldownResult);
+  throw new Error(`Unknown framework: ${framework}`);
 };

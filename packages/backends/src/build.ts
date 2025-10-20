@@ -14,9 +14,9 @@ export const doBuild = async (
   const outputSetting = args.config.outputDirectory;
   if (!outputSetting) {
     if (result) {
-      console.warn(
-        `Output directory not specified. Falling back to @vercel/express builder.`
-      );
+      // console.warn(
+      //   `Output directory not specified. Falling back to @vercel/express builder.`
+      // );
     }
     const buildResult = await cervelBuild({
       cwd: args.workPath,
