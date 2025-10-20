@@ -56,6 +56,22 @@ export async function esbuild(
     sourcemap: tsconfig.options.sourceMap,
     ...opts,
   });
+
+  const shouldBuildEsm = process.argv[2] === '--esm';
+
+  if (shouldBuildEsm) {
+    // Build ESM version with .mjs extension
+    await build({
+      entryPoints,
+      format: 'esm',
+      outdir,
+      platform: 'node',
+      target: ts.ScriptTarget[tsconfig.options.target],
+      sourcemap: tsconfig.options.sourceMap,
+      ...opts,
+      outExtension: { '.js': '.mjs' },
+    });
+  }
 }
 
 export async function tsc() {
