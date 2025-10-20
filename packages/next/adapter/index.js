@@ -34921,7 +34921,7 @@ async function getSourceFilePathFromPage({
     if (import_fs_extra10.default.existsSync(fsPath)) {
       return import_node_path.default.relative(workPath, fsPath);
     }
-    const extensionless = fsPath.replace(import_node_path.default.extname(fsPath), "");
+    const extensionless = fsPath;
     for (const ext of extensionsToTry) {
       fsPath = `${extensionless}.${ext}`;
       if (pageType === "app" && extensionless === import_node_path.default.join(workPath, `${usesSrcDir ? "src/" : ""}app/index`)) {

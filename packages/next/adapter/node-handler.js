@@ -174,12 +174,12 @@ const getHandlerSource = (ctx) => `
         url: req.url,
         matchedPath: req.headers["x-matched-path"]
       });
-      const mod = "./" + Boolean(process.env.__PRIVATE_IS_MIDDLEWARE) ? require(path.posix.join(relativeDistDir, "server", "middleware.js")) : require(path.posix.join(
+      const mod = require("./" + (Boolean(process.env.__PRIVATE_IS_MIDDLEWARE) ? path.posix.join(relativeDistDir, "server", "middleware.js") : path.posix.join(
         relativeDistDir,
         "server",
         isAppDir ? "app" : "pages",
         `${page === "/" ? "index" : page}.js`
-      ));
+      )));
       await (await mod).handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
