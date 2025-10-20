@@ -2803,6 +2803,7 @@ export const frameworks = [
       outputDirectory: {
         value: 'dist',
       },
+    },
     dependency: 'express',
     getOutputDirName: async () => 'public',
   },
@@ -3026,23 +3027,6 @@ export const frameworks = [
       },
       outputDirectory: {
         value: 'N/A',
-      },
-    },
-    expeimentaLsettings: {
-      installCommand: {
-        placeholder:
-          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
-      },
-      buildCommand: {
-        placeholder: 'npx cervel build',
-        value: null,
-      },
-      devCommand: {
-        placeholder: 'npx cervel dev',
-        value: null,
-      },
-      outputDirectory: {
-        value: 'dist',
       },
     },
     dependency: 'express',
