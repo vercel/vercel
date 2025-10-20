@@ -142,15 +142,15 @@ const getHandlerSource = (ctx) => `
     async render404(req, res) {
       let mod;
       try {
-        mod = require("./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`));
+        mod = await require("./" + path.posix.join(relativeDistDir, "server", "pages", `404.js`));
         console.log("using 404.js for render404");
       } catch (_) {
-        mod = require("./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`));
+        mod = await require("./" + path.posix.join(relativeDistDir, "server", "pages", `_error.js`));
         console.log("using _error for render404");
       }
       res.statusCode = 404;
       if (mod) {
-        await (await mod).handler(req, res, {
+        await mod.handler(req, res, {
           waitUntil: getRequestContext().waitUntil
         });
       } else {
@@ -174,13 +174,13 @@ const getHandlerSource = (ctx) => `
         url: req.url,
         matchedPath: req.headers["x-matched-path"]
       });
-      const mod = require("./" + (Boolean(process.env.__PRIVATE_IS_MIDDLEWARE) ? path.posix.join(relativeDistDir, "server", "middleware.js") : path.posix.join(
+      const mod = await require("./" + (Boolean(process.env.__PRIVATE_IS_MIDDLEWARE) ? path.posix.join(relativeDistDir, "server", "middleware.js") : path.posix.join(
         relativeDistDir,
         "server",
         isAppDir ? "app" : "pages",
         `${page === "/" ? "index" : page}.js`
       )));
-      await (await mod).handler(req, res, {
+      await mod.handler(req, res, {
         waitUntil: getRequestContext().waitUntil
       });
     } catch (error) {
