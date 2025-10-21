@@ -1,5 +1,6 @@
 import type { Hono } from 'hono';
 import { pathToRegexp } from 'path-to-regexp';
+import { setupCloseHandlers } from './util';
 
 let app: Hono | null = null;
 
@@ -15,30 +16,13 @@ export const handle = (honoModule: any) => {
   return TrackedHono;
 };
 
-process.on('SIGINT', () => {
-  extractMetadata();
-});
-process.on('SIGTERM', () => {
-  extractMetadata();
-});
-process.on('exit', () => {
-  extractMetadata();
-});
+setupCloseHandlers(() => ({ routes: extractRoutes() }));
 
-const extractMetadata = () => {
-  if (!app) {
-    return;
-  }
-  const metadata = {
-    routes: extractRoutes(app),
-  };
-  console.log(JSON.stringify(metadata));
-};
-function extractRoutes(app: Hono) {
-  const routes: { src: string; dest: string; methods: string[] }[] = [];
+function extractRoutes() {
   if (!app || !app.routes) {
     return [];
   }
+  const routes: { src: string; dest: string; methods: string[] }[] = [];
 
   for (const route of app.routes) {
     const routePath = route.path;

@@ -20,13 +20,13 @@ export default defineConfig([
     format: 'esm',
   },
   {
-    entry: 'src/introspection/express/handle.ts',
-    outDir: 'dist/express',
+    entry: 'src/introspection/express.ts',
+    outDir: 'dist',
     format: 'esm',
   },
   {
-    entry: 'src/introspection/hono/handle.ts',
-    outDir: 'dist/hono',
+    entry: 'src/introspection/hono.ts',
+    outDir: 'dist',
     format: 'esm',
   },
 ]);

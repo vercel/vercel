@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import { pathToRegexp } from 'path-to-regexp';
+import { setupCloseHandlers } from './util';
 
 let app: Express | null = null;
 
@@ -19,37 +20,13 @@ export const handle = (expressModule: any) => {
   }
   return expressModule;
 };
-process.on('SIGINT', () => {
-  extractMetadata();
-});
-process.on('SIGTERM', () => {
-  extractMetadata();
-});
-process.on('exit', () => {
-  extractMetadata();
-});
 
-const extractMetadata = () => {
-  if (!app) {
-    return;
-  }
-  const metadata = {
-    routes: extractRoutes(),
-  };
-  console.log(JSON.stringify(metadata));
-};
-
-let isExtractingRoutes = false;
+setupCloseHandlers(() => ({ routes: extractRoutes() ?? [] }));
 
 const extractRoutes = () => {
-  if (isExtractingRoutes) {
-    return;
-  }
   if (!app) {
-    return;
+    return [];
   }
-  isExtractingRoutes = true;
-
   const routes: { src: string; dest: string; methods: string[] }[] = [];
   const methods = [
     'all',

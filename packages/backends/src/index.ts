@@ -48,6 +48,11 @@ export const build: BuildV2 = async args => {
     }
   }
 
+  // Don't return until the TypeScript compilation is complete
+  if (outputConfig.tsPromise) {
+    await outputConfig.tsPromise;
+  }
+
   return {
     routes,
     output,

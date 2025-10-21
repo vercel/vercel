@@ -25,10 +25,7 @@ export async function load(
   const result = await nextLoad(url, context);
 
   if (expressUrl === url) {
-    const pathToExpressExtract = new URL(
-      '../express/handle.js',
-      import.meta.url
-    );
+    const pathToExpressExtract = new URL('../express.js', import.meta.url);
     // Create a shim that captures the Express app instance
     const shimSource = `
 import { handle} from ${JSON.stringify(pathToExpressExtract.toString())};
@@ -47,7 +44,7 @@ export default extendedExpress;
     };
   }
   if (honoUrl === url) {
-    const pathToHonoExtract = new URL('../hono/handle.js', import.meta.url);
+    const pathToHonoExtract = new URL('../hono.js', import.meta.url);
     const shimSource = `
 import { handle } from ${JSON.stringify(pathToHonoExtract.toString())};
 import * as originalHono from ${JSON.stringify(url + '?original')};
