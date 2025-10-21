@@ -34664,9 +34664,7 @@ async function handleNodeOutputs(nodeOutputs, {
             experimentalAllowBundling: true,
             // middleware handler always expects Request/Response interface
             useWebApi: isMiddleware
-          },
-          null,
-          2
+          }
         )
       );
       fsSema.release();
@@ -34768,9 +34766,7 @@ async function handlePrerenderOutputs(prerenderOutputs, {
                 ...output.pprChain,
                 outputPath: import_node_path.default.posix.join(parentNodeOutput.pathname)
               } : void 0
-            },
-            null,
-            2
+            }
           )
         );
         if (output.fallback?.filePath && prerenderFallbackPath && // if postponed state is present we write the fallback file above
@@ -34854,7 +34850,7 @@ async function handleEdgeOutputs(edgeOutputs, {
       };
       await import_fs_extra10.default.writeFile(
         import_node_path.default.join(functionDir, ".vc-config.json"),
-        JSON.stringify(edgeConfig, null, 2)
+        JSON.stringify(edgeConfig)
       );
       fsSema.release();
     })
