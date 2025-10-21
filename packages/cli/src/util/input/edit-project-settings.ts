@@ -40,8 +40,12 @@ export async function editProjectSettings(
     projectSettings
   );
 
+  const hasLocalConfigurationOverrides =
+    localConfigurationOverrides &&
+    Object.values(localConfigurationOverrides ?? {}).some(Boolean);
+
   // Start UX by displaying (and applying) overrides. They will be referenced throughout remainder of CLI.
-  if (localConfigurationOverrides) {
+  if (hasLocalConfigurationOverrides) {
     // Apply local overrides (from `vercel.json`)
     for (const setting of settingKeys) {
       const localConfigValue = localConfigurationOverrides[setting];
