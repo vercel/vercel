@@ -16,7 +16,13 @@ export const handle = (honoModule: any) => {
   return TrackedHono;
 };
 
-setupCloseHandlers(() => ({ routes: extractRoutes() }));
+setupCloseHandlers(() => {
+  const routes = extractRoutes();
+  if (routes.length > 0) {
+    return { frameworkSlug: 'hono', routes };
+  }
+  return undefined;
+});
 
 function extractRoutes() {
   if (!app || !app.routes) {

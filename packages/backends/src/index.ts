@@ -7,7 +7,7 @@ import { relative, join } from 'path';
 import { doBuild } from './build';
 
 export const build: BuildV2 = async args => {
-  console.log(`Using experimental express build`);
+  console.log(`Using experimental build`);
 
   const downloadResult = await downloadInstallAndBundle(args);
 
@@ -15,7 +15,7 @@ export const build: BuildV2 = async args => {
 
   const { files } = await nodeFileTrace(args, outputConfig);
 
-  const { routes } = await introspectApp(args, {
+  const { routes, framework } = await introspectApp(args, {
     ...outputConfig,
     files,
   });
@@ -31,9 +31,7 @@ export const build: BuildV2 = async args => {
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: true,
-    framework: {
-      slug: 'express',
-    },
+    framework,
     awsLambdaHandler: '',
   });
 

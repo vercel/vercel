@@ -21,7 +21,13 @@ export const handle = (expressModule: any) => {
   return expressModule;
 };
 
-setupCloseHandlers(() => ({ routes: extractRoutes() ?? [] }));
+setupCloseHandlers(() => {
+  const routes = extractRoutes();
+  if (routes.length > 0) {
+    return { frameworkSlug: 'express', routes };
+  }
+  return undefined;
+});
 
 const extractRoutes = () => {
   if (!app) {

@@ -2,6 +2,7 @@ import {
   BuildResultV2Typical,
   FileFsRef,
   Files,
+  NodejsLambda,
 } from '@vercel/build-utils/dist';
 import { build } from '../dist';
 import { join } from 'path';
@@ -109,6 +110,12 @@ describe('successful builds', async () => {
         entrypoint: 'package.json',
         repoRootPath: workPath,
       })) as BuildResultV2Typical;
+
+      const lambda = result.output.index as unknown as NodejsLambda;
+      expect(lambda.framework).toMatchObject({
+        slug: expect.stringMatching(/^express|hono$/),
+        // version: expect.any(String), //getting hono version is tricky
+      });
 
       const expectedFilePath = join(workPath, 'files.json');
       if (existsSync(expectedFilePath)) {

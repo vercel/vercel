@@ -1,9 +1,16 @@
 export const setupCloseHandlers = (
-  cb: () => { routes: { src: string; dest: string; methods: string[] }[] }
+  cb: () =>
+    | {
+        frameworkSlug: string;
+        routes: { src: string; dest: string; methods: string[] }[];
+      }
+    | undefined
 ) => {
   const callCallback = () => {
-    const routes = cb();
-    console.log(JSON.stringify(routes));
+    const result = cb();
+    if (result) {
+      console.log(JSON.stringify(result));
+    }
   };
 
   process.on('SIGINT', callCallback);

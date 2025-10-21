@@ -1,6 +1,7 @@
 import { BuildV2, Files } from '@vercel/build-utils';
 import { spawn } from 'child_process';
-import { join } from 'path';
+import { existsSync } from 'fs';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
@@ -20,8 +21,13 @@ export const introspectApp = async (
   const esmLoaderPath = new URL('loaders/esm.js', import.meta.url).href;
   const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
 
-  let introspectionRoutes: { src: string; dest: string; methods: string[] }[] =
-    [];
+  let introspectionResult: {
+    frameworkSlug: string;
+    routes: { src: string; dest: string; methods: string[] }[];
+  } = {
+    frameworkSlug: '',
+    routes: [],
+  };
 
   await new Promise(resolvePromise => {
     try {
@@ -45,6 +51,7 @@ export const introspectApp = async (
         try {
           const introspection = JSON.parse(data.toString());
           const introspectionSchema = z.object({
+            frameworkSlug: z.string(),
             routes: z.array(
               z.object({
                 src: z.string(),
@@ -53,8 +60,7 @@ export const introspectApp = async (
               })
             ),
           });
-          const introspectionResult = introspectionSchema.parse(introspection);
-          introspectionRoutes = introspectionResult.routes;
+          introspectionResult = introspectionSchema.parse(introspection);
         } catch (error) {
           // Ignore errors
         }
@@ -89,12 +95,42 @@ export const introspectApp = async (
     {
       handle: 'filesystem',
     },
-    ...introspectionRoutes,
+    ...introspectionResult.routes,
     {
       src: '/(.*)',
       dest: '/',
     },
   ];
 
-  return { routes, files: rolldownResult.files };
+  let version: string | undefined;
+  if (introspectionResult.frameworkSlug) {
+    // Resolve to package.json specifically
+    const frameworkLibPath = require.resolve(
+      `${introspectionResult.frameworkSlug}`,
+      {
+        paths: [rolldownResult.dir],
+      }
+    );
+    const findNearestPackageJson = (dir: string) => {
+      const packageJsonPath = join(dir, 'package.json');
+      if (existsSync(packageJsonPath)) {
+        return packageJsonPath;
+      }
+      return findNearestPackageJson(dirname(dir));
+    };
+    const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
+    if (nearestPackageJsonPath) {
+      const frameworkPackageJson = require(nearestPackageJsonPath);
+      version = frameworkPackageJson.version;
+    }
+  }
+
+  return {
+    routes,
+    files: rolldownResult.files,
+    framework: {
+      slug: introspectionResult.frameworkSlug,
+      version,
+    },
+  };
 };
