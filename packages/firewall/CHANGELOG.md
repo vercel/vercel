@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.1.1
+
+### Patch Changes
+
+- Allow users to set a path prefix to the Rate Limit request to support microfrontends. ([#14123](https://github.com/vercel/vercel/pull/14123))
+
 ## 1.1.0
 
 ### Minor Changes
