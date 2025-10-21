@@ -17,7 +17,15 @@ export const introspectApp = async (
   const thisDistDir = dirname(fileURLToPath(import.meta.url));
   const cjsLoaderPath = resolve(join(thisDistDir, 'loaders/cjs.cjs'));
   const esmLoaderPath = resolve(join(thisDistDir, 'loaders/esm.js'));
+  const dummy = resolve(join('/some-long-path/@vercel/ok', 'dummy.js'));
   const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
+  console.log({
+    cjsLoaderPath,
+    thisDistDir,
+    esmLoaderPath,
+    handlerPath,
+    dummy,
+  });
 
   let introspectionRoutes: { src: string; dest: string; methods: string[] }[] =
     [];
