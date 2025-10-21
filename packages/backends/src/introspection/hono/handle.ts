@@ -15,13 +15,25 @@ export const handle = (honoModule: any) => {
   return TrackedHono;
 };
 
-process.on('beforeExit', () => {
-  if (app) {
-    const routes = extractRoutes(app);
-    console.log(JSON.stringify({ routes }));
-  }
+process.on('SIGINT', () => {
+  extractMetadata();
+});
+process.on('SIGTERM', () => {
+  extractMetadata();
+});
+process.on('exit', () => {
+  extractMetadata();
 });
 
+const extractMetadata = () => {
+  if (!app) {
+    return;
+  }
+  const metadata = {
+    routes: extractRoutes(app),
+  };
+  console.log(JSON.stringify(metadata));
+};
 function extractRoutes(app: Hono) {
   const routes: { src: string; dest: string; methods: string[] }[] = [];
   if (!app || !app.routes) {

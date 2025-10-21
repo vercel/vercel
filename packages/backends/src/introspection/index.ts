@@ -1,6 +1,7 @@
 import { BuildV2, Files } from '@vercel/build-utils';
 import { spawn } from 'child_process';
 import { resolve, join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
 type RolldownResult = {
@@ -13,9 +14,9 @@ export const introspectApp = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  const packageRoot = getPackageRoot();
-  const cjsLoaderPath = resolve(join(packageRoot, 'dist/loaders/cjs.cjs'));
-  const esmLoaderPath = resolve(join(packageRoot, 'dist/loaders/esm.js'));
+  const thisDistDir = dirname(fileURLToPath(import.meta.url));
+  const cjsLoaderPath = resolve(join(thisDistDir, 'loaders/cjs.cjs'));
+  const esmLoaderPath = resolve(join(thisDistDir, 'loaders/esm.js'));
   const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
 
   let introspectionRoutes: { src: string; dest: string; methods: string[] }[] =
@@ -39,7 +40,7 @@ export const introspectApp = async (
       );
 
       child.stdout?.on('data', data => {
-        // console.log('[LOADER]', data.toString());
+        console.log('[LOADER]', data.toString());
         try {
           const introspection = JSON.parse(data.toString());
           const introspectionSchema = z.object({
@@ -58,9 +59,9 @@ export const introspectApp = async (
         }
       });
 
-      // child.stderr?.on('data', data => {
-      //   console.log('[LOADER]', data.toString());
-      // });
+      child.stderr?.on('data', data => {
+        console.log('[LOADER]', data.toString());
+      });
 
       const timeout = setTimeout(() => {
         child.kill('SIGTERM');
@@ -95,17 +96,4 @@ export const introspectApp = async (
   ];
 
   return { routes, files: rolldownResult.files };
-};
-
-const getPackageRoot = () => {
-  try {
-    const packageJsonPath = require.resolve('@vercel/backends/package.json');
-    return dirname(packageJsonPath);
-  } catch {
-    if (__dirname.includes('/src/')) {
-      return resolve(join(__dirname, '..', '..'));
-    } else {
-      return resolve(join(__dirname, '..'));
-    }
-  }
 };
