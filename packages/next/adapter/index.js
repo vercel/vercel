@@ -34833,7 +34833,7 @@ async function handleEdgeOutputs(edgeOutputs, {
         "index.js"
       );
       await import_fs_extra10.default.mkdir(import_node_path.default.dirname(handlerFilePath), { recursive: true });
-      await import_fs_extra10.default.writeFile(handlerFilePath, edgeSource);
+      await writeFileWithLock(handlerFilePath, edgeSource.toString());
       const edgeConfig = {
         runtime: "edge",
         entrypoint: import_node_path.default.posix.join(
@@ -34848,7 +34848,7 @@ async function handleEdgeOutputs(edgeOutputs, {
           version: nextVersion
         }
       };
-      await import_fs_extra10.default.writeFile(
+      await writeFileWithLock(
         import_node_path.default.join(functionDir, ".vc-config.json"),
         JSON.stringify(edgeConfig)
       );
