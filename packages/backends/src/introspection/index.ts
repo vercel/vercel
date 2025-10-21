@@ -1,6 +1,6 @@
 import { BuildV2, Files } from '@vercel/build-utils';
 import { spawn } from 'child_process';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
@@ -14,18 +14,11 @@ export const introspectApp = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  const thisDistDir = dirname(fileURLToPath(import.meta.url));
   const cjsLoaderPath = fileURLToPath(
     new URL('loaders/cjs.cjs', import.meta.url)
   );
   const esmLoaderPath = new URL('loaders/esm.js', import.meta.url).href;
   const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
-  console.log({
-    cjsLoaderPath,
-    thisDistDir,
-    esmLoaderPath,
-    handlerPath,
-  });
 
   let introspectionRoutes: { src: string; dest: string; methods: string[] }[] =
     [];
@@ -67,9 +60,9 @@ export const introspectApp = async (
         }
       });
 
-      child.stderr?.on('data', data => {
-        console.log('[LOADER]', data.toString());
-      });
+      // child.stderr?.on('data', data => {
+      //   console.log('[ERROR]', data.toString());
+      // });
 
       const timeout = setTimeout(() => {
         child.kill('SIGTERM');
