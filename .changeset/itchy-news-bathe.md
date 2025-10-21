@@ -1,0 +1,4 @@
+---
+---
+
+Add Fastify example
