@@ -221,11 +221,15 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
     });
 
     test('Should use path prefix when set', async () => {
-      process.env.NEXT_PUBLIC_VERCEL_FIREWALL_PATH_PREFIX = 'test-prefix';
       try {
+        process.env.NEXT_PUBLIC_VERCEL_FIREWALL_PATH_PREFIX = 'test-prefix';
         const { rateLimited } = await checkRateLimit('test-rule1', {
           firewallHostForDevelopment: HOST,
           rateLimitKey: '123' + rand,
+          headers: {
+            'x-real-ip': '192.168.10.2' + rand,
+            host: HOST,
+          },
         });
         expect(rateLimited).toBe(false);
         expect(fetchCalls).toHaveLength(1);
