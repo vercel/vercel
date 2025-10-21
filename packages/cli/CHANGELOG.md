@@ -1,5 +1,15 @@
 # vercel
 
+## 48.5.0
+
+### Minor Changes
+
+- Add zero-config support for Fastify ([#14120](https://github.com/vercel/vercel/pull/14120))
+
+### Patch Changes
+
+- Fix bug that was over-showing the local settings override log ([#14118](https://github.com/vercel/vercel/pull/14118))
+
 ## 48.4.1
 
 ### Patch Changes
