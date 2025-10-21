@@ -34501,6 +34501,13 @@ var copy = async (src, dest) => {
   await import_fs_extra10.default.remove(dest);
   await import_fs_extra10.default.copy(src, dest);
 };
+var writeLock = /* @__PURE__ */ new Map();
+var writeFileWithLock = async (filePath, content) => {
+  await writeLock.get(filePath);
+  const writePromise = import_fs_extra10.default.writeFile(filePath, content).finally(() => writeLock.delete(filePath));
+  writeLock.set(filePath, writePromise);
+  return writePromise;
+};
 async function handlePublicFiles(publicFolder, vercelOutputDir, config) {
   const topLevelItems = await import_fs_extra10.default.readdir(publicFolder).catch(() => []);
   const fsSema = new import_async_sema5.Sema(16, { capacity: topLevelItems.length });
@@ -34616,7 +34623,7 @@ async function handleNodeOutputs(nodeOutputs, {
         "___next_launcher.cjs"
       );
       await import_fs_extra10.default.mkdir(import_node_path.default.dirname(handlerFilePath), { recursive: true });
-      await import_fs_extra10.default.writeFile(
+      await writeFileWithLock(
         handlerFilePath,
         (0, import_node_handler.getHandlerSource)({
           projectRelativeDistDir: import_node_path.default.posix.relative(projectDir, distDir),
@@ -34635,7 +34642,7 @@ async function handleNodeOutputs(nodeOutputs, {
         sourceFile,
         config: vercelConfig
       });
-      await import_fs_extra10.default.writeFile(
+      await writeFileWithLock(
         import_node_path.default.join(functionDir, `.vc-config.json`),
         JSON.stringify(
           // TODO: strongly type this
@@ -34655,13 +34662,12 @@ async function handleNodeOutputs(nodeOutputs, {
             maxDuration: output.config.maxDuration,
             supportsResponseStreaming: true,
             experimentalAllowBundling: true,
-            ...isMiddleware ? {
-              useWebApi: true
-            } : {}
+            // middleware handler always expects Request/Response interface
+            useWebApi: isMiddleware
           },
           null,
           2
-        ).replace(/\0/g, "")
+        )
       );
       fsSema.release();
     })
@@ -34729,14 +34735,14 @@ async function handlePrerenderOutputs(prerenderOutputs, {
             output.fallback.filePath,
             "utf8"
           );
-          await import_fs_extra10.default.writeFile(
+          await writeFileWithLock(
             prerenderFallbackPath,
             `${output.fallback.postponedState}${fallbackHtml}`
           );
           initialHeaders["content-type"] = `application/x-nextjs-pre-render; state-length=${output.fallback.postponedState.length}; origin="text/html; charset=utf-8"`;
         }
         await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderConfigPath), { recursive: true });
-        await import_fs_extra10.default.writeFile(
+        await writeFileWithLock(
           prerenderConfigPath,
           JSON.stringify(
             // TODO: strongly type this
@@ -34848,7 +34854,7 @@ async function handleEdgeOutputs(edgeOutputs, {
       };
       await import_fs_extra10.default.writeFile(
         import_node_path.default.join(functionDir, ".vc-config.json"),
-        JSON.stringify(edgeConfig, null, 2).replace(/\0/g, "")
+        JSON.stringify(edgeConfig, null, 2)
       );
       fsSema.release();
     })
