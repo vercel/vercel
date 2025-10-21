@@ -1,6 +1,6 @@
 import { BuildV2, Files } from '@vercel/build-utils';
 import { spawn } from 'child_process';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
@@ -15,9 +15,11 @@ export const introspectApp = async (
   rolldownResult: RolldownResult
 ) => {
   const thisDistDir = dirname(fileURLToPath(import.meta.url));
-  const cjsLoaderPath = new URL('loaders/cjs.cjs', import.meta.url).href;
+  const cjsLoaderPath = fileURLToPath(
+    new URL('loaders/cjs.cjs', import.meta.url)
+  );
   const esmLoaderPath = new URL('loaders/esm.js', import.meta.url).href;
-  const handlerPath = new URL(rolldownResult.handler, import.meta.url).href;
+  const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
   console.log({
     cjsLoaderPath,
     thisDistDir,
