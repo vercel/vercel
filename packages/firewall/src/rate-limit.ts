@@ -8,17 +8,26 @@
  * @param rateLimitId The ID of the rate limit to check. The same ID must be defined in the Vercel Firewall as a @vercel/firewall rule condition.
  * @param options
  * @returns A promise that resolves to an object with a `rateLimited` property that is `true` if the request is rate-limited, and `false` otherwise. The
- *   `error` property is defined if the request was blocked by the firewall or the rate limit ID was not found.
+ *   `error` property is defined if the request was blocked by the firewall or the rate limit ID was not found. The `rateLimitHeaders` property
+ *   contains rate limiting information from the firewall API response, including reset time, remaining requests, and retry timing.
  *
  * @example
  * ```js
  * import { unstable_checkRateLimit as checkRateLimit } from '@vercel/firewall';
  *
  * export async function POST() {
- *   const { rateLimited } = await checkRateLimit('my-rate-limit-id');
+ *   const { rateLimited, rateLimitHeaders } = await checkRateLimit('my-rate-limit-id');
  *   if (rateLimited) {
- *     return new Response('', {
+ *     const headers: Record<string, string> = {};
+ *     if (rateLimitHeaders?.reset) {
+ *       headers['RateLimit-Reset'] = rateLimitHeaders.reset.toString();
+ *     }
+ *     if (rateLimitHeaders?.retryAfter) {
+ *       headers['Retry-After'] = rateLimitHeaders.retryAfter.toString();
+ *     }
+ *     return new Response('Rate limit exceeded', {
  *       status: 429,
+ *       headers,
  *     });
  *   }
  *   // Implement logic guarded by rate limit
@@ -44,6 +53,17 @@ export async function checkRateLimit(
 ): Promise<{
   rateLimited: boolean;
   error?: 'not-found' | 'blocked';
+  /** Rate limiting headers returned by the firewall API */
+  rateLimitHeaders?: {
+    /** The rate limit threshold (maximum requests allowed) */
+    limit?: number;
+    /** Number of requests remaining in the current window */
+    remaining?: number;
+    /** Unix timestamp when the rate limit will reset */
+    reset?: number;
+    /** Number of seconds until the rate limit resets */
+    retryAfter?: number;
+  };
 }> {
   if (
     process.env.NODE_ENV !== 'production' &&
@@ -127,17 +147,20 @@ export async function checkRateLimit(
   if (response.status === 204) {
     return {
       rateLimited: false,
+      rateLimitHeaders: parseRateLimitHeaders(response),
     };
   }
   if (response.status === 429) {
     return {
       rateLimited: true,
+      rateLimitHeaders: parseRateLimitHeaders(response),
     };
   }
   if (response.status === 403) {
     return {
       rateLimited: true,
       error: 'blocked',
+      rateLimitHeaders: parseRateLimitHeaders(response),
     };
   }
   if (response.status === 404) {
@@ -145,6 +168,7 @@ export async function checkRateLimit(
     return {
       rateLimited: false,
       error: 'not-found',
+      rateLimitHeaders: parseRateLimitHeaders(response),
     };
   }
   throw new Error(
@@ -153,6 +177,47 @@ export async function checkRateLimit(
 }
 
 export { checkRateLimit as unstable_checkRateLimit };
+
+function parseRateLimitHeaders(response: Response) {
+  const headers: {
+    limit?: number;
+    remaining?: number;
+    reset?: number;
+    retryAfter?: number;
+  } = {};
+
+  const limit =
+    response.headers.get('ratelimit-limit') ||
+    response.headers.get('x-ratelimit-limit');
+  if (limit) {
+    const parsed = parseInt(limit, 10);
+    if (!isNaN(parsed)) headers.limit = parsed;
+  }
+
+  const remaining =
+    response.headers.get('ratelimit-remaining') ||
+    response.headers.get('x-ratelimit-remaining');
+  if (remaining) {
+    const parsed = parseInt(remaining, 10);
+    if (!isNaN(parsed)) headers.remaining = parsed;
+  }
+
+  const reset =
+    response.headers.get('ratelimit-reset') ||
+    response.headers.get('x-ratelimit-reset');
+  if (reset) {
+    const parsed = parseInt(reset, 10);
+    if (!isNaN(parsed)) headers.reset = parsed;
+  }
+
+  const retryAfter = response.headers.get('retry-after');
+  if (retryAfter) {
+    const parsed = parseInt(retryAfter, 10);
+    if (!isNaN(parsed)) headers.retryAfter = parsed;
+  }
+
+  return Object.keys(headers).length > 0 ? headers : undefined;
+}
 
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();

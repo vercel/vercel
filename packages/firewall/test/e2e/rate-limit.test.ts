@@ -219,5 +219,167 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
         })
       ).rejects.toThrow('`headers` or `request` options are required');
     });
+
+    test('Should parse and return rate limiting headers when present', async () => {
+      const origFetch = globalThis.fetch;
+
+      // Mock a successful response with rate limiting headers
+      globalThis.fetch = async () => {
+        return new Response(null, {
+          status: 204, // Not rate limited
+          headers: new Headers({
+            'ratelimit-limit': '100',
+            'ratelimit-remaining': '95',
+            'ratelimit-reset': '1640995200', // Unix timestamp
+            'retry-after': '60',
+          }),
+        });
+      };
+
+      try {
+        const result = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+          headers: new Headers(),
+        });
+
+        expect(result.rateLimited).toBe(false);
+        expect(result.rateLimitHeaders).toBeDefined();
+        expect(result.rateLimitHeaders?.limit).toBe(100);
+        expect(result.rateLimitHeaders?.remaining).toBe(95);
+        expect(result.rateLimitHeaders?.reset).toBe(1640995200);
+        expect(result.rateLimitHeaders?.retryAfter).toBe(60);
+      } finally {
+        globalThis.fetch = origFetch;
+      }
+    });
+
+    test('Should parse rate limiting headers with x-ratelimit prefix', async () => {
+      const origFetch = globalThis.fetch;
+
+      // Mock response with x-ratelimit prefixed headers
+      globalThis.fetch = async () => {
+        return new Response(null, {
+          status: 429, // Rate limited
+          headers: new Headers({
+            'x-ratelimit-limit': '50',
+            'x-ratelimit-remaining': '0',
+            'x-ratelimit-reset': '1640998800',
+            'retry-after': '120',
+          }),
+        });
+      };
+
+      try {
+        const result = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+          headers: new Headers(),
+        });
+
+        expect(result.rateLimited).toBe(true);
+        expect(result.rateLimitHeaders).toBeDefined();
+        expect(result.rateLimitHeaders?.limit).toBe(50);
+        expect(result.rateLimitHeaders?.remaining).toBe(0);
+        expect(result.rateLimitHeaders?.reset).toBe(1640998800);
+        expect(result.rateLimitHeaders?.retryAfter).toBe(120);
+      } finally {
+        globalThis.fetch = origFetch;
+      }
+    });
+
+    test('Should handle responses without rate limiting headers', async () => {
+      const origFetch = globalThis.fetch;
+
+      // Mock response without any rate limiting headers
+      globalThis.fetch = async () => {
+        return new Response(null, {
+          status: 204,
+          headers: new Headers({
+            'content-type': 'application/json',
+          }),
+        });
+      };
+
+      try {
+        const result = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+          headers: new Headers(),
+        });
+
+        expect(result.rateLimited).toBe(false);
+        expect(result.rateLimitHeaders).toBeUndefined();
+      } finally {
+        globalThis.fetch = origFetch;
+      }
+    });
+
+    test('Should handle partial rate limiting headers', async () => {
+      const origFetch = globalThis.fetch;
+
+      // Mock response with only some rate limiting headers
+      globalThis.fetch = async () => {
+        return new Response(null, {
+          status: 429,
+          headers: new Headers({
+            'ratelimit-reset': '1640999400',
+            // Missing limit, remaining, and retry-after
+          }),
+        });
+      };
+
+      try {
+        const result = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+          headers: new Headers(),
+        });
+
+        expect(result.rateLimited).toBe(true);
+        expect(result.rateLimitHeaders).toBeDefined();
+        expect(result.rateLimitHeaders?.reset).toBe(1640999400);
+        expect(result.rateLimitHeaders?.limit).toBeUndefined();
+        expect(result.rateLimitHeaders?.remaining).toBeUndefined();
+        expect(result.rateLimitHeaders?.retryAfter).toBeUndefined();
+      } finally {
+        globalThis.fetch = origFetch;
+      }
+    });
+
+    test('Should handle invalid header values gracefully', async () => {
+      const origFetch = globalThis.fetch;
+
+      // Mock response with invalid numeric header values
+      globalThis.fetch = async () => {
+        return new Response(null, {
+          status: 204,
+          headers: new Headers({
+            'ratelimit-limit': 'invalid',
+            'ratelimit-remaining': 'also-invalid',
+            'ratelimit-reset': '1640999999', // This one is valid
+            'retry-after': 'not-a-number',
+          }),
+        });
+      };
+
+      try {
+        const result = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+          headers: new Headers(),
+        });
+
+        expect(result.rateLimited).toBe(false);
+        expect(result.rateLimitHeaders).toBeDefined();
+        // Only the valid header should be parsed
+        expect(result.rateLimitHeaders?.reset).toBe(1640999999);
+        expect(result.rateLimitHeaders?.limit).toBeUndefined();
+        expect(result.rateLimitHeaders?.remaining).toBeUndefined();
+        expect(result.rateLimitHeaders?.retryAfter).toBeUndefined();
+      } finally {
+        globalThis.fetch = origFetch;
+      }
+    });
   };
 }

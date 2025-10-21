@@ -20,7 +20,7 @@ Renames and re-exports [checkRateLimit](README.md#checkratelimit)
 
 ### checkRateLimit
 
-▸ **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
+▸ **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimitHeaders?`: { `limit?`: `number` ; `remaining?`: `number` ; `reset?`: `number` ; `retryAfter?`: `number` } ; `rateLimited`: `boolean` }\>
 
 Experimental: Check rate-limits defined through the Vercel Firewall.
 
@@ -34,10 +34,18 @@ ID. The return value indicates whether the request is rate limited or not.
 import { unstable_checkRateLimit as checkRateLimit } from '@vercel/firewall';
 
 export async function POST() {
-  const { rateLimited } = await checkRateLimit('my-rate-limit-id');
+  const { rateLimited, rateLimitHeaders } = await checkRateLimit('my-rate-limit-id');
   if (rateLimited) {
-    return new Response('', {
+    const headers: Record<string, string> = {};
+    if (rateLimitHeaders?.reset) {
+      headers['RateLimit-Reset'] = rateLimitHeaders.reset.toString();
+    }
+    if (rateLimitHeaders?.retryAfter) {
+      headers['Retry-After'] = rateLimitHeaders.retryAfter.toString();
+    }
+    return new Response('Rate limit exceeded', {
       status: 429,
+      headers,
     });
   }
   // Implement logic guarded by rate limit
@@ -57,11 +65,12 @@ export async function POST() {
 
 #### Returns
 
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimitHeaders?`: { `limit?`: `number` ; `remaining?`: `number` ; `reset?`: `number` ; `retryAfter?`: `number` } ; `rateLimited`: `boolean` }\>
 
 A promise that resolves to an object with a `rateLimited` property that is `true` if the request is rate-limited, and `false` otherwise. The
-`error` property is defined if the request was blocked by the firewall or the rate limit ID was not found.
+`error` property is defined if the request was blocked by the firewall or the rate limit ID was not found. The `rateLimitHeaders` property
+contains rate limiting information from the firewall API response, including reset time, remaining requests, and retry timing.
 
 #### Defined in
 
-[rate-limit.ts:29](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L29)
+[rate-limit.ts:38](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L38)
