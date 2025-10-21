@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.14.0
+
+### Minor Changes
+
+- Add zero-config support for Fastify ([#14120](https://github.com/vercel/vercel/pull/14120))
+
 ## 3.13.0
 
 ### Minor Changes
