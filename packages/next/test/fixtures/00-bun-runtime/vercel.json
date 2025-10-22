@@ -1,29 +1,17 @@
 {
   "bunVersion": "1.x",
-  "functions": {
-    "pages/api/pages/bun.js": {
-      "runtime": "@vercel/bun"
-    },
-    "app/api/app/bun/route.js": {
-      "runtime": "@vercel/bun"
-    }
-  },
   "probes": [
     {
       "path": "/api/pages/bun",
       "mustContain": "\"runtime\":\"bun\""
     },
     {
-      "path": "/api/pages/node",
-      "mustContain": "\"runtime\":\"node\""
-    },
-    {
       "path": "/api/app/bun",
       "mustContain": "\"runtime\":\"bun\""
     },
     {
-      "path": "/api/app/node",
-      "mustContain": "\"runtime\":\"node\""
+      "path": "/",
+      "mustContain": "\"runtime\":\"bun\""
     }
   ]
 }
