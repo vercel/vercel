@@ -104,6 +104,7 @@ it('Should invoke build command with serverless-no-config', async () => {
   const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
     filePath.match(/static.*\/pages\/_error-.*\.js$/)
   );
+  // yooo
   const hasBuildFile = await fs.pathExists(
     path.join(__dirname, 'serverless-no-config-build'),
     '.next',
