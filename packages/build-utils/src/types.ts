@@ -25,6 +25,7 @@ export interface Files {
 }
 
 export interface Config {
+  bunVersion?: string;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
