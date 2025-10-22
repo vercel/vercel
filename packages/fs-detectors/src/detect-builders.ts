@@ -464,6 +464,10 @@ function maybeGetApiBuilder(
     }
   }
 
+  if (options.bunVersion) {
+    config.bunVersion = options.bunVersion;
+  }
+
   const builder: Builder = {
     use,
     src: fileName,
