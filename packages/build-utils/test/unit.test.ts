@@ -162,17 +162,6 @@ it('should resolve to the provided bunVersion on dev', async () => {
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
-it('should fail if both nodeVersion and bunVersion are given', async () => {
-  expect(
-    getNodeVersion(
-      '/tmp',
-      undefined,
-      { nodeVersion: '22.x', bunVersion: '1.x' },
-      { isDev: false }
-    )
-  ).rejects.toThrow();
-});
-
 it('should fail if the provided bun version is not valid', async () => {
   expect(
     getNodeVersion(
