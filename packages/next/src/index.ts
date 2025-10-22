@@ -281,7 +281,6 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -392,7 +391,6 @@ export const build: BuildV2 = async buildOptions => {
             [],
             spawnOpts,
             meta,
-            nodeVersion,
             config.projectSettings?.createdAt
           );
         }
@@ -1088,7 +1086,6 @@ export const build: BuildV2 = async buildOptions => {
       ['--production'],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }

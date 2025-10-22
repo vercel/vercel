@@ -1,10 +1,18 @@
 import { statSync } from 'fs';
 import { intersects, validRange } from 'semver';
-import { NodeVersion } from '../types';
+import { BunVersion, NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
+
+export const BUN_VERSIONS: BunVersion[] = [
+  new BunVersion({
+    major: 1,
+    range: '1.x',
+    runtime: 'bun1.x',
+  }),
+];
 
 // `NODE_VERSIONS` is assumed to be sorted by version number
 // with the newest supported version first
@@ -108,6 +116,31 @@ export function getLatestNodeVersion(availableVersions?: NodeVersionMajor[]) {
 export function getDiscontinuedNodeVersions(): NodeVersion[] {
   return getOptions().filter(version => {
     return version.state === 'discontinued';
+  });
+}
+
+/**
+ * For now this function just validates that the Bun version set in the
+ * engines is valid and matches what is currently supported.
+ */
+export function getSupportedBunVersion(engineRange: string): BunVersion {
+  if (validRange(engineRange)) {
+    const selected = BUN_VERSIONS.find(version => {
+      return intersects(version.range, engineRange);
+    });
+
+    if (selected) {
+      return new BunVersion({
+        major: selected.major,
+        range: selected.range,
+        runtime: selected.runtime,
+      });
+    }
+  }
+
+  throw new NowBuildError({
+    message: `Found invalid Bun Version: "${engineRange}".`,
+    code: 'BUILD_UTILS_BUN_VERSION_INVALID',
   });
 }
 

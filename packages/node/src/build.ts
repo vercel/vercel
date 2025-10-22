@@ -94,7 +94,6 @@ async function downloadInstallAndBundle({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -117,7 +116,6 @@ async function downloadInstallAndBundle({
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -508,13 +506,6 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
-  const isStaticConfigBun = runtime === 'bun';
-  // The functions config is already filtered to only the current entrypoint
-  const isBuilderBun = Object.values(config.functions ?? {}).some(
-    func => func.runtime === '@vercel/bun'
-  );
-  const isBun = !isEdgeFunction && (isStaticConfigBun || isBuilderBun);
-
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -606,7 +597,7 @@ export const build = async ({
       files: preparedFiles,
       handler,
       architecture: staticConfig?.architecture,
-      runtime: isBun ? 'bun1.x' : nodeVersion.runtime,
+      runtime: nodeVersion.runtime,
       useWebApi: isMiddleware ? true : useWebApi,
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,

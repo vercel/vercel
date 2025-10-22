@@ -17,11 +17,12 @@ import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
-import { Meta, PackageJson, NodeVersion, Config } from '../types';
+import { Meta, PackageJson, NodeVersion, Config, BunVersion } from '../types';
 import {
   getSupportedNodeVersion,
   getLatestNodeVersion,
   getAvailableNodeVersions,
+  getSupportedBunVersion,
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
@@ -265,6 +266,10 @@ export function getSpawnOptions(
     env: cloneEnv(process.env),
   };
 
+  if (nodeVersion.runtime.startsWith('bun')) {
+    return opts;
+  }
+
   if (!meta.isDev) {
     let found = false;
     const oldPath = opts.env.PATH || process.env.PATH || '';
@@ -294,16 +299,26 @@ export async function getNodeVersion(
   config: Config = {},
   meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
-): Promise<NodeVersion> {
+): Promise<NodeVersion | BunVersion> {
+  const { packageJson } = await scanParentDirs(destPath, true);
+
+  /**
+   * If there is a Bun version specified in the package.json, we use it and
+   * bail from using Node.js altogether. In the future we probably want to
+   * fail if both Bun and Node.js are specified.
+   */
+  if (packageJson?.engines?.bun) {
+    return getSupportedBunVersion(packageJson.engines.bun);
+  }
+
   const latestVersion = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     latestVersion.runtime = 'nodejs';
     return latestVersion;
   }
-  const { packageJson } = await scanParentDirs(destPath, true);
-  const configuredVersion = config.nodeVersion || fallbackVersion;
 
+  const configuredVersion = config.nodeVersion || fallbackVersion;
   const packageJsonVersion = packageJson?.engines?.node;
   const supportedNodeVersion = await getSupportedNodeVersion(
     packageJsonVersion || configuredVersion,
@@ -731,7 +746,6 @@ export async function runNpmInstall(
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
-  nodeVersion?: NodeVersion,
   projectCreatedAt?: number
 ): Promise<boolean> {
   if (meta?.isDev) {
@@ -796,7 +810,6 @@ export async function runNpmInstall(
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
-      nodeVersion,
       env,
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
@@ -835,7 +848,6 @@ export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
   packageJsonPackageManager,
-  nodeVersion,
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
@@ -844,7 +856,6 @@ export function getEnvForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   packageJsonPackageManager?: string | undefined;
-  nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
@@ -864,7 +875,6 @@ export function getEnvForPackageManager({
     cliType,
     lockfileVersion,
     corepackPackageManager: packageJsonPackageManager,
-    nodeVersion,
     corepackEnabled,
     packageJsonEngines,
     projectCreatedAt,
@@ -1039,7 +1049,6 @@ export function getPathOverrideForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
-  nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
   packageJsonEngines?: PackageJson.Engines;
   projectCreatedAt?: number;
@@ -1286,12 +1295,10 @@ export function detectPackageManager(
 export function getPathForPackageManager({
   cliType,
   lockfileVersion,
-  nodeVersion,
   env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
-  nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }): {
   /**
@@ -1322,7 +1329,6 @@ export function getPathForPackageManager({
     cliType,
     lockfileVersion,
     corepackPackageManager: undefined,
-    nodeVersion,
   });
 
   if (corepackEnabled) {
@@ -1354,13 +1360,11 @@ export function getPathForPackageManager({
 export async function runCustomInstallCommand({
   destPath,
   installCommand,
-  nodeVersion,
   spawnOpts,
   projectCreatedAt,
 }: {
   destPath: string;
   installCommand: string;
-  nodeVersion: NodeVersion;
   spawnOpts?: SpawnOptions;
   projectCreatedAt?: number;
 }) {
@@ -1376,7 +1380,6 @@ export async function runCustomInstallCommand({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
     turboSupportsCorepackHome,
@@ -1421,7 +1424,6 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
-      nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,

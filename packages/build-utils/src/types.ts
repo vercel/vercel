@@ -280,6 +280,7 @@ export namespace PackageJson {
     node?: string;
     npm?: string;
     pnpm?: string;
+    bun?: string;
   }
 
   export interface PublishConfig {
@@ -377,6 +378,8 @@ export class Version implements BaseVersion {
 }
 
 export class NodeVersion extends Version {}
+
+export class BunVersion extends Version {}
 
 export interface Builder {
   use: string;
