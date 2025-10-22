@@ -1,6 +1,6 @@
 import { statSync } from 'fs';
 import { intersects, validRange } from 'semver';
-import { BunVersion, NodeVersion } from '../types';
+import { BunVersion, NodeVersion, Version } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
 
@@ -210,4 +210,8 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
     message: `Found invalid Bun Version: "${engineRange}".`,
     code: 'BUILD_UTILS_BUN_VERSION_INVALID',
   });
+}
+
+export function isBunVersion(version: Version): version is BunVersion {
+  return version.runtime.startsWith('bun');
 }

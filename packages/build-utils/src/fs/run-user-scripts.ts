@@ -23,6 +23,7 @@ import {
   getLatestNodeVersion,
   getAvailableNodeVersions,
   getSupportedBunVersion,
+  isBunVersion,
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
@@ -265,6 +266,10 @@ export function getSpawnOptions(
   const opts = {
     env: cloneEnv(process.env),
   };
+
+  if (isBunVersion(nodeVersion)) {
+    return opts;
+  }
 
   if (!meta.isDev) {
     let found = false;
