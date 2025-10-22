@@ -731,7 +731,6 @@ export async function runNpmInstall(
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
-  nodeVersion?: NodeVersion,
   projectCreatedAt?: number
 ): Promise<boolean> {
   if (meta?.isDev) {
@@ -796,7 +795,6 @@ export async function runNpmInstall(
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
-      nodeVersion,
       env,
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
@@ -835,7 +833,6 @@ export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
   packageJsonPackageManager,
-  nodeVersion,
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
@@ -844,7 +841,6 @@ export function getEnvForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   packageJsonPackageManager?: string | undefined;
-  nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
@@ -864,7 +860,6 @@ export function getEnvForPackageManager({
     cliType,
     lockfileVersion,
     corepackPackageManager: packageJsonPackageManager,
-    nodeVersion,
     corepackEnabled,
     packageJsonEngines,
     projectCreatedAt,
@@ -1039,7 +1034,6 @@ export function getPathOverrideForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
-  nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
   packageJsonEngines?: PackageJson.Engines;
   projectCreatedAt?: number;
@@ -1286,12 +1280,10 @@ export function detectPackageManager(
 export function getPathForPackageManager({
   cliType,
   lockfileVersion,
-  nodeVersion,
   env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
-  nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }): {
   /**
@@ -1322,7 +1314,6 @@ export function getPathForPackageManager({
     cliType,
     lockfileVersion,
     corepackPackageManager: undefined,
-    nodeVersion,
   });
 
   if (corepackEnabled) {
@@ -1354,13 +1345,11 @@ export function getPathForPackageManager({
 export async function runCustomInstallCommand({
   destPath,
   installCommand,
-  nodeVersion,
   spawnOpts,
   projectCreatedAt,
 }: {
   destPath: string;
   installCommand: string;
-  nodeVersion: NodeVersion;
   spawnOpts?: SpawnOptions;
   projectCreatedAt?: number;
 }) {
@@ -1376,7 +1365,6 @@ export async function runCustomInstallCommand({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
     turboSupportsCorepackHome,
@@ -1421,7 +1409,6 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
-      nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
