@@ -94,7 +94,6 @@ async function downloadInstallAndBundle({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -117,7 +116,6 @@ async function downloadInstallAndBundle({
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -506,6 +504,16 @@ export const build = async ({
 
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
+  }
+
+  if (
+    !isEdgeFunction &&
+    nodeVersion.runtime.startsWith('bun') &&
+    staticConfig?.runtime === 'nodejs'
+  ) {
+    throw new Error(
+      `The "nodejs" runtime is not compatible with the "bun" engine. Please change the runtime from ${entrypointPath} to "bun".`
+    );
   }
 
   debug('Tracing input files...');

@@ -99,6 +99,7 @@ import {
   require_,
   getServerlessPages,
   RenderingMode,
+  shouldUseBunRuntime,
 } from './utils';
 import { getAppRouterPathnameFilesMap } from './metadata';
 
@@ -280,7 +281,6 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -391,7 +391,6 @@ export const build: BuildV2 = async buildOptions => {
             [],
             spawnOpts,
             meta,
-            nodeVersion,
             config.projectSettings?.createdAt
           );
         }
@@ -1087,7 +1086,6 @@ export const build: BuildV2 = async buildOptions => {
       ['--production'],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -1207,18 +1205,21 @@ export const build: BuildV2 = async buildOptions => {
             ],
         };
 
+        const sourceFile = await getSourceFilePathFromPage({
+          workPath: entryPath,
+          page,
+        });
+
         let lambdaOptions = {};
         if (config && config.functions) {
           lambdaOptions = await getLambdaOptionsFromFunction({
-            sourceFile: await getSourceFilePathFromPage({
-              workPath: entryPath,
-              page,
-            }),
+            sourceFile,
             config,
           });
         }
 
         debug(`Creating serverless function for page: "${page}"...`);
+        const useBun = shouldUseBunRuntime(sourceFile, config);
         lambdas[path.posix.join(entryDirectory, pathname)] = new NodejsLambda({
           files: {
             ...nextFiles,
@@ -1226,7 +1227,7 @@ export const build: BuildV2 = async buildOptions => {
             '___next_launcher.cjs': new FileBlob({ data: launcher }),
           },
           handler: '___next_launcher.cjs',
-          runtime: nodeVersion.runtime,
+          runtime: useBun ? 'bun1.x' : nodeVersion.runtime,
           ...lambdaOptions,
           operationType: 'Page', // always Page because we're in legacy mode
           shouldAddHelpers: false,
@@ -1764,6 +1765,7 @@ export const build: BuildV2 = async buildOptions => {
       isApiLambda: boolean;
       lambdaIdentifier: string;
       lambdaCombinedBytes: number;
+      runtime?: 'nodejs' | 'bun';
     };
     const apiLambdaGroups: Array<LambdaGroup> = [];
     const pageLambdaGroups: Array<LambdaGroup> = [];
@@ -1998,12 +2000,14 @@ export const build: BuildV2 = async buildOptions => {
             supportsCancellation?: boolean;
           } = {};
 
+          const sourceFile = await getSourceFilePathFromPage({
+            workPath: entryPath,
+            page,
+          });
+
           if (config && config.functions) {
             lambdaOptions = await getLambdaOptionsFromFunction({
-              sourceFile: await getSourceFilePathFromPage({
-                workPath: entryPath,
-                page,
-              }),
+              sourceFile,
               config,
             });
           }
@@ -2012,6 +2016,7 @@ export const build: BuildV2 = async buildOptions => {
             path.join(entryDirectory, pathname),
             isServerMode
           );
+          const useBun = shouldUseBunRuntime(sourceFile, config);
 
           if (requiresTracing) {
             lambdas[outputName] = await createLambdaFromPseudoLayers({
@@ -2035,7 +2040,7 @@ export const build: BuildV2 = async buildOptions => {
                 prerenderManifest,
                 pageFileName,
               }),
-              runtime: nodeVersion.runtime,
+              runtime: useBun ? 'bun1.x' : nodeVersion.runtime,
               nextVersion,
               ...lambdaOptions,
             });
@@ -2056,7 +2061,7 @@ export const build: BuildV2 = async buildOptions => {
                 '___next_launcher.cjs'
               ),
               operationType: getOperationType({ pageFileName }), // can only be API or Page
-              runtime: nodeVersion.runtime,
+              runtime: useBun ? 'bun1.x' : nodeVersion.runtime,
               nextVersion,
               ...lambdaOptions,
             });
@@ -2282,7 +2287,8 @@ export const build: BuildV2 = async buildOptions => {
                   '___next_launcher.cjs'
                 ),
                 operationType,
-                runtime: nodeVersion.runtime,
+                runtime:
+                  group.runtime === 'bun' ? 'bun1.x' : nodeVersion.runtime,
                 nextVersion,
               });
           }

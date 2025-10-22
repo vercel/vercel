@@ -126,7 +126,6 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -148,7 +147,6 @@ export const build: BuildV2 = async ({
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -330,7 +328,6 @@ export const build: BuildV2 = async ({
         env: nonCiEnv,
       },
       undefined,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }

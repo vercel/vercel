@@ -660,7 +660,8 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
-    if (func.runtime !== undefined) {
+    // `@vercel/bun` is a special builder that transparently maps to `@vercel/node`
+    if (func.runtime !== undefined && func.runtime !== '@vercel/bun') {
       const tag = `${func.runtime}`.split('@').pop();
 
       if (!tag || !validSemver(tag)) {
@@ -714,7 +715,9 @@ function checkUnusedFunctions(
         fnKey.startsWith('pages/') ||
         fnKey.startsWith('src/pages') ||
         fnKey.startsWith('app/') ||
-        fnKey.startsWith('src/app/')
+        fnKey.startsWith('src/app/') ||
+        fnKey.startsWith('middleware') ||
+        fnKey.startsWith('src/middleware')
       ) {
         unusedFunctions.delete(fnKey);
       } else {
