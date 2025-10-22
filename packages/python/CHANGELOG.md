@@ -1,5 +1,19 @@
 # @vercel/python
 
+## 5.0.10
+
+### Patch Changes
+
+- [python] flask start dev server ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+- [python] streaming e2e tests ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+## 5.0.9
+
+### Patch Changes
+
+- reverts fastapi background task commit ([#14074](https://github.com/vercel/vercel/pull/14074))
+
 ## 5.0.8
 
 ### Patch Changes
