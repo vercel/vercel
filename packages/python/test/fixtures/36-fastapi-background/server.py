@@ -88,3 +88,24 @@ async def bg_logs():
     else:
         log_files = os.listdir(log_dir)
     return {"status": "ok", "log_files": log_files, "count": f"{len(log_files)} log files"}
+
+
+@app.get("/bg-clear-logs")
+async def bg_clear_logs():
+    logger.info("Clearing background logs")
+    log_dir = "/tmp/logs"
+    if not os.path.exists(log_dir):
+        return {"status": "ok", "message": "No logs to clear", "cleared": 0}
+
+    log_files = os.listdir(log_dir)
+    count = 0
+    for filename in log_files:
+        filepath = os.path.join(log_dir, filename)
+        try:
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+                count += 1
+        except Exception as e:
+            logger.error(f"Failed to remove {filepath}: {e}")
+
+    return {"status": "ok", "message": f"Cleared {count} log files", "cleared": count}
