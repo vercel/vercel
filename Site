@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INFO GAMER - Loja de Produtos de Computador</title>
+  <style>
+    body { font-family: Arial; margin: 0; background: #f5f5f5; text-align: center; }
+    header { background: #1e1e1e; color: #fff; padding: 20px; }
+    main { display: flex; flex-wrap: wrap; justify-content: center; padding: 30px; gap: 20px; }
+    .produto { background: #fff; padding: 20px; width: 250px; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 5px; }
+    button:hover { background: #45a049; }
+  </style>
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <header>
+    <h1>INFO GAMER</h1>
+    <p>Loja de Produtos de Computador</p>
+  </header>
+
+  <main>
+    <div class="produto">
+      <h2>Placa de Vídeo GTX 1660</h2>
+      <p>R$ 1.200,00</p>
+      <button onclick="comprar('prod_gtx1660')">Comprar</button>
+    </div>
+
+    <div class="produto">
+      <h2>Processador Intel i7</h2>
+      <p>R$ 1.800,00</p>
+      <button onclick="comprar('prod_i7')">Comprar</button>
+    </div>
+
+    <div class="produto">
+      <h2>Memória RAM 16GB</h2>
+      <p>R$ 400,00</p>
+      <button onclick="comprar('prod_ram16')">Comprar</button>
+    </div>
+  </main>
+
+  <script>
+    const stripe = Stripe('SUA_CHAVE_PUBLISHABLE_DO_STRIPE'); // Coloque sua chave de teste do Stripe
+
+    function comprar(produtoId) {
+      fetch('https://seu-backend.com/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ produtoId: produtoId })
+      })
+      .then(res => res.json())
+      .then(session => stripe.redirectToCheckout({ sessionId: session.id }))
+      .catch(err => alert('Erro ao processar pagamento: ' + err.message));
+    }
+  </script>
+</body>
+</html>
