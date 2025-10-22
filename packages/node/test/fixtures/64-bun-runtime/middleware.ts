@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'bun',
+};
+
 export default (req: Request) => {
   const url = new URL(req.url);
   const headers = new Headers({

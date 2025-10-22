@@ -506,6 +506,16 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
+  if (
+    !isEdgeFunction &&
+    nodeVersion.runtime.startsWith('bun') &&
+    staticConfig?.runtime === 'nodejs'
+  ) {
+    throw new Error(
+      `The "nodejs" runtime is not compatible with the "bun" engine. Please change the runtime from ${entrypointPath} to "bun".`
+    );
+  }
+
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
