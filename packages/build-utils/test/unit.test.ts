@@ -1018,8 +1018,7 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   }
 
   const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
-  const nodeVersion = { major: nodeMajor } as any;
-  await runNpmInstall(fixture, [], {}, {}, nodeVersion);
+  await runNpmInstall(fixture, [], {}, {});
   expect(warningMessages).toStrictEqual([
     'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
   ]);
