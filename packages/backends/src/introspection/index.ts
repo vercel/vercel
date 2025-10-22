@@ -111,7 +111,7 @@ export const introspectApp = async (
         paths: [rolldownResult.dir],
       }
     );
-    const findNearestPackageJson = (dir: string) => {
+    const findNearestPackageJson = (dir: string): string | undefined => {
       const packageJsonPath = join(dir, 'package.json');
       if (existsSync(packageJsonPath)) {
         return packageJsonPath;

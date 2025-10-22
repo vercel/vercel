@@ -2,8 +2,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "types": ["node", "jest"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "target": "ES2022"
   },
   "extends": "../../tsconfig.base.json",

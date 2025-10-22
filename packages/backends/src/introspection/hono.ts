@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import { pathToRegexp } from 'path-to-regexp';
-import { setupCloseHandlers } from './util';
+import { setupCloseHandlers } from './util.js';
 
 let app: Hono | null = null;
 
@@ -17,6 +17,7 @@ export const handle = (honoModule: any) => {
 };
 
 setupCloseHandlers(() => {
+  console.log({ closing: 'nonono' });
   const routes = extractRoutes();
   if (routes.length > 0) {
     return { frameworkSlug: 'hono', routes };

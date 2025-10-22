@@ -1,6 +1,6 @@
 export const version = 2;
-import { BuildOptions } from '@vercel/build-utils';
-import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
+import type { BuildOptions } from '@vercel/build-utils';
+import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils.js';
 import { build as cervelBuild, getBuildSummary } from '@vercel/cervel-beta';
 import { join } from 'path';
 

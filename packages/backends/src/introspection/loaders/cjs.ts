@@ -1,6 +1,6 @@
 import Module from 'module';
-import { handle as handleHono } from '../hono';
-import { handle as handleExpress } from '../express';
+import { handle as handleHono } from '../hono.js';
+import { handle as handleExpress } from '../express.js';
 
 const originalRequire = Module.prototype.require;
 

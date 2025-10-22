@@ -1,10 +1,10 @@
 export const version = 2;
 import { BuildV2, NodejsLambda } from '@vercel/build-utils';
-import { downloadInstallAndBundle } from './utils';
+import { downloadInstallAndBundle } from './utils.js';
 import { introspectApp } from './introspection/index.js';
-import { nodeFileTrace } from './node-file-trace';
+import { nodeFileTrace } from './node-file-trace.js';
 import { relative, join } from 'path';
-import { doBuild } from './build';
+import { doBuild } from './build.js';
 
 export const build: BuildV2 = async args => {
   console.log(`Using experimental build`);

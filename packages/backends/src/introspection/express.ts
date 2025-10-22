@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import { pathToRegexp } from 'path-to-regexp';
-import { setupCloseHandlers } from './util';
+import { setupCloseHandlers } from './util.js';
 
 let app: Express | null = null;
 
