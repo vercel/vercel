@@ -46,6 +46,7 @@ export interface Options {
   cleanUrls?: boolean;
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
+  bunVersion?: string;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -541,6 +542,10 @@ function detectFrontBuilder(
 
   if (projectSettings.outputDirectory) {
     config.outputDirectory = projectSettings.outputDirectory;
+  }
+
+  if (options.bunVersion) {
+    config.bunVersion = options.bunVersion;
   }
 
   if (
