@@ -8,6 +8,12 @@
   "publishConfig": {
     "access": "public"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./loaders/cjs": "./dist/loaders/cjs.js",
+    "./loaders/esm": "./dist/loaders/esm.js",
+    "./loaders/hooks": "./dist/loaders/hooks.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/vercel/vercel.git",
@@ -51,7 +57,7 @@
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
     "@types/node": "22",
-    "@vercel/build-utils": "12.1.2",
+    "@vercel/build-utils": "12.1.3",
     "execa": "3.2.0",
     "hono": "4.10.1",
     "jest-junit": "16.0.0",
