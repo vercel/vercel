@@ -714,7 +714,9 @@ function checkUnusedFunctions(
         fnKey.startsWith('pages/') ||
         fnKey.startsWith('src/pages') ||
         fnKey.startsWith('app/') ||
-        fnKey.startsWith('src/app/')
+        fnKey.startsWith('src/app/') ||
+        fnKey.startsWith('middleware') ||
+        fnKey.startsWith('src/middleware')
       ) {
         unusedFunctions.delete(fnKey);
       } else {
