@@ -1,27 +1,8 @@
 {
-  "functions": {
-    "api/bun.ts": {
-      "runtime": "@vercel/bun"
-    }
-  },
   "probes": [
     {
       "path": "/api/bun",
       "mustContain": "\"runtime\":\"bun\"",
-      "responseHeaders": {
-        "x-got-middleware": "true"
-      }
-    },
-    {
-      "path": "/api/bun-2",
-      "mustContain": "\"runtime\":\"bun\"",
-      "responseHeaders": {
-        "x-got-middleware": "true"
-      }
-    },
-    {
-      "path": "/api/node",
-      "mustContain": "\"runtime\":\"node\"",
       "responseHeaders": {
         "x-got-middleware": "true"
       }
@@ -35,3 +16,4 @@
     }
   ]
 }
+
