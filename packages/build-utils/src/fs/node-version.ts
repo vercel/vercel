@@ -212,6 +212,6 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
   });
 }
 
-export function isBunVersion(version: Version): version is BunVersion {
+export function isBunVersion(version: Version) {
   return version.runtime.startsWith('bun');
 }
