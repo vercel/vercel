@@ -611,6 +611,7 @@ async function doBuild(
             buildCommand: projectSettings.buildCommand ?? undefined,
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
+            bunVersion: localConfig.bunVersion ?? undefined,
           }
         : build.config || {};
 
