@@ -378,6 +378,8 @@ export class Version implements BaseVersion {
 
 export class NodeVersion extends Version {}
 
+export class BunVersion extends Version {}
+
 export interface Builder {
   use: string;
   src?: string;
