@@ -543,6 +543,15 @@ export default class DevServer {
           return defaults;
         }
       }
+
+      // Once we're happy with this approach, the backend framework definitions
+      // can be updated to contain a dev command. And we can remove this
+      if (
+        process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||
+        process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1'
+      ) {
+        return 'npx @vercel/cervel-beta dev';
+      }
     }
     return undefined;
   }

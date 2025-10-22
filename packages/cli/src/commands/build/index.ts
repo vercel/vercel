@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
+import * as experimentalBackendBuilder from '@vercel/backends';
 
 import {
   download,
@@ -635,21 +636,10 @@ async function doBuild(
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
           () => {
             if (
-              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-              'name' in builder &&
-              builder.name === 'express' &&
-              'experimentalBuild' in builder &&
-              typeof builder.experimentalBuild === 'function'
+              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||
+              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1'
             ) {
-              return builder.experimentalBuild(buildOptions);
-            } else if (
-              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-              'name' in builder &&
-              builder.name === 'hono' &&
-              'experimentalBuild' in builder &&
-              typeof builder.experimentalBuild === 'function'
-            ) {
-              return builder.experimentalBuild(buildOptions);
+              return experimentalBackendBuilder.build(buildOptions);
             }
             return builder.build(buildOptions);
           }

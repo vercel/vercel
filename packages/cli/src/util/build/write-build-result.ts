@@ -61,20 +61,10 @@ export async function writeBuildResult(
 ) {
   let version = builder.version;
   if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'express'
+    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||
+    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1'
   ) {
-    version = builder.experimentalVersion as 2 | 3;
-  }
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'hono'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
+    version = 2;
   }
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(

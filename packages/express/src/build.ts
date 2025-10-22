@@ -26,7 +26,6 @@ const entrypointsForMessage = validFilenames
   .join('\n');
 
 export const build: BuildV3 = async args => {
-  console.dir(args, { depth: null });
   // Introducing new behavior for the node builder where Typescript errors always
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
