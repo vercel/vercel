@@ -1,5 +1,6 @@
 {
   "bunVersion": "1.x",
+  "uploadNowJson": true,
   "probes": [
     {
       "path": "/api/pages/bun",
