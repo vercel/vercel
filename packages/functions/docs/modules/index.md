@@ -20,7 +20,7 @@
 - [getCache](index.md#getcache)
 - [getEnv](index.md#getenv)
 - [invalidateByTag](index.md#invalidatebytag)
-- [addCacheTag] (index.md#addcachetag)
+- [addCacheTag](index.md#addcachetag)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
