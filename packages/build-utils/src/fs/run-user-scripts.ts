@@ -306,7 +306,6 @@ export async function getNodeVersion(
   }
 
   const latestVersion = getLatestNodeVersion(availableVersions);
-  // TODO: Maybe here we want to use the local bun version instead
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     latestVersion.runtime = 'nodejs';
