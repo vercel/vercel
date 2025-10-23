@@ -302,13 +302,6 @@ export async function getNodeVersion(
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion | BunVersion> {
   if (config.bunVersion) {
-    // if (config.nodeVersion) {
-    //   throw new NowBuildError({
-    //     code: 'BUILD_UTILS_BUN_AND_NODE_VERSION_CONFLICT',
-    //     message: `When opting to use Bun, do not set a Node.js version as well.`,
-    //   });
-    // }
-
     return getSupportedBunVersion(config.bunVersion);
   }
 
