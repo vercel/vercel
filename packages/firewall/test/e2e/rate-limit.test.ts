@@ -219,5 +219,26 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
         })
       ).rejects.toThrow('`headers` or `request` options are required');
     });
+
+    test('Should use path prefix when set', async () => {
+      try {
+        process.env.NEXT_PUBLIC_VERCEL_FIREWALL_PATH_PREFIX = 'test-prefix';
+        const { rateLimited } = await checkRateLimit('test-rule1', {
+          firewallHostForDevelopment: HOST,
+          rateLimitKey: '123' + rand,
+          headers: {
+            'x-real-ip': '192.168.10.2' + rand,
+            host: HOST,
+          },
+        });
+        expect(rateLimited).toBe(false);
+        expect(fetchCalls).toHaveLength(1);
+        expect(fetchCalls[0].url).toBe(
+          `https://${HOST}/test-prefix/.well-known/vercel/rate-limit-api/test-rule1`
+        );
+      } finally {
+        delete process.env.NEXT_PUBLIC_VERCEL_FIREWALL_PATH_PREFIX;
+      }
+    });
   };
 }
