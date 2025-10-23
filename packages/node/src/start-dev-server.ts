@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 import _treeKill from 'tree-kill';
 import { promisify } from 'util';
 import {
+  BunVersion,
   walkParentDirs,
   type StartDevServer,
   type StartDevServerOptions,
@@ -20,6 +21,7 @@ import {
 } from './fork-dev-server';
 import { fixConfig } from './typescript';
 import { getRegExpFromMatchers } from './utils';
+import { getSupportedBunVersion } from '@vercel/build-utils/dist/fs/node-version';
 
 const require_ = createRequire(__filename);
 const treeKill = promisify(_treeKill);
@@ -32,12 +34,17 @@ export const startDevServer: StartDevServer = async opts => {
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
-  const isStaticConfigBun = staticConfig?.runtime === 'bun';
-  // The functions config is already filtered to only the current entrypoint
-  const isBuilderBun = Object.values(config.functions ?? {}).some(
-    func => func.runtime === '@vercel/bun'
-  );
-  const runtime = isStaticConfigBun || isBuilderBun ? 'bun' : 'node';
+  const vercelConfigFile = opts.files['vercel.json'];
+  let bunVersion: BunVersion | undefined;
+  if (vercelConfigFile.type === 'FileFsRef') {
+    const vercelConfigContents = await fsp.readFile(
+      vercelConfigFile.fsPath,
+      'utf8'
+    );
+    const vercelConfig = JSON.parse(vercelConfigContents);
+    bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+  }
+  const runtime = bunVersion ? 'bun' : 'node';
 
   if (config.middleware === true && typeof meta.requestUrl === 'string') {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
