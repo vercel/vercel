@@ -1,5 +1,16 @@
 # @vercel/static-build
 
+## 2.8.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.99
+
 ## 2.7.26
 
 ### Patch Changes
