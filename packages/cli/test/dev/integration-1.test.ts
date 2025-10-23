@@ -765,6 +765,10 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
   }
 });
 
+// bump to trigger change
+const a = () => {};
+a();
+
 test('[vercel dev] reflects changes to config and env without restart', async () => {
   const dir = fixture('node-helpers');
   const configPath = join(dir, 'vercel.json');
