@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.7.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 5.6.4
 
 ### Patch Changes
