@@ -32,3 +32,4 @@ export interface PurgeApi {
     tag: string | string[],
     options?: DangerouslyDeleteOptions
   ) => Promise<void>;
+}

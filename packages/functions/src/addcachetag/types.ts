@@ -1,5 +1,5 @@
 /**
- * Add cache tag API.
+ * Vercel AddCacheTag API.
  */
 export interface AddCacheTagApi {
   /**
