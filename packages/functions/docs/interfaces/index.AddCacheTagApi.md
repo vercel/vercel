@@ -1,6 +1,6 @@
-# Interface: AddCacheTag
+# Interface: AddCacheTagApi
 
-[index](../modules/index.md).AddCacheTag
+[index](../modules/index.md).AddCacheTagApi
 
 Vercel AddCacheTag API
 
