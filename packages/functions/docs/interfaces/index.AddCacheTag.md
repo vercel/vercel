@@ -2,13 +2,13 @@
 
 [index](../modules/index.md).AddCacheTag
 
-Interface representing the AddCacheTag API
+Vercel AddCacheTag API
 
 ## Table of contents
 
 ### Properties
 
-- [addCacheTag](index.PurgeApi.md#addCacheTag)
+- [addCacheTag](index.AddCacheTag.md#addCacheTag)
 
 ## Properties
 
@@ -20,13 +20,13 @@ Interface representing the AddCacheTag API
 
 ▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
 
-Add tags to content
+Add tag or tags to cached content
 
 ##### Parameters
 
-| Name  | Type                   | Description                    |
-| :---- | :--------------------- | :----------------------------- |
-| `tag` | `string` \| `string`[] | Add tag or tags to content. |
+| Name  | Type                   | Description                        |
+| :---- | :--------------------- | :----------------------------------|
+| `tag` | `string` \| `string`[] | Add tag or tags to cached content. |
 
 ##### Returns
 
@@ -36,4 +36,4 @@ A promise that resolves when the invalidate is complete.
 
 #### Defined in
 
-[packages/functions/src/purge/types.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/types.ts#L42)
+[packages/functions/src/addcachetag/types.ts:11](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/types.ts#L11)

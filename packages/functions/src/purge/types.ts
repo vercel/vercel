@@ -32,12 +32,3 @@ export interface PurgeApi {
     tag: string | string[],
     options?: DangerouslyDeleteOptions
   ) => Promise<void>;
-
-  /**
-   * Add tags to the cache.
-   *
-   * @param tags The tags to add.
-   * @returns A promise that resolves when the tags are added.
-   */
-  addCacheTag: (tags: string | string[]) => Promise<void>;
-}

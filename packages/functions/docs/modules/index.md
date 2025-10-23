@@ -276,7 +276,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L24)
+[packages/functions/src/addcachetag/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/index.ts#L5)
 
 ---
 

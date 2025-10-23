@@ -11,4 +11,5 @@ export {
 export type { RuntimeCache } from './cache/types';
 export { invalidateByTag, dangerouslyDeleteByTag } from './purge';
 export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';
+export { addCacheTag } from './addcachetag';
 export type { AddCacheTagApi } from './addcachetag/types';

@@ -1,13 +1,12 @@
 /**
-   * Vercel Cache Add Cache Tag APIs.
-*/
-export interface AddCacheTagApi {
-/**
- * Add tags to the cache.
- *
- * @param tags The tags to add.
- * @returns A promise that resolves when the tags are added.
+ * Add cache tag API.
  */
-addCacheTag: (tags: string | string[]) => Promise<void>;
+export interface AddCacheTagApi {
+  /**
+   * Add one or more tags to the cache content
+   *
+   * @param tag One or more tags to add to the cache content.
+   * @returns A promise that resolves when the tag is added.
+   */
+  addCacheTag: (tag: string | string[]) => Promise<void>;
 }
-  
