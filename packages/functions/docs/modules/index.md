@@ -9,6 +9,7 @@
 - [PurgeApi](../interfaces/index.PurgeApi.md)
 - [Request](../interfaces/index.Request.md)
 - [RuntimeCache](../interfaces/index.RuntimeCache.md)
+- [AddCacheTag](../interfaces/index.AddCacheTag.md)
 
 ### Functions
 
