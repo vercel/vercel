@@ -32,7 +32,7 @@ Add tag or tags to cached content
 
 [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
 
-A promise that resolves when the invalidate is complete.
+A promise that resolves when the tag is added.
 
 #### Defined in
 
