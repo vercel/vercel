@@ -611,8 +611,12 @@ async function doBuild(
             buildCommand: projectSettings.buildCommand ?? undefined,
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
+            bunVersion: localConfig.bunVersion ?? undefined,
           }
-        : build.config || {};
+        : {
+            ...(build.config || {}),
+            bunVersion: localConfig.bunVersion ?? undefined,
+          };
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,

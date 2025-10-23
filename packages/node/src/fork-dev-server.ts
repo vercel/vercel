@@ -1,11 +1,18 @@
 import once from '@tootallnate/once';
 import { cloneEnv } from '@vercel/build-utils';
 import type { Config, Meta } from '@vercel/build-utils';
-import { ChildProcess, fork, ForkOptions } from 'child_process';
+import {
+  ChildProcess,
+  fork,
+  ForkOptions,
+  spawn,
+  SpawnOptions,
+} from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';
+import { getOrCreateBunBinary } from './bun-helpers';
 
-export function forkDevServer(options: {
+export async function forkDevServer(options: {
   tsConfig: any;
   config: Config;
   maybeTranspile: boolean;
@@ -17,54 +24,97 @@ export function forkDevServer(options: {
   meta: Meta;
   printLogs?: boolean;
   publicDir?: string;
+  runtime?: 'node' | 'bun';
 
   /**
    * A path to the dev-server path. This is used in tests.
    */
   devServerPath?: string;
-}) {
-  let nodeOptions = process.env.NODE_OPTIONS || '';
-
-  if (!nodeOptions.includes('--no-warnings')) {
-    nodeOptions += ' --no-warnings';
-  }
-  const tsNodePath = options.require_.resolve('ts-node');
-  const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
-  const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
+}): Promise<ChildProcess> {
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.mjs');
 
-  if (options.maybeTranspile) {
-    if (options.isTypeScript) {
-      nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
-        nodeOptions || ''
-      }`;
-    } else {
-      if (options.isEsm) {
-        // no transform needed because Node.js supports ESM natively
+  let child: ChildProcess;
+
+  if (options.runtime === 'bun') {
+    const bun = await getOrCreateBunBinary();
+    const spawnOptions: SpawnOptions = {
+      cwd: options.workPath,
+      env: cloneEnv(process.env, options.meta.env, {
+        VERCEL_DEV_ENTRYPOINT: options.entrypoint,
+        VERCEL_DEV_CONFIG: JSON.stringify(options.config),
+        VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
+        VERCEL_DEV_PUBLIC_DIR: options.publicDir || '',
+      }),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    };
+
+    child = spawn(bun, ['--bun', devServerPath], spawnOptions);
+
+    // Parse stdout to get the port to send requests to, since we can't use IPC with Bun. We
+    // buffer the output until we find the port, then emit it back as a message
+    let buffer = '';
+
+    child.stdout?.on('data', data => {
+      const output = data.toString();
+      buffer += output;
+
+      if (buffer.includes('Dev server listening:')) {
+        const portMatch = buffer.match(/(\d{4,5})/);
+        if (portMatch) {
+          const port = parseInt(portMatch[1], 10);
+          child.emit('message', { port }, null);
+        }
+        buffer = '';
       } else {
-        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+        // Still log other stdout data
+        console.log(output);
+      }
+    });
+    child.stderr?.on('data', console.error);
+  } else {
+    let nodeOptions = process.env.NODE_OPTIONS || '';
+
+    if (!nodeOptions.includes('--no-warnings')) {
+      nodeOptions += ' --no-warnings';
+    }
+
+    const tsNodePath = options.require_.resolve('ts-node');
+    const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
+    const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
+
+    if (options.maybeTranspile) {
+      if (options.isTypeScript) {
+        nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
+          nodeOptions || ''
+        }`;
+      } else {
+        if (options.isEsm) {
+          // no transform needed because Node.js supports ESM natively
+        } else {
+          nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+        }
       }
     }
-  }
 
-  const forkOptions: ForkOptions = {
-    cwd: options.workPath,
-    execArgv: [],
-    env: cloneEnv(process.env, options.meta.env, {
-      VERCEL_DEV_ENTRYPOINT: options.entrypoint,
-      VERCEL_DEV_CONFIG: JSON.stringify(options.config),
-      VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
-      VERCEL_DEV_PUBLIC_DIR: options.publicDir || '',
-      TS_NODE_TRANSPILE_ONLY: '1',
-      TS_NODE_COMPILER_OPTIONS: options.tsConfig?.compilerOptions
-        ? JSON.stringify(options.tsConfig.compilerOptions)
-        : undefined,
-      NODE_OPTIONS: nodeOptions,
-    }),
-    stdio: options.printLogs ? 'pipe' : undefined,
-  };
-  const child = fork(devServerPath, [], forkOptions);
+    const forkOptions: ForkOptions = {
+      cwd: options.workPath,
+      execArgv: [],
+      env: cloneEnv(process.env, options.meta.env, {
+        VERCEL_DEV_ENTRYPOINT: options.entrypoint,
+        VERCEL_DEV_CONFIG: JSON.stringify(options.config),
+        VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
+        VERCEL_DEV_PUBLIC_DIR: options.publicDir || '',
+        TS_NODE_TRANSPILE_ONLY: '1',
+        TS_NODE_COMPILER_OPTIONS: options.tsConfig?.compilerOptions
+          ? JSON.stringify(options.tsConfig.compilerOptions)
+          : undefined,
+        NODE_OPTIONS: nodeOptions,
+      }),
+      stdio: options.printLogs ? 'pipe' : undefined,
+    };
+    child = fork(devServerPath, [], forkOptions);
+  }
 
   if (options.printLogs) {
     child.stdout?.on('data', data => {

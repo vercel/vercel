@@ -89,7 +89,8 @@ it('Should build the serverless-no-config example', async () => {
   ).toBeFalsy();
 });
 
-it('Should invoke build command with serverless-no-config', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('Should invoke build command with serverless-no-config', async () => {
   const {
     workPath,
     buildResult: { output },

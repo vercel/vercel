@@ -1,0 +1,20 @@
+{
+  "bunVersion": "1.x",
+  "uploadNowJson": true,
+  "probes": [
+    {
+      "path": "/api/bun",
+      "mustContain": "\"runtime\":\"bun\"",
+      "responseHeaders": {
+        "x-got-middleware": "true"
+      }
+    },
+    {
+      "path": "/non-exist",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:middleware:bun",
+      "responseHeaders": {
+        "x-got-middleware": "true"
+      }
+    }
+  ]
+}

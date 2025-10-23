@@ -163,6 +163,7 @@ export interface VercelConfig {
   outputDirectory?: string | null;
   images?: Images;
   crons?: Cron[];
+  bunVersion?: string;
 }
 
 export interface GitMetadata {

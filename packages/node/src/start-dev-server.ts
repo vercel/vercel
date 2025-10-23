@@ -7,7 +7,9 @@ import { spawn } from 'child_process';
 import _treeKill from 'tree-kill';
 import { promisify } from 'util';
 import {
+  BunVersion,
   walkParentDirs,
+  getSupportedBunVersion,
   type StartDevServer,
   type StartDevServerOptions,
 } from '@vercel/build-utils';
@@ -30,12 +32,33 @@ export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {}, publicDir } = opts;
   const entrypointPath = join(workPath, entrypoint);
 
-  if (config.middleware === true && typeof meta.requestUrl === 'string') {
-    // TODO: static config is also parsed in `dev-server.ts`.
-    // we should pass in this version as an env var instead.
-    const project = new Project();
-    const staticConfig = getConfig(project, entrypointPath);
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
+  const vercelConfigFile = opts.files['vercel.json'];
+  let bunVersion: BunVersion | undefined;
+  try {
+    if (vercelConfigFile?.type === 'FileFsRef') {
+      const vercelConfigContents = await fsp.readFile(
+        vercelConfigFile.fsPath,
+        'utf8'
+      );
+      if (vercelConfigContents) {
+        try {
+          const vercelConfig = JSON.parse(vercelConfigContents);
+          if (vercelConfig.bunVersion) {
+            bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    }
+  } catch {
+    // Ignore
+  }
+  const runtime = bunVersion ? 'bun' : 'node';
 
+  if (config.middleware === true && typeof meta.requestUrl === 'string') {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
 
@@ -139,7 +162,7 @@ export const startDevServer: StartDevServer = async opts => {
     tsConfig.compilerOptions.noEmit = true;
   }
 
-  const child = forkDevServer({
+  const child = await forkDevServer({
     workPath,
     config,
     entrypoint,
@@ -150,6 +173,7 @@ export const startDevServer: StartDevServer = async opts => {
     meta,
     tsConfig,
     publicDir,
+    runtime,
   });
 
   const { pid } = child;
@@ -165,18 +189,39 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
+    if (!pid) {
+      throw new Error(`Child process exited`);
+    }
+
     // An optional callback for graceful shutdown.
     const shutdown = async () => {
       // Send a "shutdown" message to the child process. Ideally we'd use a signal
       // (SIGTERM) here, but that doesn't work on Windows. This is a portable way
       // to tell the child process to exit gracefully.
-      child.send('shutdown', async err => {
-        if (err) {
+      if (runtime === 'bun') {
+        try {
+          process.kill(pid, 'SIGTERM');
+        } catch (err) {
           // The process might have already exited, for example, if the application
           // handler threw an error. Try terminating the process to be sure.
           await treeKill(pid);
         }
-      });
+      } else {
+        // For Node.js runtime using fork(), use IPC
+        await new Promise<void>((resolve, reject) => {
+          child.send('shutdown', err => {
+            if (err) {
+              // The process might have already exited, for example, if the application
+              // handler threw an error. Try terminating the process to be sure.
+              treeKill(pid)
+                .then(() => resolve())
+                .catch(killErr => reject(killErr));
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
     };
 
     return { port: message.value.port, pid, shutdown };

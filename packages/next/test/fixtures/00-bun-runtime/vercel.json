@@ -1,0 +1,18 @@
+{
+  "bunVersion": "1.x",
+  "uploadNowJson": true,
+  "probes": [
+    {
+      "path": "/api/pages/bun",
+      "mustContain": "\"runtime\":\"bun\""
+    },
+    {
+      "path": "/api/app/bun",
+      "mustContain": "\"runtime\":\"bun\""
+    },
+    {
+      "path": "/",
+      "mustContain": "\"runtime\":\"bun\""
+    }
+  ]
+}
