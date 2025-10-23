@@ -151,19 +151,19 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
 });
 
 it('should resolve to the provided bunVersion when its valid', async () => {
-  expect(
+  await expect(
     getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should resolve to the provided bunVersion on dev', async () => {
-  expect(
+  await expect(
     getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: true })
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should fail if the provided bun version is not valid', async () => {
-  expect(
+  await expect(
     getNodeVersion(
       '/tmp',
       undefined,
