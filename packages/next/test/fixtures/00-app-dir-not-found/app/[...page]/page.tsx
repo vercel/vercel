@@ -18,13 +18,13 @@ export async function generateStaticParams(): Promise<Params[]> {
 }
 
 export default async function Page({ params }) {
-  if (params.page[0] !== "demo") {
+  if ((await params).page[0] !== "demo") {
     return notFound();
   }
 
   return (
     <pre>
-      <code>{JSON.stringify(params, null, 2)}</code>
+      <code>{JSON.stringify(await params, null, 2)}</code>
     </pre>
   );
 }

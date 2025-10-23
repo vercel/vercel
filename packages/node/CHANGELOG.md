@@ -1,14 +1,31 @@
 # @vercel/node
 
+## 5.5.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies [[`970781cb50ebdb0379056abe1700bba4a53fcf7c`](https://github.com/vercel/vercel/commit/970781cb50ebdb0379056abe1700bba4a53fcf7c)]:
+  - @vercel/build-utils@12.2.0
+
+## 5.4.1
+
+### Patch Changes
+
+- Ensure `vc dev` uses project-level ts when available ([#14115](https://github.com/vercel/vercel/pull/14115))
+
 ## 5.4.0
 
 ### Minor Changes
 
-- Add vc dev support for NestJS ([#14080](https://github.com/vercel/vercel/pull/14080))
+- Add vc dev support for NestJS ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ### Patch Changes
 
-- Updated dependencies [[`a16adfbf0ed1b9272951b01923080990e558ac2d`](https://github.com/vercel/vercel/commit/a16adfbf0ed1b9272951b01923080990e558ac2d)]:
+- Updated dependencies [[`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c)]:
   - @vercel/build-utils@12.1.3
 
 ## 5.3.26

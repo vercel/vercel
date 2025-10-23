@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.4.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 2.3.6
 
 ### Patch Changes

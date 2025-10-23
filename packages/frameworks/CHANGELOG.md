@@ -1,10 +1,26 @@
 # @vercel/frameworks
 
-## 3.11.2
+## 3.14.0
+
+### Minor Changes
+
+- Add zero-config support for Fastify ([#14120](https://github.com/vercel/vercel/pull/14120))
+
+## 3.13.0
+
+### Minor Changes
+
+- Add root main as entrypoint for NestJS ([#14105](https://github.com/vercel/vercel/pull/14105))
+
+## 3.12.0
+
+### Minor Changes
+
+- Update nitro framework detection to detect nitro package ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ### Patch Changes
 
-- Add support for additional entrypoints in NestJS ([#14073](https://github.com/vercel/vercel/pull/14073))
+- Add support for additional entrypoints in NestJS ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ## 3.11.1
 

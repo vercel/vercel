@@ -428,12 +428,16 @@ export async function getBuildMatches(
       buildConfig.config?.framework === 'hono' ||
       buildConfig.config?.framework === 'express' ||
       buildConfig.config?.framework === 'h3' ||
-      buildConfig.config?.framework === 'nestjs'
+      buildConfig.config?.framework === 'nestjs' ||
+      buildConfig.config?.framework === 'fastify'
     ) {
       src = 'package.json';
     }
 
-    if (buildConfig.config?.framework === 'fastapi') {
+    if (
+      buildConfig.config?.framework === 'fastapi' ||
+      buildConfig.config?.framework === 'flask'
+    ) {
       // Mirror @vercel/python's entrypoint candidates
       const candidateDirs = ['', 'src', 'app'];
       const candidateNames = ['app', 'index', 'server', 'main'];
