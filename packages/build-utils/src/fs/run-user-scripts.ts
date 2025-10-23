@@ -302,18 +302,10 @@ export async function getNodeVersion(
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion | BunVersion> {
   if (config.bunVersion) {
-    // if (config.nodeVersion) {
-    //   throw new NowBuildError({
-    //     code: 'BUILD_UTILS_BUN_AND_NODE_VERSION_CONFLICT',
-    //     message: `When opting to use Bun, do not set a Node.js version as well.`,
-    //   });
-    // }
-
     return getSupportedBunVersion(config.bunVersion);
   }
 
   const latestVersion = getLatestNodeVersion(availableVersions);
-  // TODO: Maybe here we want to use the local bun version instead
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     latestVersion.runtime = 'nodejs';

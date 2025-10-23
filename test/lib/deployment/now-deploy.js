@@ -68,9 +68,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     },
   };
 
-  console.log(nowDeployPayload);
-  console.log(nowJson);
-
   logWithinTest(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
