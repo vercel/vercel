@@ -41,9 +41,15 @@ export const startDevServer: StartDevServer = async opts => {
       vercelConfigFile.fsPath,
       'utf8'
     );
-    const vercelConfig = JSON.parse(vercelConfigContents);
-    if (vercelConfig.bunVersion) {
-      bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+    if (vercelConfigContents) {
+      try {
+        const vercelConfig = JSON.parse(vercelConfigContents);
+        if (vercelConfig.bunVersion) {
+          bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+        }
+      } catch {
+        // Ignore
+      }
     }
   }
   const runtime = bunVersion ? 'bun' : 'node';
