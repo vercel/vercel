@@ -9,6 +9,7 @@ import { promisify } from 'util';
 import {
   BunVersion,
   walkParentDirs,
+  getSupportedBunVersion,
   type StartDevServer,
   type StartDevServerOptions,
 } from '@vercel/build-utils';
@@ -21,7 +22,6 @@ import {
 } from './fork-dev-server';
 import { fixConfig } from './typescript';
 import { getRegExpFromMatchers } from './utils';
-import { getSupportedBunVersion } from '@vercel/build-utils/dist/fs/node-version';
 
 const require_ = createRequire(__filename);
 const treeKill = promisify(_treeKill);
