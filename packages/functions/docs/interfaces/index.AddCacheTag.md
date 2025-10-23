@@ -8,7 +8,7 @@ Vercel AddCacheTag API
 
 ### Properties
 
-- [addCacheTag](index.AddCacheTag.md#addCacheTag)
+- [addCacheTag](index.AddCacheTag.md#addcachetag)
 
 ## Properties
 
@@ -20,7 +20,7 @@ Vercel AddCacheTag API
 
 ▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
 
-Add tag or tags to cached content
+Add one tag or more tags to cached content
 
 ##### Parameters
 
