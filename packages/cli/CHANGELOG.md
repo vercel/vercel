@@ -1,5 +1,25 @@
 # vercel
 
+## 48.6.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies [[`970781cb50ebdb0379056abe1700bba4a53fcf7c`](https://github.com/vercel/vercel/commit/970781cb50ebdb0379056abe1700bba4a53fcf7c)]:
+  - @vercel/static-build@2.8.0
+  - @vercel/build-utils@12.2.0
+  - @vercel/hydrogen@1.3.0
+  - @vercel/express@0.1.0
+  - @vercel/redwood@2.4.0
+  - @vercel/remix-builder@5.5.0
+  - @vercel/hono@0.2.0
+  - @vercel/next@4.14.0
+  - @vercel/node@5.5.0
+  - @vercel/h3@0.1.7
+
 ## 48.5.0
 
 ### Minor Changes

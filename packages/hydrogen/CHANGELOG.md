@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.3.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 1.2.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.5.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 5.4.13
 
 ### Patch Changes
