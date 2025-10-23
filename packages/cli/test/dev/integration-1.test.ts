@@ -756,7 +756,20 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
       await fs.remove(configPath);
 
       const res = await fetch(`http://localhost:${port}/api`);
-      const body = await res.json();
+      const text = await res.text();
+      // eslint-disable-next-line no-console
+      console.log('Response status after config deletion:', res.status);
+      // eslint-disable-next-line no-console
+      console.log(
+        'Response headers:',
+        JSON.stringify([...res.headers.entries()])
+      );
+      // eslint-disable-next-line no-console
+      console.log('Response text (full):', text);
+      // eslint-disable-next-line no-console
+      console.log('Response text length:', text.length);
+
+      const body = JSON.parse(text);
       expect(body.FOO).toBe(undefined);
     }
   } finally {
