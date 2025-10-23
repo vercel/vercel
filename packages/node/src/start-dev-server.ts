@@ -36,21 +36,25 @@ export const startDevServer: StartDevServer = async opts => {
   const staticConfig = getConfig(project, entrypointPath);
   const vercelConfigFile = opts.files['vercel.json'];
   let bunVersion: BunVersion | undefined;
-  if (vercelConfigFile?.type === 'FileFsRef') {
-    const vercelConfigContents = await fsp.readFile(
-      vercelConfigFile.fsPath,
-      'utf8'
-    );
-    if (vercelConfigContents) {
-      try {
-        const vercelConfig = JSON.parse(vercelConfigContents);
-        if (vercelConfig.bunVersion) {
-          bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+  try {
+    if (vercelConfigFile?.type === 'FileFsRef') {
+      const vercelConfigContents = await fsp.readFile(
+        vercelConfigFile.fsPath,
+        'utf8'
+      );
+      if (vercelConfigContents) {
+        try {
+          const vercelConfig = JSON.parse(vercelConfigContents);
+          if (vercelConfig.bunVersion) {
+            bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+          }
+        } catch {
+          // Ignore
         }
-      } catch {
-        // Ignore
       }
     }
+  } catch {
+    // Ignore
   }
   const runtime = bunVersion ? 'bun' : 'node';
 
