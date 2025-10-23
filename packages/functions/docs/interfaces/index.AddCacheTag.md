@@ -25,7 +25,7 @@ Add one tag or more tags to cached content
 ##### Parameters
 
 | Name  | Type                   | Description                        |
-| :---- | :--------------------- | :----------------------------------|
+| :---- | :--------------------- | :--------------------------------- |
 | `tag` | `string` \| `string`[] | Add tag or tags to cached content. |
 
 ##### Returns
