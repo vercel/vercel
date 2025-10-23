@@ -36,7 +36,7 @@ export const startDevServer: StartDevServer = async opts => {
   const staticConfig = getConfig(project, entrypointPath);
   const vercelConfigFile = opts.files['vercel.json'];
   let bunVersion: BunVersion | undefined;
-  if (vercelConfigFile.type === 'FileFsRef') {
+  if (vercelConfigFile?.type === 'FileFsRef') {
     const vercelConfigContents = await fsp.readFile(
       vercelConfigFile.fsPath,
       'utf8'
