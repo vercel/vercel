@@ -1,30 +1,81 @@
+import * as dotenvx from '@dotenvx/dotenvx';
 import type { Dictionary } from '@vercel/client';
-import { readFile } from 'fs-extra';
-import { parseEnv } from '../parse-env';
 import chalk from 'chalk';
+import { existsSync, outputFile, readFile } from 'fs-extra';
+import { dirname, join } from 'path';
 import output from '../../output-manager';
 
 export async function createEnvObject(
   envPath: string
 ): Promise<Dictionary<string | undefined> | undefined> {
-  // Originally authored by Tyler Waters under MIT License: https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/lib/parse.js
-  // https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/LICENSE
-  const envArr = (await readFile(envPath, 'utf-8'))
-    // remove double quotes
-    .replace(/"/g, '')
-    // split on new line
-    .split(/\r?\n|\r/)
-    // filter comments
-    .filter(line => /^[^#]/.test(line))
-    // needs equal sign
-    .filter(line => /=/i.test(line));
+  try {
+    const content = await readFile(envPath, 'utf-8');
+    const privateKey = await getEncryptionKey(envPath);
 
-  const parsedEnv = parseEnv(envArr);
-  if (Object.keys(parsedEnv).length === 0) {
-    output.debug('Failed to parse env file.');
-    return;
+    return dotenvx.parse(content, { processEnv: {}, privateKey });
+  } catch (error) {
+    output.debug(
+      `Failed to parse env file: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return undefined;
   }
-  return parsedEnv;
+}
+
+export async function updateEnvFile(
+  envPath: string,
+  updates: Dictionary<string | undefined>
+): Promise<void> {
+  let backupContent: string | null = null;
+
+  try {
+    if (existsSync(envPath)) {
+      backupContent = await readFile(envPath, 'utf8');
+    }
+  } catch (error) {
+    throw new Error(
+      `Failed to backup existing file: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  const privateKey = await getEncryptionKey(envPath);
+
+  try {
+    for (const [key, value] of Object.entries(updates)) {
+      dotenvx.set(key, value ?? '', { path: envPath, encrypt: !!privateKey });
+    }
+  } catch (error) {
+    // Restore backup on any failure to ensure atomic operation
+    if (backupContent !== null) {
+      try {
+        await outputFile(envPath, backupContent, 'utf8');
+      } catch (restoreError) {
+        throw new Error(
+          `Failed to set environment variable and unable to restore backup: ${error instanceof Error ? error.message : String(error)}. Restore error: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`
+        );
+      }
+    }
+    throw new Error(
+      `Failed to set environment variable: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
+async function getEncryptionKey(envPath: string): Promise<string | undefined> {
+  const keysPath = join(dirname(envPath), '.env.keys');
+  if (!existsSync(keysPath)) {
+    return undefined;
+  }
+
+  try {
+    const content = await readFile(keysPath, 'utf8');
+    const keys = dotenvx.parse(content, { processEnv: {} });
+    return keys.DOTENV_PRIVATE_KEY;
+  } catch (error) {
+    output.debug(
+      `Failed to read encryption key from ${keysPath}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return undefined;
+  }
 }
 
 function findChanges(
@@ -44,9 +95,8 @@ function findChanges(
     } else if (oldEnv[key] !== newEnv[key]) {
       changed.push(key);
     }
-    delete oldEnv[key];
   }
-  const removed = Object.keys(oldEnv);
+  const removed = Object.keys(oldEnv).filter(key => !(key in newEnv));
 
   return {
     added,

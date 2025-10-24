@@ -1,33 +1,38 @@
+import type { ProjectLinked } from '@vercel-internals/types';
+import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
-import { closeSync, openSync, readSync } from 'fs';
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  outputFile,
+  readSync,
+} from 'fs-extra';
 import { resolve } from 'path';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  buildDeltaString,
+  createEnvObject,
+  updateEnvFile,
+} from '../../util/env/diff-env-files';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
 } from '../../util/env/get-env-records';
-import {
-  buildDeltaString,
-  createEnvObject,
-} from '../../util/env/diff-env-files';
-import { isErrnoException } from '@vercel/error-utils';
-import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import JSONparse from 'json-parse-better-errors';
-import { formatProject } from '../../util/projects/format-project';
-import type { ProjectLinked } from '@vercel-internals/types';
-import output from '../../output-manager';
-import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
-import { pullSubcommand } from './command';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
+import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
 import { getLinkedProject } from '../../util/projects/link';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
+import { pullSubcommand } from './command';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -139,8 +144,8 @@ export async function envPullCommandLogic(
   source: EnvRecordsSource
 ) {
   const fullPath = resolve(cwd, filename);
-  const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
-  const exists = typeof head !== 'undefined';
+  const head = tryReadHeadSync(fullPath, CONTENTS_PREFIX.length);
+  const exists = existsSync(fullPath);
 
   if (head === CONTENTS_PREFIX) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
@@ -148,7 +153,7 @@ export async function envPullCommandLogic(
     exists &&
     !skipConfirmation &&
     !(await client.input.confirm(
-      `Found existing file ${param(filename)}. Do you want to overwrite?`,
+      `Found existing file ${param(filename)}. Do you want to update?`,
       false
     ))
   ) {
@@ -173,31 +178,30 @@ export async function envPullCommandLogic(
       gitBranch,
     })
   ).env;
+  const newEnv = Object.fromEntries(
+    Object.entries(records).filter(
+      ([key]) => !VARIABLES_TO_IGNORE.includes(key)
+    )
+  );
 
   let deltaString = '';
   let oldEnv;
   if (exists) {
     oldEnv = await createEnvObject(fullPath);
     if (oldEnv) {
-      // Removes any double quotes from `records`, if they exist
-      // We need this because double quotes are stripped from the local .env file,
-      // but `records` is already in the form of a JSON object that doesn't filter
-      // double quotes.
-      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
-      deltaString = buildDeltaString(oldEnv, newEnv);
+      deltaString = buildDeltaString(oldEnv, { ...oldEnv, ...newEnv });
+    }
+  } else {
+    try {
+      await outputFile(fullPath, CONTENTS_PREFIX, 'utf8');
+    } catch (error) {
+      throw new Error(
+        `Failed to create env file at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  const contents =
-    CONTENTS_PREFIX +
-    Object.keys(records)
-      .sort()
-      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
-      .join('\n') +
-    '\n';
-
-  await outputFile(fullPath, contents, 'utf8');
+  await updateEnvFile(fullPath, newEnv);
 
   if (deltaString) {
     output.print('\n' + deltaString);
@@ -224,12 +228,4 @@ export async function envPullCommandLogic(
       emoji('success')
     )}\n`
   );
-}
-
-function escapeValue(value: string | undefined) {
-  return value
-    ? value
-        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
-    : '';
 }
