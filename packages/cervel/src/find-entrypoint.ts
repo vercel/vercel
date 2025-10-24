@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 const frameworks = ['express', 'hono'];
 
@@ -17,7 +18,28 @@ const createFrameworkRegex = (framework: string) =>
     'g'
   );
 
-export const findEntrypoint = async (cwd: string) => {
+export const findEntrypoint = async (
+  cwd: string,
+  options?: { ignoreRegex?: boolean }
+) => {
+  const ignoreRegex = options?.ignoreRegex ?? false;
+
+  // If ignoreRegex is true, just find the first file that exists
+  if (ignoreRegex) {
+    for (const entrypoint of entrypoints) {
+      if (existsSync(join(cwd, entrypoint))) {
+        return entrypoint;
+      }
+    }
+    for (const entrypoint of entrypoints) {
+      if (existsSync(join(cwd, 'src', entrypoint))) {
+        return join('src', entrypoint);
+      }
+    }
+    throw new Error('No entrypoint file found');
+  }
+
+  // Original behavior: check for framework imports
   const packageJson = await readFile(join(cwd, 'package.json'), 'utf-8');
   const packageJsonObject = JSON.parse(packageJson);
   const framework = frameworks.find(

@@ -30,7 +30,7 @@ export const nodeFileTrace = async (
   for (const file of nftResult.fileList) {
     const fullPath = join(args.repoRootPath, file);
     const stats = lstatSync(fullPath, {});
-    files[file] = new FileFsRef({ fsPath: file, mode: stats.mode });
+    files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
   }
 
   return { files };

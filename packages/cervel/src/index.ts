@@ -10,6 +10,9 @@ import { readFile, writeFile } from 'fs/promises';
 
 const require = createRequire(import.meta.url);
 
+// Re-export findEntrypoint for use in other packages
+export { findEntrypoint };
+
 export const getBuildSummary = async (outputDir: string) => {
   const buildSummary = await readFile(join(outputDir, '.cervel.json'), 'utf-8');
   return JSON.parse(buildSummary);

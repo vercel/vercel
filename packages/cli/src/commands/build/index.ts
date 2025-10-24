@@ -640,7 +640,12 @@ async function doBuild(
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
           () => {
-            if (shouldUseExperimentalBackends(buildConfig.framework)) {
+            // Use experimental backends builder only for backend framework builders,
+            // not for static builders (which handle public/ directories)
+            if (
+              shouldUseExperimentalBackends(buildConfig.framework) &&
+              builderPkg.name !== '@vercel/static'
+            ) {
               return experimentalBackendBuilder.build(buildOptions);
             }
             return builder.build(buildOptions);
