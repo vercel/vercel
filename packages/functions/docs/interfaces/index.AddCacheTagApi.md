@@ -8,7 +8,7 @@ Vercel AddCacheTag API
 
 ### Properties
 
-- [addCacheTag](index.AddCacheTag.md#addcachetag)
+- [addCacheTag](index.AddCacheTagApi.md#addcachetag)
 
 ## Properties
 
