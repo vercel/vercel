@@ -6,9 +6,9 @@ import * as fs from 'fs';
 
 vi.mock('./token-io');
 
-import { findRootDir, getUserDataDir } from './token-io';
-import * as tokenUtil from './token-util';
-import { refreshToken } from './token';
+import { findRootDir, getUserDataDir } from './token-io.js';
+import * as tokenUtil from './token-util.js';
+import { refreshToken } from './token.js';
 
 describe('refreshToken', () => {
   let rootDir: string;
