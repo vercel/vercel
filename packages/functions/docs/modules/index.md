@@ -4,15 +4,16 @@
 
 ### Interfaces
 
+- [AddCacheTagApi](../interfaces/index.AddCacheTagApi.md)
 - [DangerouslyDeleteOptions](../interfaces/index.DangerouslyDeleteOptions.md)
 - [Geo](../interfaces/index.Geo.md)
 - [PurgeApi](../interfaces/index.PurgeApi.md)
 - [Request](../interfaces/index.Request.md)
 - [RuntimeCache](../interfaces/index.RuntimeCache.md)
-- [AddCacheTagApi](../interfaces/index.AddCacheTagApi.md)
 
 ### Functions
 
+- [addCacheTag](index.md#addcachetag)
 - [attachDatabasePool](index.md#attachdatabasepool)
 - [dangerouslyDeleteByTag](index.md#dangerouslydeletebytag)
 - [experimental_attachDatabasePool](index.md#experimental_attachdatabasepool)
@@ -20,13 +21,32 @@
 - [getCache](index.md#getcache)
 - [getEnv](index.md#getenv)
 - [invalidateByTag](index.md#invalidatebytag)
-- [addCacheTag](index.md#addcachetag)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
 - [waitUntil](index.md#waituntil)
 
 ## Functions
+
+### addCacheTag
+
+▸ **addCacheTag**(`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name  | Type                   |
+| :---- | :--------------------- |
+| `tag` | `string` \| `string`[] |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/addcachetag/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/index.ts#L4)
+
+---
 
 ### attachDatabasePool
 
@@ -257,26 +277,6 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 #### Defined in
 
 [packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L5)
-
----
-
-### addCacheTag
-
-▸ **addCacheTag**(`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
-
-#### Parameters
-
-| Name  | Type                   |
-| :---- | :--------------------- |
-| `tag` | `string` \| `string`[] |
-
-#### Returns
-
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
-
-#### Defined in
-
-[packages/functions/src/addcachetag/index.ts:11](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/index.ts#L11)
 
 ---
 

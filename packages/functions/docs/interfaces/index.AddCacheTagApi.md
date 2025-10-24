@@ -2,7 +2,7 @@
 
 [index](../modules/index.md).AddCacheTagApi
 
-Vercel AddCacheTag API
+Vercel AddCacheTag API.
 
 ## Table of contents
 
@@ -20,13 +20,13 @@ Vercel AddCacheTag API
 
 ▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
 
-Add one tag or more tags to cached content
+Add one or more tags to the cache content
 
 ##### Parameters
 
-| Name  | Type                   | Description                        |
-| :---- | :--------------------- | :--------------------------------- |
-| `tag` | `string` \| `string`[] | Add tag or tags to cached content. |
+| Name  | Type                   | Description                                   |
+| :---- | :--------------------- | :-------------------------------------------- |
+| `tag` | `string` \| `string`[] | One or more tags to add to the cache content. |
 
 ##### Returns
 
