@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flats Porto de Galinhas - Réveillon 28/12 a 03/01</title>
+  <meta name="description" content="Pacote Réveillon (28/12 a 03/01) — R$ 5.000 total. Flats em Porto de Galinhas - PE. Contato direto no WhatsApp +55 34 9926-3609." />
+
+  <!-- Favicon usando seu logo -->
+  <link rel="icon" type="image/png" href="logo-flats-porto.png" />
+
+  <!-- Fonte Google (Inter) -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-grad-from: #ffffff;
+      --bg-grad-to: #f1f5f9;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --black: #000000;
+      --white: #ffffff;
+      --accent: #0f172a;
+      --accent-light: rgba(15,23,42,0.08);
+      --green-wa: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      color: var(--slate-800);
+      background: linear-gradient(to bottom, var(--bg-grad-from), var(--bg-grad-to));
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    /* HEADER / NAVBAR */
+    header.navbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    .navbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      line-height: 1;
+      color: var(--slate-900);
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: .5rem;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 10px 20px rgba(0,0,0,.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    nav.nav-links {
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      nav.nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        font-size: .875rem;
+        font-weight: 500;
+        color: var(--slate-600);
+      }
+      nav.nav-links a:hover {
+        color: var(--slate-900);
+      }
+      .btn-nav-main {
+        background: var(--accent);
+        color: var(--white);
+        border-radius: 1rem;
+        font-size: .875rem;
+        padding: .5rem 1rem;
+        box-shadow: 0 20px 30px -10px rgba(0,0,0,.4);
+        border: 0;
+        cursor: pointer;
+      }
+    }
+
+    /* HERO */
+    section.hero {
+      padding-top: 3rem;
+      padding-bottom: 3rem;
+    }
+
+    @media (min-width: 768px) {
+      section.hero {
+        padding-top: 5rem;
+        padding-bottom: 5rem;
+      }
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+      align-items: center;
+    }
+
+    @media (min-width: 768px) {
+      .hero-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .hero-title {
+      font-size: 1.875rem;
+      line-height: 1.2;
+      font-weight: 600;
+      color: var(--slate-900);
+    }
+
+    @media (min-width: 768px) {
+      .hero-title {
+        font-size: 2.25rem;
+      }
+    }
+
+    .hero-sub {
+      display: block;
+      font-size: 1.125rem;
+      line-height: 1.4;
+      font-weight: 400;
+      color: var(--slate-500);
+      margin-top: .75rem;
+    }
+
+    .hero-bullets {
+      font-size: 1rem;
+      color: var(--slate-700);
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      margin-top: 1.5rem;
+    }
+
+    .hero-bullet {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+    }
+
+    .hero-bullet-icon {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      min-height: 20px;
+      border-radius: .5rem;
+      background: var(--accent);
+      color: var(--white);
+      font-size: .6rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .hero-ctas {
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      margin-top: .5rem;
+    }
+
+    @media (min-width: 640px) {
+      .hero-ctas {
+        flex-direction: row;
+      }
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--white);
+      border-radius: 1rem;
+      font-size: .875rem;
+      font-weight: 500;
+      padding: .75rem 1.25rem;
+      box-shadow: 0 24px 30px -10px rgba(0,0,0,.6);
+      text-align: center;
+    }
+
+    .btn-secondary {
+      border: 1px solid var(--slate-300);
+      background: var(--white);
+      color: var(--slate-800);
+      border-radius: 1rem;
+      font-size: .875rem;
+      font-weight: 500;
+      padding: .75rem 1.25rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,.06);
+      text-align: center;
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      color: var(--slate-500);
+      font-size: .75rem;
+      margin-top: 1rem;
+      font-weight: 500;
+    }
+
+    .hero-image-card {
+      position: relative;
+      width: 100%;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 30px 60px -10px rgba(0,0,0,.6);
+      border: 1px solid var(--slate-200);
+      aspect-ratio: 4 / 3;
+      background: var(--slate-800);
+      color: var(--white);
+    }
+
+    .hero-image-card img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hero-image-label {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,0));
+      color: var(--white);
+      font-size: .875rem;
+      line-height: 1.4;
+      padding: 1rem;
+      font-weight: 500;
+    }
+
+    /* FLATS LIST */
+    section.flats {
+      background: var(--white);
+      border-top: 1px solid var(--slate-200);
+      border-bottom: 1px solid var(--slate-200);
+      padding-top: 3.5rem;
+      padding-bottom: 3.5rem;
+    }
+
+    .flats-headline {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      .flats-headline {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+      }
+    }
+
+    .flats-headline-left h2 {
+      font-size: 1.5rem;
+      line-height: 1.3;
+      font-weight: 600;
+      color: var(--slate-900);
+      margin: 0;
+    }
+
+    .flats-headline-left p {
+      color: var(--slate-600);
+      font-size: .875rem;
+      line-height: 1.5;
+      margin-top: .25rem;
+    }
+
+    .flats-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      font-size: .75rem;
+      font-weight: 500;
+    }
+
+    .filter-chip {
+      border-radius: .75rem;
+      border: 1px solid var(--slate-300);
+      background: var(--white);
+      box-shadow: 0 8px 16px rgba(0,0,0,.06);
+      padding: .5rem .75rem;
+      line-height: 1.2;
+      color: var(--slate-700);
+    }
+
+    .filter-chip.highlight {
+      background: var(--slate-900);
+      border-color: var(--slate-900);
+      color: var(--white);
+      box-shadow: 0 20px 30px -10px rgba(0,0,0,.8);
+    }
+
+    .flats-grid {
+      display: grid;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    @media (min-width: 768px) {
+      .flats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .flat-card {
+      background: var(--white);
+      border-radius: 1.5rem;
+      overflow: hidden;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,.4);
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      transition: box-shadow .15s;
+    }
+
+    .flat-card:hover {
+      box-shadow: 0 30px 60px -10px rgba(0,0,0,.6);
+    }
+
+    .flat-img-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+    }
+
+    .flat-img-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .flat-badge {
+      position: absolute;
+      left: .75rem;
+      top: .75rem;
+      background: rgba(255,255,255,.9);
+      color: var(--slate-900);
+      font-size: .625rem;
+      font-weight: 600;
+      line-height: 1.2;
+      border-radius: .75rem;
+      padding: .4rem .5rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,.15);
+    }
+
+    .flat-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      flex-grow: 1;
+    }
+
+    .flat-headline-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .5rem;
+    }
+
+    .flat-title {
+      font-size: 1rem;
+      line-height: 1.3;
+      font-weight: 600;
+      color: var(--slate-900);
+      margin: 0;
+    }
+
+    .flat-price {
+      background: var(--slate-100);
+      color: var(--slate-900);
+      border-radius: .5rem;
+      font-size: .75rem;
+      font-weight: 600;
+      line-height: 1.2;
+      padding: .4rem .5rem;
+      white-space: nowrap;
+    }
+
+    .flat-desc {
+      font-size: .875rem;
+      line-height: 1.5;
+      color: var(--slate-600);
+    }
+
+    .flat-more {
+      font-size: .8125rem;
+      line-height: 1.5;
+      color: var(--slate-500);
+    }
+
+    .btn-card {
+      margin-top: auto;
+      background: var(--accent);
+      color: var(--white);
+      text-align: center;
+      font-size: .875rem;
+      font-weight: 500;
+      padding: .65rem 1rem;
+      border-radius: 1rem;
+      box-shadow: 0 24px 30px -10px rgba(0,0,0,.6);
+    }
+
+    /* CONTATO */
+    section.contato {
+      background: var(--white);
+      padding-top: 4rem;
+      padding-bottom: 4rem;
+    }
+
+    @media (min-width: 768px) {
+      .contato-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 2.5rem;
+      }
+    }
+
+    .contato-box {
+      border: 1px solid var(--slate-200);
+      background: var(--slate-50);
+      border-radius: 1rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,.05);
+      padding: 1rem 1rem 1rem 1rem;
+      font-size: .875rem;
+      color: var(--slate-700);
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      max-width: 320px;
+    }
+
+    .contato-row {
+      display: flex;
+      gap: .5rem;
+      font-size: .875rem;
+      line-height: 1.4;
+    }
+
+    .contato-label {
+      color: var(--slate-500);
+      font-weight: 500;
+      min-width: 5rem;
+    }
+
+    .btn-whatsapp {
+      background: var(--green-wa);
+      color: var(--white);
+      text-align: center;
+      font-weight: 500;
+      font-size: .875rem;
+      padding: .75rem 1.25rem;
+      border-radius: 1rem;
+      box-shadow: 0 24px 30px -10px rgba(0,0,0,.6);
+    }
+
+    .wa-note {
+      color: var(--slate-500);
+      font-size: .75rem;
+      line-height: 1.4;
+    }
+
+    .contato-form {
+      border: 1px solid var(--slate-200);
+      background: var(--white);
+      border-radius: 1.5rem;
+      box-shadow: 0 30px 60px -10px rgba(0,0,0,.4);
+      padding: 1.5rem;
+      font-size: .875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 480px;
+      margin-top: 2rem;
+    }
+
+    @media (min-width: 768px) {
+      .contato-form {
+        margin-top: 0;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+    }
+
+    .form-label {
+      font-size: .75rem;
+      font-weight: 500;
+      color: var(--slate-700);
+    }
+
+    .input,
+    .textarea {
+      width: 100%;
+      border-radius: .75rem;
+      border: 1px solid var(--slate-300);
+      background: var(--white);
+      color: var(--slate-800);
+      font-size: .875rem;
+      padding: .7rem .75rem;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.08);
+      font-family: inherit;
+    }
+
+    .textarea {
+      resize: none;
+      min-height: 90px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      border-radius: 1rem;
+      background: var(--accent);
+      color: var(--white);
+      font-size: .875rem;
+      font-weight: 500;
+      padding: .8rem 1rem;
+      text-align: center;
+      box-shadow: 0 24px 30px -10px rgba(0,0,0,.6);
+      border: 0;
+      cursor: pointer;
+    }
+
+    .submit-note {
+      text-align: center;
+      color: var(--slate-400);
+      font-size: .7rem;
+      line-height: 1.5;
+    }
+
+    /* FOOTER */
+    footer.footer {
+      background: #020617;
+      color: var(--slate-400);
+      font-size: .75rem;
+      line-height: 1.5;
+      padding-top: 2.5rem;
+      padding-bottom: 2.5rem;
+      margin-top: auto;
+    }
+
+    @media (min-width: 768px) {
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        column-gap: 2rem;
+      }
+    }
+
+    .footer-block-title {
+      color: #fff;
+      font-weight: 500;
+      font-size: .8rem;
+      margin-bottom: .5rem;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      color: #fff;
+      font-weight: 600;
+      font-size: .8rem;
+    }
+
+    .footer-logo {
+      width: 24px;
+      height: 24px;
+      border-radius: .5rem;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 10px 20px rgba(0,0,0,.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      color: var(--slate-600);
+      font-size: .7rem;
+      margin-top: 2rem;
+    }
+
+    .footer-smalltext {
+      color: var(--slate-500);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="logo-flats-porto.png" alt="Flats Porto de Galinhas logo" />
+        </div>
+        <div>Flats Porto de Galinhas</div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#flats">Flats</a>
+        <a href="#contato">Reservar</a>
+        <button class="btn-nav-main">Reservar agora</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <h1 class="hero-title">
+          Flats em Porto de Galinhas - PE
+          <span class="hero-sub">
+            Pacote Réveillon (28/12 a 03/01) — R$ 5.000 total.
+          </span>
+        </h1>
+
+        <div class="hero-bullets">
+          <div class="hero-bullet">
+            <div class="hero-bullet-icon">✓</div>
+            <div>Direto com o proprietário, sem taxa escondida</div>
+          </div>
+          <div class="hero-bullet">
+            <div class="hero-bullet-icon">✓</div>
+            <div>Check-in inteligente (chegou, entrou)</div>
+          </div>
+          <div class="hero-bullet">
+            <div class="hero-bullet-icon">✓</div>
+            <div>Férias perfeitas em Porto de Galinhas</div>
+          </div>
+        </div>
+
+        <div class="hero-ctas">
+          <a href="#contato" class="btn-primary">Ver disponibilidade</a>
+          <a href="#flats" class="btn-secondary">Ver opções de flats</a>
+        </div>
+
+        <div class="hero-tags">
+          <div>📅 28/12 a 03/01</div>
+          <div>📶 Wi-Fi rápido</div>
+          <div>🚗 Estacionamento incluso</div>
+        </div>
+      </div>
+
+      <div class="hero-image-card">
+        <img src="portodegalinhas.jpg" alt="Piscina e fachada dos flats em Porto de Galinhas" />
+        <div class="hero-image-label">
+          Pacote Réveillon (28/12 a 03/01) — R$ 5.000 total
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FLATS -->
+  <section id="flats" class="flats">
+    <div class="container">
+      <div class="flats-headline">
+        <div class="flats-headline-left">
+          <h2>5 Flats disponíveis em Porto de Galinhas</h2>
+          <p>Todos mobiliados, com ar-condicionado e acesso à piscina.</p>
+        </div>
+        <div class="flats-filters">
+          <div class="filter-chip">Casal (2 pessoas)</div>
+          <div class="filter-chip">Família / Grupo</div>
+          <div class="filter-chip highlight">Pacote Réveillon 28/12 a 03/01</div>
+        </div>
+      </div>
+
+      <div class="flats-grid">
+
+        <!-- CARD 1 -->
+        <div class="flat-card">
+          <div class="flat-img-wrap">
+            <img src="portodegalinhas.jpg" alt="Flat Premium Vista Mar" />
+            <div class="flat-badge">Frente à praia (Porto de Galinhas - PE)</div>
+          </div>
+          <div class="flat-body">
+            <div class="flat-headline-row">
+              <h3 class="flat-title">Flat Premium Vista Mar</h3>
+              <div class="flat-price">R$ 5.000 (pacote Réveillon 28/12 a 03/01)</div>
+            </div>
+            <div class="flat-desc">
+              1 quarto • 2 hóspedes • Piscina • Academia • Wi-Fi rápido
+            </div>
+            <div class="flat-more">
+              Flat completo com varanda e vista incrível. Perfeito para Réveillon e férias de verão.
+            </div>
+            <a class="btn-card" href="#contato">Reservar datas</a>
+          </div>
+        </div>
+
+        <!-- CARD 2 -->
+        <div class="flat-card">
+          <div class="flat-img-wrap">
+            <img src="portodegalinhas.jpg" alt="Studio Central Conforto+" />
+            <div class="flat-badge">Centro (Porto de Galinhas - PE)</div>
+          </div>
+          <div class="flat-body">
+            <div class="flat-headline-row">
+              <h3 class="flat-title">Studio Central Conforto+</h3>
+              <div class="flat-price">R$ 5.000 (pacote Réveillon 28/12 a 03/01)</div>
+            </div>
+            <div class="flat-desc">
+              Studio • 2 hóspedes • Garagem • Portaria 24h
+            </div>
+            <div class="flat-more">
+              Pertinho de tudo: shopping, restaurantes e vida noturna. Ar-condicionado e vaga inclusa.
+            </div>
+            <a class="btn-card" href="#contato">Reservar datas</a>
+          </div>
+        </div>
+
+        <!-- CARD 3 -->
+        <div class="flat-card">
+          <div class="flat-img-wrap">
+            <img src="portodegalinhas.jpg" alt="Flat Família Piscina Resort" />
+            <div class="flat-badge">Condomínio fechado (Porto de Galinhas - PE)</div>
+          </div>
+          <div class="flat-body">
+            <div class="flat-headline-row">
+              <h3 class="flat-title">Flat Família Piscina Resort</h3>
+              <div class="flat-price">R$ 5.000 (pacote Réveillon 28/12 a 03/01)</div>
+            </div>
+            <div class="flat-desc">
+              2 quartos • até 5 hóspedes • Área kids • Estacionamento
+            </div>
+            <div class="flat-more">
+              Condomínio tipo resort, perfeito pra vir com a galera fim de ano / férias coletivas.
+            </div>
+            <a class="btn-card" href="#contato">Reservar datas</a>
+          </div>
+        </div>
+
+        <!-- CARD 4 -->
+        <div class="flat-card">
+          <div class="flat-img-wrap">
+            <img src="portodegalinhas.jpg" alt="Flat Piscina & Varanda" />
+            <div class="flat-badge">Porto de Galinhas - PE</div>
+          </div>
+          <div class="flat-body">
+            <div class="flat-headline-row">
+              <h3 class="flat-title">Flat Piscina & Varanda</h3>
+              <div class="flat-price">R$ 5.000 (pacote Réveillon 28/12 a 03/01)</div>
+            </div>
+            <div class="flat-desc">
+              Varanda privativa • Piscina no condomínio • Ar gelando
+            </div>
+            <div class="flat-more">
+              Ideal pra casal que quer paz e estrutura boa.
+            </div>
+            <a class="btn-card" href="#contato">Reservar datas</a>
+          </div>
+        </div>
+
+        <!-- CARD 5 -->
+        <div class="flat-card">
+          <div class="flat-img-wrap">
+            <img src="portodegalinhas.jpg" alt="Flat Pé na Areia" />
+            <div class="flat-badge">A poucos passos da praia</div>
+          </div>
+          <div class="flat-body">
+            <div class="flat-headline-row">
+              <h3 class="flat-title">Flat Pé na Areia</h3>
+              <div class="flat-price">R$ 5.000 (pacote Réveillon 28/12 a 03/01)</div>
+            </div>
+            <div class="flat-desc">
+              Cozinha completa • Wi-Fi rápido • Estacionamento
+            </div>
+            <div class="flat-more">
+              Aquele clima de férias sem preocupação, perfeito pro réveillon.
+            </div>
+            <a class="btn-card" href="#contato">Reservar datas</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="contato" class="contato">
+    <div class="container contato-grid">
+      <div>
+        <h2 style="font-size:1.5rem;line-height:1.3;font-weight:600;color:var(--slate-900);margin:0 0 .5rem 0;">
+          Reserva rápida no WhatsApp
+        </h2>
+        <p style="color:var(--slate-600);font-size:.875rem;line-height:1.5;max-width:28rem;margin:0 0 1rem 0;">
+          Me chama no WhatsApp e fala as datas que você quer (Natal, Réveillon,
+          férias coletivas, carnaval etc). Se tiver livre eu já te mando
+          vídeo do lugar.
+        </p>
+
+        <div class="contato-box">
+          <div class="contato-row">
+            <div class="contato-label">Check-in:</div>
+            <div class="contato-value" style="font-weight:600;color:var(--slate-900);">A partir das 14h</div>
+          </div>
+          <div class="contato-row">
+            <div class="contato-label">Check-out:</div>
+            <div class="contato-value" style="font-weight:600;color:var(--slate-900);">Até 11h</div>
+          </div>
+          <div class="contato-row">
+            <div class="contato-label">Caução:</div>
+            <div class="contato-value" style="font-weight:600;color:var(--slate-900);">Devolvido na saída</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:.75rem;font-size:.875rem;margin-top:1rem;max-width:320px;">
+          <a class="btn-whatsapp" href="https://wa.me/553499263609" target="_blank" rel="noopener noreferrer">
+            Falar no WhatsApp (+55 34 9926-3609)
+          </a>
+          <div class="wa-note">
+            *sem intermediário, resposta rápida
+          </div>
+        </div>
+      </div>
+
+      <form class="contato-form">
+        <div class="form-group">
+          <label class="form-label">Nome</label>
+          <input class="input" type="text" placeholder="Seu nome" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">WhatsApp</label>
+          <input class="input" type="text" placeholder="(+55) 34 9926-3609" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Datas desejadas</label>
+          <input class="input" type="text" placeholder="Ex: 28/12 até 03/01" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Quantas pessoas?</label>
+          <input class="input" type="number" placeholder="2" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mensagem</label>
+          <textarea class="textarea" placeholder="Quero pacote Réveillon. Vocês aceitam check-in dia 30 à noite?"></textarea>
+        </div>
+
+        <button type="button" class="btn-submit">Consultar disponibilidade</button>
+
+        <div class="submit-note">
+          Ao enviar você aceita receber resposta no WhatsApp.
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <img src="logo-flats-porto.png" alt="Flats Porto de Galinhas logo" />
+          </div>
+          <div>Flats Porto de Galinhas</div>
+        </div>
+        <div class="footer-smalltext">
+          Aluguel direto com o proprietário.
+          Hospedagens registradas e legalizadas.
+        </div>
+      </div>
+
+      <div>
+        <div class="footer-block-title">Contato</div>
+        <div class="footer-smalltext">WhatsApp: +55 34 9926-3609</div>
+        <div class="footer-smalltext">Reserva rápida via mensagem</div>
+      </div>
+
+      <div>
+        <div class="footer-block-title">Importante</div>
+        <div class="footer-smalltext">Check-in com documento e caução reembolsável.</div>
+        <div class="footer-smalltext">Proibido festas / som alto após 22h.</div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      © <span id="year"></span> Flats Porto de Galinhas • Todos os direitos reservados
+    </div>
+  </footer>
+
+  <script>
+    // coloca ano atual automático
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
+
