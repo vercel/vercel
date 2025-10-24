@@ -89,10 +89,10 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
       return join(dir, entrypointFromOutputDir);
     }
 
+    // When output dir is specified, if no regex-matching entrypoint found but there are other entrypoints,
+    // use the first one available (fallback behavior for output directories)
     if (entrypointsNotMatchingRegex.length > 0) {
-      throw new Error(
-        `No entrypoint found which imports hono. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
-      );
+      return join(dir, entrypointsNotMatchingRegex[0]);
     }
     throw new Error(
       `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
