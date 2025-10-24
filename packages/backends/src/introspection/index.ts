@@ -116,7 +116,11 @@ export const introspectApp = async (
       if (existsSync(packageJsonPath)) {
         return packageJsonPath;
       }
-      return findNearestPackageJson(dirname(dir));
+      const parentDir = dirname(dir);
+      if (parentDir === dir) {
+        return undefined;
+      }
+      return findNearestPackageJson(parentDir);
     };
     const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
     if (nearestPackageJsonPath) {
