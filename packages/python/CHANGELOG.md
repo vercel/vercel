@@ -4,7 +4,9 @@
 
 ### Patch Changes
 
-- [python] streaming e2e tests ([#14079](https://github.com/vercel/vercel/pull/14079))
+- [python] flask start dev server ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+- [python] streaming e2e tests ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ## 5.0.9
 

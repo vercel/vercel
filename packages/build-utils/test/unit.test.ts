@@ -150,6 +150,29 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
   ).toHaveProperty('runtime', 'nodejs');
 });
 
+it('should resolve to the provided bunVersion when its valid', async () => {
+  await expect(
+    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
+  ).resolves.toHaveProperty('runtime', 'bun1.x');
+});
+
+it('should resolve to the provided bunVersion on dev', async () => {
+  await expect(
+    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: true })
+  ).resolves.toHaveProperty('runtime', 'bun1.x');
+});
+
+it('should fail if the provided bun version is not valid', async () => {
+  await expect(
+    getNodeVersion(
+      '/tmp',
+      undefined,
+      { bunVersion: 'bun1.x' },
+      { isDev: false }
+    )
+  ).rejects.toThrow();
+});
+
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
@@ -995,8 +1018,7 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   }
 
   const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
-  const nodeVersion = { major: nodeMajor } as any;
-  await runNpmInstall(fixture, [], {}, {}, nodeVersion);
+  await runNpmInstall(fixture, [], {}, {});
   expect(warningMessages).toStrictEqual([
     'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
   ]);
