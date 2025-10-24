@@ -1,10 +1,12 @@
 import { RuntimeCache } from './cache/types';
 import { PurgeApi } from './purge/types';
+import { AddCacheTagApi } from './addcachetag/types';
 
 type Context = {
   waitUntil?: (promise: Promise<unknown>) => void;
   cache?: RuntimeCache;
   purge?: PurgeApi;
+  addCacheTag?: AddCacheTagApi;
   headers?: Record<string, string>;
 };
 
