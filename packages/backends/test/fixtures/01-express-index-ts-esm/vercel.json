@@ -1,0 +1,5 @@
+{
+  "devCommand": "cervel",
+  "framework": "express-experimental",
+  "outputDirectory": "dist"
+}
