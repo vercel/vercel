@@ -20,7 +20,7 @@ import {
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
 export * from './schemas';
-export { getCleanUrls } from './superstatic';
+export { getCleanUrls, sourceToRegex } from './superstatic';
 export * from './types';
 
 const VALID_HANDLE_VALUES = [

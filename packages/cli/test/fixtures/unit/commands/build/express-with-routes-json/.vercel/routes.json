@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "source": "/users/:id",
+      "methods": ["GET"]
+    },
+    {
+      "source": "/api/posts/:postId",
+      "methods": ["GET"]
+    }
+  ]
+}
+
