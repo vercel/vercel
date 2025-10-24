@@ -1,2 +1,4 @@
 *.js
+*.mjs
 *.d.ts
+!build.mjs
