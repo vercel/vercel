@@ -76,15 +76,20 @@ export const introspectApp = async (
       const timeout = setTimeout(() => {
         child.kill('SIGTERM');
       }, 2000);
+      const timeout2 = setTimeout(() => {
+        child.kill('SIGKILL');
+      }, 3000);
 
       child.on('error', err => {
         clearTimeout(timeout);
+        clearTimeout(timeout2);
         console.log(`Loader error: ${err.message}`);
         resolvePromise(undefined);
       });
 
       child.on('close', () => {
         clearTimeout(timeout);
+        clearTimeout(timeout2);
         resolvePromise(undefined);
       });
     } catch (error) {
