@@ -7,13 +7,14 @@ export const { build, entrypointCallback, findEntrypoint, require_ } =
     'nestjs',
     /(?:from|require|import)\s*(?:\(\s*)?["']@nestjs\/core["']\s*(?:\))?/g,
     [
-      'src/main', // default, so most common
-      'app',
-      'index',
-      'server',
+      'src/main',
       'src/app',
       'src/index',
       'src/server',
+      'main',
+      'app',
+      'index',
+      'server',
     ],
     ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'],
     nodeBuild
