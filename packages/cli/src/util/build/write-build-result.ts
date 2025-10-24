@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs, { existsSync } from 'fs-extra';
 import mimeTypes from 'mime-types';
 import {
   basename,
@@ -34,6 +34,7 @@ import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
 import { fileNameSymbol, type VercelConfig } from '@vercel/client';
+import outputManager from '../../output-manager';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
@@ -274,6 +275,42 @@ async function writeBuildResultV3(
   standalone: boolean = false
 ) {
   const { output } = buildResult;
+  if (process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON === '1') {
+    const routesJsonPath = join(outputDir, '..', 'routes.json');
+    if (existsSync(routesJsonPath)) {
+      try {
+        const newOutput: Record<string, Lambda | EdgeFunction> = {
+          index: output,
+        };
+        const routesJson = await fs.readJSON(routesJsonPath);
+        if (
+          routesJson &&
+          typeof routesJson === 'object' &&
+          'routes' in routesJson &&
+          Array.isArray(routesJson.routes)
+        ) {
+          for (const route of routesJson.routes) {
+            if (route.source === '/') {
+              continue;
+            }
+            if (route.source) {
+              newOutput[route.source] = output;
+            }
+          }
+        }
+        return writeBuildResultV2(
+          repoRootPath,
+          outputDir,
+          { output: newOutput, routes: buildResult.routes },
+          build,
+          vercelConfig,
+          standalone
+        );
+      } catch (error) {
+        outputManager.error(`Failed to read routes.json: ${error}`);
+      }
+    }
+  }
   const src = build.src;
   if (typeof src !== 'string') {
     throw new Error(`Expected "build.src" to be a string`);
