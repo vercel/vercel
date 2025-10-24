@@ -640,8 +640,8 @@ async function doBuild(
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
           () => {
             if (
-              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||
-              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1'
+              (process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' && builderPkg.name === '@vercel/express') ||
+              (process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' && builderPkg.name === '@vercel/hono')
             ) {
               return experimentalBackendBuilder.build(buildOptions);
             }
