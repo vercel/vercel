@@ -38,7 +38,6 @@ export const prepareCache: PrepareCache = async ({
         stdio: 'ignore',
       },
       undefined,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
 

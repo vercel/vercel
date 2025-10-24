@@ -40,6 +40,8 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSupportedNodeVersion,
+  isBunVersion,
+  getSupportedBunVersion,
 } from './fs/node-version';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
 import debug from './debug';
@@ -75,6 +77,8 @@ export {
   getNodeBinPath,
   getNodeBinPaths,
   getSupportedNodeVersion,
+  isBunVersion,
+  getSupportedBunVersion,
   detectPackageManager,
   runNpmInstall,
   runBundleInstall,

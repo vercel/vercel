@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.14.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 4.13.4
 
 ### Patch Changes

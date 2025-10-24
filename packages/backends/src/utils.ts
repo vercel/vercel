@@ -38,7 +38,6 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -61,7 +60,6 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
