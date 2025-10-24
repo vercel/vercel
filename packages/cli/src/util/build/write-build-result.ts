@@ -61,7 +61,7 @@ export async function writeBuildResult(
   standalone: boolean = false
 ) {
   let version = builder.version;
-  if (isExperimentalBackendsEnabled()) {
+  if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
     version = 2;
   }
   if (typeof version !== 'number' || version === 2) {
