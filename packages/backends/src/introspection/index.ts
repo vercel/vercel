@@ -2,8 +2,11 @@ import { BuildV2, Files } from '@vercel/build-utils';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { dirname, join } from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+
+const require = createRequire(import.meta.url);
 
 type RolldownResult = {
   dir: string;
