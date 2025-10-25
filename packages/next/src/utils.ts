@@ -1685,10 +1685,12 @@ async function getSourceFilePathFromPage({
   workPath,
   page,
   pageExtensions,
+  nextVersion,
 }: {
   workPath: string;
   page: string;
   pageExtensions?: ReadonlyArray<string>;
+  nextVersion?: string;
 }) {
   const usesSrcDir = await usesSrcDirectory(workPath);
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
@@ -1758,6 +1760,14 @@ async function getSourceFilePathFromPage({
   // by Next.js for App Router 500 page. There's no need to warn or return a source file in this case, as it won't have
   // any configuration applied to it.
   if (page === '/_global-error/page') {
+    return '';
+  }
+
+  // In Next.js 16+, middleware.ts is replaced by proxy.ts (though middleware.ts still works
+  // for Edge runtime). Skip the warning for middleware in Next.js 16+ since it's expected
+  // that it may not be found.
+  const isNextJs16Plus = nextVersion && semver.gte(nextVersion, '16.0.0');
+  if (page === 'middleware' && isNextJs16Plus) {
     return '';
   }
 
@@ -3740,6 +3750,7 @@ export async function getNodeMiddleware({
     workPath: entryPath,
     page: normalizeSourceFilePageFromManifest('/middleware', 'middleware', {}),
     pageExtensions,
+    nextVersion,
   });
 
   const vercelConfigOpts = await getLambdaOptionsFromFunction({
