@@ -7,8 +7,6 @@ import { relative, join } from 'path';
 import { doBuild } from './build.js';
 
 export const build: BuildV2 = async args => {
-  console.log(`Using experimental build`);
-
   const downloadResult = await downloadInstallAndBundle(args);
 
   const outputConfig = await doBuild(args, downloadResult);

@@ -50,7 +50,6 @@ export const introspectApp = async (
       );
 
       child.stdout?.on('data', data => {
-        // console.log('[LOADER]', data.toString());
         try {
           const introspection = JSON.parse(data.toString());
           const introspectionSchema = z.object({
@@ -68,10 +67,6 @@ export const introspectApp = async (
           // Ignore errors
         }
       });
-
-      // child.stderr?.on('data', data => {
-      //   console.log('[ERROR]', data.toString());
-      // });
 
       const timeout = setTimeout(() => {
         child.kill('SIGTERM');
@@ -93,7 +88,6 @@ export const introspectApp = async (
         resolvePromise(undefined);
       });
     } catch (error) {
-      console.log('Failed to run loader');
       resolvePromise(undefined);
     }
   });
