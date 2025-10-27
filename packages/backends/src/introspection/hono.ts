@@ -17,7 +17,6 @@ export const handle = (honoModule: any) => {
 };
 
 setupCloseHandlers(() => {
-  console.log({ closing: 'nonono' });
   const routes = extractRoutes();
   if (routes.length > 0) {
     return { frameworkSlug: 'hono', routes };
