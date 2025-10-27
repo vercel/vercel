@@ -94,12 +94,12 @@ describe('successful builds', async () => {
       const workPath = join(__dirname, 'fixtures', fixtureName);
 
       const fileList = await readDirectoryRecursively(workPath);
-      const vercelJson = await readFile(join(workPath, 'vercel.json'), 'utf8');
-      const vercelJsonObject = JSON.parse(vercelJson);
-      config.projectSettings = {
-        ...config.projectSettings,
-        ...vercelJsonObject,
-      };
+      // const vercelJson = await readFile(join(workPath, 'vercel.json'), 'utf8');
+      // const vercelJsonObject = JSON.parse(vercelJson);
+      // config.projectSettings = {
+      //   ...config.projectSettings,
+      //   ...vercelJsonObject,
+      // };
 
       const files = createFiles(workPath, fileList);
       const result = (await build({

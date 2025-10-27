@@ -1,7 +1,7 @@
 ---
 '@vercel/backends': patch
 '@vercel/express': patch
-'@vercel/cervel-beta': patch
+'@vercel/cervel': patch
 '@vercel/hono': patch
 'vercel': patch
 ---

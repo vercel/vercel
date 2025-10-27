@@ -1,6 +1,0 @@
-{
-  "devCommand": "cervel",
-  "framework": "express-experimental",
-  "installCommand": "npm install",
-  "outputDirectory": "dist"
-}

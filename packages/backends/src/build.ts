@@ -5,7 +5,7 @@ import {
   build as cervelBuild,
   getBuildSummary,
   findEntrypoint,
-} from '@vercel/cervel-beta';
+} from '@vercel/cervel';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { writeFile } from 'fs/promises';
@@ -24,18 +24,19 @@ export const doBuild = async (
   // If a build command ran but no output directory was configured, that's an error
   // Exception: if the build command is a cervel command, it handles output internally
   const isCervelCommand = buildCommand?.trim().startsWith('cervel');
-  if (buildCommandResult && !outputSetting && !isCervelCommand) {
-    throw new Error(
-      'Build command ran successfully, but no "outputDirectory" was configured. ' +
-        'Please specify where your build outputs files by setting "outputDirectory" in your vercel.json.'
-    );
-  }
+  // if (buildCommandResult && !outputSetting && !isCervelCommand) {
+  //   throw new Error(
+  //     'Build command ran successfully, but no "outputDirectory" was configured. ' +
+  //       'Please specify where your build outputs files by setting "outputDirectory" in your vercel.json.'
+  //   );
+  // }
 
   // If there's no output directory configured
   if (!outputSetting) {
     // If cervel was run as build command, use its default output location
     if (isCervelCommand) {
-      const cervelOutputDir = join(args.workPath, defaultOutputDirectory);
+      // Cervel defaults to outputting to a `dist` directory
+      const cervelOutputDir = join(args.workPath, 'dist');
       const cervelJsonPath = join(cervelOutputDir, '.cervel.json');
 
       if (existsSync(cervelJsonPath)) {

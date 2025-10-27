@@ -7,7 +7,7 @@
   "dependencies": {
     "@types/express": "5.0.3",
     "@types/node": "^22.10.0",
-    "@vercel/cervel-beta": "file:../../../../cervel",
+    "@vercel/cervel": "file:../../../../cervel",
     "express": "5.1.0",
     "pug": "^3.0.3",
     "typescript": "^5.9.3"
