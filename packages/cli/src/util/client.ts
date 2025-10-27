@@ -1,4 +1,4 @@
-import { bold, gray } from 'chalk';
+import chalk from 'chalk';
 import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
@@ -116,8 +116,8 @@ export default class Client extends EventEmitter implements Stdio {
     this.telemetryEventStore = opts.telemetryEventStore;
 
     const theme = {
-      prefix: gray('?'),
-      style: { answer: gray },
+      prefix: chalk.gray('?'),
+      style: { answer: chalk.gray },
     };
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
@@ -351,7 +351,7 @@ export default class Client extends EventEmitter implements Stdio {
         output.prettyError(error);
       } else {
         output.error(
-          `Failed to re-authenticate for ${bold(error.scope)} scope`
+          `Failed to re-authenticate for ${chalk.bold(error.scope)} scope`
         );
       }
       throw error;

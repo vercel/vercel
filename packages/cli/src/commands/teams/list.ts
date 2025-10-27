@@ -1,6 +1,6 @@
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
-import { gray } from 'chalk';
+import chalk from 'chalk';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import { packageName } from '../../util/pkg-name';
@@ -90,7 +90,7 @@ export default async function list(
 
   const teamTable = table(
     [
-      ['id', 'Team name'].map(str => gray(str)),
+      ['id', 'Team name'].map(str => chalk.gray(str)),
       ...teamList.map(team => [team.value, team.name]),
     ],
     { hsep: 5 }

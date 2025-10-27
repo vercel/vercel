@@ -1,4 +1,4 @@
-import gray from 'chalk';
+import chalk from 'chalk';
 
 // listItem('woot') === '- woot'
 // listItem('->', 'woot') === '-> woot'
@@ -10,7 +10,7 @@ const listItem = (msg: string, n?: string | number) => {
   if (Number(n)) {
     n += '.';
   }
-  return `${gray(n.toString())} ${msg}`;
+  return `${chalk.gray(n.toString())} ${msg}`;
 };
 
 export default listItem;
