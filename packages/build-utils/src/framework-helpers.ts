@@ -25,7 +25,12 @@ export function isBackendFramework(
  * Checks if experimental backends are enabled via environment variable
  */
 export function isExperimentalBackendsEnabled(): boolean {
-  return process.env.VERCEL_EXPERIMENTAL_BACKENDS === '1';
+  return (
+    process.env.VERCEL_EXPERIMENTAL_BACKENDS === '1' ||
+    // Previously used for experimental express and hono builds
+    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||
+    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1'
+  );
 }
 
 /**
