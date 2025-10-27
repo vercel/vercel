@@ -81,7 +81,7 @@ async function createEventHandler(
 async function hasWebHandlers(getExports: () => Promise<string[]>) {
   const exports = await getExports().catch(() => []);
   for (const name of exports) {
-    if (HTTP_METHODS.includes(name)) {
+    if (HTTP_METHODS.includes(name) || name === 'default' || name === 'fetch') {
       return true;
     }
   }
@@ -176,6 +176,9 @@ async function onDevRequest(
     const { headers, body, status } = await handleEvent(req);
     res.statusCode = status;
 
+    // Transfer-Encoding is a hop-to-hop header and should not be proxied
+    headers.delete('transfer-encoding');
+
     for (const [key, value] of headers as Headers) {
       if (value !== undefined)
         res.setHeader(
@@ -214,4 +217,11 @@ process.on('message', async m => {
       console.error(`unknown IPC message from parent:`, m);
       break;
   }
+});
+
+process.on('SIGTERM', async () => {
+  if (onExit) {
+    await onExit();
+  }
+  process.exit(0);
 });

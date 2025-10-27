@@ -90,7 +90,14 @@ export async function checkRateLimit(
     }
   }
 
-  const url = `https://${firewallHost}/.well-known/vercel/rate-limit-api/${encodeURIComponent(rateLimitId)}`;
+  let pathPrefix =
+    process.env.PUBLIC_VERCEL_FIREWALL_PATH_PREFIX ||
+    process.env.NEXT_PUBLIC_VERCEL_FIREWALL_PATH_PREFIX ||
+    '';
+  if (pathPrefix && !pathPrefix.startsWith('/')) {
+    pathPrefix = `/${pathPrefix}`;
+  }
+  const url = `https://${firewallHost}${pathPrefix}/.well-known/vercel/rate-limit-api/${encodeURIComponent(rateLimitId)}`;
 
   fullRateLimitKey = `${fullRateLimitKey}-${await hashString(
     fullRateLimitKey +
