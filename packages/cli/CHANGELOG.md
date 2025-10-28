@@ -1,5 +1,18 @@
 # vercel
 
+## 48.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`0e63b0b007dd5705434ff594e7576c86dda939bc`](https://github.com/vercel/vercel/commit/0e63b0b007dd5705434ff594e7576c86dda939bc)]:
+  - @vercel/build-utils@12.2.1
+  - @vercel/backends@0.0.3
+  - @vercel/express@0.1.2
+  - @vercel/h3@0.1.8
+  - @vercel/hono@0.2.2
+  - @vercel/node@5.5.1
+  - @vercel/static-build@2.8.1
+
 ## 48.6.3
 
 ### Patch Changes
