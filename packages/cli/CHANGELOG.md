@@ -1,5 +1,11 @@
 # vercel
 
+## 48.6.3
+
+### Patch Changes
+
+- Fix vc build regression ([#14149](https://github.com/vercel/vercel/pull/14149))
+
 ## 48.6.2
 
 ### Patch Changes
