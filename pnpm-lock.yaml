@@ -225,9 +225,6 @@ importers:
       '@vercel/nft':
         specifier: 0.30.1
         version: 0.30.1
-      '@vercel/node':
-        specifier: 5.3.26
-        version: 5.3.26
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
@@ -8896,14 +8893,6 @@ packages:
       undici: 5.28.4
     dev: false
 
-  /@vercel/build-utils@12.1.2:
-    resolution: {integrity: sha512-W0j2n9e65rr/fpzghTCgH4qFJgMX249hCQJmEdVzdKkXRlO6DfSqBljEHASCFaeBeumBdgS5jeSDixXyjKtdfw==}
-    dev: false
-
-  /@vercel/error-utils@2.0.3:
-    resolution: {integrity: sha512-CqC01WZxbLUxoiVdh9B/poPbNpY9U+tO1N9oWHwTl5YAZxcqXmmWJ8KNMFItJCUUWdY3J3xv8LvAuQv2KZ5YdQ==}
-    dev: false
-
   /@vercel/fun@1.1.6:
     resolution: {integrity: sha512-xDiM+bD0fSZyzcjsAua3D+guXclvHOSTzr03UcZEQwYzIjwWjLduT7bl2gAaeNIe7fASAIZd0P00clcj0On4rQ==}
     engines: {node: '>= 18'}
@@ -8993,47 +8982,6 @@ packages:
       - encoding
       - rollup
       - supports-color
-    dev: false
-
-  /@vercel/node@5.3.26:
-    resolution: {integrity: sha512-9oJAmWviJsH82X748D2K0nutED9SpL2oJBLi6X4NmlSa5AXXoMf268iHp/VaDObB8b8OxVUA1Vr9EpjyaZ+ojA==}
-    dependencies:
-      '@edge-runtime/node-utils': 2.3.0
-      '@edge-runtime/primitives': 4.1.0
-      '@edge-runtime/vm': 3.2.0
-      '@types/node': 16.18.11
-      '@vercel/build-utils': 12.1.2
-      '@vercel/error-utils': 2.0.3
-      '@vercel/nft': 0.30.1
-      '@vercel/static-config': 3.1.2
-      async-listen: 3.0.0
-      cjs-module-lexer: 1.2.3
-      edge-runtime: 2.5.9
-      es-module-lexer: 1.4.1
-      esbuild: 0.14.47
-      etag: 1.8.1
-      mime-types: 2.1.35
-      node-fetch: 2.6.9
-      path-to-regexp: 6.1.0
-      path-to-regexp-updated: /path-to-regexp@6.3.0
-      ts-morph: 12.0.0
-      ts-node: 10.9.1(@swc/core@1.2.218)(@types/node@18.0.0)(typescript@4.9.5)
-      typescript: 4.9.5
-      undici: 5.28.4
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - encoding
-      - rollup
-      - supports-color
-    dev: false
-
-  /@vercel/static-config@3.1.2:
-    resolution: {integrity: sha512-2d+TXr6K30w86a+WbMbGm2W91O0UzO5VeemZYBBUJbCjk/5FLLGIi8aV6RS2+WmaRvtcqNTn2pUA7nCOK3bGcQ==}
-    dependencies:
-      ajv: 8.6.3
-      json-schema-to-ts: 1.6.4
-      ts-morph: 12.0.0
     dev: false
 
   /@vercel/style-guide@4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4):
