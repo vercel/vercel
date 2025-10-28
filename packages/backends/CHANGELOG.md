@@ -1,5 +1,13 @@
 # @vercel/backends
 
+## 0.0.3
+
+### Patch Changes
+
+- Fix dependency ([#14148](https://github.com/vercel/vercel/pull/14148))
+
+- Support sub-apps for Hono's experimental o11y ([#14148](https://github.com/vercel/vercel/pull/14148))
+
 ## 0.0.2
 
 ### Patch Changes
