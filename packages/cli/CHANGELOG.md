@@ -1,5 +1,14 @@
 # vercel
 
+## 48.6.2
+
+### Patch Changes
+
+- Add experimental support for routes.json ([#14138](https://github.com/vercel/vercel/pull/14138))
+
+- Updated dependencies [[`2f586d89e744ee905626080de5f49b140739dde7`](https://github.com/vercel/vercel/commit/2f586d89e744ee905626080de5f49b140739dde7), [`2f586d89e744ee905626080de5f49b140739dde7`](https://github.com/vercel/vercel/commit/2f586d89e744ee905626080de5f49b140739dde7)]:
+  - @vercel/backends@0.0.3
+
 ## 48.6.1
 
 ### Patch Changes
