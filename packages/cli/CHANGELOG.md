@@ -1,5 +1,11 @@
 # vercel
 
+## 48.6.5
+
+### Patch Changes
+
+- Enable experimental backends mode ([#14155](https://github.com/vercel/vercel/pull/14155))
+
 ## 48.6.4
 
 ### Patch Changes
