@@ -166,7 +166,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['beta'];
+  const betaCommands: string[] = ['curl'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
