@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 12.2.1
+
+### Patch Changes
+
+- Add backend util helpers ([#14152](https://github.com/vercel/vercel/pull/14152))
+
 ## 12.2.0
 
 ### Minor Changes
