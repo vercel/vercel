@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-const app = new Elysia().get("/", () => `Hello Elysia from ${runtime}`);
+const app = new Elysia().get("/", () => "Hello from Elysia");
 
 export default app;
 
