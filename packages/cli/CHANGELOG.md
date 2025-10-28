@@ -1,5 +1,17 @@
 # vercel
 
+## 48.6.1
+
+### Patch Changes
+
+- Replace experimental builders for Express and Hono with a @vercel/backends package ([#14065](https://github.com/vercel/vercel/pull/14065))
+
+- Updated dependencies [[`c40a0e7c53755cf5bed642256498da3d3102d8ac`](https://github.com/vercel/vercel/commit/c40a0e7c53755cf5bed642256498da3d3102d8ac), [`c6cf33d7db28f858d7e34d08ec871a28423ded2a`](https://github.com/vercel/vercel/commit/c6cf33d7db28f858d7e34d08ec871a28423ded2a), [`c6cf33d7db28f858d7e34d08ec871a28423ded2a`](https://github.com/vercel/vercel/commit/c6cf33d7db28f858d7e34d08ec871a28423ded2a)]:
+  - @vercel/next@4.14.1
+  - @vercel/express@0.1.1
+  - @vercel/backends@0.0.2
+  - @vercel/hono@0.2.1
+
 ## 48.6.0
 
 ### Minor Changes

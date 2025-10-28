@@ -441,7 +441,7 @@ importers:
         specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.1.0
+        specifier: 0.1.1
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -453,13 +453,13 @@ importers:
         specifier: 0.1.7
         version: link:../h3
       '@vercel/hono':
-        specifier: 0.2.0
+        specifier: 0.2.1
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.3.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.14.0
+        specifier: 4.14.1
         version: link:../next
       '@vercel/node':
         specifier: 5.5.0
