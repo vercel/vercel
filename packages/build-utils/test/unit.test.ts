@@ -333,7 +333,7 @@ it('should only allow nodejs22.x when env var is set', async () => {
 it('should only allow nodejs22.x when env var is set', async () => {
   try {
     expect(getLatestNodeVersion()).toHaveProperty('major', 22);
-    expect(getSupportedNodeVersion('24.x')).rejects.toThrow();
+    await expect(getSupportedNodeVersion('24.x')).rejects.toThrow();
 
     process.env.VERCEL_ALLOW_NODEJS_24 = '1';
 
