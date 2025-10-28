@@ -330,6 +330,23 @@ it('should only allow nodejs22.x when env var is set', async () => {
   expect(await getSupportedNodeVersion('>=20')).toHaveProperty('major', 22);
 });
 
+it('should only allow nodejs22.x when env var is set', async () => {
+  try {
+    expect(getLatestNodeVersion()).toHaveProperty('major', 22);
+    expect(getSupportedNodeVersion('24.x')).rejects.toThrow();
+
+    process.env.VERCEL_ALLOW_NODEJS_24 = '1';
+
+    expect(getLatestNodeVersion()).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('24.x')).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('24')).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('24.3.0')).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('>=24')).toHaveProperty('major', 24);
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS_24;
+  }
+});
+
 it('should warn for deprecated versions, soon to be discontinued', async () => {
   const realDateNow = Date.now;
   try {
