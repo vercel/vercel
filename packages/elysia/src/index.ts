@@ -15,12 +15,6 @@ export const shouldServe: ShouldServe = async opts => {
   return true;
 };
 
-/**
- * The dev server works essentially the same as the build command, it creates
- * a shim file, but it places it in a gitignored location so as to not pollute
- * the users git index. For this reason, the shim's import statement will
- * need to be relative to the shim's location.
- */
 export const startDevServer: StartDevServer = async opts => {
   const entrypoint = await entrypointCallback(opts);
 
