@@ -69,10 +69,14 @@ export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
   return NODE_VERSIONS.find(v => v.major === major);
 }
 
-function getOptions() {
+function getOptions(): NodeVersion[] {
   if (process.env.VERCEL_ALLOW_NODEJS_24 === '1') {
     return [
-      { major: 24, range: '24.x', runtime: 'nodejs24.x' },
+      new NodeVersion({
+        major: 24,
+        range: '24.x',
+        runtime: 'nodejs24.x',
+      }),
       ...NODE_VERSIONS,
     ];
   }
