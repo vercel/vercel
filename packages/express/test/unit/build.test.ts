@@ -1,6 +1,5 @@
 import { FileFsRef, Files } from '@vercel/build-utils/dist';
 import { build } from '../../src/build';
-import { build as experimentalBuild } from '../../src/experimental/build';
 import { join, sep } from 'path';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
@@ -202,6 +201,7 @@ const failingFixtures: Record<
       outputDirectory: 'dist',
     },
   },
+  '07-invalid-ts': {},
 };
 
 describe('successful builds', () => {
@@ -243,58 +243,7 @@ describe('successful builds', () => {
       }
     }, 10000);
   }
-  for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
-    it(`experimental builds ${fixtureName}`, async () => {
-      const workPath = join(__dirname, '../fixtures', fixtureName);
 
-      const fileList = readDirectoryRecursively(workPath);
-
-      const files = createFiles(workPath, fileList);
-      const result = await experimentalBuild({
-        files,
-        workPath,
-        config: {
-          ...config,
-          projectSettings: {
-            ...config.projectSettings,
-            ...fixtureConfig.projectSettings,
-          },
-        },
-        meta,
-        // Entrypoint is just used as the BOA function name
-        entrypoint: 'package.json',
-        repoRootPath: workPath,
-      });
-      for (const route of fixtureConfig.routes || []) {
-        if ('routes' in result && result.routes) {
-          expect(result.routes.find(r => r.dest === route.dest)).toBeDefined();
-        }
-        if ('output' in result && result.output) {
-          const dest = route.dest === '/' ? 'index' : route.dest;
-          expect(result.output[dest]).toBeDefined();
-        }
-      }
-
-      if ('output' in result && result.output) {
-        // console.log(result.output.index);
-        if ('handler' in result.output.index) {
-          const entrypoint = join(
-            workPath,
-            '.vercel',
-            'output',
-            'functions',
-            'index.func',
-            result.output.index.handler
-          );
-          const handlerContent = fs.readFileSync(entrypoint, 'utf8');
-          const moduleTypeDetected = await detectModuleType(handlerContent);
-          expect(moduleTypeDetected).toBe(fixtureConfig.moduleType);
-        }
-      } else {
-        throw new Error('entrypoint is not defined');
-      }
-    }, 10000);
-  }
   describe('failing fixtures', () => {
     for (const [fixtureName, fixtureConfig] of Object.entries(
       failingFixtures

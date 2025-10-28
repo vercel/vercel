@@ -1,14 +1,17 @@
-import { FileBlob, FileFsRef, walkParentDirs } from '@vercel/build-utils';
-import { BuildV2, Files } from '@vercel/build-utils/dist/types';
-import { nodeFileTrace } from '@vercel/nft';
-import { existsSync, lstatSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
+import { rm, readFile } from 'fs/promises';
 import { extname, join, relative } from 'path';
 import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
+import { findNearestTsconfig } from './typescript.js';
 
-export const rolldown = async (args: Parameters<BuildV2>[0]) => {
+export const rolldown = async (args: {
+  entrypoint: string;
+  workPath: string;
+  repoRootPath: string;
+  out: string;
+}) => {
   const baseDir = args.repoRootPath || args.workPath;
   const entrypointPath = join(args.workPath, args.entrypoint);
-  const files: Files = {};
   const shouldAddSourcemapSupport = false;
 
   const extension = extname(args.entrypoint);
@@ -30,11 +33,9 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
   const external: string[] = [];
+  let pkg: Record<string, unknown> = {};
   if (existsSync(packageJsonPath)) {
-    const { mode } = lstatSync(packageJsonPath);
-    const source = readFileSync(packageJsonPath);
-    const relPath = relative(baseDir, packageJsonPath);
-    let pkg;
+    const source = await readFile(packageJsonPath, 'utf8');
     try {
       pkg = JSON.parse(source.toString());
     } catch (_e) {
@@ -59,7 +60,6 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
       external.push(dependency);
     }
-    files[relPath] = new FileBlob({ data: source, mode });
   }
 
   const absoluteImportPlugin: RolldownPlugin = {
@@ -72,21 +72,8 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     },
   };
 
-  let tsconfigPath: string | null = join(baseDir, 'tsconfig.json');
-  if (!existsSync(tsconfigPath)) {
-    tsconfigPath = await walkParentDirs({
-      base: baseDir,
-      start: args.workPath,
-      filename: 'tsconfig.json',
-    });
-  }
-
-  const relativeOutputDir = join(
-    '.vercel',
-    'output',
-    'functions',
-    'index.func'
-  );
+  const tsconfig = await findNearestTsconfig(baseDir);
+  const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
   let handler: string | null = null;
   // @ts-ignore TS doesn't like the tsconfig option, but it's here https://rolldown.rs/reference/config-options#tsconfig
@@ -96,7 +83,7 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     platform: 'node',
     external: /node_modules/,
     plugins: [absoluteImportPlugin],
-    tsconfig: tsconfigPath || undefined,
+    tsconfig,
     output: {
       dir: outputDir,
       // FIXME: This is a bit messy, not sure what facadeModuleId even is and the only reason for renaming here
@@ -136,22 +123,18 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   if (typeof handler !== 'string') {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
-  const nftResult = await nodeFileTrace([join(outputDir, handler)], {
-    // This didn't work as I expected it to, didn't find node_modules
-    // base: outputDir,
-    // processCwd: outputDir,
-    ignore: args.config.excludeFiles,
-  });
-  for (const file of nftResult.fileList) {
-    if (file.startsWith(relativeOutputDir)) {
-      continue;
-    }
-    files[file] = new FileFsRef({ fsPath: file, mode: 0o644 });
-  }
+
+  const cleanup = async () => {
+    await rm(outputDir, { recursive: true, force: true });
+  };
+
   return {
-    files,
-    shouldAddSourcemapSupport,
-    handler,
-    outputDir,
+    result: {
+      pkg,
+      shouldAddSourcemapSupport,
+      handler,
+      outputDir,
+    },
+    cleanup,
   };
 };

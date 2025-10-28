@@ -1,0 +1,142 @@
+import { BuildV2, Files } from '@vercel/build-utils';
+import { spawn } from 'child_process';
+import { existsSync } from 'fs';
+import { dirname, join } from 'path';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { z } from 'zod';
+
+const require = createRequire(import.meta.url);
+
+type RolldownResult = {
+  dir: string;
+  handler: string;
+  files: Files;
+};
+
+export const introspectApp = async (
+  args: Parameters<BuildV2>[0],
+  rolldownResult: RolldownResult
+) => {
+  const cjsLoaderPath = fileURLToPath(
+    new URL('loaders/cjs.cjs', import.meta.url)
+  );
+  const esmLoaderPath = new URL('loaders/esm.js', import.meta.url).href;
+  const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
+
+  let introspectionResult: {
+    frameworkSlug: string;
+    routes: { src: string; dest: string; methods: string[] }[];
+  } = {
+    frameworkSlug: '',
+    routes: [],
+  };
+
+  await new Promise(resolvePromise => {
+    try {
+      // Use both -r (for CommonJS/require) and --import (for ESM/import)
+      const child = spawn(
+        'node',
+        ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          cwd: rolldownResult.dir,
+          env: {
+            ...process.env,
+            ...(args.meta?.env || {}),
+            ...(args.meta?.buildEnv || {}),
+          },
+        }
+      );
+
+      child.stdout?.on('data', data => {
+        try {
+          const introspection = JSON.parse(data.toString());
+          const introspectionSchema = z.object({
+            frameworkSlug: z.string(),
+            routes: z.array(
+              z.object({
+                src: z.string(),
+                dest: z.string(),
+                methods: z.array(z.string()),
+              })
+            ),
+          });
+          introspectionResult = introspectionSchema.parse(introspection);
+        } catch (error) {
+          // Ignore errors
+        }
+      });
+
+      const timeout = setTimeout(() => {
+        child.kill('SIGTERM');
+      }, 2000);
+      const timeout2 = setTimeout(() => {
+        child.kill('SIGKILL');
+      }, 3000);
+
+      child.on('error', err => {
+        clearTimeout(timeout);
+        clearTimeout(timeout2);
+        console.log(`Loader error: ${err.message}`);
+        resolvePromise(undefined);
+      });
+
+      child.on('close', () => {
+        clearTimeout(timeout);
+        clearTimeout(timeout2);
+        resolvePromise(undefined);
+      });
+    } catch (error) {
+      resolvePromise(undefined);
+    }
+  });
+
+  // For now, return empty routes
+  const routes = [
+    {
+      handle: 'filesystem',
+    },
+    ...introspectionResult.routes,
+    {
+      src: '/(.*)',
+      dest: '/',
+    },
+  ];
+
+  let version: string | undefined;
+  if (introspectionResult.frameworkSlug) {
+    // Resolve to package.json specifically
+    const frameworkLibPath = require.resolve(
+      `${introspectionResult.frameworkSlug}`,
+      {
+        paths: [rolldownResult.dir],
+      }
+    );
+    const findNearestPackageJson = (dir: string): string | undefined => {
+      const packageJsonPath = join(dir, 'package.json');
+      if (existsSync(packageJsonPath)) {
+        return packageJsonPath;
+      }
+      const parentDir = dirname(dir);
+      if (parentDir === dir) {
+        return undefined;
+      }
+      return findNearestPackageJson(parentDir);
+    };
+    const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
+    if (nearestPackageJsonPath) {
+      const frameworkPackageJson = require(nearestPackageJsonPath);
+      version = frameworkPackageJson.version;
+    }
+  }
+
+  return {
+    routes,
+    files: rolldownResult.files,
+    framework: {
+      slug: introspectionResult.frameworkSlug,
+      version,
+    },
+  };
+};
