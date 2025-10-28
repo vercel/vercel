@@ -28,6 +28,7 @@ import {
   getLambdaOptionsFromFunction,
   normalizePath,
   type TriggerEvent,
+  isExperimentalBackendsEnabled,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
@@ -60,21 +61,8 @@ export async function writeBuildResult(
   standalone: boolean = false
 ) {
   let version = builder.version;
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'express'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
-  }
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'hono'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
+  if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
+    version = 2;
   }
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(

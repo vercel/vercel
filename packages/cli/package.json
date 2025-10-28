@@ -19,7 +19,7 @@
     "coverage": "codecov",
     "build": "node scripts/build.mjs",
     "dev": "echo \"'pnpm dev [command]' has been removed. Use 'pnpm vercel [command]' instead.\" && exit 1",
-    "vercel": "ts-node ./src/index.ts",
+    "vercel": "pnpm build && node ./dist/vc.js",
     "vc": "pnpm vercel",
     "type-check": "tsc --noEmit"
   },
@@ -39,6 +39,7 @@
     "@vercel/detect-agent": "workspace:*",
     "@vercel/fun": "1.1.6",
     "@vercel/go": "3.2.3",
+    "@vercel/backends": "workspace:*",
     "@vercel/express": "0.1.0",
     "@vercel/hono": "0.2.0",
     "@vercel/h3": "0.1.7",
