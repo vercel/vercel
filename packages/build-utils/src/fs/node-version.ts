@@ -66,7 +66,7 @@ export const BUN_VERSIONS: BunVersion[] = [
 ];
 
 export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
-  return NODE_VERSIONS.find(v => v.major === major);
+  return getOptions().find(v => v.major === major);
 }
 
 function getOptions(): NodeVersion[] {
