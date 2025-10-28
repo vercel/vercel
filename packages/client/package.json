@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "17.1.0",
+  "version": "17.1.1",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -42,7 +42,7 @@
     "@vercel/build-utils": "12.2.0",
     "@vercel/error-utils": "2.0.3",
     "@vercel/microfrontends": "1.2.2",
-    "@vercel/routing-utils": "5.2.0",
+    "@vercel/routing-utils": "5.2.1",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
