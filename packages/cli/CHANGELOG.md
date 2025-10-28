@@ -1,5 +1,11 @@
 # vercel
 
+## 48.6.6
+
+### Patch Changes
+
+- Fix regression on node 20.17 and earlier ([#14158](https://github.com/vercel/vercel/pull/14158))
+
 ## 48.6.5
 
 ### Patch Changes
