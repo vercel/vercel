@@ -43,7 +43,6 @@
   "dependencies": {
     "@vercel/cervel": "workspace:*",
     "@vercel/nft": "0.30.1",
-    "@vercel/node": "5.3.26",
     "@vercel/static-config": "3.1.2",
     "fs-extra": "11.1.0",
     "path-to-regexp": "8.3.0",
