@@ -33,7 +33,6 @@
     "execa": "3.2.0",
     "rolldown": "1.0.0-beta.35",
     "srvx": "0.8.9",
-    "tsdown": "0.15.6",
     "tsx": "4.19.2"
   },
   "peerDependencies": {
@@ -42,6 +41,7 @@
   "devDependencies": {
     "@types/node": "24.7.0",
     "typescript": "4.9.5",
+    "tsdown": "0.15.6",
     "vitest": "^2.0.1"
   }
 }
