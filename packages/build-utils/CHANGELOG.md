@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 12.2.2
+
+### Patch Changes
+
+- Allow Node.js 24 behind env var feature flag ([#14160](https://github.com/vercel/vercel/pull/14160))
+
 ## 12.2.1
 
 ### Patch Changes
