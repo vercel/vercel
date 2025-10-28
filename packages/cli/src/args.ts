@@ -38,6 +38,7 @@ export const help = () => `
       alias                [cmd]       Manages your domain aliases
       bisect                           Use binary search to find the deployment that introduced a bug
       certs                [cmd]       Manages your SSL certificates
+      curl                 [path]      cURL requests to your linked project's deployment [beta]
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       logs                 [url]       Displays the logs for a deployment
