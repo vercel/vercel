@@ -322,7 +322,7 @@ it('should throw for discontinued versions', async () => {
   }
 });
 
-it('should only allow nodejs22.x', async () => {
+it('should allow nodejs22.x', async () => {
   expect(getLatestNodeVersion()).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22.x')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22')).toHaveProperty('major', 22);
