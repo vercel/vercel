@@ -14,6 +14,7 @@ import {
   FileBlob,
   FileFsRef,
   normalizePath,
+  isBackendFramework,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -423,13 +424,8 @@ export async function getBuildMatches(
     // needs to `index.js` so the BOA entry is index.func. BuildResultV2 allows
     // us to return a different value from what the preset provides, but we need
     // to use BuildResultV3 so that we can run the dev server with the startDevServer
-    // function exported from Hono.
-    if (
-      buildConfig.config?.framework === 'hono' ||
-      buildConfig.config?.framework === 'express' ||
-      buildConfig.config?.framework === 'h3' ||
-      buildConfig.config?.framework === 'nestjs'
-    ) {
+    // function exported from backend frameworks.
+    if (isBackendFramework(buildConfig.config?.framework)) {
       src = 'package.json';
     }
 

@@ -12,7 +12,7 @@
     "dist"
   ],
   "types": "./dist/index.d.ts",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "repository": {
     "directory": "packages/firewall",
     "type": "git",

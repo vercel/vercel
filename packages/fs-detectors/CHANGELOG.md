@@ -1,5 +1,32 @@
 # @vercel/fs-detectors
 
+## 5.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`c4fca8a2ee0eeb863fbe1abeac73c6c760182303`](https://github.com/vercel/vercel/commit/c4fca8a2ee0eeb863fbe1abeac73c6c760182303)]:
+  - @vercel/routing-utils@5.2.1
+
+## 5.7.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+## 5.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`1e3e68d5c07e5516566db2d8e54d226142041f31`](https://github.com/vercel/vercel/commit/1e3e68d5c07e5516566db2d8e54d226142041f31)]:
+  - @vercel/frameworks@3.14.0
+
+## 5.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`3eefc863b8e2078a3fcf691f925646da71698771`](https://github.com/vercel/vercel/commit/3eefc863b8e2078a3fcf691f925646da71698771)]:
+  - @vercel/frameworks@3.13.0
+
 ## 5.6.2
 
 ### Patch Changes
