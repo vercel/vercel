@@ -4,7 +4,7 @@ import type { FileFsRef } from '@vercel/build-utils';
 import { glob, debug } from '@vercel/build-utils';
 
 export const FASTAPI_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
-export const FASTAPI_ENTRYPOINT_DIRS = ['', 'src', 'app'];
+export const FASTAPI_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api', 'backend'];
 export const FASTAPI_CONTENT_REGEX =
   /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
 
@@ -30,7 +30,7 @@ export function isFastapiEntrypoint(
 
 // Flask zero-config detection
 export const FLASK_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
-export const FLASK_ENTRYPOINT_DIRS = ['', 'src', 'app'];
+export const FLASK_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
 export const FLASK_CONTENT_REGEX =
   /(from\s+flask\s+import\s+Flask|import\s+flask|Flask\s*\()/;
 
