@@ -6,6 +6,9 @@ import debug from '../debug';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
+// Track which versions we've already logged to avoid duplicates
+const loggedVersions = new Set<string>();
+
 // `NODE_VERSIONS` is assumed to be sorted by version number
 // with the newest supported version first
 export const NODE_VERSIONS: NodeVersion[] = [
@@ -176,7 +179,27 @@ export async function getSupportedNodeVersion(
   }
 
   debug(`Selected Node.js ${selection.range}`);
-  console.log(`Using Node.js ${selection.range}`);
+
+  // Only log once per version to avoid duplicate messages
+  const logKey = `node-${selection.range}`;
+  if (!loggedVersions.has(logKey)) {
+    loggedVersions.add(logKey);
+
+    // Try to get the actual Node.js version being used
+    let actualVersion = selection.range;
+    try {
+      // process.version gives us the actual version like 'v22.11.0'
+      const nodeVersion = process.version;
+      const nodeMajor = parseInt(nodeVersion.slice(1).split('.')[0], 10);
+      if (nodeMajor === selection.major) {
+        actualVersion = nodeVersion;
+      }
+    } catch {
+      // Fall back to range if we can't get actual version
+    }
+
+    console.log(`Using Node.js ${actualVersion} to build`);
+  }
 
   if (selection.state === 'deprecated') {
     const d = selection.formattedDate;
@@ -214,7 +237,26 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
         range: selected.range,
         runtime: selected.runtime,
       });
-      console.log(`Using Bun ${bunVersion.range}`);
+
+      // Only log once per version to avoid duplicate messages
+      const logKey = `bun-${bunVersion.range}`;
+      if (!loggedVersions.has(logKey)) {
+        loggedVersions.add(logKey);
+
+        // Try to get the actual Bun version being used
+        let actualVersion = bunVersion.range;
+        try {
+          // process.versions.bun gives us the actual version if running under Bun
+          if (process.versions?.bun) {
+            actualVersion = `v${process.versions.bun}`;
+          }
+        } catch {
+          // Fall back to range if we can't get actual version
+        }
+
+        console.log(`Using Bun ${actualVersion} to build`);
+      }
+
       return bunVersion;
     }
   }
