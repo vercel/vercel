@@ -80,7 +80,7 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
                 enqueue_or_send_message({
                     "type": "log",
                     "payload": {
-                        "context": {"invocationId": 0, "requestId": 0},
+                        "context": {"invocationId": "0", "requestId": 0},
                         "message": base64.b64encode(message.encode()).decode(),
                         "level": level,
                     }
