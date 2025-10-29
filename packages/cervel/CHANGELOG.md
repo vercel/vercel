@@ -1,5 +1,11 @@
 # @vercel/cervel
 
+## 0.0.3
+
+### Patch Changes
+
+- Move tsdown to dev dep ([#14157](https://github.com/vercel/vercel/pull/14157))
+
 ## 0.0.2
 
 ### Patch Changes
