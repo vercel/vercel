@@ -413,6 +413,8 @@ export const build: BuildV3 = async ({
     '**/.venv/**',
     '**/venv/**',
     '**/__pycache__/**',
+    '**/.mypy_cache/**',
+    '**/.ruff_cache/**',
     '**/public/**',
   ];
 
