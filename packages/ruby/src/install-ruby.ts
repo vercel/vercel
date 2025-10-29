@@ -101,6 +101,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
     gemPath: join(gemHome, 'bin', 'gem'),
     vendorPath: `vendor/bundle/ruby/${major}.${minor}.0`,
   };
+  console.log(`Using Ruby ${selection.range}`);
   debug(JSON.stringify(result, null, ' '));
   return result;
 }

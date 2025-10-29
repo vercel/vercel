@@ -318,6 +318,7 @@ export async function createGo({
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
         debug(`Selected go ${version} (from ${label})`);
+        console.log(`Using Go version ${version}`);
 
         await setGoEnv(goDir);
         return new GoWrapper(env, opts);

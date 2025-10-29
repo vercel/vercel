@@ -176,6 +176,7 @@ export async function getSupportedNodeVersion(
   }
 
   debug(`Selected Node.js ${selection.range}`);
+  console.log(`Using Node.js ${selection.range}`);
 
   if (selection.state === 'deprecated') {
     const d = selection.formattedDate;
@@ -208,11 +209,13 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
     });
 
     if (selected) {
-      return new BunVersion({
+      const bunVersion = new BunVersion({
         major: selected.major,
         range: selected.range,
         runtime: selected.runtime,
       });
+      console.log(`Using Bun ${bunVersion.range}`);
+      return bunVersion;
     }
   }
 
