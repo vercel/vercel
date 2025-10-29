@@ -148,6 +148,7 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
 ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 storage: contextvars.ContextVar[dict | None] = contextvars.ContextVar('storage', default=None)
 send_message = lambda m: None
+_original_stderr = sys.stderr
 
 
 # Buffer for pre-handshake logs (to avoid blocking IPC on startup)
@@ -173,7 +174,7 @@ def enqueue_or_send_message(msg: dict):
         with contextlib.suppress(Exception):
             payload = msg.get("payload", {})
             decoded = base64.b64decode(payload.get("message", "")).decode(errors="ignore")
-            sys.stderr.write(decoded + "\n")
+            _original_stderr.write(decoded + "\n")
 
 
 if 'VERCEL_IPC_PATH' in os.environ:
