@@ -28503,48 +28503,31 @@ var require_constants2 = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/Source.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/Source.js
 var require_Source = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/Source.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/Source.js"(exports2, module2) {
     "use strict";
     var Source = class {
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         throw new Error("Abstract");
       }
       buffer() {
         const source = this.source();
         if (Buffer.isBuffer(source)) return source;
-        return Buffer.from(source, "utf8");
+        return Buffer.from(source, "utf-8");
       }
       size() {
         return this.buffer().length;
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
-      // eslint-disable-next-line no-unused-vars
       map(options) {
         return null;
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         return {
           source: this.source(),
           map: this.map(options)
         };
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
-      // eslint-disable-next-line no-unused-vars
       updateHash(hash) {
         throw new Error("Abstract");
       }
@@ -28553,9 +28536,9 @@ var require_Source = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/getGeneratedSourceInfo.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/getGeneratedSourceInfo.js
 var require_getGeneratedSourceInfo = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/getGeneratedSourceInfo.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/getGeneratedSourceInfo.js"(exports2, module2) {
     "use strict";
     var CHAR_CODE_NEW_LINE = "\n".charCodeAt(0);
     var getGeneratedSourceInfo = (source) => {
@@ -28584,15 +28567,14 @@ var require_getGeneratedSourceInfo = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/splitIntoLines.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/splitIntoLines.js
 var require_splitIntoLines = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/splitIntoLines.js"(exports2, module2) {
-    "use strict";
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/splitIntoLines.js"(exports2, module2) {
     var splitIntoLines = (str) => {
       const results = [];
       const len = str.length;
       let i = 0;
-      while (i < len) {
+      for (; i < len; ) {
         const cc = str.charCodeAt(i);
         if (cc === 10) {
           results.push("\n");
@@ -28610,13 +28592,13 @@ var require_splitIntoLines = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunksOfRawSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunksOfRawSource.js
 var require_streamChunksOfRawSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunksOfRawSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunksOfRawSource.js"(exports2, module2) {
     "use strict";
     var getGeneratedSourceInfo = require_getGeneratedSourceInfo();
     var splitIntoLines = require_splitIntoLines();
-    var streamChunksOfRawSource = (source, onChunk, _onSource, _onName) => {
+    var streamChunksOfRawSource = (source, onChunk, onSource, onName) => {
       let line = 1;
       const matches = splitIntoLines(source);
       let match;
@@ -28624,185 +28606,102 @@ var require_streamChunksOfRawSource = __commonJS2({
         onChunk(match, line, 0, -1, -1, -1, -1);
         line++;
       }
-      return matches.length === 0 || /** @type {string} */
-      match.endsWith("\n") ? {
+      return matches.length === 0 || match.endsWith("\n") ? {
         generatedLine: matches.length + 1,
         generatedColumn: 0
       } : {
         generatedLine: matches.length,
-        generatedColumn: (
-          /** @type {string} */
-          match.length
-        )
+        generatedColumn: match.length
       };
     };
-    module2.exports = (source, onChunk, onSource, onName, finalSource) => finalSource ? getGeneratedSourceInfo(source) : streamChunksOfRawSource(source, onChunk, onSource, onName);
-  }
-});
-
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/stringBufferUtils.js
-var require_stringBufferUtils = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/stringBufferUtils.js"(exports2, module2) {
-    "use strict";
-    var dualStringBufferCaching = true;
-    function isDualStringBufferCachingEnabled() {
-      return dualStringBufferCaching;
-    }
-    function enableDualStringBufferCaching() {
-      dualStringBufferCaching = true;
-    }
-    function disableDualStringBufferCaching() {
-      dualStringBufferCaching = false;
-    }
-    var interningStringMap = /* @__PURE__ */ new Map();
-    var enableStringInterningRefCount = 0;
-    function isStringInterningEnabled() {
-      return enableStringInterningRefCount > 0;
-    }
-    function enterStringInterningRange() {
-      enableStringInterningRefCount++;
-    }
-    function exitStringInterningRange() {
-      if (--enableStringInterningRefCount <= 0) {
-        interningStringMap.clear();
-        enableStringInterningRefCount = 0;
-      }
-    }
-    function internString(str) {
-      if (!isStringInterningEnabled() || !str || str.length < 128 || typeof str !== "string") {
-        return str;
-      }
-      let internedString = interningStringMap.get(str);
-      if (internedString === void 0) {
-        internedString = str;
-        interningStringMap.set(str, internedString);
-      }
-      return internedString;
-    }
-    module2.exports = {
-      disableDualStringBufferCaching,
-      enableDualStringBufferCaching,
-      internString,
-      isDualStringBufferCachingEnabled,
-      enterStringInterningRange,
-      exitStringInterningRange
+    module2.exports = (source, onChunk, onSource, onName, finalSource) => {
+      return finalSource ? getGeneratedSourceInfo(source) : streamChunksOfRawSource(source, onChunk, onSource, onName);
     };
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/RawSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/RawSource.js
 var require_RawSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/RawSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/RawSource.js"(exports2, module2) {
     "use strict";
-    var Source = require_Source();
     var streamChunksOfRawSource = require_streamChunksOfRawSource();
-    var {
-      internString,
-      isDualStringBufferCachingEnabled
-    } = require_stringBufferUtils();
+    var Source = require_Source();
     var RawSource = class extends Source {
-      /**
-       * @param {string | Buffer} value value
-       * @param {boolean=} convertToString convert to string
-       */
       constructor(value2, convertToString = false) {
         super();
         const isBuffer = Buffer.isBuffer(value2);
         if (!isBuffer && typeof value2 !== "string") {
-          throw new TypeError("argument 'value' must be either string or Buffer");
+          throw new TypeError("argument 'value' must be either string of Buffer");
         }
         this._valueIsBuffer = !convertToString && isBuffer;
-        const internedString = typeof value2 === "string" ? internString(value2) : void 0;
-        this._value = convertToString && isBuffer ? void 0 : typeof value2 === "string" ? internedString : value2;
+        this._value = convertToString && isBuffer ? void 0 : value2;
         this._valueAsBuffer = isBuffer ? value2 : void 0;
-        this._valueAsString = isBuffer ? void 0 : internedString;
+        this._valueAsString = isBuffer ? void 0 : value2;
       }
       isBuffer() {
         return this._valueIsBuffer;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         if (this._value === void 0) {
-          const value2 = (
-            /** @type {Buffer} */
-            this._valueAsBuffer.toString("utf8")
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._value = internString(value2);
-          }
-          return value2;
+          this._value = this._valueAsBuffer.toString("utf-8");
         }
         return this._value;
       }
       buffer() {
         if (this._valueAsBuffer === void 0) {
-          const value2 = Buffer.from(
-            /** @type {string} */
-            this._value,
-            "utf8"
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._valueAsBuffer = value2;
-          }
-          return value2;
+          this._valueAsBuffer = Buffer.from(this._value, "utf-8");
         }
         return this._valueAsBuffer;
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
-      // eslint-disable-next-line no-unused-vars
       map(options) {
         return null;
       }
       /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
+       * @param {object} options options
+       * @param {function(string, number, number, number, number, number, number): void} onChunk called for each chunk of code
+       * @param {function(number, string, string)} onSource called for each source
+       * @param {function(number, string)} onName called for each name
+       * @returns {void}
        */
       streamChunks(options, onChunk, onSource, onName) {
-        let strValue = this._valueAsString;
-        if (strValue === void 0) {
-          const value2 = this.source();
-          strValue = typeof value2 === "string" ? value2 : value2.toString("utf8");
-          if (isDualStringBufferCachingEnabled()) {
-            this._valueAsString = internString(strValue);
-          }
+        if (this._value === void 0) {
+          this._value = Buffer.from(this._valueAsBuffer, "utf-8");
+        }
+        if (this._valueAsString === void 0) {
+          this._valueAsString = typeof this._value === "string" ? this._value : this._value.toString("utf-8");
         }
         return streamChunksOfRawSource(
-          strValue,
+          this._valueAsString,
           onChunk,
           onSource,
           onName,
-          Boolean(options && options.finalSource)
+          !!(options && options.finalSource)
         );
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
+        if (this._valueAsBuffer === void 0) {
+          this._valueAsBuffer = Buffer.from(this._value, "utf-8");
+        }
         hash.update("RawSource");
-        hash.update(this.buffer());
+        hash.update(this._valueAsBuffer);
       }
     };
     module2.exports = RawSource;
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/createMappingsSerializer.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/createMappingsSerializer.js
 var require_createMappingsSerializer = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/createMappingsSerializer.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/createMappingsSerializer.js"(exports2, module2) {
     "use strict";
-    var ALPHABET = [
-      ..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    ];
+    var ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split(
+      ""
+    );
     var CONTINUATION_BIT = 32;
+    var createMappingsSerializer = (options) => {
+      const linesOnly = options && options.columns === false;
+      return linesOnly ? createLinesOnlyMappingsSerializer() : createFullMappingsSerializer();
+    };
     var createFullMappingsSerializer = () => {
       let currentLine = 1;
       let currentColumn = 0;
@@ -28818,8 +28717,10 @@ var require_createMappingsSerializer = __commonJS2({
           if (sourceIndex === currentSourceIndex && originalLine === currentOriginalLine && originalColumn === currentOriginalColumn && !activeName && nameIndex < 0) {
             return "";
           }
-        } else if (sourceIndex < 0) {
-          return "";
+        } else {
+          if (sourceIndex < 0) {
+            return "";
+          }
         }
         let str;
         if (currentLine < generatedLine) {
@@ -28913,64 +28814,67 @@ var require_createMappingsSerializer = __commonJS2({
         if (generatedLine === currentLine + 1) {
           currentLine = generatedLine;
           if (sourceIndex === currentSourceIndex) {
+            currentSourceIndex = sourceIndex;
             if (originalLine === currentOriginalLine + 1) {
               currentOriginalLine = originalLine;
               return ";AACA";
+            } else {
+              str = ";AA";
+              writeValue(originalLine - currentOriginalLine);
+              currentOriginalLine = originalLine;
+              return str + "A";
             }
-            str = ";AA";
+          } else {
+            str = ";A";
+            writeValue(sourceIndex - currentSourceIndex);
+            currentSourceIndex = sourceIndex;
             writeValue(originalLine - currentOriginalLine);
             currentOriginalLine = originalLine;
-            return `${str}A`;
+            return str + "A";
           }
-          str = ";A";
-          writeValue(sourceIndex - currentSourceIndex);
-          currentSourceIndex = sourceIndex;
-          writeValue(originalLine - currentOriginalLine);
-          currentOriginalLine = originalLine;
-          return `${str}A`;
-        }
-        str = ";".repeat(generatedLine - currentLine);
-        currentLine = generatedLine;
-        if (sourceIndex === currentSourceIndex) {
-          if (originalLine === currentOriginalLine + 1) {
+        } else {
+          str = ";".repeat(generatedLine - currentLine);
+          currentLine = generatedLine;
+          if (sourceIndex === currentSourceIndex) {
+            currentSourceIndex = sourceIndex;
+            if (originalLine === currentOriginalLine + 1) {
+              currentOriginalLine = originalLine;
+              return str + "AACA";
+            } else {
+              str += "AA";
+              writeValue(originalLine - currentOriginalLine);
+              currentOriginalLine = originalLine;
+              return str + "A";
+            }
+          } else {
+            str += "A";
+            writeValue(sourceIndex - currentSourceIndex);
+            currentSourceIndex = sourceIndex;
+            writeValue(originalLine - currentOriginalLine);
             currentOriginalLine = originalLine;
-            return `${str}AACA`;
+            return str + "A";
           }
-          str += "AA";
-          writeValue(originalLine - currentOriginalLine);
-          currentOriginalLine = originalLine;
-          return `${str}A`;
         }
-        str += "A";
-        writeValue(sourceIndex - currentSourceIndex);
-        currentSourceIndex = sourceIndex;
-        writeValue(originalLine - currentOriginalLine);
-        currentOriginalLine = originalLine;
-        return `${str}A`;
       };
-    };
-    var createMappingsSerializer = (options) => {
-      const linesOnly = options && options.columns === false;
-      return linesOnly ? createLinesOnlyMappingsSerializer() : createFullMappingsSerializer();
     };
     module2.exports = createMappingsSerializer;
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/getFromStreamChunks.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/getFromStreamChunks.js
 var require_getFromStreamChunks = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/getFromStreamChunks.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/getFromStreamChunks.js"(exports2) {
     "use strict";
     var createMappingsSerializer = require_createMappingsSerializer();
-    module2.exports.getSourceAndMap = (inputSource, options) => {
+    exports2.getSourceAndMap = (inputSource, options) => {
       let code = "";
       let mappings = "";
-      const potentialSources = [];
-      const potentialSourcesContent = [];
-      const potentialNames = [];
+      let sources = [];
+      let sourcesContent = [];
+      let names = [];
       const addMapping = createMappingsSerializer(options);
       const { source } = inputSource.streamChunks(
-        { ...options, finalSource: true },
+        Object.assign({}, options, { finalSource: true }),
         (chunk, generatedLine, generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex) => {
           if (chunk !== void 0) code += chunk;
           mappings += addMapping(
@@ -28983,22 +28887,22 @@ var require_getFromStreamChunks = __commonJS2({
           );
         },
         (sourceIndex, source2, sourceContent) => {
-          while (potentialSources.length < sourceIndex) {
-            potentialSources.push(null);
+          while (sources.length < sourceIndex) {
+            sources.push(null);
           }
-          potentialSources[sourceIndex] = source2;
+          sources[sourceIndex] = source2;
           if (sourceContent !== void 0) {
-            while (potentialSourcesContent.length < sourceIndex) {
-              potentialSourcesContent.push(null);
+            while (sourcesContent.length < sourceIndex) {
+              sourcesContent.push(null);
             }
-            potentialSourcesContent[sourceIndex] = sourceContent;
+            sourcesContent[sourceIndex] = sourceContent;
           }
         },
         (nameIndex, name) => {
-          while (potentialNames.length < nameIndex) {
-            potentialNames.push(null);
+          while (names.length < nameIndex) {
+            names.push(null);
           }
-          potentialNames[nameIndex] = name;
+          names[nameIndex] = name;
         }
       );
       return {
@@ -29007,30 +28911,20 @@ var require_getFromStreamChunks = __commonJS2({
           version: 3,
           file: "x",
           mappings,
-          // We handle broken sources as `null`, in spec this field should be string, but no information what we should do in such cases if we change type it will be breaking change
-          sources: (
-            /** @type {string[]} */
-            potentialSources
-          ),
-          sourcesContent: potentialSourcesContent.length > 0 ? (
-            /** @type {string[]} */
-            potentialSourcesContent
-          ) : void 0,
-          names: (
-            /** @type {string[]} */
-            potentialNames
-          )
+          sources,
+          sourcesContent: sourcesContent.length > 0 ? sourcesContent : void 0,
+          names
         } : null
       };
     };
-    module2.exports.getMap = (source, options) => {
+    exports2.getMap = (source, options) => {
       let mappings = "";
-      const potentialSources = [];
-      const potentialSourcesContent = [];
-      const potentialNames = [];
+      let sources = [];
+      let sourcesContent = [];
+      let names = [];
       const addMapping = createMappingsSerializer(options);
       source.streamChunks(
-        { ...options, source: false, finalSource: true },
+        Object.assign({}, options, { source: false, finalSource: true }),
         (chunk, generatedLine, generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex) => {
           mappings += addMapping(
             generatedLine,
@@ -29042,57 +28936,46 @@ var require_getFromStreamChunks = __commonJS2({
           );
         },
         (sourceIndex, source2, sourceContent) => {
-          while (potentialSources.length < sourceIndex) {
-            potentialSources.push(null);
+          while (sources.length < sourceIndex) {
+            sources.push(null);
           }
-          potentialSources[sourceIndex] = source2;
+          sources[sourceIndex] = source2;
           if (sourceContent !== void 0) {
-            while (potentialSourcesContent.length < sourceIndex) {
-              potentialSourcesContent.push(null);
+            while (sourcesContent.length < sourceIndex) {
+              sourcesContent.push(null);
             }
-            potentialSourcesContent[sourceIndex] = sourceContent;
+            sourcesContent[sourceIndex] = sourceContent;
           }
         },
         (nameIndex, name) => {
-          while (potentialNames.length < nameIndex) {
-            potentialNames.push(null);
+          while (names.length < nameIndex) {
+            names.push(null);
           }
-          potentialNames[nameIndex] = name;
+          names[nameIndex] = name;
         }
       );
       return mappings.length > 0 ? {
         version: 3,
         file: "x",
         mappings,
-        // We handle broken sources as `null`, in spec this field should be string, but no information what we should do in such cases if we change type it will be breaking change
-        sources: (
-          /** @type {string[]} */
-          potentialSources
-        ),
-        sourcesContent: potentialSourcesContent.length > 0 ? (
-          /** @type {string[]} */
-          potentialSourcesContent
-        ) : void 0,
-        names: (
-          /** @type {string[]} */
-          potentialNames
-        )
+        sources,
+        sourcesContent: sourcesContent.length > 0 ? sourcesContent : void 0,
+        names
       } : null;
     };
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/splitIntoPotentialTokens.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/splitIntoPotentialTokens.js
 var require_splitIntoPotentialTokens = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/splitIntoPotentialTokens.js"(exports2, module2) {
-    "use strict";
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/splitIntoPotentialTokens.js"(exports2, module2) {
     var splitIntoPotentialTokens = (str) => {
       const len = str.length;
       if (len === 0) return null;
       const results = [];
       let i = 0;
-      while (i < len) {
-        const start = i;
+      for (; i < len; ) {
+        const s = i;
         block: {
           let cc = str.charCodeAt(i);
           while (cc !== 10 && cc !== 59 && cc !== 123 && cc !== 125) {
@@ -29107,7 +28990,7 @@ var require_splitIntoPotentialTokens = __commonJS2({
             i++;
           }
         }
-        results.push(str.slice(start, i));
+        results.push(str.slice(s, i));
       }
       return results;
     };
@@ -29115,23 +28998,16 @@ var require_splitIntoPotentialTokens = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/OriginalSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/OriginalSource.js
 var require_OriginalSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/OriginalSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/OriginalSource.js"(exports2, module2) {
     "use strict";
-    var Source = require_Source();
     var { getMap, getSourceAndMap } = require_getFromStreamChunks();
-    var getGeneratedSourceInfo = require_getGeneratedSourceInfo();
     var splitIntoLines = require_splitIntoLines();
+    var getGeneratedSourceInfo = require_getGeneratedSourceInfo();
+    var Source = require_Source();
     var splitIntoPotentialTokens = require_splitIntoPotentialTokens();
-    var {
-      isDualStringBufferCachingEnabled
-    } = require_stringBufferUtils();
     var OriginalSource2 = class extends Source {
-      /**
-       * @param {string | Buffer} value value
-       * @param {string} name name
-       */
       constructor(value2, name) {
         super();
         const isBuffer = Buffer.isBuffer(value2);
@@ -29142,87 +29018,60 @@ var require_OriginalSource = __commonJS2({
       getName() {
         return this._name;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         if (this._value === void 0) {
-          const value2 = (
-            /** @type {Buffer} */
-            this._valueAsBuffer.toString("utf8")
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._value = value2;
-          }
-          return value2;
+          this._value = this._valueAsBuffer.toString("utf-8");
         }
         return this._value;
       }
       buffer() {
         if (this._valueAsBuffer === void 0) {
-          const value2 = Buffer.from(
-            /** @type {string} */
-            this._value,
-            "utf8"
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._valueAsBuffer = value2;
-          }
-          return value2;
+          this._valueAsBuffer = Buffer.from(this._value, "utf-8");
         }
         return this._valueAsBuffer;
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         return getMap(this, options);
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         return getSourceAndMap(this, options);
       }
       /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} _onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
+       * @param {object} options options
+       * @param {function(string, number, number, number, number, number, number): void} onChunk called for each chunk of code
+       * @param {function(number, string, string)} onSource called for each source
+       * @param {function(number, string)} onName called for each name
+       * @returns {void}
        */
-      streamChunks(options, onChunk, onSource, _onName) {
+      streamChunks(options, onChunk, onSource, onName) {
         if (this._value === void 0) {
-          this._value = /** @type {Buffer} */
-          this._valueAsBuffer.toString("utf8");
+          this._value = this._valueAsBuffer.toString("utf-8");
         }
         onSource(0, this._name, this._value);
-        const finalSource = Boolean(options && options.finalSource);
+        const finalSource = !!(options && options.finalSource);
         if (!options || options.columns !== false) {
-          const matches2 = splitIntoPotentialTokens(this._value);
-          let line2 = 1;
+          const matches = splitIntoPotentialTokens(this._value);
+          let line = 1;
           let column = 0;
-          if (matches2 !== null) {
-            for (const match2 of matches2) {
-              const isEndOfLine = match2.endsWith("\n");
-              if (isEndOfLine && match2.length === 1) {
-                if (!finalSource) onChunk(match2, line2, column, -1, -1, -1, -1);
+          if (matches !== null) {
+            for (const match of matches) {
+              const isEndOfLine = match.endsWith("\n");
+              if (isEndOfLine && match.length === 1) {
+                if (!finalSource) onChunk(match, line, column, -1, -1, -1, -1);
               } else {
-                const chunk = finalSource ? void 0 : match2;
-                onChunk(chunk, line2, column, 0, line2, column, -1);
+                const chunk = finalSource ? void 0 : match;
+                onChunk(chunk, line, column, 0, line, column, -1);
               }
               if (isEndOfLine) {
-                line2++;
+                line++;
                 column = 0;
               } else {
-                column += match2.length;
+                column += match.length;
               }
             }
           }
           return {
-            generatedLine: line2,
+            generatedLine: line,
             generatedColumn: column,
             source: finalSource ? this._value : void 0
           };
@@ -29230,46 +29079,38 @@ var require_OriginalSource = __commonJS2({
           const result = getGeneratedSourceInfo(this._value);
           const { generatedLine, generatedColumn } = result;
           if (generatedColumn === 0) {
-            for (let line2 = 1; line2 < /** @type {number} */
-            generatedLine; line2++) {
-              onChunk(void 0, line2, 0, 0, line2, 0, -1);
-            }
+            for (let line = 1; line < generatedLine; line++)
+              onChunk(void 0, line, 0, 0, line, 0, -1);
           } else {
-            for (let line2 = 1; line2 <= /** @type {number} */
-            generatedLine; line2++) {
-              onChunk(void 0, line2, 0, 0, line2, 0, -1);
-            }
+            for (let line = 1; line <= generatedLine; line++)
+              onChunk(void 0, line, 0, 0, line, 0, -1);
           }
           return result;
+        } else {
+          let line = 1;
+          const matches = splitIntoLines(this._value);
+          let match;
+          for (match of matches) {
+            onChunk(finalSource ? void 0 : match, line, 0, 0, line, 0, -1);
+            line++;
+          }
+          return matches.length === 0 || match.endsWith("\n") ? {
+            generatedLine: matches.length + 1,
+            generatedColumn: 0,
+            source: finalSource ? this._value : void 0
+          } : {
+            generatedLine: matches.length,
+            generatedColumn: match.length,
+            source: finalSource ? this._value : void 0
+          };
         }
-        let line = 1;
-        const matches = splitIntoLines(this._value);
-        let match;
-        for (match of matches) {
-          onChunk(finalSource ? void 0 : match, line, 0, 0, line, 0, -1);
-          line++;
-        }
-        return matches.length === 0 || /** @type {string} */
-        match.endsWith("\n") ? {
-          generatedLine: matches.length + 1,
-          generatedColumn: 0,
-          source: finalSource ? this._value : void 0
-        } : {
-          generatedLine: matches.length,
-          generatedColumn: (
-            /** @type {string} */
-            match.length
-          ),
-          source: finalSource ? this._value : void 0
-        };
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
+        if (this._valueAsBuffer === void 0) {
+          this._valueAsBuffer = Buffer.from(this._value, "utf-8");
+        }
         hash.update("OriginalSource");
-        hash.update(this.buffer());
+        hash.update(this._valueAsBuffer);
         hash.update(this._name || "");
       }
     };
@@ -29277,9 +29118,9 @@ var require_OriginalSource = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/getSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/getSource.js
 var require_getSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/getSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/getSource.js"(exports2, module2) {
     "use strict";
     var getSource = (sourceMap, index) => {
       if (index < 0) return null;
@@ -29287,15 +29128,15 @@ var require_getSource = __commonJS2({
       const source = sources[index];
       if (!sourceRoot) return source;
       if (sourceRoot.endsWith("/")) return sourceRoot + source;
-      return `${sourceRoot}/${source}`;
+      return sourceRoot + "/" + source;
     };
     module2.exports = getSource;
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/readMappings.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/readMappings.js
 var require_readMappings = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/readMappings.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/readMappings.js"(exports2, module2) {
     "use strict";
     var ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     var CONTINUATION_BIT = 32;
@@ -29304,12 +29145,14 @@ var require_readMappings = __commonJS2({
     var INVALID = END_SEGMENT_BIT | 2;
     var DATA_MASK = 31;
     var ccToValue = new Uint8Array("z".charCodeAt(0) + 1);
-    ccToValue.fill(INVALID);
-    for (let i = 0; i < ALPHABET.length; i++) {
-      ccToValue[ALPHABET.charCodeAt(i)] = i;
+    {
+      ccToValue.fill(INVALID);
+      for (let i = 0; i < ALPHABET.length; i++) {
+        ccToValue[ALPHABET.charCodeAt(i)] = i;
+      }
+      ccToValue[",".charCodeAt(0)] = END_SEGMENT_BIT;
+      ccToValue[";".charCodeAt(0)] = NEXT_LINE;
     }
-    ccToValue[",".charCodeAt(0)] = END_SEGMENT_BIT;
-    ccToValue[";".charCodeAt(0)] = NEXT_LINE;
     var ccMax = ccToValue.length - 1;
     var readMappings = (mappings, onMapping) => {
       const currentData = new Uint32Array([0, 0, 1, 0, 0]);
@@ -29345,7 +29188,7 @@ var require_readMappings = __commonJS2({
                 currentData[4]
               );
             }
-            [generatedColumn] = currentData;
+            generatedColumn = currentData[0];
           }
           currentDataPos = 0;
           if (value2 === NEXT_LINE) {
@@ -29390,9 +29233,9 @@ var require_readMappings = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunksOfSourceMap.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunksOfSourceMap.js
 var require_streamChunksOfSourceMap = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunksOfSourceMap.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunksOfSourceMap.js"(exports2, module2) {
     "use strict";
     var getGeneratedSourceInfo = require_getGeneratedSourceInfo();
     var getSource = require_getSource();
@@ -29610,10 +29453,7 @@ var require_streamChunksOfSourceMap = __commonJS2({
       }
       let mappingActiveLine = 0;
       const onMapping = (generatedLine, generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex) => {
-        if (generatedLine >= /** @type {number} */
-        finalLine && (generatedColumn >= /** @type {number} */
-        finalColumn || generatedLine > /** @type {number} */
-        finalLine)) {
+        if (generatedLine >= finalLine && (generatedColumn >= finalColumn || generatedLine > finalLine)) {
           return;
         }
         if (sourceIndex >= 0) {
@@ -29652,13 +29492,7 @@ var require_streamChunksOfSourceMap = __commonJS2({
           sourcesContent && sourcesContent[i] || void 0
         );
       }
-      const finalLine = generatedColumn === 0 ? (
-        /** @type {number} */
-        generatedLine - 1
-      ) : (
-        /** @type {number} */
-        generatedLine
-      );
+      const finalLine = generatedColumn === 0 ? generatedLine - 1 : generatedLine;
       let currentGeneratedLine = 1;
       const onMapping = (generatedLine2, _generatedColumn, sourceIndex, originalLine, originalColumn, _nameIndex) => {
         if (sourceIndex >= 0 && currentGeneratedLine <= generatedLine2 && generatedLine2 <= finalLine) {
@@ -29692,37 +29526,38 @@ var require_streamChunksOfSourceMap = __commonJS2({
           onSource,
           onName
         );
+      } else {
+        return finalSource ? streamChunksOfSourceMapLinesFinal(
+          source,
+          sourceMap,
+          onChunk,
+          onSource,
+          onName
+        ) : streamChunksOfSourceMapLinesFull(
+          source,
+          sourceMap,
+          onChunk,
+          onSource,
+          onName
+        );
       }
-      return finalSource ? streamChunksOfSourceMapLinesFinal(
-        source,
-        sourceMap,
-        onChunk,
-        onSource,
-        onName
-      ) : streamChunksOfSourceMapLinesFull(
-        source,
-        sourceMap,
-        onChunk,
-        onSource,
-        onName
-      );
     };
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunksOfCombinedSourceMap.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunksOfCombinedSourceMap.js
 var require_streamChunksOfCombinedSourceMap = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunksOfCombinedSourceMap.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunksOfCombinedSourceMap.js"(exports2, module2) {
     "use strict";
-    var splitIntoLines = require_splitIntoLines();
     var streamChunksOfSourceMap = require_streamChunksOfSourceMap();
+    var splitIntoLines = require_splitIntoLines();
     var streamChunksOfCombinedSourceMap = (source, sourceMap, innerSourceName, innerSource, innerSourceMap, removeInnerSource, onChunk, onSource, onName, finalSource, columns) => {
-      const sourceMapping = /* @__PURE__ */ new Map();
-      const nameMapping = /* @__PURE__ */ new Map();
+      let sourceMapping = /* @__PURE__ */ new Map();
+      let nameMapping = /* @__PURE__ */ new Map();
       const sourceIndexMapping = [];
       const nameIndexMapping = [];
       const nameIndexValueMapping = [];
-      let outerSourceIndex = -2;
+      let innerSourceIndex = -2;
       const innerSourceIndexMapping = [];
       const innerSourceIndexValueMapping = [];
       const innerSourceContents = [];
@@ -29736,7 +29571,7 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
         let l = 0;
         let r = mappingsData.length / 5;
         while (l < r) {
-          const m = l + r >> 1;
+          let m = l + r >> 1;
           if (mappingsData[m * 5] <= column) {
             l = m + 1;
           } else {
@@ -29750,25 +29585,25 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
         source,
         sourceMap,
         (chunk, generatedLine, generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex) => {
-          if (sourceIndex === outerSourceIndex) {
+          if (sourceIndex === innerSourceIndex) {
             const idx = findInnerMapping(originalLine, originalColumn);
             if (idx !== -1) {
               const { chunks, mappingsData } = innerSourceMapLineData[originalLine - 1];
               const mi = idx * 5;
-              const innerSourceIndex = mappingsData[mi + 1];
+              const innerSourceIndex2 = mappingsData[mi + 1];
               const innerOriginalLine = mappingsData[mi + 2];
               let innerOriginalColumn = mappingsData[mi + 3];
               let innerNameIndex = mappingsData[mi + 4];
-              if (innerSourceIndex >= 0) {
+              if (innerSourceIndex2 >= 0) {
                 const innerChunk = chunks[idx];
                 const innerGeneratedColumn = mappingsData[mi];
                 const locationInChunk = originalColumn - innerGeneratedColumn;
                 if (locationInChunk > 0) {
-                  let originalSourceLines = innerSourceIndex < innerSourceContentLines.length ? innerSourceContentLines[innerSourceIndex] : null;
+                  let originalSourceLines = innerSourceIndex2 < innerSourceContentLines.length ? innerSourceContentLines[innerSourceIndex2] : null;
                   if (originalSourceLines === void 0) {
-                    const originalSource = innerSourceContents[innerSourceIndex];
+                    const originalSource = innerSourceContents[innerSourceIndex2];
                     originalSourceLines = originalSource ? splitIntoLines(originalSource) : null;
-                    innerSourceContentLines[innerSourceIndex] = originalSourceLines;
+                    innerSourceContentLines[innerSourceIndex2] = originalSourceLines;
                   }
                   if (originalSourceLines !== null) {
                     const originalChunk = innerOriginalLine <= originalSourceLines.length ? originalSourceLines[innerOriginalLine - 1].slice(
@@ -29781,16 +29616,16 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
                     }
                   }
                 }
-                let sourceIndex2 = innerSourceIndex < innerSourceIndexMapping.length ? innerSourceIndexMapping[innerSourceIndex] : -2;
+                let sourceIndex2 = innerSourceIndex2 < innerSourceIndexMapping.length ? innerSourceIndexMapping[innerSourceIndex2] : -2;
                 if (sourceIndex2 === -2) {
-                  const [source2, sourceContent] = innerSourceIndex < innerSourceIndexValueMapping.length ? innerSourceIndexValueMapping[innerSourceIndex] : [null, void 0];
+                  const [source2, sourceContent] = innerSourceIndex2 < innerSourceIndexValueMapping.length ? innerSourceIndexValueMapping[innerSourceIndex2] : [null, void 0];
                   let globalIndex = sourceMapping.get(source2);
                   if (globalIndex === void 0) {
                     sourceMapping.set(source2, globalIndex = sourceMapping.size);
                     onSource(globalIndex, source2, sourceContent);
                   }
                   sourceIndex2 = globalIndex;
-                  innerSourceIndexMapping[innerSourceIndex] = sourceIndex2;
+                  innerSourceIndexMapping[innerSourceIndex2] = sourceIndex2;
                 }
                 let finalNameIndex = -1;
                 if (innerNameIndex >= 0) {
@@ -29810,11 +29645,11 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
                     innerNameIndexMapping[innerNameIndex] = finalNameIndex;
                   }
                 } else if (nameIndex >= 0) {
-                  let originalSourceLines = innerSourceContentLines[innerSourceIndex];
+                  let originalSourceLines = innerSourceContentLines[innerSourceIndex2];
                   if (originalSourceLines === void 0) {
-                    const originalSource = innerSourceContents[innerSourceIndex];
+                    const originalSource = innerSourceContents[innerSourceIndex2];
                     originalSourceLines = originalSource ? splitIntoLines(originalSource) : null;
-                    innerSourceContentLines[innerSourceIndex] = originalSourceLines;
+                    innerSourceContentLines[innerSourceIndex2] = originalSourceLines;
                   }
                   if (originalSourceLines !== null) {
                     const name = nameIndexValueMapping[nameIndex];
@@ -29856,14 +29691,15 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
             if (removeInnerSource) {
               onChunk(chunk, generatedLine, generatedColumn, -1, -1, -1, -1);
               return;
-            }
-            if (sourceIndexMapping[sourceIndex] === -2) {
-              let globalIndex = sourceMapping.get(innerSourceName);
-              if (globalIndex === void 0) {
-                sourceMapping.set(source, globalIndex = sourceMapping.size);
-                onSource(globalIndex, innerSourceName, innerSource);
+            } else {
+              if (sourceIndexMapping[sourceIndex] === -2) {
+                let globalIndex = sourceMapping.get(innerSourceName);
+                if (globalIndex === void 0) {
+                  sourceMapping.set(source, globalIndex = sourceMapping.size);
+                  onSource(globalIndex, innerSourceName, innerSource);
+                }
+                sourceIndexMapping[sourceIndex] = globalIndex;
               }
-              sourceIndexMapping[sourceIndex] = globalIndex;
             }
           }
           const finalSourceIndex = sourceIndex < 0 || sourceIndex >= sourceIndexMapping.length ? -1 : sourceIndexMapping[sourceIndex];
@@ -29897,13 +29733,11 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
         },
         (i, source2, sourceContent) => {
           if (source2 === innerSourceName) {
-            outerSourceIndex = i;
+            innerSourceIndex = i;
             if (innerSource !== void 0) sourceContent = innerSource;
-            else innerSource = /** @type {string} */
-            sourceContent;
+            else innerSource = sourceContent;
             sourceIndexMapping[i] = -2;
             streamChunksOfSourceMap(
-              /** @type {string} */
               sourceContent,
               innerSourceMap,
               (chunk, generatedLine, generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex) => {
@@ -29921,10 +29755,7 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
                   originalColumn,
                   nameIndex
                 );
-                data.chunks.push(
-                  /** @type {string} */
-                  chunk
-                );
+                data.chunks.push(chunk);
               },
               (i2, source3, sourceContent2) => {
                 innerSourceContents[i2] = sourceContent2;
@@ -29960,43 +29791,32 @@ var require_streamChunksOfCombinedSourceMap = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/SourceMapSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/SourceMapSource.js
 var require_SourceMapSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/SourceMapSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/SourceMapSource.js"(exports2, module2) {
     "use strict";
     var Source = require_Source();
-    var { getMap, getSourceAndMap } = require_getFromStreamChunks();
-    var streamChunksOfCombinedSourceMap = require_streamChunksOfCombinedSourceMap();
     var streamChunksOfSourceMap = require_streamChunksOfSourceMap();
-    var {
-      isDualStringBufferCachingEnabled
-    } = require_stringBufferUtils();
+    var streamChunksOfCombinedSourceMap = require_streamChunksOfCombinedSourceMap();
+    var { getMap, getSourceAndMap } = require_getFromStreamChunks();
     var SourceMapSource2 = class extends Source {
-      /**
-       * @param {string | Buffer} value value
-       * @param {string} name name
-       * @param {string | Buffer | RawSourceMap=} sourceMap source map
-       * @param {SourceValue=} originalSource original source
-       * @param {(string | Buffer | RawSourceMap)=} innerSourceMap inner source map
-       * @param {boolean=} removeOriginalSource do remove original source
-       */
       constructor(value2, name, sourceMap, originalSource, innerSourceMap, removeOriginalSource) {
         super();
         const valueIsBuffer = Buffer.isBuffer(value2);
         this._valueAsString = valueIsBuffer ? void 0 : value2;
         this._valueAsBuffer = valueIsBuffer ? value2 : void 0;
         this._name = name;
-        this._hasSourceMap = Boolean(sourceMap);
+        this._hasSourceMap = !!sourceMap;
         const sourceMapIsBuffer = Buffer.isBuffer(sourceMap);
         const sourceMapIsString = typeof sourceMap === "string";
         this._sourceMapAsObject = sourceMapIsBuffer || sourceMapIsString ? void 0 : sourceMap;
         this._sourceMapAsString = sourceMapIsString ? sourceMap : void 0;
         this._sourceMapAsBuffer = sourceMapIsBuffer ? sourceMap : void 0;
-        this._hasOriginalSource = Boolean(originalSource);
+        this._hasOriginalSource = !!originalSource;
         const originalSourceIsBuffer = Buffer.isBuffer(originalSource);
         this._originalSourceAsString = originalSourceIsBuffer ? void 0 : originalSource;
         this._originalSourceAsBuffer = originalSourceIsBuffer ? originalSource : void 0;
-        this._hasInnerSourceMap = Boolean(innerSourceMap);
+        this._hasInnerSourceMap = !!innerSourceMap;
         const innerSourceMapIsBuffer = Buffer.isBuffer(innerSourceMap);
         const innerSourceMapIsString = typeof innerSourceMap === "string";
         this._innerSourceMapAsObject = innerSourceMapIsBuffer || innerSourceMapIsString ? void 0 : innerSourceMap;
@@ -30004,239 +29824,164 @@ var require_SourceMapSource = __commonJS2({
         this._innerSourceMapAsBuffer = innerSourceMapIsBuffer ? innerSourceMap : void 0;
         this._removeOriginalSource = removeOriginalSource;
       }
-      /**
-       * @returns {[Buffer, string, Buffer, Buffer | undefined, Buffer | undefined, boolean | undefined]} args
-       */
+      _ensureValueBuffer() {
+        if (this._valueAsBuffer === void 0) {
+          this._valueAsBuffer = Buffer.from(this._valueAsString, "utf-8");
+        }
+      }
+      _ensureValueString() {
+        if (this._valueAsString === void 0) {
+          this._valueAsString = this._valueAsBuffer.toString("utf-8");
+        }
+      }
+      _ensureOriginalSourceBuffer() {
+        if (this._originalSourceAsBuffer === void 0 && this._hasOriginalSource) {
+          this._originalSourceAsBuffer = Buffer.from(
+            this._originalSourceAsString,
+            "utf-8"
+          );
+        }
+      }
+      _ensureOriginalSourceString() {
+        if (this._originalSourceAsString === void 0 && this._hasOriginalSource) {
+          this._originalSourceAsString = this._originalSourceAsBuffer.toString(
+            "utf-8"
+          );
+        }
+      }
+      _ensureInnerSourceMapObject() {
+        if (this._innerSourceMapAsObject === void 0 && this._hasInnerSourceMap) {
+          this._ensureInnerSourceMapString();
+          this._innerSourceMapAsObject = JSON.parse(this._innerSourceMapAsString);
+        }
+      }
+      _ensureInnerSourceMapBuffer() {
+        if (this._innerSourceMapAsBuffer === void 0 && this._hasInnerSourceMap) {
+          this._ensureInnerSourceMapString();
+          this._innerSourceMapAsBuffer = Buffer.from(
+            this._innerSourceMapAsString,
+            "utf-8"
+          );
+        }
+      }
+      _ensureInnerSourceMapString() {
+        if (this._innerSourceMapAsString === void 0 && this._hasInnerSourceMap) {
+          if (this._innerSourceMapAsBuffer !== void 0) {
+            this._innerSourceMapAsString = this._innerSourceMapAsBuffer.toString(
+              "utf-8"
+            );
+          } else {
+            this._innerSourceMapAsString = JSON.stringify(
+              this._innerSourceMapAsObject
+            );
+          }
+        }
+      }
+      _ensureSourceMapObject() {
+        if (this._sourceMapAsObject === void 0) {
+          this._ensureSourceMapString();
+          this._sourceMapAsObject = JSON.parse(this._sourceMapAsString);
+        }
+      }
+      _ensureSourceMapBuffer() {
+        if (this._sourceMapAsBuffer === void 0) {
+          this._ensureSourceMapString();
+          this._sourceMapAsBuffer = Buffer.from(this._sourceMapAsString, "utf-8");
+        }
+      }
+      _ensureSourceMapString() {
+        if (this._sourceMapAsString === void 0) {
+          if (this._sourceMapAsBuffer !== void 0) {
+            this._sourceMapAsString = this._sourceMapAsBuffer.toString("utf-8");
+          } else {
+            this._sourceMapAsString = JSON.stringify(this._sourceMapAsObject);
+          }
+        }
+      }
       getArgsAsBuffers() {
+        this._ensureValueBuffer();
+        this._ensureSourceMapBuffer();
+        this._ensureOriginalSourceBuffer();
+        this._ensureInnerSourceMapBuffer();
         return [
-          this.buffer(),
+          this._valueAsBuffer,
           this._name,
-          this._sourceMapBuffer(),
-          this._originalSourceBuffer(),
-          this._innerSourceMapBuffer(),
+          this._sourceMapAsBuffer,
+          this._originalSourceAsBuffer,
+          this._innerSourceMapAsBuffer,
           this._removeOriginalSource
         ];
       }
       buffer() {
-        if (this._valueAsBuffer === void 0) {
-          const value2 = Buffer.from(
-            /** @type {string} */
-            this._valueAsString,
-            "utf8"
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._valueAsBuffer = value2;
-          }
-          return value2;
-        }
+        this._ensureValueBuffer();
         return this._valueAsBuffer;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
-        if (this._valueAsString === void 0) {
-          const value2 = (
-            /** @type {Buffer} */
-            this._valueAsBuffer.toString("utf8")
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._valueAsString = value2;
-          }
-          return value2;
-        }
+        this._ensureValueString();
         return this._valueAsString;
       }
-      /**
-       * @private
-       * @returns {undefined | Buffer} buffer
-       */
-      _originalSourceBuffer() {
-        if (this._originalSourceAsBuffer === void 0 && this._hasOriginalSource) {
-          const value2 = Buffer.from(
-            /** @type {string} */
-            this._originalSourceAsString,
-            "utf8"
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._originalSourceAsBuffer = value2;
-          }
-          return value2;
-        }
-        return this._originalSourceAsBuffer;
-      }
-      _originalSourceString() {
-        if (this._originalSourceAsString === void 0 && this._hasOriginalSource) {
-          const value2 = (
-            /** @type {Buffer} */
-            this._originalSourceAsBuffer.toString("utf8")
-          );
-          if (isDualStringBufferCachingEnabled()) {
-            this._originalSourceAsString = value2;
-          }
-          return value2;
-        }
-        return this._originalSourceAsString;
-      }
-      _innerSourceMapObject() {
-        if (this._innerSourceMapAsObject === void 0 && this._hasInnerSourceMap) {
-          const value2 = JSON.parse(this._innerSourceMapString());
-          if (isDualStringBufferCachingEnabled()) {
-            this._innerSourceMapAsObject = value2;
-          }
-          return value2;
-        }
-        return this._innerSourceMapAsObject;
-      }
-      _innerSourceMapBuffer() {
-        if (this._innerSourceMapAsBuffer === void 0 && this._hasInnerSourceMap) {
-          const value2 = Buffer.from(this._innerSourceMapString(), "utf8");
-          if (isDualStringBufferCachingEnabled()) {
-            this._innerSourceMapAsBuffer = value2;
-          }
-          return value2;
-        }
-        return this._innerSourceMapAsBuffer;
-      }
-      /**
-       * @private
-       * @returns {string} result
-       */
-      _innerSourceMapString() {
-        if (this._innerSourceMapAsString === void 0 && this._hasInnerSourceMap) {
-          if (this._innerSourceMapAsBuffer !== void 0) {
-            const value3 = this._innerSourceMapAsBuffer.toString("utf8");
-            if (isDualStringBufferCachingEnabled()) {
-              this._innerSourceMapAsString = value3;
-            }
-            return value3;
-          }
-          const value2 = JSON.stringify(this._innerSourceMapAsObject);
-          if (isDualStringBufferCachingEnabled()) {
-            this._innerSourceMapAsString = value2;
-          }
-          return value2;
-        }
-        return (
-          /** @type {string} */
-          this._innerSourceMapAsString
-        );
-      }
-      _sourceMapObject() {
-        if (this._sourceMapAsObject === void 0) {
-          const value2 = JSON.parse(this._sourceMapString());
-          if (isDualStringBufferCachingEnabled()) {
-            this._sourceMapAsObject = value2;
-          }
-          return value2;
-        }
-        return this._sourceMapAsObject;
-      }
-      _sourceMapBuffer() {
-        if (this._sourceMapAsBuffer === void 0) {
-          const value2 = Buffer.from(this._sourceMapString(), "utf8");
-          if (isDualStringBufferCachingEnabled()) {
-            this._sourceMapAsBuffer = value2;
-          }
-          return value2;
-        }
-        return this._sourceMapAsBuffer;
-      }
-      _sourceMapString() {
-        if (this._sourceMapAsString === void 0) {
-          if (this._sourceMapAsBuffer !== void 0) {
-            const value3 = this._sourceMapAsBuffer.toString("utf8");
-            if (isDualStringBufferCachingEnabled()) {
-              this._sourceMapAsString = value3;
-            }
-            return value3;
-          }
-          const value2 = JSON.stringify(this._sourceMapAsObject);
-          if (isDualStringBufferCachingEnabled()) {
-            this._sourceMapAsString = value2;
-          }
-          return value2;
-        }
-        return this._sourceMapAsString;
-      }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         if (!this._hasInnerSourceMap) {
-          return this._sourceMapObject();
+          this._ensureSourceMapObject();
+          return this._sourceMapAsObject;
         }
         return getMap(this, options);
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         if (!this._hasInnerSourceMap) {
+          this._ensureValueString();
+          this._ensureSourceMapObject();
           return {
-            source: this.source(),
-            map: this._sourceMapObject()
+            source: this._valueAsString,
+            map: this._sourceMapAsObject
           };
         }
         return getSourceAndMap(this, options);
       }
-      /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
-       */
       streamChunks(options, onChunk, onSource, onName) {
+        this._ensureValueString();
+        this._ensureSourceMapObject();
+        this._ensureOriginalSourceString();
         if (this._hasInnerSourceMap) {
+          this._ensureInnerSourceMapObject();
           return streamChunksOfCombinedSourceMap(
-            /** @type {string} */
-            this.source(),
-            this._sourceMapObject(),
+            this._valueAsString,
+            this._sourceMapAsObject,
             this._name,
-            /** @type {string} */
-            this._originalSourceString(),
-            this._innerSourceMapObject(),
+            this._originalSourceAsString,
+            this._innerSourceMapAsObject,
             this._removeOriginalSource,
             onChunk,
             onSource,
             onName,
-            Boolean(options && options.finalSource),
-            Boolean(options && options.columns !== false)
+            !!(options && options.finalSource),
+            !!(options && options.columns !== false)
+          );
+        } else {
+          return streamChunksOfSourceMap(
+            this._valueAsString,
+            this._sourceMapAsObject,
+            onChunk,
+            onSource,
+            onName,
+            !!(options && options.finalSource),
+            !!(options && options.columns !== false)
           );
         }
-        return streamChunksOfSourceMap(
-          /** @type {string} */
-          this.source(),
-          this._sourceMapObject(),
-          onChunk,
-          onSource,
-          onName,
-          Boolean(options && options.finalSource),
-          Boolean(options && options.columns !== false)
-        );
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
+        this._ensureValueBuffer();
+        this._ensureSourceMapBuffer();
+        this._ensureOriginalSourceBuffer();
+        this._ensureInnerSourceMapBuffer();
         hash.update("SourceMapSource");
-        hash.update(this.buffer());
-        hash.update(this._sourceMapBuffer());
+        hash.update(this._valueAsBuffer);
+        hash.update(this._sourceMapAsBuffer);
         if (this._hasOriginalSource) {
-          hash.update(
-            /** @type {Buffer} */
-            this._originalSourceBuffer()
-          );
+          hash.update(this._originalSourceAsBuffer);
         }
         if (this._hasInnerSourceMap) {
-          hash.update(
-            /** @type {Buffer} */
-            this._innerSourceMapBuffer()
-          );
+          hash.update(this._innerSourceMapAsBuffer);
         }
         hash.update(this._removeOriginalSource ? "true" : "false");
       }
@@ -30245,55 +29990,57 @@ var require_SourceMapSource = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunks.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunks.js
 var require_streamChunks = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamChunks.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamChunks.js"(exports2, module2) {
     "use strict";
     var streamChunksOfRawSource = require_streamChunksOfRawSource();
     var streamChunksOfSourceMap = require_streamChunksOfSourceMap();
     module2.exports = (source, options, onChunk, onSource, onName) => {
       if (typeof source.streamChunks === "function") {
         return source.streamChunks(options, onChunk, onSource, onName);
+      } else {
+        const sourceAndMap = source.sourceAndMap(options);
+        if (sourceAndMap.map) {
+          return streamChunksOfSourceMap(
+            sourceAndMap.source,
+            sourceAndMap.map,
+            onChunk,
+            onSource,
+            onName,
+            !!(options && options.finalSource),
+            !!(options && options.columns !== false)
+          );
+        } else {
+          return streamChunksOfRawSource(
+            sourceAndMap.source,
+            onChunk,
+            onSource,
+            onName,
+            !!(options && options.finalSource)
+          );
+        }
       }
-      const sourceAndMap = source.sourceAndMap(options);
-      if (sourceAndMap.map) {
-        return streamChunksOfSourceMap(
-          /** @type {string} */
-          sourceAndMap.source,
-          sourceAndMap.map,
-          onChunk,
-          onSource,
-          onName,
-          Boolean(options && options.finalSource),
-          Boolean(options && options.columns !== false)
-        );
-      }
-      return streamChunksOfRawSource(
-        /** @type {string} */
-        sourceAndMap.source,
-        onChunk,
-        onSource,
-        onName,
-        Boolean(options && options.finalSource)
-      );
     };
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamAndGetSourceAndMap.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamAndGetSourceAndMap.js
 var require_streamAndGetSourceAndMap = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/helpers/streamAndGetSourceAndMap.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/helpers/streamAndGetSourceAndMap.js"(exports2, module2) {
     "use strict";
     var createMappingsSerializer = require_createMappingsSerializer();
     var streamChunks = require_streamChunks();
     var streamAndGetSourceAndMap = (inputSource, options, onChunk, onSource, onName) => {
       let code = "";
       let mappings = "";
-      const potentialSources = [];
-      const potentialSourcesContent = [];
-      const potentialNames = [];
-      const addMapping = createMappingsSerializer({ ...options, columns: true });
-      const finalSource = Boolean(options && options.finalSource);
+      let sources = [];
+      let sourcesContent = [];
+      let names = [];
+      const addMapping = createMappingsSerializer(
+        Object.assign({}, options, { columns: true })
+      );
+      const finalSource = !!(options && options.finalSource);
       const { generatedLine, generatedColumn, source } = streamChunks(
         inputSource,
         options,
@@ -30318,23 +30065,23 @@ var require_streamAndGetSourceAndMap = __commonJS2({
           );
         },
         (sourceIndex, source2, sourceContent) => {
-          while (potentialSources.length < sourceIndex) {
-            potentialSources.push(null);
+          while (sources.length < sourceIndex) {
+            sources.push(null);
           }
-          potentialSources[sourceIndex] = source2;
+          sources[sourceIndex] = source2;
           if (sourceContent !== void 0) {
-            while (potentialSourcesContent.length < sourceIndex) {
-              potentialSourcesContent.push(null);
+            while (sourcesContent.length < sourceIndex) {
+              sourcesContent.push(null);
             }
-            potentialSourcesContent[sourceIndex] = sourceContent;
+            sourcesContent[sourceIndex] = sourceContent;
           }
           return onSource(sourceIndex, source2, sourceContent);
         },
         (nameIndex, name) => {
-          while (potentialNames.length < nameIndex) {
-            potentialNames.push(null);
+          while (names.length < nameIndex) {
+            names.push(null);
           }
-          potentialNames[nameIndex] = name;
+          names[nameIndex] = name;
           return onName(nameIndex, name);
         }
       );
@@ -30350,19 +30097,9 @@ var require_streamAndGetSourceAndMap = __commonJS2({
           version: 3,
           file: "x",
           mappings,
-          // We handle broken sources as `null`, in spec this field should be string, but no information what we should do in such cases if we change type it will be breaking change
-          sources: (
-            /** @type {string[]} */
-            potentialSources
-          ),
-          sourcesContent: potentialSourcesContent.length > 0 ? (
-            /** @type {string[]} */
-            potentialSourcesContent
-          ) : void 0,
-          names: (
-            /** @type {string[]} */
-            potentialNames
-          )
+          sources,
+          sourcesContent: sourcesContent.length > 0 ? sourcesContent : void 0,
+          names
         } : null
       };
     };
@@ -30370,56 +30107,41 @@ var require_streamAndGetSourceAndMap = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/CachedSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/CachedSource.js
 var require_CachedSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/CachedSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/CachedSource.js"(exports2, module2) {
     "use strict";
     var Source = require_Source();
-    var streamAndGetSourceAndMap = require_streamAndGetSourceAndMap();
-    var streamChunksOfRawSource = require_streamChunksOfRawSource();
     var streamChunksOfSourceMap = require_streamChunksOfSourceMap();
-    var {
-      isDualStringBufferCachingEnabled
-    } = require_stringBufferUtils();
+    var streamChunksOfRawSource = require_streamChunksOfRawSource();
+    var streamAndGetSourceAndMap = require_streamAndGetSourceAndMap();
     var mapToBufferedMap = (map) => {
       if (typeof map !== "object" || !map) return map;
-      const bufferedMap = (
-        /** @type {BufferedMap} */
-        /** @type {unknown} */
-        { ...map }
-      );
+      const bufferedMap = Object.assign({}, map);
       if (map.mappings) {
-        bufferedMap.mappings = Buffer.from(map.mappings, "utf8");
+        bufferedMap.mappings = Buffer.from(map.mappings, "utf-8");
       }
       if (map.sourcesContent) {
         bufferedMap.sourcesContent = map.sourcesContent.map(
-          (str) => str && Buffer.from(str, "utf8")
+          (str) => str && Buffer.from(str, "utf-8")
         );
       }
       return bufferedMap;
     };
     var bufferedMapToMap = (bufferedMap) => {
       if (typeof bufferedMap !== "object" || !bufferedMap) return bufferedMap;
-      const map = (
-        /** @type {RawSourceMap} */
-        /** @type {unknown} */
-        { ...bufferedMap }
-      );
+      const map = Object.assign({}, bufferedMap);
       if (bufferedMap.mappings) {
-        map.mappings = bufferedMap.mappings.toString("utf8");
+        map.mappings = bufferedMap.mappings.toString("utf-8");
       }
       if (bufferedMap.sourcesContent) {
         map.sourcesContent = bufferedMap.sourcesContent.map(
-          (buffer) => buffer && buffer.toString("utf8")
+          (buffer) => buffer && buffer.toString("utf-8")
         );
       }
       return map;
     };
     var CachedSource = class extends Source {
-      /**
-       * @param {Source | (() => Source)} source source
-       * @param {CachedData=} cachedData cached data
-       */
       constructor(source, cachedData) {
         super();
         this._source = source;
@@ -30430,13 +30152,10 @@ var require_CachedSource = __commonJS2({
         this._cachedMaps = cachedData ? cachedData.maps : /* @__PURE__ */ new Map();
         this._cachedHashUpdate = cachedData ? cachedData.hash : void 0;
       }
-      /**
-       * @returns {CachedData} cached data
-       */
       getCachedData() {
         const bufferedMaps = /* @__PURE__ */ new Map();
         for (const pair of this._cachedMaps) {
-          const [, cacheEntry] = pair;
+          let cacheEntry = pair[1];
           if (cacheEntry.bufferedMap === void 0) {
             cacheEntry.bufferedMap = mapToBufferedMap(
               this._getMapFromCacheEntry(cacheEntry)
@@ -30447,15 +30166,11 @@ var require_CachedSource = __commonJS2({
             bufferedMap: cacheEntry.bufferedMap
           });
         }
+        if (this._cachedSource) {
+          this.buffer();
+        }
         return {
-          // We don't want to cache strings
-          // So if we have a caches sources
-          // create a buffer from it and only store
-          // if it was a Buffer or string
-          buffer: this._cachedSource ? this.buffer() : (
-            /** @type {Buffer} */
-            this._cachedBuffer
-          ),
+          buffer: this._cachedBuffer,
           source: this._cachedSourceType !== void 0 ? this._cachedSourceType : typeof this._cachedSource === "string" ? true : Buffer.isBuffer(this._cachedSource) ? false : void 0,
           size: this._cachedSize,
           maps: bufferedMaps,
@@ -30469,57 +30184,31 @@ var require_CachedSource = __commonJS2({
         if (typeof this._source === "function") this._source = this._source();
         return this._source;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         const source = this._getCachedSource();
         if (source !== void 0) return source;
-        return this._cachedSource = /** @type {string} */
-        this.original().source();
+        return this._cachedSource = this.original().source();
       }
-      /**
-       * @private
-       * @param {BufferEntry} cacheEntry cache entry
-       * @returns {null | RawSourceMap} raw source map
-       */
       _getMapFromCacheEntry(cacheEntry) {
         if (cacheEntry.map !== void 0) {
           return cacheEntry.map;
         } else if (cacheEntry.bufferedMap !== void 0) {
           return cacheEntry.map = bufferedMapToMap(cacheEntry.bufferedMap);
         }
-        return null;
       }
-      /**
-       * @private
-       * @returns {undefined | string} cached source
-       */
       _getCachedSource() {
         if (this._cachedSource !== void 0) return this._cachedSource;
         if (this._cachedBuffer && this._cachedSourceType !== void 0) {
-          const value2 = this._cachedSourceType ? this._cachedBuffer.toString("utf8") : this._cachedBuffer;
-          if (isDualStringBufferCachingEnabled()) {
-            this._cachedSource = /** @type {string} */
-            value2;
-          }
-          return (
-            /** @type {string} */
-            value2
-          );
+          return this._cachedSource = this._cachedSourceType ? this._cachedBuffer.toString("utf-8") : this._cachedBuffer;
         }
       }
-      /**
-       * @returns {Buffer} buffer
-       */
       buffer() {
         if (this._cachedBuffer !== void 0) return this._cachedBuffer;
         if (this._cachedSource !== void 0) {
-          const value3 = Buffer.isBuffer(this._cachedSource) ? this._cachedSource : Buffer.from(this._cachedSource, "utf8");
-          if (isDualStringBufferCachingEnabled()) {
-            this._cachedBuffer = value3;
+          if (Buffer.isBuffer(this._cachedSource)) {
+            return this._cachedBuffer = this._cachedSource;
           }
-          return value3;
+          return this._cachedBuffer = Buffer.from(this._cachedSource, "utf-8");
         }
         if (typeof this.original().buffer === "function") {
           return this._cachedBuffer = this.original().buffer();
@@ -30528,15 +30217,8 @@ var require_CachedSource = __commonJS2({
         if (Buffer.isBuffer(bufferOrString)) {
           return this._cachedBuffer = bufferOrString;
         }
-        const value2 = Buffer.from(bufferOrString, "utf8");
-        if (isDualStringBufferCachingEnabled()) {
-          this._cachedBuffer = value2;
-        }
-        return value2;
+        return this._cachedBuffer = Buffer.from(bufferOrString, "utf-8");
       }
-      /**
-       * @returns {number} size
-       */
       size() {
         if (this._cachedSize !== void 0) return this._cachedSize;
         if (this._cachedBuffer !== void 0) {
@@ -30548,10 +30230,6 @@ var require_CachedSource = __commonJS2({
         }
         return this._cachedSize = this.original().size();
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         const key = options ? JSON.stringify(options) : "{}";
         const cacheEntry = this._cachedMaps.get(key);
@@ -30565,8 +30243,7 @@ var require_CachedSource = __commonJS2({
           map = this.original().map(options);
         } else {
           const sourceAndMap = this.original().sourceAndMap(options);
-          source = /** @type {string} */
-          sourceAndMap.source;
+          source = sourceAndMap.source;
           map = sourceAndMap.map;
           this._cachedSource = source;
         }
@@ -30576,59 +30253,44 @@ var require_CachedSource = __commonJS2({
         });
         return { source, map };
       }
-      /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
-       */
       streamChunks(options, onChunk, onSource, onName) {
         const key = options ? JSON.stringify(options) : "{}";
         if (this._cachedMaps.has(key) && (this._cachedBuffer !== void 0 || this._cachedSource !== void 0)) {
-          const { source, map } = this.sourceAndMap(options);
-          if (map) {
+          const { source: source2, map: map2 } = this.sourceAndMap(options);
+          if (map2) {
             return streamChunksOfSourceMap(
-              /** @type {string} */
-              source,
-              map,
+              source2,
+              map2,
               onChunk,
               onSource,
               onName,
-              Boolean(options && options.finalSource),
+              !!(options && options.finalSource),
               true
             );
+          } else {
+            return streamChunksOfRawSource(
+              source2,
+              onChunk,
+              onSource,
+              onName,
+              !!(options && options.finalSource)
+            );
           }
-          return streamChunksOfRawSource(
-            /** @type {string} */
-            source,
-            onChunk,
-            onSource,
-            onName,
-            Boolean(options && options.finalSource)
-          );
         }
-        const sourceAndMap = streamAndGetSourceAndMap(
+        const { result, source, map } = streamAndGetSourceAndMap(
           this.original(),
           options,
           onChunk,
           onSource,
           onName
         );
-        this._cachedSource = sourceAndMap.source;
+        this._cachedSource = source;
         this._cachedMaps.set(key, {
-          map: (
-            /** @type {RawSourceMap} */
-            sourceAndMap.map
-          ),
+          map,
           bufferedMap: void 0
         });
-        return sourceAndMap.result;
+        return result;
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         const key = options ? JSON.stringify(options) : "{}";
         const cacheEntry = this._cachedMaps.get(key);
@@ -30642,22 +30304,14 @@ var require_CachedSource = __commonJS2({
         });
         return map;
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
         if (this._cachedHashUpdate !== void 0) {
           for (const item of this._cachedHashUpdate) hash.update(item);
           return;
         }
         const update = [];
-        let currentString;
+        let currentString = void 0;
         const tracker = {
-          /**
-           * @param {string | Buffer} item item
-           * @returns {void}
-           */
           update: (item) => {
             if (typeof item === "string" && item.length < 10240) {
               if (currentString === void 0) {
@@ -30678,10 +30332,7 @@ var require_CachedSource = __commonJS2({
             }
           }
         };
-        this.original().updateHash(
-          /** @type {HashLike} */
-          tracker
-        );
+        this.original().updateHash(tracker);
         if (currentString !== void 0) {
           update.push(Buffer.from(currentString));
         }
@@ -30693,23 +30344,21 @@ var require_CachedSource = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/ConcatSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/ConcatSource.js
 var require_ConcatSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/ConcatSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/ConcatSource.js"(exports2, module2) {
     "use strict";
-    var RawSource = require_RawSource();
     var Source = require_Source();
-    var { getMap, getSourceAndMap } = require_getFromStreamChunks();
+    var RawSource = require_RawSource();
     var streamChunks = require_streamChunks();
+    var { getMap, getSourceAndMap } = require_getFromStreamChunks();
     var stringsAsRawSources = /* @__PURE__ */ new WeakSet();
     var ConcatSource3 = class _ConcatSource extends Source {
-      /**
-       * @param {Child[]} args children
-       */
-      constructor(...args) {
+      constructor() {
         super();
         this._children = [];
-        for (const item of args) {
+        for (let i = 0; i < arguments.length; i++) {
+          const item = arguments[i];
           if (item instanceof _ConcatSource) {
             for (const child of item._children) {
               this._children.push(child);
@@ -30718,22 +30367,12 @@ var require_ConcatSource = __commonJS2({
             this._children.push(item);
           }
         }
-        this._isOptimized = args.length === 0;
+        this._isOptimized = arguments.length === 0;
       }
-      /**
-       * @returns {Source[]} children
-       */
       getChildren() {
         if (!this._isOptimized) this._optimize();
-        return (
-          /** @type {Source[]} */
-          this._children
-        );
+        return this._children;
       }
-      /**
-       * @param {Child} item item
-       * @returns {void}
-       */
       add(item) {
         if (item instanceof _ConcatSource) {
           for (const child of item._children) {
@@ -30744,10 +30383,6 @@ var require_ConcatSource = __commonJS2({
         }
         this._isOptimized = false;
       }
-      /**
-       * @param {Child[]} items items
-       * @returns {void}
-       */
       addAllSkipOptimizing(items) {
         for (const item of items) {
           this._children.push(item);
@@ -30756,11 +30391,7 @@ var require_ConcatSource = __commonJS2({
       buffer() {
         if (!this._isOptimized) this._optimize();
         const buffers = [];
-        for (
-          const child of
-          /** @type {SourceLike[]} */
-          this._children
-        ) {
+        for (const child of this._children) {
           if (typeof child.buffer === "function") {
             buffers.push(child.buffer());
           } else {
@@ -30768,21 +30399,17 @@ var require_ConcatSource = __commonJS2({
             if (Buffer.isBuffer(bufferOrString)) {
               buffers.push(bufferOrString);
             } else {
-              buffers.push(Buffer.from(bufferOrString, "utf8"));
+              buffers.push(Buffer.from(bufferOrString, "utf-8"));
             }
           }
         }
         return Buffer.concat(buffers);
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         if (!this._isOptimized) this._optimize();
         let source = "";
         for (const child of this._children) {
-          source += /** @type {Source} */
-          child.source();
+          source += child.source();
         }
         return source;
       }
@@ -30790,57 +30417,28 @@ var require_ConcatSource = __commonJS2({
         if (!this._isOptimized) this._optimize();
         let size = 0;
         for (const child of this._children) {
-          size += /** @type {Source} */
-          child.size();
+          size += child.size();
         }
         return size;
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         return getMap(this, options);
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         return getSourceAndMap(this, options);
       }
-      /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
-       */
       streamChunks(options, onChunk, onSource, onName) {
         if (!this._isOptimized) this._optimize();
-        if (this._children.length === 1) {
-          return (
-            /** @type {ConcatSource[]} */
-            this._children[0].streamChunks(
-              options,
-              onChunk,
-              onSource,
-              onName
-            )
-          );
-        }
+        if (this._children.length === 1)
+          return this._children[0].streamChunks(options, onChunk, onSource, onName);
         let currentLineOffset = 0;
         let currentColumnOffset = 0;
-        const sourceMapping = /* @__PURE__ */ new Map();
-        const nameMapping = /* @__PURE__ */ new Map();
-        const finalSource = Boolean(options && options.finalSource);
+        let sourceMapping = /* @__PURE__ */ new Map();
+        let nameMapping = /* @__PURE__ */ new Map();
+        const finalSource = !!(options && options.finalSource);
         let code = "";
         let needToCloseMapping = false;
-        for (
-          const item of
-          /** @type {Source[]} */
-          this._children
-        ) {
+        for (const item of this._children) {
           const sourceIndexMapping = [];
           const nameIndexMapping = [];
           let lastMappingLine = 0;
@@ -30868,24 +30466,33 @@ var require_ConcatSource = __commonJS2({
               const resultSourceIndex = sourceIndex < 0 || sourceIndex >= sourceIndexMapping.length ? -1 : sourceIndexMapping[sourceIndex];
               const resultNameIndex = nameIndex < 0 || nameIndex >= nameIndexMapping.length ? -1 : nameIndexMapping[nameIndex];
               lastMappingLine = resultSourceIndex < 0 ? 0 : generatedLine2;
-              let _chunk;
               if (finalSource) {
                 if (chunk !== void 0) code += chunk;
+                if (resultSourceIndex >= 0) {
+                  onChunk(
+                    void 0,
+                    line,
+                    column,
+                    resultSourceIndex,
+                    originalLine,
+                    originalColumn,
+                    resultNameIndex
+                  );
+                }
               } else {
-                _chunk = chunk;
-              }
-              if (resultSourceIndex < 0) {
-                onChunk(_chunk, line, column, -1, -1, -1, -1);
-              } else {
-                onChunk(
-                  _chunk,
-                  line,
-                  column,
-                  resultSourceIndex,
-                  originalLine,
-                  originalColumn,
-                  resultNameIndex
-                );
+                if (resultSourceIndex < 0) {
+                  onChunk(chunk, line, column, -1, -1, -1, -1);
+                } else {
+                  onChunk(
+                    chunk,
+                    line,
+                    column,
+                    resultSourceIndex,
+                    originalLine,
+                    originalColumn,
+                    resultNameIndex
+                  );
+                }
               }
             },
             (i, source2, sourceContent) => {
@@ -30906,31 +30513,27 @@ var require_ConcatSource = __commonJS2({
             }
           );
           if (source !== void 0) code += source;
-          if (needToCloseMapping && (generatedLine !== 1 || generatedColumn !== 0)) {
-            onChunk(
-              void 0,
-              currentLineOffset + 1,
-              currentColumnOffset,
-              -1,
-              -1,
-              -1,
-              -1
-            );
-            needToCloseMapping = false;
+          if (needToCloseMapping) {
+            if (generatedLine !== 1 || generatedColumn !== 0) {
+              onChunk(
+                void 0,
+                currentLineOffset + 1,
+                currentColumnOffset,
+                -1,
+                -1,
+                -1,
+                -1
+              );
+              needToCloseMapping = false;
+            }
           }
-          if (
-            /** @type {number} */
-            generatedLine > 1
-          ) {
-            currentColumnOffset = /** @type {number} */
-            generatedColumn;
+          if (generatedLine > 1) {
+            currentColumnOffset = generatedColumn;
           } else {
-            currentColumnOffset += /** @type {number} */
-            generatedColumn;
+            currentColumnOffset += generatedColumn;
           }
           needToCloseMapping = needToCloseMapping || finalSource && lastMappingLine === generatedLine;
-          currentLineOffset += /** @type {number} */
-          generatedLine - 1;
+          currentLineOffset += generatedLine - 1;
         }
         return {
           generatedLine: currentLineOffset + 1,
@@ -30938,10 +30541,6 @@ var require_ConcatSource = __commonJS2({
           source: finalSource ? code : void 0
         };
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
         if (!this._isOptimized) this._optimize();
         hash.update("ConcatSource");
@@ -30951,8 +30550,8 @@ var require_ConcatSource = __commonJS2({
       }
       _optimize() {
         const newChildren = [];
-        let currentString;
-        let currentRawSources;
+        let currentString = void 0;
+        let currentRawSources = void 0;
         const addStringToRawSources = (string) => {
           if (currentRawSources === void 0) {
             currentRawSources = string;
@@ -30960,10 +30559,7 @@ var require_ConcatSource = __commonJS2({
             currentRawSources.push(string);
           } else {
             currentRawSources = [
-              typeof currentRawSources === "string" ? currentRawSources : (
-                /** @type {string} */
-                currentRawSources.source()
-              ),
+              typeof currentRawSources === "string" ? currentRawSources : currentRawSources.source(),
               string
             ];
           }
@@ -30972,17 +30568,10 @@ var require_ConcatSource = __commonJS2({
           if (currentRawSources === void 0) {
             currentRawSources = source;
           } else if (Array.isArray(currentRawSources)) {
-            currentRawSources.push(
-              /** @type {string} */
-              source.source()
-            );
+            currentRawSources.push(source.source());
           } else {
             currentRawSources = [
-              typeof currentRawSources === "string" ? currentRawSources : (
-                /** @type {string} */
-                currentRawSources.source()
-              ),
-              /** @type {string} */
+              typeof currentRawSources === "string" ? currentRawSources : currentRawSources.source(),
               source.source()
             ];
           }
@@ -31013,10 +30602,7 @@ var require_ConcatSource = __commonJS2({
               currentString = void 0;
             }
             if (stringsAsRawSources.has(child)) {
-              addSourceToRawSources(
-                /** @type {SourceLike} */
-                child
-              );
+              addSourceToRawSources(child);
             } else {
               if (currentRawSources !== void 0) {
                 mergeRawSources();
@@ -31040,23 +30626,17 @@ var require_ConcatSource = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/ReplaceSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/ReplaceSource.js
 var require_ReplaceSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/ReplaceSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/ReplaceSource.js"(exports2, module2) {
     "use strict";
-    var Source = require_Source();
     var { getMap, getSourceAndMap } = require_getFromStreamChunks();
-    var splitIntoLines = require_splitIntoLines();
     var streamChunks = require_streamChunks();
+    var Source = require_Source();
+    var splitIntoLines = require_splitIntoLines();
     var hasStableSort = typeof process === "object" && process.versions && typeof process.versions.v8 === "string" && !/^[0-6]\./.test(process.versions.v8);
     var MAX_SOURCE_POSITION = 536870912;
     var Replacement = class {
-      /**
-       * @param {number} start start
-       * @param {number} end end
-       * @param {string} content content
-       * @param {string=} name name
-       */
       constructor(start, end, content, name) {
         this.start = start;
         this.end = end;
@@ -31068,10 +30648,6 @@ var require_ReplaceSource = __commonJS2({
       }
     };
     var ReplaceSource = class extends Source {
-      /**
-       * @param {Source} source source
-       * @param {string=} name name
-       */
       constructor(source, name) {
         super();
         this._source = source;
@@ -31086,40 +30662,22 @@ var require_ReplaceSource = __commonJS2({
         this._sortReplacements();
         return this._replacements;
       }
-      /**
-       * @param {number} start start
-       * @param {number} end end
-       * @param {string} newValue new value
-       * @param {string=} name name
-       * @returns {void}
-       */
       replace(start, end, newValue, name) {
-        if (typeof newValue !== "string") {
+        if (typeof newValue !== "string")
           throw new Error(
-            `insertion must be a string, but is a ${typeof newValue}`
+            "insertion must be a string, but is a " + typeof newValue
           );
-        }
         this._replacements.push(new Replacement(start, end, newValue, name));
         this._isSorted = false;
       }
-      /**
-       * @param {number} pos pos
-       * @param {string} newValue new value
-       * @param {string=} name name
-       * @returns {void}
-       */
       insert(pos, newValue, name) {
-        if (typeof newValue !== "string") {
+        if (typeof newValue !== "string")
           throw new Error(
-            `insertion must be a string, but is a ${typeof newValue}: ${newValue}`
+            "insertion must be a string, but is a " + typeof newValue + ": " + newValue
           );
-        }
         this._replacements.push(new Replacement(pos, pos - 1, newValue, name));
         this._isSorted = false;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         if (this._replacements.length === 0) {
           return this._source.source();
@@ -31147,20 +30705,12 @@ var require_ReplaceSource = __commonJS2({
         result.push(current);
         return result.join("");
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         if (this._replacements.length === 0) {
           return this._source.map(options);
         }
         return getMap(this, options);
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         if (this._replacements.length === 0) {
           return this._source.sourceAndMap(options);
@@ -31173,7 +30723,7 @@ var require_ReplaceSource = __commonJS2({
       _sortReplacements() {
         if (this._isSorted) return;
         if (hasStableSort) {
-          this._replacements.sort((a, b) => {
+          this._replacements.sort(function(a, b) {
             const diff1 = a.start - b.start;
             if (diff1 !== 0) return diff1;
             const diff2 = a.end - b.end;
@@ -31181,35 +30731,24 @@ var require_ReplaceSource = __commonJS2({
             return 0;
           });
         } else {
-          for (const [i, repl] of this._replacements.entries()) repl.index = i;
-          this._replacements.sort((a, b) => {
+          this._replacements.forEach((repl, i) => repl.index = i);
+          this._replacements.sort(function(a, b) {
             const diff1 = a.start - b.start;
             if (diff1 !== 0) return diff1;
             const diff2 = a.end - b.end;
             if (diff2 !== 0) return diff2;
-            return (
-              /** @type {number} */
-              a.index - /** @type {number} */
-              b.index
-            );
+            return a.index - b.index;
           });
         }
         this._isSorted = true;
       }
-      /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
-       */
       streamChunks(options, onChunk, onSource, onName) {
         this._sortReplacements();
-        const replacements = this._replacements;
+        const repls = this._replacements;
         let pos = 0;
         let i = 0;
-        let replacementEnd = -1;
-        let nextReplacement = i < replacements.length ? Math.floor(replacements[i].start) : MAX_SOURCE_POSITION;
+        let replacmentEnd = -1;
+        let nextReplacement = i < repls.length ? Math.floor(repls[i].start) : MAX_SOURCE_POSITION;
         let generatedLineOffset = 0;
         let generatedColumnOffset = 0;
         let generatedColumnOffsetLine = 0;
@@ -31227,18 +30766,14 @@ var require_ReplaceSource = __commonJS2({
           if (contentLine === null) return false;
           return contentLine.slice(column, column + expectedChunk.length) === expectedChunk;
         };
-        const { generatedLine, generatedColumn } = streamChunks(
+        let { generatedLine, generatedColumn } = streamChunks(
           this._source,
-          { ...options, finalSource: false },
-          (_chunk, generatedLine2, generatedColumn2, sourceIndex, originalLine, originalColumn, nameIndex) => {
+          Object.assign({}, options, { finalSource: false }),
+          (chunk, generatedLine2, generatedColumn2, sourceIndex, originalLine, originalColumn, nameIndex) => {
             let chunkPos = 0;
-            const chunk = (
-              /** @type {string} */
-              _chunk
-            );
-            const endPos = pos + chunk.length;
-            if (replacementEnd > pos) {
-              if (replacementEnd >= endPos) {
+            let endPos = pos + chunk.length;
+            if (replacmentEnd > pos) {
+              if (replacmentEnd >= endPos) {
                 const line3 = generatedLine2 + generatedLineOffset;
                 if (chunk.endsWith("\n")) {
                   generatedLineOffset--;
@@ -31254,7 +30789,7 @@ var require_ReplaceSource = __commonJS2({
                 pos = endPos;
                 return;
               }
-              chunkPos = replacementEnd - pos;
+              chunkPos = replacmentEnd - pos;
               if (checkOriginalContent(
                 sourceIndex,
                 originalLine,
@@ -31300,8 +30835,8 @@ var require_ReplaceSource = __commonJS2({
                     originalColumn += chunkSlice.length;
                   }
                 }
-                const { content, name } = replacements[i];
-                const matches2 = splitIntoLines(content);
+                const { content, name } = repls[i];
+                let matches2 = splitIntoLines(content);
                 let replacementNameIndex = nameIndex;
                 if (sourceIndex >= 0 && name) {
                   let globalIndex = nameMapping.get(name);
@@ -31338,16 +30873,16 @@ var require_ReplaceSource = __commonJS2({
                     generatedColumnOffsetLine = line2;
                   }
                 }
-                replacementEnd = Math.max(
-                  replacementEnd,
-                  Math.floor(replacements[i].end + 1)
+                replacmentEnd = Math.max(
+                  replacmentEnd,
+                  Math.floor(repls[i].end + 1)
                 );
                 i++;
-                nextReplacement = i < replacements.length ? Math.floor(replacements[i].start) : MAX_SOURCE_POSITION;
-                const offset = chunk.length - endPos + replacementEnd - chunkPos;
+                nextReplacement = i < repls.length ? Math.floor(repls[i].start) : MAX_SOURCE_POSITION;
+                const offset = chunk.length - endPos + replacmentEnd - chunkPos;
                 if (offset > 0) {
-                  if (replacementEnd >= endPos) {
-                    const line4 = generatedLine2 + generatedLineOffset;
+                  if (replacmentEnd >= endPos) {
+                    let line4 = generatedLine2 + generatedLineOffset;
                     if (chunk.endsWith("\n")) {
                       generatedLineOffset--;
                       if (generatedColumnOffsetLine === line4) {
@@ -31399,9 +30934,8 @@ var require_ReplaceSource = __commonJS2({
             pos = endPos;
           },
           (sourceIndex, source, sourceContent) => {
-            while (sourceContents.length < sourceIndex) {
+            while (sourceContents.length < sourceIndex)
               sourceContents.push(void 0);
-            }
             sourceContents[sourceIndex] = sourceContent;
             onSource(sourceIndex, source, sourceContent);
           },
@@ -31416,20 +30950,16 @@ var require_ReplaceSource = __commonJS2({
           }
         );
         let remainer = "";
-        for (; i < replacements.length; i++) {
-          remainer += replacements[i].content;
+        for (; i < repls.length; i++) {
+          remainer += repls[i].content;
         }
-        let line = (
-          /** @type {number} */
-          generatedLine + generatedLineOffset
-        );
-        const matches = splitIntoLines(remainer);
+        let line = generatedLine + generatedLineOffset;
+        let matches = splitIntoLines(remainer);
         for (let m = 0; m < matches.length; m++) {
           const contentLine = matches[m];
           onChunk(
             contentLine,
             line,
-            /** @type {number} */
             generatedColumn + (line === generatedColumnOffsetLine ? generatedColumnOffset : 0),
             -1,
             -1,
@@ -31446,54 +30976,39 @@ var require_ReplaceSource = __commonJS2({
           } else {
             generatedLineOffset++;
             line++;
-            generatedColumnOffset = -/** @type {number} */
-            generatedColumn;
+            generatedColumnOffset = -generatedColumn;
             generatedColumnOffsetLine = line;
           }
         }
         return {
           generatedLine: line,
-          generatedColumn: (
-            /** @type {number} */
-            generatedColumn + (line === generatedColumnOffsetLine ? generatedColumnOffset : 0)
-          )
+          generatedColumn: generatedColumn + (line === generatedColumnOffsetLine ? generatedColumnOffset : 0)
         };
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
         this._sortReplacements();
         hash.update("ReplaceSource");
         this._source.updateHash(hash);
         hash.update(this._name || "");
         for (const repl of this._replacements) {
-          hash.update(
-            `${repl.start}${repl.end}${repl.content}${repl.name ? repl.name : ""}`
-          );
+          hash.update(`${repl.start}${repl.end}${repl.content}${repl.name}`);
         }
       }
     };
     module2.exports = ReplaceSource;
-    module2.exports.Replacement = Replacement;
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/PrefixSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/PrefixSource.js
 var require_PrefixSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/PrefixSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/PrefixSource.js"(exports2, module2) {
     "use strict";
-    var RawSource = require_RawSource();
     var Source = require_Source();
-    var { getMap, getSourceAndMap } = require_getFromStreamChunks();
+    var RawSource = require_RawSource();
     var streamChunks = require_streamChunks();
+    var { getMap, getSourceAndMap } = require_getFromStreamChunks();
     var REPLACE_REGEX = /\n(?=.|\s)/g;
     var PrefixSource = class extends Source {
-      /**
-       * @param {string} prefix prefix
-       * @param {string | Buffer | Source} source source
-       */
       constructor(prefix, source) {
         super();
         this._source = typeof source === "string" || Buffer.isBuffer(source) ? new RawSource(source, true) : source;
@@ -31505,44 +31020,22 @@ var require_PrefixSource = __commonJS2({
       original() {
         return this._source;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
-        const node = (
-          /** @type {string} */
-          this._source.source()
-        );
+        const node = this._source.source();
         const prefix = this._prefix;
-        return prefix + node.replace(REPLACE_REGEX, `
-${prefix}`);
+        return prefix + node.replace(REPLACE_REGEX, "\n" + prefix);
       }
       // TODO efficient buffer() implementation
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         return getMap(this, options);
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         return getSourceAndMap(this, options);
       }
-      /**
-       * @param {Options} options options
-       * @param {OnChunk} onChunk called for each chunk of code
-       * @param {OnSource} onSource called for each source
-       * @param {OnName} onName called for each name
-       * @returns {GeneratedSourceInfo} generated source info
-       */
       streamChunks(options, onChunk, onSource, onName) {
         const prefix = this._prefix;
         const prefixOffset = prefix.length;
-        const linesOnly = Boolean(options && options.columns === false);
+        const linesOnly = !!(options && options.columns === false);
         const { generatedLine, generatedColumn, source } = streamChunks(
           this._source,
           options,
@@ -31574,16 +31067,10 @@ ${prefix}`);
         );
         return {
           generatedLine,
-          generatedColumn: generatedColumn === 0 ? 0 : prefixOffset + /** @type {number} */
-          generatedColumn,
-          source: source !== void 0 ? prefix + source.replace(REPLACE_REGEX, `
-${prefix}`) : void 0
+          generatedColumn: generatedColumn === 0 ? 0 : prefixOffset + generatedColumn,
+          source: source !== void 0 ? prefix + source.replace(REPLACE_REGEX, "\n" + prefix) : void 0
         };
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
         hash.update("PrefixSource");
         this._source.updateHash(hash);
@@ -31594,15 +31081,12 @@ ${prefix}`) : void 0
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/SizeOnlySource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/SizeOnlySource.js
 var require_SizeOnlySource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/SizeOnlySource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/SizeOnlySource.js"(exports2, module2) {
     "use strict";
     var Source = require_Source();
     var SizeOnlySource = class extends Source {
-      /**
-       * @param {number} size size
-       */
       constructor(size) {
         super();
         this._size = size;
@@ -31615,32 +31099,16 @@ var require_SizeOnlySource = __commonJS2({
       size() {
         return this._size;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         throw this._error();
       }
-      /**
-       * @returns {Buffer} buffer
-       */
       buffer() {
         throw this._error();
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
-      // eslint-disable-next-line no-unused-vars
       map(options) {
         throw this._error();
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
-      // eslint-disable-next-line no-unused-vars
-      updateHash(hash) {
+      updateHash() {
         throw this._error();
       }
     };
@@ -31648,29 +31116,19 @@ var require_SizeOnlySource = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/CompatSource.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/CompatSource.js
 var require_CompatSource = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/CompatSource.js"(exports2, module2) {
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/CompatSource.js"(exports2, module2) {
     "use strict";
     var Source = require_Source();
     var CompatSource = class _CompatSource extends Source {
-      /**
-       * @param {SourceLike} sourceLike source like
-       * @returns {Source} source
-       */
       static from(sourceLike) {
         return sourceLike instanceof Source ? sourceLike : new _CompatSource(sourceLike);
       }
-      /**
-       * @param {SourceLike} sourceLike source like
-       */
       constructor(sourceLike) {
         super();
         this._sourceLike = sourceLike;
       }
-      /**
-       * @returns {SourceValue} source
-       */
       source() {
         return this._sourceLike.source();
       }
@@ -31686,30 +31144,18 @@ var require_CompatSource = __commonJS2({
         }
         return super.size();
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {RawSourceMap | null} map
-       */
       map(options) {
         if (typeof this._sourceLike.map === "function") {
           return this._sourceLike.map(options);
         }
         return super.map(options);
       }
-      /**
-       * @param {MapOptions=} options map options
-       * @returns {SourceAndMap} source and map
-       */
       sourceAndMap(options) {
         if (typeof this._sourceLike.sourceAndMap === "function") {
           return this._sourceLike.sourceAndMap(options);
         }
         return super.sourceAndMap(options);
       }
-      /**
-       * @param {HashLike} hash hash
-       * @returns {void}
-       */
       updateHash(hash) {
         if (typeof this._sourceLike.updateHash === "function") {
           return this._sourceLike.updateHash(hash);
@@ -31726,98 +31172,32 @@ var require_CompatSource = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/index.js
+// ../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/index.js
 var require_lib8 = __commonJS2({
-  "../../node_modules/.pnpm/webpack-sources@3.3.3/node_modules/webpack-sources/lib/index.js"(exports2, module2) {
-    "use strict";
-    var memoize = (fn) => {
-      let cache = false;
-      let result;
-      return () => {
-        if (cache) {
-          return (
-            /** @type {T} */
-            result
-          );
-        }
-        result = fn();
-        cache = true;
-        fn = void 0;
-        return (
-          /** @type {T} */
-          result
-        );
-      };
-    };
-    var mergeExports = (obj, exports3) => {
-      const descriptors = Object.getOwnPropertyDescriptors(exports3);
-      for (const name of Object.keys(descriptors)) {
-        const descriptor2 = descriptors[name];
-        if (descriptor2.get) {
-          const fn = descriptor2.get;
-          Object.defineProperty(obj, name, {
-            configurable: false,
-            enumerable: true,
-            get: memoize(fn)
-          });
-        } else if (typeof descriptor2.value === "object") {
-          Object.defineProperty(obj, name, {
-            configurable: false,
-            enumerable: true,
-            writable: false,
-            value: mergeExports({}, descriptor2.value)
-          });
-        } else {
-          throw new Error(
-            "Exposed values must be either a getter or an nested object"
-          );
-        }
-      }
-      return (
-        /** @type {A & B} */
-        Object.freeze(obj)
-      );
-    };
-    module2.exports = mergeExports(
-      {},
-      {
-        get Source() {
-          return require_Source();
-        },
-        get RawSource() {
-          return require_RawSource();
-        },
-        get OriginalSource() {
-          return require_OriginalSource();
-        },
-        get SourceMapSource() {
-          return require_SourceMapSource();
-        },
-        get CachedSource() {
-          return require_CachedSource();
-        },
-        get ConcatSource() {
-          return require_ConcatSource();
-        },
-        get ReplaceSource() {
-          return require_ReplaceSource();
-        },
-        get PrefixSource() {
-          return require_PrefixSource();
-        },
-        get SizeOnlySource() {
-          return require_SizeOnlySource();
-        },
-        get CompatSource() {
-          return require_CompatSource();
-        },
-        util: {
-          get stringBufferUtils() {
-            return require_stringBufferUtils();
+  "../../node_modules/.pnpm/webpack-sources@3.2.3/node_modules/webpack-sources/lib/index.js"(exports2) {
+    var defineExport = (name, fn) => {
+      let value2;
+      Object.defineProperty(exports2, name, {
+        get: () => {
+          if (fn !== void 0) {
+            value2 = fn();
+            fn = void 0;
           }
-        }
-      }
-    );
+          return value2;
+        },
+        configurable: true
+      });
+    };
+    defineExport("Source", () => require_Source());
+    defineExport("RawSource", () => require_RawSource());
+    defineExport("OriginalSource", () => require_OriginalSource());
+    defineExport("SourceMapSource", () => require_SourceMapSource());
+    defineExport("CachedSource", () => require_CachedSource());
+    defineExport("ConcatSource", () => require_ConcatSource());
+    defineExport("ReplaceSource", () => require_ReplaceSource());
+    defineExport("PrefixSource", () => require_PrefixSource());
+    defineExport("SizeOnlySource", () => require_SizeOnlySource());
+    defineExport("CompatSource", () => require_CompatSource());
   }
 });
 
@@ -34116,7 +33496,7 @@ var require_convert_source_map = __commonJS2({
 });
 
 // src/index.ts
-var import_promises4 = __toESM2(require("node:fs/promises"));
+var import_promises2 = __toESM2(require("node:fs/promises"));
 var import_node_path2 = __toESM2(require("node:path"));
 
 // src/pretty-bytes.ts
@@ -34366,20 +33746,20 @@ function denormalizeNextDataRoutes(config, buildId, shouldHandleMiddlewareDataRe
 
 // src/outputs.ts
 var import_node_path = __toESM2(require("node:path"));
-var import_fs_extra10 = __toESM2(require_lib6());
+var import_fs_extra12 = __toESM2(require_lib6());
 var import_async_sema5 = __toESM2(require_lib7());
 var import_node_handler = require("./node-handler");
 var import_build_utils = __toESM2(require_dist2());
 var import_constants2 = __toESM2(require_constants2());
 
 // src/get-edge-function-source.ts
-var import_promises3 = require("node:fs/promises");
+var import_fs_extra11 = __toESM2(require_lib6());
 var import_webpack_sources2 = __toESM2(require_lib8());
 
 // src/sourcemapped.ts
 var import_source_map = __toESM2(require_source_map());
 var import_convert_source_map = __toESM2(require_convert_source_map());
-var import_promises2 = __toESM2(require("node:fs/promises"));
+var import_fs_extra10 = __toESM2(require_lib6());
 var import_webpack_sources = __toESM2(require_lib8());
 function sourcemapped(strings, ...sources) {
   const concat = new import_webpack_sources.ConcatSource();
@@ -34402,8 +33782,8 @@ async function fileToSource(content, sourceName, fullFilePath) {
 async function getSourceMap(content, fullFilePath) {
   let map;
   try {
-    if (fullFilePath && await import_promises2.default.access(`${fullFilePath}.map`).then(() => true).catch(() => false)) {
-      const mapJson = await import_promises2.default.readFile(`${fullFilePath}.map`, "utf8");
+    if (fullFilePath && await import_fs_extra10.default.pathExists(`${fullFilePath}.map`)) {
+      const mapJson = await import_fs_extra10.default.readFile(`${fullFilePath}.map`, "utf8");
       map = import_convert_source_map.default.fromJSON(mapJson).toObject();
     } else {
       map = import_convert_source_map.default.fromComment(content).toObject();
@@ -34451,14 +33831,15 @@ async function getNextjsEdgeFunctionSource(filePaths, params, outputDir, wasm) {
   const chunks = new import_webpack_sources2.ConcatSource(raw(`globalThis._ENTRIES = {};`));
   for (const filePath of filePaths) {
     const fullFilePath = (0, import_path10.join)(outputDir, filePath);
-    const content = await (0, import_promises3.readFile)(fullFilePath, "utf8");
+    const content = await (0, import_fs_extra11.readFile)(fullFilePath, "utf8");
     chunks.add(raw(`
 /**/;`));
     chunks.add(await fileToSource(content, filePath, fullFilePath));
   }
-  const sourceResult = chunks.source();
-  const text = typeof sourceResult === "string" ? sourceResult : sourceResult.toString();
-  const wasmFiles = Object.values(wasm ?? []);
+  const text = chunks.source();
+  const wasmFiles = Object.values(wasm || {}).map(
+    (filePath) => (0, import_path10.join)(outputDir, filePath)
+  );
   await validateSize(text, wasmFiles);
   const getPageMatchCode = `(function () {
     const module = { exports: {}, loaded: false };
@@ -34483,7 +33864,7 @@ function getWasmImportStatements(wasm) {
 async function validateSize(script, wasmFiles) {
   const buffers = [Buffer.from(script, "utf8")];
   for (const filePath of wasmFiles) {
-    buffers.push(await (0, import_promises3.readFile)(filePath));
+    buffers.push(await (0, import_fs_extra11.readFile)(filePath));
   }
   const content = Buffer.concat(buffers);
   const gzipped = await gzip(content);
@@ -34498,18 +33879,18 @@ async function validateSize(script, wasmFiles) {
 
 // src/outputs.ts
 var copy = async (src, dest) => {
-  await import_fs_extra10.default.remove(dest);
-  await import_fs_extra10.default.copy(src, dest);
+  await import_fs_extra12.default.remove(dest);
+  await import_fs_extra12.default.copy(src, dest);
 };
 var writeLock = /* @__PURE__ */ new Map();
 var writeFileWithLock = async (filePath, content) => {
   await writeLock.get(filePath);
-  const writePromise = import_fs_extra10.default.writeFile(filePath, content).finally(() => writeLock.delete(filePath));
+  const writePromise = import_fs_extra12.default.writeFile(filePath, content).finally(() => writeLock.delete(filePath));
   writeLock.set(filePath, writePromise);
   return writePromise;
 };
 async function handlePublicFiles(publicFolder, vercelOutputDir, config) {
-  const topLevelItems = await import_fs_extra10.default.readdir(publicFolder).catch(() => []);
+  const topLevelItems = await import_fs_extra12.default.readdir(publicFolder).catch(() => []);
   const fsSema = new import_async_sema5.Sema(16, { capacity: topLevelItems.length });
   await Promise.all(
     topLevelItems.map(async (item) => {
@@ -34521,7 +33902,7 @@ async function handlePublicFiles(publicFolder, vercelOutputDir, config) {
         item
       );
       const destDirectory = import_node_path.default.dirname(destination);
-      await import_fs_extra10.default.mkdir(destDirectory, { recursive: true });
+      await import_fs_extra12.default.mkdir(destDirectory, { recursive: true });
       await copy(import_node_path.default.join(publicFolder, item), destination);
       fsSema.release();
     })
@@ -34550,12 +33931,12 @@ async function handleStaticOutputs(outputs, {
         output.pathname + (isHtml ? ".html" : "")
       );
       const destDirectory = import_node_path.default.dirname(destination);
-      await import_fs_extra10.default.mkdir(destDirectory, { recursive: true });
+      await import_fs_extra12.default.mkdir(destDirectory, { recursive: true });
       await copy(output.filePath, destination);
       fsSema.release();
     })
   );
-  await import_fs_extra10.default.writeFile(
+  await import_fs_extra12.default.writeFile(
     import_node_path.default.posix.join(
       vercelOutputDir,
       "static",
@@ -34600,7 +33981,7 @@ async function handleNodeOutputs(nodeOutputs, {
         functionsDir,
         `${output.pathname === "/" ? "/index" : output.pathname}.func`
       );
-      await import_fs_extra10.default.mkdir(functionDir, { recursive: true });
+      await import_fs_extra12.default.mkdir(functionDir, { recursive: true });
       const files = {};
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
         files[relPath] = import_node_path.default.posix.relative(repoRoot, fsPath);
@@ -34622,7 +34003,7 @@ async function handleNodeOutputs(nodeOutputs, {
         handlerRelativeDir,
         "___next_launcher.cjs"
       );
-      await import_fs_extra10.default.mkdir(import_node_path.default.dirname(handlerFilePath), { recursive: true });
+      await import_fs_extra12.default.mkdir(import_node_path.default.dirname(handlerFilePath), { recursive: true });
       await writeFileWithLock(
         handlerFilePath,
         (0, import_node_handler.getHandlerSource)({
@@ -34709,10 +34090,10 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           `${output.pathname === "/" ? "/index" : output.pathname}.func`
         );
         if (output.pathname !== parentNodeOutput.pathname) {
-          await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), {
+          await import_fs_extra12.default.mkdir(import_node_path.default.dirname(prerenderFunctionDir), {
             recursive: true
           });
-          await import_fs_extra10.default.symlink(
+          await import_fs_extra12.default.symlink(
             import_node_path.default.relative(
               import_node_path.default.dirname(prerenderFunctionDir),
               parentFunctionDir
@@ -34729,7 +34110,7 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           output.fallback?.initialHeaders
         );
         if (output.fallback?.postponedState && output.fallback.filePath && prerenderFallbackPath) {
-          const fallbackHtml = await import_fs_extra10.default.readFile(
+          const fallbackHtml = await import_fs_extra12.default.readFile(
             output.fallback.filePath,
             "utf8"
           );
@@ -34739,7 +34120,7 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           );
           initialHeaders["content-type"] = `application/x-nextjs-pre-render; state-length=${output.fallback.postponedState.length}; origin="text/html; charset=utf-8"`;
         }
-        await import_fs_extra10.default.mkdir(import_node_path.default.dirname(prerenderConfigPath), { recursive: true });
+        await import_fs_extra12.default.mkdir(import_node_path.default.dirname(prerenderConfigPath), { recursive: true });
         await writeFileWithLock(
           prerenderConfigPath,
           JSON.stringify(
@@ -34799,7 +34180,7 @@ async function handleEdgeOutputs(edgeOutputs, {
         functionsDir,
         `${output.pathname === "/" ? "index" : output.pathname}.func`
       );
-      await import_fs_extra10.default.mkdir(functionDir, { recursive: true });
+      await import_fs_extra12.default.mkdir(functionDir, { recursive: true });
       const files = {};
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
         files[relPath] = import_node_path.default.posix.relative(repoRoot, fsPath);
@@ -34832,7 +34213,7 @@ async function handleEdgeOutputs(edgeOutputs, {
         handlerRelativeDir,
         "index.js"
       );
-      await import_fs_extra10.default.mkdir(import_node_path.default.dirname(handlerFilePath), { recursive: true });
+      await import_fs_extra12.default.mkdir(import_node_path.default.dirname(handlerFilePath), { recursive: true });
       await writeFileWithLock(handlerFilePath, edgeSource.toString());
       const edgeConfig = {
         runtime: "edge",
@@ -34887,7 +34268,7 @@ async function usesSrcDirectory(workPath) {
   if (!_usesSrcCache) {
     const sourcePages = import_node_path.default.join(workPath, "src", "pages");
     try {
-      if ((await import_fs_extra10.default.stat(sourcePages)).isDirectory()) {
+      if ((await import_fs_extra12.default.stat(sourcePages)).isDirectory()) {
         _usesSrcCache = true;
       }
     } catch (_err) {
@@ -34897,7 +34278,7 @@ async function usesSrcDirectory(workPath) {
   if (!_usesSrcCache) {
     const sourceAppdir = import_node_path.default.join(workPath, "src", "app");
     try {
-      if ((await import_fs_extra10.default.stat(sourceAppdir)).isDirectory()) {
+      if ((await import_fs_extra12.default.stat(sourceAppdir)).isDirectory()) {
         _usesSrcCache = true;
       }
     } catch (_err) {
@@ -34907,7 +34288,7 @@ async function usesSrcDirectory(workPath) {
   return Boolean(_usesSrcCache);
 }
 function isDirectory2(path3) {
-  return import_fs_extra10.default.existsSync(path3) && import_fs_extra10.default.lstatSync(path3).isDirectory();
+  return import_fs_extra12.default.existsSync(path3) && import_fs_extra12.default.lstatSync(path3).isDirectory();
 }
 async function getSourceFilePathFromPage({
   workPath,
@@ -34924,7 +34305,7 @@ async function getSourceFilePathFromPage({
     if (usesSrcDir) {
       fsPath = import_node_path.default.join(workPath, "src", pageType, page);
     }
-    if (import_fs_extra10.default.existsSync(fsPath)) {
+    if (import_fs_extra12.default.existsSync(fsPath)) {
       return import_node_path.default.relative(workPath, fsPath);
     }
     const extensionless = fsPath;
@@ -34933,7 +34314,7 @@ async function getSourceFilePathFromPage({
       if (pageType === "app" && extensionless === import_node_path.default.join(workPath, `${usesSrcDir ? "src/" : ""}app/index`)) {
         fsPath = `${extensionless.replace(/index$/, "page")}.${ext}`;
       }
-      if (import_fs_extra10.default.existsSync(fsPath)) {
+      if (import_fs_extra12.default.existsSync(fsPath)) {
         return import_node_path.default.relative(workPath, fsPath);
       }
     }
@@ -34941,18 +34322,18 @@ async function getSourceFilePathFromPage({
       if (pageType === "pages") {
         for (const ext of extensionsToTry) {
           fsPath = import_node_path.default.join(extensionless, `index.${ext}`);
-          if (import_fs_extra10.default.existsSync(fsPath)) {
+          if (import_fs_extra12.default.existsSync(fsPath)) {
             return import_node_path.default.relative(workPath, fsPath);
           }
         }
       } else {
         for (const ext of extensionsToTry) {
           fsPath = import_node_path.default.join(extensionless, `page.${ext}`);
-          if (import_fs_extra10.default.existsSync(fsPath)) {
+          if (import_fs_extra12.default.existsSync(fsPath)) {
             return import_node_path.default.relative(workPath, fsPath);
           }
           fsPath = import_node_path.default.join(extensionless, `route.${ext}`);
-          if (import_fs_extra10.default.existsSync(fsPath)) {
+          if (import_fs_extra12.default.existsSync(fsPath)) {
             return import_node_path.default.relative(workPath, fsPath);
           }
         }
@@ -34989,7 +34370,7 @@ var myAdapter = {
     nextVersion
   }) {
     const vercelOutputDir = import_node_path2.default.join(distDir, "output");
-    await import_promises4.default.mkdir(vercelOutputDir, { recursive: true });
+    await import_promises2.default.mkdir(vercelOutputDir, { recursive: true });
     const escapedBuildId = escapeStringRegexp(buildId);
     const hasMiddleware = Boolean(outputs.middleware);
     const hasAppDir = outputs.appPages.length > 0 || outputs.appRoutes.length > 0;
@@ -35702,7 +35083,7 @@ var myAdapter = {
       ]
     ];
     const outputConfigPath = import_node_path2.default.join(vercelOutputDir, "config.json");
-    await import_promises4.default.writeFile(outputConfigPath, JSON.stringify(vercelConfig2, null, 2));
+    await import_promises2.default.writeFile(outputConfigPath, JSON.stringify(vercelConfig2, null, 2));
   }
 };
 module.exports = myAdapter;
