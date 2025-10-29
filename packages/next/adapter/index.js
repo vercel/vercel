@@ -34456,7 +34456,8 @@ async function handleNodeOutputs(nodeOutputs, {
             supportsResponseStreaming: true,
             experimentalAllowBundling: true,
             // middleware handler always expects Request/Response interface
-            useWebApi: isMiddleware
+            useWebApi: isMiddleware,
+            launcherType: "Nodejs"
           }
         )
       );
