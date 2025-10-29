@@ -70,13 +70,13 @@ export default async function dangerouslyDelete(
     itemValue = tag;
     flag = '--tag';
     postUrl = '/v1/edge-cache/dangerously-delete-by-tags';
-    postBody = { tags: tag };
+    postBody = { tags: tag, revalidationDeadlineSeconds: revalidate };
   } else if (srcimg) {
     itemName = 'source image';
     itemValue = srcimg;
     flag = '--srcimg';
     postUrl = '/v1/edge-cache/dangerously-delete-by-src-images';
-    postBody = { srcImages: [srcimg] };
+    postBody = { srcImages: [srcimg], revalidationDeadlineSeconds: revalidate };
   } else {
     output.error(`The --tag or --srcimg option is required`);
     return 1;

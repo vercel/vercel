@@ -87,6 +87,31 @@ describe('cache dangerously-delete', () => {
     );
   });
 
+  it('should succeed with --tag and --revalidation-deadline-seconds', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-by-tags`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          tags: 'foo',
+          revalidationDeadlineSeconds: 60,
+        });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--tag=foo',
+      '--revalidation-deadline-seconds=60',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully deleted all cached content associated with tag foo'
+    );
+  });
+
   it('should ask for confirmation when --tag is missing --yes', async () => {
     client.setArgv('cache', 'dangerously-delete', '--tag=foo');
     const exitCode = await cache(client);
@@ -124,6 +149,31 @@ describe('cache dangerously-delete', () => {
       'cache',
       'dangerously-delete',
       '--srcimg=/api/avatar/1',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully deleted all cached content associated with source image /api/avatar/1'
+    );
+  });
+
+  it('should succeed with --srcimg and --revalidation-deadline-seconds', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-by-src-images`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          srcImages: ['/api/avatar/1'],
+          revalidationDeadlineSeconds: 60,
+        });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--srcimg=/api/avatar/1',
+      '--revalidation-deadline-seconds=60',
       '--yes'
     );
     const exitCode = await cache(client);
