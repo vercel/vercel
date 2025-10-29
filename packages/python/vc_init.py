@@ -64,20 +64,17 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
 
             context = storage.get()
             if context is not None:
-                try:
-                    send_message({
-                        "type": "log",
-                        "payload": {
-                            "context": {
-                                "invocationId": context['invocationId'],
-                                "requestId": context['requestId'],
-                            },
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "level": level,
-                        }
-                    })
-                except Exception:
-                    pass
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
+                    }
+                })
             else:
                 # If IPC is not ready, enqueue the message to be sent later.
                 enqueue_or_send_message({
@@ -145,17 +142,18 @@ ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 storage: contextvars.ContextVar[dict | None] = contextvars.ContextVar('storage', default=None)
 send_message = lambda m: None
 
+
 # Buffer for pre-handshake logs (to avoid blocking IPC on startup)
 _ipc_ready = False
 _init_log_buf: list[dict] = []
 _INIT_LOG_BUF_MAX_BYTES = 1_000_000
 _init_log_buf_bytes = 0
 
+
 def enqueue_or_send_message(msg: dict):
     global _init_log_buf_bytes
     if _ipc_ready:
-        with contextlib.suppress(Exception):
-            send_message(msg)
+        send_message(msg)
         return
 
     enc_len = len(json.dumps(msg))
@@ -165,18 +163,20 @@ def enqueue_or_send_message(msg: dict):
         _init_log_buf_bytes += enc_len
     else:
         # Fallback so message is not lost if buffer is full
-        try:
+        with contextlib.suppress(Exception):
             payload = msg.get("payload", {})
             decoded = base64.b64decode(payload.get("message", "")).decode(errors="ignore")
             sys.stderr.write(decoded + "\n")
-        except Exception:
-            pass
 
 
 if 'VERCEL_IPC_PATH' in os.environ:
     with contextlib.suppress(Exception):
         ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
-        send_message = lambda message: ipc_sock.sendall((json.dumps(message) + '\0').encode())
+
+        def send_message(message: dict):
+            with contextlib.suppress(Exception):
+                ipc_sock.sendall((json.dumps(message) + '\0').encode())
+
         setup_logging(send_message, storage)
 
 
@@ -482,8 +482,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
         # Mark IPC as ready and flush any buffered init logs
         _ipc_ready = True
         for m in _init_log_buf:
-            with contextlib.suppress(Exception):
-                send_message(m)
+            send_message(m)
         _init_log_buf.clear()
         server.serve_forever()
 
