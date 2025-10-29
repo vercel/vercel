@@ -34295,9 +34295,12 @@ var copy = async (src, dest) => {
   await import_fs_extra12.default.copy(src, dest);
 };
 var writeLock = /* @__PURE__ */ new Map();
-var writeFileWithLock = async (filePath, content) => {
+var writeIfNotExists = async (filePath, content) => {
   await writeLock.get(filePath);
-  const writePromise = import_promises2.default.writeFile(filePath, content).finally(() => writeLock.delete(filePath));
+  const writePromise = import_promises2.default.writeFile(filePath, content, { flag: "wx" }).catch((err) => {
+    if (err.code === "EEXIST") return;
+    throw err;
+  }).finally(() => writeLock.delete(filePath));
   writeLock.set(filePath, writePromise);
   return writePromise;
 };
@@ -34416,7 +34419,7 @@ async function handleNodeOutputs(nodeOutputs, {
         "___next_launcher.cjs"
       );
       await import_promises2.default.mkdir(import_node_path2.default.dirname(handlerFilePath), { recursive: true });
-      await writeFileWithLock(
+      await writeIfNotExists(
         handlerFilePath,
         (0, import_node_handler.getHandlerSource)({
           projectRelativeDistDir: import_node_path2.default.posix.relative(projectDir, distDir),
@@ -34435,7 +34438,7 @@ async function handleNodeOutputs(nodeOutputs, {
         sourceFile,
         config: vercelConfig
       });
-      await writeFileWithLock(
+      await writeIfNotExists(
         import_node_path2.default.join(functionDir, `.vc-config.json`),
         JSON.stringify(
           // TODO: strongly type this
@@ -34527,14 +34530,14 @@ async function handlePrerenderOutputs(prerenderOutputs, {
             output.fallback.filePath,
             "utf8"
           );
-          await writeFileWithLock(
+          await writeIfNotExists(
             prerenderFallbackPath,
             `${output.fallback.postponedState}${fallbackHtml}`
           );
           initialHeaders["content-type"] = `application/x-nextjs-pre-render; state-length=${output.fallback.postponedState.length}; origin="text/html; charset=utf-8"`;
         }
         await import_promises2.default.mkdir(import_node_path2.default.dirname(prerenderConfigPath), { recursive: true });
-        await writeFileWithLock(
+        await writeIfNotExists(
           prerenderConfigPath,
           JSON.stringify(
             // TODO: strongly type this
@@ -34626,7 +34629,7 @@ async function handleEdgeOutputs(edgeOutputs, {
         "index.js"
       );
       await import_promises2.default.mkdir(import_node_path2.default.dirname(handlerFilePath), { recursive: true });
-      await writeFileWithLock(handlerFilePath, edgeSource.toString());
+      await writeIfNotExists(handlerFilePath, edgeSource.toString());
       const edgeConfig = {
         runtime: "edge",
         entrypoint: import_node_path2.default.posix.join(
@@ -34641,7 +34644,7 @@ async function handleEdgeOutputs(edgeOutputs, {
           version: nextVersion
         }
       };
-      await writeFileWithLock(
+      await writeIfNotExists(
         import_node_path2.default.join(functionDir, ".vc-config.json"),
         JSON.stringify(edgeConfig)
       );
