@@ -1,5 +1,25 @@
 # @vercel/hono
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.2
+
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.1
+
+## 0.2.1
+
+### Patch Changes
+
+- Replace experimental builders for Express and Hono with a @vercel/backends package ([#14065](https://github.com/vercel/vercel/pull/14065))
+
 ## 0.2.0
 
 ### Minor Changes

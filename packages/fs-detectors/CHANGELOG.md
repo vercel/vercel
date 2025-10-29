@@ -1,5 +1,12 @@
 # @vercel/fs-detectors
 
+## 5.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`c4fca8a2ee0eeb863fbe1abeac73c6c760182303`](https://github.com/vercel/vercel/commit/c4fca8a2ee0eeb863fbe1abeac73c6c760182303)]:
+  - @vercel/routing-utils@5.2.1
+
 ## 5.7.0
 
 ### Minor Changes

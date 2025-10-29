@@ -1,9 +1,10 @@
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import fs from 'fs-extra';
+import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
+// import * as experimentalBackendBuilder from '@vercel/backends';
 
 import {
   download,
@@ -27,6 +28,7 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  // shouldUseExperimentalBackends,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -42,6 +44,7 @@ import {
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
+  sourceToRegex,
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
@@ -638,23 +641,15 @@ async function doBuild(
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
           () => {
-            if (
-              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-              'name' in builder &&
-              builder.name === 'express' &&
-              'experimentalBuild' in builder &&
-              typeof builder.experimentalBuild === 'function'
-            ) {
-              return builder.experimentalBuild(buildOptions);
-            } else if (
-              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-              'name' in builder &&
-              builder.name === 'hono' &&
-              'experimentalBuild' in builder &&
-              typeof builder.experimentalBuild === 'function'
-            ) {
-              return builder.experimentalBuild(buildOptions);
-            }
+            // Use experimental backends builder only for backend framework builders,
+            // not for static builders (which handle public/ directories)
+            // hotfix: disable experimental backends for now
+            // if (
+            //   shouldUseExperimentalBackends(buildConfig.framework) &&
+            //   builderPkg.name !== '@vercel/static'
+            // ) {
+            //   return experimentalBackendBuilder.build(buildOptions);
+            // }
             return builder.build(buildOptions);
           }
         );
@@ -706,6 +701,59 @@ async function doBuild(
             message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
             link: 'https://vercel.link/function-runtimes',
           });
+        }
+      }
+
+      // Experimental feature where users can provide a routes.json which will be mapped ot the
+      // single lambda function output, giving o11y to those routes.
+      const backendBuilders = [
+        '@vercel/express',
+        '@vercel/hono',
+        '@vercel/fastify',
+      ];
+      const isBackendBuilder = build.use && backendBuilders.includes(build.use);
+      if (process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON === '1') {
+        if ('output' in buildResult && buildResult.output && isBackendBuilder) {
+          const routesJsonPath = join(outputDir, '..', 'routes.json');
+          if (existsSync(routesJsonPath)) {
+            try {
+              const routesJson = await readJSONFile(routesJsonPath);
+              if (
+                routesJson &&
+                typeof routesJson === 'object' &&
+                'routes' in routesJson &&
+                Array.isArray(routesJson.routes)
+              ) {
+                // Convert routes from introspection format to Vercel routing format
+                const convertedRoutes = [];
+                for (const route of routesJson.routes) {
+                  if (typeof route.source !== 'string') {
+                    continue;
+                  }
+                  const { src } = sourceToRegex(route.source);
+                  const newRoute: Route = {
+                    src,
+                    dest: route.source,
+                  };
+                  if (route.methods) {
+                    newRoute.methods = route.methods;
+                  }
+                  if (route.source === '/') {
+                    continue;
+                  }
+                  convertedRoutes.push(newRoute);
+                }
+                // Wrap routes with filesystem handler and catch-all
+                (buildResult as BuildResultV2Typical).routes = [
+                  { handle: 'filesystem' },
+                  ...convertedRoutes,
+                  { src: '/(.*)', dest: '/' },
+                ];
+              }
+            } catch (error) {
+              output.error(`Failed to read routes.json: ${error}`);
+            }
+          }
         }
       }
 
