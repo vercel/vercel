@@ -205,4 +205,18 @@ describe('cache dangerously-delete', () => {
       `You are about to dangerously delete all cached content associated with source image /api/avatar/1 for project ${projectId}. To continue, run \`vercel cache dangerously-delete --srcimg /api/avatar/1 --revalidation-deadline-seconds 60 --yes\`.`
     );
   });
+
+  it('should error when both --tag and --srcimg are provided', async () => {
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--tag=foo',
+      '--srcimg=/api/avatar/1'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use both --tag and --srcimg options'
+    );
+  });
 });

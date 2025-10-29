@@ -113,4 +113,18 @@ describe('cache invalidate', () => {
       `You are about to invalidate all cached content associated with source image /api/avatar/1 for project ${projectId}. To continue, run \`vercel cache invalidate --srcimg /api/avatar/1 --yes\`.`
     );
   });
+
+  it('should error when both --tag and --srcimg are provided', async () => {
+    client.setArgv(
+      'cache',
+      'invalidate',
+      '--tag=foo',
+      '--srcimg=/api/avatar/1'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use both --tag and --srcimg options'
+    );
+  });
 });
