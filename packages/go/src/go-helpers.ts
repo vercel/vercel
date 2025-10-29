@@ -21,6 +21,9 @@ import type { Env } from '@vercel/build-utils';
 
 const streamPipeline = promisify(pipeline);
 
+// Track which versions we've already logged to avoid duplicates
+const loggedVersions = new Set<string>();
+
 const versionMap = new Map([
   ['1.24', '1.24.5'],
   ['1.23', '1.23.11'],
@@ -318,7 +321,13 @@ export async function createGo({
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
         debug(`Selected go ${version} (from ${label})`);
-        console.log(`Using Go version ${version}`);
+
+        // Only log once per version to avoid duplicate messages
+        const logKey = `go-${version}`;
+        if (!loggedVersions.has(logKey)) {
+          loggedVersions.add(logKey);
+          console.log(`Using Go version ${version} to build`);
+        }
 
         await setGoEnv(goDir);
         return new GoWrapper(env, opts);

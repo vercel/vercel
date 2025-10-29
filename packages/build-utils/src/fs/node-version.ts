@@ -3,6 +3,7 @@ import { intersects, validRange } from 'semver';
 import { BunVersion, NodeVersion, Version } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
+import execa from 'execa';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
@@ -185,17 +186,20 @@ export async function getSupportedNodeVersion(
   if (!loggedVersions.has(logKey)) {
     loggedVersions.add(logKey);
 
-    // Try to get the actual Node.js version being used
+    // Try to get the actual Node.js version being used in the build environment
     let actualVersion = selection.range;
     try {
-      // process.version gives us the actual version like 'v22.11.0'
-      const nodeVersion = process.version;
-      const nodeMajor = parseInt(nodeVersion.slice(1).split('.')[0], 10);
-      if (nodeMajor === selection.major) {
-        actualVersion = nodeVersion;
+      // Try to query the Node version from the build environment path
+      const nodePath = `/node${selection.major}/bin/node`;
+      const { stdout } = await execa(nodePath, ['--version'], {
+        timeout: 5000,
+        reject: false,
+      });
+      if (stdout && stdout.trim().startsWith('v')) {
+        actualVersion = stdout.trim();
       }
     } catch {
-      // Fall back to range if we can't get actual version
+      // If /nodeXX/bin/node doesn't exist (e.g., in dev), fall back to range
     }
 
     console.log(`Using Node.js ${actualVersion} to build`);

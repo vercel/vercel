@@ -6,6 +6,9 @@ import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
 
 class RubyVersion extends Version {}
 
+// Track which versions we've already logged to avoid duplicates
+const loggedVersions = new Set<string>();
+
 const allOptions: RubyVersion[] = [
   new RubyVersion({
     major: 3,
@@ -101,7 +104,14 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
     gemPath: join(gemHome, 'bin', 'gem'),
     vendorPath: `vendor/bundle/ruby/${major}.${minor}.0`,
   };
-  console.log(`Using Ruby ${selection.range}`);
+
+  // Only log once per version to avoid duplicate messages
+  const logKey = `ruby-${selection.range}`;
+  if (!loggedVersions.has(logKey)) {
+    loggedVersions.add(logKey);
+    console.log(`Using Ruby ${selection.range} to build`);
+  }
+
   debug(JSON.stringify(result, null, ' '));
   return result;
 }
