@@ -107,7 +107,14 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
                     }
                 })
             else:
-                self.stream.write(message)
+                enqueue_or_send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {"invocationId": "0", "requestId": 0},
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
+                    }
+                })
 
         def __getattr__(self, name):
             return getattr(self.stream, name)
