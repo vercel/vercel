@@ -274,3 +274,8 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
 export function isBunVersion(version: Version) {
   return version.runtime.startsWith('bun');
 }
+
+// Test helper to clear logged versions
+export function clearLoggedVersions() {
+  loggedVersions.clear();
+}

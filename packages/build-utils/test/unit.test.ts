@@ -2,7 +2,10 @@ import ms from 'ms';
 import path from 'path';
 import fs from 'fs-extra';
 import { strict as assert } from 'assert';
-import { getSupportedNodeVersion } from '../src/fs/node-version';
+import {
+  getSupportedNodeVersion,
+  clearLoggedVersions,
+} from '../src/fs/node-version';
 import {
   FileBlob,
   getNodeVersion,
@@ -38,16 +41,25 @@ async function expectBuilderError(promise: Promise<any>, pattern: string) {
 }
 
 let warningMessages: string[];
+let logMessages: string[];
 const originalConsoleWarn = console.warn;
+const originalConsoleLog = console.log;
+
 beforeEach(() => {
   warningMessages = [];
+  logMessages = [];
+  clearLoggedVersions(); // Clear deduplication state
   console.warn = m => {
     warningMessages.push(m);
+  };
+  console.log = m => {
+    logMessages.push(m);
   };
 });
 
 afterEach(() => {
   console.warn = originalConsoleWarn;
+  console.log = originalConsoleLog;
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
@@ -367,6 +379,51 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   } finally {
     global.Date.now = realDateNow;
   }
+});
+
+it('should log Node.js version only once when called multiple times', async () => {
+  // Clear any previous logs
+  logMessages = [];
+
+  // Call getSupportedNodeVersion multiple times with same version
+  await getSupportedNodeVersion('22.x', false);
+  await getSupportedNodeVersion('22.x', false);
+  await getSupportedNodeVersion('22.x', true);
+
+  // Filter for the "Using Node.js" message
+  const versionLogs = logMessages.filter(
+    msg => msg.includes('Using Node.js') && msg.includes('to build')
+  );
+
+  // Should only log once despite multiple calls
+  expect(versionLogs).toHaveLength(1);
+  expect(versionLogs[0]).toMatch(
+    /Using Node\.js (v?\d+\.\d+(\.\d+)?|22\.x) to build/
+  );
+});
+
+it('should log different Node.js versions separately', async () => {
+  // Clear any previous logs
+  logMessages = [];
+
+  // Call with different versions
+  await getSupportedNodeVersion('20.x', false);
+  await getSupportedNodeVersion('22.x', false);
+  await getSupportedNodeVersion('20.x', false); // Should not log again
+
+  // Filter for the "Using Node.js" message
+  const versionLogs = logMessages.filter(
+    msg => msg.includes('Using Node.js') && msg.includes('to build')
+  );
+
+  // Should log twice (once for each different version)
+  expect(versionLogs).toHaveLength(2);
+  expect(versionLogs[0]).toMatch(
+    /Using Node\.js (v?\d+\.\d+(\.\d+)?|20\.x) to build/
+  );
+  expect(versionLogs[1]).toMatch(
+    /Using Node\.js (v?\d+\.\d+(\.\d+)?|22\.x) to build/
+  );
 });
 
 it('should support initialHeaders and initialStatus correctly', async () => {
