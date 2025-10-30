@@ -6,3 +6,4 @@ __pycache__/
 .DS_Store
 .env*
 .vercel
+uv.lock

@@ -126,7 +126,7 @@ export async function detectFastapiEntrypoint(
   }
 }
 
-export async function getPyprojectTomlEntrypoint(
+export async function getPyprojectEntrypoint(
   workPath: string
 ): Promise<string | null> {
   const pyprojectData = await readConfigFile<{
@@ -178,5 +178,5 @@ export async function detectPythonEntrypoint(
     entrypoint = await detectFlaskEntrypoint(workPath, configuredEntrypoint);
   }
   if (entrypoint) return entrypoint;
-  return await getPyprojectTomlEntrypoint(workPath);
+  return await getPyprojectEntrypoint(workPath);
 }
