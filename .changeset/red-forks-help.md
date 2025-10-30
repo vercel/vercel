@@ -1,7 +1,5 @@
 ---
-"vercel": patch
-"@vercel/frameworks": patch
-"@vercel/python": patch
+"@vercel/python": major
 ---
 
 [python] allowing /api folder entrypoints for FastAPI + Flask
