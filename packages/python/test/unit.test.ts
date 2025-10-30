@@ -483,14 +483,14 @@ describe('python version fallback logging', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should log that it's falling back to latest installed
+    // Should log that no Python version is specified and which version is being used
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining(
-        'No Python version specified in pyproject.toml or Pipfile.lock'
+        'No Python version specified in pyproject.toml or Pipfile.lock. Using Python'
       )
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using latest installed version')
+      expect.stringContaining('to build')
     );
   });
 
