@@ -34609,8 +34609,8 @@ async function handleEdgeOutputs(edgeOutputs, {
           });
         }
       }
-      for (const [relPath, fsPath] of Object.entries(output.wasmAssets || {})) {
-        files[import_node_path2.default.posix.join("wasm", relPath)] = import_node_path2.default.posix.relative(
+      for (const [name, fsPath] of Object.entries(output.wasmAssets || {})) {
+        files[`wasm/${name}.wasm`] = import_node_path2.default.posix.relative(
           repoRoot,
           fsPath
         );
