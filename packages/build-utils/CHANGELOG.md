@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 12.2.2
+
+### Patch Changes
+
+- Allow Node.js 24 behind env var feature flag ([#14160](https://github.com/vercel/vercel/pull/14160))
+
+## 12.2.1
+
+### Patch Changes
+
+- Add backend util helpers ([#14152](https://github.com/vercel/vercel/pull/14152))
+
+## 12.2.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 12.1.3
 
 ### Patch Changes

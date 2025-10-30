@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.14.1
+
+### Patch Changes
+
+- Support proxy.ts in Next.js 16+ and suppress middleware warnings ([#14140](https://github.com/vercel/vercel/pull/14140))
+
+  Adds support for the new proxy.ts file format introduced in Next.js 16, while maintaining backward compatibility with middleware.ts. The builder now checks for proxy.ts first in Next.js 16+, falls back to middleware.ts, and suppresses unnecessary warnings when neither file exists. This ensures vercel.json function configurations are properly applied to proxy.ts files.
+
+## 4.14.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 4.13.4
 
 ### Patch Changes

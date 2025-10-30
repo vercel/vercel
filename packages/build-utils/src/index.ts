@@ -40,6 +40,8 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSupportedNodeVersion,
+  isBunVersion,
+  getSupportedBunVersion,
 } from './fs/node-version';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
 import debug from './debug';
@@ -75,6 +77,8 @@ export {
   getNodeBinPath,
   getNodeBinPaths,
   getSupportedNodeVersion,
+  isBunVersion,
+  getSupportedBunVersion,
   detectPackageManager,
   runNpmInstall,
   runBundleInstall,
@@ -122,3 +126,11 @@ export { getInstalledPackageVersion } from './get-installed-package-version';
 export { defaultCachePathGlob } from './default-cache-path-glob';
 
 export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
+
+export {
+  BACKEND_FRAMEWORKS,
+  BackendFramework,
+  isBackendFramework,
+  isExperimentalBackendsEnabled,
+  shouldUseExperimentalBackends,
+} from './framework-helpers';
