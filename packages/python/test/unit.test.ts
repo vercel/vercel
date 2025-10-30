@@ -448,6 +448,113 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
+describe('pyproject.toml entrypoint detection', () => {
+  it('resolves FastAPI entrypoint from pyproject scripts (uvicorn module:attr)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-fastapi-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend', 'api'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n\n[project.scripts]\napp = "uvicorn backend.api.server:main"\n',
+      }),
+      'backend/api/server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'missing.py',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend/api/server.py')).toBe(true);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Flask entrypoint from pyproject scripts (module:attr -> .py)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-flask-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n\n[project.scripts]\napp = "backend:run"\n',
+      }),
+      'backend.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'missing.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend.py')).toBe(true);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to package __init__.py when module path has no .py file', async () => {
+    const workPath = path.join(tmpdir(), `python-pyproject-init-${Date.now()}`);
+    fs.mkdirSync(path.join(workPath, 'backend', 'server'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n\n[project.scripts]\napp = "backend.server:main"\n',
+      }),
+      'backend/server/__init__.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'missing.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend/server/__init__.py')).toBe(true);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
 describe('python version fallback logging', () => {
   let mockWorkPath: string;
   let consoleLogSpy: jest.SpyInstance;
