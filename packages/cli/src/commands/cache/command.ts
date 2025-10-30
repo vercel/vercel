@@ -48,6 +48,14 @@ export const invalidateSubcommand = {
       argument: 'TAGS',
       deprecated: false,
     },
+    {
+      name: 'srcimg',
+      description: 'Source Image to invalidate',
+      shorthand: null,
+      type: String,
+      argument: 'SRCIMG',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -57,6 +65,10 @@ export const invalidateSubcommand = {
     {
       name: 'Invalidate all cached content associated with any one of multiple tags',
       value: `${packageName} cache invalidate --tag foo,bar,baz`,
+    },
+    {
+      name: 'Invalidate all cached content associated with a source image',
+      value: `${packageName} cache invalidate --srcimg /api/avatar/1`,
     },
   ],
 } as const;
@@ -77,6 +89,14 @@ export const dangerouslyDeleteSubcommand = {
       deprecated: false,
     },
     {
+      name: 'srcimg',
+      description: 'Source Image to delete',
+      shorthand: null,
+      type: String,
+      argument: 'SRCIMG',
+      deprecated: false,
+    },
+    {
       name: 'revalidation-deadline-seconds',
       description: 'Revalidation deadline in seconds',
       shorthand: null,
@@ -93,6 +113,14 @@ export const dangerouslyDeleteSubcommand = {
     {
       name: 'Dangerously delete all cached content associated with a tag if not accessed in the next hour',
       value: `${packageName} cache dangerously-delete --tag foo --revalidation-deadline-seconds 3600`,
+    },
+    {
+      name: 'Dangerously delete all cached content associated with a source image',
+      value: `${packageName} cache dangerously-delete --srcimg /api/avatar/1`,
+    },
+    {
+      name: 'Dangerously delete all cached content associated with a source image if not accessed in the next hour',
+      value: `${packageName} cache dangerously-delete --srcimg /api/avatar/1 --revalidation-deadline-seconds 3600`,
     },
   ],
 } as const;
