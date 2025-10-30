@@ -1,0 +1,24 @@
+{
+  "probes": [
+    {
+      "path": "/api/wheels",
+      "status": 200,
+      "mustContain": "example_pkg_one"
+    },
+    {
+      "path": "/api/wheels",
+      "status": 200,
+      "mustContain": "example_pkg_two"
+    },
+    {
+      "path": "/api/wheels",
+      "status": 200,
+      "mustContain": "1.0.0"
+    },
+    {
+      "path": "/api/wheels",
+      "status": 200,
+      "mustContain": "2.0.0"
+    }
+  ]
+}

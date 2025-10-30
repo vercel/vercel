@@ -1,9 +1,9 @@
 import Link from 'next/link';
 
-const Page = ({ params }) => {
+const Page = async ({ params }) => {
   return (
     <div>
-      <div id="page-param">page-param-{params.slug?.[0] ?? ''}</div>
+      <div id="page-param">page-param-{(await params).slug?.[0] ?? ''}</div>
       <Link href="/">Home</Link>
       <Link href="/foo">Foo</Link>
       <Link href="/bar">Bar</Link>

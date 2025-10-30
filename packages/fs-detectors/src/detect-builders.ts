@@ -46,6 +46,7 @@ export interface Options {
   cleanUrls?: boolean;
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
+  bunVersion?: string;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -346,10 +347,13 @@ export async function detectBuilders(
   }
 
   if (frontendBuilder) {
-    // Add @vercel/static build for public files when using @vercel/express or @vercel/hono
+    // Add @vercel/static build for public files for server-based frameworks
+    // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
+    // This applies to Express, Hono, and any Python-based server frameworks.
     if (
       frontendBuilder?.use === '@vercel/express' ||
-      frontendBuilder?.use === '@vercel/hono'
+      frontendBuilder?.use === '@vercel/hono' ||
+      frontendBuilder?.use === '@vercel/python'
     ) {
       builders.push({
         src: 'public/**/*',
@@ -460,6 +464,10 @@ function maybeGetApiBuilder(
     }
   }
 
+  if (options.bunVersion) {
+    config.bunVersion = options.bunVersion;
+  }
+
   const builder: Builder = {
     use,
     src: fileName,
@@ -538,6 +546,10 @@ function detectFrontBuilder(
 
   if (projectSettings.outputDirectory) {
     config.outputDirectory = projectSettings.outputDirectory;
+  }
+
+  if (options.bunVersion) {
+    config.bunVersion = options.bunVersion;
   }
 
   if (
@@ -711,7 +723,9 @@ function checkUnusedFunctions(
         fnKey.startsWith('pages/') ||
         fnKey.startsWith('src/pages') ||
         fnKey.startsWith('app/') ||
-        fnKey.startsWith('src/app/')
+        fnKey.startsWith('src/app/') ||
+        fnKey.startsWith('middleware') ||
+        fnKey.startsWith('src/middleware')
       ) {
         unusedFunctions.delete(fnKey);
       } else {

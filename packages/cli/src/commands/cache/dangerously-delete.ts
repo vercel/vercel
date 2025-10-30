@@ -48,20 +48,41 @@ export default async function dangerouslyDelete(
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const yes = Boolean(parsedArgs.flags['--yes']);
   const tag = parsedArgs.flags['--tag'];
+  const srcimg = parsedArgs.flags['--srcimg'];
+  const revalidate = parsedArgs.flags['--revalidation-deadline-seconds'];
   telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionTag(tag);
+  telemetry.trackCliOptionSrcimg(srcimg);
+  telemetry.trackCliOptionRevalidationDeadlineSeconds(revalidate);
 
-  if (!tag) {
-    output.error(`The --tag option is required`);
+  if (tag && srcimg) {
+    output.error(`Cannot use both --tag and --srcimg options`);
     return 1;
   }
 
-  const revalidate = parsedArgs.flags['--revalidation-deadline-seconds'];
-  telemetry.trackCliOptionRevalidationDeadlineSeconds(revalidate);
+  let itemName = '';
+  let itemValue = '';
+  let flag = '';
+  let postUrl = '';
+  let postBody = {};
+  if (tag) {
+    itemName = plural('tag', tag.split(',').length, false);
+    itemValue = tag;
+    flag = '--tag';
+    postUrl = '/v1/edge-cache/dangerously-delete-by-tags';
+    postBody = { tags: tag, revalidationDeadlineSeconds: revalidate };
+  } else if (srcimg) {
+    itemName = 'source image';
+    itemValue = srcimg;
+    flag = '--srcimg';
+    postUrl = '/v1/edge-cache/dangerously-delete-by-src-images';
+    postBody = { srcImages: [srcimg], revalidationDeadlineSeconds: revalidate };
+  } else {
+    output.error(`The --tag or --srcimg option is required`);
+    return 1;
+  }
 
-  const tagsDesc = plural('tag', tag.split(',').length, false);
-  const msg = `You are about to dangerously delete all cached content associated with ${tagsDesc} ${tag} for project ${project.name}`;
-  const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
+  const msg = `You are about to dangerously delete all cached content associated with ${itemName} ${itemValue} for project ${project.name}`;
 
   if (!yes) {
     if (!process.stdin.isTTY) {
@@ -70,7 +91,7 @@ export default async function dangerouslyDelete(
           ? ` --revalidation-deadline-seconds ${revalidate}`
           : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete --tag ${tag}${optional} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache dangerously-delete ${flag} ${itemValue}${optional} --yes`)}.`
       );
       return 1;
     }
@@ -81,20 +102,15 @@ export default async function dangerouslyDelete(
     }
   }
 
-  await client.fetch(`/v1/edge-cache/dangerously-delete-by-tags?${query}`, {
+  await client.fetch(`${postUrl}?projectIdOrName=${project.id}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      tags: tag,
-      revalidationDeadlineSeconds: revalidate,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(postBody),
   });
 
   output.print(
     prependEmoji(
-      `Successfully deleted all cached content associated with ${tagsDesc} ${tag}`,
+      `Successfully deleted all cached content associated with ${itemName} ${itemValue}`,
       emoji('success')
     ) + `\n`
   );

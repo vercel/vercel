@@ -1319,6 +1319,51 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
+  // Skip on Windows because route parameters with colons (e.g., `:id`) are used as filesystem paths
+  it.skipIf(process.platform === 'win32')(
+    'should apply routes from `.vercel/routes.json` when VERCEL_EXPERIMENTAL_ROUTES_JSON is enabled',
+    async () => {
+      const cwd = fixture('express-with-routes-json');
+      const output = join(cwd, '.vercel/output');
+
+      try {
+        process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON = '1';
+        client.cwd = cwd;
+        const exitCode = await build(client);
+        expect(exitCode).toEqual(0);
+
+        // `config.json` should include routes from `.vercel/routes.json`
+        const config = await fs.readJSON(join(output, 'config.json'));
+        expect(config).toMatchObject({
+          version: 3,
+          routes: [
+            { handle: 'filesystem' },
+            {
+              src: expect.stringMatching(/^\^.*users.*\$$/),
+              dest: '/users/:id',
+              methods: ['GET'],
+            },
+            {
+              src: expect.stringMatching(/^\^.*api.*posts.*\$$/),
+              dest: '/api/posts/:postId',
+              methods: ['GET'],
+            },
+            {
+              src: '/(.*)',
+              dest: '/',
+            },
+          ],
+        });
+
+        // "functions" directory should have the express function
+        const functions = await fs.readdir(join(output, 'functions'));
+        expect(functions).toContain('index.func');
+      } finally {
+        delete process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON;
+      }
+    }
+  );
+
   it('should build with `repo.json` link', async () => {
     const cwd = fixture('../../monorepo-link');
 
@@ -1530,12 +1575,12 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  describe('VERCEL_EXPERIMENTAL_STANDALONE_BUILD env', () => {
-    it('should convert FileFsRef to FileBlob when VERCEL_EXPERIMENTAL_STANDALONE_BUILD is used', async () => {
+  describe('--standalone flag', () => {
+    it('should convert FileFsRef to FileBlob when --standalone is used', async () => {
       const cwd = fixture('node');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD = '1';
+      client.setArgv('build', '--standalone');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1571,11 +1616,11 @@ describe.skipIf(flakey)('build', () => {
       }
     });
 
-    it('should work with static builds and VERCEL_EXPERIMENTAL_STANDALONE_BUILD env', async () => {
+    it('should work with static builds and --standalone flag', async () => {
       const cwd = fixture('static');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD = '1';
+      client.setArgv('build', '--standalone');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 

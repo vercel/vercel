@@ -1,5 +1,49 @@
 # @vercel/next
 
+## 4.14.1
+
+### Patch Changes
+
+- Support proxy.ts in Next.js 16+ and suppress middleware warnings ([#14140](https://github.com/vercel/vercel/pull/14140))
+
+  Adds support for the new proxy.ts file format introduced in Next.js 16, while maintaining backward compatibility with middleware.ts. The builder now checks for proxy.ts first in Next.js 16+, falls back to middleware.ts, and suppresses unnecessary warnings when neither file exists. This ensures vercel.json function configurations are properly applied to proxy.ts files.
+
+## 4.14.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+## 4.13.4
+
+### Patch Changes
+
+- Update locale in prerender-manifest dataRoute ([#14101](https://github.com/vercel/vercel/pull/14101))
+
+## 4.13.3
+
+### Patch Changes
+
+- Fix allowQuery logic for RDC navigations with fallback root params ([#14053](https://github.com/vercel/vercel/pull/14053))
+
+## 4.13.2
+
+### Patch Changes
+
+- Revert "Fix allowQuery logic for RDC navigations with fallback root params" ([#14051](https://github.com/vercel/vercel/pull/14051))
+
+## 4.13.1
+
+### Patch Changes
+
+- Fix allowQuery logic for RDC navigations with fallback root params ([#14040](https://github.com/vercel/vercel/pull/14040))
+
+## 4.13.0
+
+### Minor Changes
+
+- Let global error handlers handle errors that next.js passes up to the function runtime rather than directly exiting the process ([#13981](https://github.com/vercel/vercel/pull/13981))
+
 ## 4.12.6
 
 ### Patch Changes

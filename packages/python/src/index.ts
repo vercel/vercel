@@ -1,73 +1,68 @@
 import fs from 'fs';
-import execa from 'execa';
 import { promisify } from 'util';
-import { join, dirname, basename, posix as pathPosix } from 'path';
+import { join, dirname, basename, parse } from 'path';
 import {
-  getWriteableDirectory,
   download,
   glob,
   Lambda,
   FileBlob,
-  shouldServe,
   debug,
   NowBuildError,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
   type Files,
+  type ShouldServe,
   FileFsRef,
 } from '@vercel/build-utils';
 import {
   installRequirement,
   installRequirementsFile,
   resolveVendorDir,
+  exportRequirementsFromUv,
+  exportRequirementsFromPipfile,
+  getUvBinaryOrInstall,
 } from './install';
-import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { readConfigFile } from '@vercel/build-utils';
+import { getSupportedPythonVersion } from './version';
+import { startDevServer } from './start-dev-server';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-const fastapiEntrypointFilenames = ['app', 'index', 'server', 'main'];
-const fastapiEntrypointDirs = ['', 'src', 'app'];
-const fastapiContentRegex =
-  /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
-
-const fastapiCandidateEntrypoints = fastapiEntrypointFilenames.flatMap(
-  filename =>
-    fastapiEntrypointDirs.map(dir => pathPosix.join(dir, `${filename}.py`))
-);
-
-function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
-  try {
-    const fsPath = (file as FileFsRef).fsPath;
-    if (!fsPath) return false;
-    const contents = fs.readFileSync(fsPath, 'utf8');
-    return fastapiContentRegex.test(contents);
-  } catch {
-    return false;
-  }
-}
-
-async function pipenvConvert(
-  cmd: string,
-  srcDir: string,
-  env?: NodeJS.ProcessEnv
-) {
-  debug('Running pipfile2req...');
-  try {
-    const out = await execa.stdout(cmd, [], {
-      cwd: srcDir,
-      env,
-    });
-    debug('Contents of requirements.txt is: ' + out);
-    fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
-  } catch (err) {
-    console.log('Failed to run "pipfile2req"');
-    throw err;
-  }
-}
+import {
+  FASTAPI_CANDIDATE_ENTRYPOINTS,
+  detectFastapiEntrypoint,
+} from './entrypoint';
+import {
+  FLASK_CANDIDATE_ENTRYPOINTS,
+  detectFlaskEntrypoint,
+} from './entrypoint';
 
 export const version = 3;
+
+function findDir({
+  file,
+  entryDirectory,
+  workPath,
+  fsFiles,
+}: {
+  file: string;
+  entryDirectory: string;
+  workPath: string;
+  fsFiles: Record<string, unknown>;
+}): string | null {
+  if (fsFiles[join(entryDirectory, file)]) {
+    return join(workPath, entryDirectory);
+  }
+
+  if (fsFiles[file]) {
+    return workPath;
+  }
+
+  // Case 3: File not found in either location
+  return null;
+}
 
 export async function downloadFilesInWorkPath({
   entrypoint,
@@ -95,8 +90,6 @@ export const build: BuildV3 = async ({
   meta = {},
   config,
 }) => {
-  let pythonVersion = getLatestPythonVersion(meta);
-
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
@@ -123,32 +116,33 @@ export const build: BuildV3 = async ({
 
   let fsFiles = await glob('**', workPath);
 
-  // Zero-config entrypoint discovery
-  if (!fsFiles[entrypoint]) {
-    let discovered: string | undefined;
-
-    if (config?.framework === 'fastapi') {
-      const entrypointCandidates = fastapiCandidateEntrypoints.filter(
-        c => !!fsFiles[c]
-      );
-      if (entrypointCandidates.length) {
-        const fastapiEntrypoint = entrypointCandidates.find(c =>
-          isFastapiEntrypoint(fsFiles[c] as FileFsRef)
-        );
-        discovered = fastapiEntrypoint || entrypointCandidates[0];
-      }
-    }
-
-    if (discovered) {
+  // Zero config entrypoint discovery
+  if (!fsFiles[entrypoint] && config?.framework === 'fastapi') {
+    const detected = await detectFastapiEntrypoint(workPath, entrypoint);
+    if (detected) {
       debug(
-        `Resolved Python entrypoint to "${discovered}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = discovered;
-    } else if (config?.framework === 'fastapi') {
-      const searchedList = fastapiCandidateEntrypoints.join(', ');
+      entrypoint = detected;
+    } else {
+      const searchedList = FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: 'FASTAPI_ENTRYPOINT_NOT_FOUND',
         message: `No FastAPI entrypoint found. Searched for: ${searchedList}`,
+      });
+    }
+  } else if (!fsFiles[entrypoint] && config?.framework === 'flask') {
+    const detected = await detectFlaskEntrypoint(workPath, entrypoint);
+    if (detected) {
+      debug(
+        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+      );
+      entrypoint = detected;
+    } else {
+      const searchedList = FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+      throw new NowBuildError({
+        code: 'FLASK_ENTRYPOINT_NOT_FOUND',
+        message: `No Flask entrypoint found. Searched for: ${searchedList}`,
       });
     }
   }
@@ -157,6 +151,20 @@ export const build: BuildV3 = async ({
 
   const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
   const hasReqGlobal = !!fsFiles['requirements.txt'];
+
+  const uvLockDir = findDir({
+    file: 'uv.lock',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+
+  const pyprojectDir = findDir({
+    file: 'pyproject.toml',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
 
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
     ? join(workPath, entryDirectory)
@@ -169,73 +177,57 @@ export const build: BuildV3 = async ({
       ? workPath
       : null;
 
-  if (!hasReqLocal && !hasReqGlobal && (pipfileLockDir || pipfileDir)) {
-    if (pipfileLockDir) {
-      debug('Found "Pipfile.lock"');
-    } else {
-      debug('Found "Pipfile"');
+  // Determine Python version from pyproject.toml or Pipfile.lock if present.
+  let declaredPythonVersion:
+    | { version: string; source: 'Pipfile.lock' | 'pyproject.toml' }
+    | undefined;
+
+  if (pyprojectDir) {
+    let requiresPython: string | undefined;
+    try {
+      const pyproject = await readConfigFile<{
+        project?: { ['requires-python']?: string };
+      }>(join(pyprojectDir, 'pyproject.toml'));
+      requiresPython = pyproject?.project?.['requires-python'];
+    } catch (err) {
+      debug('Failed to parse pyproject.toml', err);
     }
-
-    if (pipfileLockDir) {
-      let lock: {
-        _meta?: {
-          requires?: {
-            python_version?: string;
-          };
-        };
-      } = {};
-      try {
-        const json = await readFile(
-          join(pipfileLockDir, 'Pipfile.lock'),
-          'utf8'
-        );
-        lock = JSON.parse(json);
-      } catch (err) {
-        throw new NowBuildError({
-          code: 'INVALID_PIPFILE_LOCK',
-          message: 'Unable to parse Pipfile.lock',
-        });
-      }
-      pythonVersion = getSupportedPythonVersion({
-        isDev: meta.isDev,
-        pipLockPythonVersion: lock?._meta?.requires?.python_version,
-      });
-    }
-
-    if (!hasReqLocal && !hasReqGlobal) {
-      // Convert Pipenv.Lock to requirements.txt.
-      // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
-      // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
-      // it into a separate folder.
-      const tempDir = await getWriteableDirectory();
-      await installRequirement({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        dependency: 'pipfile-requirements',
-        version: '0.3.0',
-        workPath: tempDir,
-        meta,
-        args: ['--no-warn-script-location'],
-      });
-
-      // Scope PYTHONPATH to the conversion step only, and point at the vendor dir
-      const tempVendorDir = join(tempDir, resolveVendorDir());
-      const envForConvert = { ...process.env, PYTHONPATH: tempVendorDir };
-      const convertCmd =
-        process.platform === 'win32'
-          ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
-          : join(tempVendorDir, 'bin', 'pipfile2req');
-      await pipenvConvert(
-        convertCmd,
-        pipfileLockDir || pipfileDir!,
-        envForConvert
-      );
-    } else {
+    const VERSION_REGEX = /\b\d+\.\d+\b/;
+    const exact = requiresPython?.trim().match(VERSION_REGEX)?.[0];
+    if (exact) {
+      declaredPythonVersion = { version: exact, source: 'pyproject.toml' };
       debug(
-        'Skipping Pipfile.lock conversion because "requirements.txt" exists'
+        `Found Python version ${exact} in pyproject.toml (requires-python: "${requiresPython}")`
       );
+    } else if (requiresPython) {
+      debug(
+        `Could not parse Python version from pyproject.toml requires-python: "${requiresPython}"`
+      );
+    }
+  } else if (pipfileLockDir) {
+    let lock: {
+      _meta?: { requires?: { python_version?: string } };
+    } = {};
+    try {
+      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
+      lock = JSON.parse(json);
+    } catch (err) {
+      throw new NowBuildError({
+        code: 'INVALID_PIPFILE_LOCK',
+        message: 'Unable to parse Pipfile.lock',
+      });
+    }
+    const pyFromLock = lock?._meta?.requires?.python_version;
+    if (pyFromLock) {
+      declaredPythonVersion = { version: pyFromLock, source: 'Pipfile.lock' };
+      debug(`Found Python version ${pyFromLock} in Pipfile.lock`);
     }
   }
+
+  const pythonVersion = getSupportedPythonVersion({
+    isDev: meta.isDev,
+    declaredPythonVersion,
+  });
 
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
@@ -255,35 +247,142 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  console.log('Installing required dependencies...');
+  let installationSource: string | undefined;
+  if (uvLockDir && pyprojectDir) {
+    installationSource = 'uv.lock';
+  } else if (pyprojectDir) {
+    installationSource = 'pyproject.toml';
+  } else if (pipfileLockDir) {
+    installationSource = 'Pipfile.lock';
+  } else if (pipfileDir) {
+    installationSource = 'Pipfile';
+  } else if (fsFiles[requirementsTxt] || fsFiles['requirements.txt']) {
+    installationSource = 'requirements.txt';
+  }
+  if (installationSource) {
+    console.log(
+      `Installing required dependencies from ${installationSource}...`
+    );
+  } else {
+    console.log('Installing required dependencies...');
+  }
+
+  let uvPath: string | null = null;
+  try {
+    uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+    console.log(`Using uv at "${uvPath}"`);
+  } catch (err) {
+    if (uvLockDir || (pyprojectDir && !hasReqLocal && !hasReqGlobal)) {
+      console.log('Failed to install uv');
+      throw new Error(
+        `uv is required for this project but failed to install: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
+    debug('Failed to install uv', err);
+  }
 
   await installRequirement({
     pythonPath: pythonVersion.pythonPath,
     pipPath: pythonVersion.pipPath,
+    uvPath,
     dependency: 'werkzeug',
     version: '1.0.1',
-    workPath: vendorBaseDir,
+    workPath,
+    targetDir: vendorBaseDir,
     meta,
   });
 
-  if (fsFiles[requirementsTxt]) {
+  let installedFromProjectFiles = false;
+
+  // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
+  if (uvLockDir) {
+    debug('Found "uv.lock"');
+    if (pyprojectDir) {
+      const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
+        locked: true,
+      });
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        filePath: exportedReq,
+        workPath,
+        targetDir: vendorBaseDir,
+        meta,
+      });
+      installedFromProjectFiles = true;
+    } else {
+      debug('Skipping uv export because "pyproject.toml" was not found');
+    }
+  } else if (pyprojectDir) {
+    debug('Found "pyproject.toml"');
+    if (hasReqLocal || hasReqGlobal) {
+      console.log(
+        'Detected both pyproject.toml and requirements.txt but no lockfile; using pyproject.toml'
+      );
+    }
+    const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
+      locked: false,
+    });
+    await installRequirementsFile({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      uvPath,
+      filePath: exportedReq,
+      workPath,
+      targetDir: vendorBaseDir,
+      meta,
+    });
+    installedFromProjectFiles = true;
+  } else if (pipfileLockDir || pipfileDir) {
+    debug(`Found ${pipfileLockDir ? '"Pipfile.lock"' : '"Pipfile"'}`);
+    if (hasReqLocal || hasReqGlobal) {
+      debug('Skipping Pipfile export because "requirements.txt" exists');
+    } else {
+      const exportedReq = await exportRequirementsFromPipfile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        projectDir: pipfileLockDir || pipfileDir!,
+        meta,
+      });
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        filePath: exportedReq,
+        workPath,
+        targetDir: vendorBaseDir,
+        meta,
+      });
+      installedFromProjectFiles = true;
+    }
+  }
+
+  if (!installedFromProjectFiles && fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
+      uvPath,
       filePath: requirementsTxtPath,
-      workPath: vendorBaseDir,
+      workPath,
+      targetDir: vendorBaseDir,
       meta,
     });
-  } else if (fsFiles['requirements.txt']) {
+  } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
+      uvPath,
       filePath: requirementsTxtPath,
-      workPath: vendorBaseDir,
+      workPath,
+      targetDir: vendorBaseDir,
       meta,
     });
   }
@@ -291,7 +390,7 @@ export const build: BuildV3 = async ({
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
@@ -314,6 +413,7 @@ export const build: BuildV3 = async ({
     '**/.venv/**',
     '**/venv/**',
     '**/__pycache__/**',
+    '**/public/**',
   ];
 
   const lambdaEnv = {} as Record<string, string>;
@@ -368,7 +468,51 @@ export const build: BuildV3 = async ({
   return { output };
 };
 
-export { shouldServe };
+export { startDevServer };
+
+export const shouldServe: ShouldServe = opts => {
+  const framework = opts.config.framework;
+  if (framework === 'fastapi') {
+    const requestPath = opts.requestPath.replace(/\/$/, '');
+    // Don't override API routes if another builder already matched them
+    if (requestPath.startsWith('api') && opts.hasMatched) {
+      return false;
+    }
+    // Public assets are served by the static builder / default handler
+    return true;
+  } else if (framework === 'flask') {
+    const requestPath = opts.requestPath.replace(/\/$/, '');
+    if (requestPath.startsWith('api') && opts.hasMatched) {
+      return false;
+    }
+    return true;
+  }
+  return defaultShouldServe(opts);
+};
+
+export const defaultShouldServe: ShouldServe = ({
+  entrypoint,
+  files,
+  requestPath,
+}) => {
+  requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
+  entrypoint = entrypoint.replace(/\\/g, '/'); // windows compatibility
+
+  if (entrypoint === requestPath && hasProp(files, entrypoint)) {
+    return true;
+  }
+
+  const { dir, name } = parse(entrypoint);
+  if (name === 'index' && dir === requestPath && hasProp(files, entrypoint)) {
+    return true;
+  }
+
+  return false;
+};
+
+function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
+  return Object.hasOwnProperty.call(obj, key);
+}
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };

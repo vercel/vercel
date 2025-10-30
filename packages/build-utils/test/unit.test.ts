@@ -150,6 +150,29 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
   ).toHaveProperty('runtime', 'nodejs');
 });
 
+it('should resolve to the provided bunVersion when its valid', async () => {
+  await expect(
+    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
+  ).resolves.toHaveProperty('runtime', 'bun1.x');
+});
+
+it('should resolve to the provided bunVersion on dev', async () => {
+  await expect(
+    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: true })
+  ).resolves.toHaveProperty('runtime', 'bun1.x');
+});
+
+it('should fail if the provided bun version is not valid', async () => {
+  await expect(
+    getNodeVersion(
+      '/tmp',
+      undefined,
+      { bunVersion: 'bun1.x' },
+      { isDev: false }
+    )
+  ).rejects.toThrow();
+});
+
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
@@ -299,12 +322,29 @@ it('should throw for discontinued versions', async () => {
   }
 });
 
-it('should only allow nodejs22.x when env var is set', async () => {
+it('should allow nodejs22.x', async () => {
   expect(getLatestNodeVersion()).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22.x')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22.1.0')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('>=20')).toHaveProperty('major', 22);
+});
+
+it('should only allow nodejs24.x when env var is set', async () => {
+  try {
+    expect(getLatestNodeVersion()).toHaveProperty('major', 22);
+    await expect(getSupportedNodeVersion('24.x')).rejects.toThrow();
+
+    process.env.VERCEL_ALLOW_NODEJS_24 = '1';
+
+    expect(getLatestNodeVersion()).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('24.x')).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('24')).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('24.3.0')).toHaveProperty('major', 24);
+    expect(await getSupportedNodeVersion('>=24')).toHaveProperty('major', 24);
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS_24;
+  }
 });
 
 it('should warn for deprecated versions, soon to be discontinued', async () => {
@@ -995,8 +1035,7 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   }
 
   const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
-  const nodeVersion = { major: nodeMajor } as any;
-  await runNpmInstall(fixture, [], {}, {}, nodeVersion);
+  await runNpmInstall(fixture, [], {}, {});
   expect(warningMessages).toStrictEqual([
     'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
   ]);

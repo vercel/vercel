@@ -100,11 +100,14 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
 
 async function pipInstall(
   pipPath: string,
-  pythonPath: string,
+  uvPath: string | null,
   workPath: string,
-  args: string[]
+  args: string[],
+  targetDir?: string
 ) {
-  const target = resolveVendorDir();
+  const target = targetDir
+    ? join(targetDir, resolveVendorDir())
+    : resolveVendorDir();
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
   // Disable installing to the Python user install directory, which is
@@ -114,15 +117,7 @@ async function pipInstall(
   // prefix, exec_prefix/home, or install_(plat)base
   process.env.PIP_USER = '0';
 
-  let uvBin: string | null = null;
-
-  try {
-    uvBin = await getUvBinaryOrInstall(pythonPath);
-  } catch (err) {
-    console.log('Failed to install uv, falling back to pip');
-  }
-
-  if (uvBin) {
+  if (uvPath) {
     const uvArgs = [
       'pip',
       'install',
@@ -132,16 +127,16 @@ async function pipInstall(
       target,
       ...args,
     ];
-    const prettyUv = `${uvBin} ${uvArgs.join(' ')}`;
+    const prettyUv = `${uvPath} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
     try {
-      await execa(uvBin!, uvArgs, {
+      await execa(uvPath!, uvArgs, {
         cwd: workPath,
       });
       return;
     } catch (err) {
       console.log(`Failed to run "${prettyUv}", falling back to pip`);
-      // fall through to pip
+      debug(`error: ${err}`);
     }
   }
 
@@ -162,13 +157,14 @@ async function pipInstall(
     });
   } catch (err) {
     console.log(`Failed to run "${pretty}"`);
+    debug(`error: ${err}`);
     throw err;
   }
 }
 
 async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   // If on PATH already, use it
-  const found = which.sync(uvExec, { nothrow: true });
+  const found = which.sync('uv', { nothrow: true });
   if (found) return found;
 
   // Interprerer's global/venv scripts dir
@@ -179,10 +175,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       if (fs.existsSync(uvPath)) return uvPath;
     }
   } catch (err) {
-    debug(
-      "Failed to resolve uv from interpreter's global scripts directory",
-      err
-    );
+    debug('Failed to resolve Python global scripts directory', err);
   }
 
   // Interpreter's user scripts dir
@@ -193,10 +186,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       if (fs.existsSync(uvPath)) return uvPath;
     }
   } catch (err) {
-    debug(
-      "Failed to resolve uv from interpreter's user scripts directory",
-      err
-    );
+    debug('Failed to resolve Python user scripts directory', err);
   }
 
   // Common fallbacks
@@ -207,7 +197,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       candidates.push('/usr/local/bin/uv');
       candidates.push('/opt/homebrew/bin/uv');
     } else {
-      candidates.push('C:\\Users\\Public\\uv\\uv.exe'); // minimal Windows fallback
+      candidates.push('C:\\Users\\Public\\uv\\uv.exe');
     }
     for (const p of candidates) {
       if (fs.existsSync(p)) return p;
@@ -219,12 +209,11 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   return null;
 }
 
-async function getUvBinaryOrInstall(pythonPath: string): Promise<string> {
+export async function getUvBinaryOrInstall(
+  pythonPath: string
+): Promise<string> {
   const uvBin = await maybeFindUvBin(pythonPath);
-  if (uvBin) {
-    console.log(`Using uv at "${uvBin}"`);
-    return uvBin;
-  }
+  if (uvBin) return uvBin;
 
   // Pip install uv
   // Note we're using pip directly instead of pipPath because we want to make sure
@@ -264,9 +253,11 @@ async function getUvBinaryOrInstall(pythonPath: string): Promise<string> {
 interface InstallRequirementArg {
   pythonPath: string;
   pipPath: string;
+  uvPath: string | null;
   dependency: string;
   version: string;
   workPath: string;
+  targetDir?: string;
   meta: Meta;
   args?: string[];
 }
@@ -278,27 +269,35 @@ interface InstallRequirementArg {
 export async function installRequirement({
   pythonPath,
   pipPath,
+  uvPath,
   dependency,
   version,
   workPath,
+  targetDir,
   meta,
   args = [],
 }: InstallRequirementArg) {
-  if (meta.isDev && (await isInstalled(pythonPath, dependency, workPath))) {
+  const actualTargetDir = targetDir || workPath;
+  if (
+    meta.isDev &&
+    (await isInstalled(pythonPath, dependency, actualTargetDir))
+  ) {
     debug(
-      `Skipping ${dependency} dependency installation, already installed in ${workPath}`
+      `Skipping ${dependency} dependency installation, already installed in ${actualTargetDir}`
     );
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(pipPath, pythonPath, workPath, [exact, ...args]);
+  await pipInstall(pipPath, uvPath, workPath, [exact, ...args], targetDir);
 }
 
 interface InstallRequirementsFileArg {
   pythonPath: string;
   pipPath: string;
+  uvPath: string | null;
   filePath: string;
   workPath: string;
+  targetDir?: string;
   meta: Meta;
   args?: string[];
 }
@@ -306,8 +305,10 @@ interface InstallRequirementsFileArg {
 export async function installRequirementsFile({
   pythonPath,
   pipPath,
+  uvPath,
   filePath,
   workPath,
+  targetDir,
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
@@ -316,17 +317,108 @@ export async function installRequirementsFile({
   // of the dependencies globally, whereas, for this Runtime, we want it to happen only
   // locally, so we'll run a separate installation.
 
+  const actualTargetDir = targetDir || workPath;
   if (
     meta.isDev &&
-    (await areRequirementsInstalled(pythonPath, filePath, workPath))
+    (await areRequirementsInstalled(pythonPath, filePath, actualTargetDir))
   ) {
     debug(`Skipping requirements file installation, already installed`);
     return;
   }
-  await pipInstall(pipPath, pythonPath, workPath, [
-    '--upgrade',
-    '-r',
-    filePath,
-    ...args,
-  ]);
+  await pipInstall(
+    pipPath,
+    uvPath,
+    workPath,
+    ['--upgrade', '-r', filePath, ...args],
+    targetDir
+  );
+}
+
+export async function exportRequirementsFromUv(
+  projectDir: string,
+  uvPath: string | null,
+  options: { locked?: boolean } = {}
+): Promise<string> {
+  const { locked = false } = options;
+  if (!uvPath) {
+    throw new Error('uv is not available to export requirements');
+  }
+  const args: string[] = ['export'];
+  // Prefer using the lockfile strictly if present
+  if (locked) {
+    // "--frozen" ensures the lock is respected and not updated during export
+    args.push('--frozen');
+  }
+  debug(`Running "${uvPath} ${args.join(' ')}" in ${projectDir}...`);
+  let stdout: string;
+  try {
+    const { stdout: out } = await execa(uvPath, args, { cwd: projectDir });
+    stdout = out;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${uvPath} ${args.join(' ')}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+  const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'vercel-uv-'));
+  const outPath = join(tmpDir, 'requirements.uv.txt');
+  await fs.promises.writeFile(outPath, stdout);
+  debug(`Exported requirements to ${outPath}`);
+  return outPath;
+}
+
+export async function exportRequirementsFromPipfile({
+  pythonPath,
+  pipPath,
+  uvPath,
+  projectDir,
+  meta,
+}: {
+  pythonPath: string;
+  pipPath: string;
+  uvPath: string | null;
+  projectDir: string;
+  meta: Meta;
+}): Promise<string> {
+  // Install pipfile-requirements into a temp vendor dir, then run pipfile2req
+  const tempDir = await fs.promises.mkdtemp(
+    join(os.tmpdir(), 'vercel-pipenv-')
+  );
+  await installRequirement({
+    pythonPath,
+    pipPath,
+    dependency: 'pipfile-requirements',
+    version: '0.3.0',
+    workPath: tempDir,
+    meta,
+    args: ['--no-warn-script-location'],
+    uvPath,
+  });
+
+  const tempVendorDir = join(tempDir, resolveVendorDir());
+  const convertCmd = isWin
+    ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
+    : join(tempVendorDir, 'bin', 'pipfile2req');
+
+  debug(`Running "${convertCmd}" in ${projectDir}...`);
+  let stdout: string;
+  try {
+    const { stdout: out } = await execa(convertCmd, [], {
+      cwd: projectDir,
+      env: { ...process.env, PYTHONPATH: tempVendorDir },
+    });
+    stdout = out;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${convertCmd}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+
+  const outPath = join(tempDir, 'requirements.pipenv.txt');
+  await fs.promises.writeFile(outPath, stdout);
+  debug(`Exported pipfile requirements to ${outPath}`);
+  return outPath;
 }

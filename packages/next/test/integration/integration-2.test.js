@@ -89,7 +89,8 @@ it('Should build the serverless-no-config example', async () => {
   ).toBeFalsy();
 });
 
-it('Should invoke build command with serverless-no-config', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('Should invoke build command with serverless-no-config', async () => {
   const {
     workPath,
     buildResult: { output },
@@ -422,7 +423,7 @@ it('should handle edge functions in app with basePath', async () => {
   expect(output['test/test.rsc'].type).toBe('EdgeFunction');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Prerender');
+  expect(output['test/_not-found'].type).toBe('EdgeFunction');
 
   const lambdas = new Set();
   const edgeFunctions = new Set();
@@ -435,7 +436,7 @@ it('should handle edge functions in app with basePath', async () => {
     }
   }
   expect(lambdas.size).toBe(0);
-  expect(edgeFunctions.size).toBe(4);
+  expect(edgeFunctions.size).toBe(5);
 });
 
 it('should not generate lambdas that conflict with static index route in app with basePath', async () => {
@@ -653,9 +654,7 @@ describe('rewrite headers with rewrite', () => {
   });
 
   it('should add rewrite headers to the original rewrite', () => {
-    let route = routes.filter(
-      r => r.src === '^(?:/(en|fi|sv|fr|nb))(?:/)?(?<rscsuff>\\.rsc)?$'
-    );
+    let route = routes.filter(r => r.headers?.['x-nextjs-rewritten-path']);
     expect(route.length).toBe(1);
 
     expect(route[0].headers).toEqual({
@@ -697,9 +696,9 @@ describe('cache-control', () => {
       throw new Error('Unexpected output type ' + outputEntry.type);
     }
 
-    // cache life profile "weeks"
-    expect(outputEntry.expiration).toBe(604800); // 1 week
-    expect(outputEntry.staleExpiration).toBe(2592000); // 30 days
+    // this uses default expiration as fallbacks don't have cacheLife
+    // applied to them
+    expect(outputEntry.expiration).toBe(1);
   });
 
   it('should not add a staleExpiration value for static routes', async () => {

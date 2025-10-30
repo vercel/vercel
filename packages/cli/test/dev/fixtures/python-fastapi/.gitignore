@@ -1,0 +1,10 @@
+.now
+.vercel
+__pycache__/
+**/__pycache__/
+.venv/
+venv/
+package-lock.json
+# Ensure 'public' directory is not ignored so we can test static files
+!public/
+!public/**
