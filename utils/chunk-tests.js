@@ -44,7 +44,22 @@ const runnersMap = new Map([
   ],
   [
     'test-e2e',
-    { min: 1, max: 7, testScript: 'test', runners: ['ubuntu-latest'] },
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest'],
+    },
+  ],
+  [
+    'test-e2e-node-all-versions',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest'],
+      nodeVersions: ['20', '22'],
+    },
   ],
   [
     'test-next-local',
