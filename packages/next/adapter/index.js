@@ -34601,19 +34601,19 @@ async function handleEdgeOutputs(edgeOutputs, {
       const jsRegex = /\.(m|c)?js$/;
       const nonJsAssetFiles = [];
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
-        files[relPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
-        if (!jsRegex.test(fsPath)) {
+        if (jsRegex.test(fsPath)) {
+          files[relPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
+        } else {
+          const assetPath = import_node_path2.default.posix.join("assets", relPath);
+          files[assetPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
           nonJsAssetFiles.push({
             name: relPath,
-            path: `assets/${relPath}`
+            path: assetPath
           });
         }
       }
       for (const [name, fsPath] of Object.entries(output.wasmAssets || {})) {
-        files[`wasm/${name}.wasm`] = import_node_path2.default.posix.relative(
-          repoRoot,
-          fsPath
-        );
+        files[`wasm/${name}.wasm`] = import_node_path2.default.posix.relative(repoRoot, fsPath);
       }
       files[import_node_path2.default.posix.relative(projectDir, output.filePath)] = import_node_path2.default.posix.relative(repoRoot, output.filePath);
       const filePaths = [
