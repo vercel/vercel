@@ -34598,14 +34598,21 @@ async function handleEdgeOutputs(edgeOutputs, {
       );
       await import_promises2.default.mkdir(functionDir, { recursive: true });
       const files = {};
+      const jsRegex = /\.(m|c)?js$/;
+      const nonJsAssetFiles = [];
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
         files[relPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
+        if (!jsRegex.test(fsPath)) {
+          nonJsAssetFiles.push({
+            name: relPath,
+            path: `assets/${relPath}`
+          });
+        }
       }
       for (const [relPath, fsPath] of Object.entries(output.wasmAssets || {})) {
         files[relPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
       }
       files[import_node_path2.default.posix.relative(projectDir, output.filePath)] = import_node_path2.default.posix.relative(repoRoot, output.filePath);
-      const jsRegex = /\.(m|c)?js$/;
       const filePaths = [
         import_node_path2.default.posix.relative(projectDir, output.filePath),
         ...Object.values(output.assets).map((item) => import_node_path2.default.posix.relative(projectDir, item)).filter((item) => jsRegex.test(item))
@@ -34635,20 +34642,20 @@ async function handleEdgeOutputs(edgeOutputs, {
       await writeIfNotExists(handlerFilePath, edgeSource.toString());
       const edgeConfig = {
         runtime: "edge",
+        name: params.name,
         entrypoint: import_node_path2.default.posix.join(
           import_node_path2.default.posix.relative(repoRoot, projectDir),
           "index.js"
         ),
         filePathMap: files,
+        assets: nonJsAssetFiles,
         deploymentTarget: "v8-worker",
         environment: output.config.env || {},
         regions: output.config.preferredRegion,
         framework: {
           slug: "nextjs",
           version: nextVersion
-        },
-        name: params.name
-        // assets: params.assets
+        }
       };
       await writeIfNotExists(
         import_node_path2.default.join(functionDir, ".vc-config.json"),
