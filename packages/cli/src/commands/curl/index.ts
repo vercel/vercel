@@ -16,9 +16,16 @@ import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
 import { getDeploymentUrlById } from './deployment-url';
 import { requoteArgs } from './utils';
+import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
 
 export default async function curl(client: Client): Promise<number> {
   const { print } = output;
+
+  const telemetryClient = new CurlTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   let parsedArgs = null;
 
@@ -45,6 +52,18 @@ export default async function curl(client: Client): Promise<number> {
 
   const separatorIndex = process.argv.indexOf('--');
   const path = parsedArgs.args[0];
+
+  telemetryClient.trackCliArgumentPath(path);
+
+  const deploymentFlag = flags['--deployment'];
+  if (deploymentFlag) {
+    telemetryClient.trackCliOptionDeployment(deploymentFlag);
+  }
+
+  const protectionBypassFlag = flags['--protection-bypass'];
+  if (protectionBypassFlag) {
+    telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
+  }
 
   if (!path || path === '--' || path.startsWith('--')) {
     output.error(
@@ -109,11 +128,11 @@ export default async function curl(client: Client): Promise<number> {
   const target = linkedProject.project.latestDeployments?.[0].url;
 
   let baseUrl: string;
-  const deploymentId = flags['--deployment'];
-  if (deploymentId) {
-    const deploymentUrl = await getDeploymentUrlById(client, deploymentId);
+
+  if (deploymentFlag) {
+    const deploymentUrl = await getDeploymentUrlById(client, deploymentFlag);
     if (!deploymentUrl) {
-      output.error(`No deployment found for ID "${deploymentId}"`);
+      output.error(`No deployment found for ID "${deploymentFlag}"`);
       return 1;
     }
     baseUrl = deploymentUrl;
@@ -136,8 +155,9 @@ export default async function curl(client: Client): Promise<number> {
 
   if (project.id) {
     deploymentProtectionToken =
-      flags['--protection-bypass'] ??
+      protectionBypassFlag ??
       (await getOrCreateDeploymentProtectionToken(client, link));
+
     if (deploymentProtectionToken) {
       curlFlags.unshift(
         '--header',

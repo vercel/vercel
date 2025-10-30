@@ -288,6 +288,113 @@ describe('curl', () => {
       expect(client.argv[bypassIndex + 1]).toBe(secretWithSpecialChars);
     });
   });
+
+  describe('telemetry', () => {
+    it('tracks path argument with leading slash', async () => {
+      client.setArgv('curl', '/api/hello');
+      // this throws because API endpoints aren't mocked, but telemetry is tracked before that
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+      ]);
+    });
+
+    it('tracks path argument without leading slash', async () => {
+      client.setArgv('curl', 'api/hello');
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'no-slash',
+        },
+      ]);
+    });
+
+    it('tracks deployment option with dpl_ prefix', async () => {
+      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_ABC123');
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'dpl_',
+        },
+      ]);
+    });
+
+    it('tracks deployment option without dpl_ prefix', async () => {
+      client.setArgv('curl', '/api/hello', '--deployment', 'ABC123');
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'no-prefix',
+        },
+      ]);
+    });
+
+    it('tracks protection-bypass option', async () => {
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--protection-bypass',
+        'my-secret-key'
+      );
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('tracks both deployment and protection-bypass options', async () => {
+      client.setArgv(
+        'curl',
+        'api/test',
+        '--deployment',
+        'dpl_XYZ789',
+        '--protection-bypass',
+        'another-secret'
+      );
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'no-slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'dpl_',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
 });
 
 describe('getDeploymentUrlById', () => {
