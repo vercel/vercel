@@ -34639,13 +34639,16 @@ async function handleEdgeOutputs(edgeOutputs, {
           import_node_path2.default.posix.relative(repoRoot, projectDir),
           "index.js"
         ),
-        files,
+        filePathMap: files,
+        deploymentTarget: "v8-worker",
         environment: output.config.env || {},
         regions: output.config.preferredRegion,
         framework: {
           slug: "nextjs",
           version: nextVersion
-        }
+        },
+        name: params.name
+        // assets: params.assets
       };
       await writeIfNotExists(
         import_node_path2.default.join(functionDir, ".vc-config.json"),
