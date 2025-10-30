@@ -46,7 +46,9 @@ describe('cache dangerously-delete', () => {
     client.setArgv('cache', 'dangerously-delete', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
-    await expect(client.stderr).toOutput('The --tag option is required');
+    await expect(client.stderr).toOutput(
+      'The --tag or --srcimg option is required'
+    );
   });
 
   it('should succeed with --tag', async () => {
@@ -85,7 +87,32 @@ describe('cache dangerously-delete', () => {
     );
   });
 
-  it('should ask for confirmation if the --yes option is omitted', async () => {
+  it('should succeed with --tag and --revalidation-deadline-seconds', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-by-tags`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          tags: 'foo',
+          revalidationDeadlineSeconds: 60,
+        });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--tag=foo',
+      '--revalidation-deadline-seconds=60',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully deleted all cached content associated with tag foo'
+    );
+  });
+
+  it('should ask for confirmation when --tag is missing --yes', async () => {
     client.setArgv('cache', 'dangerously-delete', '--tag=foo');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
@@ -94,7 +121,7 @@ describe('cache dangerously-delete', () => {
     );
   });
 
-  it('should ask for confirmation and if no --yes and pass through the --revalidation-deadline-seconds', async () => {
+  it('should ask for confirmation when --tag and --revalidation-deadline-seconds is missing --yes', async () => {
     client.setArgv(
       'cache',
       'dangerously-delete',
@@ -105,6 +132,91 @@ describe('cache dangerously-delete', () => {
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
       `You are about to dangerously delete all cached content associated with tag foo for project ${projectId}. To continue, run \`vercel cache dangerously-delete --tag foo --revalidation-deadline-seconds 60 --yes\`.`
+    );
+  });
+
+  it('should succeed with --srcimg', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-by-src-images`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          srcImages: ['/api/avatar/1'],
+        });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--srcimg=/api/avatar/1',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully deleted all cached content associated with source image /api/avatar/1'
+    );
+  });
+
+  it('should succeed with --srcimg and --revalidation-deadline-seconds', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-by-src-images`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          srcImages: ['/api/avatar/1'],
+          revalidationDeadlineSeconds: 60,
+        });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--srcimg=/api/avatar/1',
+      '--revalidation-deadline-seconds=60',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully deleted all cached content associated with source image /api/avatar/1'
+    );
+  });
+
+  it('should ask for confirmation when --srcimg is missing --yes', async () => {
+    client.setArgv('cache', 'dangerously-delete', '--srcimg=/api/avatar/1');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `You are about to dangerously delete all cached content associated with source image /api/avatar/1 for project ${projectId}. To continue, run \`vercel cache dangerously-delete --srcimg /api/avatar/1 --yes\`.`
+    );
+  });
+
+  it('should ask for confirmation when --srcimg and --revalidation-deadline-seconds is missing --yes', async () => {
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--srcimg=/api/avatar/1',
+      '--revalidation-deadline-seconds=60'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `You are about to dangerously delete all cached content associated with source image /api/avatar/1 for project ${projectId}. To continue, run \`vercel cache dangerously-delete --srcimg /api/avatar/1 --revalidation-deadline-seconds 60 --yes\`.`
+    );
+  });
+
+  it('should error when both --tag and --srcimg are provided', async () => {
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--tag=foo',
+      '--srcimg=/api/avatar/1'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use both --tag and --srcimg options'
     );
   });
 });

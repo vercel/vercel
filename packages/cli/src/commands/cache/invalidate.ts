@@ -48,22 +48,44 @@ export default async function invalidate(
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const yes = Boolean(parsedArgs.flags['--yes']);
   const tag = parsedArgs.flags['--tag'];
+  const srcimg = parsedArgs.flags['--srcimg'];
   telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionTag(tag);
+  telemetry.trackCliOptionSrcimg(srcimg);
 
-  if (!tag) {
-    output.error(`The --tag option is required`);
+  if (tag && srcimg) {
+    output.error(`Cannot use both --tag and --srcimg options`);
     return 1;
   }
 
-  const tagsDesc = plural('tag', tag.split(',').length, false);
-  const msg = `You are about to invalidate all cached content associated with ${tagsDesc} ${tag} for project ${project.name}`;
-  const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
+  let itemName = '';
+  let itemValue = '';
+  let flag = '';
+  let postUrl = '';
+  let postBody = {};
+  if (tag) {
+    itemName = plural('tag', tag.split(',').length, false);
+    itemValue = tag;
+    flag = '--tag';
+    postUrl = '/v1/edge-cache/invalidate-by-tags';
+    postBody = { tags: tag };
+  } else if (srcimg) {
+    itemName = 'source image';
+    itemValue = srcimg;
+    flag = '--srcimg';
+    postUrl = '/v1/edge-cache/invalidate-by-src-images';
+    postBody = { srcImages: [srcimg] };
+  } else {
+    output.error(`The --tag or --srcimg option is required`);
+    return 1;
+  }
+
+  const msg = `You are about to invalidate all cached content associated with ${itemName} ${itemValue} for project ${project.name}`;
 
   if (!yes) {
     if (!process.stdin.isTTY) {
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache invalidate --tag ${tag} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue} --yes`)}.`
       );
       return 1;
     }
@@ -74,19 +96,15 @@ export default async function invalidate(
     }
   }
 
-  await client.fetch(`/v1/edge-cache/invalidate-by-tags?${query}`, {
+  await client.fetch(`${postUrl}?projectIdOrName=${project.id}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      tags: tag,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(postBody),
   });
 
   output.print(
     prependEmoji(
-      `Successfully invalidated all cached content associated with ${tagsDesc} ${tag}`,
+      `Successfully invalidated all cached content associated with ${itemName} ${itemValue}`,
       emoji('success')
     ) + `\n`
   );

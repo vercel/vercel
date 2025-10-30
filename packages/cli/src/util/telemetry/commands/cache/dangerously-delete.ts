@@ -21,6 +21,15 @@ export class CacheDangerouslyDeleteTelemetryClient
     }
   }
 
+  trackCliOptionSrcimg(srcimg: string | undefined) {
+    if (srcimg) {
+      this.trackCliOption({
+        option: 'srcimg',
+        value: srcimg,
+      });
+    }
+  }
+
   trackCliOptionRevalidationDeadlineSeconds(seconds: number | undefined) {
     if (seconds) {
       this.trackCliOption({
