@@ -35423,7 +35423,7 @@ var myAdapter = {
         src: import_node_path3.default.posix.join(
           "/",
           config.basePath || "",
-          `/((?!index$|_error|500).*?)(?:/)?$`
+          `/((?!index$|_error$|500$).*?)(?:/)?$`
         ),
         headers: {
           "x-matched-path": "/$1"

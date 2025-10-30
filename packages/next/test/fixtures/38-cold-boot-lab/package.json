@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "https://vercel-packages.vercel.app/next/commits/dd75b8f9abfae45166af6a6196c7981602726969/next",
+    "next": "canary",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   }
