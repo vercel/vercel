@@ -1940,7 +1940,6 @@ export const frameworks = [
         value: 'dist',
       },
     },
-    dependency: 'vite',
     getOutputDirName: async () => 'dist',
   },
   {
