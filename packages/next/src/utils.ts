@@ -2858,7 +2858,11 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
-      const isDynamic = isDynamicRoute(routeKey);
+      // We added the `!!route` check because the isDynamicRoute does not
+      // currently support intercepting routes, but if it exists in the
+      // `dynamicRoutes` part of the routes manifest, then we know that it's
+      // dynamic!
+      const isDynamic = !!route || isDynamicRoute(routeKey);
       const routeKeys = route?.routeKeys;
 
       // by default allowQuery should be undefined and only set when
