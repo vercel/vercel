@@ -34601,6 +34601,9 @@ async function handleEdgeOutputs(edgeOutputs, {
       for (const [relPath, fsPath] of Object.entries(output.assets)) {
         files[relPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
       }
+      for (const [relPath, fsPath] of Object.entries(output.wasmAssets || {})) {
+        files[relPath] = import_node_path2.default.posix.relative(repoRoot, fsPath);
+      }
       files[import_node_path2.default.posix.relative(projectDir, output.filePath)] = import_node_path2.default.posix.relative(repoRoot, output.filePath);
       const jsRegex = /\.(m|c)?js$/;
       const filePaths = [
