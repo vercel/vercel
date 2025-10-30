@@ -1109,6 +1109,16 @@ describe('deploy', () => {
         { key: 'flag:logs', value: 'TRUE' },
       ]);
     });
+    it('--guidance', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--guidance');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:guidance', value: 'TRUE' },
+      ]);
+    });
     it('--name', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--name', 'okok');

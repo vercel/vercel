@@ -1,0 +1,11 @@
+{
+  "name": "fastify",
+  "type": "module",
+  "dependencies": {
+    "fastify": "5.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.17",
+    "typescript": "5.8.3"
+  }
+}

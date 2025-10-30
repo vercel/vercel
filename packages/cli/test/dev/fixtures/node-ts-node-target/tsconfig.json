@@ -4,6 +4,7 @@
 
     /* Basic Options */
     // "incremental": true,                   /* Enable incremental compilation */
+    "target": "es2018",
     "module": "CommonJS",
     // "lib": [],                             /* Specify library files to be included in the compilation. */
     // "allowJs": true,                       /* Allow javascript files to be compiled. */

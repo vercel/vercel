@@ -1,5 +1,77 @@
 # @vercel/python
 
+## 5.0.10
+
+### Patch Changes
+
+- [python] flask start dev server ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+- [python] streaming e2e tests ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+## 5.0.9
+
+### Patch Changes
+
+- reverts fastapi background task commit ([#14074](https://github.com/vercel/vercel/pull/14074))
+
+## 5.0.8
+
+### Patch Changes
+
+- [python] FastAPI background tasks bugfix, enhanced probes and fixture ([#14050](https://github.com/vercel/vercel/pull/14050))
+
+- [python] flask zero-config ([#14055](https://github.com/vercel/vercel/pull/14055))
+
+## 5.0.7
+
+### Patch Changes
+
+- [python] fixes logging categorization ([#14035](https://github.com/vercel/vercel/pull/14035))
+
+- [python] better build logging ([#14026](https://github.com/vercel/vercel/pull/14026))
+
+## 5.0.6
+
+### Patch Changes
+
+- [python] switch build pip install step to prefer uv ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- [python] FastAPI background task support ([#14011](https://github.com/vercel/vercel/pull/14011))
+
+- [python] relative paths in requirements.txt fix ([#14022](https://github.com/vercel/vercel/pull/14022))
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+## 5.0.5
+
+### Patch Changes
+
+- [python] switch build pip install step to prefer uv ([#13953](https://github.com/vercel/vercel/pull/13953))
+
+## 5.0.4
+
+### Patch Changes
+
+- [python]: move python packages vendor dir out of /cache ([#13921](https://github.com/vercel/vercel/pull/13921))
+
+## 5.0.3
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
+## 5.0.2
+
+### Patch Changes
+
+- Vercel build command on python projects installs dependencies into vendor dir instead of project root. ([#13884](https://github.com/vercel/vercel/pull/13884))
+
+## 5.0.1
+
+### Patch Changes
+
+- fix(python): Avoid uploading pycache ([#13909](https://github.com/vercel/vercel/pull/13909))
+
 ## 5.0.0
 
 ### Major Changes

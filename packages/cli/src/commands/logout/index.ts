@@ -42,9 +42,12 @@ export default async function logout(client: Client): Promise<number> {
     return 0;
   }
 
-  if (authConfig.type === 'oauth') {
+  // Unless the authConfig has a refreshToken, fall back to legacy logout
+  if ('refreshToken' in authConfig) {
     return await future(client);
   }
+
+  output.debug('Falling back to legacy logout');
 
   if (!authConfig.token) {
     output.note(

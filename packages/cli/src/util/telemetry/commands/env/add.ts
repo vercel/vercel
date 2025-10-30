@@ -50,4 +50,10 @@ export class EnvAddTelemetryClient
       this.trackCliFlag('force');
     }
   }
+
+  trackCliFlagGuidance(guidance: boolean | undefined) {
+    if (guidance) {
+      this.trackCliFlag('guidance');
+    }
+  }
 }

@@ -1,5 +1,102 @@
 # @vercel/frameworks
 
+## 3.14.0
+
+### Minor Changes
+
+- Add zero-config support for Fastify ([#14120](https://github.com/vercel/vercel/pull/14120))
+
+## 3.13.0
+
+### Minor Changes
+
+- Add root main as entrypoint for NestJS ([#14105](https://github.com/vercel/vercel/pull/14105))
+
+## 3.12.0
+
+### Minor Changes
+
+- Update nitro framework detection to detect nitro package ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+### Patch Changes
+
+- Add support for additional entrypoints in NestJS ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+## 3.11.1
+
+### Patch Changes
+
+- [python] flask zero-config ([#14055](https://github.com/vercel/vercel/pull/14055))
+
+## 3.11.0
+
+### Minor Changes
+
+- Add zero config support for NestJS ([#14009](https://github.com/vercel/vercel/pull/14009))
+
+## 3.10.0
+
+### Minor Changes
+
+- Add h3 example ([#14021](https://github.com/vercel/vercel/pull/14021))
+
+### Patch Changes
+
+- [python] fastapi route redirects fix ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+## 3.9.3
+
+### Patch Changes
+
+- [python] update fastapi logo ([#13982](https://github.com/vercel/vercel/pull/13982))
+
+## 3.9.2
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+## 3.9.1
+
+### Patch Changes
+
+- [python] framework demo + removed experimental ([#13959](https://github.com/vercel/vercel/pull/13959))
+
+## 3.9.0
+
+### Minor Changes
+
+- Add h3 zero config support ([#13942](https://github.com/vercel/vercel/pull/13942))
+
+## 3.8.5
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
+## 3.8.4
+
+### Patch Changes
+
+- This updates `Nuxt.js` -> `Nuxt`, detects Nuxt if the nightly version is installed, and updates the development command to nuxt dev. ([#13606](https://github.com/vercel/vercel/pull/13606))
+
+## 3.8.3
+
+### Patch Changes
+
+- Adds FastAPI to the list of auto-detected frameworks ([#13877](https://github.com/vercel/vercel/pull/13877))
+
+## 3.8.2
+
+### Patch Changes
+
+- Add .cts support to express and hono builders ([#13828](https://github.com/vercel/vercel/pull/13828))
+
+- - Expand framework detection to src/app and src/server files. ([#13828](https://github.com/vercel/vercel/pull/13828))
+  - Improve handling when multiple entrypoints are detected.
+
 ## 3.8.1
 
 ### Patch Changes
