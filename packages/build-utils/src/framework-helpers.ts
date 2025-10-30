@@ -7,6 +7,7 @@ export const BACKEND_FRAMEWORKS = [
   'h3',
   'nestjs',
   'fastify',
+  'elysia',
 ] as const;
 
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
