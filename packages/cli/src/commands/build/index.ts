@@ -4,7 +4,6 @@ import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
-// import * as experimentalBackendBuilder from '@vercel/backends';
 
 import {
   download,
@@ -28,7 +27,7 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
-  // shouldUseExperimentalBackends,
+  shouldUseExperimentalBackends,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -640,16 +639,18 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          () => {
+          async () => {
             // Use experimental backends builder only for backend framework builders,
             // not for static builders (which handle public/ directories)
-            // hotfix: disable experimental backends for now
-            // if (
-            //   shouldUseExperimentalBackends(buildConfig.framework) &&
-            //   builderPkg.name !== '@vercel/static'
-            // ) {
-            //   return experimentalBackendBuilder.build(buildOptions);
-            // }
+            if (
+              shouldUseExperimentalBackends(buildConfig.framework) &&
+              builderPkg.name !== '@vercel/static'
+            ) {
+              const experimentalBackendBuilder = await import(
+                '@vercel/backends'
+              );
+              return experimentalBackendBuilder.build(buildOptions);
+            }
             return builder.build(buildOptions);
           }
         );
