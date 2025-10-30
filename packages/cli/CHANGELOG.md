@@ -1,5 +1,11 @@
 # vercel
 
+## 48.7.0
+
+### Minor Changes
+
+- [cli] add new commands `vercel cache invalidate --srcimg` ([#14169](https://github.com/vercel/vercel/pull/14169))
+
 ## 48.6.7
 
 ### Patch Changes
