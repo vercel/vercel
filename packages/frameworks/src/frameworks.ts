@@ -2068,6 +2068,7 @@ export const frameworks = [
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
     useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
         {
@@ -2119,6 +2120,7 @@ export const frameworks = [
     description: 'A Flask app, ready for production',
     website: 'https://flask.palletsprojects.com',
     useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
         {
@@ -3347,6 +3349,229 @@ export const frameworks = [
       },
     },
     dependency: 'nestjs',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Elysia',
+    slug: 'elysia',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/elysia.svg',
+    tagline: 'Ergonomic framework for humans',
+    description:
+      'TypeScript with End-to-End Type Safety, type integrity, and exceptional developer experience. Supercharged by Bun.',
+    website: 'https://elysiajs.com/',
+    useRuntime: { src: 'index.js', use: '@vercel/elysia' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: 'elysia' }],
+      some: [
+        {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+
+        {
+          path: 'src/server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']elysia["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
     getOutputDirName: async () => 'public',
   },
   {
