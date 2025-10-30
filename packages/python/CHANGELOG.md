@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.0.0
+
+### Major Changes
+
+- [python] allowing /api folder entrypoints for FastAPI + Flask ([#14168](https://github.com/vercel/vercel/pull/14168))
+
 ## 5.0.10
 
 ### Patch Changes

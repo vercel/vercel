@@ -1,5 +1,21 @@
 # vercel
 
+## 48.7.1
+
+### Patch Changes
+
+- Re-enable experimental backends support ([#14163](https://github.com/vercel/vercel/pull/14163))
+
+- Updated dependencies [[`055f9cd9f560085cabe243e2d213b62dbdb5160c`](https://github.com/vercel/vercel/commit/055f9cd9f560085cabe243e2d213b62dbdb5160c), [`55a1f7691ab944e133a43fc859fb8f373c5982c0`](https://github.com/vercel/vercel/commit/55a1f7691ab944e133a43fc859fb8f373c5982c0)]:
+  - @vercel/python@6.0.0
+  - @vercel/build-utils@12.2.3
+  - @vercel/node@5.5.3
+  - @vercel/backends@0.0.4
+  - @vercel/express@0.1.4
+  - @vercel/h3@0.1.10
+  - @vercel/hono@0.2.4
+  - @vercel/static-build@2.8.3
+
 ## 48.7.0
 
 ### Minor Changes

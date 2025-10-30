@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.14.1
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
 ## 3.14.0
 
 ### Minor Changes

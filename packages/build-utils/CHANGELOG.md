@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 12.2.3
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
 ## 12.2.2
 
 ### Patch Changes
