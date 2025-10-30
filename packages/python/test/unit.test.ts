@@ -338,7 +338,7 @@ describe('fastapi entrypoint discovery', () => {
         config: { framework: 'fastapi' },
         repoRootPath: mockWorkPath,
       })
-    ).rejects.toThrow('No FastAPI entrypoint found');
+    ).rejects.toThrow(/No fastapi entrypoint found/i);
 
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
