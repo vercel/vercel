@@ -52,7 +52,7 @@ const runnersMap = new Map([
     },
   ],
   [
-    'test-e2e-node-20-22',
+    'test-e2e-node-all-versions',
     {
       min: 1,
       max: 7,
