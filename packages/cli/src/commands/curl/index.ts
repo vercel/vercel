@@ -137,10 +137,6 @@ export default async function curl(client: Client): Promise<number> {
     }
     baseUrl = deploymentUrl;
   } else if (target) {
-    if (!target) {
-      output.error(`No deployment found for environment "${target}"`);
-      return 1;
-    }
     baseUrl = `https://${target}`;
   } else {
     throw new Error('No deployment URL found for the project');
@@ -154,9 +150,16 @@ export default async function curl(client: Client): Promise<number> {
   let deploymentProtectionToken: string | null = null;
 
   if (project.id) {
-    deploymentProtectionToken =
-      protectionBypassFlag ??
-      (await getOrCreateDeploymentProtectionToken(client, link));
+    try {
+      deploymentProtectionToken =
+        protectionBypassFlag ??
+        (await getOrCreateDeploymentProtectionToken(client, link));
+    } catch (err) {
+      output.error(
+        `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`
+      );
+      return 1;
+    }
 
     if (deploymentProtectionToken) {
       curlFlags.unshift(

@@ -2,6 +2,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
+import { useUser } from '../../../mocks/user';
+import { useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
 
 let spawnMock: ReturnType<typeof vi.fn>;
 vi.mock('child_process', () => ({
@@ -286,6 +289,55 @@ describe('curl', () => {
 
       const bypassIndex = client.argv.indexOf('--protection-bypass');
       expect(client.argv[bypassIndex + 1]).toBe(secretWithSpecialChars);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle getOrCreateDeploymentProtectionToken failure gracefully', async () => {
+      // Import setupUnitFixture to use a real fixture
+      const { setupUnitFixture } = await import(
+        '../../../helpers/setup-unit-fixture'
+      );
+      const cwd = setupUnitFixture('commands/deploy/static');
+      client.cwd = cwd;
+
+      // Mock the bypass-token module to throw an error
+      const bypassTokenModule = await import(
+        '../../../../src/commands/curl/bypass-token'
+      );
+
+      const mockSpy = vi
+        .spyOn(bypassTokenModule, 'getOrCreateDeploymentProtectionToken')
+        .mockRejectedValue(
+          new Error('Failed to create deployment protection bypass token')
+        );
+
+      useUser();
+      useTeams('team_dummy'); // Matches the orgId in the fixture
+      useProject({
+        id: 'static', // Matches the projectId in the fixture
+        name: 'static-project',
+        latestDeployments: [
+          {
+            url: 'static-project-abc123.vercel.app',
+          },
+        ],
+      });
+
+      client.setArgv('curl', '/api/hello');
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'Failed to get deployment protection bypass token'
+      );
+
+      // Verify the mock was called
+      expect(mockSpy).toHaveBeenCalled();
+
+      // Restore the mock
+      mockSpy.mockRestore();
     });
   });
 
