@@ -2883,7 +2883,11 @@ export const onPrerenderRoute =
           allowQuery = Object.values(routeKeys);
         }
       } else {
-        const isDynamic = isDynamicRoute(pageKey);
+        // We added the `!!route` check because the isDynamicRoute does not
+        // currently support intercepting routes, but if it exists in the
+        // `dynamicRoutes` part of the routes manifest, then we know that it's
+        // dynamic!
+        const isDynamic = !!route || isDynamicRoute(pageKey);
 
         if (routeKeys) {
           // if we have routeKeys in the routes-manifest we use those
