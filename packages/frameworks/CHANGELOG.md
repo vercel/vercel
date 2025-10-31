@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.15.0
+
+### Minor Changes
+
+- Add TanStack Start framework preset ([#14175](https://github.com/vercel/vercel/pull/14175))
+
+## 3.14.1
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
 ## 3.14.0
 
 ### Minor Changes
