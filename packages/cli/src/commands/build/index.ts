@@ -28,6 +28,7 @@ import {
   type Meta,
   type PackageJson,
   shouldUseExperimentalBackends,
+  isBackendBuilder,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -705,15 +706,11 @@ async function doBuild(
         }
       }
 
-      // Experimental feature where users can provide a routes.json which will be mapped ot the
-      // single lambda function output, giving o11y to those routes.
-      const backendBuilders = [
-        '@vercel/express',
-        '@vercel/hono',
-        '@vercel/fastify',
-      ];
-      const isBackendBuilder = build.use && backendBuilders.includes(build.use);
-      if ('output' in buildResult && buildResult.output && isBackendBuilder) {
+      if (
+        'output' in buildResult &&
+        buildResult.output &&
+        isBackendBuilder(build)
+      ) {
         const routesJsonPath = join(outputDir, '..', 'routes.json');
         if (existsSync(routesJsonPath)) {
           try {
