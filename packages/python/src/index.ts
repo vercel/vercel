@@ -32,11 +32,8 @@ const writeFile = promisify(fs.writeFile);
 
 import {
   FASTAPI_CANDIDATE_ENTRYPOINTS,
-  detectFastapiEntrypoint,
-} from './entrypoint';
-import {
   FLASK_CANDIDATE_ENTRYPOINTS,
-  detectFlaskEntrypoint,
+  detectPythonEntrypoint,
 } from './entrypoint';
 
 export const version = 3;
@@ -90,6 +87,7 @@ export const build: BuildV3 = async ({
   meta = {},
   config,
 }) => {
+  const framework = config?.framework;
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
@@ -117,32 +115,30 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
-  if (!fsFiles[entrypoint] && config?.framework === 'fastapi') {
-    const detected = await detectFastapiEntrypoint(workPath, entrypoint);
+  if (
+    (framework === 'fastapi' || framework === 'flask') &&
+    (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
+  ) {
+    const detected = await detectPythonEntrypoint(
+      config.framework as 'fastapi' | 'flask',
+      workPath,
+      entrypoint
+    );
     if (detected) {
       debug(
         `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
       );
       entrypoint = detected;
     } else {
-      const searchedList = FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ');
+      const searchedList =
+        framework === 'fastapi'
+          ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
+          : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
-        code: 'FASTAPI_ENTRYPOINT_NOT_FOUND',
-        message: `No FastAPI entrypoint found. Searched for: ${searchedList}`,
-      });
-    }
-  } else if (!fsFiles[entrypoint] && config?.framework === 'flask') {
-    const detected = await detectFlaskEntrypoint(workPath, entrypoint);
-    if (detected) {
-      debug(
-        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
-      );
-      entrypoint = detected;
-    } else {
-      const searchedList = FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
-        code: 'FLASK_ENTRYPOINT_NOT_FOUND',
-        message: `No Flask entrypoint found. Searched for: ${searchedList}`,
+        code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
+        message: `No ${framework} entrypoint found. Define a valid application entrypoint in one of the following locations: ${searchedList} or add an 'app' script in pyproject.toml.`,
+        link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
+        action: 'Learn More',
       });
     }
   }

@@ -3,12 +3,11 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
-import { debug } from '@vercel/build-utils';
+import { debug, NowBuildError } from '@vercel/build-utils';
 import {
   FASTAPI_CANDIDATE_ENTRYPOINTS,
-  detectFastapiEntrypoint,
   FLASK_CANDIDATE_ENTRYPOINTS,
-  detectFlaskEntrypoint,
+  detectPythonEntrypoint,
 } from './entrypoint';
 import { getLatestPythonVersion } from './version';
 import { isInVirtualEnv, useVirtualEnv } from './utils';
@@ -172,26 +171,22 @@ export const startDevServer: StartDevServer = async opts => {
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  let entry: string | null = null;
-  if (framework === 'fastapi') {
-    const detectedFastapi = await detectFastapiEntrypoint(
-      workPath,
-      rawEntrypoint
-    );
-    if (!detectedFastapi) {
-      throw new Error(
-        `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
-      );
-    }
-    entry = detectedFastapi;
-  } else {
-    const detectedFlask = await detectFlaskEntrypoint(workPath, rawEntrypoint);
-    if (!detectedFlask) {
-      throw new Error(
-        `No Flask entrypoint found. Searched for: ${FLASK_CANDIDATE_ENTRYPOINTS.join(', ')}`
-      );
-    }
-    entry = detectedFlask;
+  const entry = await detectPythonEntrypoint(
+    framework,
+    workPath,
+    rawEntrypoint
+  );
+  if (!entry) {
+    const searched =
+      framework === 'fastapi'
+        ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
+        : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+    throw new NowBuildError({
+      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message: `No ${framework} entrypoint found. Define a valid application entrypoint in one of the following locations: ${searched} or add an 'app' script in pyproject.toml.`,
+      link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
+      action: 'Learn More',
+    });
   }
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"

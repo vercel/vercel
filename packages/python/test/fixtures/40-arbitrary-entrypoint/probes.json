@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "ok" },
+    { "path": "/api/token/RANDOMNESS_PLACEHOLDER/status", "status": 200, "mustContain": "ok:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

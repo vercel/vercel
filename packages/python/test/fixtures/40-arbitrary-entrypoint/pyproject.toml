@@ -1,0 +1,10 @@
+[project]
+name = "vercel-flask"
+version = "0.1.0"
+requires-python = "==3.12"
+dependencies = [
+  "flask>=3.1",
+]
+
+[project.scripts]
+app = "backend.server.my_server:app"

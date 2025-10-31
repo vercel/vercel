@@ -446,6 +446,9 @@ export async function getBuildMatches(
         const existing = candidates.filter(p => fileList.includes(p));
         if (existing.length > 0) {
           src = existing[0];
+        } else if (fileList.includes('pyproject.toml')) {
+          // Builder will resolve entrypoint from pyproject.toml;
+          src = 'pyproject.toml';
         }
       }
     }
