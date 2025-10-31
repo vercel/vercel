@@ -12,6 +12,7 @@ describe('index', () => {
         ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
+        ['curl', 'curl'],
         ['deploy', 'deploy'],
         ['dev', 'dev'],
         ['develop', 'dev'],
