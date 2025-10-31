@@ -8,6 +8,7 @@ import {
   getNextConfig,
   getServerlessPages,
   normalizePrefetches,
+  getMaxUncompressedLambdaSize,
 } from '../../src/utils';
 import { FileFsRef, FileRef } from '@vercel/build-utils';
 import { genDir } from '../utils';
@@ -440,4 +441,30 @@ describe('normalizePrefetches', () => {
       'foo/bar/baz.prefetch.rsc',
     ]);
   });
+});
+
+describe('getMaxUncompressedLambdaSize', () => {
+  it.each(['bun1.x', 'bun2.x'])('should return 150 MiB for %s', runtime => {
+    const size = getMaxUncompressedLambdaSize(runtime);
+    expect(size).toBe(150 * 1024 * 1024);
+  });
+
+  it.each(['provided.al2023', 'nodejs22.x'])(
+    'should return 250 MiB for %s runtime',
+    runtime => {
+      const size = getMaxUncompressedLambdaSize(runtime);
+      expect(size).toBe(250 * 1024 * 1024);
+    }
+  );
+
+  it.each(['bun1.x', 'provided.al2023', 'nodejs22.x'])(
+    'should use override for %s',
+    runtime => {
+      const override = 100 * 1024 * 1024;
+      process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE = override.toString();
+      const size = getMaxUncompressedLambdaSize(runtime);
+      expect(size).toBe(override);
+      delete process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE;
+    }
+  );
 });
