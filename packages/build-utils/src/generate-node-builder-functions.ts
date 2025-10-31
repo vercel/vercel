@@ -85,10 +85,9 @@ export function generateNodeBuilderFunctions(
         return join(dir, entrypointFromOutputDir);
       }
 
+      // When output dir is specified, even if we didn't find an entrypoint, use the first one available (fallback behavior for output directories)
       if (entrypointsNotMatchingRegex.length > 0) {
-        throw new Error(
-          `No entrypoint found which imports ${frameworkName}. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
-        );
+        return join(dir, entrypointsNotMatchingRegex[0]);
       }
       throw new Error(
         `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
