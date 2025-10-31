@@ -10,10 +10,7 @@ jest.setTimeout(12 * 60 * 1000);
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // Skip fixtures using deprecated @shopify/hydrogen v1 packages that fail npm install
-const skipped = [
-  'demo-store-js',
-  'demo-store-ts',
-];
+const skipped = ['demo-store-js', 'demo-store-ts'];
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
