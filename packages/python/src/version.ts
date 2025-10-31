@@ -105,7 +105,9 @@ export function getSupportedPythonVersion({
       // Otherwise, prefer the requested version if installed; fall back to latest installed
       if (isInstalled(requested)) {
         selection = requested;
-        console.log(`Using Python ${selection.version} from ${source}`);
+        console.log(
+          `Using Python ${selection.version} from ${source} to build`
+        );
       } else {
         console.warn(
           `Warning: Python version "${version}" detected in ${source} is not installed and will be ignored. http://vercel.link/python-version`
@@ -124,7 +126,7 @@ export function getSupportedPythonVersion({
     }
   } else {
     console.log(
-      `No Python version specified in pyproject.toml or Pipfile.lock. Using latest installed version: ${selection.version}`
+      `No Python version specified in pyproject.toml or Pipfile.lock. Using Python ${selection.version} to build`
     );
   }
 

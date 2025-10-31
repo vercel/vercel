@@ -65,6 +65,10 @@ describe('glob()', () => {
   });
 
   it('should allow for following symlinks', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
     const rootDir = await fs.mkdtemp(join(tmpdir(), 'build-utils-test'));
     const dir = await fs.mkdtemp(join(rootDir, 'build-utils-test'));
     try {
