@@ -14,6 +14,27 @@ vi.mock('child_process', () => ({
 describe('curl', () => {
   let originalProcessArgv: string[];
 
+  // Helper to set up a proper linked project environment
+  const setupLinkedProject = async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    });
+  };
+
   beforeEach(async () => {
     originalProcessArgv = process.argv;
 
@@ -67,13 +88,21 @@ describe('curl', () => {
     });
 
     it('should accept / as a valid path', async () => {
-      client.setArgv('curl', '/');
-      await expect(curl(client)).rejects.toThrow();
+      await setupLinkedProject();
+
+      client.setArgv('curl', '/', '--protection-bypass', 'test-secret');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
           value: 'slash',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
         },
       ]);
     });
@@ -348,34 +377,70 @@ describe('curl', () => {
 
   describe('telemetry', () => {
     it('tracks path argument with leading slash', async () => {
-      client.setArgv('curl', '/api/hello');
-      // this throws because API endpoints aren't mocked, but telemetry is tracked before that
-      await expect(curl(client)).rejects.toThrow();
+      await setupLinkedProject();
 
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--protection-bypass',
+        'test-secret'
+      );
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
           value: 'slash',
         },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
       ]);
     });
 
     it('tracks path argument without leading slash', async () => {
-      client.setArgv('curl', 'api/hello');
-      await expect(curl(client)).rejects.toThrow();
+      await setupLinkedProject();
 
+      client.setArgv('curl', 'api/hello', '--protection-bypass', 'test-secret');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
           value: 'no-slash',
         },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
       ]);
     });
 
     it('tracks deployment option with dpl_ prefix', async () => {
-      client.setArgv('curl', '/api/hello', '--deployment', 'dpl_ABC123');
-      await expect(curl(client)).rejects.toThrow();
+      await setupLinkedProject();
 
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'dpl_ABC123',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      // Mock the deployment URL lookup
+      client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
+        res.json({
+          url: 'deployment-abc123.vercel.app',
+        });
+      });
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
@@ -385,13 +450,35 @@ describe('curl', () => {
           key: 'option:deployment',
           value: 'dpl_',
         },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
       ]);
     });
 
     it('tracks deployment option without dpl_ prefix', async () => {
-      client.setArgv('curl', '/api/hello', '--deployment', 'ABC123');
-      await expect(curl(client)).rejects.toThrow();
+      await setupLinkedProject();
 
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'ABC123',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      // Mock the deployment URL lookup (prefix will be auto-added)
+      client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
+        res.json({
+          url: 'deployment-abc123.vercel.app',
+        });
+      });
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
@@ -401,18 +488,25 @@ describe('curl', () => {
           key: 'option:deployment',
           value: 'no-prefix',
         },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
       ]);
     });
 
     it('tracks protection-bypass option', async () => {
+      await setupLinkedProject();
+
       client.setArgv(
         'curl',
         '/api/hello',
         '--protection-bypass',
         'my-secret-key'
       );
-      await expect(curl(client)).rejects.toThrow();
+      const exitCode = await curl(client);
 
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
@@ -426,6 +520,8 @@ describe('curl', () => {
     });
 
     it('tracks both deployment and protection-bypass options', async () => {
+      await setupLinkedProject();
+
       client.setArgv(
         'curl',
         'api/test',
@@ -434,8 +530,17 @@ describe('curl', () => {
         '--protection-bypass',
         'another-secret'
       );
-      await expect(curl(client)).rejects.toThrow();
 
+      // Mock the deployment URL lookup
+      client.scenario.get('/v13/deployments/dpl_XYZ789', (_req, res) => {
+        res.json({
+          url: 'deployment-xyz789.vercel.app',
+        });
+      });
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'argument:path',
