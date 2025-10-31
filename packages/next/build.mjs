@@ -1,4 +1,5 @@
 import { readFileSync, promises as fsPromises } from 'node:fs';
+import { copy } from 'fs-extra';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
@@ -45,6 +46,8 @@ await copyFile(
   require.resolve('source-map/lib/mappings.wasm'),
   join(process.cwd(), 'dist/mappings.wasm')
 );
+
+await copy(join(process.cwd(), 'adapter'), join(process.cwd(), 'dist/adapter'));
 
 await esbuild({
   bundle: true,
