@@ -14,7 +14,6 @@ vi.mock('child_process', () => ({
 describe('curl', () => {
   let originalProcessArgv: string[];
 
-  // Helper to set up a proper linked project environment
   const setupLinkedProject = async () => {
     const { setupUnitFixture } = await import(
       '../../../helpers/setup-unit-fixture'
@@ -431,7 +430,6 @@ describe('curl', () => {
         'test-secret'
       );
 
-      // Mock the deployment URL lookup
       client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
         res.json({
           url: 'deployment-abc123.vercel.app',
