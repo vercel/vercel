@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.0
+
+### Minor Changes
+
+- Add TanStack Start framework preset ([#14188](https://github.com/vercel/vercel/pull/14188))
+
 ## 17.1.4
 
 ### Patch Changes
