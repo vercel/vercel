@@ -33,6 +33,7 @@ import { rollingReleaseCommand } from './rolling-release/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
+import { unlinkCommand } from './unlink/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import type { Command } from './help';
@@ -74,6 +75,7 @@ const commandsStructs = [
   targetCommand,
   teamsCommand,
   telemetryCommand,
+  unlinkCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
