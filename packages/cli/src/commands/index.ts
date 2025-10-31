@@ -3,6 +3,7 @@ import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
@@ -44,6 +45,7 @@ const commandsStructs = [
   buildCommand,
   cacheCommand,
   certsCommand,
+  curlCommand,
   deployCommand,
   devCommand,
   dnsCommand,

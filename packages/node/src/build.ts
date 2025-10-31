@@ -31,6 +31,7 @@ import {
   execCommand,
   getEnvForPackageManager,
   scanParentDirs,
+  isBunVersion,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -199,10 +200,13 @@ async function compile(
     shouldAddSourcemapSupport = true;
     return source;
   }
+  const isBun = isBunVersion(nodeVersion);
 
   const conditions = isEdgeFunction
     ? ['edge-light', 'browser', 'module', 'import', 'require']
-    : undefined;
+    : isBun
+      ? ['bun']
+      : undefined;
 
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
