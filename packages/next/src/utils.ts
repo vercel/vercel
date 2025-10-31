@@ -2873,7 +2873,12 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
-      const isDynamic = isDynamicRoute(routeKey);
+      const isRouteKeyDynamic =
+        routesManifest?.dynamicRoutes.some(
+          (r): r is RoutesManifestRoute =>
+            r.page === routeKey && !('isMiddleware' in r)
+        ) ?? false;
+      const isDynamic = isRouteKeyDynamic || isDynamicRoute(routeKey);
       const routeKeys = route?.routeKeys;
 
       // by default allowQuery should be undefined and only set when
@@ -2894,7 +2899,11 @@ export const onPrerenderRoute =
           allowQuery = Object.values(routeKeys);
         }
       } else {
-        const isDynamic = isDynamicRoute(pageKey);
+        // We added the `!!route` check because the isDynamicRoute does not
+        // currently support intercepting routes, but if it exists in the
+        // `dynamicRoutes` part of the routes manifest, then we know that it's
+        // dynamic!
+        const isDynamic = isRouteKeyDynamic || isDynamicRoute(pageKey);
 
         if (routeKeys) {
           // if we have routeKeys in the routes-manifest we use those
