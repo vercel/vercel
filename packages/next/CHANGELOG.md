@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.0
+
+### Minor Changes
+
+- Update functions size threshold when using Bun as a runtime ([#14171](https://github.com/vercel/vercel/pull/14171))
+
 ## 4.14.1
 
 ### Patch Changes

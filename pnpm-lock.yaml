@@ -456,7 +456,7 @@ importers:
         specifier: 1.3.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.14.1
+        specifier: 4.15.0
         version: link:../next
       '@vercel/node':
         specifier: 5.5.3
@@ -619,7 +619,7 @@ importers:
         specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 17.1.4
+        specifier: 17.2.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
