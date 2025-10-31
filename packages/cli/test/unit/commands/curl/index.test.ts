@@ -66,11 +66,16 @@ describe('curl', () => {
       await expect(client.stderr).toOutput('requires an API path');
     });
 
-    it('should accept / as a valid path', () => {
-      const path = '/';
-      expect(path).toBeTruthy();
-      expect(path).not.toBe('--');
-      expect(path.startsWith('--')).toBe(false);
+    it('should accept / as a valid path', async () => {
+      client.setArgv('curl', '/');
+      await expect(curl(client)).rejects.toThrow();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+      ]);
     });
 
     it('should reject unrecognized flags before --', async () => {
