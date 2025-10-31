@@ -131,6 +131,7 @@ export {
   BACKEND_FRAMEWORKS,
   BackendFramework,
   isBackendFramework,
+  isBackendBuilder,
   isExperimentalBackendsEnabled,
   shouldUseExperimentalBackends,
 } from './framework-helpers';

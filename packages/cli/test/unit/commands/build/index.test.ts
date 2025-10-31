@@ -1319,15 +1319,13 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
-  // Skip on Windows because route parameters with colons (e.g., `:id`) are used as filesystem paths
   it.skipIf(process.platform === 'win32')(
-    'should apply routes from `.vercel/routes.json` when VERCEL_EXPERIMENTAL_ROUTES_JSON is enabled',
+    'should apply routes from `.vercel/routes.json` for backend frameworks',
     async () => {
       const cwd = fixture('express-with-routes-json');
       const output = join(cwd, '.vercel/output');
 
       try {
-        process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON = '1';
         client.cwd = cwd;
         const exitCode = await build(client);
         expect(exitCode).toEqual(0);
