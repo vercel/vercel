@@ -1,5 +1,50 @@
 # @vercel/hono
 
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`55a1f7691ab944e133a43fc859fb8f373c5982c0`](https://github.com/vercel/vercel/commit/55a1f7691ab944e133a43fc859fb8f373c5982c0)]:
+  - @vercel/node@5.5.3
+
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.2
+
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.1
+
+## 0.2.1
+
+### Patch Changes
+
+- Replace experimental builders for Express and Hono with a @vercel/backends package ([#14065](https://github.com/vercel/vercel/pull/14065))
+
+## 0.2.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies [[`970781cb50ebdb0379056abe1700bba4a53fcf7c`](https://github.com/vercel/vercel/commit/970781cb50ebdb0379056abe1700bba4a53fcf7c)]:
+  - @vercel/node@5.5.0
+
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies [[`ff370d874863bb2a00a19de4bdef3a707296b9f2`](https://github.com/vercel/vercel/commit/ff370d874863bb2a00a19de4bdef3a707296b9f2)]:
+  - @vercel/node@5.4.1
+
 ## 0.1.6
 
 ### Patch Changes

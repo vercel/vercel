@@ -1,6 +1,6 @@
 import { statSync } from 'fs';
 import { intersects, validRange } from 'semver';
-import { NodeVersion } from '../types';
+import { BunVersion, NodeVersion, Version } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
 
@@ -57,11 +57,29 @@ export const NODE_VERSIONS: NodeVersion[] = [
   }),
 ];
 
+export const BUN_VERSIONS: BunVersion[] = [
+  new BunVersion({
+    major: 1,
+    range: '1.x',
+    runtime: 'bun1.x',
+  }),
+];
+
 export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
-  return NODE_VERSIONS.find(v => v.major === major);
+  return getOptions().find(v => v.major === major);
 }
 
-function getOptions() {
+function getOptions(): NodeVersion[] {
+  if (process.env.VERCEL_ALLOW_NODEJS_24 === '1') {
+    return [
+      new NodeVersion({
+        major: 24,
+        range: '24.x',
+        runtime: 'nodejs24.x',
+      }),
+      ...NODE_VERSIONS,
+    ];
+  }
   return NODE_VERSIONS;
 }
 
@@ -181,4 +199,29 @@ export async function getSupportedNodeVersion(
   }
 
   return selection;
+}
+
+export function getSupportedBunVersion(engineRange: string): BunVersion {
+  if (validRange(engineRange)) {
+    const selected = BUN_VERSIONS.find(version => {
+      return intersects(version.range, engineRange);
+    });
+
+    if (selected) {
+      return new BunVersion({
+        major: selected.major,
+        range: selected.range,
+        runtime: selected.runtime,
+      });
+    }
+  }
+
+  throw new NowBuildError({
+    message: `Found invalid Bun Version: "${engineRange}".`,
+    code: 'BUILD_UTILS_BUN_VERSION_INVALID',
+  });
+}
+
+export function isBunVersion(version: Version) {
+  return version.runtime.startsWith('bun');
 }

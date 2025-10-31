@@ -20,4 +20,13 @@ export class CacheInvalidateTelemetryClient
       });
     }
   }
+
+  trackCliOptionSrcimg(srcimg: string | undefined) {
+    if (srcimg) {
+      this.trackCliOption({
+        option: 'srcimg',
+        value: srcimg,
+      });
+    }
+  }
 }

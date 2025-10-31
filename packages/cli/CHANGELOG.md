@@ -1,5 +1,145 @@
 # vercel
 
+## 48.8.0
+
+### Minor Changes
+
+- Add TanStack Start framework preset ([#14188](https://github.com/vercel/vercel/pull/14188))
+
+- [cli] adds `vc curl` beta command ([#14170](https://github.com/vercel/vercel/pull/14170))
+
+### Patch Changes
+
+- Updated dependencies [[`00c960f0c187650152580f14ab17770cec46dfc2`](https://github.com/vercel/vercel/commit/00c960f0c187650152580f14ab17770cec46dfc2)]:
+  - @vercel/next@4.15.0
+
+## 48.7.1
+
+### Patch Changes
+
+- Re-enable experimental backends support ([#14163](https://github.com/vercel/vercel/pull/14163))
+
+- Updated dependencies [[`055f9cd9f560085cabe243e2d213b62dbdb5160c`](https://github.com/vercel/vercel/commit/055f9cd9f560085cabe243e2d213b62dbdb5160c), [`55a1f7691ab944e133a43fc859fb8f373c5982c0`](https://github.com/vercel/vercel/commit/55a1f7691ab944e133a43fc859fb8f373c5982c0)]:
+  - @vercel/python@6.0.0
+  - @vercel/build-utils@12.2.3
+  - @vercel/node@5.5.3
+  - @vercel/backends@0.0.4
+  - @vercel/express@0.1.4
+  - @vercel/h3@0.1.10
+  - @vercel/hono@0.2.4
+  - @vercel/static-build@2.8.3
+
+## 48.7.0
+
+### Minor Changes
+
+- [cli] add new commands `vercel cache invalidate --srcimg` ([#14169](https://github.com/vercel/vercel/pull/14169))
+
+## 48.6.7
+
+### Patch Changes
+
+- Updated dependencies [[`f843e147b71ce44af214647c78eab4a6109db98b`](https://github.com/vercel/vercel/commit/f843e147b71ce44af214647c78eab4a6109db98b), [`2de7ca658769b3d4d3c38c5194bb75a63bd895a4`](https://github.com/vercel/vercel/commit/2de7ca658769b3d4d3c38c5194bb75a63bd895a4)]:
+  - @vercel/build-utils@12.2.2
+  - @vercel/backends@0.0.4
+  - @vercel/express@0.1.3
+  - @vercel/h3@0.1.9
+  - @vercel/hono@0.2.3
+  - @vercel/node@5.5.2
+  - @vercel/static-build@2.8.2
+
+## 48.6.6
+
+### Patch Changes
+
+- Fix regression on node 20.17 and earlier ([#14158](https://github.com/vercel/vercel/pull/14158))
+
+## 48.6.5
+
+### Patch Changes
+
+- Enable experimental backends mode ([#14155](https://github.com/vercel/vercel/pull/14155))
+
+## 48.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`0e63b0b007dd5705434ff594e7576c86dda939bc`](https://github.com/vercel/vercel/commit/0e63b0b007dd5705434ff594e7576c86dda939bc)]:
+  - @vercel/build-utils@12.2.1
+  - @vercel/backends@0.0.3
+  - @vercel/express@0.1.2
+  - @vercel/h3@0.1.8
+  - @vercel/hono@0.2.2
+  - @vercel/node@5.5.1
+  - @vercel/static-build@2.8.1
+
+## 48.6.3
+
+### Patch Changes
+
+- Fix vc build regression ([#14149](https://github.com/vercel/vercel/pull/14149))
+
+## 48.6.2
+
+### Patch Changes
+
+- Add experimental support for routes.json ([#14138](https://github.com/vercel/vercel/pull/14138))
+
+- Updated dependencies [[`2f586d89e744ee905626080de5f49b140739dde7`](https://github.com/vercel/vercel/commit/2f586d89e744ee905626080de5f49b140739dde7), [`2f586d89e744ee905626080de5f49b140739dde7`](https://github.com/vercel/vercel/commit/2f586d89e744ee905626080de5f49b140739dde7)]:
+  - @vercel/backends@0.0.3
+
+## 48.6.1
+
+### Patch Changes
+
+- Replace experimental builders for Express and Hono with a @vercel/backends package ([#14065](https://github.com/vercel/vercel/pull/14065))
+
+- Updated dependencies [[`c40a0e7c53755cf5bed642256498da3d3102d8ac`](https://github.com/vercel/vercel/commit/c40a0e7c53755cf5bed642256498da3d3102d8ac), [`c6cf33d7db28f858d7e34d08ec871a28423ded2a`](https://github.com/vercel/vercel/commit/c6cf33d7db28f858d7e34d08ec871a28423ded2a), [`c6cf33d7db28f858d7e34d08ec871a28423ded2a`](https://github.com/vercel/vercel/commit/c6cf33d7db28f858d7e34d08ec871a28423ded2a)]:
+  - @vercel/next@4.14.1
+  - @vercel/express@0.1.1
+  - @vercel/backends@0.0.2
+  - @vercel/hono@0.2.1
+
+## 48.6.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies [[`970781cb50ebdb0379056abe1700bba4a53fcf7c`](https://github.com/vercel/vercel/commit/970781cb50ebdb0379056abe1700bba4a53fcf7c)]:
+  - @vercel/static-build@2.8.0
+  - @vercel/build-utils@12.2.0
+  - @vercel/hydrogen@1.3.0
+  - @vercel/express@0.1.0
+  - @vercel/redwood@2.4.0
+  - @vercel/remix-builder@5.5.0
+  - @vercel/hono@0.2.0
+  - @vercel/next@4.14.0
+  - @vercel/node@5.5.0
+  - @vercel/h3@0.1.7
+
+## 48.5.0
+
+### Minor Changes
+
+- Add zero-config support for Fastify ([#14120](https://github.com/vercel/vercel/pull/14120))
+
+### Patch Changes
+
+- Fix bug that was over-showing the local settings override log ([#14118](https://github.com/vercel/vercel/pull/14118))
+
+## 48.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`ff370d874863bb2a00a19de4bdef3a707296b9f2`](https://github.com/vercel/vercel/commit/ff370d874863bb2a00a19de4bdef3a707296b9f2)]:
+  - @vercel/node@5.4.1
+  - @vercel/express@0.0.26
+  - @vercel/h3@0.1.6
+  - @vercel/hono@0.1.7
+
 ## 48.4.0
 
 ### Minor Changes

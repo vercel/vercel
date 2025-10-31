@@ -29,6 +29,10 @@
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },
+    "test-e2e-node-all-versions": {
+      "dependsOn": ["build"],
+      "outputLogs": "new-only"
+    },
     "test-unit": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"

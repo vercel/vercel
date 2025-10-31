@@ -1,5 +1,45 @@
 # @vercel/node
 
+## 5.5.3
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
+- Updated dependencies [[`55a1f7691ab944e133a43fc859fb8f373c5982c0`](https://github.com/vercel/vercel/commit/55a1f7691ab944e133a43fc859fb8f373c5982c0)]:
+  - @vercel/build-utils@12.2.3
+
+## 5.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`f843e147b71ce44af214647c78eab4a6109db98b`](https://github.com/vercel/vercel/commit/f843e147b71ce44af214647c78eab4a6109db98b)]:
+  - @vercel/build-utils@12.2.2
+
+## 5.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`0e63b0b007dd5705434ff594e7576c86dda939bc`](https://github.com/vercel/vercel/commit/0e63b0b007dd5705434ff594e7576c86dda939bc)]:
+  - @vercel/build-utils@12.2.1
+
+## 5.5.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies [[`970781cb50ebdb0379056abe1700bba4a53fcf7c`](https://github.com/vercel/vercel/commit/970781cb50ebdb0379056abe1700bba4a53fcf7c)]:
+  - @vercel/build-utils@12.2.0
+
+## 5.4.1
+
+### Patch Changes
+
+- Ensure `vc dev` uses project-level ts when available ([#14115](https://github.com/vercel/vercel/pull/14115))
+
 ## 5.4.0
 
 ### Minor Changes
