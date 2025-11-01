@@ -521,7 +521,9 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 print('Uvicorn is required to run ASGI apps. Please ensure it is installed.')
                 exit(1)
 
-            user_app = getattr(__vc_module.app, 'asgi', __vc_module.app)
+            # Prefer a callable app.asgi when available; some frameworks expose a boolean here
+            user_app_candidate = getattr(__vc_module.app, 'asgi', None)
+            user_app = user_app_candidate if callable(user_app_candidate) else __vc_module.app
             asgi_app = VCASGIMiddleware(user_app)
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
