@@ -2374,6 +2374,7 @@ export const frameworks = [
     detectors: {
       some: [{ matchPackage: 'nitropack' }, { matchPackage: 'nitro' }],
     },
+    supersedes: ['vite'],
     settings: {
       installCommand: {
         placeholder:
