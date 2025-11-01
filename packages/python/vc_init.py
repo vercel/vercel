@@ -110,20 +110,17 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
         def write(self, message: str):
             context = storage.get()
             if context is not None:
-                try:
-                    send_message({
-                        "type": "log",
-                        "payload": {
-                            "context": {
-                                "invocationId": context['invocationId'],
-                                "requestId": context['requestId'],
-                            },
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "stream": self.stream_name,
-                        }
-                    })
-                except Exception:
-                    pass
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
+                    }
+                })
             else:
                 # Don't send messages without context - just write to stream
                 self.stream.write(message)
