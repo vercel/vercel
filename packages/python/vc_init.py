@@ -42,6 +42,7 @@ if os.path.isdir(_vendor):
 
     importlib.invalidate_caches()
 
+
 def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
     # Override logging.Handler to send logs to the platform when a request context is available.
     class VCLogHandler(logging.Handler):
@@ -78,26 +79,23 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
 
             context = storage.get()
             if context is not None:
-                try:
-                    send_message({
-                        "type": "log",
-                        "payload": {
-                            "context": {
-                                "invocationId": context['invocationId'],
-                                "requestId": context['requestId'],
-                            },
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "level": level,
-                        }
-                    })
-                except Exception:
-                    pass
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
+                    }
+                })
             else:
                 # If IPC is not ready, enqueue the message to be sent later.
                 enqueue_or_send_message({
                     "type": "log",
                     "payload": {
-                        "context": {"invocationId": 0, "requestId": 0},
+                        "context": {"invocationId": "0", "requestId": 0},
                         "message": base64.b64encode(message.encode()).decode(),
                         "level": level,
                     }
@@ -181,8 +179,7 @@ _init_log_buf_bytes = 0
 def enqueue_or_send_message(msg: dict):
     global _init_log_buf_bytes
     if _ipc_ready:
-        with contextlib.suppress(Exception):
-            send_message(msg)
+        send_message(msg)
         return
 
     enc_len = len(json.dumps(msg))
@@ -574,8 +571,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
         # Mark IPC as ready and flush any buffered init logs
         _ipc_ready = True
         for m in _init_log_buf:
-            with contextlib.suppress(Exception):
-                send_message(m)
+            send_message(m)
         _init_log_buf.clear()
         server.serve_forever()
 
