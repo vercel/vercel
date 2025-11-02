@@ -270,14 +270,14 @@ When using `--deployment`:
 
 ## Comparison with `vercel curl`
 
-| Feature              | `vercel curl`              | `vercel httpstat`                          |
-| -------------------- | -------------------------- | ------------------------------------------ |
-| Purpose              | Execute HTTP requests      | Execute HTTP requests with timing analysis |
-| Visual Output        | Standard curl output       | Beautiful timing visualization             |
-| Performance Analysis | Manual with `-w` flag      | Automatic with detailed breakdown          |
-| URL Management       | ✅ Automatic               | ✅ Automatic                               |
-| Protection Bypass    | ✅ Automatic               | ✅ Automatic                               |
-| Use Case             | General HTTP requests      | Performance testing and debugging          |
+| Feature              | `vercel curl`               | `vercel httpstat`                          |
+| -------------------- | --------------------------- | ------------------------------------------ |
+| Purpose              | Execute HTTP requests       | Execute HTTP requests with timing analysis |
+| Visual Output        | Standard curl output        | Beautiful timing visualization             |
+| Performance Analysis | Manual with `-w` flag       | Automatic with detailed breakdown          |
+| URL Management       | ✅ Automatic                | ✅ Automatic                               |
+| Protection Bypass    | ✅ Automatic                | ✅ Automatic                               |
+| Use Case             | General HTTP requests       | Performance testing and debugging          |
 | Dependencies         | curl (usually preinstalled) | httpstat (requires installation)           |
 
 ## Use Cases
@@ -302,4 +302,3 @@ When using `--deployment`:
   ```bash
   watch -n 5 vercel httpstat /api/endpoint
   ```
-

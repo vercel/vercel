@@ -74,12 +74,7 @@ describe('httpstat', () => {
     });
 
     it('should reject when only -- is provided without a path', async () => {
-      client.setArgv(
-        'httpstat',
-        '--',
-        '-H',
-        'Content-Type: application/json'
-      );
+      client.setArgv('httpstat', '--', '-H', 'Content-Type: application/json');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput('requires an API path');
@@ -229,7 +224,12 @@ describe('httpstat', () => {
     it('tracks path argument without leading slash', async () => {
       await setupLinkedProject();
 
-      client.setArgv('httpstat', 'api/hello', '--protection-bypass', 'test-secret');
+      client.setArgv(
+        'httpstat',
+        'api/hello',
+        '--protection-bypass',
+        'test-secret'
+      );
       const exitCode = await httpstat(client);
 
       expect(exitCode).toEqual(0);
@@ -320,4 +320,3 @@ describe('httpstat', () => {
     });
   });
 });
-

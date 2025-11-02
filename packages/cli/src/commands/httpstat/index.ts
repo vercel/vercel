@@ -205,4 +205,3 @@ export default async function httpstat(client: Client): Promise<number> {
     });
   });
 }
-

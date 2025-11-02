@@ -8,4 +8,3 @@ export const requoteArgs = (arg: string): string => {
   }
   return arg;
 };
-
