@@ -210,7 +210,7 @@ def format_headers(headers, decode=False):
     return keyToList
 
 
-class VCASGIMiddleware:
+class ASGIMiddleware:
     """
     ASGI middleware that preserves Vercel IPC semantics for request lifecycle:
     - Handles /_vercel/ping
@@ -503,7 +503,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
             # Prefer a callable app.asgi when available; some frameworks expose a boolean here
             user_app_candidate = getattr(__vc_module.app, 'asgi', None)
             user_app = user_app_candidate if callable(user_app_candidate) else __vc_module.app
-            asgi_app = VCASGIMiddleware(user_app)
+            asgi_app = ASGIMiddleware(user_app)
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
