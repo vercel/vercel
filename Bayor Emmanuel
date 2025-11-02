@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Emmanuel Data GH — Home</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f8f9fa;
+      color: #222;
+    }
+    .container {
+      width: 90%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header.site-header {
+      background: #004aad;
+      color: #fff;
+      padding: 15px 0;
+    }
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      background: white;
+      color: #004aad;
+      font-weight: bold;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .tag {
+      font-size: 14px;
+      color: #e0e0e0;
+    }
+    nav.nav a {
+      color: white;
+      text-decoration: none;
+      margin-left: 15px;
+      font-weight: bold;
+    }
+    nav.nav a:hover {
+      text-decoration: underline;
+    }
+    main {
+      margin-top: 30px;
+      margin-bottom: 40px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .card.small {
+      background: #f1f5ff;
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .btn.primary {
+      background: #004aad;
+      color: white;
+    }
+    .btn.outline {
+      border: 2px solid #004aad;
+      color: #004aad;
+      background: white;
+    }
+    .cta-row {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    footer.site-footer {
+      background: #222;
+      color: white;
+      text-align: center;
+      padding: 15px 0;
+    }
+    footer a {
+      color: #4da3ff;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand"> 
+        <div class="logo">ED</div>
+        <div>
+          <h1>Emmanuel Data GH</h1>
+          <div class="tag">Affordable data bundles in Ghana — Fast, Easy, Reliable.</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="mtn.html">MTN Bundles</a>
+        <a href="telecel.html">Telecel Bundles</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero card">
+      <h2>Affordable Data — Delivered Fast</h2>
+      <p class="lead">Buy MTN and Telecel bundles with secure Paystack payments. Delivery: MTN 5–25 minutes, Telecel instant.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="mtn.html">Buy MTN Bundles</a>
+        <a class="btn outline" href="telecel.html">Buy Telecel Bundles</a>
+      </div>
+    </section>
+
+    <section class="card small">
+      <h3>Quick Contact</h3>
+      <p>WhatsApp Channel: <a href="https://whatsapp.com/channel/0029Vb624AM2ER6ljwUpYz2x" target="_blank">Join our channel</a></p>
+      <p>Direct WhatsApp: <a href="https://wa.me/233557594296" target="_blank">055 759 4296</a></p>
+    </section>
+
+    <section class="card">
+      <h3>How to order</h3>
+      <ol>
+        <li>Choose network and bundle (MTN or Telecel).</li>
+        <li>Click <strong>Buy Now</strong> — you will be taken to our Paystack payment page.</li>
+        <li>After payment is verified automatically, we deliver the bundle via our vendor API.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© Emmanuel Data GH • Phone: 055 759 4296 • 
+      <a href="https://whatsapp.com/channel/0029Vb624AM2ER6ljwUpYz2x" target="_blank">WhatsApp Channel</a>
+    </div>
+  </footer>
+</body>
+</html>
