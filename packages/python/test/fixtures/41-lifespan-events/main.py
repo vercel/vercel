@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import logging
 
 MODELS = ["a", "b", "c"]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.info("starting up...")
     MODELS.append("d")
     yield
 
