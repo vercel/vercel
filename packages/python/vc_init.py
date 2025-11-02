@@ -248,7 +248,6 @@ class ASGIMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Fast health check
         if scope.get('path') == '/_vercel/ping':
             await send({
                 'type': 'http.response.start',
