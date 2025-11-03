@@ -8,6 +8,12 @@ import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
 import { getDeploymentUrlById } from './deployment-url';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { help } from '../help';
+import { getCommandName } from '../../util/pkg-name';
+import type { Command } from '../help';
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
@@ -18,6 +24,90 @@ export interface DeploymentUrlResult {
   fullUrl: string;
   deploymentProtectionToken: string | null;
   link: ProjectLinked;
+}
+
+export interface CommandSetupResult {
+  path: string;
+  deploymentFlag?: string;
+  protectionBypassFlag?: string;
+  toolFlags: string[];
+}
+
+export interface CommandTelemetryClient {
+  trackCliArgumentPath(path: string | undefined): void;
+  trackCliOptionDeployment(deploymentId: string | undefined): void;
+  trackCliOptionProtectionBypass(secret: string | undefined): void;
+}
+
+/**
+ * Shared setup logic for curl-like commands
+ * Handles argument parsing, validation, help, and telemetry
+ */
+export function setupCurlLikeCommand(
+  client: Client,
+  command: Command,
+  telemetryClient: CommandTelemetryClient
+): CommandSetupResult | number {
+  const { print } = output;
+
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(command.options);
+
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  const { flags } = parsedArgs;
+
+  if (parsedArgs.flags['--help']) {
+    print(help(command, { columns: client.stderr.columns }));
+    return 2;
+  }
+
+  // Remove command name from the args list
+  if (parsedArgs.args[0] === command.name) {
+    parsedArgs.args.shift();
+  }
+
+  const separatorIndex = process.argv.indexOf('--');
+  const path = parsedArgs.args[0];
+
+  telemetryClient.trackCliArgumentPath(path);
+
+  const deploymentFlag = flags['--deployment'];
+  if (deploymentFlag) {
+    telemetryClient.trackCliOptionDeployment(deploymentFlag);
+  }
+
+  const protectionBypassFlag = flags['--protection-bypass'];
+  if (protectionBypassFlag) {
+    telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
+  }
+
+  if (!path || path === '--' || path.startsWith('--')) {
+    output.error(
+      `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
+    );
+    print(help(command, { columns: client.stderr.columns }));
+    return 1;
+  }
+
+  const toolFlags =
+    separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
+  output.debug(
+    `${command.name} flags (${toolFlags.length} args): ${JSON.stringify(toolFlags)}`
+  );
+
+  return {
+    path,
+    deploymentFlag,
+    protectionBypassFlag,
+    toolFlags,
+  };
 }
 
 /**

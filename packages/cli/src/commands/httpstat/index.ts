@@ -1,77 +1,26 @@
 /* eslint-disable no-console */
 import { spawn } from 'child_process';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { help } from '../help';
 import { httpstatCommand } from './command';
 import output from '../../output-manager';
-import { getCommandName } from '../../util/pkg-name';
 import { requoteArgs } from '../curl/utils';
 import { HttpstatTelemetryClient } from '../../util/telemetry/commands/httpstat';
-import { getDeploymentUrlAndToken } from '../curl/shared';
+import { getDeploymentUrlAndToken, setupCurlLikeCommand } from '../curl/shared';
 
 export default async function httpstat(client: Client): Promise<number> {
-  const { print } = output;
-
   const telemetryClient = new HttpstatTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
-  let parsedArgs = null;
+  const setup = setupCurlLikeCommand(client, httpstatCommand, telemetryClient);
 
-  const flagsSpecification = getFlagsSpecification(httpstatCommand.options);
-
-  try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (err) {
-    printError(err);
-    return 1;
+  if (typeof setup === 'number') {
+    return setup;
   }
 
-  const { flags } = parsedArgs;
-
-  if (parsedArgs.flags['--help']) {
-    print(help(httpstatCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
-  // gotta remove 'httpstat' from the args list
-  if (parsedArgs.args[0] === httpstatCommand.name) {
-    parsedArgs.args.shift();
-  }
-
-  const separatorIndex = process.argv.indexOf('--');
-  const path = parsedArgs.args[0];
-
-  telemetryClient.trackCliArgumentPath(path);
-
-  const deploymentFlag = flags['--deployment'];
-  if (deploymentFlag) {
-    telemetryClient.trackCliOptionDeployment(deploymentFlag);
-  }
-
-  const protectionBypassFlag = flags['--protection-bypass'];
-  if (protectionBypassFlag) {
-    telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
-  }
-
-  if (!path || path === '--' || path.startsWith('--')) {
-    output.error(
-      `${getCommandName('httpstat <path>')} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
-    );
-    print(help(httpstatCommand, { columns: client.stderr.columns }));
-    return 1;
-  }
-
-  const httpstatFlags =
-    separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-  output.debug(
-    `Httpstat flags (${httpstatFlags.length} args): ${JSON.stringify(httpstatFlags)}`
-  );
+  const { path, deploymentFlag, protectionBypassFlag, toolFlags } = setup;
 
   const result = await getDeploymentUrlAndToken(client, 'httpstat', path, {
     deploymentFlag,
@@ -83,6 +32,8 @@ export default async function httpstat(client: Client): Promise<number> {
   }
 
   const { fullUrl, deploymentProtectionToken } = result;
+
+  const httpstatFlags = [...toolFlags];
 
   if (deploymentProtectionToken) {
     httpstatFlags.unshift(
