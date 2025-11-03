@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.1
+
+### Patch Changes
+
+- version gate clientSegmentCache flag ([#14200](https://github.com/vercel/vercel/pull/14200))
+
 ## 4.15.0
 
 ### Minor Changes
