@@ -74,7 +74,12 @@ describe('httpstat', () => {
     });
 
     it('should reject when only -- is provided without a path', async () => {
-      client.setArgv('httpstat', '--', '-H', 'Content-Type: application/json');
+      client.setArgv(
+        'httpstat',
+        '--',
+        '-H',
+        'Content-Type: application/json'
+      );
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput('requires an API path');
