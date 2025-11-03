@@ -26,32 +26,20 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-interface AuthConfigBase {
+interface AuthConfig {
   '// Note'?: string;
   '// Docs'?: string;
-  token?: string;
   skipWrite?: boolean;
-}
-
-interface LegacyAuthConfig extends AuthConfigBase {
-  /** An Vercel token retrieved using the legacy authentication flow. */
-  token?: string;
-  type?: 'legacy';
-}
-
-interface OAuthAuthConfig extends AuthConfigBase {
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
+  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
+  refreshToken?: string;
   /**
-   * The absolute time (seconds) when the {@link OAuthAuthConfig.token} expires.
+   * The absolute time (seconds) when the {@link AuthConfig.token} expires.
    * Used to optimistically check if the token is still valid.
    */
   expiresAt?: number;
-  refreshToken?: string;
-  type: 'oauth';
 }
-
-type AuthConfig = LegacyAuthConfig | OAuthAuthConfig;
 
 export interface GlobalConfig {
   '// Note'?: string;
@@ -374,6 +362,25 @@ export interface ProjectLinkData {
   deployHooks?: DeployHook[];
 }
 
+export interface AutomationProtectionBypass {
+  createdAt: number;
+  createdBy: string;
+  scope: 'automation-bypass';
+}
+
+export interface IntegrationAutomationProtectionBypass {
+  createdAt: number;
+  createdBy: string;
+  scope: 'integration-automation-bypass';
+  integrationId: string;
+  configurationId: string;
+}
+
+export type ProjectProtectionBypass = Record<
+  string,
+  AutomationProtectionBypass | IntegrationAutomationProtectionBypass
+>;
+
 export interface Project extends ProjectSettings {
   id: string;
   analytics?: {
@@ -394,6 +401,7 @@ export interface Project extends ProjectSettings {
   };
   customEnvironments?: CustomEnvironment[];
   rollingRelease?: ProjectRollingRelease;
+  protectionBypass?: ProjectProtectionBypass;
 }
 
 export interface Org {

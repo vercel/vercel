@@ -1,25 +1,53 @@
 {
   "name": "@vercel/detect-agent",
-  "version": "0.2.0",
+  "version": "1.0.0",
+  "description": "Detect if code is running in an AI agent or automated development environment",
+  "keywords": [
+    "ai",
+    "agent",
+    "detection",
+    "environment",
+    "cursor",
+    "claude",
+    "devin",
+    "automation",
+    "ai-agent"
+  ],
   "license": "Apache-2.0",
+  "author": "Vercel",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://vercel.com/docs",
+  "homepage": "https://github.com/vercel/vercel/tree/main/packages/detect-agent#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/detect-agent"
   },
+  "bugs": {
+    "url": "https://github.com/vercel/vercel/issues"
+  },
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
+    "test": "vitest -c ../../vitest.config.mts",
     "type-check": "tsc --noEmit"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "dependencies": {},
   "devDependencies": {

@@ -51,7 +51,7 @@ import {
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
   LambdaGroup,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  getMaxUncompressedLambdaSize,
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
@@ -391,9 +391,9 @@ export async function serverBuild({
               )
             : false;
 
-        // If the rewrite was external and the origin is not allowed, we don't
-        // need to add the rewrite headers.
-        if (origin && !isAllowedOrigin) continue;
+        // If the rewrite was external and the origin is not allowed, or
+        // if there is no rewritten pathname or query, skip adding headers.
+        if ((origin && !isAllowedOrigin) || (!pathname && !query)) continue;
 
         (rewrite as RouteWithSrc).headers = {
           ...(rewrite as RouteWithSrc).headers,
@@ -823,10 +823,11 @@ export async function serverBuild({
       )
     );
 
-    if (uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
+    const maxLambdaSize = getMaxUncompressedLambdaSize(nodeVersion.runtime);
+    if (uncompressedInitialSize > maxLambdaSize) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          MAX_UNCOMPRESSED_LAMBDA_SIZE
+          maxLambdaSize
         )} uncompressed reached`
       );
 
@@ -838,7 +839,7 @@ export async function serverBuild({
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${maxLambdaSize} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -1062,6 +1063,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      nodeVersion,
     });
 
     for (const group of pageLambdaGroups) {
@@ -1084,6 +1086,7 @@ export async function serverBuild({
       internalPages,
       pageExtensions,
       inversedAppPathManifest,
+      nodeVersion,
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
@@ -1103,6 +1106,7 @@ export async function serverBuild({
       pageExtensions,
       inversedAppPathManifest,
       isRouteHandlers: true,
+      nodeVersion,
     });
 
     const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
@@ -1134,6 +1138,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      nodeVersion,
     });
 
     for (const group of apiLambdaGroups) {
@@ -1200,7 +1205,11 @@ export async function serverBuild({
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
+    await detectLambdaLimitExceeding(
+      combinedGroups,
+      compressedPages,
+      nodeVersion.runtime
+    );
 
     const appNotFoundTraces = pageTraces['_not-found.js'];
     const appNotFoundPsuedoLayer =
@@ -1364,6 +1373,7 @@ export async function serverBuild({
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
@@ -1984,6 +1994,33 @@ export async function serverBuild({
       ...trailingSlashRedirects,
 
       ...privateOutputs.routes,
+
+      ...(isNextDataServerResolving
+        ? [
+            // ensure x-nextjs-data header is always present
+            // if we are doing middleware next data resolving
+            {
+              src: path.posix.join('/', entryDirectory, '/_next/data/(.*)'),
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-nextjs-data',
+                },
+              ],
+              transforms: [
+                {
+                  type: 'request.headers',
+                  op: 'append',
+                  target: {
+                    key: 'x-nextjs-data',
+                  },
+                  args: `1`,
+                },
+              ],
+              continue: true,
+            },
+          ]
+        : []),
 
       // normalize _next/data URL before processing redirects
       ...normalizeNextDataRoute(true),

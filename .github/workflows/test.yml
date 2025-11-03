@@ -2,7 +2,6 @@ name: Tests
 
 on:
   pull_request:
-  merge_group:
 
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
@@ -18,23 +17,52 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
-    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && github.event.pull_request.title != 'Version Packages'
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.waitForTarball.outputs.url }}
+      affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
+      testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0 # Need full history for turbo query to work
           token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
+      - id: affected-packages
+        run: |
+          # Set base SHA for affected package detection
+          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          # Get affected packages info for PR comment
+          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ github.event.pull_request.base.sha }}" 2>&1)
+
+          # Extract affected packages count and strategy
+          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" || echo "0")
+          if echo "$AFFECTED_OUTPUT" | grep -q "Infrastructure changes detected"; then
+            STRATEGY="all-e2e"
+          elif [ "$PACKAGE_COUNT" -gt "0" ]; then
+            STRATEGY="affected-only"
+          else
+            STRATEGY="full-test"
+          fi
+
+          # Get the list of affected packages
+          PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
+
+          echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
+          # Set base SHA for affected package detection
+          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
           echo "Files to test:"
           echo "$TESTS_ARRAY"
@@ -45,6 +73,80 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+
+  comment-test-strategy:
+    name: Comment Test Strategy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    needs:
+      - setup
+    steps:
+      - name: Comment PR with test strategy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const strategy = '${{ needs.setup.outputs.testStrategy }}';
+            const packages = '${{ needs.setup.outputs.affectedPackages }}';
+            const packageCount = packages ? packages.split(',').length : 0;
+            const baseSha = '${{ github.event.pull_request.base.sha }}';
+            const headSha = '${{ github.event.pull_request.head.sha }}';
+
+            let message = '## 🧪 Test Strategy\n\n';
+            message += `**Comparing**: [\`${baseSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${baseSha}) → [\`${headSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${headSha}) ([view diff](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${baseSha}...${headSha}))\n\n`;
+
+            if (strategy === 'all-e2e') {
+              message += '**Strategy**: Infrastructure changes detected - running ALL tests\n\n';
+              message += '⚠️ Infrastructure or core utility changes were detected, so we\'re running the full test suite to ensure integration between packages is properly tested.\n\n';
+              message += `**Affected packages** (${packageCount}): All packages will be tested\n\n`;
+              if (packages) {
+                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
+                message += `Includes:\n${packageList}\n\n`;
+              }
+              message += '**E2E Tests**: All e2e tests will run';
+            } else if (strategy === 'affected-only') {
+              message += '**Strategy**: Affected packages only\n\n';
+              message += '✅ Only testing packages that have been modified or depend on modified packages. This saves time while maintaining safety.\n\n';
+              message += `**Affected packages** (${packageCount}):\n`;
+              if (packages) {
+                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
+                message += packageList + '\n\n';
+              }
+              message += '**E2E Tests**: Only affected package e2e tests will run';
+            } else {
+              message += '**Strategy**: Full test suite\n\n';
+              message += '🔄 Running all tests (no base SHA available for affected package detection)\n\n';
+              message += '**E2E Tests**: All e2e tests will run';
+            }
+
+            message += '\n\n---\n*This comment is automatically generated based on the [affected testing strategy](.github/AFFECTED_TESTING.md)*';
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('## 🧪 Test Strategy')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: message
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }
 
   test:
     timeout-minutes: 120
@@ -60,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0 # Need full history for turbo query to work
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -87,6 +189,7 @@ jobs:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           FORCE_COLOR: '1'
       - name: 'Determine Turbo HIT or MISS'
         if: ${{ !cancelled() }}

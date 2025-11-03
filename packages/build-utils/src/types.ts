@@ -25,6 +25,7 @@ export interface Files {
 }
 
 export interface Config {
+  bunVersion?: string;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -190,7 +191,12 @@ export interface ShouldServeOptions {
 /**
  * `startDevServer()` is given the same parameters as `build()`.
  */
-export type StartDevServerOptions = BuildOptions;
+export type StartDevServerOptions = BuildOptions & {
+  /**
+   * Directory to serve static files from in dev mode
+   */
+  publicDir?: string;
+};
 
 export interface StartDevServerSuccess {
   /**
@@ -372,6 +378,8 @@ export class Version implements BaseVersion {
 }
 
 export class NodeVersion extends Version {}
+
+export class BunVersion extends Version {}
 
 export interface Builder {
   use: string;

@@ -35,6 +35,14 @@ export const buildCommand = {
       description:
         'Skip the confirmation prompt about pulling environment variables and project settings when not found locally',
     },
+    {
+      name: 'standalone',
+      description:
+        'Create a standalone build with all dependencies inlined into function output folders',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {

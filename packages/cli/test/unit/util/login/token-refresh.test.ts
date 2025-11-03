@@ -17,7 +17,6 @@ describe('OAuth Token Refresh', () => {
     const refreshToken = randomUUID();
     const accessToken = randomUUID();
     client.authConfig = {
-      type: 'oauth',
       token: accessToken,
       expiresAt: 0,
       refreshToken,
@@ -74,7 +73,6 @@ describe('OAuth Token Refresh', () => {
 
   it('should empty the token config if the refresh token is missing', async () => {
     client.authConfig = {
-      type: 'oauth',
       token: randomUUID(),
       expiresAt: 0,
     };

@@ -201,8 +201,8 @@ async function fetchInformation({
 }) {
   const [domain, renewalPrice] = await Promise.all([
     getDomainByName(client, contextName, domainName, { ignoreWait: true }),
-    getDomainPrice(client, domainName, 'renewal')
-      .then(res => (res instanceof Error ? null : res.price))
+    getDomainPrice(client, domainName)
+      .then(res => (res instanceof Error ? null : res.renewalPrice))
       .catch(() => null),
   ]);
 

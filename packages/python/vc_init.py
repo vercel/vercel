@@ -1,14 +1,196 @@
+from __future__ import annotations
 import sys
+import os
+import site
+import importlib
 import base64
 import json
 import inspect
+import asyncio
+import http
+import time
 from importlib import util
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socket
-import os
+import functools
+import logging
+import builtins
+from typing import Callable, Literal, TextIO
+import contextvars
+import contextlib
+
+
+_here = os.path.dirname(__file__)
+_vendor_rel = '__VC_HANDLER_VENDOR_DIR'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
+
+
+def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
+    # Override logging.Handler to send logs to the platform when a request context is available.
+    class VCLogHandler(logging.Handler):
+        def emit(self, record: logging.LogRecord):
+            try:
+                message = record.getMessage()
+            except Exception:
+                message = repr(getattr(record, "msg", ""))
+
+            if record.levelno >= logging.CRITICAL:
+                level = "fatal"
+            elif record.levelno >= logging.ERROR:
+                level = "error"
+            elif record.levelno >= logging.WARNING:
+                level = "warn"
+            elif record.levelno >= logging.INFO:
+                level = "info"
+            else:
+                level = "debug"
+
+            context = storage.get()
+            if context is not None:
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
+                    }
+                })
+            else:
+                # If IPC is not ready, enqueue the message to be sent later.
+                enqueue_or_send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {"invocationId": "0", "requestId": 0},
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
+                    }
+                })
+
+    # Override sys.stdout and sys.stderr to map logs to the correct request
+    class StreamWrapper:
+        def __init__(self, stream: TextIO, stream_name: Literal["stdout", "stderr"]):
+            self.stream = stream
+            self.stream_name = stream_name
+
+        def write(self, message: str):
+            context = storage.get()
+            if context is not None:
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
+                    }
+                })
+            else:
+                enqueue_or_send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {"invocationId": "0", "requestId": 0},
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
+                    }
+                })
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+    sys.stdout = StreamWrapper(sys.stdout, "stdout")
+    sys.stderr = StreamWrapper(sys.stderr, "stderr")
+
+    logging.basicConfig(level=logging.INFO, handlers=[VCLogHandler()], force=True)
+
+    # Ensure built-in print funnels through stdout wrapper so prints are
+    # attributed to the current request context.
+    def print_wrapper(func: Callable[..., None]) -> Callable[..., None]:
+        @functools.wraps(func)
+        def wrapper(*args, sep=' ', end='\n', file=None, flush=False):
+            if file is None:
+                file = sys.stdout
+            if file in (sys.stdout, sys.stderr):
+                file.write(sep.join(map(str, args)) + end)
+                if flush:
+                    file.flush()
+            else:
+                # User specified a different file, use original print behavior
+                func(*args, sep=sep, end=end, file=file, flush=flush)
+        return wrapper
+
+    builtins.print = print_wrapper(builtins.print)
+
+
+# If running in the platform (IPC present), logging must be setup before importing user code so that
+# logs happening outside the request context are emitted correctly.
+ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+storage: contextvars.ContextVar[dict | None] = contextvars.ContextVar('storage', default=None)
+send_message = lambda m: None
+_original_stderr = sys.stderr
+
+
+# Buffer for pre-handshake logs (to avoid blocking IPC on startup)
+_ipc_ready = False
+_init_log_buf: list[dict] = []
+_INIT_LOG_BUF_MAX_BYTES = 1_000_000
+_init_log_buf_bytes = 0
+
+
+def enqueue_or_send_message(msg: dict):
+    global _init_log_buf_bytes
+    if _ipc_ready:
+        send_message(msg)
+        return
+
+    enc_len = len(json.dumps(msg))
+
+    if _init_log_buf_bytes + enc_len <= _INIT_LOG_BUF_MAX_BYTES:
+        _init_log_buf.append(msg)
+        _init_log_buf_bytes += enc_len
+    else:
+        # Fallback so message is not lost if buffer is full
+        with contextlib.suppress(Exception):
+            payload = msg.get("payload", {})
+            decoded = base64.b64decode(payload.get("message", "")).decode(errors="ignore")
+            _original_stderr.write(decoded + "\n")
+
+
+if 'VERCEL_IPC_PATH' in os.environ:
+    with contextlib.suppress(Exception):
+        ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
+
+        def send_message(message: dict):
+            with contextlib.suppress(Exception):
+                ipc_sock.sendall((json.dumps(message) + '\0').encode())
+
+        setup_logging(send_message, storage)
+
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
+user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
+__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
 __vc_module = util.module_from_spec(__vc_spec)
 sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
@@ -27,21 +209,9 @@ def format_headers(headers, decode=False):
         keyToList[key].append(value)
     return keyToList
 
+
 if 'VERCEL_IPC_PATH' in os.environ:
-    from http.server import ThreadingHTTPServer
-    import http
-    import time
-    import contextvars
-    import functools
-    import builtins
-    import logging
-
     start_time = time.time()
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
-
-    send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
-    storage = contextvars.ContextVar('storage', default=None)
 
     # Override urlopen from urllib3 (& requests) to send Request Metrics
     try:
@@ -85,71 +255,6 @@ if 'VERCEL_IPC_PATH' in os.environ:
         urllib3.connectionpool.HTTPConnectionPool.urlopen = timed_request(urllib3.connectionpool.HTTPConnectionPool.urlopen)
     except:
         pass
-
-    # Override sys.stdout and sys.stderr to map logs to the correct request
-    class StreamWrapper:
-        def __init__(self, stream, stream_name):
-            self.stream = stream
-            self.stream_name = stream_name
-
-        def write(self, message):
-            context = storage.get()
-            if context is not None:
-                send_message({
-                    "type": "log",
-                    "payload": {
-                        "context": {
-                            "invocationId": context['invocationId'],
-                            "requestId": context['requestId'],
-                        },
-                        "message": base64.b64encode(message.encode()).decode(),
-                        "stream": self.stream_name,
-                    }
-                })
-            else:
-                self.stream.write(message)
-
-        def __getattr__(self, name):
-            return getattr(self.stream, name)
-
-    sys.stdout = StreamWrapper(sys.stdout, "stdout")
-    sys.stderr = StreamWrapper(sys.stderr, "stderr")
-
-    # Override the global print to log to stdout
-    def print_wrapper(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            sys.stdout.write(' '.join(map(str, args)) + '\n')
-        return wrapper
-    builtins.print = print_wrapper(builtins.print)
-
-    # Override logging to maps logs to the correct request
-    def logging_wrapper(func, level="info"):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            context = storage.get()
-            if context is not None:
-                send_message({
-                    "type": "log",
-                    "payload": {
-                        "context": {
-                            "invocationId": context['invocationId'],
-                            "requestId": context['requestId'],
-                        },
-                        "message": base64.b64encode(f"{args[0]}".encode()).decode(),
-                        "level": level,
-                    }
-                })
-            else:
-                func(*args, **kwargs)
-        return wrapper
-
-    logging.basicConfig(level=logging.INFO)
-    logging.debug = logging_wrapper(logging.debug)
-    logging.info = logging_wrapper(logging.info)
-    logging.warning = logging_wrapper(logging.warning, "warn")
-    logging.error = logging_wrapper(logging.error, "error")
-    logging.critical = logging_wrapper(logging.critical, "error")
 
     class BaseHandler(BaseHTTPRequestHandler):
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
@@ -382,6 +487,11 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 "httpPort": server.server_address[1],
             }
         })
+        # Mark IPC as ready and flush any buffered init logs
+        _ipc_ready = True
+        for m in _init_log_buf:
+            send_message(m)
+        _init_log_buf.clear()
         server.serve_forever()
 
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')

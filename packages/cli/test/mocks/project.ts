@@ -330,6 +330,28 @@ export function useProject(
       res.json(envs);
     }
   );
+  client.scenario.patch(
+    `/v10/projects/${project.id}/env/:envId`,
+    (req, res) => {
+      const envId = req.params.envId;
+      const { type, key, value, target, customEnvironmentIds, gitBranch } =
+        req.body;
+      for (const env of envs) {
+        if (env.id === envId) {
+          env.type = type || env.type;
+          env.key = key || env.key;
+          env.value = value || env.value;
+          env.target = target || env.target;
+          env.customEnvironmentIds =
+            customEnvironmentIds || env.customEnvironmentIds;
+          env.gitBranch = gitBranch || env.gitBranch;
+          env.updatedAt = Date.now();
+          break;
+        }
+      }
+      res.json({ envs });
+    }
+  );
   client.scenario.post(`/v9/projects/${project.id}/link`, (req, res) => {
     const { type, repo, org } = req.body;
     if (
