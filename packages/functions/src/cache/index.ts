@@ -108,14 +108,13 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
   }
 
   if (!RUNTIME_CACHE_ENDPOINT || !RUNTIME_CACHE_HEADERS) {
+    if (!warnedCacheUnavailable && !process.env.DISABLE_RUNTIME_CACHE_WARNING) {
+      console.warn(
+        'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
+      );
+      warnedCacheUnavailable = true;
+    }
     return inMemoryCacheInstance;
-  }
-
-  if (!warnedCacheUnavailable && !process.env.DISABLE_RUNTIME_CACHE_WARNING) {
-    console.warn(
-      'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
-    );
-    warnedCacheUnavailable = true;
   }
 
   if (!buildCacheInstance) {
