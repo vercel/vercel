@@ -1,0 +1,118 @@
+import React, { useState } from 'react';
+
+// صفحة مدرسية منظمة حسب المستويات: من الصف الأول حتى الجامعة
+// كل مرحلة تعليمية تحتوي على بطاقات كتب PDF منفصلة مع نفس الألوان (أبيض + أصفر)
+
+export default function SchoolBooksPage() {
+  const [grades, setGrades] = useState(initialGrades);
+
+  function handleUpload(e, level) {
+    const files = Array.from(e.target.files).map((file, i) => ({
+      id: Date.now() + Math.random() + i,
+      file,
+      title: file.name.replace(/\.pdf$/i, '').replace(/[_-]/g, ' '),
+      color: sampleColors[i % sampleColors.length],
+      url: URL.createObjectURL(file),
+    }));
+
+    setGrades(prev => prev.map(g => g.name === level ? { ...g, books: [...g.books, ...files] } : g));
+  }
+
+  function removeBook(level, id) {
+    setGrades(prev => prev.map(g => g.name === level ? { ...g, books: g.books.filter(b => b.id !== id) } : g));
+  }
+
+  function changeColor(level, id, color) {
+    setGrades(prev => prev.map(g => g.name === level ? { ...g, books: g.books.map(b => b.id === id ? { ...b, color } : b) } : g));
+  }
+
+  function clearAll(level) {
+    setGrades(prev => prev.map(g => g.name === level ? { ...g, books: [] } : g));
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <header className="max-w-6xl mx-auto mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">مكتبتي المدرسية والجامعية</h1>
+        <p className="text-gray-600 mt-1">من الصف الأول حتى الجامعة — كل مستوى له ركن خاص وكتب ملونة بألوان الأبيض والأصفر.</p>
+      </header>
+
+      <main className="max-w-6xl mx-auto space-y-10">
+        {grades.map((grade) => (
+          <section key={grade.name} className="bg-white rounded-2xl shadow-md p-6 border-l-8 border-yellow-400">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-800">{grade.name}</h2>
+              <div className="flex gap-2">
+                <label className="px-3 py-1 bg-yellow-100 rounded-md border cursor-pointer text-sm font-medium">
+                  <input onChange={(e) => handleUpload(e, grade.name)} multiple accept="application/pdf" type="file" className="hidden" />
+                  أضف ملفات
+                </label>
+                <button onClick={() => clearAll(grade.name)} className="px-3 py-1 bg-white border rounded-md text-sm font-medium">حذف الكل</button>
+              </div>
+            </div>
+
+            {grade.books.length === 0 ? (
+              <div className="p-4 bg-gray-50 rounded-md text-gray-500 text-center">لم يتم رفع كتب بعد لهذا الصف.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {grade.books.map((b) => (
+                  <article key={b.id} className="rounded-2xl shadow-md overflow-hidden bg-white">
+                    <div className="p-4 flex items-start gap-4">
+                      <div className="flex-none w-20 h-28 rounded-md overflow-hidden" style={{background: b.color}}>
+                        <div className="w-full h-full flex items-center justify-center text-white font-bold text-center px-2">{b.title.split(' ').slice(0,2).join(' ')}</div>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-800">{b.title}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{(b.file.size/1024/1024).toFixed(2)} MB</p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <a href={b.url} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-yellow-100 rounded-md text-sm font-medium border">عرض</a>
+                          <a href={b.url} download={b.file.name} className="px-3 py-1 bg-white rounded-md text-sm font-medium border">تحميل</a>
+                          <button onClick={() => removeBook(grade.name, b.id)} className="px-2 py-1 bg-white rounded-md border text-sm">حذف</button>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2 text-sm">
+                          <span className="text-gray-600">لون البطاقة:</span>
+                          {sampleColors.map(c => (
+                            <button key={c} onClick={() => changeColor(grade.name, b.id, c)} className="w-6 h-6 rounded-full border" style={{background: c}} aria-label={c}></button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="border-t p-2 bg-gray-50">
+                      <iframe title={b.title} src={b.url} className="w-full h-48" />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
+      </main>
+
+      <footer className="mt-10 text-center text-gray-500 text-sm">© 2025 مكتبة التعليم — من الصف الأول حتى الجامعة</footer>
+    </div>
+  );
+}
+
+const sampleColors = [
+  '#FFF9DB',
+  '#FFF3B0',
+  '#FFF59D',
+  '#FFF176',
+  '#FFF8E1',
+];
+
+const initialGrades = [
+  { name: 'الصف الأول', books: [] },
+  { name: 'الصف الثاني', books: [] },
+  { name: 'الصف الثالث', books: [] },
+  { name: 'الصف الرابع', books: [] },
+  { name: 'الصف الخامس', books: [] },
+  { name: 'الصف السادس', books: [] },
+  { name: 'الصف السابع', books: [] },
+  { name: 'الصف الثامن', books: [] },
+  { name: 'الصف التاسع', books: [] },
+  { name: 'الصف العاشر', books: [] },
+  { name: 'الصف الحادي عشر', books: [] },
+  { name: 'الصف الثاني عشر', books: [] },
+  { name: 'الجامعة', books: [] },
+];
