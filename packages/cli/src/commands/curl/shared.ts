@@ -89,7 +89,7 @@ export function setupCurlLikeCommand(
     telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
   }
 
-  if (!path || path === '--' || path.startsWith('--')) {
+  if (!path || path === '--' || path.startsWith('-')) {
     output.error(
       `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
     );
