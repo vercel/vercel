@@ -26,6 +26,13 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
     },
+    {
+      name: 'json',
+      description: 'Output as JSON',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [],
 } as const;

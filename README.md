@@ -66,7 +66,7 @@ cd ./packages/cli
 pnpm vercel <cli-commands...>
 ```
 
-See [CLI Local Development](../packages/cli#local-development) for more details.
+See [CLI Local Development](./packages/cli/README.md#local-development) for more details.
 
 ### Verifying your change
 
