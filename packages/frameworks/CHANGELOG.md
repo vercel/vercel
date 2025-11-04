@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.15.1
+
+### Patch Changes
+
+- Fix express logos ([#13783](https://github.com/vercel/vercel/pull/13783))
+
 ## 3.15.0
 
 ### Minor Changes
