@@ -1,23 +1,25 @@
+[**@vercel/edge**](../README.md)
+
+---
+
 # Interface: ModifiedRequest
 
-## Table of contents
-
-### Properties
-
-- [headers](ModifiedRequest.md#headers)
+Defined in: packages/functions/middleware.d.ts:1
 
 ## Properties
 
-### headers
+### headers?
 
-• `Optional` **headers**: [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
+> `optional` **headers**: [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers)
+
+Defined in: packages/functions/middleware.d.ts:23
 
 If set, overwrites the incoming headers to the origin request.
 
 This is useful when you want to pass data between a Middleware and a
 Serverless or Edge Function.
 
-**`Example`**
+#### Example
 
 <caption>Add a `x-user-id` header and remove the `Authorization` header</caption>
 
@@ -32,7 +34,3 @@ export default async function middleware(request: Request): Promise<Response> {
   });
 }
 ```
-
-#### Defined in
-
-packages/functions/middleware.d.ts:23
