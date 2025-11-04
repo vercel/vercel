@@ -153,12 +153,12 @@ export const startDevServer: StartDevServer = async opts => {
 
     // In prod, `.ts` inputs use TypeScript and
     // `.js` inputs use Babel to convert ESM to CJS.
-    // In dev, both `.ts` and `.js` inputs use ts-node
+    // In dev, both `.ts` and `.js` inputs use tsx
     // without Babel so we must enable `allowJs`.
     tsConfig.compilerOptions.allowJs = true;
 
     // In prod, we emit outputs to the filesystem.
-    // In dev, we don't emit because we use ts-node.
+    // In dev, we don't emit because we use tsx.
     tsConfig.compilerOptions.noEmit = true;
   }
 
