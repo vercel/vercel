@@ -1,5 +1,11 @@
 # vercel
 
+## 48.8.2
+
+### Patch Changes
+
+- Add fastify as a direct dependency ([#14202](https://github.com/vercel/vercel/pull/14202))
+
 ## 48.8.1
 
 ### Patch Changes
