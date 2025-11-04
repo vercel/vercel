@@ -1,6 +1,5 @@
 import { getContext } from '../get-context';
 import { DangerouslyDeleteOptions } from './types';
-export * from './types';
 
 export const invalidateByTag = (tag: string | string[]) => {
   const api = getContext().purge;
@@ -19,4 +18,19 @@ export const dangerouslyDeleteByTag = (
     return api.dangerouslyDeleteByTag(tag, options);
   }
   return Promise.resolve();
+};
+
+export const invalidateBySrcImage = (src: string | string[]): Promise<void> => {
+  const api = getContext().purge;
+  return api ? api.invalidateBySrcImage(src) : Promise.resolve();
+};
+
+export const dangerouslyDeleteBySrcImage = (
+  src: string | string[],
+  options?: DangerouslyDeleteOptions
+): Promise<void> => {
+  const api = getContext().purge;
+  return api
+    ? api.dangerouslyDeleteBySrcImage(src, options)
+    : Promise.resolve();
 };

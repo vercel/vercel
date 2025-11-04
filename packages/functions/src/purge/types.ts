@@ -32,4 +32,27 @@ export interface PurgeApi {
     tag: string | string[],
     options?: DangerouslyDeleteOptions
   ) => Promise<void>;
+
+  /**
+   * Given a source image, invalidate all of its transformed images by marking them as stale.
+   * On the next access, the stale transformed image will be served and a background task will transform the source image.
+   *
+   * @param src The source image to invalidate.
+   * @returns A promise that resolves when the invalidate is complete.
+   */
+  invalidateBySrcImage: (src: string | string[]) => Promise<void>;
+
+  /**
+   * Given a source image, delete all of its transformed images after a specified revalidation deadline.
+   * If accessed prior to the revalidation deadline, the stale transformed image will be served and a background task will be triggered. After the revalidation deadline is reached, the transformed image will be deleted.
+   * The default revalidation deadline is 0 and the content will be deleted immediately.
+   *
+   * @param src The source image to delete.
+   * @param options The options for the delete that specify the revalidation deadline.
+   * @returns A promise that resolves when the delete is complete.
+   */
+  dangerouslyDeleteBySrcImage: (
+    src: string | string[],
+    options?: DangerouslyDeleteOptions
+  ) => Promise<void>;
 }
