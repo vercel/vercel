@@ -34,26 +34,39 @@ afterEach(() => {
 
 it('should only match supported versions, otherwise throw an error', () => {
   makeMockPython('3.9');
-  const result = getSupportedPythonVersion({ pipLockPythonVersion: '3.9' });
+  const result = getSupportedPythonVersion({
+    declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+  });
   expect(result).toHaveProperty('runtime', 'python3.9');
 });
 
 it('should ignore minor version in vercel dev', () => {
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.9', isDev: true })
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+      isDev: true,
+    })
   ).toHaveProperty('runtime', 'python3');
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6', isDev: true })
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+      isDev: true,
+    })
   ).toHaveProperty('runtime', 'python3');
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '999', isDev: true })
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '999', source: 'Pipfile.lock' },
+      isDev: true,
+    })
   ).toHaveProperty('runtime', 'python3');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select latest supported installed version when no Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({ pipLockPythonVersion: undefined });
+  const result = getSupportedPythonVersion({
+    declaredPythonVersion: undefined,
+  });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([]);
@@ -61,7 +74,9 @@ it('should select latest supported installed version when no Piplock detected', 
 
 it('should select latest supported installed version and warn when invalid Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({ pipLockPythonVersion: '999' });
+  const result = getSupportedPythonVersion({
+    declaredPythonVersion: { version: '999', source: 'Pipfile.lock' },
+  });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([
@@ -72,7 +87,9 @@ it('should select latest supported installed version and warn when invalid Piplo
 it('should throw if python not found', () => {
   process.env.PATH = '.';
   expect(() =>
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    })
   ).toThrow('Unable to find any supported Python versions.');
   expect(warningMessages).toStrictEqual([]);
 });
@@ -82,7 +99,9 @@ it('should throw for discontinued versions', () => {
   makeMockPython('3.6');
 
   expect(() =>
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    })
   ).toThrow(
     'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.'
   );
@@ -94,7 +113,9 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
   makeMockPython('3.6');
 
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    })
   ).toHaveProperty('runtime', 'python3.6');
   expect(warningMessages).toStrictEqual([
     'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
@@ -102,15 +123,24 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
 });
 
 function makeMockPython(version: string) {
-  fs.mkdirSync(tmpPythonDir);
+  fs.mkdirSync(tmpPythonDir, { recursive: true });
+  const isWin = process.platform === 'win32';
+  const posixScript = '#!/usr/bin/env sh\n# mock binary\nexit 0\n';
+  const winScript = '@echo off\r\nrem mock binary\r\nexit /b 0\r\n';
+
   for (const name of ['python', 'pip']) {
     const bin = path.join(
       tmpPythonDir,
-      `${name}${version}${process.platform === 'win32' ? '.exe' : ''}`
+      `${name}${version}${isWin ? '.cmd' : ''}`
     );
-    fs.writeFileSync(bin, '');
-    fs.chmodSync(bin, 0o755);
+    fs.writeFileSync(bin, isWin ? winScript : posixScript, 'utf8');
+    if (!isWin) fs.chmodSync(bin, 0o755);
   }
+
+  const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
+  fs.writeFileSync(uvBin, isWin ? winScript : posixScript, 'utf8');
+  if (!isWin) fs.chmodSync(uvBin, 0o755);
+
   process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
 }
 
@@ -204,6 +234,86 @@ describe('file exclusions', () => {
   });
 });
 
+describe('python version selection from uv.lock and pyproject.toml', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-uvlock-test-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    makeMockPython('3.10');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('uses python version from uv.lock when present (build succeeds)', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'uv.lock': new FileBlob({ data: '[project]\npython = "3.11"\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    expect(handler).toBeDefined();
+  });
+
+  it('falls back to pyproject.toml requires-python when no uv.lock (build succeeds)', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.10,<3.12"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    expect(handler).toBeDefined();
+  });
+
+  it('throws when pyproject.toml requires discontinued python version', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.6,<3.7"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/discontinued/i);
+  });
+});
+
 describe('fastapi entrypoint discovery', () => {
   it('should throw a clear error when no FastAPI entrypoint is found', async () => {
     const mockWorkPath = path.join(
@@ -228,7 +338,7 @@ describe('fastapi entrypoint discovery', () => {
         config: { framework: 'fastapi' },
         repoRootPath: mockWorkPath,
       })
-    ).rejects.toThrow('No FastAPI entrypoint found');
+    ).rejects.toThrow(/No fastapi entrypoint found/i);
 
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
@@ -338,6 +448,182 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
+describe('pyproject.toml entrypoint detection', () => {
+  it('resolves FastAPI entrypoint from pyproject scripts (uvicorn module:attr)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-fastapi-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend', 'api'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n\n[project.scripts]\napp = "uvicorn backend.api.server:main"\n',
+      }),
+      'backend/api/server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'missing.py',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend/api/server.py')).toBe(true);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Flask entrypoint from pyproject scripts (module:attr -> .py)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-flask-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n\n[project.scripts]\napp = "backend:run"\n',
+      }),
+      'backend.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'missing.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend.py')).toBe(true);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to package __init__.py when module path has no .py file', async () => {
+    const workPath = path.join(tmpdir(), `python-pyproject-init-${Date.now()}`);
+    fs.mkdirSync(path.join(workPath, 'backend', 'server'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n\n[project.scripts]\napp = "backend.server:main"\n',
+      }),
+      'backend/server/__init__.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'missing.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend/server/__init__.py')).toBe(true);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('python version fallback logging', () => {
+  let mockWorkPath: string;
+  let consoleLogSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-version-log-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('logs when no Python version is specified in pyproject.toml', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "myproject"\nversion = "0.1.0"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should log that it's falling back to latest installed
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'No Python version specified in pyproject.toml or Pipfile.lock'
+      )
+    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using latest installed version')
+    );
+  });
+
+  it('logs when Python version is found in pyproject.toml', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.11,<3.13"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from pyproject.toml')
+    );
+  });
+});
+
 describe('uv install path', () => {
   it('uses uv to install requirement (no fallback to pip)', async () => {
     jest.resetModules();
@@ -371,6 +657,7 @@ describe('uv install path', () => {
       await installRequirement({
         pythonPath: '/usr/bin/python3',
         pipPath: '/usr/bin/pip3',
+        uvPath: '/mock/uv',
         dependency: 'foo',
         version: '1.2.3',
         workPath,

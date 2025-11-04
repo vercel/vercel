@@ -1,0 +1,66 @@
+{
+  "name": "@vercel/backends",
+  "version": "0.0.4",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "homepage": "https://vercel.com/docs",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./loaders/cjs": "./dist/loaders/cjs.js",
+    "./loaders/esm": "./dist/loaders/esm.js",
+    "./loaders/hooks": "./dist/loaders/hooks.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/backends"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
+    "type-check": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "express-loader.js",
+    "express-loader.mjs",
+    "express-loader-register.mjs",
+    "express-loader-hooks.mjs",
+    "express-introspection-source.js",
+    "hono-loader.js",
+    "hono-loader-hooks.js",
+    "universal-loader.js",
+    "universal-loader-cjs.js",
+    "universal-loader-esm.mjs",
+    "universal-loader-hooks.mjs"
+  ],
+  "dependencies": {
+    "@vercel/cervel": "workspace:*",
+    "@vercel/nft": "0.30.1",
+    "@vercel/static-config": "3.1.2",
+    "fs-extra": "11.1.0",
+    "path-to-regexp": "8.3.0",
+    "rolldown": "1.0.0-beta.35",
+    "ts-morph": "12.0.0",
+    "zod": "3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/fs-extra": "11",
+    "@types/jest": "27.5.1",
+    "@types/node": "22",
+    "@vercel/build-utils": "12.2.4",
+    "execa": "3.2.0",
+    "hono": "4.10.1",
+    "jest-junit": "16.0.0",
+    "tsdown": "0.15.6",
+    "vite": "^5.1.6",
+    "vitest": "^2.0.1"
+  }
+}

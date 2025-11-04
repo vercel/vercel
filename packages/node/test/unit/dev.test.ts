@@ -10,7 +10,7 @@ import { setTimeout } from 'timers/promises';
 
 vi.setConfig({ testTimeout: 20 * 1000 });
 
-function testForkDevServer(entrypoint: string) {
+function testForkDevServer(entrypoint: string, runtime?: 'node' | 'bun') {
   const ext = extname(entrypoint);
   const isTypeScript = ext === '.ts';
   const isEsm = ext === '.mjs';
@@ -27,6 +27,7 @@ function testForkDevServer(entrypoint: string) {
     workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
     devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
+    runtime,
   });
 }
 
@@ -43,15 +44,16 @@ async function withHttpServer(hander: (req: any, res: any) => void) {
 async function withDevServer(
   entrypoint: string,
   fn: (url: string) => Promise<void>,
-  { runningTimeout }: { runningTimeout?: number } = {}
+  options: { runningTimeout?: number; runtime?: 'node' | 'bun' } = {}
 ) {
-  const child = testForkDevServer(entrypoint);
+  const { runningTimeout, runtime = 'node' } = options;
+  const child = await testForkDevServer(entrypoint, runtime);
 
   const result = await readMessage(child);
   if (result.state !== 'message') {
     throw new Error('Exited. error: ' + JSON.stringify(result.value));
   }
-  const { address, port } = result.value;
+  const { address = 'localhost', port } = result.value;
   const url = `http://${address}:${port}`;
 
   const start = Date.now();
@@ -61,25 +63,37 @@ async function withDevServer(
   } finally {
     const elapsed = Date.now() - start;
     if (runningTimeout) await setTimeout(runningTimeout - elapsed);
-    child.send('shutdown', error => {
-      if (error) {
-        console.log('Shutdown error:', error);
+
+    // Bun uses spawn() not fork(), so no IPC. Use SIGTERM to gracefully shut down.
+    if (runtime === 'bun') {
+      if (child.pid) {
         try {
-          child.kill(9);
-        } catch (killError) {
-          // In Node 22, there's a bug where attempting to kill a child process
-          // results in an EPERM error. Ignore the error in that case.
-          // See: https://github.com/nodejs/node/issues/51766
-          console.log('Ignoring kill error:', killError);
+          process.kill(child.pid, 'SIGTERM');
+        } catch (err) {
+          // Process might have already exited
         }
       }
-    });
+    } else {
+      child.send('shutdown', error => {
+        if (error) {
+          console.log('Shutdown error:', error);
+          try {
+            child.kill(9);
+          } catch (killError) {
+            // In Node 22, there's a bug where attempting to kill a child process
+            // results in an EPERM error. Ignore the error in that case.
+            // See: https://github.com/nodejs/node/issues/51766
+            console.log('Ignoring kill error:', killError);
+          }
+        }
+      });
+    }
     if (child.exitCode === null) await once(child, 'exit');
   }
 }
 
 describe('web handlers', () => {
-  describe('for node runtime', () => {
+  describe.each(['node', 'bun'] as const)('for %s runtime', runtime => {
     test('with `waitUntil` from import', () =>
       withDevServer(
         './wait-until-node.js',
@@ -93,7 +107,7 @@ describe('web handlers', () => {
           await setTimeout(50); // wait a bit for waitUntil resolution
           expect(isWaitUntilCalled).toBe(true);
         },
-        { runningTimeout: 300 }
+        { runningTimeout: 300, runtime }
       ));
 
     test('with `waitUntil` from context', () =>
@@ -112,7 +126,7 @@ describe('web handlers', () => {
           await setTimeout(50); // wait a bit for waitUntil resolution
           expect(isWaitUntilCalled).toBe(true);
         },
-        { runningTimeout: 300 }
+        { runningTimeout: 300, runtime }
       ));
 
     test('with `waitUntil` from context rejecting a promise ', () =>
@@ -125,134 +139,162 @@ describe('web handlers', () => {
           await setTimeout(50); // wait a bit for waitUntil resolution
           expect(response.status).toBe(200);
         },
-        { runningTimeout: 75 }
+        { runningTimeout: 75, runtime }
       ));
 
     test('exporting GET', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'GET',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: 'Web handler using GET',
-          transferEncoding: 'chunked',
-          'x-web-handler': 'Web handler using GET',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'GET',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: 'Web handler using GET',
+            transferEncoding: 'chunked',
+            'x-web-handler': 'Web handler using GET',
+          });
+        },
+        { runtime }
+      ));
 
     test('exporting POST', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'POST',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: 'Web handler using POST',
-          transferEncoding: 'chunked',
-          'x-web-handler': 'Web handler using POST',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'POST',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: 'Web handler using POST',
+            transferEncoding: 'chunked',
+            'x-web-handler': 'Web handler using POST',
+          });
+        },
+        { runtime }
+      ));
 
     test('exporting DELETE', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'DELETE',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: 'Web handler using DELETE',
-          transferEncoding: 'chunked',
-          'x-web-handler': 'Web handler using DELETE',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'DELETE',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: 'Web handler using DELETE',
+            transferEncoding: 'chunked',
+            'x-web-handler': 'Web handler using DELETE',
+          });
+        },
+        { runtime }
+      ));
 
     test('exporting PUT', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'PUT',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: 'Web handler using PUT',
-          transferEncoding: 'chunked',
-          'x-web-handler': 'Web handler using PUT',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'PUT',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: 'Web handler using PUT',
+            transferEncoding: 'chunked',
+            'x-web-handler': 'Web handler using PUT',
+          });
+        },
+        { runtime }
+      ));
 
     test('exporting PATCH', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'PATCH',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: 'Web handler using PATCH',
-          transferEncoding: 'chunked',
-          'x-web-handler': 'Web handler using PATCH',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'PATCH',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: 'Web handler using PATCH',
+            transferEncoding: 'chunked',
+            'x-web-handler': 'Web handler using PATCH',
+          });
+        },
+        { runtime }
+      ));
 
     test('exporting HEAD', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'HEAD',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: '',
-          transferEncoding: null,
-          'x-web-handler': 'Web handler using HEAD',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'HEAD',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: '',
+            transferEncoding: null,
+            'x-web-handler': 'Web handler using HEAD',
+          });
+        },
+        { runtime }
+      ));
 
     test('exporting OPTIONS', () =>
-      withDevServer('./web-handlers-node.js', async (url: string) => {
-        const response = await fetch(`${url}/api/web-handlers-node`, {
-          method: 'OPTIONS',
-        });
-        expect({
-          status: response.status,
-          body: await response.text(),
-          transferEncoding: response.headers.get('transfer-encoding'),
-          'x-web-handler': response.headers.get('x-web-handler'),
-        }).toEqual({
-          status: 200,
-          body: 'Web handler using OPTIONS',
-          transferEncoding: 'chunked',
-          'x-web-handler': 'Web handler using OPTIONS',
-        });
-      }));
+      withDevServer(
+        './web-handlers-node.js',
+        async (url: string) => {
+          const response = await fetch(`${url}/api/web-handlers-node`, {
+            method: 'OPTIONS',
+          });
+          expect({
+            status: response.status,
+            body: await response.text(),
+            transferEncoding: response.headers.get('transfer-encoding'),
+            'x-web-handler': response.headers.get('x-web-handler'),
+          }).toEqual({
+            status: 200,
+            body: 'Web handler using OPTIONS',
+            transferEncoding: 'chunked',
+            'x-web-handler': 'Web handler using OPTIONS',
+          });
+        },
+        { runtime }
+      ));
   });
 
   describe('for edge runtime', () => {
@@ -511,7 +553,7 @@ describe('web handlers', () => {
 
 test('dev server should remove transfer encoding header', async () => {
   expect.assertions(2);
-  const child = testForkDevServer('./edge-echo.js');
+  const child = await testForkDevServer('./edge-echo.js');
   try {
     const result = await readMessage(child);
     if (result.state !== 'message') {

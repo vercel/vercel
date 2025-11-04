@@ -13,11 +13,13 @@
 ### Functions
 
 - [attachDatabasePool](index.md#attachdatabasepool)
+- [dangerouslyDeleteBySrcImage](index.md#dangerouslydeletebysrcimage)
 - [dangerouslyDeleteByTag](index.md#dangerouslydeletebytag)
 - [experimental_attachDatabasePool](index.md#experimental_attachdatabasepool)
 - [geolocation](index.md#geolocation)
 - [getCache](index.md#getcache)
 - [getEnv](index.md#getenv)
+- [invalidateBySrcImage](index.md#invalidatebysrcimage)
 - [invalidateByTag](index.md#invalidatebytag)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
@@ -56,7 +58,28 @@ attachDatabasePool(pgPool);
 
 #### Defined in
 
-[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+[packages/functions/src/db-connections/index.ts:225](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L225)
+
+---
+
+### dangerouslyDeleteBySrcImage
+
+▸ **dangerouslyDeleteBySrcImage**(`src`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name       | Type                                                                          |
+| :--------- | :---------------------------------------------------------------------------- |
+| `src`      | `string` \| `string`[]                                                        |
+| `options?` | [`DangerouslyDeleteOptions`](../interfaces/index.DangerouslyDeleteOptions.md) |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/purge/index.ts:28](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L28)
 
 ---
 
@@ -77,7 +100,7 @@ attachDatabasePool(pgPool);
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:13](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L13)
+[packages/functions/src/purge/index.ts:12](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L12)
 
 ---
 
@@ -101,7 +124,7 @@ Use attachDatabasePool instead.
 
 #### Defined in
 
-[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+[packages/functions/src/db-connections/index.ts:225](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L225)
 
 ---
 
@@ -238,6 +261,26 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 ---
 
+### invalidateBySrcImage
+
+▸ **invalidateBySrcImage**(`src`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name  | Type                   |
+| :---- | :--------------------- |
+| `src` | `string` \| `string`[] |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/purge/index.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L23)
+
+---
+
 ### invalidateByTag
 
 ▸ **invalidateByTag**(`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
@@ -254,7 +297,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L5)
+[packages/functions/src/purge/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L4)
 
 ---
 

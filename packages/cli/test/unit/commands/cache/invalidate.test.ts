@@ -43,7 +43,9 @@ describe('cache invalidate', () => {
     client.setArgv('cache', 'invalidate', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
-    await expect(client.stderr).toOutput('The --tag option is required');
+    await expect(client.stderr).toOutput(
+      'The --tag or --srcimg option is required'
+    );
   });
 
   it('should succeed with --tag', async () => {
@@ -76,12 +78,53 @@ describe('cache invalidate', () => {
     );
   });
 
-  it('should ask for confirmation if the --yes option is omitted', async () => {
+  it('should ask for confirmation when --tag is missing --yes', async () => {
     client.setArgv('cache', 'invalidate', '--tag=foo');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
       `You are about to invalidate all cached content associated with tag foo for project ${projectId}. To continue, run \`vercel cache invalidate --tag foo --yes\`.`
+    );
+  });
+
+  it('should succeed with --srcimg', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/invalidate-by-src-images`,
+      (req, res) => {
+        expect(req.body).toEqual({
+          srcImages: ['/api/avatar/1'],
+        });
+        res.end();
+      }
+    );
+    client.setArgv('cache', 'invalidate', '--srcimg=/api/avatar/1', '--yes');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully invalidated all cached content associated with source image /api/avatar/1'
+    );
+  });
+
+  it('should ask for confirmation when --srcimg is missing --yes', async () => {
+    client.setArgv('cache', 'invalidate', '--srcimg=/api/avatar/1');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `You are about to invalidate all cached content associated with source image /api/avatar/1 for project ${projectId}. To continue, run \`vercel cache invalidate --srcimg /api/avatar/1 --yes\`.`
+    );
+  });
+
+  it('should error when both --tag and --srcimg are provided', async () => {
+    client.setArgv(
+      'cache',
+      'invalidate',
+      '--tag=foo',
+      '--srcimg=/api/avatar/1'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use both --tag and --srcimg options'
     );
   });
 });

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["node", "jest"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2022"
+  },
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

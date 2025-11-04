@@ -1,5 +1,85 @@
 # @vercel/client
 
+## 17.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`21214ebaf1077f1a9d1d7d4046bffe79db0196d2`](https://github.com/vercel/vercel/commit/21214ebaf1077f1a9d1d7d4046bffe79db0196d2)]:
+  - @vercel/build-utils@12.2.4
+
+## 17.2.0
+
+### Minor Changes
+
+- Add TanStack Start framework preset ([#14188](https://github.com/vercel/vercel/pull/14188))
+
+## 17.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`55a1f7691ab944e133a43fc859fb8f373c5982c0`](https://github.com/vercel/vercel/commit/55a1f7691ab944e133a43fc859fb8f373c5982c0)]:
+  - @vercel/build-utils@12.2.3
+
+## 17.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`f843e147b71ce44af214647c78eab4a6109db98b`](https://github.com/vercel/vercel/commit/f843e147b71ce44af214647c78eab4a6109db98b)]:
+  - @vercel/build-utils@12.2.2
+
+## 17.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`0e63b0b007dd5705434ff594e7576c86dda939bc`](https://github.com/vercel/vercel/commit/0e63b0b007dd5705434ff594e7576c86dda939bc)]:
+  - @vercel/build-utils@12.2.1
+
+## 17.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`c4fca8a2ee0eeb863fbe1abeac73c6c760182303`](https://github.com/vercel/vercel/commit/c4fca8a2ee0eeb863fbe1abeac73c6c760182303)]:
+  - @vercel/routing-utils@5.2.1
+
+## 17.1.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+### Patch Changes
+
+- Updated dependencies [[`970781cb50ebdb0379056abe1700bba4a53fcf7c`](https://github.com/vercel/vercel/commit/970781cb50ebdb0379056abe1700bba4a53fcf7c)]:
+  - @vercel/build-utils@12.2.0
+
+## 17.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`bcf9c18da437d9566eeff1fdaedb11abb00c080c`](https://github.com/vercel/vercel/commit/bcf9c18da437d9566eeff1fdaedb11abb00c080c)]:
+  - @vercel/build-utils@12.1.3
+
+## 17.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`df38583152228b40060a5b11ef63c6a33cb12249`](https://github.com/vercel/vercel/commit/df38583152228b40060a5b11ef63c6a33cb12249)]:
+  - @vercel/build-utils@12.1.2
+
+## 17.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`0fd2477a7510c7856c6d7e6622c72b712c285fe7`](https://github.com/vercel/vercel/commit/0fd2477a7510c7856c6d7e6622c72b712c285fe7)]:
+  - @vercel/build-utils@12.1.1
+
+## 17.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`07cefee4765af8797855092d387a834eaa8a987a`](https://github.com/vercel/vercel/commit/07cefee4765af8797855092d387a834eaa8a987a), [`6deaf1c665aeacd57d075d2b808a8b2880023b53`](https://github.com/vercel/vercel/commit/6deaf1c665aeacd57d075d2b808a8b2880023b53)]:
+  - @vercel/routing-utils@5.2.0
+
 ## 17.0.0
 
 ### Major Changes
