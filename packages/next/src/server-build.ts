@@ -51,7 +51,7 @@ import {
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
   LambdaGroup,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  getMaxUncompressedLambdaSize,
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
@@ -823,10 +823,11 @@ export async function serverBuild({
       )
     );
 
-    if (uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
+    const maxLambdaSize = getMaxUncompressedLambdaSize(nodeVersion.runtime);
+    if (uncompressedInitialSize > maxLambdaSize) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          MAX_UNCOMPRESSED_LAMBDA_SIZE
+          maxLambdaSize
         )} uncompressed reached`
       );
 
@@ -838,7 +839,7 @@ export async function serverBuild({
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${maxLambdaSize} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -1062,6 +1063,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      nodeVersion,
     });
 
     for (const group of pageLambdaGroups) {
@@ -1084,6 +1086,7 @@ export async function serverBuild({
       internalPages,
       pageExtensions,
       inversedAppPathManifest,
+      nodeVersion,
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
@@ -1103,6 +1106,7 @@ export async function serverBuild({
       pageExtensions,
       inversedAppPathManifest,
       isRouteHandlers: true,
+      nodeVersion,
     });
 
     const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
@@ -1134,6 +1138,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      nodeVersion,
     });
 
     for (const group of apiLambdaGroups) {
@@ -1200,7 +1205,11 @@ export async function serverBuild({
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
+    await detectLambdaLimitExceeding(
+      combinedGroups,
+      compressedPages,
+      nodeVersion.runtime
+    );
 
     const appNotFoundTraces = pageTraces['_not-found.js'];
     const appNotFoundPsuedoLayer =

@@ -362,6 +362,25 @@ export interface ProjectLinkData {
   deployHooks?: DeployHook[];
 }
 
+export interface AutomationProtectionBypass {
+  createdAt: number;
+  createdBy: string;
+  scope: 'automation-bypass';
+}
+
+export interface IntegrationAutomationProtectionBypass {
+  createdAt: number;
+  createdBy: string;
+  scope: 'integration-automation-bypass';
+  integrationId: string;
+  configurationId: string;
+}
+
+export type ProjectProtectionBypass = Record<
+  string,
+  AutomationProtectionBypass | IntegrationAutomationProtectionBypass
+>;
+
 export interface Project extends ProjectSettings {
   id: string;
   analytics?: {
@@ -382,6 +401,7 @@ export interface Project extends ProjectSettings {
   };
   customEnvironments?: CustomEnvironment[];
   rollingRelease?: ProjectRollingRelease;
+  protectionBypass?: ProjectProtectionBypass;
 }
 
 export interface Org {

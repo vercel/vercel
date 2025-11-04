@@ -434,11 +434,11 @@ export async function getBuildMatches(
       buildConfig.config?.framework === 'flask'
     ) {
       // Mirror @vercel/python's entrypoint candidates
-      const candidateDirs = ['', 'src', 'app'];
+      const candidateDirs = ['', 'src', 'app', 'api'];
       const candidateNames = ['app', 'index', 'server', 'main'];
       const candidates: string[] = [];
-      for (const dir of candidateDirs) {
-        for (const name of candidateNames) {
+      for (const name of candidateNames) {
+        for (const dir of candidateDirs) {
           candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
         }
       }
@@ -446,6 +446,9 @@ export async function getBuildMatches(
         const existing = candidates.filter(p => fileList.includes(p));
         if (existing.length > 0) {
           src = existing[0];
+        } else if (fileList.includes('pyproject.toml')) {
+          // Builder will resolve entrypoint from pyproject.toml;
+          src = 'pyproject.toml';
         }
       }
     }
