@@ -29,7 +29,7 @@ export class WasmAssets {
       promises.push(
         (async () => {
           const bytes = await fs.readFile(filePath);
-          context[name] = await WebAssembly.compile(bytes);
+          context[name] = await WebAssembly.compile(bytes as BufferSource);
         })()
       );
     }
@@ -88,5 +88,7 @@ export function createEdgeWasmPlugin() {
 }
 
 function sha1(data: string | Buffer) {
-  return createHash('sha1').update(data).digest('hex');
+  return createHash('sha1')
+    .update(data as any)
+    .digest('hex');
 }
