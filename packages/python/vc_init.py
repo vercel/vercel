@@ -61,7 +61,6 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
                     if isinstance(exc_info, tuple):
                         tb = ''.join(traceback.format_exception(*exc_info))
                         if tb:
-                            # Ensure separation from the original message
                             if message:
                                 message = f"{message}\n{tb}"
                             else:
