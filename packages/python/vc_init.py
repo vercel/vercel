@@ -9,6 +9,7 @@ import inspect
 import asyncio
 import http
 import time
+import traceback
 from importlib import util
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socket
@@ -50,6 +51,20 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
                 message = record.getMessage()
             except Exception:
                 message = repr(getattr(record, "msg", ""))
+
+            with contextlib.suppress(Exception):
+                if record.exc_info:
+                    # logging allows exc_info=True or a (type, value, tb) tuple
+                    exc_info = record.exc_info
+                    if exc_info is True:
+                        exc_info = sys.exc_info()
+                    if isinstance(exc_info, tuple):
+                        tb = ''.join(traceback.format_exception(*exc_info))
+                        if tb:
+                            if message:
+                                message = f"{message}\n{tb}"
+                            else:
+                                message = tb
 
             if record.levelno >= logging.CRITICAL:
                 level = "fatal"
