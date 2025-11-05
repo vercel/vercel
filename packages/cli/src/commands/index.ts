@@ -11,6 +11,7 @@ import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
+import { httpstatCommand } from './httpstat/command';
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
@@ -52,6 +53,7 @@ const commandsStructs = [
   domainsCommand,
   envCommand,
   gitCommand,
+  httpstatCommand,
   initCommand,
   inspectCommand,
   installCommand,

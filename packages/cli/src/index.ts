@@ -659,6 +659,10 @@ const main = async () => {
             func = null;
             break;
           }
+        case 'httpstat':
+          telemetry.trackCliCommandHttpstat(userSuppliedSubCommand);
+          func = require('./commands/httpstat').default;
+          break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
