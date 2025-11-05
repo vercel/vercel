@@ -633,7 +633,7 @@ export const build: BuildV2 = async ({
       // TODO: Add bins to PATH once we implement pip caching
     }
 
-    if (process.env.PATH) {
+    if (spawnEnv.PATH) {
       // Append system path last so others above take precedence
       pathList.push(spawnEnv.PATH);
     }
