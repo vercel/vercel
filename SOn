@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <title>3D Солнечная Система</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- Подключаем Tailwind CSS для быстрой стилизации -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'space-dark': '#0a0a2a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; 
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            position: relative;
+        }
+        canvas {
+            display: block;
+        }
+        
+        /* Общие стили для иконок планет в меню */
+        .planet-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 0 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .planet-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        }
+
+        /* --- Специфические CSS-стили для имитации внешнего вида планет (без изменений) --- */
+        .icon-mercury { background-color: #999999; }
+        .icon-venus { 
+            background: radial-gradient(circle at 70% 30%, #f7d294 10%, #eda359 90%);
+        }
+        .icon-earth {
+            /* Имитация континентов и облаков */
+            background: radial-gradient(circle at 10% 20%, #4a90e2 0%, #3d6d9d 40%, #50c878 70%, #f0f0f0 90%);
+        }
+        .icon-mars {
+            background: radial-gradient(circle, #cc6633 0%, #b0542f 80%);
+        }
+        .icon-jupiter {
+            /* Имитация полос Юпитера */
+            background: linear-gradient(180deg, #bf8d51 0%, #6d4b2e 20%, #bf8d51 40%, #ffffff 50%, #bf8d51 60%, #6d4b2e 80%, #bf8d51 100%);
+        }
+        .icon-saturn {
+            background-color: #aaa583;
+            position: relative;
+            overflow: visible; 
+        }
+        .icon-saturn::after {
+            content: '';
+            position: absolute;
+            width: 180%; 
+            height: 5px;
+            top: 50%;
+            left: -40%;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: rotate(-10deg);
+        }
+        .icon-uranus {
+             background: linear-gradient(180deg, #a4e5e7 0%, #5fcbcf 100%);
+        }
+        .icon-neptune { 
+            background: radial-gradient(circle, #3e66f9 0%, #1f337a 100%);
+        }
+
+        /* Стили для панелей */
+        .panel-style {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+        }
+        /* Стиль для прокручиваемой области в модальном окне */
+        #full-desc-text {
+            /* Устанавливаем максимальную высоту для прокрутки */
+            max-height: calc(100vh - 150px); 
+            overflow-y: auto;
+            /* Добавляем стилизацию для полосы прокрутки */
+            padding-right: 15px; 
+        }
+        #description-content {
+            overflow-y: auto;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- 1. Информационный оверлей (верхний левый угол) -->
+    <div class="absolute top-0 left-0 p-4 z-10">
+        <!-- Кнопка "Сделал" для открытия модального окна автора -->
+        <button id="credits-button" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-xl transition-colors mb-2">
+            сделал
+        </button>
+        <!-- Инфо-панель -->
+        <div id="info" class="p-4 text-sm bg-black bg-opacity-50 rounded-br-lg shadow-xl">
+            <p class="font-bold">Солнечная система (3D)</p>
+            <p>Кликните по планете в меню снизу для фокусировки.</p>
+        </div>
+    </div>
+
+    <!-- 2. Панель меню планет (внизу) -->
+    <div id="planet-menu" class="absolute bottom-0 left-0 w-full p-3 bg-black bg-opacity-70 flex justify-center items-center space-x-4 z-20">
+        <!-- Иконки планет будут добавлены сюда с помощью JavaScript -->
+    </div>
+
+    <!-- 3. Панель краткого описания планеты (появляется при клике) -->
+    <div id="description-panel" class="absolute bottom-0 left-0 w-full h-1/3 p-6 panel-style 
+        bg-space-dark bg-opacity-70 text-white z-30 transition-all duration-500 hidden 
+        flex-col justify-between md:h-1/4">
+        
+        <!-- Контент с текстом (должен занимать большую часть места) -->
+        <div id="description-content" class="flex-grow min-h-0 pb-4">
+            <h2 id="desc-name" class="text-3xl font-bold mb-2 text-yellow-300"></h2>
+            <p id="desc-text" class="text-gray-300 text-base leading-relaxed"></p>
+        </div>
+
+        <!-- Кнопки (расположены внизу, после текста) -->
+        <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-4 flex-shrink-0">
+            <button id="read-more-button" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 
+                text-white font-semibold rounded-lg shadow-md transition-colors 
+                w-full sm:w-auto">
+                Подробнее...
+            </button>
+            <button id="back-button" class="px-6 py-2 bg-red-600 hover:bg-red-700 
+                text-white font-semibold rounded-lg shadow-md transition-colors 
+                w-full sm:w-auto">
+                Вернуться к общему виду
+            </button>
+        </div>
+    </div>
+    
+    <!-- 4. КНОПКИ НАВИГАЦИИ СТРЕЛКАМИ -->
+    <div id="nav-arrows" class="absolute inset-0 z-30 pointer-events-none hidden">
+        <!-- Левая стрелка -->
+        <button id="prev-planet-button" class="absolute left-4 top-1/2 transform -translate-y-1/2 
+            p-3 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full 
+            shadow-lg transition-colors pointer-events-auto text-2xl font-bold backdrop-filter backdrop-blur-sm">
+            &lt;
+        </button>
+        <!-- Правая стрелка -->
+        <button id="next-planet-button" class="absolute right-4 top-1/2 transform -translate-y-1/2 
+            p-3 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full 
+            shadow-lg transition-colors pointer-events-auto text-2xl font-bold backdrop-filter backdrop-blur-sm">
+            &gt;
+        </button>
+    </div>
+
+    <!-- 5. Полноэкранное модальное окно с детальным описанием -->
+    <div id="full-description-modal" class="hidden fixed inset-0 z-40 p-4 md:p-8 
+        bg-black bg-opacity-80 justify-center items-center">
+        
+        <div class="bg-space-dark panel-style bg-opacity-95 p-6 md:p-10 rounded-xl w-full max-w-4xl h-full md:h-5/6 flex flex-col">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h1 id="full-desc-name" class="text-4xl font-extrabold text-yellow-400"></h1>
+                <button id="close-full-desc-button" class="text-3xl font-bold text-red-400 hover:text-red-500 leading-none">
+                    &times;
+                </button>
+            </div>
+            
+            <div id="full-desc-text" class="text-gray-200 text-base space-y-4 flex-grow">
+                <!-- Сюда будет загружено полное описание. ЭТОТ БЛОК ПРОКРУЧИВАЕТСЯ! -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. МОДАЛЬНОЕ ОКНО АВТОРА (Credits) -->
+    <div id="credits-modal" class="hidden fixed inset-0 z-50 p-4 bg-black bg-opacity-95 justify-center items-center backdrop-filter backdrop-blur-md">
+        <div class="w-full h-full flex flex-col justify-center items-center relative"
+             style="background: radial-gradient(circle at 50% 50%, rgba(20, 20, 50, 0.5) 0%, rgba(0, 0, 0, 0.9) 100%);">
+            
+            <!-- Кнопка закрытия -->
+            <button id="close-credits-button" class="absolute top-4 right-4 p-2 text-4xl text-red-400 hover:text-red-500 font-bold leading-none bg-black bg-opacity-50 rounded-full">&times;</button>
+
+            <!-- Имя автора в центре -->
+            <h1 class="text-6xl md:text-8xl font-extrabold tracking-wider text-transparent bg-clip-text 
+                       bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 
+                       text-center animate-pulse"
+                style="text-shadow: 0 0 15px rgba(255, 0, 255, 0.8), 0 0 25px rgba(255, 0, 255, 0.5);">
+                тёмные черты
+            </h1>
+            <p class="text-xl mt-4 text-gray-400">Автор данного интерактивного проекта</p>
+        </div>
+    </div>
+    
+    <!-- Скрипты Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Глобальные переменные ---
+        let scene, camera, renderer, controls;
+        let sun;
+        const planets = [];
+        const planetMenu = document.getElementById('planet-menu');
+        const descriptionPanel = document.getElementById('description-panel');
+        const backButton = document.getElementById('back-button');
+        const readMoreButton = document.getElementById('read-more-button');
+        const fullDescriptionModal = document.getElementById('full-description-modal');
+        const closeFullDescButton = document.getElementById('close-full-desc-button');
+        
+        const navArrowsContainer = document.getElementById('nav-arrows');
+        const prevPlanetButton = document.getElementById('prev-planet-button');
+        const nextPlanetButton = document.getElementById('next-planet-button');
+        
+        // Переменные для модального окна автора
+        const creditsButton = document.getElementById('credits-button');
+        const creditsModal = document.getElementById('credits-modal');
+        const closeCreditsButton = document.getElementById('close-credits-button');
+
+
+        const initialCameraPosition = new THREE.Vector3(0, 30, 70); 
+        const initialCameraTarget = new THREE.Vector3(0, 0, 0); 
+
+        // Состояние отслеживания
+        let trackedPlanetData = null; 
+        const LERP_FACTOR = 0.05; 
+
+
+        // --- Данные Солнечной системы ---
+        const SOLAR_SYSTEM_DATA = [
+            { name: "Солнце", key: "sun", cssClass: "icon-sun", size: 4, color: 0xffff00, orbit: 0, speed: 0, 
+                description: "Звезда в центре нашей системы. Источник света и тепла.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Общие характеристики</h3>
+                    <p><strong>Солнце — это желтый карлик (звезда G-класса),</strong> который обеспечивает жизнь на Земле. Оно составляет примерно 99.8% всей массы Солнечной системы.</p>
+                    <p><strong>Температура поверхности:</strong> примерно 5500 °C. Температура ядра достигает 15 миллионов °C.</p>
+                    <p><strong>Состав:</strong> В основном водород (73%) и гелий (25%), которые участвуют в термоядерных реакциях.</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Особенности</h3>
+                    <p>Солнце постоянно испускает солнечный ветер — поток заряженных частиц, который взаимодействует с магнитными полями планет, вызывая полярные сияния на Земле.</p>
+                `
+            },
+            { name: "Меркурий", key: "mercury", cssClass: "icon-mercury", size: 0.5, color: 0x999999, orbit: 7, speed: 0.04, 
+                description: "Самая маленькая и быстрая планета. Поверхность покрыта кратерами.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Температурные Экстремумы</h3>
+                    <p><strong>Меркурий — ближайшая планета к Солнцу,</strong> совершающая оборот всего за 88 земных суток. Из-за отсутствия атмосферы дневная и ночная стороны имеют экстремально разные температуры.</p>
+                    <p><strong>Макс. температура:</strong> примерно 430 °C (день). <strong>Мин. температура:</strong> примерно -180 °C (ночь).</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Удивительные факты</h3>
+                    <p>Один меркурианский день длится дольше, чем его год! В полярных кратерах, куда не попадает солнечный свет, обнаружен водяной лед.</p>
+                    <p class="mt-2">Меркурий имеет вторую по плотности (после Земли) структуру, что говорит о большом железном ядре.</p>
+                `
+            },
+            { name: "Венера", key: "venus", cssClass: "icon-venus", size: 0.8, color: 0xeda359, orbit: 11, speed: 0.02, 
+                description: "Самая горячая планета из-за парникового эффекта. Вращается в обратную сторону.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Атмосфера и Тепло</h3>
+                    <p><strong>Венера — 'злой двойник' Земли.</strong> Похожая по размеру, но полностью окутана плотными облаками из серной кислоты, которые вызывают мощнейший парниковый эффект, делая ее самой горячей планетой.</p>
+                    <p><strong>Температура поверхности:</strong> примерно 470 °C (выше, чем на Меркурии).</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Уникальное Вращение</h3>
+                    <p>Вращается в направлении, противоположном большинству планет (ретроградное вращение). Атмосферное давление на поверхности в 92 раза выше земного, что равно давлению воды на глубине почти 1 км.</p>
+                    <p class="mt-2">Один оборот вокруг своей оси Венера совершает за 243 земных дня, что дольше, чем ее оборот вокруг Солнца (225 земных дней).</p>
+                `
+            },
+            { name: "Земля", key: "earth", cssClass: "icon-earth", size: 1, color: 0x3d6d9d, orbit: 16, speed: 0.01, 
+                description: "Наш дом. Единственная известная планета с жидкой водой на поверхности и жизнью.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Оазис Жизни</h3>
+                    <p><strong>Земля — единственная планета,</strong> известная тем, что на ней существует жизнь, благодаря наличию воды в жидком состоянии и подходящей атмосфере.</p>
+                    <p><strong>Средняя температура:</strong> примерно 15 °C.</p>
+                    <p class="mt-2 font-bold text-red-400">ВНИМАНИЕ: На этом 3D объекте Земли загружена тестовая текстура. Вы можете заменить ее своей фотографией, предоставив прямую ссылку (URL)!</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">География и Защита</h3>
+                    <p>Около 71% поверхности покрыто водой. Имеет мощное магнитное поле (магнитосферу), которое защищает ее от солнечного ветра.</p>
+                    <p class="mt-2">Наша планета имеет один естественный спутник — Луну, которая стабилизирует наклон оси Земли, обеспечивая относительно стабильный климат.</p>
+                `
+            },
+            { name: "Марс", key: "mars", cssClass: "icon-mars", size: 0.7, color: 0xb0542f, orbit: 22, speed: 0.008, 
+                description: "Красная планета, названная в честь римского бога войны. Изучается на предмет возможности колонизации.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Красный Ландшафт</h3>
+                    <p><strong>Марс — 'Красная планета'</strong> из-за большого количества оксида железа (ржавчины) на поверхности. Имеет полярные шапки, состоящие из водяного льда и сухого льда (углекислый газ, CO2).</p>
+                    <p><strong>Средняя температура:</strong> примерно -63 °C.</p>
+                    
+                    <p class="mt-4 text-pink-300 font-medium italic">Секретный Факт от Бро: Идут слухи, что муравьи любят играть там на гитаре.</p>
+                    
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Гиганты и Колонизация</h3>
+                    <p>На Марсе находится самая высокая гора в Солнечной системе — Олимп (Olympus Mons). Ученые активно ищут следы древней жизни и готовятся к будущей колонизации.</p>
+                    <p class="mt-2">Продолжительность марсианского дня (сола) очень близка к земному дню: 24 часа 37 минут.</p>
+                `
+            },
+            { name: "Юпитер", key: "jupiter", cssClass: "icon-jupiter", size: 2.5, color: 0xbf8d51, orbit: 30, speed: 0.006, 
+                description: "Самый большой газовый гигант. Известен своим Большим Красным Пятном – огромным штормом.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Царь Планет</h3>
+                    <p><strong>Юпитер — планета, которая могла бы стать звездой,</strong> если бы была в 80 раз массивнее. Это самый большой газовый гигант Солнечной системы.</p>
+                    <p><strong>Температура верхних слоев атмосферы:</strong> примерно -145 °C.</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Шторм и Спутники</h3>
+                    <p>Большое Красное Пятно — это антициклон, который бушует уже несколько сотен лет и больше Земли по размеру.</p>
+                    <p class="mt-2">Юпитер имеет более 95 спутников, включая четыре Галилеевых: Ио (вулканический), Европа (водный лед), Ганимед (самый большой в системе) и Каллисто.</p>
+                `
+            },
+            { name: "Сатурн", key: "saturn", cssClass: "icon-saturn", size: 1.8, color: 0xaaa583, orbit: 35, speed: 0.005, 
+                description: "Знаменит своей системой колец, состоящих из льда и пыли. Второй по величине гигант.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Кольцевая Система</h3>
+                    <p><strong>Сатурн — самый красивый газовый гигант,</strong> известный своей впечатляющей системой колец. Планета состоит в основном из водорода и гелия.</p>
+                    <p><strong>Температура верхних слоев атмосферы:</strong> примерно -178 °C.</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Плотность и Кольца</h3>
+                    <p>Его кольца невероятно тонкие — толщиной не более 20 метров, но шириной сотни тысяч километров. Они состоят из миллиардов кусочков льда и камня.</p>
+                    <p class="mt-2">Сатурн имеет очень низкую плотность — он мог бы плавать в воде!</p>
+                `
+            },
+            { name: "Уран", key: "uranus", cssClass: "icon-uranus", size: 1.5, color: 0x5fcbcf, orbit: 42, speed: 0.004, 
+                description: "Ледяной гигант. Имеет уникальный наклон оси вращения, почти лежа на боку.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Наклонная Ось</h3>
+                    <p><strong>Уран — ледяной гигант,</strong> открытый Уильямом Гершелем в 1781 году. Получил свое название в честь греческого бога неба.</p>
+                    <p><strong>Температура:</strong> примерно -216 °C.</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Экстремальные Сезоны</h3>
+                    <p>Планета наклонена набок (ось вращения наклонена на 98°), что приводит к экстремальным сменам сезонов: по 42 земных года длится день и ночь на полюсах.</p>
+                    <p class="mt-2">Уран, как и Венера, имеет ретроградное вращение (с востока на запад).</p>
+                `
+            },
+            { name: "Нептун", key: "neptune", cssClass: "icon-neptune", size: 1.4, color: 0x3e66f9, orbit: 50, speed: 0.002, 
+                description: "Самый дальний известный газовый гигант. Известен очень сильными ветрами.",
+                fullDescription: `
+                    <h3 class="text-xl font-semibold text-yellow-300">Самый Дальний Гигант</h3>
+                    <p><strong>Нептун — самый удаленный гигант,</strong> который был обнаружен путем математических расчетов, а не прямого наблюдения. Атмосфера имеет синий цвет из-за метана.</p>
+                    <p><strong>Температура:</strong> примерно -201 °C.</p>
+                    <h3 class="text-xl font-semibold text-yellow-300 mt-4">Супер-Ветры</h3>
+                    <p>На Нептуне дуют самые сильные ветры в Солнечной системе, скорость которых может превышать 2000 км/ч.</p>
+                    <p class="mt-2">Планета имеет 14 известных спутников, самый крупный из которых — Тритон, который вращается вокруг Нептуна в обратном направлении (ретроградная орбита).</p>
+                `
+            }
+        ];
+
+        // --- Инициализация (Init) ---
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.copy(initialCameraPosition);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 10;
+            controls.maxDistance = 500;
+            controls.target.copy(initialCameraTarget); // Камера смотрит на центр
+
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0xffffff, 1.5, 500);
+            scene.add(pointLight);
+
+            createStars();
+            
+            // Создание Солнца и Планет
+            SOLAR_SYSTEM_DATA.forEach(data => {
+                let planetObject;
+                if (data.key === 'sun') {
+                    planetObject = createSun(data);
+                } else if (data.key === 'saturn') {
+                    planetObject = createSaturn(data);
+                } else {
+                    // Используем универсальную функцию createPlanet, которая теперь может загружать текстуры
+                    planetObject = createPlanet(data);
+                }
+                
+                planets.push(planetObject);
+                
+                if (data.key !== 'sun') {
+                    createMenuIcon(data);
+                }
+            });
+
+            // Обработчики событий
+            window.addEventListener('resize', onWindowResize);
+            backButton.addEventListener('click', returnToGlobalView);
+            readMoreButton.addEventListener('click', openFullDescription);
+            closeFullDescButton.addEventListener('click', closeFullDescription);
+            
+            // ОБРАБОТЧИКИ ДЛЯ СТРЕЛОК
+            prevPlanetButton.addEventListener('click', focusPreviousPlanet);
+            nextPlanetButton.addEventListener('click', focusNextPlanet);
+            
+            // ОБРАБОТЧИКИ ДЛЯ МОДАЛЬНОГО ОКНА АВТОРА
+            creditsButton.addEventListener('click', openCreditsModal);
+            closeCreditsButton.addEventListener('click', closeCreditsModal);
+
+
+            // Запуск анимации
+            animate();
+        }
+        
+        // --- Функции создания 3D объектов (оставлены без изменений) ---
+
+        function createSun(data) { 
+            const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+            // Солнце не должно быть MeshStandardMaterial, иначе оно не будет светиться
+            const material = new THREE.MeshBasicMaterial({ color: data.color }); 
+            sun = new THREE.Mesh(geometry, material);
+            sun.name = data.name;
+            scene.add(sun);
+            return { planet: sun, pivot: new THREE.Object3D(), orbitalSpeed: 0, ...data };
+        }
+
+        function createPlanet(data) { 
+            const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+            let material;
+            
+            if (data.key === 'earth') {
+                const textureLoader = new THREE.TextureLoader();
+                // ТЕСТОВАЯ ЗАГЛУШКА
+                const customTextureUrl = "https://placehold.co/1024x512/3d6d9d/ffffff?text=ТВОЯ+ФОТКА"; 
+                
+                material = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load(customTextureUrl, 
+                        () => { console.log(`Текстура для ${data.name} загружена.`); },
+                        undefined, 
+                        (error) => { console.error(`Ошибка загрузки текстуры для ${data.name}:`, error); 
+                            // В случае ошибки вернемся к цветному материалу
+                            this.material = new THREE.MeshStandardMaterial({ color: data.color });
+                        }
+                    ),
+                });
+            } else {
+                // Стандартный материал с цветом для всех остальных
+                material = new THREE.MeshStandardMaterial({ color: data.color });
+            }
+
+            const planet = new THREE.Mesh(geometry, material);
+            planet.name = data.name;
+
+            const pivot = new THREE.Object3D();
+            scene.add(pivot);
+            pivot.add(planet);
+            
+            planet.position.x = data.orbit;
+
+            createOrbitLine(data.orbit);
+
+            return { planet, pivot, orbitalSpeed: data.speed, ...data };
+        }
+        
+        function createSaturn(data) { 
+            const planetData = createPlanet(data);
+            
+            // Кольца Сатурна
+            const ringGeometry = new THREE.RingGeometry(data.size * 1.2, data.size * 1.8, 64);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: 0x555555,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.6
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.rotation.x = Math.PI / 2.5;
+            planetData.planet.add(ring);
+            
+            return planetData;
+        }
+
+        function createOrbitLine(orbitalRadius) { 
+            const orbitGeometry = new THREE.BufferGeometry().setFromPoints(
+                new THREE.Path().absellipse(0, 0, orbitalRadius, orbitalRadius, 0, Math.PI * 2, false, 0).getSpacedPoints(128)
+            );
+            const orbitMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 });
+            const orbitLine = new THREE.LineLoop(orbitGeometry, orbitMaterial);
+            orbitLine.rotation.x = Math.PI / 2;
+            scene.add(orbitLine);
+        }
+
+        function createStars() { 
+            const starGeometry = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 15000; i++) {
+                const distance = 100 + Math.random() * 900;
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.acos(Math.random() * 2 - 1);
+                
+                starVertices.push(
+                    distance * Math.sin(phi) * Math.cos(theta),
+                    distance * Math.sin(phi) * Math.sin(theta),
+                    distance * Math.cos(phi)
+                );
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        // --- Логика UI и Камеры ---
+        
+        function createMenuIcon(data) {
+            const button = document.createElement('div');
+            button.className = `planet-icon flex items-center justify-center ${data.cssClass}`;
+            button.title = data.name;
+            button.onclick = () => focusOnPlanet(data.key);
+            planetMenu.appendChild(button);
+        }
+        
+        function focusNextPlanet() {
+            if (!trackedPlanetData) return;
+
+            const currentIndex = SOLAR_SYSTEM_DATA.findIndex(d => d.key === trackedPlanetData.key);
+            
+            let newIndex = currentIndex + 1;
+
+            // Если выходим за пределы (после Нептуна), переходим к Меркурию (индекс 1)
+            if (newIndex >= SOLAR_SYSTEM_DATA.length) {
+                newIndex = 1; 
+            }
+
+            const nextPlanet = SOLAR_SYSTEM_DATA[newIndex];
+            focusOnPlanet(nextPlanet.key);
+        }
+
+        function focusPreviousPlanet() {
+            if (!trackedPlanetData) return;
+
+            const currentIndex = SOLAR_SYSTEM_DATA.findIndex(d => d.key === trackedPlanetData.key);
+            
+            // Если мы на Меркурии (индекс 1) или меньше, переходим к Нептуну (последняя планета)
+            let newIndex = currentIndex - 1;
+
+            if (newIndex <= 0) { 
+                newIndex = SOLAR_SYSTEM_DATA.length - 1; 
+            }
+
+            const previousPlanet = SOLAR_SYSTEM_DATA[newIndex];
+            focusOnPlanet(previousPlanet.key);
+        }
+
+        function focusOnPlanet(key) {
+            const data = planets.find(p => p.key === key);
+            if (!data || data.key === 'sun') return;
+
+            trackedPlanetData = data;
+            
+            // Скрываем все модальные окна
+            fullDescriptionModal.classList.add('hidden');
+            fullDescriptionModal.style.display = 'none';
+            creditsModal.classList.add('hidden');
+            creditsModal.style.display = 'none';
+
+            // Показываем панель краткого описания И СТРЕЛКИ
+            descriptionPanel.classList.remove('hidden');
+            descriptionPanel.style.display = 'flex'; 
+            navArrowsContainer.classList.remove('hidden'); 
+
+            // Обновляем текст краткого описания
+            document.getElementById('desc-name').textContent = data.name;
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.fullDescription, 'text/html');
+            let plainText = doc.body.textContent || ""; 
+            if (plainText.length > 200) {
+                 plainText = plainText.substring(0, 200).trim() + '...';
+            }
+            document.getElementById('desc-text').textContent = plainText;
+
+            // Отключаем стандартное управление камерой
+            controls.enabled = false;
+        }
+
+        function openFullDescription() {
+            if (!trackedPlanetData) return;
+            
+            // 1. Скрываем краткое описание (менюшка)
+            descriptionPanel.classList.add('hidden');
+            descriptionPanel.style.display = 'none';
+
+            // 2. Показываем полное описание
+            fullDescriptionModal.classList.remove('hidden');
+            fullDescriptionModal.style.display = 'flex';
+            
+            // 3. СКРЫВАЕМ СТРЕЛКИ
+            navArrowsContainer.classList.add('hidden'); 
+
+            // Обновляем заголовок и контент
+            document.getElementById('full-desc-name').textContent = trackedPlanetData.name + " — Подробности";
+            document.getElementById('full-desc-text').innerHTML = trackedPlanetData.fullDescription;
+        }
+
+        function closeFullDescription() {
+            // Скрываем полное описание
+            fullDescriptionModal.classList.add('hidden');
+            fullDescriptionModal.style.display = 'none';
+
+            // Возвращаем краткое описание (если мы все еще следим) И СТРЕЛКИ
+            if (trackedPlanetData) {
+                 descriptionPanel.classList.remove('hidden');
+                 descriptionPanel.style.display = 'flex';
+                 navArrowsContainer.classList.remove('hidden'); 
+            }
+        }
+        
+        // --- ФУНКЦИИ МОДАЛЬНОГО ОКНА АВТОРА ---
+        function openCreditsModal() {
+            creditsModal.classList.remove('hidden');
+            creditsModal.style.display = 'flex';
+            
+            // Скрываем другие панели, чтобы не мешали
+            descriptionPanel.classList.add('hidden');
+            descriptionPanel.style.display = 'none';
+            fullDescriptionModal.classList.add('hidden');
+            fullDescriptionModal.style.display = 'none';
+            navArrowsContainer.classList.add('hidden'); 
+        }
+
+        function closeCreditsModal() {
+            creditsModal.classList.add('hidden');
+            creditsModal.style.display = 'none';
+            
+            // Восстанавливаем элементы UI, если планета была в фокусе
+            if (trackedPlanetData) {
+                descriptionPanel.classList.remove('hidden');
+                descriptionPanel.style.display = 'flex';
+                navArrowsContainer.classList.remove('hidden');
+            }
+        }
+
+        function returnToGlobalView() {
+            trackedPlanetData = null;
+            
+            // Скрываем все элементы UI
+            planetMenu.classList.remove('hidden');
+            descriptionPanel.classList.add('hidden');
+            descriptionPanel.style.display = 'none';
+            fullDescriptionModal.classList.add('hidden');
+            fullDescriptionModal.style.display = 'none';
+            navArrowsContainer.classList.add('hidden'); 
+            creditsModal.classList.add('hidden');
+            creditsModal.style.display = 'none';
+
+
+            // В этом режиме controls.enabled остается false, пока камера не вернется
+        }
+
+        // --- Главный цикл анимации (без изменений) ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 1. Движение планет
+            sun.rotation.y += 0.001;
+            planets.forEach(p => {
+                if (p.pivot) {
+                   p.pivot.rotation.y += p.orbitalSpeed;
+                }
+                if (p.planet) {
+                   p.planet.rotation.y += 0.01;
+                }
+            });
+
+            // 2. Логика камеры (фокусировка/слежение)
+            if (trackedPlanetData) {
+                const planetPosition = new THREE.Vector3();
+                trackedPlanetData.planet.getWorldPosition(planetPosition); 
+
+                const planetDirection = planetPosition.clone().normalize();
+
+                // Расчет смещения камеры для слежения
+                const distanceOffset = trackedPlanetData.size * 10 + 10; 
+                const heightOffset = trackedPlanetData.size * 3 + 5;
+
+                const targetCameraPosition = planetPosition.clone()
+                    .add(planetDirection.multiplyScalar(distanceOffset)) 
+                    .add(new THREE.Vector3(0, heightOffset, 0)); 
+
+                // Плавно перемещаем камеру и ее цель (планету)
+                camera.position.lerp(targetCameraPosition, LERP_FACTOR);
+                controls.target.lerp(planetPosition, LERP_FACTOR);
+                
+                // Камера смотрит на цель
+                camera.lookAt(controls.target);
+
+            } else {
+                // Логика возвращения к общему виду
+                
+                const returnTarget = initialCameraTarget;
+                const returnPosition = initialCameraPosition;
+                
+                const isPositionClose = camera.position.distanceTo(returnPosition) < 0.1;
+                const isTargetClose = controls.target.distanceTo(returnTarget) < 0.1;
+
+                if (!isPositionClose || !isTargetClose) {
+                    controls.enabled = false; 
+                    camera.position.lerp(returnPosition, LERP_FACTOR);
+                    controls.target.lerp(returnTarget, LERP_FACTOR);
+                    camera.lookAt(controls.target);
+                } else {
+                    controls.enabled = true;
+                    controls.update(); 
+                }
+            }
+            
+            if (controls.enabled) {
+                controls.update();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- Обработчик изменения размера окна (без изменений) ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Запуск
+        window.onload = function() {
+            init();
+        }
+
+    </script>
+</body>
+</html>
+
