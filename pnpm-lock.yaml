@@ -222,6 +222,9 @@ importers:
       '@vercel/cervel':
         specifier: workspace:*
         version: link:../cervel
+      '@vercel/introspection':
+        specifier: workspace:*
+        version: link:../introspection
       '@vercel/nft':
         specifier: 0.30.1
         version: 0.30.1
@@ -1576,6 +1579,67 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
+
+  packages/introspection:
+    dependencies:
+      '@vercel/cervel':
+        specifier: workspace:*
+        version: link:../cervel
+      '@vercel/nft':
+        specifier: 0.30.1
+        version: 0.30.1
+      '@vercel/static-config':
+        specifier: 3.1.2
+        version: link:../static-config
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      path-to-regexp:
+        specifier: 8.3.0
+        version: 8.3.0
+      rolldown:
+        specifier: 1.0.0-beta.35
+        version: 1.0.0-beta.35
+      ts-morph:
+        specifier: 12.0.0
+        version: 12.0.0
+      zod:
+        specifier: 3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@types/express':
+        specifier: 5.0.3
+        version: 5.0.3
+      '@types/fs-extra':
+        specifier: '11'
+        version: 11.0.1
+      '@types/jest':
+        specifier: 27.5.1
+        version: 27.5.1
+      '@types/node':
+        specifier: '22'
+        version: 22.5.0
+      '@vercel/build-utils':
+        specifier: 12.2.4
+        version: link:../build-utils
+      execa:
+        specifier: 3.2.0
+        version: 3.2.0
+      hono:
+        specifier: 4.10.1
+        version: 4.10.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      tsdown:
+        specifier: 0.15.6
+        version: 0.15.6(typescript@4.9.5)
+      vite:
+        specifier: ^5.1.6
+        version: 5.1.8(@types/node@22.5.0)
+      vitest:
+        specifier: ^2.0.1
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/mcp-adapter: {}
 
@@ -15836,7 +15900,7 @@ packages:
   /package-manager-detector@0.2.11:
     resolution: {integrity: sha512-BEnLolu+yuz22S56CU1SUKq3XC3PkwD5wv4ikR4MfGvnRVcmzXR9DwSlW2fEamyTPyXHomBJRzgapeuBvRNzJQ==}
     dependencies:
-      quansync: 0.2.10
+      quansync: 0.2.11
     dev: true
 
   /pako@0.2.9:
@@ -16353,10 +16417,6 @@ packages:
     engines: {node: '>=0.6'}
     dependencies:
       side-channel: 1.1.0
-    dev: true
-
-  /quansync@0.2.10:
-    resolution: {integrity: sha512-t41VRkMYbkHyCYmOvx/6URnN80H7k4X0lLdBMGsz+maAwrJQYB1djpV6vHrQIBE0WBSGqhtEHrK9U3DWWH8v7A==}
     dev: true
 
   /quansync@0.2.11:
