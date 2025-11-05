@@ -22,6 +22,7 @@ describe('index', () => {
         ['env', 'env'],
         ['git', 'git'],
         ['help', 'help'],
+        ['httpstat', 'httpstat'],
         ['i', 'install'],
         ['init', 'init'],
         ['inspect', 'inspect'],
