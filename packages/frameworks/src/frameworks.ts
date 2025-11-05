@@ -2124,15 +2124,15 @@ export const frameworks = [
       some: [
         {
           path: 'requirements.txt',
-          matchContent: 'flask',
+          matchContent: '[Ff]lask',
         },
         {
           path: 'pyproject.toml',
-          matchContent: 'flask',
+          matchContent: '[Ff]lask',
         },
         {
           path: 'Pipfile',
-          matchContent: 'flask',
+          matchContent: '[Ff]lask',
         },
       ],
     },

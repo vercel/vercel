@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.0.1
+
+### Patch Changes
+
+- [python] allow arbitrary entrypoints in pyproject.toml ([#14181](https://github.com/vercel/vercel/pull/14181))
+
+- [python] update predefined excludes ([#14166](https://github.com/vercel/vercel/pull/14166))
+
+- [python] fix logging ([#14165](https://github.com/vercel/vercel/pull/14165))
+
 ## 6.0.0
 
 ### Major Changes
