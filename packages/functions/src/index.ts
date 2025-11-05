@@ -16,3 +16,5 @@ export {
   dangerouslyDeleteBySrcImage,
 } from './purge';
 export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';
+export { addCacheTag } from './addcachetag';
+export type { AddCacheTagApi } from './addcachetag/types';
