@@ -1,0 +1,128 @@
+
+export default function CargoKing() {
+  function handleSubmit(e) {
+    e.preventDefault();
+    alert('✅ Thank you for booking with Cargo King! Our team will contact you shortly.');
+    e.target.reset();
+  }
+
+  return (
+    <div className="min-h-screen bg-white text-gray-800 font-sans">
+      {/* Header */}
+      <header className="bg-blue-800 text-white py-4 shadow-md">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold tracking-wide">Cargo King</h1>
+          <a
+            href="https://wa.me/260977260179"
+            className="bg-green-500 px-4 py-2 rounded-lg text-white font-medium hover:bg-green-600"
+          >
+            WhatsApp Us
+          </a>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="bg-blue-700 text-white text-center py-20">
+        <h2 className="text-4xl font-bold mb-4">Fast & Reliable Nationwide Delivery</h2>
+        <p className="text-lg mb-8">
+          We move parcels, documents, and goods across Zambia — safely and on time.
+        </p>
+        <a
+          href="#booking"
+          className="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold shadow-md hover:bg-gray-100"
+        >
+          Book a Delivery
+        </a>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="py-16 px-4 md:px-20 text-center">
+        <h3 className="text-3xl font-bold text-blue-800 mb-4">About Cargo King</h3>
+        <p className="max-w-2xl mx-auto text-lg">
+          Cargo King is a Zambian logistics company dedicated to connecting people and
+          businesses through reliable, efficient, and affordable delivery services. We
+          specialize in parcel, document, and intercity transport across all provinces.
+        </p>
+      </section>
+
+      {/* Services Section */}
+      <section id="services" className="bg-gray-100 py-16 px-4 md:px-20 text-center">
+        <h3 className="text-3xl font-bold text-blue-800 mb-10">Our Services</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white shadow-lg p-6 rounded-2xl">
+            <h4 className="text-xl font-semibold mb-2">Parcel Delivery</h4>
+            <p>We handle your packages with care and deliver them quickly anywhere in Zambia.</p>
+          </div>
+          <div className="bg-white shadow-lg p-6 rounded-2xl">
+            <h4 className="text-xl font-semibold mb-2">Document Courier</h4>
+            <p>Secure and fast document transport for businesses, schools, and individuals.</p>
+          </div>
+          <div className="bg-white shadow-lg p-6 rounded-2xl">
+            <h4 className="text-xl font-semibold mb-2">Intercity Transport</h4>
+            <p>Reliable movement of goods between major cities and towns nationwide.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Booking Form */}
+      <section id="booking" className="py-16 px-4 md:px-20 text-center">
+        <h3 className="text-3xl font-bold text-blue-800 mb-6">Book a Delivery</h3>
+        <form
+          onSubmit={handleSubmit}
+          className="max-w-lg mx-auto bg-white p-8 rounded-2xl shadow-lg space-y-4"
+        >
+          <input
+            type="text"
+            placeholder="Full Name"
+            className="w-full border rounded-lg p-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Pickup Location"
+            className="w-full border rounded-lg p-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Destination"
+            className="w-full border rounded-lg p-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Package Type (Parcel/Document)"
+            className="w-full border rounded-lg p-3"
+            required
+          />
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            className="w-full border rounded-lg p-3"
+            required
+          />
+          <button
+            type="submit"
+            className="w-full bg-blue-700 text-white py-3 rounded-lg font-semibold hover:bg-blue-800"
+          >
+            Submit Booking
+          </button>
+        </form>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="bg-blue-800 text-white text-center py-10">
+        <h3 className="text-2xl font-bold mb-2">Contact Us</h3>
+        <p>📞 +260 977 260 179</p>
+        <a href="https://wa.me/260977260179" className="underline hover:text-gray-200">
+          Chat on WhatsApp
+        </a>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-blue-900 text-white text-center py-4 text-sm">
+        © {new Date().getFullYear()} Cargo King. All rights reserved.
+      </footer>
+    </div>
+  );
+}
