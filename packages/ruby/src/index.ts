@@ -18,6 +18,7 @@ import {
   walkParentDirs,
   cloneEnv,
   FileBlob,
+  type GlobOptions,
   type Files,
   type BuildV3,
 } from '@vercel/build-utils';
@@ -95,16 +96,24 @@ async function bundleInstall(
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   if (major >= 3) {
-    const result = await execa('bundler', ['add', 'webrick'], {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    });
-    if (result.exitCode !== 0) {
-      console.log(result.stdout);
-      console.error(result.stderr);
-      throw result;
+    // Read the Gemfile to check if webrick is already specified
+    const gemfileContent = await readFile(gemfilePath, 'utf8');
+    const hasWebrick = /^\s*gem\s+['"]webrick['"]/m.test(gemfileContent);
+
+    if (!hasWebrick) {
+      const result = await execa('bundler', ['add', 'webrick'], {
+        cwd: dirname(gemfilePath),
+        stdio: 'pipe',
+        env: bundlerEnv,
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        console.log(result.stdout);
+        console.error(result.stderr);
+        throw result;
+      }
+    } else {
+      debug('webrick already specified in Gemfile, skipping auto-injection');
     }
   }
 
@@ -218,7 +227,23 @@ export const build: BuildV3 = async ({
   // something else
   const handlerRbFilename = 'vc__handler__ruby';
 
-  const outputFiles: Files = await glob('**', workPath);
+  // Apply predefined default excludes similar to Python runtime
+  const predefinedExcludes = [
+    '.git/**',
+    '.gitignore',
+    '.vercel/**',
+    '.pnpm-store/**',
+    '**/node_modules/**',
+    '**/.next/**',
+    '**/.nuxt/**',
+  ];
+
+  const globOptions: GlobOptions = {
+    cwd: workPath,
+    ignore: predefinedExcludes,
+  };
+
+  const outputFiles: Files = await glob('**', globOptions);
 
   outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
     data: nowHandlerRbContents,
