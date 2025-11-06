@@ -323,54 +323,74 @@ export async function getNodeVersion(
   destPath: string,
   fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
-  meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion | BunVersion> {
   if (config.bunVersion) {
     return getSupportedBunVersion(config.bunVersion);
   }
 
-  const latestVersion = getLatestNodeVersion(availableVersions);
-  if (meta.isDev) {
-    // Use the system-installed version of `node` in PATH for `vercel dev`
-    latestVersion.runtime = 'nodejs';
-    return latestVersion;
-  }
-  const { packageJson } = await scanParentDirs(destPath, true);
-  const configuredVersion = config.nodeVersion || fallbackVersion;
+  const [configuredVersion, packageJsonVersion] =
+    await getConfiguredAndLocalNodeVersion(destPath, fallbackVersion, config);
 
-  const packageJsonVersion = packageJson?.engines?.node;
   const supportedNodeVersion = await getSupportedNodeVersion(
     packageJsonVersion || configuredVersion,
     !packageJsonVersion,
     availableVersions
   );
 
-  if (packageJson?.engines?.node) {
-    const { node } = packageJson.engines;
+  validateConfiguredAndLocalNodeVersion(
+    configuredVersion,
+    packageJsonVersion,
+    supportedNodeVersion
+  );
+
+  return supportedNodeVersion;
+}
+
+export async function getConfiguredAndLocalNodeVersion(
+  destPath: string,
+  fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
+  config: Config = {}
+): Promise<[string | undefined, string | undefined]> {
+  const { packageJson } = await scanParentDirs(destPath, true);
+  const configuredVersion = config.nodeVersion || fallbackVersion;
+
+  const packageJsonVersion = packageJson?.engines?.node;
+
+  return [configuredVersion, packageJsonVersion];
+}
+
+export async function validateConfiguredAndLocalNodeVersion(
+  configuredVersion: string | undefined,
+  packageJsonVersion: string | undefined,
+  supportedNodeVersion: NodeVersion,
+  availableVersions = getAvailableNodeVersions()
+): Promise<void> {
+  const latestVersion = getLatestNodeVersion(availableVersions);
+
+  if (packageJsonVersion) {
     if (
       configuredVersion &&
       !intersects(configuredVersion, supportedNodeVersion.range)
     ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${packageJsonVersion}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: http://vercel.link/node-version`
       );
     }
 
-    if (coerce(node)?.raw === node) {
+    if (coerce(packageJsonVersion)?.raw === packageJsonVersion) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${packageJsonVersion}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
     } else if (
-      validRange(node) &&
-      intersects(`${latestVersion.major + 1}.x`, node)
+      validRange(packageJsonVersion) &&
+      intersects(`${latestVersion.major + 1}.x`, packageJsonVersion)
     ) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${packageJsonVersion}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
     }
   }
-  return supportedNodeVersion;
 }
 
 export async function scanParentDirs(
