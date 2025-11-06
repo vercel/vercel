@@ -13,8 +13,8 @@ import {
   gte,
   minVersion,
 } from 'semver';
-import { SpawnOptions } from 'child_process';
-import { deprecate } from 'util';
+import { exec, SpawnOptions } from 'child_process';
+import { deprecate, promisify } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config, BunVersion } from '../types';
@@ -29,6 +29,8 @@ import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
 import yaml from 'js-yaml';
+
+const execAsync = promisify(exec);
 
 const NO_OVERRIDE = {
   detectedLockfile: undefined,
@@ -292,6 +294,29 @@ export function getSpawnOptions(
   }
 
   return opts;
+}
+
+export async function getRuntimeNodeVersion(
+  destPath: string,
+  availableVersions = getAvailableNodeVersions()
+): Promise<NodeVersion> {
+  const { stdout } = await execAsync('node --version', { cwd: destPath });
+  const version = stdout.trim();
+  const coercedVersion = coerce(version);
+  console.log({
+    stdout,
+    version,
+    coercedVersion,
+  });
+  if (coercedVersion) {
+    return getSupportedNodeVersion(
+      coercedVersion.raw,
+      false,
+      availableVersions
+    );
+  }
+
+  return getSupportedNodeVersion(undefined, false, availableVersions);
 }
 
 export async function getNodeVersion(

@@ -30,7 +30,6 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
-  getNodeVersion,
   getSpawnOptions,
   debug,
   NowBuildError,
@@ -38,6 +37,7 @@ import {
   cloneEnv,
   getInstalledPackageVersion,
   defaultCachePathGlob,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -479,12 +479,7 @@ export const build: BuildV2 = async ({
       }
     }
 
-    const nodeVersion = await getNodeVersion(
-      entrypointDir,
-      undefined,
-      config,
-      meta
-    );
+    const nodeVersion = await getRuntimeNodeVersion(entrypointDir);
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
     if (!spawnOpts.env) {
@@ -844,12 +839,7 @@ export const build: BuildV2 = async ({
 
   if (!config.zeroConfig && entrypoint.endsWith('.sh')) {
     debug(`Running build script "${entrypoint}"`);
-    const nodeVersion = await getNodeVersion(
-      entrypointDir,
-      undefined,
-      config,
-      meta
-    );
+    const nodeVersion = await getRuntimeNodeVersion(entrypointDir);
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
     validateDistDir(distPath, workPath);

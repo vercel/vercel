@@ -8,7 +8,6 @@ import {
   FileBlob,
   FileFsRef,
   getEnvForPackageManager,
-  getNodeVersion,
   getSpawnOptions,
   glob,
   EdgeFunction,
@@ -17,6 +16,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
@@ -91,12 +91,7 @@ export const build: BuildV2 = async ({
   const entrypointFsDirname = join(workPath, mountpoint);
 
   // Run "Install Command"
-  const nodeVersion = await getNodeVersion(
-    entrypointFsDirname,
-    undefined,
-    config,
-    meta
-  );
+  const nodeVersion = await getRuntimeNodeVersion(entrypointFsDirname);
 
   const {
     cliType,
