@@ -1,0 +1,21 @@
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Vercel
+.vercel/
+
+# Build outputs
+build/
+dist/
+
+# Misc
+.DS_Store
+.env
+.env.*
+.vercel

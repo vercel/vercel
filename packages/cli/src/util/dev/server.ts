@@ -63,6 +63,7 @@ import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import output from '../../output-manager';
+import { servicesToBuildsAndRoutes } from '../services';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -569,6 +570,21 @@ export default class DevServer {
 
     await this.validateVercelConfig(vercelConfig);
 
+    // If `services` are defined, transform them into builds and service routes
+    let serviceRewriteRoutes: Route[] = [];
+    if (Array.isArray((vercelConfig as any).services)) {
+      const { builds: serviceBuilds, rewriteRoutes } =
+        await servicesToBuildsAndRoutes(
+          (vercelConfig as any).services,
+          this.cwd
+        );
+      vercelConfig.builds = serviceBuilds;
+      // Transforming `services` into `builds` for dev – remove `services` to
+      // avoid validation error about using both simultaneously.
+      delete (vercelConfig as any).services;
+      serviceRewriteRoutes = rewriteRoutes;
+    }
+
     this.projectSettings = {
       ...this.originalProjectSettings,
       ...pickOverrides(vercelConfig),
@@ -581,6 +597,13 @@ export default class DevServer {
       await this.exit();
     }
     vercelConfig.routes = maybeRoutes || [];
+    if (serviceRewriteRoutes.length > 0) {
+      vercelConfig.routes = appendRoutesToPhase({
+        routes: vercelConfig.routes,
+        newRoutes: serviceRewriteRoutes,
+        phase: 'filesystem',
+      });
+    }
 
     // no builds -> zero config
     if (!vercelConfig.builds || vercelConfig.builds.length === 0) {
@@ -1940,6 +1963,21 @@ export default class DevServer {
         const origQuery = parseQueryString(origUrl.search);
         Object.assign(origQuery, query);
         origUrl.search = formatQueryString(origQuery);
+
+        // If this request matched a service rewrite, propagate the service prefix
+        // to the upstream via X-Forwarded-Prefix and include x-matched-path for parity
+        const servicePrefix = getServicePrefixForRequest(
+          (routeResult as any).matched_route,
+          routes,
+          dest,
+          '/' + match.entrypoint,
+          origUrl.pathname || '/'
+        );
+        if (servicePrefix) {
+          req.headers['x-forwarded-prefix'] = servicePrefix;
+          req.headers['x-matched-path'] = dest;
+        }
+
         req.url = url.format({
           pathname: origUrl.pathname,
           search: origUrl.search,
@@ -2055,6 +2093,19 @@ export default class DevServer {
         const origQuery = parseQueryString(origUrl.search);
         Object.assign(origQuery, query);
         origUrl.search = formatQueryString(origQuery);
+
+        // If invoking a service-mapped lambda, propagate the service prefix header
+        const servicePrefix = getServicePrefixForRequest(
+          (routeResult as any).matched_route,
+          routes,
+          dest,
+          '/' + match.entrypoint,
+          origUrl.pathname || '/'
+        );
+        if (servicePrefix) {
+          req.headers['x-forwarded-prefix'] = servicePrefix;
+        }
+
         const path = url.format({
           pathname: origUrl.pathname,
           search: origUrl.search,
@@ -2497,6 +2548,11 @@ async function shouldServe(
     if (shouldServe) {
       return true;
     }
+  } else if (src === requestPath) {
+    // Default: if neither cleanUrls nor trailingSlash apply and builder has
+    // no `shouldServe`, then match the builder when the request path equals
+    // the entrypoint path (used for service rewrites to entry files).
+    return true;
   } else if (findAsset(match, requestPath, vercelConfig)) {
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
@@ -2658,4 +2714,86 @@ function buildMatchEquals(a?: BuildMatch, b?: BuildMatch): boolean {
   if (a.use !== b.use) return false;
   if (!deepEqual(a.config || {}, b.config || {})) return false;
   return true;
+}
+
+/**
+ * If the matched route is a service rewrite like:
+ *   src: ^/prefix(?:/.*)?$
+ *   dest: /<entry>
+ * and the `dest` maps to the current builder's entrypoint, then return the
+ * incoming pathname with the service prefix stripped off, so the app sees
+ * the path relative to the service root (matching production behavior).
+ */
+function getServicePrefix(
+  matchedRoute: any,
+  routeDest: string,
+  builderDest: string
+): string | undefined {
+  try {
+    if (!matchedRoute || typeof matchedRoute.src !== 'string') return;
+    // Only apply when this route maps to the current builder entrypoint
+    if (routeDest !== builderDest) return;
+
+    const prefix = extractServicePrefixFromSrc(matchedRoute.src);
+    if (!prefix) return;
+    return prefix;
+  } catch {
+    return;
+  }
+}
+
+/**
+ * Extracts the literal service prefix from a "src" regex generated by services:
+ *   "^/prefix(?:/.*)?$" -> "/prefix"
+ */
+function extractServicePrefixFromSrc(srcPattern: string): string | undefined {
+  let i = 0;
+  if (srcPattern.startsWith('^')) i = 1;
+  let prefix = '';
+  while (i < srcPattern.length) {
+    const ch = srcPattern[i];
+    if (ch === '(' || ch === '$') break;
+    prefix += ch;
+    i++;
+  }
+  if (!prefix || prefix[0] !== '/') return undefined;
+  return prefix;
+}
+
+function getServicePrefixFromRoutes(
+  routes: Route[] | undefined,
+  routeDest: string,
+  builderDest: string,
+  pathname: string
+): string | undefined {
+  if (!routes || routeDest !== builderDest) return;
+  for (const r of routes) {
+    if (
+      !r ||
+      typeof (r as any).src !== 'string' ||
+      (r as any).dest !== routeDest
+    ) {
+      continue;
+    }
+    try {
+      const re = new RegExp((r as any).src);
+      if (!re.test(pathname)) continue;
+    } catch {
+      continue;
+    }
+    const prefix = extractServicePrefixFromSrc((r as any).src);
+    if (prefix) return prefix;
+  }
+}
+
+function getServicePrefixForRequest(
+  matchedRoute: any,
+  routes: Route[] | undefined,
+  routeDest: string,
+  builderDest: string,
+  pathname: string
+): string | undefined {
+  const direct = getServicePrefix(matchedRoute, routeDest, builderDest);
+  if (direct) return direct;
+  return getServicePrefixFromRoutes(routes, routeDest, builderDest, pathname);
 }

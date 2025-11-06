@@ -48,6 +48,7 @@ import {
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
+import { servicesToBuildsAndRoutes } from '../../util/services';
 
 import output from '../../output-manager';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
@@ -466,11 +467,23 @@ async function doBuild(
     });
   }
 
-  let builds = localConfig.builds || [];
+  let builds: Builder[] = [];
   let zeroConfigRoutes: Route[] = [];
+  let serviceRoutes: Route[] = [];
   let isZeroConfig = false;
 
-  if (builds.length > 0) {
+  if (Array.isArray((localConfig as any).services)) {
+    const { builds: serviceBuilds, rewriteRoutes } =
+      await servicesToBuildsAndRoutes((localConfig as any).services, workPath);
+    builds = serviceBuilds;
+    // Insert service rewrites into filesystem phase before user routes
+    serviceRoutes = appendRoutesToPhase({
+      routes: [],
+      newRoutes: rewriteRoutes,
+      phase: 'filesystem',
+    });
+  } else if ((localConfig.builds || []).length > 0) {
+    builds = localConfig.builds || [];
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
@@ -878,6 +891,13 @@ async function doBuild(
       use: '@vercel/zero-config-routes',
       entrypoint: '/',
       routes: zeroConfigRoutes,
+    });
+  }
+  if (serviceRoutes.length) {
+    builderRoutes.unshift({
+      use: '@vercel/services-routes',
+      entrypoint: '/',
+      routes: serviceRoutes,
     });
   }
   const mergedRoutes = mergeRoutes({

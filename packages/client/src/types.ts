@@ -142,6 +142,11 @@ export interface VercelConfig {
     env?: Dictionary<string>;
   };
   builds?: Builder[];
+  /**
+   * Experimental: declarative multi-service configuration.
+   * Mutually exclusive with `builds` and `functions`.
+   */
+  services?: Service[];
   routes?: Route[];
   files?: string[];
   cleanUrls?: boolean;
@@ -164,6 +169,40 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
+}
+
+export interface Service {
+  /**
+   * Service type. Only 'web' is currently supported. Later 'cron', 'worker', etc.
+   */
+  type: 'web';
+  /**
+   * Entrypoint file for the service (e.g. services/python/server.py).
+   */
+  entry: string;
+  /**
+   * Optional URL path prefix that routes to this service (e.g. "/api").
+   * At most one service may omit `prefix`.
+   */
+  prefix?: string;
+  /**
+   * Optional framework slug (e.g. 'express', 'fastapi').
+   * If omitted, a framework/builder will be detected from the entry.
+   */
+  framework?: string;
+  /**
+   * Optional explicit builder package to use (e.g. '@vercel/express').
+   * Overrides `framework` if provided.
+   */
+  builder?: string;
+  /**
+   * Optional per-service memory (in MB). Range: 128-10240.
+   */
+  memory?: number;
+  /**
+   * Optional per-service max duration (in seconds). Range: 1-900.
+   */
+  maxDuration?: number;
 }
 
 export interface GitMetadata {

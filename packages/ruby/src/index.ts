@@ -21,6 +21,7 @@ import {
   type Files,
   type BuildV3,
 } from '@vercel/build-utils';
+export { shouldServe } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
 async function matchPaths(
