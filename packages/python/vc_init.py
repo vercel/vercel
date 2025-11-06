@@ -158,6 +158,12 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
     builtins.print = print_wrapper(builtins.print)
 
 
+def _stderr(message: str):
+    with contextlib.suppress(Exception):
+        _original_stderr.write(message + "\n")
+        _original_stderr.flush()
+
+
 # If running in the platform (IPC present), logging must be setup before importing user code so that
 # logs happening outside the request context are emitted correctly.
 ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -336,8 +342,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
     if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
         if not issubclass(base, BaseHTTPRequestHandler):
-            print('Handler must inherit from BaseHTTPRequestHandler')
-            print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
+            _stderr('Handler must inherit from BaseHTTPRequestHandler')
+            _stderr('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
             exit(1)
 
         class Handler(BaseHandler, base):
@@ -509,8 +515,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
         _init_log_buf.clear()
         server.serve_forever()
 
-    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
-    print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
+    _stderr('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    _stderr('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
 
 if 'handler' in __vc_variables or 'Handler' in __vc_variables:
