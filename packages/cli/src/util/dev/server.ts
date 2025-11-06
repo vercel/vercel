@@ -1976,6 +1976,16 @@ export default class DevServer {
         if (servicePrefix) {
           req.headers['x-forwarded-prefix'] = servicePrefix;
           req.headers['x-matched-path'] = dest;
+          // Avoid framework trailing-slash redirects for Python by normalizing
+          if (
+            builderPkg.name === '@vercel/python' &&
+            (origUrl.pathname === servicePrefix ||
+              (origUrl.pathname === servicePrefix + '/' && false))
+          ) {
+            origUrl.pathname = servicePrefix.endsWith('/')
+              ? servicePrefix
+              : servicePrefix + '/';
+          }
         }
 
         req.url = url.format({
@@ -1984,7 +1994,7 @@ export default class DevServer {
         });
 
         // Add the Vercel platform proxy request headers
-        const headers = this.getProxyHeaders(req, requestId, false);
+        const headers = this.getProxyHeaders(req, requestId, true);
         for (const [name, value] of Object.entries(headers)) {
           req.headers[name] = value;
         }
@@ -2297,7 +2307,7 @@ export default class DevServer {
       await treeKill(this.devProcess.pid!);
     }
 
-    output.log(`Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`);
+    output.log(`Running Dev Command ${chalk.cyan.bold(`"${devCommand}"`)}`);
 
     const port = await getPort();
 

@@ -168,6 +168,11 @@ export async function servicesToBuildsAndRoutes(
       (config as any).basePath = `/${entry}`;
     }
 
+    // For Python server frameworks, scope dev matching to the specific service entry rewrite
+    if (use === '@vercel/python') {
+      (config as any).basePath = `/${entry}`;
+    }
+
     // Apply per-service function limits
     addFunctionLimits(config, entry, service.memory, service.maxDuration);
 
