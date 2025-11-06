@@ -1978,7 +1978,8 @@ export default class DevServer {
           req.headers['x-matched-path'] = dest;
           // Avoid framework trailing-slash redirects for Python by normalizing
           if (
-            builderPkg.name === '@vercel/python' &&
+            (builderPkg.name === '@vercel/python' ||
+              builderPkg.name === '@vercel/ruby') &&
             (origUrl.pathname === servicePrefix ||
               (origUrl.pathname === servicePrefix + '/' && false))
           ) {

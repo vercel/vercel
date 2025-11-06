@@ -79,14 +79,14 @@ async function detectBuilderFromEntry(
     return { use: '@vercel/node' };
   }
 
-  if (ext === '.rb') {
+  if (ext === '.rb' || ext === '.ru') {
     return { use: '@vercel/ruby' };
   }
 
   // Fallback: if unknown, try to infer via extensionless language conventions later
   // For now, throw an error to surface misconfiguration.
   throw new Error(
-    `Unsupported service entry extension for "${entry}". Supported: .py, .go, .js/.ts variants.`
+    `Unsupported service entry extension for "${entry}". Supported: .py, .go, .js/.ts variants, .rb/.ru.`
   );
 }
 
@@ -170,6 +170,11 @@ export async function servicesToBuildsAndRoutes(
 
     // For Python server frameworks, scope dev matching to the specific service entry rewrite
     if (use === '@vercel/python') {
+      (config as any).basePath = `/${entry}`;
+    }
+
+    // For Ruby server frameworks, scope dev matching to the specific service entry rewrite
+    if (use === '@vercel/ruby') {
       (config as any).basePath = `/${entry}`;
     }
 

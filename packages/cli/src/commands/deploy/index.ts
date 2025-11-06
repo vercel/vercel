@@ -266,6 +266,7 @@ export default async (client: Client): Promise<number> => {
     project.sourceFilesOutsideRootDirectory ?? true;
 
   // For repo-style linking, reset the path to the root of the repository
+  const deployArgPath = cwd; // original user-provided cwd (may be a subdirectory)
   if (link.repoRoot) {
     cwd = link.repoRoot;
   }
@@ -273,12 +274,17 @@ export default async (client: Client): Promise<number> => {
   // #region Build `--prebuilt`
   let vercelOutputDir: string | undefined;
   if (parsedArguments.flags['--prebuilt']) {
+    // Default to looking under current cwd (which may have been reset to repo root)
     vercelOutputDir = join(cwd, '.vercel/output');
 
     // For repo-style linking, update `cwd` to be the Project
     // subdirectory when `rootDirectory` setting is defined
     if (link.repoRoot && link.project.rootDirectory) {
       vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+    } else if (link.repoRoot && !link.project.rootDirectory) {
+      // If linked to a repo but no Root Directory is configured,
+      // fall back to the original deploy path (subdirectory) for prebuilt output
+      vercelOutputDir = join(deployArgPath, '.vercel/output');
     }
 
     const prebuiltExists = await fs.pathExists(vercelOutputDir);
@@ -551,11 +557,21 @@ export default async (client: Client): Promise<number> => {
     if (!createArgs.projectSettings) createArgs.projectSettings = {};
     createArgs.projectSettings.nodeVersion = nodeVersion;
 
+    // When deploying prebuilt output, ensure upload path matches where `.vercel/output/**` lives.
+    let uploadPath = cwd;
+    if (parsedArguments.flags['--prebuilt']) {
+      if (link.repoRoot && link.project.rootDirectory) {
+        uploadPath = join(cwd, link.project.rootDirectory);
+      } else if (link.repoRoot && !link.project.rootDirectory) {
+        uploadPath = deployArgPath;
+      }
+    }
+
     deployment = await createDeploy(
       client,
       now,
       contextName,
-      cwd,
+      uploadPath,
       createArgs,
       org,
       !project,
