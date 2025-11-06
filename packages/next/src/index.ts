@@ -12,7 +12,6 @@ import {
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getPrefixedEnvVars,
-  getSpawnOptions,
   getScriptName,
   glob,
   runNpmInstall,
@@ -109,6 +108,8 @@ const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 // related PR: https://github.com/vercel/next.js/pull/27143
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
+// related PR: https://github.com/vercel/next.js/pull/84643
+const IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION = 'v16.0.0';
 
 export const MAX_AGE_ONE_YEAR = 31536000;
 
@@ -268,7 +269,6 @@ export const build: BuildV2 = async buildOptions => {
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,
     lockfileVersion,
@@ -276,11 +276,11 @@ export const build: BuildV2 = async buildOptions => {
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env || {},
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -381,14 +381,14 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           await execCommand(trimmedInstallCommand, {
-            ...spawnOpts,
+            env: spawnEnv,
             cwd: entryPath,
           });
         } else {
           await runNpmInstall(
             entryPath,
             [],
-            spawnOpts,
+            { env: spawnEnv },
             meta,
             config.projectSettings?.createdAt
           );
@@ -398,7 +398,7 @@ export const build: BuildV2 = async buildOptions => {
     console.log(`Skipping "install" command...`);
   }
 
-  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+  if (spawnEnv.VERCEL_ANALYTICS_ID) {
     debug('Found VERCEL_ANALYTICS_ID in environment');
 
     const version = await getInstalledPackageVersion(
@@ -410,7 +410,7 @@ export const build: BuildV2 = async buildOptions => {
       // Next.js has a built-in integration with Vercel Speed Insights
       // with the new @vercel/speed-insights package this is no longer needed
       // and can be removed to avoid duplicate events
-      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete spawnEnv.VERCEL_ANALYTICS_ID;
       delete process.env.VERCEL_ANALYTICS_ID;
 
       debug(
@@ -486,7 +486,7 @@ export const build: BuildV2 = async buildOptions => {
     target = await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  const env: typeof process.env = { ...spawnOpts.env };
+  const env: typeof process.env = { ...spawnEnv };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -541,7 +541,6 @@ export const build: BuildV2 = async buildOptions => {
 
           console.log(`Running "${buildCommand}"`);
           await execCommand(buildCommand, {
-            ...spawnOpts,
             cwd: entryPath,
             env,
           });
@@ -550,7 +549,6 @@ export const build: BuildV2 = async buildOptions => {
             entryPath,
             buildScriptName,
             {
-              ...spawnOpts,
               env,
             },
             config.projectSettings?.createdAt
@@ -1083,7 +1081,9 @@ export const build: BuildV2 = async buildOptions => {
     await runNpmInstall(
       entryPath,
       ['--production'],
-      spawnOpts,
+      {
+        env: spawnEnv,
+      },
       meta,
       config.projectSettings?.createdAt
     );
@@ -1471,10 +1471,12 @@ export const build: BuildV2 = async buildOptions => {
           true
       : false;
 
-    const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
-      ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
-        true
-      : false;
+    const isAppClientSegmentCacheEnabled =
+      semver.gte(nextVersion, IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION) ||
+      (requiredServerFilesManifest
+        ? requiredServerFilesManifest.config.experimental
+            ?.clientSegmentCache === true
+        : false);
 
     // We read this from the routes manifest instead of the config because we
     // expect that the flag will be deprecated in the future and the manifest

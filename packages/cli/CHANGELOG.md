@@ -1,5 +1,45 @@
 # vercel
 
+## 48.8.2
+
+### Patch Changes
+
+- Add fastify as a direct dependency ([#14202](https://github.com/vercel/vercel/pull/14202))
+
+## 48.8.1
+
+### Patch Changes
+
+- [python] allow arbitrary entrypoints in pyproject.toml ([#14181](https://github.com/vercel/vercel/pull/14181))
+
+- Add helper for detecting backend builders ([#14182](https://github.com/vercel/vercel/pull/14182))
+
+- Remove env var guard for experimental manual routes ([#14182](https://github.com/vercel/vercel/pull/14182))
+
+- Updated dependencies [[`1e8a3a874ec2c837dff062728866ed7ac498e57e`](https://github.com/vercel/vercel/commit/1e8a3a874ec2c837dff062728866ed7ac498e57e), [`21214ebaf1077f1a9d1d7d4046bffe79db0196d2`](https://github.com/vercel/vercel/commit/21214ebaf1077f1a9d1d7d4046bffe79db0196d2), [`de6c3f8d9d2b43c6b83cd97dd54ca1427a71fbab`](https://github.com/vercel/vercel/commit/de6c3f8d9d2b43c6b83cd97dd54ca1427a71fbab), [`ed0d8875a077731cba5515830afc14c616b0eedd`](https://github.com/vercel/vercel/commit/ed0d8875a077731cba5515830afc14c616b0eedd), [`06a8810b86134b7f3f800f0be82835198ea84a75`](https://github.com/vercel/vercel/commit/06a8810b86134b7f3f800f0be82835198ea84a75)]:
+  - @vercel/python@6.0.1
+  - @vercel/build-utils@12.2.4
+  - @vercel/next@4.15.1
+  - @vercel/backends@0.0.4
+  - @vercel/express@0.1.5
+  - @vercel/h3@0.1.11
+  - @vercel/hono@0.2.5
+  - @vercel/node@5.5.4
+  - @vercel/static-build@2.8.4
+
+## 48.8.0
+
+### Minor Changes
+
+- Add TanStack Start framework preset ([#14188](https://github.com/vercel/vercel/pull/14188))
+
+- [cli] adds `vc curl` beta command ([#14170](https://github.com/vercel/vercel/pull/14170))
+
+### Patch Changes
+
+- Updated dependencies [[`00c960f0c187650152580f14ab17770cec46dfc2`](https://github.com/vercel/vercel/commit/00c960f0c187650152580f14ab17770cec46dfc2)]:
+  - @vercel/next@4.15.0
+
 ## 48.7.1
 
 ### Patch Changes

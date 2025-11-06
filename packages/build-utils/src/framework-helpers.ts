@@ -1,3 +1,5 @@
+import { Builder } from '.';
+
 /**
  * List of backend frameworks supported by the experimental backends feature
  */
@@ -8,6 +10,15 @@ export const BACKEND_FRAMEWORKS = [
   'nestjs',
   'fastify',
   'elysia',
+] as const;
+
+export const BACKEND_BUILDERS = [
+  '@vercel/express',
+  '@vercel/hono',
+  '@vercel/h3',
+  '@vercel/nestjs',
+  '@vercel/fastify',
+  '@vercel/elysia',
 ] as const;
 
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
@@ -32,6 +43,12 @@ export function isExperimentalBackendsEnabled(): boolean {
     process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||
     process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1'
   );
+}
+
+export function isBackendBuilder(builder: Builder | null | undefined): boolean {
+  if (!builder) return false;
+  const use = builder.use as (typeof BACKEND_BUILDERS)[number];
+  return BACKEND_BUILDERS.includes(use);
 }
 
 /**
