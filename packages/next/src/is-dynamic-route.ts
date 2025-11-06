@@ -175,7 +175,13 @@ export function isDynamicRoute(route: string, nextVersion: string): boolean {
   // an interception route, we need to extract the intercepted route. This is
   // gated on the version to ensure that we don't break existing behaviors for
   // older versions.
-  if (semver.gte(nextVersion, '16.0.0') && isInterceptionRouteAppPath(route)) {
+  if (
+    semver.gte(semver.coerce(nextVersion)!, '16.0.0', {
+      loose: true,
+      includePrerelease: true,
+    }) &&
+    isInterceptionRouteAppPath(route)
+  ) {
     route = extractInterceptionRouteInformation(route).interceptedRoute;
   }
 
