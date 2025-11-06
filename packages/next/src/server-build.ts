@@ -687,7 +687,7 @@ export async function serverBuild({
       }
       const normalizedPathname = normalizePage(pathname);
 
-      if (isDynamicRoute(normalizedPathname)) {
+      if (isDynamicRoute(normalizedPathname, nextVersion)) {
         dynamicPages.push(normalizedPathname);
       }
 
@@ -1259,7 +1259,10 @@ export async function serverBuild({
             }
             case 'server/pages-manifest.json': {
               for (const key of Object.keys(manifestData)) {
-                if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                if (
+                  isDynamicRoute(key, nextVersion) &&
+                  !normalizedPages.has(key)
+                ) {
                   delete manifestData[key];
                 }
               }
@@ -1272,7 +1275,7 @@ export async function serverBuild({
                   key.replace(/(^|\/)(page|route)$/, '');
 
                 if (
-                  isDynamicRoute(normalizedKey) &&
+                  isDynamicRoute(normalizedKey, nextVersion) &&
                   !normalizedPages.has(normalizedKey)
                 ) {
                   delete manifestData[key];
@@ -1625,6 +1628,7 @@ export async function serverBuild({
     isAppClientSegmentCacheEnabled,
     isAppClientParamParsingEnabled,
     appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
+    nextVersion,
   });
 
   await Promise.all(
@@ -1664,7 +1668,7 @@ export async function serverBuild({
       // they are in the prerender manifest since a dynamic
       // route can have some prerendered paths and the rest SSR
       inversedAppPathManifest[route] &&
-      isDynamicRoute(route)
+      isDynamicRoute(route, nextVersion)
     ) {
       return;
     }
@@ -2599,7 +2603,10 @@ export async function serverBuild({
             // filter to only static data routes as dynamic routes will be handled
             // below
             const { pathname } = new URL(route.dest || '/', 'http://n');
-            return !isDynamicRoute(pathname.replace(/(\\)?\.json$/, ''));
+            return !isDynamicRoute(
+              pathname.replace(/(\\)?\.json$/, ''),
+              nextVersion
+            );
           })
         : []),
 

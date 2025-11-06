@@ -1276,6 +1276,7 @@ export const build: BuildV2 = async buildOptions => {
       entryDirectory,
       htmlContentType,
       prerenderManifest,
+      nextVersion,
       routesManifest
     );
     hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
@@ -1856,7 +1857,7 @@ export const build: BuildV2 = async buildOptions => {
             path.relative(workPath, pages[page].fsPath)
           );
           const pathname = page.replace(/\.js$/, '');
-          const routeIsDynamic = isDynamicRoute(pathname);
+          const routeIsDynamic = isDynamicRoute(pathname, nextVersion);
           routeIsApi = isApiPage(pageFileName);
 
           if (routeIsDynamic) {
@@ -1969,7 +1970,7 @@ export const build: BuildV2 = async buildOptions => {
 
           const pathname = page.replace(/\.js$/, '');
 
-          if (isDynamicRoute(pathname)) {
+          if (isDynamicRoute(pathname, nextVersion)) {
             dynamicPages.push(normalizePage(pathname));
           }
 
@@ -2311,6 +2312,7 @@ export const build: BuildV2 = async buildOptions => {
       isAppClientSegmentCacheEnabled: false,
       isAppClientParamParsingEnabled: false,
       appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
+      nextVersion,
     });
 
     await Promise.all(
