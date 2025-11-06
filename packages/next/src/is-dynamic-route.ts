@@ -170,13 +170,18 @@ function extractInterceptionRouteInformation(
 // eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
 
-export function isDynamicRoute(route: string, nextVersion: string): boolean {
+export function isDynamicRoute(
+  route: string,
+  nextVersion: string | null
+): boolean {
   // If the Next.js version is greater than or equal to 16.0.0, and the route is
   // an interception route, we need to extract the intercepted route. This is
   // gated on the version to ensure that we don't break existing behaviors for
   // older versions.
+  const coerced = nextVersion ? semver.coerce(nextVersion) : null;
   if (
-    semver.gte(semver.coerce(nextVersion)!, '16.0.0', {
+    coerced &&
+    semver.gte(coerced, '16.0.0', {
       loose: true,
       includePrerelease: true,
     }) &&
