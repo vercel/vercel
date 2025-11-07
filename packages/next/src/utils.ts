@@ -57,6 +57,7 @@ import {
   getContentTypeFromFile,
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
+import { isDynamicRoute } from './is-dynamic-route';
 
 type stringMap = { [key: string]: string };
 
@@ -82,15 +83,6 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
 const skipDefaultLocaleRewrite = Boolean(
   process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
 );
-
-// Identify /[param]/ in route string
-// eslint-disable-next-line no-useless-escape
-const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
-
-function isDynamicRoute(route: string): boolean {
-  route = route.startsWith('/') ? route : `/${route}`;
-  return TEST_DYNAMIC_ROUTE.test(route);
-}
 
 /**
  * Validate if the entrypoint is allowed to be used
@@ -849,6 +841,7 @@ export function filterStaticPages(
   entryDirectory: string,
   htmlContentType: string,
   prerenderManifest: NextPrerenderedRoutes,
+  nextVersion: string,
   routesManifest?: RoutesManifest
 ) {
   const staticPages: FileMap = {};
@@ -878,7 +871,7 @@ export function filterStaticPages(
     staticPages[staticRoute] = staticPageFiles[page];
     staticPages[staticRoute].contentType = htmlContentType;
 
-    if (isDynamicRoute(pathname)) {
+    if (isDynamicRoute(pathname, nextVersion)) {
       dynamicPages.push(routeName);
       return;
     }
@@ -2346,6 +2339,7 @@ type OnPrerenderRouteArgs = {
   isSharedLambdas: boolean;
   isServerMode: boolean;
   canUsePreviewMode: boolean;
+  nextVersion: string;
   lambdas: { [key: string]: Lambda };
   experimentalStreamingLambdaPaths:
     | ReadonlyMap<
@@ -2425,6 +2419,7 @@ export const onPrerenderRoute =
       isAppClientSegmentCacheEnabled,
       isAppClientParamParsingEnabled,
       appPathnameFilesMap,
+      nextVersion,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2873,7 +2868,7 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
-      const isDynamic = isDynamicRoute(routeKey);
+      const isDynamic = isDynamicRoute(routeKey, nextVersion);
       const routeKeys = route?.routeKeys;
 
       // by default allowQuery should be undefined and only set when
@@ -2894,7 +2889,7 @@ export const onPrerenderRoute =
           allowQuery = Object.values(routeKeys);
         }
       } else {
-        const isDynamic = isDynamicRoute(pageKey);
+        const isDynamic = isDynamicRoute(pageKey, nextVersion);
 
         if (routeKeys) {
           // if we have routeKeys in the routes-manifest we use those
@@ -4105,7 +4100,10 @@ export async function getMiddlewareBundle({
           route.override = true;
         }
 
-        if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
+        if (
+          routesManifest.version > 3 &&
+          isDynamicRoute(worker.page, nextVersion)
+        ) {
           source.dynamicRouteMap.set(worker.page, route);
         } else {
           source.staticRoutes.push(route);

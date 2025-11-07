@@ -4,6 +4,7 @@
 
 ### Interfaces
 
+- [AddCacheTagApi](../interfaces/index.AddCacheTagApi.md)
 - [DangerouslyDeleteOptions](../interfaces/index.DangerouslyDeleteOptions.md)
 - [Geo](../interfaces/index.Geo.md)
 - [PurgeApi](../interfaces/index.PurgeApi.md)
@@ -12,6 +13,7 @@
 
 ### Functions
 
+- [addCacheTag](index.md#addcachetag)
 - [attachDatabasePool](index.md#attachdatabasepool)
 - [dangerouslyDeleteBySrcImage](index.md#dangerouslydeletebysrcimage)
 - [dangerouslyDeleteByTag](index.md#dangerouslydeletebytag)
@@ -27,6 +29,26 @@
 - [waitUntil](index.md#waituntil)
 
 ## Functions
+
+### addCacheTag
+
+▸ **addCacheTag**(`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name  | Type                   |
+| :---- | :--------------------- |
+| `tag` | `string` \| `string`[] |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/addcachetag/index.ts:3](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/index.ts#L3)
+
+---
 
 ### attachDatabasePool
 
