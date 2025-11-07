@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.5.1
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
 ## 5.5.0
 
 ### Minor Changes

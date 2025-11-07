@@ -1,5 +1,11 @@
 # @vercel/backends
 
+## 0.0.5
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
 ## 0.0.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.3.0
+
+### Minor Changes
+
+- Introduce Vercel AddCacheTag API: addCacheTag ([#14096](https://github.com/vercel/vercel/pull/14096))
+
 ## 3.2.0
 
 ### Minor Changes
