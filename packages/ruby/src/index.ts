@@ -162,6 +162,7 @@ export const build: BuildV3 = async ({
   const relativeVendorDir = join(entrypointFsDirname, vendorPath);
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
@@ -180,7 +181,20 @@ export const build: BuildV3 = async ({
 
   await ensureDir(vendorDir);
 
-  await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+  // no vendor directory, check for Gemfile to install
+  if (!hasVendorDir) {
+    if (gemfilePath) {
+      debug(
+        'did not find a vendor directory but found a Gemfile, bundling gems...'
+      );
+
+      // try installing. this won't work if native extensions are required.
+      // if that's the case, gems should be vendored locally before deploying.
+      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+    }
+  } else {
+    debug('found vendor directory, skipping "bundle install"...');
+  }
 
   // try to remove gem cache to slim bundle size
   try {
