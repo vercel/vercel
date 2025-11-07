@@ -6,7 +6,12 @@ import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
 import { DeploymentFile, FilesMap } from './utils/hashes';
-import { fetch, API_FILES, createDebug } from './utils';
+import {
+  fetch,
+  API_FILES,
+  createDebug,
+  getDefaultDeploymentName,
+} from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import { VercelClientOptions, DeploymentOptions } from './types';
@@ -41,11 +46,20 @@ export async function* upload(
     return;
   }
 
+  const defaultDeploymentName = getDefaultDeploymentName(files, clientOptions);
   let shas: string[] = [];
 
   debug('Determining necessary files for upload...');
 
-  for await (const event of deploy(files, clientOptions, deploymentOptions)) {
+  for await (const event of deploy(
+    defaultDeploymentName,
+    clientOptions,
+    deploymentOptions,
+    {
+      inline: [],
+      preUploaded: [],
+    }
+  )) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
         shas = event.payload.missing;

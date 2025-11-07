@@ -473,6 +473,33 @@ export async function queryMissingFiles(
   return missingFiles;
 }
 
+/**
+ * Given all the files that should be deployed, and the client options, return
+ * a default deployment name.
+ *
+ * @param files - All the files from the deployment.
+ * @param clientOptions - CLI options
+ * @returns Deployment name.
+ */
+export function getDefaultDeploymentName(
+  files: FilesMap,
+  clientOptions: VercelClientOptions
+): string {
+  const debug = createDebug(clientOptions.debug);
+  const { isDirectory, path } = clientOptions;
+
+  if (isDirectory && typeof path === 'string') {
+    debug('Provided path is a directory. Using last segment as default name');
+    return path.split('/').pop() || path;
+  } else {
+    debug(
+      'Provided path is not a directory. Using last segment of the first file as default name'
+    );
+    const filePath = Array.from(files.values())[0].names[0];
+    return filePath.split('/').pop() || filePath;
+  }
+}
+
 export function createDebug(debug?: boolean) {
   if (debug) {
     return (...logs: string[]) => {

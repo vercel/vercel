@@ -1,6 +1,6 @@
 import { lstatSync } from 'fs-extra';
 import { isAbsolute, join, relative, sep } from 'path';
-import { hash, hashes, mapToObject } from './utils/hashes';
+import { FilesMap, hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { deploy } from './deploy';
 import {
@@ -9,6 +9,7 @@ import {
   queryMissingFiles,
   prepareFiles,
   getInlineFiles,
+  getDefaultDeploymentName,
 } from './utils';
 import { DeploymentError } from './errors';
 import { isErrnoException } from '@vercel/error-utils';
@@ -100,8 +101,7 @@ export default function buildCreateDeployment() {
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
 
-    let files;
-
+    let files: FilesMap;
     try {
       if (clientOptions.archive === 'tgz') {
         debug('Packing tarball');
@@ -144,6 +144,11 @@ export default function buildCreateDeployment() {
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };
 
+    const defaultDeploymentName = getDefaultDeploymentName(
+      files,
+      clientOptions
+    );
+
     if (clientOptions.apiUrl) {
       debug(`Using provided API URL: ${clientOptions.apiUrl}`);
     }
@@ -169,10 +174,10 @@ export default function buildCreateDeployment() {
       debug('All files are small enough for inline upload');
       const inlineFiles = getInlineFiles(preparedFiles);
       for await (const event of deploy(
-        files,
+        defaultDeploymentName,
         clientOptions,
         deploymentOptions,
-        inlineFiles
+        { inline: inlineFiles, preUploaded: [] }
       )) {
         debug(`Yielding a '${event.type}' event`);
         yield event as any;
@@ -212,10 +217,10 @@ export default function buildCreateDeployment() {
       debug('Missing files are small enough for inline upload');
       const inlineFiles = getInlineFiles(missingFiles);
       for await (const event of deploy(
-        files,
+        defaultDeploymentName,
         clientOptions,
         deploymentOptions,
-        inlineFiles
+        { inline: inlineFiles, preUploaded: [] }
       )) {
         debug(`Yielding a '${event.type}' event`);
         yield event as any;
