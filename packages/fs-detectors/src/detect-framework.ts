@@ -104,8 +104,36 @@ async function matches(
   const result: (MatchResult | undefined)[] = [];
 
   if (every) {
-    const everyResult = await Promise.all(every.map(item => check(item)));
-    result.push(...everyResult);
+    // Separate efficient checks from expensive checks (arbitrary content matching)
+    const everyEfficientChecks = [];
+    const everyExpensiveChecks = [];
+    for (const item of every) {
+      // Only items with matchContent (but not matchPackage) are expensive
+      // matchPackage checks are fast since they're always against package.json
+      if (item.matchContent && !item.matchPackage) {
+        everyExpensiveChecks.push(item);
+      } else {
+        everyEfficientChecks.push(item);
+      }
+    }
+
+    // First, run the efficient checks (path existence and package.json checks)
+    const everyEfficientResult = await Promise.all(
+      everyEfficientChecks.map(item => check(item))
+    );
+    if (!everyEfficientResult.every(value => !!value)) {
+      return;
+    }
+
+    // Only run expensive checks if all efficient checks passed
+    const everyExpensiveResult = await Promise.all(
+      everyExpensiveChecks.map(item => check(item))
+    );
+    if (!everyExpensiveResult.every(value => !!value)) {
+      return;
+    }
+
+    result.push(...everyEfficientResult, ...everyExpensiveResult);
   }
 
   if (some) {
