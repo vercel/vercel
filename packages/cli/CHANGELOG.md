@@ -1,5 +1,31 @@
 # vercel
 
+## 48.9.0
+
+### Minor Changes
+
+- Add `vercel httpstat` command for HTTP timing visualization. This new command provides beautiful timing statistics for Vercel deployments, wrapping the httpstat tool with automatic deployment URL resolution and protection bypass handling. ([#14195](https://github.com/vercel/vercel/pull/14195))
+
+### Patch Changes
+
+- Add elysia dep to the CLI ([#14218](https://github.com/vercel/vercel/pull/14218))
+
+- Updated dependencies [[`0391e5b3e4087af0337cb782f27b4c59c8c15735`](https://github.com/vercel/vercel/commit/0391e5b3e4087af0337cb782f27b4c59c8c15735), [`bbf0c2c05454530a994781dc5a2ebc9e94c068df`](https://github.com/vercel/vercel/commit/bbf0c2c05454530a994781dc5a2ebc9e94c068df), [`6430affe714b17b7314223fb835d452de214a695`](https://github.com/vercel/vercel/commit/6430affe714b17b7314223fb835d452de214a695), [`314a62920d965765c71b198ca672ff44242fd1fd`](https://github.com/vercel/vercel/commit/314a62920d965765c71b198ca672ff44242fd1fd)]:
+  - @vercel/python@6.0.2
+  - @vercel/next@4.15.2
+  - @vercel/build-utils@13.0.0
+  - @vercel/static-build@2.8.5
+  - @vercel/backends@0.0.5
+  - @vercel/hydrogen@1.3.1
+  - @vercel/redwood@2.4.1
+  - @vercel/remix-builder@5.5.1
+  - @vercel/node@5.5.5
+  - @vercel/elysia@0.1.3
+  - @vercel/express@0.1.6
+  - @vercel/fastify@0.1.6
+  - @vercel/h3@0.1.12
+  - @vercel/hono@0.2.6
+
 ## 48.8.2
 
 ### Patch Changes
