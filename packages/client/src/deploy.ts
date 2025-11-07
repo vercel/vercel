@@ -1,4 +1,4 @@
-import { FilesMap } from './utils/hashes';
+import type { FilesMap } from './utils/hashes';
 import { generateQueryString } from './utils/query-string';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { checkDeploymentStatus } from './check-deployment-status';
@@ -7,9 +7,9 @@ import {
   prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
-  InlineFile,
+  type InlineFile,
 } from './utils';
-import {
+import type {
   Deployment,
   DeploymentOptions,
   VercelClientOptions,
@@ -20,7 +20,7 @@ async function* postDeployment(
   files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions,
-  inlinedFiles?: InlineFile[]
+  inlineFiles?: InlineFile[]
 ): AsyncIterableIterator<{
   type: DeploymentEventType;
   payload: any;
@@ -60,8 +60,8 @@ async function* postDeployment(
         },
         body: JSON.stringify({
           ...deploymentOptions,
-          files: inlinedFiles
-            ? [...inlinedFiles, ...preparedFiles]
+          files: inlineFiles
+            ? [...inlineFiles, ...preparedFiles]
             : preparedFiles,
         }),
         apiUrl: clientOptions.apiUrl,
