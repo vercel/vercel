@@ -180,7 +180,7 @@ export async function getDeploymentUrlAndToken(
     return 1;
   }
 
-  const target = linkedProject.project.latestDeployments?.[0].url;
+  const target = linkedProject.project.latestDeployments?.[0]?.url;
 
   let baseUrl: string;
 
