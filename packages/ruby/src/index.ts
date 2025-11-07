@@ -55,6 +55,7 @@ async function bundleInstall(
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
   const gemfileContent = await readFile(gemfilePath, 'utf8');
+  let gemfileModified = false;
 
   if (gemfileContent.includes('ruby "~> 2.7.x"')) {
     // Gemfile contains "2.7.x" which will cause an error message:
@@ -65,6 +66,7 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
+    gemfileModified = true;
   } else if (gemfileContent.includes('ruby "~> 3.2.x"')) {
     // Gemfile contains "3.2.x" which will cause an error message:
     // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
@@ -74,6 +76,7 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
     );
+    gemfileModified = true;
   } else if (gemfileContent.includes('ruby "~> 3.3.x"')) {
     // Gemfile contains "3.3.x" which will cause an error message:
     // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
@@ -83,6 +86,7 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"')
     );
+    gemfileModified = true;
   }
 
   const bundlerEnv = cloneEnv(process.env, {
@@ -114,8 +118,24 @@ async function bundleInstall(
         console.error(result.stderr);
         throw result;
       }
+      gemfileModified = true;
     } else {
       debug('Gemfile already declares webrick; skipping "bundler add webrick"');
+    }
+  }
+
+  // If we modified the Gemfile, refresh the lockfile before frozen install
+  if (gemfileModified) {
+    const lockResult = await execa(bundlePath, ['lock'], {
+      cwd: dirname(gemfilePath),
+      stdio: 'pipe',
+      env: bundlerEnv,
+      reject: false,
+    });
+    if (lockResult.exitCode !== 0) {
+      console.log(lockResult.stdout);
+      console.error(lockResult.stderr);
+      throw lockResult;
     }
   }
 
