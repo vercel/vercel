@@ -10,6 +10,7 @@ import {
   prepareFiles,
   getInlineFiles,
   getDefaultDeploymentName,
+  getPreUploadedFiles,
 } from './utils';
 import { DeploymentError } from './errors';
 import { isErrnoException } from '@vercel/error-utils';
@@ -203,6 +204,9 @@ export default function buildCreateDeployment() {
     }
 
     const missingFiles = preparedFiles.filter(f => missingShas.includes(f.sha));
+    const existingFiles = preparedFiles.filter(
+      f => !missingShas.includes(f.sha)
+    );
     const missingFilesTotalSize = missingFiles.reduce(
       (sum, file) => sum + file.size,
       0
@@ -216,11 +220,12 @@ export default function buildCreateDeployment() {
     if (missingFilesTotalSize < MAX_INLINE_SIZE) {
       debug('Missing files are small enough for inline upload');
       const inlineFiles = getInlineFiles(missingFiles);
+      const preUploadedFiles = getPreUploadedFiles(existingFiles);
       for await (const event of deploy(
         defaultDeploymentName,
         clientOptions,
         deploymentOptions,
-        { inline: inlineFiles, preUploaded: [] }
+        { inline: inlineFiles, preUploaded: preUploadedFiles }
       )) {
         debug(`Yielding a '${event.type}' event`);
         yield event as any;

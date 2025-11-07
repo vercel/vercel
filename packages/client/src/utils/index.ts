@@ -330,7 +330,7 @@ export interface PreparedFile {
   sha: string;
   size: number;
   mode: number;
-  data: Buffer<ArrayBufferLike>;
+  data: Buffer;
 }
 
 const IS_WIN = process.platform.includes('win');
@@ -371,7 +371,7 @@ export const prepareFiles = (
       }
 
       const size = file.data?.byteLength || file.data?.length;
-      if (!size) {
+      if (size === undefined || size === null) {
         throw new Error(`Could not get the size of file ${fileName}`);
       }
 
