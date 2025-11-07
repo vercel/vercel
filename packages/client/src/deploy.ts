@@ -7,6 +7,7 @@ import {
   prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
+  InlineFile,
 } from './utils';
 import {
   Deployment,
@@ -18,7 +19,8 @@ import {
 async function* postDeployment(
   files: FilesMap,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
+  inlinedFiles?: InlineFile[]
 ): AsyncIterableIterator<{
   type: DeploymentEventType;
   payload: any;
@@ -58,7 +60,9 @@ async function* postDeployment(
         },
         body: JSON.stringify({
           ...deploymentOptions,
-          files: preparedFiles,
+          files: inlinedFiles
+            ? [...inlinedFiles, ...preparedFiles]
+            : preparedFiles,
         }),
         apiUrl: clientOptions.apiUrl,
         userAgent: clientOptions.userAgent,
@@ -133,7 +137,8 @@ function getDefaultName(
 export async function* deploy(
   files: FilesMap,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
+  inlineFiles?: InlineFile[]
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(clientOptions.debug);
 
@@ -167,7 +172,8 @@ export async function* deploy(
     for await (const event of postDeployment(
       files,
       clientOptions,
-      deploymentOptions
+      deploymentOptions,
+      inlineFiles
     )) {
       if (event.type === 'created') {
         debug('Deployment created');

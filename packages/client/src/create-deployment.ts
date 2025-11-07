@@ -2,7 +2,16 @@ import { lstatSync } from 'fs-extra';
 import { isAbsolute, join, relative, sep } from 'path';
 import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { buildFileTree, createDebug } from './utils';
+import { deploy } from './deploy';
+import {
+  buildFileTree,
+  createDebug,
+  queryMissingFiles,
+  prepareFiles,
+  getInlineFiles,
+  getPreUploadedFiles,
+  PreparedFile,
+} from './utils';
 import { DeploymentError } from './errors';
 import { isErrnoException } from '@vercel/error-utils';
 import {
@@ -11,8 +20,12 @@ import {
   DeploymentEventType,
 } from './types';
 import { streamToBufferChunks } from '@vercel/build-utils';
-import tar from 'tar-fs';
+import * as tar from 'tar-fs';
 import { createGzip } from 'zlib';
+
+// Maximum size of all the files combined that we can upload inline, when creating
+// a deployment.
+const MAX_INLINE_SIZE = 50 * 1024; // 50KB
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -144,10 +157,135 @@ export default function buildCreateDeployment() {
     debug(`Setting platform version to harcoded value 2`);
     deploymentOptions.version = 2;
 
-    debug(`Creating the deployment and starting upload...`);
-    for await (const event of upload(files, clientOptions, deploymentOptions)) {
+    // Scan the `files` map and extract only the information that will be required
+    // to pre-upload the files or upload them inline.
+    const preparedFiles = prepareFiles(files, clientOptions);
+    const totalSize = preparedFiles.reduce((sum, file) => sum + file.size, 0);
+    debug(
+      `Total file size: ${totalSize} bytes (${preparedFiles.length} files to upload)`
+    );
+
+    // Strategy 1: If total size of all the files combined is less than 50KB,
+    // upload all files as inline (in the same POST deployment query).
+    if (totalSize < MAX_INLINE_SIZE) {
+      debug('All files are small enough for inline upload');
+      const inlineFiles = getInlineFiles(preparedFiles);
+      for await (const event of deploy(
+        files,
+        clientOptions,
+        deploymentOptions,
+        inlineFiles
+      )) {
+        debug(`Yielding a '${event.type}' event`);
+        yield event as any;
+      }
+      return;
+    }
+
+    // If we could not use strategy 1, fetch the SHA of all the missing files
+    // that need to be uploaded.
+    debug(
+      'Files are too large for direct inline upload, querying missing files...'
+    );
+    let missingShas: string[];
+    const allShas = preparedFiles.map(f => f.sha);
+    try {
+      missingShas = (await queryMissingFiles(
+        allShas,
+        clientOptions
+      )) as string[];
+    } catch (err) {
+      debug(`Failed to query missing files - Error: ${err}`);
+      missingShas = allShas;
+    }
+
+    const missingFiles = preparedFiles.filter(f => missingShas.includes(f.sha));
+    const missingFilesTotalSize = missingFiles.reduce(
+      (sum, file) => sum + file.size,
+      0
+    );
+    debug(
+      `Missing files size: ${missingFilesTotalSize} bytes (${missingFiles.length} files)`
+    );
+
+    // Strategy 2: If total size of all the missing files combined is less than 50KB,
+    // upload all the missing files as inline (in the same POST deployment query).
+    if (missingFilesTotalSize < MAX_INLINE_SIZE) {
+      debug('Missing files are small enough for inline upload');
+      const inlineFiles = getInlineFiles(missingFiles);
+      for await (const event of deploy(
+        files,
+        clientOptions,
+        deploymentOptions,
+        inlineFiles
+      )) {
+        debug(`Yielding a '${event.type}' event`);
+        yield event as any;
+      }
+      return;
+    }
+
+    // Strategy 4: If total size of all the missing files combined is more than 50KB,
+    // use a hybrid approach: upload smaller files inline (up to 50KB of total combined
+    // size), and larger files separately.
+    debug('Using hybrid upload approach');
+
+    // Divide the `preparedFiles` in inline files (all the smallest files, up to
+    // 50KB of combined size) and into files to pre-upload.
+    const sortedFiles = preparedFiles
+      .filter(item => item.size > 0)
+      .sort((a, b) => a.size - b.size);
+    const inlinePreparedFiles: PreparedFile[] = [];
+    const preUploadedPreparedFiles: PreparedFile[] = [];
+    let currentSize = 0;
+
+    for (const file of sortedFiles) {
+      if (currentSize + file.size <= MAX_INLINE_SIZE) {
+        inlinePreparedFiles.push(file);
+        currentSize += file.size;
+      } else {
+        preUploadedPreparedFiles.push(file);
+      }
+    }
+    debug(
+      `Inline upload: ${inlinePreparedFiles.length} files, Regular upload: ${preUploadedPreparedFiles.length} files`
+    );
+
+    // First, pre-upload files before creating the deployment.
+    if (preUploadedPreparedFiles.length > 0) {
+      debug('Uploading remaining files individually');
+      const uploadedFiles = getPreUploadedFiles(preUploadedPreparedFiles);
+      for await (const event of upload(
+        uploadedFiles,
+        clientOptions,
+        deploymentOptions
+      )) {
+        debug(`Yielding a '${event.type}' event`);
+        yield event as any;
+      }
+    }
+
+    const inlineFiles = getInlineFiles(inlinePreparedFiles);
+
+    for await (const event of deploy(
+      files,
+      clientOptions,
+      deploymentOptions,
+      inlineFiles
+    )) {
+      if (event.type === 'error' && event.payload.code === 'missing_files') {
+        // If we still have missing files after inline upload, continue with regular upload
+        debug(
+          'Some files still missing after inline upload, continuing with regular upload'
+        );
+        break;
+      }
+      if (event.type === 'alias-assigned') {
+        debug('Deployment succeeded with inline files only');
+        return yield event as any;
+      }
       debug(`Yielding a '${event.type}' event`);
-      yield event;
+      yield event as any;
     }
   };
 }
