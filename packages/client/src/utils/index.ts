@@ -352,7 +352,7 @@ export const prepareFiles = (
   const preparedFiles: PreparedFile[] = [];
   for (const [sha, file] of files) {
     if (!sha) {
-      throw new Error(`Could not find the sha of a file`);
+      continue;
     }
 
     for (const name of file.names) {
