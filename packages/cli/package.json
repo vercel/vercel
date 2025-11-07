@@ -40,6 +40,7 @@
     "@vercel/fun": "1.1.6",
     "@vercel/go": "3.2.3",
     "@vercel/backends": "workspace:*",
+    "@vercel/elysia": "0.1.2",
     "@vercel/express": "0.1.5",
     "@vercel/fastify": "0.1.5",
     "@vercel/hono": "0.2.5",
