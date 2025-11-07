@@ -5,8 +5,8 @@ import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
-import { DeploymentFile } from './utils/hashes';
-import { fetch, API_FILES, createDebug, PreUploadedFile } from './utils';
+import { DeploymentFile, FilesMap } from './utils/hashes';
+import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import { VercelClientOptions, DeploymentOptions } from './types';
@@ -29,22 +29,45 @@ const isClientNetworkError = (err: Error) => {
 };
 
 export async function* upload(
-  filesToPreUpload: PreUploadedFile[],
+  files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
   const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);
 
-  if (!token && !teamId) {
-    debug(`Neither 'token' nor 'teamId are present. Exiting`);
+  if (!files && !token && !teamId) {
+    debug(`Neither 'files', 'token' nor 'teamId are present. Exiting`);
     return;
   }
 
   let shas: string[] = [];
 
-  const uploads = filesToPreUpload.map(f => {
-    return new UploadProgress(f.sha, files.get(sha)!);
+  debug('Determining necessary files for upload...');
+
+  for await (const event of deploy(files, clientOptions, deploymentOptions)) {
+    if (event.type === 'error') {
+      if (event.payload.code === 'missing_files') {
+        shas = event.payload.missing;
+
+        debug(`${shas.length} files are required to upload`);
+      } else {
+        return yield event;
+      }
+    } else {
+      // If the deployment has succeeded here, don't continue
+      if (event.type === 'alias-assigned') {
+        debug('Deployment succeeded on file check');
+
+        return yield event;
+      }
+
+      yield event;
+    }
+  }
+
+  const uploads = shas.map(sha => {
+    return new UploadProgress(sha, files.get(sha)!);
   });
 
   yield {
@@ -129,6 +152,7 @@ export async function* upload(
               teamId,
               apiUrl,
               userAgent,
+              // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
               signal: abortController.signal,
             },
             clientOptions.debug

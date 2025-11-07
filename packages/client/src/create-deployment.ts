@@ -9,18 +9,16 @@ import {
   queryMissingFiles,
   prepareFiles,
   getInlineFiles,
-  getPreUploadedFiles,
-  PreparedFile,
 } from './utils';
 import { DeploymentError } from './errors';
 import { isErrnoException } from '@vercel/error-utils';
-import {
+import type {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
 import { streamToBufferChunks } from '@vercel/build-utils';
-import * as tar from 'tar-fs';
+import tar from 'tar-fs';
 import { createGzip } from 'zlib';
 
 // Maximum size of all the files combined that we can upload inline, when creating
@@ -225,67 +223,17 @@ export default function buildCreateDeployment() {
       return;
     }
 
-    // Strategy 4: If total size of all the missing files combined is more than 50KB,
+    // Strategy 3: Not implemented yet, TODO.
+    // If total size of all the missing files combined is more than 50KB,
     // use a hybrid approach: upload smaller files inline (up to 50KB of total combined
     // size), and larger files separately.
-    debug('Using hybrid upload approach');
-
-    // Divide the `preparedFiles` in inline files (all the smallest files, up to
-    // 50KB of combined size) and into files to pre-upload.
-    const sortedFiles = preparedFiles
-      .filter(item => item.size > 0)
-      .sort((a, b) => a.size - b.size);
-    const inlinePreparedFiles: PreparedFile[] = [];
-    const preUploadedPreparedFiles: PreparedFile[] = [];
-    let currentSize = 0;
-
-    for (const file of sortedFiles) {
-      if (currentSize + file.size <= MAX_INLINE_SIZE) {
-        inlinePreparedFiles.push(file);
-        currentSize += file.size;
-      } else {
-        preUploadedPreparedFiles.push(file);
-      }
-    }
-    debug(
-      `Inline upload: ${inlinePreparedFiles.length} files, Regular upload: ${preUploadedPreparedFiles.length} files`
-    );
-
-    // First, pre-upload files before creating the deployment.
-    if (preUploadedPreparedFiles.length > 0) {
-      debug('Uploading remaining files individually');
-      const uploadedFiles = getPreUploadedFiles(preUploadedPreparedFiles);
-      for await (const event of upload(
-        uploadedFiles,
-        clientOptions,
-        deploymentOptions
-      )) {
-        debug(`Yielding a '${event.type}' event`);
-        yield event as any;
-      }
-    }
-
-    const inlineFiles = getInlineFiles(inlinePreparedFiles);
-
-    for await (const event of deploy(
-      files,
-      clientOptions,
-      deploymentOptions,
-      inlineFiles
-    )) {
-      if (event.type === 'error' && event.payload.code === 'missing_files') {
-        // If we still have missing files after inline upload, continue with regular upload
-        debug(
-          'Some files still missing after inline upload, continuing with regular upload'
-        );
-        break;
-      }
-      if (event.type === 'alias-assigned') {
-        debug('Deployment succeeded with inline files only');
-        return yield event as any;
-      }
+    //
+    // Now, we are just defaulting to the previous method: try to create the deployment,
+    // get the missing files and proceed to pre-upload all of them.
+    debug(`Creating the deployment and starting upload...`);
+    for await (const event of upload(files, clientOptions, deploymentOptions)) {
       debug(`Yielding a '${event.type}' event`);
-      yield event as any;
+      yield event;
     }
   };
 }
