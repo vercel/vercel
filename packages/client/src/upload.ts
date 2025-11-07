@@ -11,6 +11,8 @@ import {
   API_FILES,
   createDebug,
   getDefaultDeploymentName,
+  prepareFiles,
+  getPreUploadedFiles,
 } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
@@ -51,13 +53,14 @@ export async function* upload(
 
   debug('Determining necessary files for upload...');
 
+  let preparedFiles = prepareFiles(files, clientOptions);
   for await (const event of deploy(
     defaultDeploymentName,
     clientOptions,
     deploymentOptions,
     {
       inline: [],
-      preUploaded: [],
+      preUploaded: getPreUploadedFiles(preparedFiles),
     }
   )) {
     if (event.type === 'error') {
@@ -249,7 +252,13 @@ export async function* upload(
 
   try {
     debug('Starting deployment creation');
-    for await (const event of deploy(files, clientOptions, deploymentOptions)) {
+    preparedFiles = prepareFiles(files, clientOptions);
+    for await (const event of deploy(
+      defaultDeploymentName,
+      clientOptions,
+      deploymentOptions,
+      { inline: [], preUploaded: getPreUploadedFiles(preparedFiles) }
+    )) {
       if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;
