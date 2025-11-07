@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.2.0
+
+### Minor Changes
+
+- Add new API for invalidateBySrcImage and dangerouslyDeleteBySrcImage ([#14111](https://github.com/vercel/vercel/pull/14111))
+
 ## 3.1.4
 
 ### Patch Changes

@@ -12,7 +12,6 @@ import {
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getPrefixedEnvVars,
-  getSpawnOptions,
   getScriptName,
   glob,
   runNpmInstall,
@@ -270,7 +269,6 @@ export const build: BuildV2 = async buildOptions => {
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,
     lockfileVersion,
@@ -278,11 +276,11 @@ export const build: BuildV2 = async buildOptions => {
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env || {},
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -383,14 +381,14 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           await execCommand(trimmedInstallCommand, {
-            ...spawnOpts,
+            env: spawnEnv,
             cwd: entryPath,
           });
         } else {
           await runNpmInstall(
             entryPath,
             [],
-            spawnOpts,
+            { env: spawnEnv },
             meta,
             config.projectSettings?.createdAt
           );
@@ -400,7 +398,7 @@ export const build: BuildV2 = async buildOptions => {
     console.log(`Skipping "install" command...`);
   }
 
-  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+  if (spawnEnv.VERCEL_ANALYTICS_ID) {
     debug('Found VERCEL_ANALYTICS_ID in environment');
 
     const version = await getInstalledPackageVersion(
@@ -412,7 +410,7 @@ export const build: BuildV2 = async buildOptions => {
       // Next.js has a built-in integration with Vercel Speed Insights
       // with the new @vercel/speed-insights package this is no longer needed
       // and can be removed to avoid duplicate events
-      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete spawnEnv.VERCEL_ANALYTICS_ID;
       delete process.env.VERCEL_ANALYTICS_ID;
 
       debug(
@@ -488,7 +486,7 @@ export const build: BuildV2 = async buildOptions => {
     target = await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  const env: typeof process.env = { ...spawnOpts.env };
+  const env: typeof process.env = { ...spawnEnv };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -543,7 +541,6 @@ export const build: BuildV2 = async buildOptions => {
 
           console.log(`Running "${buildCommand}"`);
           await execCommand(buildCommand, {
-            ...spawnOpts,
             cwd: entryPath,
             env,
           });
@@ -552,7 +549,6 @@ export const build: BuildV2 = async buildOptions => {
             entryPath,
             buildScriptName,
             {
-              ...spawnOpts,
               env,
             },
             config.projectSettings?.createdAt
@@ -1085,7 +1081,9 @@ export const build: BuildV2 = async buildOptions => {
     await runNpmInstall(
       entryPath,
       ['--production'],
-      spawnOpts,
+      {
+        env: spawnEnv,
+      },
       meta,
       config.projectSettings?.createdAt
     );
@@ -1278,6 +1276,7 @@ export const build: BuildV2 = async buildOptions => {
       entryDirectory,
       htmlContentType,
       prerenderManifest,
+      nextVersion,
       routesManifest
     );
     hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
@@ -1863,7 +1862,7 @@ export const build: BuildV2 = async buildOptions => {
             path.relative(workPath, pages[page].fsPath)
           );
           const pathname = page.replace(/\.js$/, '');
-          const routeIsDynamic = isDynamicRoute(pathname);
+          const routeIsDynamic = isDynamicRoute(pathname, nextVersion);
           routeIsApi = isApiPage(pageFileName);
 
           if (routeIsDynamic) {
@@ -1976,7 +1975,7 @@ export const build: BuildV2 = async buildOptions => {
 
           const pathname = page.replace(/\.js$/, '');
 
-          if (isDynamicRoute(pathname)) {
+          if (isDynamicRoute(pathname, nextVersion)) {
             dynamicPages.push(normalizePage(pathname));
           }
 
@@ -2318,6 +2317,7 @@ export const build: BuildV2 = async buildOptions => {
       isAppClientSegmentCacheEnabled: false,
       isAppClientParamParsingEnabled: false,
       appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
+      nextVersion,
     });
 
     await Promise.all(
