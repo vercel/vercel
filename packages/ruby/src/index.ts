@@ -97,28 +97,30 @@ async function bundleInstall(
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   // Avoid adding if Gemfile already declares it to prevent duplicate gem errors.
   if (major >= 3) {
-    const hasWebrickGem = /(^|\n)\s*gem\s+["']webrick["']\b/.test(
-      gemfileContent
-    );
-    if (!hasWebrickGem) {
-      const result = await execa('bundler', ['add', 'webrick'], {
-        cwd: dirname(gemfilePath),
-        stdio: 'pipe',
-        env: bundlerEnv,
-        reject: false,
-      });
+    // Only add if not already declared in Gemfile to avoid version conflicts
+    const hasWebrick = /gem\s+['"]webrick['"]/m.test(gemfileContent);
+    if (!hasWebrick) {
+      const result = await execa(
+        'bundler',
+        ['add', 'webrick', '--skip-install'],
+        {
+          cwd: dirname(gemfilePath),
+          stdio: 'pipe',
+          env: bundlerEnv,
+          reject: false,
+        }
+      );
       if (result.exitCode !== 0) {
         console.log(result.stdout);
         console.error(result.stderr);
         throw result;
       }
     } else {
-      debug(
-        'Skipping `bundler add webrick` because Gemfile already includes it'
-      );
+      debug('Gemfile already declares webrick; skipping "bundler add webrick"');
     }
   }
 
+  console.log('Running bundle install...');
   const result = await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
@@ -133,6 +135,38 @@ async function bundleInstall(
     console.error(result.stderr);
     throw result;
   }
+}
+
+async function bundleCheck(
+  bundlePath: string,
+  bundleDir: string,
+  gemfilePath: string,
+  rubyPath: string
+) {
+  debug(`running "bundle check"...`);
+  const bundleAppConfig = await getWriteableDirectory();
+  const bundlerEnv = cloneEnv(process.env, {
+    PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
+    BUNDLE_SILENCE_ROOT_WARNING: '1',
+    BUNDLE_APP_CONFIG: bundleAppConfig,
+    BUNDLE_JOBS: '4',
+  });
+
+  const result = await execa(
+    bundlePath,
+    ['check', '--gemfile', gemfilePath, '--path', bundleDir],
+    {
+      stdio: 'pipe',
+      env: bundlerEnv,
+      reject: false,
+    }
+  );
+
+  if (result.exitCode !== 0) {
+    debug('"bundle check" did not pass; dependencies are missing or outdated');
+    return false;
+  }
+  return true;
 }
 
 export const version = 3;
@@ -172,6 +206,7 @@ export const build: BuildV3 = async ({
   const relativeVendorDir = join(entrypointFsDirname, vendorPath);
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
@@ -190,7 +225,39 @@ export const build: BuildV3 = async ({
 
   await ensureDir(vendorDir);
 
-  await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+  // no vendor directory, check for Gemfile to install
+  if (!hasVendorDir) {
+    if (gemfilePath) {
+      debug(
+        'did not find a vendor directory but found a Gemfile, bundling gems...'
+      );
+
+      // try installing. this won't work if native extensions are required.
+      // if that's the case, gems should be vendored locally before deploying.
+      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+    }
+  } else {
+    debug(
+      'found vendor directory; verifying installed gems with "bundle check"...'
+    );
+    let isUpToDate = false;
+    try {
+      isUpToDate = await bundleCheck(
+        bundlerPath,
+        bundleDir,
+        gemfilePath,
+        rubyPath
+      );
+    } catch (err) {
+      debug('failed to run "bundle check"', err);
+    }
+    if (!isUpToDate) {
+      debug('running "bundle install --deployment" to install missing gems...');
+      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+    } else {
+      debug('"bundle check" passed; skipping "bundle install"...');
+    }
+  }
 
   // try to remove gem cache to slim bundle size
   try {
