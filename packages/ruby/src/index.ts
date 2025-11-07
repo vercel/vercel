@@ -21,6 +21,7 @@ import {
   type GlobOptions,
   type Files,
   type BuildV3,
+  type ShouldServe,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -95,7 +96,6 @@ async function bundleInstall(
 
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
-  // Avoid adding if Gemfile already declares it to prevent duplicate gem errors.
   if (major >= 3) {
     // Only add if not already declared in Gemfile to avoid version conflicts
     const hasWebrick = /gem\s+['"]webrick['"]/m.test(gemfileContent);
@@ -344,3 +344,6 @@ export const build: BuildV3 = async ({
 };
 
 export { startDevServer } from './start-dev-server';
+
+// Route all requests to the Ruby dev server during `vercel dev`
+export const shouldServe: ShouldServe = () => true;

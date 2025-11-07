@@ -7,7 +7,8 @@
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
   "files": [
     "dist",
-    "vc_init.rb"
+    "vc_init.rb",
+    "vc_init_dev.rb"
   ],
   "repository": {
     "type": "git",

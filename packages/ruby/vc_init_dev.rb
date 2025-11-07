@@ -11,6 +11,9 @@ require 'rack/handler/webrick'
 require 'webrick'
 require 'socket'
 
+$stdout.sync = true
+$stderr.sync = true
+
 USER_ENTRYPOINT = "__VC_DEV_ENTRYPOINT__"
 PUBLIC_DIR = 'public'
 
@@ -24,12 +27,31 @@ def build_user_app
   end
 end
 
+class StaticThenApp
+  def initialize(app, public_dir)
+    @app = app
+    @public_dir = public_dir
+    @file_server = Rack::File.new(public_dir)
+    @base = File.expand_path(public_dir)
+  end
+
+  def call(env)
+    req_path = env['PATH_INFO'] || '/'
+    # Normalize path and guard against traversal
+    safe = req_path.sub(/^\//, '')
+    full = File.expand_path(File.join(@public_dir, safe), @base)
+
+    if full.start_with?(@base + File::SEPARATOR) && File.file?(full)
+      # Delegate to Rack::File which handles HEAD/GET correctly
+      return @file_server.call(env)
+    end
+
+    @app.call(env)
+  end
+end
+
 def static_then_app(user_app)
-  Rack::Builder.new do
-    # Serve any existing files from ./public first; fall through to the app otherwise
-    use Rack::Static, urls: ['/'], root: PUBLIC_DIR
-    run user_app
-  end.to_app
+  StaticThenApp.new(user_app, PUBLIC_DIR)
 end
 
 host = '127.0.0.1'

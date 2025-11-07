@@ -127,6 +127,26 @@ function detectGemfile(workPath: string, entrypoint: string): string | null {
   return null;
 }
 
+async function run(
+  cmd: string,
+  args: string[],
+  opts: { cwd: string; env: NodeJS.ProcessEnv }
+) {
+  return await new Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+  }>(resolve => {
+    const child = spawn(cmd, args, {
+      cwd: opts.cwd,
+      env: opts.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    child.stdout?.on('data', buf => process.stdout.write(buf));
+    child.stderr?.on('data', buf => process.stderr.write(buf));
+    child.on('close', (code, signal) => resolve({ code, signal }));
+  });
+}
+
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint: rawEntrypoint, workPath, meta = {} } = opts;
 
@@ -193,84 +213,125 @@ export const startDevServer: StartDevServer = async opts => {
       const bundlePath = which.sync('bundle', { nothrow: true }) as
         | string
         | null;
-      let cmd = 'ruby';
-      let args: string[] = [shimPath];
-      if (gemfile && bundlePath) {
-        cmd = bundlePath;
-        args = ['exec', 'ruby', shimPath];
+      const bundlerPath =
+        bundlePath ||
+        (which.sync('bundler', { nothrow: true }) as string | null);
+      const projectDir = gemfile ? dirname(gemfile) : workPath;
+      if (gemfile) {
         env.BUNDLE_GEMFILE = gemfile;
       }
 
-      debug(`Starting Ruby dev server: ${cmd} ${args.join(' ')}`);
-      const child = spawn(cmd, args, {
-        cwd: workPath,
-        env,
-        stdio: ['inherit', 'pipe', 'pipe'],
-      });
-      childProcess = child;
-
-      stdoutLogListener = (buf: Buffer) => {
-        const s = buf.toString();
-        for (const line of s.split(/\r?\n/)) {
-          if (line)
-            process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-        }
-      };
-      stderrLogListener = (buf: Buffer) => {
-        const s = buf.toString();
-        for (const line of s.split(/\r?\n/)) {
-          if (line)
-            process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-        }
-      };
-      child.stdout?.on('data', stdoutLogListener);
-      child.stderr?.on('data', stderrLogListener);
-
-      const readinessRegexes = [
-        /Serving on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
-        /WEBrick.*?listening on.*?:(\d+)/i,
-      ];
-
-      const onDetect = (chunk: Buffer) => {
-        const text = chunk.toString();
-        let portMatch: RegExpMatchArray | null = null;
-        for (const rx of readinessRegexes) {
-          const m = text.match(rx);
-          if (m) {
-            portMatch = m;
-            break;
-          }
-        }
-        if (portMatch && child.pid) {
-          if (!resolved) {
-            resolved = true;
-            child.stdout?.removeListener('data', onDetect);
-            child.stderr?.removeListener('data', onDetect);
-            const port = Number(portMatch[1]);
-            resolveChildReady({ port, pid: child.pid });
-            resolve();
-          }
-        }
-      };
-
-      child.stdout?.on('data', onDetect);
-      child.stderr?.on('data', onDetect);
-
-      child.once('error', err => {
-        if (!resolved) {
-          rejectChildReady(err);
-          reject(err);
-        }
-      });
-      child.once('exit', (code, signal) => {
-        if (!resolved) {
-          const err = new Error(
-            `Ruby dev server exited before binding (code=${code}, signal=${signal})`
+      const checkDeps = async () => {
+        if (gemfile && bundlerPath) {
+          debug(`Running "bundle check" for ${gemfile}`);
+          const check = await run(
+            bundlerPath,
+            ['check', '--gemfile', gemfile],
+            { cwd: projectDir, env }
           );
-          rejectChildReady(err);
-          reject(err);
+          if (check.code !== 0) {
+            return false;
+          }
         }
-      });
+        return true;
+      };
+
+      checkDeps()
+        .then(ok => {
+          if (!ok) {
+            const err = new NowBuildError({
+              code: 'RUBY_GEMS_MISSING',
+              message:
+                'Required gems are not installed. Run "vercel build" and try again.',
+            });
+            rejectChildReady(err as any);
+            return reject(err as any);
+          }
+
+          let cmd = 'ruby';
+          let args: string[] = [shimPath];
+          if (gemfile && bundlerPath) {
+            cmd = bundlerPath;
+            args = ['exec', 'ruby', shimPath];
+          }
+
+          debug(`Starting Ruby dev server: ${cmd} ${args.join(' ')}`);
+          const child = spawn(cmd, args, {
+            cwd: workPath,
+            env,
+            stdio: ['inherit', 'pipe', 'pipe'],
+          });
+          childProcess = child;
+
+          stdoutLogListener = (buf: Buffer) => {
+            const s = buf.toString();
+            for (const line of s.split(/\r?\n/)) {
+              if (line)
+                process.stdout.write(line.endsWith('\n') ? line : line + '\n');
+            }
+          };
+          stderrLogListener = (buf: Buffer) => {
+            const s = buf.toString();
+            for (const line of s.split(/\r?\n/)) {
+              if (line)
+                process.stderr.write(line.endsWith('\n') ? line : line + '\n');
+            }
+          };
+          child.stdout?.on('data', stdoutLogListener);
+          child.stderr?.on('data', stderrLogListener);
+
+          const readinessRegexes = [
+            /Serving on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
+            /WEBrick.*?listening on.*?:(\d+)/i,
+          ];
+
+          const onDetect = (chunk: Buffer) => {
+            const text = chunk.toString();
+            let portMatch: RegExpMatchArray | null = null;
+            for (const rx of readinessRegexes) {
+              const m = text.match(rx);
+              if (m) {
+                portMatch = m;
+                break;
+              }
+            }
+            if (portMatch && child.pid) {
+              if (!resolved) {
+                resolved = true;
+                child.stdout?.removeListener('data', onDetect);
+                child.stderr?.removeListener('data', onDetect);
+                const port = Number(portMatch[1]);
+                resolveChildReady({ port, pid: child.pid });
+                resolve();
+              }
+            }
+          };
+
+          child.stdout?.on('data', onDetect);
+          child.stderr?.on('data', onDetect);
+
+          child.once('error', err => {
+            if (!resolved) {
+              rejectChildReady(err);
+              reject(err);
+            }
+          });
+          child.once('exit', (code, signal) => {
+            if (!resolved) {
+              const err = new Error(
+                `Ruby dev server exited before binding (code=${code}, signal=${signal})`
+              );
+              rejectChildReady(err);
+              reject(err);
+            }
+          });
+        })
+        .catch(err => {
+          if (!resolved) {
+            rejectChildReady(err);
+            reject(err);
+          }
+        });
     });
 
     const { port, pid } = await childReady;
