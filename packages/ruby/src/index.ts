@@ -101,7 +101,8 @@ async function bundleInstall(
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   if (major >= 3) {
     // Only add if not already declared in Gemfile to avoid version conflicts
-    const hasWebrick = /gem\s+['"]webrick['"]/m.test(gemfileContent);
+    // Use ^[^#]* to ensure we don't match commented-out lines
+    const hasWebrick = /^[^#]*\bgem\s+['"]webrick['"]/m.test(gemfileContent);
     if (!hasWebrick) {
       const result = await execa(
         'bundler',
