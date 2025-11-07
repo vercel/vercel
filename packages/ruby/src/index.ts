@@ -8,6 +8,7 @@ import {
   pathExists,
   readFile,
   writeFile,
+  readdir,
 } from 'fs-extra';
 import {
   download,
@@ -43,6 +44,22 @@ async function matchPaths(
   );
 
   return patternPaths.reduce((a, b) => a.concat(b), []);
+}
+
+async function hasBundledGems(dir: string): Promise<boolean> {
+  try {
+    const specs = await readdir(join(dir, 'specifications'));
+    if (specs && specs.length > 0) return true;
+  } catch (e) {
+    debug('ruby: failed to read specifications directory', e);
+  }
+  try {
+    const gems = await readdir(join(dir, 'gems'));
+    return Boolean(gems && gems.length > 0);
+  } catch (e) {
+    debug('ruby: failed to read gems directory', e);
+  }
+  return false;
 }
 
 async function bundleInstall(
@@ -93,14 +110,62 @@ async function bundleInstall(
     BUNDLE_JOBS: '4',
   });
 
+  // Ensure Gemfile.lock contains the correct target platform for the current build env
+  // so Bundler resolves native gems for the Lambda runtime architecture.
+  try {
+    if (process.platform === 'linux') {
+      const archToken = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+      const platform = `${archToken}-linux`;
+      debug(`ruby: ensuring Gemfile.lock has platform ${platform}`);
+      await execa('bundler', ['lock', '--add-platform', platform], {
+        cwd: dirname(gemfilePath),
+        stdio: 'pipe',
+        env: bundlerEnv,
+        reject: false,
+      });
+    }
+  } catch (err) {
+    debug('ruby: failed to add platform to Gemfile.lock (non-fatal)', err);
+  }
+
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   if (major >= 3) {
-    // Read the Gemfile to check if webrick is already specified
-    const gemfileContent = await readFile(gemfilePath, 'utf8');
-    const hasWebrick = /^\s*gem\s+['"]webrick['"]/m.test(gemfileContent);
+    const hasWebrick = /(?:^|\n)\s*(?!#)\s*gem\s+["']webrick["']/m.test(
+      gemfileContent
+    );
+    const injectedPath = join(dirname(gemfilePath), 'injected gems');
+    let hasInjectedWebrick = false;
+    try {
+      if (await pathExists(injectedPath)) {
+        const injected = await readFile(injectedPath, 'utf8');
+        hasInjectedWebrick = /(?:^|\n)\s*(?!#)\s*gem\s+["']webrick["']/.test(
+          injected
+        );
+        // If Gemfile already includes webrick, ensure stale Bundler "injected gems" file
+        // does not re-inject a conflicting version requirement.
+        if (hasWebrick && hasInjectedWebrick) {
+          const filtered = injected
+            .split(/\r?\n/)
+            .filter(line => !/^\s*gem\s+["']webrick["']/.test(line))
+            .join('\n')
+            .trim();
+          if (filtered.length === 0) {
+            await remove(injectedPath);
+            debug('ruby: removed stale "injected gems" file');
+          } else if (filtered !== injected.trim()) {
+            await writeFile(injectedPath, filtered + '\n');
+            debug('ruby: filtered webrick from "injected gems" file');
+          }
+          hasInjectedWebrick = false;
+        }
+      }
+    } catch (err) {
+      debug('ruby: failed to process "injected gems" file', err);
+    }
 
-    if (!hasWebrick) {
+    if (!hasWebrick && !hasInjectedWebrick) {
+      console.log('Installing required gems...');
       const result = await execa('bundler', ['add', 'webrick'], {
         cwd: dirname(gemfilePath),
         stdio: 'pipe',
@@ -113,10 +178,13 @@ async function bundleInstall(
         throw result;
       }
     } else {
-      debug('webrick already specified in Gemfile, skipping auto-injection');
+      debug(
+        `ruby: skipping bundler add for webrick (Gemfile=${hasWebrick}, injected=${hasInjectedWebrick})`
+      );
     }
   }
 
+  console.log('Running bundle install...');
   const result = await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
@@ -168,8 +236,12 @@ export const build: BuildV3 = async ({
   const vendorDir = join(workPath, vendorPath);
   const bundleDir = join(workPath, 'vendor', 'bundle');
   const relativeVendorDir = join(entrypointFsDirname, vendorPath);
-  const hasRootVendorDir = await pathExists(vendorDir);
-  const hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  const rootVendorExists = await pathExists(vendorDir);
+  const relativeVendorExists = await pathExists(relativeVendorDir);
+  const hasRootVendorDir =
+    rootVendorExists && (await hasBundledGems(vendorDir));
+  const hasRelativeVendorDir =
+    relativeVendorExists && (await hasBundledGems(relativeVendorDir));
   const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
 
   if (hasRelativeVendorDir) {
