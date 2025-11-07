@@ -330,7 +330,7 @@ export interface PreparedFile {
   sha: string;
   size: number;
   mode: number;
-  base64Data: string;
+  data: Buffer<ArrayBufferLike>;
 }
 
 const IS_WIN = process.platform.includes('win');
@@ -380,7 +380,7 @@ export const prepareFiles = (
         size,
         mode: file.mode,
         sha,
-        base64Data: file.data ? base64() : '',
+        data: file.data ?? Buffer.from([]),
       });
     }
   }
@@ -417,9 +417,9 @@ export interface InlineFile {
 }
 
 export const getInlineFiles = (files: PreparedFile[]): InlineFile[] => {
-  return files.map(({ file, base64Data }) => ({
+  return files.map(({ file, data }) => ({
     file,
-    data: base64Data,
+    data: data.toString('base64'),
     encoding: 'base64',
   }));
 };
