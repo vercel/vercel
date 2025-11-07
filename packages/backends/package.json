@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -38,7 +38,7 @@
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
     "@types/node": "22",
-    "@vercel/build-utils": "12.2.4",
+    "@vercel/build-utils": "13.0.0",
     "execa": "3.2.0",
     "hono": "4.10.1",
     "jest-junit": "16.0.0",

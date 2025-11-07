@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.0.0
+
+### Major Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
 ## 12.2.4
 
 ### Patch Changes
