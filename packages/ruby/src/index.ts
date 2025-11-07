@@ -95,17 +95,27 @@ async function bundleInstall(
 
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
+  // Avoid adding if Gemfile already declares it to prevent duplicate gem errors.
   if (major >= 3) {
-    const result = await execa('bundler', ['add', 'webrick'], {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    });
-    if (result.exitCode !== 0) {
-      console.log(result.stdout);
-      console.error(result.stderr);
-      throw result;
+    const hasWebrickGem = /(^|\n)\s*gem\s+["']webrick["']\b/.test(
+      gemfileContent
+    );
+    if (!hasWebrickGem) {
+      const result = await execa('bundler', ['add', 'webrick'], {
+        cwd: dirname(gemfilePath),
+        stdio: 'pipe',
+        env: bundlerEnv,
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        console.log(result.stdout);
+        console.error(result.stderr);
+        throw result;
+      }
+    } else {
+      debug(
+        'Skipping `bundler add webrick` because Gemfile already includes it'
+      );
     }
   }
 
@@ -265,3 +275,5 @@ export const build: BuildV3 = async ({
 
   return { output };
 };
+
+export { startDevServer } from './start-dev-server';
