@@ -61,9 +61,8 @@ function resolveSystemRuby(): {
   const ver = spawnSync(rubyPath, ['-e', 'print RUBY_VERSION'], {
     encoding: 'utf8',
   });
-  const [mj, mn] = String(ver.stdout || '')
-    .trim()
-    .split('.');
+  if (ver.status !== 0 || !ver.stdout) return null;
+  const [mj, mn] = String(ver.stdout).trim().split('.');
   const major = Number(mj) || 3;
   const minor = Number(mn) || 3;
   return { rubyPath, gemPath, major, minor };
