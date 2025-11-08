@@ -1,34 +1,104 @@
-node_modules
-dist
-.vscode
-npm-debug.log
-yarn-error.log
-.nyc_output
-coverage
-coverage.lcov
-*.swp
-*.bak
-*.tgz
-packages/cli/src/util/dev/templates/*.ts
-packages/cli/src/util/constants.ts
-packages/cli/test/**/yarn.lock
-!packages/cli/test/dev/**/yarn.lock
-packages/cli/test/**/node_modules
-packages/cli/test/dev/fixtures/08-hugo/hugo
-packages/cli/test/dev/fixtures/**/dist
-packages/cli/test/dev/fixtures/**/public
-packages/cli/test/dev/fixtures/**/.now
-packages/cli/test/dev/fixtures/**/.vercel
-!packages/cli/test/fixtures/unit/commands/build/monorepo-detection/**/yarn.lock
-packages/cli/test/fixtures/integration
-test/lib/deployment/failed-page.txt
-.DS_Store
-.next
-/.env
-/public
-__pycache__
-.vercel
-.turbo
-.eslintcache
-turbo-cache-key.json
-junit.xml
+import React, { useState, useEffect } from "react";
+
+/*
+  موقع تعليمي بصري لأجهزة الحاسوب الخارجية المهمة للاستخدام اليومي.
+  - الصفحات: الرئيسية، أجهزة الإدخال، أجهزة الإخراج، الأجهزة الهامة، الأجهزة الطرفية.
+  - المحتوى: صور تعليمية + اسم الجهاز.
+  - يمكن فهرسته وعرضه في نتائج Google بشكل طبيعي عند نشره على الإنترنت.
+*/
+
+function Router({ route, setRoute }) {
+  return (
+    <nav className="w-full bg-white border-b px-4 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <button onClick={() => setRoute("home")} className={`px-3 py-1 rounded ${route==='home'?'bg-indigo-600 text-white':''}`}>الرئيسية</button>
+        <button onClick={() => setRoute("input")} className={`px-3 py-1 rounded ${route==='input'?'bg-indigo-600 text-white':''}`}>أجهزة الإدخال</button>
+        <button onClick={() => setRoute("output")} className={`px-3 py-1 rounded ${route==='output'?'bg-indigo-600 text-white':''}`}>أجهزة الإخراج</button>
+        <button onClick={() => setRoute("important")} className={`px-3 py-1 rounded ${route==='important'?'bg-indigo-600 text-white':''}`}>الأجهزة الهامة</button>
+        <button onClick={() => setRoute("peripherals")} className={`px-3 py-1 rounded ${route==='peripherals'?'bg-indigo-600 text-white':''}`}>الأجهزة الطرفية</button>
+      </div>
+      <div className="text-sm text-gray-500">عرض صور الأجهزة مع تصنيف كل جهاز حسب وظيفته</div>
+    </nav>
+  );
+}
+
+function ImageGrid({ items }) {
+  return (
+    <div className="p-6 max-w-6xl mx-auto text-right">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        {items.map((it, idx) => (
+          <figure key={idx} className="flex flex-col items-center">
+            <img src={it.src} alt={it.label} className="w-full h-40 object-contain border rounded bg-white p-2" />
+            <figcaption className="mt-2 text-sm font-medium">{it.label}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HomePage() {
+  return (
+    <div className="p-6 max-w-4xl mx-auto text-right">
+      <h2 className="text-2xl font-bold mb-4">موقع الأجهزة الخارجية للحاسوب</h2>
+      <img src="https://via.placeholder.com/800x400?text=Computer+Devices" alt="Computer Devices" className="w-full rounded mb-4" />
+      <p className="text-sm text-gray-600 mb-4">هذا الموقع يهدف لتعليم المستخدم عن الأجهزة الخارجية الهامة للحاسوب المستخدمة في الاستعمال اليومي.</p>
+      <ul className="list-disc list-inside text-sm text-gray-700">
+        <li>أجهزة الإدخال: الفأرة، لوحة المفاتيح، الماسح الضوئي، كاميرا الويب، لوحة اللمس، قلم الرسم، فلاش USB.</li>
+        <li>أجهزة الإخراج: الشاشة، الطابعة، مكبرات الصوت، سماعات الرأس، بروجيكتور، فلاش USB.</li>
+        <li>الأجهزة الهامة: الفأرة، لوحة المفاتيح، الشاشة، الوحدة المركزية.</li>
+        <li>الأجهزة الطرفية تشمل قارئ البطاقات، محولات USB، البروجيكتور، الماسح الضوئي، قلم الرسم، لوحة اللمس، كاميرا الويب.</li>
+      </ul>
+    </div>
+  );
+}
+
+// === تعريف الأجهزة ===
+const devices = [
+  { label: 'الفأرة (Mouse)', src: 'https://via.placeholder.com/400x250?text=Mouse', categories: ['input', 'important'] },
+  { label: 'لوحة المفاتيح (Keyboard)', src: 'https://via.placeholder.com/400x250?text=Keyboard', categories: ['input', 'important'] },
+  { label: 'الماسح الضوئي (Scanner)', src: 'https://via.placeholder.com/400x250?text=Scanner', categories: ['input'] },
+  { label: 'كاميرا الويب (Webcam)', src: 'https://via.placeholder.com/400x250?text=Webcam', categories: ['input'] },
+  { label: 'لوحة اللمس (Touchpad)', src: 'https://via.placeholder.com/400x250?text=Touchpad', categories: ['input'] },
+  { label: 'قلم الرسم (Stylus)', src: 'https://via.placeholder.com/400x250?text=Stylus', categories: ['input'] },
+  { label: 'فلاش USB (USB Flash)', src: 'https://via.placeholder.com/400x250?text=USB+Flash', categories: ['input', 'output'] },
+  { label: 'الشاشة (Monitor)', src: 'https://via.placeholder.com/400x250?text=Monitor', categories: ['output', 'important'] },
+  { label: 'الطابعة (Printer)', src: 'https://via.placeholder.com/400x250?text=Printer', categories: ['output', 'peripherals'] },
+  { label: 'مكبرات الصوت (Speakers)', src: 'https://via.placeholder.com/400x250?text=Speakers', categories: ['output', 'peripherals'] },
+  { label: 'سماعات الرأس (Headphones)', src: 'https://via.placeholder.com/400x250?text=Headphones', categories: ['output', 'peripherals'] },
+  { label: 'البروجيكتور (Projector)', src: 'https://via.placeholder.com/400x250?text=Projector', categories: ['output', 'peripherals'] },
+  { label: 'الفأرة (Mouse)', src: 'https://via.placeholder.com/400x250?text=Mouse', categories: ['important'] },
+  { label: 'لوحة المفاتيح (Keyboard)', src: 'https://via.placeholder.com/400x250?text=Keyboard', categories: ['important'] },
+  { label: 'الشاشة (Monitor)', src: 'https://via.placeholder.com/400x250?text=Monitor', categories: ['important'] },
+  { label: 'الوحدة المركزية (CPU Unit)', src: 'https://via.placeholder.com/400x250?text=CPU+Unit', categories: ['important'] },
+  { label: 'قارئ البطاقات (Card Reader)', src: 'https://via.placeholder.com/400x250?text=Card+Reader', categories: ['peripherals'] },
+  { label: 'محول USB (USB Adapter)', src: 'https://via.placeholder.com/400x250?text=USB+Adapter', categories: ['peripherals'] },
+  { label: 'البروجيكتور (Projector)', src: 'https://via.placeholder.com/400x250?text=Projector', categories: ['peripherals'] },
+  { label: 'الماسح الضوئي (Scanner)', src: 'https://via.placeholder.com/400x250?text=Scanner', categories: ['peripherals'] },
+  { label: 'قلم الرسم (Stylus)', src: 'https://via.placeholder.com/400x250?text=Stylus', categories: ['peripherals'] },
+  { label: 'لوحة اللمس (Touchpad)', src: 'https://via.placeholder.com/400x250?text=Touchpad', categories: ['peripherals'] },
+  { label: 'كاميرا الويب (Webcam)', src: 'https://via.placeholder.com/400x250?text=Webcam', categories: ['peripherals'] },
+];
+
+function FilteredPage({ category }) {
+  const uniqueItems = Array.from(new Map(devices.filter(d => d.categories.includes(category)).map(d => [d.label, d])).values());
+  return <ImageGrid items={uniqueItems} />;
+}
+
+export default function App() {
+  const [route, setRoute] = useState('home');
+  useEffect(() => { document.title = 'موقع الأجهزة الخارجية — صور فقط'; }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-100 font-sans">
+      <Router route={route} setRoute={setRoute} />
+      <div className="py-6">
+        {route === 'home' && <HomePage />}
+        {route === 'input' && <FilteredPage category='input' />}
+        {route === 'output' && <FilteredPage category='output' />}
+        {route === 'important' && <FilteredPage category='important' />}
+        {route === 'peripherals' && <FilteredPage category='peripherals' />}
+      </div>
+    </div>
+  );
+}
