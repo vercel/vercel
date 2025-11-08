@@ -1,0 +1,123 @@
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+
+const questions = [
+  {
+    question: "¿Cuál de las siguientes enfermedades es causada por un virus?",
+    options: ["Tuberculosis", "Gripe", "Tétanos", "Cólera"],
+    answer: "Gripe",
+  },
+  {
+    question: "¿Cuál de estas enfermedades se transmite por mosquitos?",
+    options: ["Dengue", "Tétanos", "Gonorrea", "Lepra"],
+    answer: "Dengue",
+  },
+  {
+    question: "¿Qué tipo de microorganismo causa la tuberculosis?",
+    options: ["Virus", "Bacteria", "Hongo", "Protozoo"],
+    answer: "Bacteria",
+  },
+  {
+    question: "¿Cuál de las siguientes se considera una enfermedad de transmisión sexual?",
+    options: ["Hepatitis B", "Gripe", "Sarampión", "Tétanos"],
+    answer: "Hepatitis B",
+  },
+  {
+    question: "¿Cuál de estas enfermedades puede prevenirse con una vacuna?",
+    options: ["Varicela", "Malaria", "Amebiasis", "Teniasis"],
+    answer: "Varicela",
+  },
+];
+
+export default function QuizEnfermedades() {
+  const [start, setStart] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+
+  const handleAnswer = (option) => {
+    if (option === questions[current].answer) {
+      setScore(score + 1);
+    }
+    const next = current + 1;
+    if (next < questions.length) {
+      setCurrent(next);
+    } else {
+      setShowResult(true);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-blue-200 p-6">
+      <Card className="max-w-md w-full p-6 text-center shadow-xl rounded-2xl bg-white/80">
+        <CardContent>
+          {!start ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-2xl font-bold mb-4">
+                🧬 Enfermedades Infectocontagiosas
+              </h1>
+              <p className="text-base mb-6 text-gray-700">
+                Las enfermedades infectocontagiosas son aquellas que están
+                causadas por microorganismos patógenos (como bacterias, virus,
+                hongos o parásitos) y que pueden transmitirse de una persona a
+                otra, directa o indirectamente.
+              </p>
+              <Button onClick={() => setStart(true)}>Comenzar el juego</Button>
+            </motion.div>
+          ) : !showResult ? (
+            <motion.div
+              key={current}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-xl font-semibold mb-4">
+                Pregunta {current + 1} de {questions.length}
+              </h2>
+              <p className="text-lg mb-6">{questions[current].question}</p>
+              <div className="grid grid-cols-1 gap-3">
+                {questions[current].options.map((option, i) => (
+                  <Button
+                    key={i}
+                    variant="outline"
+                    onClick={() => handleAnswer(option)}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-2xl font-bold mb-4">🎉 ¡Juego terminado!</h2>
+              <p className="text-lg mb-2">Tu puntuación final es:</p>
+              <p className="text-3xl font-extrabold text-green-600 mb-6">
+                {score} / {questions.length}
+              </p>
+              <Button
+                onClick={() => {
+                  setScore(0);
+                  setCurrent(0);
+                  setShowResult(false);
+                  setStart(false);
+                }}
+              >
+                Jugar de nuevo
+              </Button>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
