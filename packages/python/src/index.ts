@@ -412,6 +412,9 @@ export const build: BuildV3 = async ({
     '**/.mypy_cache/**',
     '**/.ruff_cache/**',
     '**/public/**',
+    '**/pnpm-lock.yaml',
+    '**/yarn.lock',
+    '**/package-lock.json',
   ];
 
   const lambdaEnv = {} as Record<string, string>;
