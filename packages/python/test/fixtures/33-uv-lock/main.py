@@ -14,3 +14,11 @@ def dev_dependencies():
         raise HTTPException(status_code=500, detail="Dev dependencies should not be installed")
     except ImportError:
         return {"ok": True}
+
+@app.get("/api/optional-dependencies")
+def optional_dependencies():
+    try:
+        import mypy
+        raise HTTPException(status_code=500, detail="Optional dependencies should not be installed")
+    except ImportError:
+        return {"ok": True}
