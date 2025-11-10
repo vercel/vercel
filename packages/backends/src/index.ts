@@ -1,10 +1,10 @@
-export const version = 2;
-import { BuildV2, NodejsLambda } from '@vercel/build-utils';
+import { type BuildV2, NodejsLambda } from '@vercel/build-utils';
 import { downloadInstallAndBundle } from './utils.js';
-import { introspectApp } from './introspection/index.js';
+import { introspectApp } from '@vercel/introspection';
 import { nodeFileTrace } from './node-file-trace.js';
-import { relative, join } from 'path';
+import { relative, join } from 'node:path';
 import { doBuild } from './build.js';
+export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
@@ -13,9 +13,12 @@ export const build: BuildV2 = async args => {
 
   const { files } = await nodeFileTrace(args, outputConfig);
 
-  const { routes, framework } = await introspectApp(args, {
+  const { routes, framework } = await introspectApp({
     ...outputConfig,
-    files,
+    env: {
+      ...(args.meta?.env ?? {}),
+      ...(args.meta?.buildEnv ?? {}),
+    },
   });
 
   const handler = relative(

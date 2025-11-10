@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.15.2
+
+### Patch Changes
+
+- [python] make flask framework detection case insensitive ([#14197](https://github.com/vercel/vercel/pull/14197))
+
+## 3.15.1
+
+### Patch Changes
+
+- Fix express logos ([#13783](https://github.com/vercel/vercel/pull/13783))
+
 ## 3.15.0
 
 ### Minor Changes

@@ -1,5 +1,21 @@
 # @vercel/node
 
+## 5.5.5
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+- Updated dependencies [[`314a62920d965765c71b198ca672ff44242fd1fd`](https://github.com/vercel/vercel/commit/314a62920d965765c71b198ca672ff44242fd1fd)]:
+  - @vercel/build-utils@13.0.0
+
+## 5.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`21214ebaf1077f1a9d1d7d4046bffe79db0196d2`](https://github.com/vercel/vercel/commit/21214ebaf1077f1a9d1d7d4046bffe79db0196d2)]:
+  - @vercel/build-utils@12.2.4
+
 ## 5.5.3
 
 ### Patch Changes

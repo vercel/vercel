@@ -1,5 +1,23 @@
 # @vercel/python
 
+## 6.0.2
+
+### Patch Changes
+
+- [python] surface tracebacks on error logs ([#14193](https://github.com/vercel/vercel/pull/14193))
+
+- write to stderr on startup error logs ([#14198](https://github.com/vercel/vercel/pull/14198))
+
+## 6.0.1
+
+### Patch Changes
+
+- [python] allow arbitrary entrypoints in pyproject.toml ([#14181](https://github.com/vercel/vercel/pull/14181))
+
+- [python] update predefined excludes ([#14166](https://github.com/vercel/vercel/pull/14166))
+
+- [python] fix logging ([#14165](https://github.com/vercel/vercel/pull/14165))
+
 ## 6.0.0
 
 ### Major Changes

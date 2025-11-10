@@ -1,5 +1,21 @@
 # @vercel/static-build
 
+## 2.8.5
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.104
+
+## 2.8.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.103
+
 ## 2.8.3
 
 ### Patch Changes
