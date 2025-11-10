@@ -1,0 +1,5 @@
+{
+  "probes": [
+    { "path": "/?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "ok:RANDOMNESS_PLACEHOLDER:abcd" }
+  ]
+}
