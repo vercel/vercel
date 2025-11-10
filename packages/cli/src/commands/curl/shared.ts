@@ -97,6 +97,18 @@ export function setupCurlLikeCommand(
     return 1;
   }
 
+  // Disallow passing a full URL as the path arg to avoid duplicating the base URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    output.error(
+      `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
+    );
+    output.print(
+      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
+    );
+    print(help(command, { columns: client.stderr.columns }));
+    return 1;
+  }
+
   const toolFlags =
     separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
   output.debug(
@@ -168,7 +180,7 @@ export async function getDeploymentUrlAndToken(
     return 1;
   }
 
-  const target = linkedProject.project.latestDeployments?.[0].url;
+  const target = linkedProject.project.latestDeployments?.[0]?.url;
 
   let baseUrl: string;
 
