@@ -517,7 +517,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
             try:
                 import uvicorn
             except Exception:
-                print('Uvicorn is required to run ASGI apps. Please ensure it is installed.')
+                _stderr('Uvicorn is required to run ASGI apps. Please ensure it is installed.')
                 exit(1)
 
             # Prefer a callable app.asgi when available; some frameworks expose a boolean here
