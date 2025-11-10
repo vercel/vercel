@@ -97,6 +97,18 @@ export function setupCurlLikeCommand(
     return 1;
   }
 
+  // Disallow passing a full URL as the path arg to avoid duplicating the base URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    output.error(
+      `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
+    );
+    output.print(
+      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
+    );
+    print(help(command, { columns: client.stderr.columns }));
+    return 1;
+  }
+
   const toolFlags =
     separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
   output.debug(
@@ -123,9 +135,10 @@ export async function getDeploymentUrlAndToken(
   const { deploymentFlag, protectionBypassFlag } = options;
 
   let link;
+  let scope;
 
   try {
-    await getScope(client);
+    scope = await getScope(client);
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&
@@ -168,12 +181,18 @@ export async function getDeploymentUrlAndToken(
     return 1;
   }
 
-  const target = linkedProject.project.latestDeployments?.[0].url;
+  const target = linkedProject.project.latestDeployments?.[0]?.url;
 
   let baseUrl: string;
 
   if (deploymentFlag) {
-    const deploymentUrl = await getDeploymentUrlById(client, deploymentFlag);
+    // Get the accountId from the scope (team or user)
+    const accountId = scope.team?.id || scope.user.id;
+    const deploymentUrl = await getDeploymentUrlById(
+      client,
+      deploymentFlag,
+      accountId
+    );
     if (!deploymentUrl) {
       output.error(`No deployment found for ID "${deploymentFlag}"`);
       return 1;

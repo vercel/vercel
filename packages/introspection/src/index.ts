@@ -1,4 +1,3 @@
-import { BuildV2, Files } from '@vercel/build-utils';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { dirname, join } from 'path';
@@ -8,21 +7,16 @@ import { z } from 'zod';
 
 const require = createRequire(import.meta.url);
 
-type RolldownResult = {
+export const introspectApp = async (args: {
   dir: string;
   handler: string;
-  files: Files;
-};
-
-export const introspectApp = async (
-  args: Parameters<BuildV2>[0],
-  rolldownResult: RolldownResult
-) => {
+  env: Record<string, string | undefined>;
+}) => {
   const cjsLoaderPath = fileURLToPath(
     new URL('loaders/cjs.cjs', import.meta.url)
   );
   const esmLoaderPath = new URL('loaders/esm.js', import.meta.url).href;
-  const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
+  const handlerPath = join(args.dir, args.handler);
 
   let introspectionResult: {
     frameworkSlug: string;
@@ -40,11 +34,10 @@ export const introspectApp = async (
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
-          cwd: rolldownResult.dir,
+          cwd: args.dir,
           env: {
             ...process.env,
-            ...(args.meta?.env || {}),
-            ...(args.meta?.buildEnv || {}),
+            ...args.env,
           },
         }
       );
@@ -110,7 +103,7 @@ export const introspectApp = async (
     const frameworkLibPath = require.resolve(
       `${introspectionResult.frameworkSlug}`,
       {
-        paths: [rolldownResult.dir],
+        paths: [args.dir],
       }
     );
     const findNearestPackageJson = (dir: string): string | undefined => {
@@ -133,7 +126,6 @@ export const introspectApp = async (
 
   return {
     routes,
-    files: rolldownResult.files,
     framework: {
       slug: introspectionResult.frameworkSlug,
       version,

@@ -22,24 +22,17 @@ async function createDeploymentProtectionToken(
     );
   }
 
-  const query = new URLSearchParams();
-  if (orgId) {
-    query.set('teamId', orgId);
-  }
-
   try {
     const response = await client.fetch<{
       protectionBypass: ProjectProtectionBypass;
-    }>(
-      `/v1/projects/${projectId}/protection-bypass${query.toString() ? `?${query}` : ''}`,
-      {
-        method: 'PATCH',
-        body: '{}',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    }>(`/v1/projects/${projectId}/protection-bypass`, {
+      method: 'PATCH',
+      body: '{}',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      accountId: orgId,
+    });
     const { protectionBypass } = response;
 
     output.log(
