@@ -338,7 +338,6 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    output.debug(`[main] About to call doBuild`);
     try {
       await rootSpan
         .child('vc.doBuild')
@@ -401,7 +400,6 @@ async function doBuild(
   const { localConfigPath } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
-  output.debug(`[doBuild] About to call compileVercelConfig with workPath: ${workPath}`);
 
   const compileResult = await compileVercelConfig(workPath);
 
