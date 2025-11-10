@@ -1,14 +1,18 @@
-export const version = 2;
+import { existsSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { BuildOptions } from '@vercel/build-utils';
-import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils.js';
 import {
   build as cervelBuild,
-  getBuildSummary,
   findEntrypoint,
+  getBuildSummary,
 } from '@vercel/cervel';
-import { join } from 'path';
-import { existsSync } from 'fs';
-import { writeFile } from 'fs/promises';
+import {
+  maybeExecBuildCommand,
+  type downloadInstallAndBundle,
+} from './utils.js';
+
+export const version = 2;
 
 const defaultOutputDirectory = join('.vercel', 'node');
 

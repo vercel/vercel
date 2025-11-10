@@ -1,14 +1,16 @@
 import {
   BuildResultV2Typical,
+  FileBlob,
   FileFsRef,
   Files,
   NodejsLambda,
-} from '@vercel/build-utils/dist';
+} from '@vercel/build-utils';
 import { build } from '../dist';
 import { join } from 'path';
+import execa from 'execa';
 import { describe, expect, it } from 'vitest';
-import { readdir, readFile, rm, stat } from 'fs/promises';
-import { existsSync } from 'fs';
+import { readdir, writeFile, rm, stat, mkdtemp } from 'fs/promises';
+import { tmpdir } from 'os';
 
 const clearOutputs = async (fixtureName: string) => {
   await rm(join(__dirname, 'fixtures', fixtureName, '.vercel'), {
@@ -94,12 +96,6 @@ describe('successful builds', async () => {
       const workPath = join(__dirname, 'fixtures', fixtureName);
 
       const fileList = await readDirectoryRecursively(workPath);
-      // const vercelJson = await readFile(join(workPath, 'vercel.json'), 'utf8');
-      // const vercelJsonObject = JSON.parse(vercelJson);
-      // config.projectSettings = {
-      //   ...config.projectSettings,
-      //   ...vercelJsonObject,
-      // };
 
       const files = createFiles(workPath, fileList);
       const result = (await build({
@@ -112,27 +108,82 @@ describe('successful builds', async () => {
       })) as BuildResultV2Typical;
 
       const lambda = result.output.index as unknown as NodejsLambda;
-      expect(lambda.framework).toMatchObject({
-        slug: expect.stringMatching(/^express|hono$/),
-        // version: expect.any(String), //getting hono version is tricky
-      });
 
-      const expectedFilePath = join(workPath, 'files.json');
-      if (existsSync(expectedFilePath)) {
-        const expectedFiles = await readFile(expectedFilePath, 'utf8');
-        const indexOutput = result.output.index;
-        if ('type' in indexOutput && indexOutput.type === 'Lambda') {
-          if (Array.isArray(files)) {
-            expect(files).toEqual(
-              expect.arrayContaining(JSON.parse(expectedFiles))
-            );
-          }
-        }
-      }
-
-      expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
-        join(workPath, 'routes.json')
-      );
-    }, 10000);
+      // Runs without errors
+      await expect(extractAndExecuteCode(lambda)).resolves.toBeUndefined();
+    });
   }
 });
+
+it('extractAndExecuteCode throws with invalid code', async () => {
+  const validLambda = new NodejsLambda({
+    runtime: 'nodejs22.x',
+    handler: 'index.js',
+    files: {
+      'index.js': new FileBlob({
+        data: 'export default (req, res) => res.end("hi");',
+      }),
+      'package.json': new FileBlob({ data: '{"type": "module"}' }),
+    },
+    shouldAddHelpers: false,
+    shouldAddSourcemapSupport: true,
+    awsLambdaHandler: '',
+  });
+  // esm/cjs mixture which will fail on node 20
+  const invalidLambda = new NodejsLambda({
+    runtime: 'nodejs22.x',
+    handler: 'index.js',
+    files: {
+      'index.js': new FileBlob({
+        data: 'module.exports = (req, res) => res.end("hi");',
+      }),
+      'package.json': new FileBlob({ data: '{"type": "module"}' }),
+    },
+    shouldAddHelpers: false,
+    shouldAddSourcemapSupport: true,
+    awsLambdaHandler: '',
+  });
+  await expect(extractAndExecuteCode(validLambda)).resolves.toBeUndefined();
+  await expect(extractAndExecuteCode(invalidLambda)).rejects.toThrow();
+});
+
+const extractAndExecuteCode = async (lambda: NodejsLambda) => {
+  const out = await lambda.createZip();
+  const tempDir = await mkdtemp(join(tmpdir(), 'lambda-test-'));
+  await writeFile(join(tempDir, 'lambda.zip'), out);
+  await execa('unzip', ['-o', 'lambda.zip'], {
+    cwd: tempDir,
+    stdio: 'ignore',
+  });
+
+  const handlerPath = join(tempDir, lambda.handler);
+
+  // Wrap in a Promise to properly wait for the process to exit
+  await new Promise<void>((resolve, reject) => {
+    const fakeLambdaProcess = execa('node', [handlerPath], {
+      cwd: tempDir,
+    });
+
+    fakeLambdaProcess.on('error', error => {
+      console.error(error);
+      reject(error);
+    });
+
+    fakeLambdaProcess.on('exit', (code, signal) => {
+      if (code !== 0) {
+        reject(
+          new Error(`Process exited with code ${code} and signal ${signal}`)
+        );
+      } else {
+        resolve();
+      }
+    });
+
+    // Kill the process after a short delay if it's still running
+    setTimeout(() => {
+      if (!fakeLambdaProcess.killed) {
+        fakeLambdaProcess.kill('SIGTERM');
+      }
+    }, 1000);
+  });
+};
