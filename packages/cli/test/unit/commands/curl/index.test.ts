@@ -108,6 +108,20 @@ describe('curl', () => {
       ]);
     });
 
+    it('should reject when a full https URL is provided as the path', async () => {
+      client.setArgv('curl', 'https://example.com/api/hello');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('must be a relative API path');
+    });
+
+    it('should reject when a full http URL is provided as the path', async () => {
+      client.setArgv('curl', 'http://localhost:3000/');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('must be a relative API path');
+    });
+
     it('should reject unrecognized flags before --', async () => {
       client.setArgv('curl', '/api/hello', '--invalid-flag');
       const exitCode = await curl(client);
@@ -206,6 +220,37 @@ describe('curl', () => {
         separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
 
       expect(curlFlags).toEqual(['--header', 'Content-Type: application/json']);
+    });
+
+    it('should accept a full deployment URL', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://deployment-xyz789.vercel.app',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'url',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 
