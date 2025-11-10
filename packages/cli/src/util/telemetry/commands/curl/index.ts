@@ -19,8 +19,14 @@ export class CurlTelemetryClient
 
   trackCliOptionDeployment(deploymentId: string | undefined) {
     if (deploymentId) {
-      // Track whether dpl_ prefix was provided or not
-      const value = deploymentId.startsWith('dpl_') ? 'dpl_' : 'no-prefix';
+      // Track whether value is a URL, or if dpl_ prefix was provided
+      const value =
+        deploymentId.startsWith('http://') ||
+        deploymentId.startsWith('https://')
+          ? 'url'
+          : deploymentId.startsWith('dpl_')
+            ? 'dpl_'
+            : 'no-prefix';
       this.trackCliOption({
         option: 'deployment',
         value,
