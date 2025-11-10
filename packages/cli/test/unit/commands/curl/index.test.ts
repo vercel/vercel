@@ -6,6 +6,8 @@ import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 
+const MOCK_ACCOUNT_ID = 'team_test123';
+
 let spawnMock: ReturnType<typeof vi.fn>;
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
@@ -610,10 +612,15 @@ describe('getDeploymentUrlById', () => {
       }),
     } as any;
 
-    await getDeploymentUrlById(mockClient, 'ERiL45NJvP8ghWxgbvCM447bmxwV');
+    await getDeploymentUrlById(
+      mockClient,
+      'ERiL45NJvP8ghWxgbvCM447bmxwV',
+      MOCK_ACCOUNT_ID
+    );
 
     expect(mockClient.fetch).toHaveBeenCalledWith(
-      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
+      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+      { accountId: MOCK_ACCOUNT_ID }
     );
   });
 
@@ -624,10 +631,15 @@ describe('getDeploymentUrlById', () => {
       }),
     } as any;
 
-    await getDeploymentUrlById(mockClient, 'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV');
+    await getDeploymentUrlById(
+      mockClient,
+      'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+      MOCK_ACCOUNT_ID
+    );
 
     expect(mockClient.fetch).toHaveBeenCalledWith(
-      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
+      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+      { accountId: MOCK_ACCOUNT_ID }
     );
   });
 
@@ -638,7 +650,8 @@ describe('getDeploymentUrlById', () => {
 
     const result = await getDeploymentUrlById(
       mockClient,
-      'ERiL45NJvP8ghWxgbvCM447bmxwV'
+      'ERiL45NJvP8ghWxgbvCM447bmxwV',
+      MOCK_ACCOUNT_ID
     );
 
     expect(result).toBeNull();
@@ -651,11 +664,16 @@ describe('getDeploymentUrlById', () => {
       }),
     } as any;
 
-    const result = await getDeploymentUrlById(mockClient, 'XYZ789ABC123');
+    const result = await getDeploymentUrlById(
+      mockClient,
+      'XYZ789ABC123',
+      MOCK_ACCOUNT_ID
+    );
 
     expect(result).toBe('https://my-app-xyz789.vercel.app');
     expect(mockClient.fetch).toHaveBeenCalledWith(
-      '/v13/deployments/dpl_XYZ789ABC123'
+      '/v13/deployments/dpl_XYZ789ABC123',
+      { accountId: MOCK_ACCOUNT_ID }
     );
   });
 });
