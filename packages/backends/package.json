@@ -9,10 +9,7 @@
     "access": "public"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./loaders/cjs": "./dist/loaders/cjs.js",
-    "./loaders/esm": "./dist/loaders/esm.js",
-    "./loaders/hooks": "./dist/loaders/hooks.js"
+    ".": "./dist/index.js"
   },
   "repository": {
     "type": "git",
@@ -26,29 +23,15 @@
     "type-check": "tsc --noEmit"
   },
   "files": [
-    "dist",
-    "package.json",
-    "express-loader.js",
-    "express-loader.mjs",
-    "express-loader-register.mjs",
-    "express-loader-hooks.mjs",
-    "express-introspection-source.js",
-    "hono-loader.js",
-    "hono-loader-hooks.js",
-    "universal-loader.js",
-    "universal-loader-cjs.js",
-    "universal-loader-esm.mjs",
-    "universal-loader-hooks.mjs"
+    "dist"
   ],
   "dependencies": {
     "@vercel/cervel": "workspace:*",
     "@vercel/nft": "0.30.1",
     "@vercel/static-config": "3.1.2",
+    "@vercel/introspection": "workspace:*",
     "fs-extra": "11.1.0",
-    "path-to-regexp": "8.3.0",
-    "rolldown": "1.0.0-beta.35",
-    "ts-morph": "12.0.0",
-    "zod": "3.22.4"
+    "rolldown": "1.0.0-beta.35"
   },
   "devDependencies": {
     "@types/express": "5.0.3",

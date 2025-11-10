@@ -6,6 +6,8 @@ import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 
+const MOCK_ACCOUNT_ID = 'team_test123';
+
 let spawnMock: ReturnType<typeof vi.fn>;
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
@@ -106,6 +108,20 @@ describe('curl', () => {
       ]);
     });
 
+    it('should reject when a full https URL is provided as the path', async () => {
+      client.setArgv('curl', 'https://example.com/api/hello');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('must be a relative API path');
+    });
+
+    it('should reject when a full http URL is provided as the path', async () => {
+      client.setArgv('curl', 'http://localhost:3000/');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('must be a relative API path');
+    });
+
     it('should reject unrecognized flags before --', async () => {
       client.setArgv('curl', '/api/hello', '--invalid-flag');
       const exitCode = await curl(client);
@@ -204,6 +220,37 @@ describe('curl', () => {
         separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
 
       expect(curlFlags).toEqual(['--header', 'Content-Type: application/json']);
+    });
+
+    it('should accept a full deployment URL', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        '/api/hello',
+        '--deployment',
+        'https://deployment-xyz789.vercel.app',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'url',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 
@@ -565,10 +612,15 @@ describe('getDeploymentUrlById', () => {
       }),
     } as any;
 
-    await getDeploymentUrlById(mockClient, 'ERiL45NJvP8ghWxgbvCM447bmxwV');
+    await getDeploymentUrlById(
+      mockClient,
+      'ERiL45NJvP8ghWxgbvCM447bmxwV',
+      MOCK_ACCOUNT_ID
+    );
 
     expect(mockClient.fetch).toHaveBeenCalledWith(
-      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
+      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+      { accountId: MOCK_ACCOUNT_ID }
     );
   });
 
@@ -579,10 +631,15 @@ describe('getDeploymentUrlById', () => {
       }),
     } as any;
 
-    await getDeploymentUrlById(mockClient, 'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV');
+    await getDeploymentUrlById(
+      mockClient,
+      'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+      MOCK_ACCOUNT_ID
+    );
 
     expect(mockClient.fetch).toHaveBeenCalledWith(
-      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
+      '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+      { accountId: MOCK_ACCOUNT_ID }
     );
   });
 
@@ -593,7 +650,8 @@ describe('getDeploymentUrlById', () => {
 
     const result = await getDeploymentUrlById(
       mockClient,
-      'ERiL45NJvP8ghWxgbvCM447bmxwV'
+      'ERiL45NJvP8ghWxgbvCM447bmxwV',
+      MOCK_ACCOUNT_ID
     );
 
     expect(result).toBeNull();
@@ -606,11 +664,16 @@ describe('getDeploymentUrlById', () => {
       }),
     } as any;
 
-    const result = await getDeploymentUrlById(mockClient, 'XYZ789ABC123');
+    const result = await getDeploymentUrlById(
+      mockClient,
+      'XYZ789ABC123',
+      MOCK_ACCOUNT_ID
+    );
 
     expect(result).toBe('https://my-app-xyz789.vercel.app');
     expect(mockClient.fetch).toHaveBeenCalledWith(
-      '/v13/deployments/dpl_XYZ789ABC123'
+      '/v13/deployments/dpl_XYZ789ABC123',
+      { accountId: MOCK_ACCOUNT_ID }
     );
   });
 });
