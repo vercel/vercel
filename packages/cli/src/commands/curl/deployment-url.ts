@@ -4,7 +4,8 @@ import type { Deployment } from '@vercel-internals/types';
 
 export async function getDeploymentUrlById(
   client: Client,
-  deploymentIdOrUrl: string
+  deploymentIdOrUrl: string,
+  accountId?: string
 ): Promise<string | null> {
   try {
     // Accept a full deployment URL directly
@@ -28,7 +29,8 @@ export async function getDeploymentUrlById(
     }
 
     const deployment = await client.fetch<Deployment>(
-      `/v13/deployments/${fullDeploymentId}`
+      `/v13/deployments/${fullDeploymentId}`,
+      { accountId }
     );
 
     if (!deployment || !deployment.url) {

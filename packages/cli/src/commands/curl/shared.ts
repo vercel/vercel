@@ -135,9 +135,10 @@ export async function getDeploymentUrlAndToken(
   const { deploymentFlag, protectionBypassFlag } = options;
 
   let link;
+  let scope;
 
   try {
-    await getScope(client);
+    scope = await getScope(client);
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&
@@ -185,7 +186,13 @@ export async function getDeploymentUrlAndToken(
   let baseUrl: string;
 
   if (deploymentFlag) {
-    const deploymentUrl = await getDeploymentUrlById(client, deploymentFlag);
+    // Get the accountId from the scope (team or user)
+    const accountId = scope.team?.id || scope.user.id;
+    const deploymentUrl = await getDeploymentUrlById(
+      client,
+      deploymentFlag,
+      accountId
+    );
     if (!deploymentUrl) {
       output.error(`No deployment found for ID "${deploymentFlag}"`);
       return 1;
