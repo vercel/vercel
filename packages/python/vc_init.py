@@ -264,7 +264,7 @@ class ASGIMiddleware:
         # Extract internal headers and set per-request context
         headers_list = scope.get('headers', []) or []
         new_headers = []
-        invocation_id = None
+        invocation_id = "0"
         request_id = 0
 
         def _b2s(b: bytes) -> str:
