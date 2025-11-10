@@ -3,6 +3,10 @@
     {
       "path": "/api/version",
       "mustContain": "\"fastapi_version\":\"0.116.2\""
+    },
+    {
+      "path": "/api/dev-dependencies",
+      "mustContain": "\"ok\":true"
     }
   ]
 }
