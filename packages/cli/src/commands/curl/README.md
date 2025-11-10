@@ -23,14 +23,15 @@ vercel curl <path> [options] [-- <curl-args>]
 - **`path`** (required): The API path to request
   - Can start with `/` (e.g., `/api/hello`) or without (e.g., `api/hello`)
   - Automatically normalized to include leading slash
+  - Must be a relative path — do not pass a full URL. To target a specific deployment base URL, use `--deployment <id>`
 
 ### Options
 
-- **`--deployment <id>`**: Target a specific deployment by ID
+- **`--deployment <id|url>`**: Target a specific deployment by ID or URL
 
-  - Accepts IDs with or without the `dpl_` prefix
-  - Examples: `dpl_ERiL45NJvP8ghWxgbvCM447bmxwV` or `ERiL45NJvP8ghWxgbvCM447bmxwV`
-  - The `dpl_` prefix is automatically added if omitted
+  - Accepts IDs with or without the `dpl_` prefix, or a full deployment URL
+  - Examples: `dpl_ERiL45NJvP8ghWxgbvCM447bmxwV`, `ERiL45NJvP8ghWxgbvCM447bmxwV`, or `https://your-project-abc123.vercel.app`
+  - The `dpl_` prefix is automatically added for IDs when omitted
 
 - **`--protection-bypass <secret>`**: Provide a protection bypass secret
 
@@ -79,6 +80,9 @@ vercel curl /api/status --deployment ERiL45NJvP8ghWxgbvCM447bmxwV
 
 # Or with the dpl_ prefix
 vercel curl /api/status --deployment dpl_ERiL45NJvP8ghWxgbvCM447bmxwV
+
+# Or by passing a full deployment URL
+vercel curl /api/status --deployment https://your-project-abc123.vercel.app
 ```
 
 ### Custom Headers and Methods
@@ -226,6 +230,13 @@ When using `--deployment`:
 - Verify the deployment ID is correct
 - Check that the deployment belongs to your linked project
 - Ensure the deployment hasn't been deleted
+
+### "Path must be relative (not a full URL)"
+
+When invoking `vercel curl`, pass only the API path (e.g., `/api/hello`).
+
+- Don’t include the protocol or host (e.g., `https://my-app.vercel.app/api/hello`)
+- If you need to target a particular deployment, use `--deployment <id|url>` and keep `<path>` relative
 
 ## Requirements
 

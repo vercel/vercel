@@ -17,8 +17,8 @@ export const httpstatCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'The deployment ID to target',
-      argument: 'ID',
+      description: 'The deployment ID or URL to target',
+      argument: 'ID|URL',
     },
     {
       name: 'protection-bypass',

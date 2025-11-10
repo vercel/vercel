@@ -100,6 +100,20 @@ describe('httpstat', () => {
       ]);
     });
 
+    it('should reject when a full https URL is provided as the path', async () => {
+      client.setArgv('httpstat', 'https://example.com/api/hello');
+      const exitCode = await httpstat(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('must be a relative API path');
+    });
+
+    it('should reject when a full http URL is provided as the path', async () => {
+      client.setArgv('httpstat', 'http://localhost:3000/');
+      const exitCode = await httpstat(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('must be a relative API path');
+    });
+
     it('should reject unrecognized flags before --', async () => {
       client.setArgv('httpstat', '/api/hello', '--invalid-flag');
       const exitCode = await httpstat(client);
@@ -157,6 +171,37 @@ describe('httpstat', () => {
       expect(client.argv[deploymentIndex + 1]).toBe(
         'ERiL45NJvP8ghWxgbvCM447bmxwV'
       );
+    });
+
+    it('should accept a full deployment URL', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'httpstat',
+        '/api/hello',
+        '--deployment',
+        'https://deployment-xyz789.vercel.app',
+        '--protection-bypass',
+        'test-secret'
+      );
+
+      const exitCode = await httpstat(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'url',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 
