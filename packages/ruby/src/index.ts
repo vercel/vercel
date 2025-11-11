@@ -52,7 +52,7 @@ async function bundleInstall(
   rubyPath: string,
   major: number
 ) {
-  debug(`running "bundle install --deployment"...`);
+  debug(`running "bundle install --deployment --frozen"...`);
   const bundleAppConfig = await getWriteableDirectory();
   const gemfileContent = await readFile(gemfilePath, 'utf8');
   let gemfileModified = false;
@@ -140,10 +140,18 @@ async function bundleInstall(
     }
   }
 
-  console.log('Running bundle install...');
+  console.log('Running bundle install (frozen)...');
   const result = await execa(
     bundlePath,
-    ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
+    [
+      'install',
+      '--deployment',
+      '--frozen',
+      '--gemfile',
+      gemfilePath,
+      '--path',
+      bundleDir,
+    ],
     {
       stdio: 'pipe',
       env: bundlerEnv,
@@ -272,7 +280,9 @@ export const build: BuildV3 = async ({
       debug('failed to run "bundle check"', err);
     }
     if (!isUpToDate) {
-      debug('running "bundle install --deployment" to install missing gems...');
+      debug(
+        'running "bundle install --deployment --frozen" to install missing gems...'
+      );
       await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
     } else {
       debug('"bundle check" passed; skipping "bundle install"...');
