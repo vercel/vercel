@@ -14,11 +14,11 @@ import {
   FileBlob,
   FileFsRef,
   normalizePath,
-  isBackendFramework,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
+import fs from 'fs-extra';
 
 import highlight from '../output/highlight';
 import { treeKill } from '../tree-kill';
@@ -409,50 +409,6 @@ export async function getBuildMatches(
     // eslint-disable-next-line prefer-const
     let { src = '**', use, config = {} } = buildConfig;
 
-    if (!use) {
-      continue;
-    }
-
-    if (src[0] === '/') {
-      // Remove a leading slash so that the globbing is relative to `cwd`
-      // instead of the root of the filesystem. This matches the behavior
-      // of Vercel deployments.
-      src = src.substring(1);
-    }
-    // FIXME: hono-cleanup - we need to specify a src that we know exists
-    // so the rest of the script doesn't choke on it. But the framework preset
-    // needs to `index.js` so the BOA entry is index.func. BuildResultV2 allows
-    // us to return a different value from what the preset provides, but we need
-    // to use BuildResultV3 so that we can run the dev server with the startDevServer
-    // function exported from backend frameworks.
-    if (isBackendFramework(buildConfig.config?.framework)) {
-      src = 'package.json';
-    }
-
-    if (
-      buildConfig.config?.framework === 'fastapi' ||
-      buildConfig.config?.framework === 'flask'
-    ) {
-      // Mirror @vercel/python's entrypoint candidates
-      const candidateDirs = ['', 'src', 'app', 'api'];
-      const candidateNames = ['app', 'index', 'server', 'main'];
-      const candidates: string[] = [];
-      for (const name of candidateNames) {
-        for (const dir of candidateDirs) {
-          candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
-        }
-      }
-      if (!fileList.includes(src)) {
-        const existing = candidates.filter(p => fileList.includes(p));
-        if (existing.length > 0) {
-          src = existing[0];
-        } else if (fileList.includes('pyproject.toml')) {
-          // Builder will resolve entrypoint from pyproject.toml;
-          src = 'pyproject.toml';
-        }
-      }
-    }
-
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
     const extensionless = devServer.getExtensionlessFile(src);
@@ -466,6 +422,23 @@ export async function getBuildMatches(
       .map(name => join(cwd, name));
 
     if (files.length === 0) {
+      // Fallback: for service-derived builds (identified via `config.basePath`),
+      // if the entry file exists on disk but was filtered out, include it.
+      if (
+        typeof (config as any).basePath === 'string' &&
+        typeof src === 'string'
+      ) {
+        try {
+          const abs = join(cwd, src);
+          const exists = await fs.pathExists(abs);
+          if (exists) {
+            files.push(abs);
+          }
+        } catch {}
+      }
+    }
+
+    if (files.length === 0) {
       noMatches.push(buildConfig);
     }
 
@@ -475,8 +448,8 @@ export async function getBuildMatches(
       const entrypoint = mapToEntrypoint.get(src) || src;
 
       // Remove the output directory prefix
-      if (config.zeroConfig && config.outputDirectory) {
-        const outputMatch = config.outputDirectory + '/';
+      if (config.zeroConfig && (config as any).outputDirectory) {
+        const outputMatch = (config as any).outputDirectory + '/';
         if (src.startsWith(outputMatch)) {
           src = src.slice(outputMatch.length);
         }

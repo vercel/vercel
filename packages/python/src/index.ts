@@ -487,6 +487,15 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
+
+  // If a basePath is provided (service-derived), only match when requestPath equals it
+  const basePath = (opts.config as any)?.basePath;
+  if (typeof basePath === 'string') {
+    const normalized = basePath.replace(/\/$/, '').replace(/^\//, '');
+    const req = opts.requestPath.replace(/\/$/, '').replace(/^\//, '');
+    return req === normalized;
+  }
+
   if (framework === 'fastapi') {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     // Don't override API routes if another builder already matched them

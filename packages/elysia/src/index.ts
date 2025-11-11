@@ -7,6 +7,11 @@ import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
 
 export const shouldServe: ShouldServe = async opts => {
   const requestPath = opts.requestPath.replace(/\/$/, ''); // sanitize trailing '/'
+  const basePath = (opts.config as any)?.basePath;
+  if (typeof basePath === 'string') {
+    const normalized = basePath.replace(/\/$/, '');
+    return requestPath === normalized;
+  }
   if (requestPath.startsWith('api') && opts.hasMatched) {
     // Don't override API routes, otherwise serve it
     return false;

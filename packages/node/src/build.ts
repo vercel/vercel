@@ -41,6 +41,7 @@ import type {
   NodeVersion,
   BuildResultV3,
 } from '@vercel/build-utils';
+import { NowBuildError } from '@vercel/build-utils';
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
@@ -74,7 +75,29 @@ async function downloadInstallAndBundle({
   considerBuildCommand,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
-  const entrypointFsDirname = join(workPath, dirname(entrypoint));
+  // Determine install directory. For service-based frameworks we hint via
+  // config.projectSettings.outputDirectory so installs run in the service dir.
+  const hintedOutDir = (config as any)?.projectSettings?.outputDirectory;
+  const entrypointFsDirname = hintedOutDir
+    ? join(workPath, hintedOutDir)
+    : join(workPath, dirname(entrypoint));
+
+  // Resolve the file key we expect in the uploaded file set
+  const entryLookupKey =
+    entrypoint === 'package.json'
+      ? relative(workPath, join(entrypointFsDirname, 'package.json'))
+      : entrypoint;
+  const entryDownload = downloadedFiles[entryLookupKey];
+  if (!entryDownload) {
+    throw new NowBuildError({
+      code: 'ENTRYPOINT_NOT_FOUND',
+      message:
+        `Entrypoint "${entryLookupKey}" was not found in the uploaded file set. ` +
+        `Ensure the path is correct (relative to the project root) and the file is not ignored by .vercelignore.`,
+      action: 'Verify the services.entry path and file exists',
+      link: 'https://vercel.link/services-entrypoint',
+    });
+  }
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,
@@ -118,7 +141,7 @@ async function downloadInstallAndBundle({
       config.projectSettings?.createdAt
     );
   }
-  const entrypointPath = downloadedFiles[entrypoint].fsPath;
+  const entrypointPath = entryDownload.fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnEnv };
 }
 
@@ -475,9 +498,21 @@ export const build = async ({
     );
   }
   if (entrypointCallback) {
-    const entrypoint = await entrypointCallback();
-    entrypointPath = join(entrypointFsDirname, entrypoint);
-    const functionConfig = config.functions?.[entrypoint];
+    const hintedOutDir = (config as any)?.projectSettings?.outputDirectory;
+    const callbackEntrypoint = await entrypointCallback();
+    // If callback returns a path that already includes the hinted outputDirectory,
+    // resolve from workPath. Otherwise, resolve relative to the install dir.
+    if (
+      hintedOutDir &&
+      (callbackEntrypoint === hintedOutDir ||
+        callbackEntrypoint.startsWith(hintedOutDir + sep) ||
+        callbackEntrypoint.startsWith(hintedOutDir + '/'))
+    ) {
+      entrypointPath = join(workPath, callbackEntrypoint);
+    } else {
+      entrypointPath = join(entrypointFsDirname, callbackEntrypoint);
+    }
+    const functionConfig = config.functions?.[callbackEntrypoint];
     if (functionConfig) {
       const normalizeArray = (value: any) =>
         Array.isArray(value) ? value : value ? [value] : [];

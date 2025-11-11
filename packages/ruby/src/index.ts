@@ -21,6 +21,8 @@ import {
   type Files,
   type BuildV3,
 } from '@vercel/build-utils';
+import type { ShouldServe } from '@vercel/build-utils';
+export { startDevServer } from './start-dev-server';
 import { installBundler } from './install-ruby';
 
 async function matchPaths(
@@ -95,16 +97,37 @@ async function bundleInstall(
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   if (major >= 3) {
-    const result = await execa('bundler', ['add', 'webrick'], {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    });
-    if (result.exitCode !== 0) {
-      console.log(result.stdout);
-      console.error(result.stderr);
-      throw result;
+    const hasWebrick = /(?:^|\n)\s*(?!#)\s*gem\s+["']webrick["']/.test(
+      gemfileContent
+    );
+    const injectedPath = join(dirname(gemfilePath), 'injected gems');
+    let hasInjectedWebrick = false;
+    try {
+      if (await pathExists(injectedPath)) {
+        const injected = await readFile(injectedPath, 'utf8');
+        hasInjectedWebrick = /(?:^|\n)\s*(?!#)\s*gem\s+["']webrick["']/.test(
+          injected
+        );
+      }
+    } catch (e) {
+      // ignore read errors for optional "injected gems" file
+    }
+    if (!hasWebrick && !hasInjectedWebrick) {
+      const result = await execa('bundler', ['add', 'webrick'], {
+        cwd: dirname(gemfilePath),
+        stdio: 'pipe',
+        env: bundlerEnv,
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        console.log(result.stdout);
+        console.error(result.stderr);
+        throw result;
+      }
+    } else {
+      debug(
+        `ruby: skipping bundler add for webrick (Gemfile=${hasWebrick}, injected=${hasInjectedWebrick})`
+      );
     }
   }
 
@@ -168,12 +191,17 @@ export const build: BuildV3 = async ({
       debug(
         'found two vendor directories, choosing the vendor directory relative to entrypoint'
       );
+      try {
+        await remove(vendorDir);
+      } catch (_) {
+        // ignore removal errors; move with overwrite below
+      }
     } else {
       debug('found vendor directory relative to entrypoint');
     }
 
     // vendor dir must be at the root for lambda to find it
-    await move(relativeVendorDir, vendorDir);
+    await move(relativeVendorDir, vendorDir, { overwrite: true } as any);
   } else if (hasRootVendorDir) {
     debug('found vendor directory in project root');
   }
@@ -261,4 +289,36 @@ export const build: BuildV3 = async ({
   });
 
   return { output };
+};
+
+export const shouldServe: ShouldServe = opts => {
+  // If a basePath is provided (service-derived), only match that exact path
+  const basePath = (opts.config as any)?.basePath;
+  if (typeof basePath === 'string') {
+    const normalized = basePath.replace(/\/$/, '').replace(/^\//, '');
+    const req = opts.requestPath.replace(/\/$/, '').replace(/^\//, '');
+    return req === normalized;
+  }
+  // Fallback to default heuristics
+  const requestPath = opts.requestPath.replace(/\/$/, '');
+  const entrypoint = opts.entrypoint.replace(/\\/g, '/');
+  if (
+    entrypoint === requestPath &&
+    Object.prototype.hasOwnProperty.call(opts.files, entrypoint)
+  ) {
+    return true;
+  }
+  // Support index.rb mapping
+  const parts = entrypoint.split('/');
+  const file = parts[parts.length - 1];
+  if (file === 'index.rb') {
+    const dir = parts.slice(0, -1).join('/');
+    if (
+      dir === requestPath &&
+      Object.prototype.hasOwnProperty.call(opts.files, entrypoint)
+    ) {
+      return true;
+    }
+  }
+  return false;
 };

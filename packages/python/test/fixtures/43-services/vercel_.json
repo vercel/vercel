@@ -1,0 +1,31 @@
+{
+  "services": [
+    {
+      "type": "web",
+      "entry": "services/python/flask/app.py",
+      "prefix": "/flask",
+      "framework": "flask"
+    },
+    {
+      "type": "web",
+      "entry": "services/python/fastapi/server.py",
+      "prefix": "/fastapi"
+    },
+    {
+      "type": "web",
+      "entry": "services/node/express/server.js",
+      "prefix": "/express",
+      "framework": "express"
+    },
+    {
+      "type": "web",
+      "entry": "services/node/hono/server.mjs",
+      "prefix": "/hono"
+    },
+    {
+      "type": "web",
+      "entry": "services/ruby/sinatra/index.ru",
+      "prefix": "/sinatra"
+    }
+  ]
+}

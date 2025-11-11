@@ -1,0 +1,11 @@
+{
+  "name": "hono-service",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.mjs",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.5.0"
+  }
+}
