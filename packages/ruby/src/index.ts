@@ -1,4 +1,4 @@
-import { EOL } from 'os';
+import { EOL, release } from 'os';
 import { join, dirname } from 'path';
 import execa from 'execa';
 import {
@@ -95,20 +95,29 @@ async function bundleLock(
     BUNDLE_JOBS: '4',
   });
 
-  const archToken = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
-  const platform = `${archToken}-linux`;
-  debug(`ruby: ensuring Gemfile.lock has platform ${platform}`);
+  const archTokenLinux = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+  const linuxPlatform = `${archTokenLinux}-linux`;
+  const platforms = [linuxPlatform];
+  if (process.platform === 'darwin') {
+    const darwinArchToken = process.arch === 'arm64' ? 'arm64' : 'x86_64';
+    const darwinMajor = Number(release().split('.')[0]) || undefined;
+    const darwinPlatform = darwinMajor
+      ? `${darwinArchToken}-darwin-${darwinMajor}`
+      : `${darwinArchToken}-darwin`;
+    platforms.push(darwinPlatform);
+  }
+  debug(`ruby: ensuring Gemfile.lock has platforms ${platforms.join(', ')}`);
 
-  const lockRes = await execa(
-    bundlerPath,
-    ['lock', '--add-platform', platform],
-    {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    }
-  );
+  const lockArgs = ['lock'];
+  for (const platform of platforms) {
+    lockArgs.push('--add-platform', platform);
+  }
+  const lockRes = await execa(bundlerPath, lockArgs, {
+    cwd: dirname(gemfilePath),
+    stdio: 'pipe',
+    env: bundlerEnv,
+    reject: false,
+  });
   if (lockRes.exitCode !== 0) {
     console.log(lockRes.stdout);
     console.error(lockRes.stderr);
@@ -229,6 +238,9 @@ export const build: BuildV3 = async ({
   await ensureDir(vendorDir);
 
   // Always run an idempotent frozen install; Bundler will skip already-installed gems.
+  // If gems are pre-vendored and already included in the vendor directory, Bundler keeps them when they
+  // match the lockfile and platform; otherwise it only installs/replaces what's
+  // missing or mismatched (e.g. add webrick or correct platform builds).
   await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath);
 
   // try to remove gem cache to slim bundle size
