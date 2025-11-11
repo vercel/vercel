@@ -39,7 +39,7 @@ A promise that resolves when the value is deleted.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:11](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L11)
+[packages/functions/src/cache/types.ts:11](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/cache/types.ts#L11)
 
 ---
 
@@ -67,7 +67,7 @@ A promise that resolves when the cache entries expiration request is received.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:44](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
+[packages/functions/src/cache/types.ts:44](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
 
 ---
 
@@ -95,7 +95,7 @@ A promise that resolves to the value, or null if not found.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
+[packages/functions/src/cache/types.ts:19](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
 
 ---
 
@@ -128,4 +128,4 @@ A promise that resolves when the value is set.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L32)
+[packages/functions/src/cache/types.ts:32](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/cache/types.ts#L32)

@@ -64,4 +64,4 @@ A promise that resolves to an object with a `rateLimited` property that is `true
 
 #### Defined in
 
-[rate-limit.ts:29](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L29)
+[rate-limit.ts:29](https://github.com/JohnDaWalka/vercel/blob/main/packages/firewall/src/rate-limit.ts#L29)

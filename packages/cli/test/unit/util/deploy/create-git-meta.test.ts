@@ -197,7 +197,7 @@ describe('createGitMeta', () => {
         commitAuthorEmail: 'mattbstanciu@gmail.com',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'hi',
-        commitRef: 'master',
+        commitRef: 'main',
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
         remoteUrl: undefined,
@@ -235,7 +235,7 @@ describe('createGitMeta', () => {
         remoteUrl: 'https://github.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'hi',
-        commitRef: 'master',
+        commitRef: 'main',
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
       });
@@ -252,7 +252,7 @@ describe('createGitMeta', () => {
         remoteUrl: 'https://github.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'hi',
-        commitRef: 'master',
+        commitRef: 'main',
         commitSha: 'dfe1724998d3651f713380bc134f8ef28abecef9',
         dirty: true,
       });
@@ -269,7 +269,7 @@ describe('createGitMeta', () => {
         remoteUrl: 'https://gitlab.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'hi',
-        commitRef: 'master',
+        commitRef: 'main',
         commitSha: '328fa04e4363b462ad96a7180d67d2785bace650',
         dirty: false,
       });
@@ -286,7 +286,7 @@ describe('createGitMeta', () => {
         remoteUrl: 'https://bitbucket.org/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'hi',
-        commitRef: 'master',
+        commitRef: 'main',
         commitSha: '3d883ccee5de4222ef5f40bde283a57b533b1256',
         dirty: false,
       });
@@ -345,7 +345,7 @@ describe('createGitMeta', () => {
         remoteUrl: 'https://github.com/user/repo2',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'add hi',
-        commitRef: 'master',
+        commitRef: 'main',
         commitSha: '8050816205303e5957b2909083c50677930d5b29',
         dirty: true,
       });

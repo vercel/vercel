@@ -19,4 +19,4 @@ If none is provided, the default is 0 and the content will be deleted immediatel
 
 #### Defined in
 
-[packages/functions/src/purge/types.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/types.ts#L6)
+[packages/functions/src/purge/types.ts:6](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/purge/types.ts#L6)

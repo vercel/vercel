@@ -20,7 +20,7 @@
 
 #### Defined in
 
-[get-context.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-context.ts#L7)
+[get-context.ts:7](https://github.com/JohnDaWalka/vercel/blob/main/packages/oidc/src/get-context.ts#L7)
 
 ---
 
@@ -64,7 +64,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:30](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L30)
+[get-vercel-oidc-token.ts:30](https://github.com/JohnDaWalka/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L30)
 
 ---
 
@@ -101,4 +101,4 @@ The OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:81](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L81)
+[get-vercel-oidc-token.ts:81](https://github.com/JohnDaWalka/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L81)
