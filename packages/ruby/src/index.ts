@@ -140,7 +140,7 @@ async function bundleInstall(
     }
   }
 
-  console.log('Running bundle install (frozen)...');
+  console.log('Running bundle install...');
   const result = await execa(
     bundlePath,
     [
