@@ -45,6 +45,42 @@ async function matchPaths(
   return patternPaths.reduce((a, b) => a.concat(b), []);
 }
 
+async function prepareGemfile(
+  gemfilePath: string,
+  major: number
+): Promise<{ modified: boolean; webrickAdded: boolean }> {
+  let gemfile = await readFile(gemfilePath, 'utf8');
+  let modified = false;
+  let webrickAdded = false;
+
+  const patchRuby = (from: string, to: string) => {
+    if (gemfile.includes(from)) {
+      gemfile = gemfile.replace(from, to);
+      modified = true;
+    }
+  };
+
+  // Gemfiles containing the following will cause an error message:
+  // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+  // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+  // We must correct to the actual version in the build container.
+  patchRuby('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"');
+  patchRuby('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"');
+  patchRuby('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"');
+
+  if (major >= 3 && !/^[^#]*\bgem\s+["']webrick["']/m.test(gemfile)) {
+    gemfile += `${EOL}gem "webrick"${EOL}`;
+    modified = true;
+    webrickAdded = true;
+  }
+
+  if (modified) {
+    await writeFile(gemfilePath, gemfile);
+  }
+
+  return { modified, webrickAdded };
+}
+
 async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
@@ -52,7 +88,7 @@ async function bundleInstall(
   rubyPath: string,
   major: number
 ) {
-  debug(`running "bundle install --deployment --frozen"...`);
+  debug('preparing Gemfile…');
   const bundleAppConfig = await getWriteableDirectory();
   const bundlerEnv = cloneEnv(process.env, {
     PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
@@ -61,162 +97,42 @@ async function bundleInstall(
     BUNDLE_JOBS: '4',
   });
 
-  // First, try a strict frozen install to honor the existing lockfile.
-  console.log('Running bundle install...');
-  let result = await execa(
-    bundlePath,
-    [
-      'install',
-      '--deployment',
-      '--frozen',
-      '--gemfile',
-      gemfilePath,
-      '--path',
-      bundleDir,
-    ],
-    {
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    }
-  );
+  const { modified, webrickAdded } = await prepareGemfile(gemfilePath, major);
 
-  if (result.exitCode === 0) {
-    // If install succeeded, ensure Ruby 3+ has webrick available.
-    if (major >= 3) {
-      const currentGemfile = await readFile(gemfilePath, 'utf8');
-      const hasWebrick = /^[^#]*\bgem\s+['"]webrick['"]/m.test(currentGemfile);
-      if (!hasWebrick) {
-        const addRes = await execa(
-          bundlePath,
-          ['add', 'webrick', '--skip-install'],
-          {
-            cwd: dirname(gemfilePath),
-            stdio: 'pipe',
-            env: bundlerEnv,
-            reject: false,
-          }
-        );
-        if (addRes.exitCode !== 0) {
-          console.log(addRes.stdout);
-          console.error(addRes.stderr);
-          throw addRes;
-        }
-        // Update lockfile conservatively for the new gem, then re-run frozen install.
-        const lockRes = await execa(
-          bundlePath,
-          ['lock', '--update', 'webrick'],
-          {
-            cwd: dirname(gemfilePath),
-            stdio: 'pipe',
-            env: bundlerEnv,
-            reject: false,
-          }
-        );
-        if (lockRes.exitCode !== 0) {
-          console.log(lockRes.stdout);
-          console.error(lockRes.stderr);
-          throw lockRes;
-        }
-        console.log('Running bundle install...');
-        result = await execa(
-          bundlePath,
-          [
-            'install',
-            '--deployment',
-            '--frozen',
-            '--gemfile',
-            gemfilePath,
-            '--path',
-            bundleDir,
-          ],
-          {
-            stdio: 'pipe',
-            env: bundlerEnv,
-            reject: false,
-          }
-        );
-        if (result.exitCode !== 0) {
-          console.log(result.stdout);
-          console.error(result.stderr);
-          throw result;
-        }
-      }
-    }
-    return;
-  }
+  // Run bundle lock if Gemfile was modified OR if lockfile doesn't exist.
+  // --frozen install requires a lockfile, so we must ensure one exists.
+  const lockfilePath = `${gemfilePath}.lock`;
+  const lockfileExists = await pathExists(lockfilePath);
+  const needsLock = modified || !lockfileExists;
 
-  // Fallback: adjust Gemfile (ruby patch level, add webrick) then re-lock and re-install.
-  const originalGemfile = await readFile(gemfilePath, 'utf8');
-  let updatedGemfile = originalGemfile;
-  let gemfileModified = false;
+  if (needsLock) {
+    let lockArgs = ['lock'];
 
-  if (updatedGemfile.includes('ruby "~> 2.7.x"')) {
-    await writeFile(
-      gemfilePath,
-      updatedGemfile.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
-    );
-    updatedGemfile = await readFile(gemfilePath, 'utf8');
-    gemfileModified = true;
-  } else if (updatedGemfile.includes('ruby "~> 3.2.x"')) {
-    await writeFile(
-      gemfilePath,
-      updatedGemfile.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
-    );
-    updatedGemfile = await readFile(gemfilePath, 'utf8');
-    gemfileModified = true;
-  } else if (updatedGemfile.includes('ruby "~> 3.3.x"')) {
-    await writeFile(
-      gemfilePath,
-      updatedGemfile.replace('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"')
-    );
-    updatedGemfile = await readFile(gemfilePath, 'utf8');
-    gemfileModified = true;
-  }
-
-  let webrickAdded = false;
-  if (major >= 3) {
-    const hasWebrick = /^[^#]*\bgem\s+['"]webrick['"]/m.test(updatedGemfile);
-    if (!hasWebrick) {
-      const addRes = await execa(
-        bundlePath,
-        ['add', 'webrick', '--skip-install'],
-        {
-          cwd: dirname(gemfilePath),
-          stdio: 'pipe',
-          env: bundlerEnv,
-          reject: false,
-        }
-      );
-      if (addRes.exitCode !== 0) {
-        console.log(addRes.stdout);
-        console.error(addRes.stderr);
-        throw addRes;
-      }
-      webrickAdded = true;
-      gemfileModified = true;
+    // If we added webrick to an existing lockfile, use --update to scope
+    // the resolution ONLY to webrick, preserving all other pinned versions.
+    // If no lockfile exists, we must use plain "bundle lock" to create it.
+    if (lockfileExists && webrickAdded) {
+      lockArgs = ['lock', '--update', 'webrick'];
+      debug('running "bundle lock --update webrick" (scoped update)');
     } else {
-      debug('Gemfile already declares webrick; skipping "bundler add webrick"');
+      debug('running "bundle lock"');
     }
-  }
 
-  if (gemfileModified) {
-    const lockArgs = webrickAdded ? ['lock', '--update', 'webrick'] : ['lock'];
-    const lockResult = await execa(bundlePath, lockArgs, {
+    const lockRes = await execa(bundlePath, lockArgs, {
       cwd: dirname(gemfilePath),
       stdio: 'pipe',
       env: bundlerEnv,
       reject: false,
     });
-    if (lockResult.exitCode !== 0) {
-      console.log(lockResult.stdout);
-      console.error(lockResult.stderr);
-      throw lockResult;
+    if (lockRes.exitCode !== 0) {
+      console.log(lockRes.stdout);
+      console.error(lockRes.stderr);
+      throw lockRes;
     }
   }
 
-  console.log('Running bundle install...');
-  result = await execa(
+  debug('running "bundle install --deployment --frozen"');
+  const installRes = await execa(
     bundlePath,
     [
       'install',
@@ -233,10 +149,11 @@ async function bundleInstall(
       reject: false,
     }
   );
-  if (result.exitCode !== 0) {
-    console.log(result.stdout);
-    console.error(result.stderr);
-    throw result;
+
+  if (installRes.exitCode !== 0) {
+    console.log(installRes.stdout);
+    console.error(installRes.stderr);
+    throw installRes;
   }
 }
 
