@@ -38,8 +38,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Check for API key in headers for protected routes only
         # Get path from request.url.path (standard FastAPI/Starlette way)
         path = str(request.url.path)
+        
         # Only protect routes that explicitly start with /api/protected
-        if path.startswith("/api/protected"):
+        # This should NOT match "/" or any other paths - be very explicit
+        if path and len(path) >= 15 and path.startswith("/api/protected"):
             api_key = request.headers.get("X-API-Key")
             if api_key != "test-api-key-123":
                 return Response(
@@ -48,6 +50,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     media_type="application/json"
                 )
         
+        # For all other paths (including "/"), proceed normally
         response = await call_next(request)
         return response
 
