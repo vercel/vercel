@@ -40,7 +40,7 @@ A promise that resolves when the delete is complete.
 
 #### Defined in
 
-[packages/functions/src/purge/types.ts:31](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/types.ts#L31)
+[packages/functions/src/purge/types.ts:31](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/purge/types.ts#L31)
 
 ---
 
@@ -69,4 +69,4 @@ A promise that resolves when the invalidate is complete.
 
 #### Defined in
 
-[packages/functions/src/purge/types.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/types.ts#L20)
+[packages/functions/src/purge/types.ts:20](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/purge/types.ts#L20)

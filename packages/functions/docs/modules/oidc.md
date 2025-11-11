@@ -30,7 +30,7 @@
 
 #### Defined in
 
-[packages/functions/src/oidc/aws-credentials-provider.ts:70](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L70)
+[packages/functions/src/oidc/aws-credentials-provider.ts:70](https://github.com/JohnDaWalka/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L70)
 
 ---
 
