@@ -3,8 +3,12 @@ import { intersects, validRange } from 'semver';
 import { BunVersion, NodeVersion, Version } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
+import execa from 'execa';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
+
+// Track which versions we've already logged to avoid duplicates
+const loggedVersions = new Set<string>();
 
 // `NODE_VERSIONS` is assumed to be sorted by version number
 // with the newest supported version first
@@ -177,6 +181,30 @@ export async function getSupportedNodeVersion(
 
   debug(`Selected Node.js ${selection.range}`);
 
+  // Only log once per version to avoid duplicate messages
+  const logKey = `node-${selection.range}`;
+  if (!loggedVersions.has(logKey)) {
+    loggedVersions.add(logKey);
+
+    // Try to get the actual Node.js version being used in the build environment
+    let actualVersion = selection.range;
+    try {
+      // Try to query the Node version from the build environment path
+      const nodePath = `/node${selection.major}/bin/node`;
+      const { stdout } = await execa(nodePath, ['--version'], {
+        timeout: 5000,
+        reject: false,
+      });
+      if (stdout && stdout.trim().startsWith('v')) {
+        actualVersion = stdout.trim();
+      }
+    } catch {
+      // If /nodeXX/bin/node doesn't exist (e.g., in dev), fall back to range
+    }
+
+    console.log(`Using Node.js ${actualVersion} to build`);
+  }
+
   if (selection.state === 'deprecated') {
     const d = selection.formattedDate;
     // formattedDate should never be undefined because the check for deprecated
@@ -208,11 +236,32 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
     });
 
     if (selected) {
-      return new BunVersion({
+      const bunVersion = new BunVersion({
         major: selected.major,
         range: selected.range,
         runtime: selected.runtime,
       });
+
+      // Only log once per version to avoid duplicate messages
+      const logKey = `bun-${bunVersion.range}`;
+      if (!loggedVersions.has(logKey)) {
+        loggedVersions.add(logKey);
+
+        // Try to get the actual Bun version being used
+        let actualVersion = bunVersion.range;
+        try {
+          // process.versions.bun gives us the actual version if running under Bun
+          if (process.versions?.bun) {
+            actualVersion = `v${process.versions.bun}`;
+          }
+        } catch {
+          // Fall back to range if we can't get actual version
+        }
+
+        console.log(`Using Bun ${actualVersion} to build`);
+      }
+
+      return bunVersion;
     }
   }
 
@@ -224,4 +273,9 @@ export function getSupportedBunVersion(engineRange: string): BunVersion {
 
 export function isBunVersion(version: Version) {
   return version.runtime.startsWith('bun');
+}
+
+// Test helper to clear logged versions
+export function clearLoggedVersions() {
+  loggedVersions.clear();
 }
