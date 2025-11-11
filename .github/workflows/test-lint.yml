@@ -11,7 +11,7 @@ env:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
 
 jobs:
   enforce-changeset:
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ github.event.pull_request.base.ref || 'main' }}
           token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
@@ -30,7 +30,7 @@ jobs:
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
       # Enforce a changeset file to be present
-      - run: pnpm exec changeset status --since=main
+      - run: pnpm exec changeset status --since=${{ github.event.pull_request.base.ref || 'main' }}
 
   lint:
     name: Lint
