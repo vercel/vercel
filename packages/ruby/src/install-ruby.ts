@@ -63,8 +63,8 @@ function resolveSystemRuby(): {
   });
   if (ver.status !== 0 || !ver.stdout) return null;
   const [mj, mn] = String(ver.stdout).trim().split('.');
-  const major = Number(mj) || 3;
-  const minor = Number(mn) || 3;
+  const major = Number(mj) ?? 3;
+  const minor = Number(mn) ?? 3;
   return { rubyPath, gemPath, major, minor };
 }
 
