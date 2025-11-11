@@ -48,10 +48,9 @@ async function matchPaths(
 async function prepareGemfile(
   gemfilePath: string,
   major: number
-): Promise<{ modified: boolean; webrickAdded: boolean }> {
+): Promise<{ modified: boolean }> {
   let gemfile = await readFile(gemfilePath, 'utf8');
   let modified = false;
-  let webrickAdded = false;
 
   const patchRuby = (from: string, to: string) => {
     if (gemfile.includes(from)) {
@@ -71,14 +70,13 @@ async function prepareGemfile(
   if (major >= 3 && !/^[^#]*\bgem\s+["']webrick["']/m.test(gemfile)) {
     gemfile += `${EOL}gem "webrick"${EOL}`;
     modified = true;
-    webrickAdded = true;
   }
 
   if (modified) {
     await writeFile(gemfilePath, gemfile);
   }
 
-  return { modified, webrickAdded };
+  return { modified };
 }
 
 async function bundleInstall(
@@ -97,28 +95,19 @@ async function bundleInstall(
     BUNDLE_JOBS: '4',
   });
 
-  const { modified, webrickAdded } = await prepareGemfile(gemfilePath, major);
+  const { modified } = await prepareGemfile(gemfilePath, major);
 
   // Run bundle lock if Gemfile was modified OR if lockfile doesn't exist.
   // --frozen install requires a lockfile, so we must ensure one exists.
   const lockfilePath = `${gemfilePath}.lock`;
-  const lockfileExists = await pathExists(lockfilePath);
-  const needsLock = modified || !lockfileExists;
+  const needsLock = modified || !(await pathExists(lockfilePath));
 
   if (needsLock) {
-    let lockArgs = ['lock'];
-
-    // If we added webrick to an existing lockfile, use --update to scope
-    // the resolution ONLY to webrick, preserving all other pinned versions.
-    // If no lockfile exists, we must use plain "bundle lock" to create it.
-    if (lockfileExists && webrickAdded) {
-      lockArgs = ['lock', '--update', 'webrick'];
-      debug('running "bundle lock --update webrick" (scoped update)');
-    } else {
-      debug('running "bundle lock"');
-    }
-
-    const lockRes = await execa(bundlePath, lockArgs, {
+    // When adding a new gem to the Gemfile, plain "bundle lock" will add it
+    // to the lockfile while preserving all other pinned versions (unless there's
+    // a conflict, in which case it will fail loudly).
+    debug('running "bundle lock"');
+    const lockRes = await execa(bundlePath, ['lock'], {
       cwd: dirname(gemfilePath),
       stdio: 'pipe',
       env: bundlerEnv,
