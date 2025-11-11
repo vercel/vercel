@@ -91,12 +91,21 @@ async function bundleLock(
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
   });
-  const lockRes = await execa(bundlerPath, ['lock'], {
-    cwd: dirname(gemfilePath),
-    stdio: 'pipe',
-    env: bundlerEnv,
-    reject: false,
-  });
+
+  const archToken = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+  const platform = `${archToken}-linux`;
+  debug(`ruby: ensuring Gemfile.lock has platform ${platform}`);
+
+  const lockRes = await execa(
+    bundlerPath,
+    ['lock', '--add-platform', platform],
+    {
+      cwd: dirname(gemfilePath),
+      stdio: 'pipe',
+      env: bundlerEnv,
+      reject: false,
+    }
+  );
   if (lockRes.exitCode !== 0) {
     console.log(lockRes.stdout);
     console.error(lockRes.stderr);
@@ -213,13 +222,10 @@ export const build: BuildV3 = async ({
   // This guarantees webrick and Ruby constraint fixes are reflected in the lockfile,
   // so that "bundle check" accurately validates the vendor directory.
   try {
-    const { modified: preModified } = await prepareGemfile(gemfilePath, major);
-    const lockfilePath = `${gemfilePath}.lock`;
-    const needsLock = preModified || !(await pathExists(lockfilePath));
-    if (needsLock) {
-      debug('running "bundle lock" (pre-vendor-check)');
-      await bundleLock(bundlerPath, gemfilePath, rubyPath);
-    }
+    debug('preparing Gemfile');
+    await prepareGemfile(gemfilePath, major);
+    debug('running "bundle lock"');
+    await bundleLock(bundlerPath, gemfilePath, rubyPath);
   } catch (err) {
     debug(
       'failed to normalize Gemfile/lockfile before vendor check',
