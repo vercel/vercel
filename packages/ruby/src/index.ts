@@ -79,14 +79,37 @@ async function prepareGemfile(
   return { modified };
 }
 
+async function bundleLock(
+  bundlerPath: string,
+  gemfilePath: string,
+  rubyPath: string
+) {
+  const bundleAppConfig = await getWriteableDirectory();
+  const bundlerEnv = cloneEnv(process.env, {
+    PATH: `${dirname(rubyPath)}:${dirname(bundlerPath)}:${process.env.PATH}`,
+    BUNDLE_SILENCE_ROOT_WARNING: '1',
+    BUNDLE_APP_CONFIG: bundleAppConfig,
+    BUNDLE_JOBS: '4',
+  });
+  const lockRes = await execa(bundlerPath, ['lock'], {
+    cwd: dirname(gemfilePath),
+    stdio: 'pipe',
+    env: bundlerEnv,
+    reject: false,
+  });
+  if (lockRes.exitCode !== 0) {
+    console.log(lockRes.stdout);
+    console.error(lockRes.stderr);
+    throw lockRes;
+  }
+}
+
 async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
   gemfilePath: string,
-  rubyPath: string,
-  major: number
+  rubyPath: string
 ) {
-  debug('preparing Gemfile…');
   const bundleAppConfig = await getWriteableDirectory();
   const bundlerEnv = cloneEnv(process.env, {
     PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
@@ -94,31 +117,6 @@ async function bundleInstall(
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
   });
-
-  const { modified } = await prepareGemfile(gemfilePath, major);
-
-  // Run bundle lock if Gemfile was modified OR if lockfile doesn't exist.
-  // --frozen install requires a lockfile, so we must ensure one exists.
-  const lockfilePath = `${gemfilePath}.lock`;
-  const needsLock = modified || !(await pathExists(lockfilePath));
-
-  if (needsLock) {
-    // When adding a new gem to the Gemfile, plain "bundle lock" will add it
-    // to the lockfile while preserving all other pinned versions (unless there's
-    // a conflict, in which case it will fail loudly).
-    debug('running "bundle lock"');
-    const lockRes = await execa(bundlePath, ['lock'], {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    });
-    if (lockRes.exitCode !== 0) {
-      console.log(lockRes.stdout);
-      console.error(lockRes.stderr);
-      throw lockRes;
-    }
-  }
 
   debug('running "bundle install --deployment --frozen"');
   const installRes = await execa(
@@ -208,7 +206,27 @@ export const build: BuildV3 = async ({
     : '';
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
+
   process.env.GEM_HOME = gemHome;
+
+  // Normalize Gemfile and ensure lockfile is in sync before deciding vendor reuse.
+  // This guarantees webrick and Ruby constraint fixes are reflected in the lockfile,
+  // so that "bundle check" accurately validates the vendor directory.
+  try {
+    const { modified: preModified } = await prepareGemfile(gemfilePath, major);
+    const lockfilePath = `${gemfilePath}.lock`;
+    const needsLock = preModified || !(await pathExists(lockfilePath));
+    if (needsLock) {
+      debug('running "bundle lock" (pre-vendor-check)');
+      await bundleLock(bundlerPath, gemfilePath, rubyPath);
+    }
+  } catch (err) {
+    debug(
+      'failed to normalize Gemfile/lockfile before vendor check',
+      err as Error
+    );
+  }
+
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
   const bundleDir = join(workPath, 'vendor', 'bundle');
@@ -243,7 +261,7 @@ export const build: BuildV3 = async ({
 
       // try installing. this won't work if native extensions are required.
       // if that's the case, gems should be vendored locally before deploying.
-      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath);
     }
   } else {
     debug(
@@ -264,7 +282,7 @@ export const build: BuildV3 = async ({
       debug(
         'running "bundle install --deployment --frozen" to install missing gems...'
       );
-      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath);
     } else {
       debug('"bundle check" passed; skipping "bundle install"...');
     }
