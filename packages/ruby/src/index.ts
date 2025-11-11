@@ -198,9 +198,7 @@ export const build: BuildV3 = async ({
 
   process.env.GEM_HOME = gemHome;
 
-  // Normalize Gemfile and ensure lockfile is in sync before deciding vendor reuse.
-  // This guarantees webrick and Ruby constraint fixes are reflected in the lockfile,
-  // so that "bundle check" accurately validates the vendor directory.
+  // Add webrick to Gemfile if it's not included and patch the Gemfile if necessary.
   try {
     debug('preparing Gemfile');
     await prepareGemfile(gemfilePath, major);
