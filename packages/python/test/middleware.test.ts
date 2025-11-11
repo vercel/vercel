@@ -8,7 +8,7 @@ import fetch from 'node-fetch';
 jest.setTimeout(120 * 1000);
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
-const fixturePath = path.join(fixturesPath, '41-fastapi-middleware');
+const fixturePath = path.join(fixturesPath, '42-fastapi-middleware');
 
 async function withDevServer(
   workPath: string,
