@@ -19,6 +19,12 @@
       "destination": "/list-all.json"
     }
   ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "master": true
+    }
+  },
   "github": {
     "silent": true,
     "autoJobCancelation": true
