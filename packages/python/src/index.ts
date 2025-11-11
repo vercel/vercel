@@ -290,6 +290,20 @@ export const build: BuildV3 = async ({
     meta,
   });
 
+  // Flask is a WSGI framework, so we don't need uvicorn
+  if (framework !== 'flask') {
+    await installRequirement({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      uvPath,
+      dependency: 'uvicorn',
+      version: '0.38.0',
+      workPath,
+      targetDir: vendorBaseDir,
+      meta,
+    });
+  }
+
   let installedFromProjectFiles = false;
 
   // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
@@ -412,6 +426,9 @@ export const build: BuildV3 = async ({
     '**/.mypy_cache/**',
     '**/.ruff_cache/**',
     '**/public/**',
+    '**/pnpm-lock.yaml',
+    '**/yarn.lock',
+    '**/package-lock.json',
   ];
 
   const lambdaEnv = {} as Record<string, string>;

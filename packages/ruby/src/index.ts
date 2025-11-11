@@ -1,4 +1,4 @@
-import { EOL } from 'os';
+import { EOL, release } from 'os';
 import { join, dirname } from 'path';
 import execa from 'execa';
 import {
@@ -46,124 +46,92 @@ async function matchPaths(
   return patternPaths.reduce((a, b) => a.concat(b), []);
 }
 
-async function bundleInstall(
-  bundlePath: string,
-  bundleDir: string,
+async function prepareGemfile(
   gemfilePath: string,
-  rubyPath: string,
   major: number
-) {
-  debug(`running "bundle install --deployment"...`);
-  const bundleAppConfig = await getWriteableDirectory();
-  const gemfileContent = await readFile(gemfilePath, 'utf8');
-  let gemfileModified = false;
+): Promise<{ modified: boolean }> {
+  let gemfile = await readFile(gemfilePath, 'utf8');
+  let modified = false;
 
-  if (gemfileContent.includes('ruby "~> 2.7.x"')) {
-    // Gemfile contains "2.7.x" which will cause an error message:
-    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
-    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
-    // We must correct to the actual version in the build container.
-    await writeFile(
-      gemfilePath,
-      gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
-    );
-    gemfileModified = true;
-  } else if (gemfileContent.includes('ruby "~> 3.2.x"')) {
-    // Gemfile contains "3.2.x" which will cause an error message:
-    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
-    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
-    // We must correct to the actual version in the build container.
-    await writeFile(
-      gemfilePath,
-      gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
-    );
-    gemfileModified = true;
-  } else if (gemfileContent.includes('ruby "~> 3.3.x"')) {
-    // Gemfile contains "3.3.x" which will cause an error message:
-    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
-    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
-    // We must correct to the actual version in the build container.
-    await writeFile(
-      gemfilePath,
-      gemfileContent.replace('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"')
-    );
-    gemfileModified = true;
+  const patchRuby = (from: string, to: string) => {
+    if (gemfile.includes(from)) {
+      gemfile = gemfile.replace(from, to);
+      modified = true;
+    }
+  };
+
+  // Gemfiles containing the following will cause an error message:
+  // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+  // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+  // We must correct to the actual version in the build container.
+  patchRuby('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"');
+  patchRuby('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"');
+  patchRuby('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"');
+
+  // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
+  // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
+  const containsWebrick = /^[^#]*\bgem\s+["']webrick["']/m.test(gemfile);
+  if (major >= 3 && !containsWebrick) {
+    gemfile += `${EOL}gem "webrick"${EOL}`;
+    modified = true;
   }
 
+  if (modified) {
+    await writeFile(gemfilePath, gemfile);
+  }
+
+  return { modified };
+}
+
+async function bundleLock(
+  bundlerPath: string,
+  gemfilePath: string,
+  rubyPath: string
+) {
+  const bundleAppConfig = await getWriteableDirectory();
   const bundlerEnv = cloneEnv(process.env, {
-    // Ensure the correct version of `ruby` is in front of the $PATH
-    PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
+    PATH: `${dirname(rubyPath)}:${dirname(bundlerPath)}:${process.env.PATH}`,
     BUNDLE_SILENCE_ROOT_WARNING: '1',
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
   });
 
-  // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
-  // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
-  if (major >= 3) {
-    // Only add if not already declared in Gemfile to avoid version conflicts
-    const hasWebrick = /gem\s+['"]webrick['"]/m.test(gemfileContent);
-    if (!hasWebrick) {
-      const result = await execa(
-        'bundler',
-        ['add', 'webrick', '--skip-install'],
-        {
-          cwd: dirname(gemfilePath),
-          stdio: 'pipe',
-          env: bundlerEnv,
-          reject: false,
-        }
-      );
-      if (result.exitCode !== 0) {
-        console.log(result.stdout);
-        console.error(result.stderr);
-        throw result;
-      }
-      gemfileModified = true;
-    } else {
-      debug('Gemfile already declares webrick; skipping "bundler add webrick"');
-    }
+  const archTokenLinux = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+  const linuxPlatform = `${archTokenLinux}-linux`;
+  const platforms = [linuxPlatform];
+  if (process.platform === 'darwin') {
+    const darwinArchToken = process.arch === 'arm64' ? 'arm64' : 'x86_64';
+    const darwinMajor = Number(release().split('.')[0]) || undefined;
+    const darwinPlatform = darwinMajor
+      ? `${darwinArchToken}-darwin-${darwinMajor}`
+      : `${darwinArchToken}-darwin`;
+    platforms.push(darwinPlatform);
   }
+  debug(`ruby: ensuring Gemfile.lock has platforms ${platforms.join(', ')}`);
 
-  // If we modified the Gemfile, refresh the lockfile before frozen install
-  if (gemfileModified) {
-    const lockResult = await execa(bundlePath, ['lock'], {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    });
-    if (lockResult.exitCode !== 0) {
-      console.log(lockResult.stdout);
-      console.error(lockResult.stderr);
-      throw lockResult;
-    }
+  const lockArgs = ['lock'];
+  for (const platform of platforms) {
+    lockArgs.push('--add-platform', platform);
   }
-
-  console.log('Running bundle install...');
-  const result = await execa(
-    bundlePath,
-    ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
-    {
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    }
-  );
-  if (result.exitCode !== 0) {
-    console.log(result.stdout);
-    console.error(result.stderr);
-    throw result;
+  const lockRes = await execa(bundlerPath, lockArgs, {
+    cwd: dirname(gemfilePath),
+    stdio: 'pipe',
+    env: bundlerEnv,
+    reject: false,
+  });
+  if (lockRes.exitCode !== 0) {
+    console.log(lockRes.stdout);
+    console.error(lockRes.stderr);
+    throw lockRes;
   }
 }
 
-async function bundleCheck(
+async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
   gemfilePath: string,
   rubyPath: string
 ) {
-  debug(`running "bundle check"...`);
   const bundleAppConfig = await getWriteableDirectory();
   const bundlerEnv = cloneEnv(process.env, {
     PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
@@ -172,9 +140,18 @@ async function bundleCheck(
     BUNDLE_JOBS: '4',
   });
 
-  const result = await execa(
+  debug('running "bundle install --deployment --frozen"');
+  const installRes = await execa(
     bundlePath,
-    ['check', '--gemfile', gemfilePath, '--path', bundleDir],
+    [
+      'install',
+      '--deployment',
+      '--frozen',
+      '--gemfile',
+      gemfilePath,
+      '--path',
+      bundleDir,
+    ],
     {
       stdio: 'pipe',
       env: bundlerEnv,
@@ -182,11 +159,11 @@ async function bundleCheck(
     }
   );
 
-  if (result.exitCode !== 0) {
-    debug('"bundle check" did not pass; dependencies are missing or outdated');
-    return false;
+  if (installRes.exitCode !== 0) {
+    console.log(installRes.stdout);
+    console.error(installRes.stderr);
+    throw installRes;
   }
-  return true;
 }
 
 export const version = 3;
@@ -219,14 +196,28 @@ export const build: BuildV3 = async ({
     : '';
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
+
   process.env.GEM_HOME = gemHome;
+
+  // Add webrick to Gemfile if it's not included and patch the Gemfile if necessary.
+  try {
+    debug('preparing Gemfile');
+    await prepareGemfile(gemfilePath, major);
+    debug('running "bundle lock"');
+    await bundleLock(bundlerPath, gemfilePath, rubyPath);
+  } catch (err) {
+    debug(
+      'failed to normalize Gemfile/lockfile before vendor check',
+      err as Error
+    );
+  }
+
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
   const bundleDir = join(workPath, 'vendor', 'bundle');
   const relativeVendorDir = join(entrypointFsDirname, vendorPath);
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
-  const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
@@ -245,39 +236,11 @@ export const build: BuildV3 = async ({
 
   await ensureDir(vendorDir);
 
-  // no vendor directory, check for Gemfile to install
-  if (!hasVendorDir) {
-    if (gemfilePath) {
-      debug(
-        'did not find a vendor directory but found a Gemfile, bundling gems...'
-      );
-
-      // try installing. this won't work if native extensions are required.
-      // if that's the case, gems should be vendored locally before deploying.
-      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
-    }
-  } else {
-    debug(
-      'found vendor directory; verifying installed gems with "bundle check"...'
-    );
-    let isUpToDate = false;
-    try {
-      isUpToDate = await bundleCheck(
-        bundlerPath,
-        bundleDir,
-        gemfilePath,
-        rubyPath
-      );
-    } catch (err) {
-      debug('failed to run "bundle check"', err);
-    }
-    if (!isUpToDate) {
-      debug('running "bundle install --deployment" to install missing gems...');
-      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
-    } else {
-      debug('"bundle check" passed; skipping "bundle install"...');
-    }
-  }
+  // Always run an idempotent frozen install; Bundler will skip already-installed gems.
+  // If gems are pre-vendored and already included in the vendor directory, Bundler keeps them when they
+  // match the lockfile and platform; otherwise it only installs/replaces what's
+  // missing or mismatched (e.g. add webrick or correct platform builds).
+  await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath);
 
   // try to remove gem cache to slim bundle size
   try {

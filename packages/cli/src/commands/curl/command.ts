@@ -17,8 +17,8 @@ export const curlCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'The deployment ID to target',
-      argument: 'ID',
+      description: 'The deployment ID or URL to target',
+      argument: 'ID|URL',
     },
     {
       name: 'protection-bypass',
@@ -42,6 +42,10 @@ export const curlCommand = {
     {
       name: 'Target a specific deployment by ID',
       value: `${packageName} curl /api/status --deployment ERiL45NJvP8ghWxgbvCM447bmxwV`,
+    },
+    {
+      name: 'Target a specific deployment by URL',
+      value: `${packageName} curl /api/status --deployment https://your-project-abc123.vercel.app`,
     },
     {
       name: 'Use curl flags after the separator',

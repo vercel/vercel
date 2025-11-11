@@ -63,8 +63,8 @@ function resolveSystemRuby(): {
   });
   if (ver.status !== 0 || !ver.stdout) return null;
   const [mj, mn] = String(ver.stdout).trim().split('.');
-  const major = Number(mj) || 3;
-  const minor = Number(mn) || 3;
+  const major = Number(mj) ?? 3;
+  const minor = Number(mn) ?? 3;
   return { rubyPath, gemPath, major, minor };
 }
 
@@ -80,10 +80,26 @@ function makeLocalRubyEnv({
   gemPath: string;
 }) {
   const gemHome = join(tmpdir(), `vercel-ruby-${major}${minor}-${process.pid}`);
+
+  const matchedOption = allOptions.find(
+    o => o.major === major && o.minor === minor && o.state !== 'discontinued'
+  );
+
+  if (!matchedOption) {
+    throw new NowBuildError({
+      code: 'RUBY_INVALID_VERSION',
+      link: 'http://vercel.link/ruby-version',
+      message: `Local Ruby ${major}.${minor} does not match any supported Vercel runtime. Supported: ${allOptions
+        .filter(o => o.state !== 'discontinued')
+        .map(o => `${o.major}.${o.minor}`)
+        .join(', ')}`,
+    });
+  }
+
   return {
     major,
     gemHome,
-    runtime: `ruby${major}.${minor}`,
+    runtime: matchedOption.runtime,
     rubyPath,
     gemPath,
     vendorPath: `vendor/bundle/ruby/${major}.${minor}.0`,
