@@ -35,8 +35,11 @@ class RequestTrackingMiddleware(BaseHTTPMiddleware):
 # Authentication middleware that checks for API key
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Check for API key in headers for protected routes
-        if request.url.path.startswith("/api/protected"):
+        # Check for API key in headers for protected routes only
+        # Get path from request.url.path (standard FastAPI/Starlette way)
+        path = str(request.url.path)
+        # Only protect routes that explicitly start with /api/protected
+        if path.startswith("/api/protected"):
             api_key = request.headers.get("X-API-Key")
             if api_key != "test-api-key-123":
                 return Response(
