@@ -329,6 +329,7 @@ export const frameworks = [
     },
     dependency: 'astro',
     getOutputDirName: async () => 'dist',
+    cachePattern: '.astro/**',
     defaultRoutes: [
       {
         src: '^/assets/(.*)$',
