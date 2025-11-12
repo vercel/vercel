@@ -2,3 +2,4 @@
 vendor/
 tmp/
 log/
+.vercel

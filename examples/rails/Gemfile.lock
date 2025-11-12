@@ -129,6 +129,8 @@ GEM
     nio4r (2.7.5)
     nokogiri (1.18.10-arm64-darwin)
       racc (~> 1.4)
+    nokogiri (1.18.10-x86_64-linux-gnu)
+      racc (~> 1.4)
     parallel (1.27.0)
     parser (3.3.10.0)
       ast (~> 2.4.1)
@@ -231,6 +233,7 @@ GEM
       unicode-emoji (~> 4.1)
     unicode-emoji (4.1.0)
     useragent (0.16.11)
+    webrick (1.9.1)
     websocket-driver (0.8.0)
       base64
       websocket-extensions (>= 0.1.0)
@@ -239,6 +242,7 @@ GEM
 
 PLATFORMS
   arm64-darwin
+  x86_64-linux
 
 DEPENDENCIES
   brakeman
@@ -246,6 +250,7 @@ DEPENDENCIES
   puma (>= 5.0)
   rails (~> 7.1)
   rubocop-rails-omakase
+  webrick
 
 BUNDLED WITH
    2.7.2
