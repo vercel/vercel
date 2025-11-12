@@ -22,10 +22,6 @@ DEPENDENCIES
   cowsay (~> 0.3.0)
   rack (~> 2.0)
   sinatra (~> 2.0)
-  webrick
-
-RUBY VERSION
-   ruby 3.3.10p183
 
 BUNDLED WITH
    2.0.1
