@@ -67,9 +67,9 @@ class PagesController < ApplicationController
                   <div class="hero-code">
                       <pre><code><span class="keyword">class</span> <span class="class">ApplicationController</span> &lt; <span class="class">ActionController::API</span>
 
-<span class="keyword">def</span> <span class="function">home</span>
-  <span class="keyword">render</span> json: { <span class="string">"Rails"</span> =&gt; <span class="string">"on Vercel"</span> }
-<span class="keyword">end</span>
+  <span class="keyword">def</span> <span class="function">home</span>
+    <span class="keyword">render</span> json: { <span class="string">"Rails"</span> =&gt; <span class="string">"on Vercel"</span> }
+  <span class="keyword">end</span>
 
 <span class="keyword">end</span></code></pre>
                   </div>
