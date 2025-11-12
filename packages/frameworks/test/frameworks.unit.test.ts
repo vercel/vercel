@@ -321,6 +321,11 @@ describe('frameworks', () => {
         })
     );
   });
+
+  it('ensure Docusaurus has cachePattern defined', () => {
+    const docusaurus = frameworkList.find(f => f.slug === 'docusaurus-2');
+    expect(docusaurus?.cachePattern).toBe('.docusaurus/**');
+  });
 });
 
 function getValidator() {
