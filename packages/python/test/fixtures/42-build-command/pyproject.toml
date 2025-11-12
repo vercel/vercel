@@ -3,7 +3,7 @@ name = "42-build-command"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi",
+    "fastapi==0.121.1",
 ]
 
 [tool.vercel.scripts]

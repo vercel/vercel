@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { join, delimiter as pathDelimiter } from 'path';
+import { join, dirname, delimiter as pathDelimiter } from 'path';
 import execa from 'execa';
-import { readConfigFile } from '@vercel/build-utils';
+import { readConfigFile, execCommand } from '@vercel/build-utils';
 import { getUvBinaryOrInstall } from './install';
 
 export const isInVirtualEnv = (): string | undefined => {
@@ -71,43 +71,39 @@ export async function runPyprojectScript(
   const { pythonCmd } = useVirtualEnv(workPath, env, systemPython);
   const uvPath = await getUvBinaryOrInstall(pythonCmd);
 
-  // Prefer executing the actual script command to avoid relying on uv's --script support/version.
+  // Prefer executing the actual script command without attempting to tokenize it.
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
-    // Basic tokenizer that respects simple double-quoted segments
-    const tokens =
-      scriptCommand.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(t => {
-        if (t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1);
-        return t;
-      }) || [];
-    // If the script already starts with "uv", run it directly with our resolved uv binary.
-    if (tokens[0] && tokens[0].toLowerCase() === 'uv') {
-      tokens[0] = uvPath;
-      console.log(
-        `Executing: ${tokens
-          .map(a => (/\s/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
-          .join(' ')}`
-      );
-      await execa(tokens[0], tokens.slice(1), {
+    // Ensure our resolved uv is discoverable when the script uses `uv ...`
+    const uvDir = dirname(uvPath);
+    env.PATH = `${uvDir}${pathDelimiter}${env.PATH || ''}`;
+
+    // If the script already starts with "uv", execute it directly via the shell.
+    if (/^\s*uv(\s|$)/i.test(scriptCommand)) {
+      console.log(`Executing: ${scriptCommand}`);
+      await execCommand(scriptCommand, {
         cwd: workPath,
-        stdio: 'inherit',
-        env,
-      });
-      return true;
-    } else {
-      const args = ['run', ...tokens];
-      console.log(
-        `Executing: ${uvPath} ${args
-          .map(a => (/\s/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
-          .join(' ')}`
-      );
-      await execa(uvPath, args, {
-        cwd: workPath,
-        stdio: 'inherit',
         env,
       });
       return true;
     }
+
+    // Otherwise, run the command within `uv run` using the OS shell to preserve quoting.
+    const args =
+      process.platform === 'win32'
+        ? ['run', 'cmd', '/d', '/s', '/c', scriptCommand]
+        : ['run', 'sh', '-lc', scriptCommand];
+    console.log(
+      `Executing: ${uvPath} ${args
+        .map(a => (/\s/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
+        .join(' ')}`
+    );
+    await execa(uvPath, args, {
+      cwd: workPath,
+      stdio: 'inherit',
+      env,
+    });
+    return true;
   }
 
   // No command string was provided for the found script name
