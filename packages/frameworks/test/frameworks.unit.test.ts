@@ -321,6 +321,13 @@ describe('frameworks', () => {
         })
     );
   });
+
+  it('ensure SvelteKit has cachePattern defined', () => {
+    const sveltekit = frameworkList.find(f => f.slug === 'sveltekit');
+    const sveltekitV1 = frameworkList.find(f => f.slug === 'sveltekit-1');
+    expect(sveltekit?.cachePattern).toBe('.svelte-kit/**');
+    expect(sveltekitV1?.cachePattern).toBe('.svelte-kit/**');
+  });
 });
 
 function getValidator() {
