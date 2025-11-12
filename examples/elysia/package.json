@@ -1,5 +1,6 @@
 {
   "name": "bun-elysia-vc",
+  "type": "module",
   "version": "1.0.50",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -11,6 +12,5 @@
   "devDependencies": {
     "bun-types": "latest",
     "typescript": "^5.9.3"
-  },
-  "module": "src/index.js"
+  }
 }
