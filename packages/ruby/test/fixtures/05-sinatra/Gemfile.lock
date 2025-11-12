@@ -14,10 +14,8 @@ GEM
       rack-protection (= 2.2.4)
       tilt (~> 2.0)
     tilt (2.3.0)
-    webrick (1.9.1)
 
 PLATFORMS
-  arm64-darwin-24
   ruby
 
 DEPENDENCIES
@@ -30,4 +28,4 @@ RUBY VERSION
    ruby 3.3.10p183
 
 BUNDLED WITH
-   2.7.2
+   2.0.1
