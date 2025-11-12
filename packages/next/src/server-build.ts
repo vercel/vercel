@@ -477,7 +477,6 @@ export async function serverBuild({
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
   const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
-  let hasPagesRouter = false;
 
   // Only include internal pages that are actually existed
   const internalPages = [...INTERNAL_PAGES].filter(page => {
@@ -704,10 +703,6 @@ export async function serverBuild({
         nonApiPages.push(page);
       }
     });
-
-    if (nonApiPages.length > 0 || apiPages.length > 0) {
-      hasPagesRouter = true;
-    }
 
     const requiredFiles: { [key: string]: FileFsRef } = {};
 
@@ -1695,8 +1690,14 @@ export async function serverBuild({
     ];
   });
 
+  // Check if the app has Pages Router
+  // Use the appType property from routes manifest if available
+  // Otherwise, assume Pages Router exists (for backward compatibility with older Next.js versions)
+  const hasPagesRouter = routesManifest.appType
+    ? routesManifest.appType === 'pages' || routesManifest.appType === 'hybrid'
+    : true;
+
   const isNextDataServerResolving =
-    // Data routes are only produced for applications that include Pages Router
     hasPagesRouter &&
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
@@ -2693,7 +2694,7 @@ export async function serverBuild({
             .filter(Boolean)
         : dataRoutes),
 
-      ...(!isNextDataServerResolving && hasPagesRouter
+      ...(!isNextDataServerResolving
         ? [
             // ensure we 404 for non-existent _next/data routes before
             // trying page dynamic routes
