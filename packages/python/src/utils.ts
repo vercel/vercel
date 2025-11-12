@@ -57,7 +57,7 @@ export async function runPyprojectScript(
     return false;
   }
 
-  // Only support [tool.vercel.scripts]
+  // Read scripts from [tool.vercel.scripts]
   const scripts: Record<string, string> =
     pyproject?.tool?.vercel?.scripts || {};
   const candidates =
@@ -71,7 +71,6 @@ export async function runPyprojectScript(
   const { pythonCmd } = useVirtualEnv(workPath, env, systemPython);
   const uvPath = await getUvBinaryOrInstall(pythonCmd);
 
-  // Prefer executing the actual script command without attempting to tokenize it.
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
     // Ensure our resolved uv is discoverable when the script uses `uv ...`
