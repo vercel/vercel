@@ -41,7 +41,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         
         # Only protect routes that explicitly start with /api/protected
         # This should NOT match "/" or any other paths - be very explicit
-        if path and len(path) >= 15 and path.startswith("/api/protected"):
+        if path and path.startswith("/api/protected"):
             api_key = request.headers.get("X-API-Key")
             if api_key != "test-api-key-123":
                 return Response(
