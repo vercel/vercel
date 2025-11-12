@@ -148,7 +148,7 @@ export function register(
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
-  if (compiler === 'typescript') {
+  if (compiler === 'typescript' || compiler === 'typescript5') {
     console.log(
       `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
     );
