@@ -145,7 +145,8 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean
+  isEdgeFunction: boolean,
+  useTypescript5 = false
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -187,6 +188,7 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
+        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -506,6 +508,8 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
+  // Opt backend builders to use typescript5
+  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -515,7 +519,8 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction
+    isEdgeFunction,
+    useTypescript5
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
