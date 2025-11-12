@@ -210,12 +210,17 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
-__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
-__vc_module = util.module_from_spec(__vc_spec)
-sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
-__vc_spec.loader.exec_module(__vc_module)
-__vc_variables = dir(__vc_module)
+try:
+    user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
+    __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
+    __vc_module = util.module_from_spec(__vc_spec)
+    sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
+    __vc_spec.loader.exec_module(__vc_module)
+    __vc_variables = dir(__vc_module)
+except Exception:
+    _stderr(f'Error importing __VC_HANDLER_ENTRYPOINT:')
+    _stderr(traceback.format_exc())
+    exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
