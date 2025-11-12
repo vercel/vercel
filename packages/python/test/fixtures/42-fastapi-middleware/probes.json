@@ -1,0 +1,14 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "Hello from FastAPI" },
+    { "path": "/api/test", "status": 200, "mustContain": "API endpoint" },
+    { "path": "/api/users", "status": 200, "mustContain": "alice" },
+    { "path": "/api/users/123", "status": 200, "mustContain": "123" },
+    { "path": "/api/protected", "status": 401, "mustContain": "Unauthorized" },
+    { "path": "/test.txt", "status": 200, "mustContain": "This is a static file" },
+    { "path": "/safe.txt", "status": 200, "mustContain": "Safe content" },
+    { "path": "/logo.svg", "status": 200, "mustContain": "<svg" },
+    { "path": "/nonexistent.txt", "status": 404 }
+  ]
+}
+
