@@ -321,6 +321,11 @@ describe('frameworks', () => {
         })
     );
   });
+
+  it('ensure Angular has cachePattern defined', () => {
+    const angular = frameworkList.find(f => f.slug === 'angular');
+    expect(angular?.cachePattern).toBe('.angular/**');
+  });
 });
 
 function getValidator() {
