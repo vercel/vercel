@@ -321,6 +321,11 @@ describe('frameworks', () => {
         })
     );
   });
+
+  it('ensure Hugo has cachePattern defined', () => {
+    const hugo = frameworkList.find(f => f.slug === 'hugo');
+    expect(hugo?.cachePattern).toBe('resources/_gen/**');
+  });
 });
 
 function getValidator() {
