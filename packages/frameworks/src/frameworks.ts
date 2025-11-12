@@ -2043,6 +2043,7 @@ export const frameworks = [
     },
     dependency: 'parcel',
     getOutputDirName: async () => 'dist',
+    cachePattern: '.parcel-cache/**',
     defaultRoutes: [
       {
         src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
