@@ -972,6 +972,7 @@ export const frameworks = [
       }
       return base;
     },
+    cachePattern: '.angular/**',
     defaultRoutes: [
       {
         handle: 'filesystem',
