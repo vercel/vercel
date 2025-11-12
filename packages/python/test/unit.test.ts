@@ -164,6 +164,22 @@ describe('file exclusions', () => {
     const excludedDir = '.pnpm-store';
     const testFiles = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'package.json': new FileBlob({ data: 'package.json' }),
+      'pnpm-lock.yaml': new FileBlob({ data: 'pnpm-lock.yaml' }),
+      'yarn.lock': new FileBlob({ data: 'yarn.lock' }),
+      'package-lock.json': new FileBlob({ data: 'package-lock.json' }),
+      'node_modules/package.json': new FileBlob({
+        data: 'node_modules/package.json',
+      }),
+      'node_modules/package-lock.json': new FileBlob({
+        data: 'node_modules/package-lock.json',
+      }),
+      'node_modules/yarn.lock': new FileBlob({
+        data: 'node_modules/yarn.lock',
+      }),
+      'node_modules/pnpm-lock.yaml': new FileBlob({
+        data: 'node_modules/pnpm-lock.yaml',
+      }),
     };
 
     // Add files that should be excluded
@@ -186,6 +202,14 @@ describe('file exclusions', () => {
     });
 
     const outputFiles = Object.keys(result.output.files || {});
+    const excludedLockFiles = [
+      'pnpm-lock.yaml',
+      'yarn.lock',
+      'package-lock.json',
+    ];
+    for (const file of excludedLockFiles) {
+      expect(outputFiles.some(f => f.includes(file))).toBe(false);
+    }
 
     // Should include the handler
     expect(outputFiles.some(f => f.includes('handler'))).toBe(true);

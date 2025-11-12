@@ -210,12 +210,17 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
-__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
-__vc_module = util.module_from_spec(__vc_spec)
-sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
-__vc_spec.loader.exec_module(__vc_module)
-__vc_variables = dir(__vc_module)
+try:
+    user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
+    __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
+    __vc_module = util.module_from_spec(__vc_spec)
+    sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
+    __vc_spec.loader.exec_module(__vc_module)
+    __vc_variables = dir(__vc_module)
+except Exception:
+    _stderr(f'Error importing __VC_HANDLER_ENTRYPOINT:')
+    _stderr(traceback.format_exc())
+    exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
@@ -230,6 +235,95 @@ def format_headers(headers, decode=False):
         keyToList[key].append(value)
     return keyToList
 
+
+class ASGIMiddleware:
+    """
+    ASGI middleware that preserves Vercel IPC semantics for request lifecycle:
+    - Handles /_vercel/ping
+    - Extracts x-vercel-internal-* headers and removes them from downstream app
+    - Sets request context into `storage` for logging/metrics
+    - Emits handler-started and end IPC messages
+    """
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get('type') != 'http':
+            # Non-HTTP traffic is forwarded verbatim
+            await self.app(scope, receive, send)
+            return
+
+        if scope.get('path') == '/_vercel/ping':
+            await send({
+                'type': 'http.response.start',
+                'status': 200,
+                'headers': [],
+            })
+            await send({
+                'type': 'http.response.body',
+                'body': b'',
+                'more_body': False,
+            })
+            return
+
+        # Extract internal headers and set per-request context
+        headers_list = scope.get('headers', []) or []
+        new_headers = []
+        invocation_id = "0"
+        request_id = 0
+
+        def _b2s(b: bytes) -> str:
+            try:
+                return b.decode()
+            except Exception:
+                return ''
+
+        for k, v in headers_list:
+            key = _b2s(k).lower()
+            val = _b2s(v)
+            if key == 'x-vercel-internal-invocation-id':
+                invocation_id = val
+                continue
+            if key == 'x-vercel-internal-request-id':
+                request_id = int(val) if val.isdigit() else 0
+                continue
+            if key in ('x-vercel-internal-span-id', 'x-vercel-internal-trace-id'):
+                continue
+            new_headers.append((k, v))
+
+        new_scope = dict(scope)
+        new_scope['headers'] = new_headers
+
+        # Announce handler start and set context for logging/metrics
+        send_message({
+            "type": "handler-started",
+            "payload": {
+                "handlerStartedAt": int(time.time() * 1000),
+                "context": {
+                    "invocationId": invocation_id,
+                    "requestId": request_id,
+                }
+            }
+        })
+
+        token = storage.set({
+            "invocationId": invocation_id,
+            "requestId": request_id,
+        })
+
+        try:
+            await self.app(new_scope, receive, send)
+        finally:
+            storage.reset(token)
+            send_message({
+                "type": "end",
+                "payload": {
+                    "context": {
+                        "invocationId": invocation_id,
+                        "requestId": request_id,
+                    }
+                }
+            })
 
 if 'VERCEL_IPC_PATH' in os.environ:
     start_time = time.time()
@@ -424,80 +518,53 @@ if 'VERCEL_IPC_PATH' in os.environ:
                         if hasattr(response, 'close'):
                             response.close()
         else:
-            from urllib.parse import urlparse
-            from io import BytesIO
-            import asyncio
+            # ASGI: Run with Uvicorn so we get proper lifespan and protocol handling
+            try:
+                import uvicorn
+            except Exception:
+                _stderr('Uvicorn is required to run ASGI apps. Please ensure it is installed.')
+                exit(1)
 
-            app = __vc_module.app
+            # Prefer a callable app.asgi when available; some frameworks expose a boolean here
+            user_app_candidate = getattr(__vc_module.app, 'asgi', None)
+            user_app = user_app_candidate if callable(user_app_candidate) else __vc_module.app
+            asgi_app = ASGIMiddleware(user_app)
 
-            class Handler(BaseHandler):
-                def handle_request(self):
-                    # Prepare ASGI scope
-                    url = urlparse(self.path)
-                    headers_encoded = []
-                    for k, v in self.headers.items():
-                        # Cope with repeated headers in the encoding.
-                        if isinstance(v, list):
-                            headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
-                        else:
-                            headers_encoded.append([k.lower().encode(), v.encode()])
-                    scope = {
-                        'server': (self.headers.get('host', 'lambda'), self.headers.get('x-forwarded-port', 80)),
-                        'client': (self.headers.get(
-                            'x-forwarded-for', self.headers.get(
-                                'x-real-ip')), 0),
-                        'scheme': self.headers.get('x-forwarded-proto', 'http'),
-                        'root_path': '',
-                        'query_string': url.query.encode(),
-                        'headers': headers_encoded,
-                        'type': 'http',
-                        'http_version': '1.1',
-                        'method': self.command,
-                        'path': url.path,
-                        'raw_path': url.path.encode(),
-                    }
+            # Pre-bind a socket to obtain an ephemeral port for IPC announcement
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(('127.0.0.1', 0))
+            sock.listen(2048)
+            http_port = sock.getsockname()[1]
 
-                    if 'content-length' in self.headers:
-                        content_length = int(self.headers['content-length'])
-                        body = self.rfile.read(content_length)
-                    else:
-                        body = b''
+            config = uvicorn.Config(
+                app=asgi_app,
+                fd=sock.fileno(),
+                lifespan='auto',
+                access_log=False,
+                log_config=None,
+                log_level='warning',
+            )
+            server = uvicorn.Server(config)
 
-                    if _use_legacy_asyncio:
-                        loop = asyncio.new_event_loop()
-                        app_queue = asyncio.Queue(loop=loop)
-                    else:
-                        app_queue = asyncio.Queue()
-                    app_queue.put_nowait({'type': 'http.request', 'body': body, 'more_body': False})
+            send_message({
+                "type": "server-started",
+                "payload": {
+                    "initDuration": int((time.time() - start_time) * 1000),
+                    "httpPort": http_port,
+                }
+            })
 
-                    # Prepare ASGI receive function
-                    async def receive():
-                        message = await app_queue.get()
-                        return message
+            # Mark IPC as ready and flush any buffered init logs
+            _ipc_ready = True
+            for m in _init_log_buf:
+                send_message(m)
+            _init_log_buf.clear()
 
-                    # Prepare ASGI send function
-                    response_started = False
-                    async def send(event):
-                        nonlocal response_started
-                        if event['type'] == 'http.response.start':
-                            self.send_response(event['status'])
-                            if 'headers' in event:
-                                for name, value in event['headers']:
-                                    self.send_header(name.decode(), value.decode())
-                            self.end_headers()
-                            response_started = True
-                        elif event['type'] == 'http.response.body':
-                            self.wfile.write(event['body'])
-                            if not event.get('more_body', False):
-                                self.wfile.flush()
-
-                    # Run the ASGI application
-                    asgi_instance = app(scope, receive, send)
-                    if _use_legacy_asyncio:
-                        asgi_task = loop.create_task(asgi_instance)
-                        loop.run_until_complete(asgi_task)
-                    else:
-                        asyncio.run(asgi_instance)
+            # Run the server (blocking)
+            server.run()
+            # If the server ever returns, exit
+            sys.exit(0)
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
