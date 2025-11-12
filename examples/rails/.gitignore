@@ -1,0 +1,4 @@
+.vercel/
+vendor/
+tmp/
+log/

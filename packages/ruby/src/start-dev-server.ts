@@ -98,6 +98,24 @@ function installGlobalCleanupHandlers() {
   });
 }
 
+function discoverRackEntrypoint(
+  workPath: string,
+  rawEntrypoint: string
+): string | null {
+  // If the provided entrypoint is already a Rack file, use it
+  if (rawEntrypoint.endsWith('.ru')) return rawEntrypoint;
+  // Zero-config discovery for Rails: prefer config.ru in common roots
+  const candidateDirs = ['', 'src', 'app'];
+  for (const d of candidateDirs) {
+    const p = d ? join(d, 'config.ru') : 'config.ru';
+    if (existsSync(join(workPath, p))) {
+      debug(`ruby: discovered Rack entrypoint at ${p}`);
+      return p;
+    }
+  }
+  return null;
+}
+
 function createDevRubyShim(
   workPath: string,
   entrypoint: string
@@ -150,17 +168,13 @@ async function run(
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint: rawEntrypoint, workPath, meta = {} } = opts;
 
-  // Ruby dev server only supports Rack (.ru) entrypoints for now
-  if (!rawEntrypoint.endsWith('.ru')) {
-    // If user configured a non-.ru entrypoint, do not start a dev server
-    // so another builder or static can handle it.
-    return null;
-  }
+  // Ruby dev server supports Rack (.ru) entrypoints. Try zero-config discovery for Rails.
+  const entrypoint = discoverRackEntrypoint(workPath, rawEntrypoint);
+  if (!entrypoint) return null;
 
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
 
-  const entrypoint = rawEntrypoint;
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
 
   const serverKey = `${workPath}::${entrypoint}::ruby`;
