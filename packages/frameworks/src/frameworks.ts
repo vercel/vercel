@@ -1673,6 +1673,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
+    cachePattern: 'resources/_gen/**',
     defaultVersion: '0.58.2', // Must match the build image
   },
   {
