@@ -1,0 +1,9 @@
+{
+  "probes": [
+    { "logMustContain": "Running build command..." },
+    {
+      "path": "/",
+      "mustContain": "BUILD_COMMAND"
+    }
+  ]
+}
