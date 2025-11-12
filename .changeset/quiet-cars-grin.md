@@ -2,4 +2,4 @@
 '@vercel/functions': patch
 ---
 
-Patch addCacheTag api
+Fix `addCacheTag()` which was previously not working (no-op).
