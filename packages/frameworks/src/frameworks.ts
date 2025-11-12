@@ -466,6 +466,7 @@ export const frameworks = [
 
       return base;
     },
+    cachePattern: '.docusaurus/**',
     defaultRoutes: [
       {
         src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
