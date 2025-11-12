@@ -321,6 +321,11 @@ describe('frameworks', () => {
         })
     );
   });
+
+  it('ensure Parcel has cachePattern defined', () => {
+    const parcel = frameworkList.find(f => f.slug === 'parcel');
+    expect(parcel?.cachePattern).toBe('.parcel-cache/**');
+  });
 });
 
 function getValidator() {
