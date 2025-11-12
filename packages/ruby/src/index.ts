@@ -21,6 +21,7 @@ import {
   type GlobOptions,
   type Files,
   type BuildV3,
+  type ShouldServe,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -324,3 +325,8 @@ export const build: BuildV3 = async ({
 
   return { output };
 };
+
+export { startDevServer } from './start-dev-server';
+
+// Route all requests to the Ruby dev server during `vercel dev`
+export const shouldServe: ShouldServe = () => true;
