@@ -1127,6 +1127,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+    cachePattern: '.svelte-kit/**',
   },
   {
     name: 'SvelteKit',
@@ -1166,6 +1167,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+    cachePattern: '.svelte-kit/**',
   },
   {
     name: 'Ionic React',
