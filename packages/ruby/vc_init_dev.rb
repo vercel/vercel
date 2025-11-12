@@ -39,7 +39,7 @@ class StaticThenApp
     req_path = env['PATH_INFO'] || '/'
     # Normalize path and guard against traversal
     safe = req_path.sub(/^\//, '')
-    full = File.expand_path(File.join(@public_dir, safe), @base)
+    full = File.expand_path(safe, @base)
 
     if full.start_with?(@base + File::SEPARATOR) && File.file?(full)
       # Delegate to Rack::File which handles HEAD/GET correctly
