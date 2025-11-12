@@ -1,9 +1,7 @@
-import once from '@tootallnate/once';
 import url from 'url';
 import { createRequire } from 'module';
 import { promises as fsp } from 'fs';
-import { join, dirname, extname, relative, resolve } from 'path';
-import { spawn } from 'child_process';
+import { join, dirname, extname } from 'path';
 import _treeKill from 'tree-kill';
 import { promisify } from 'util';
 import {
@@ -11,7 +9,6 @@ import {
   walkParentDirs,
   getSupportedBunVersion,
   type StartDevServer,
-  type StartDevServerOptions,
 } from '@vercel/build-utils';
 import { isErrnoException } from '@vercel/error-utils';
 import { getConfig } from '@vercel/static-config';
@@ -184,9 +181,6 @@ export const startDevServer: StartDevServer = async opts => {
     if (isTypeScript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
-        console.error('Type check for %j failed:', entrypoint, err);
-      });
     }
 
     if (!pid) {
@@ -232,80 +226,3 @@ export const startDevServer: StartDevServer = async opts => {
     throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }
 };
-
-async function doTypeCheck(
-  { entrypoint, workPath, meta = {} }: StartDevServerOptions,
-  projectTsConfig: string | null
-): Promise<void> {
-  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
-  const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
-
-  // Resolve TypeScript compiler path using the same logic as typescript.ts
-  const resolveTypescript = (p: string): string => {
-    try {
-      return require_.resolve('typescript', {
-        paths: [p],
-      });
-    } catch (_) {
-      return '';
-    }
-  };
-
-  // Use the project's version of TypeScript if available
-  let compiler = resolveTypescript(workPath);
-  if (!compiler) {
-    // Otherwise fall back to using the copy that `@vercel/node` uses
-    compiler = resolveTypescript(join(__dirname, '..'));
-  }
-  if (!compiler) {
-    // Final fallback to global typescript
-    compiler = require_.resolve('typescript');
-  }
-
-  const tscPath = resolve(dirname(compiler), '../bin/tsc');
-
-  // In order to type-check a single file, a standalone tsconfig
-  // file needs to be created that inherits from the base one :(
-  // See: https://stackoverflow.com/a/44748041/376773
-  //
-  // A different filename needs to be used for different `extends` tsconfig.json
-  const tsconfigName = projectTsConfig
-    ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
-        /[\\/.]/g,
-        '-'
-      )}.json`
-    : 'tsconfig.json';
-  const tsconfigPath = join(entrypointCacheDir, tsconfigName);
-  const tsconfig = {
-    extends: projectTsConfig
-      ? relative(entrypointCacheDir, projectTsConfig)
-      : undefined,
-    include: [relative(entrypointCacheDir, join(workPath, entrypoint))],
-  };
-
-  try {
-    const json = JSON.stringify(tsconfig, null, '\t');
-    await fsp.mkdir(entrypointCacheDir, { recursive: true });
-    await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (error: unknown) {
-    if (isErrnoException(error) && error.code !== 'EEXIST') throw error;
-  }
-
-  const child = spawn(
-    process.execPath,
-    [
-      tscPath,
-      '--project',
-      tsconfigPath,
-      '--noEmit',
-      '--allowJs',
-      '--esModuleInterop',
-      '--skipLibCheck',
-    ],
-    {
-      cwd: workPath,
-      stdio: 'inherit',
-    }
-  );
-  await once.spread<[number, string | null]>(child, 'close');
-}
