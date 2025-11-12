@@ -124,7 +124,9 @@ const configFileToBuildMap = new Map<string, GetOutputFunction>();
 /**
  * Register TypeScript compiler.
  */
-export function register(opts: Options = {}): Register {
+export function register(
+  opts: Options & { useTypescript5?: boolean } = {}
+): Register {
   const options = Object.assign({}, DEFAULTS, opts);
 
   const ignoreDiagnostics = [
@@ -142,7 +144,7 @@ export function register(opts: Options = {}): Register {
       paths: [options.project || cwd],
     });
   } catch (e) {
-    compiler = 'typescript';
+    compiler = opts.useTypescript5 ? 'typescript5' : 'typescript';
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
