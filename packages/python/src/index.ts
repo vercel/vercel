@@ -157,11 +157,11 @@ export const build: BuildV3 = async ({
         cwd: workPath,
       });
     } else {
-      await runPyprojectScript(workPath, [
-        'vercel-build',
-        'now-build',
-        'build',
-      ]);
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        spawnEnv
+      );
     }
   }
 

@@ -38,7 +38,8 @@ export function useVirtualEnv(
 
 export async function runPyprojectScript(
   workPath: string,
-  scriptNames: string | Iterable<string>
+  scriptNames: string | Iterable<string>,
+  env?: NodeJS.ProcessEnv
 ) {
   const pyprojectPath = join(workPath, 'pyproject.toml');
   if (!fs.existsSync(pyprojectPath)) return false;
@@ -67,22 +68,22 @@ export async function runPyprojectScript(
 
   // Use the Python from the virtualenv if present to resolve uv, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
-  const env = { ...process.env };
-  const { pythonCmd } = useVirtualEnv(workPath, env, systemPython);
+  const finalEnv = { ...process.env, ...env };
+  const { pythonCmd } = useVirtualEnv(workPath, finalEnv, systemPython);
   const uvPath = await getUvBinaryOrInstall(pythonCmd);
 
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
     // Ensure our resolved uv is discoverable when the script uses `uv ...`
     const uvDir = dirname(uvPath);
-    env.PATH = `${uvDir}${pathDelimiter}${env.PATH || ''}`;
+    finalEnv.PATH = `${uvDir}${pathDelimiter}${finalEnv.PATH || ''}`;
 
     // If the script already starts with "uv", execute it directly via the shell.
     if (/^\s*uv(\s|$)/i.test(scriptCommand)) {
       console.log(`Executing: ${scriptCommand}`);
       await execCommand(scriptCommand, {
         cwd: workPath,
-        env,
+        env: finalEnv,
       });
       return true;
     }
@@ -100,7 +101,7 @@ export async function runPyprojectScript(
     await execa(uvPath, args, {
       cwd: workPath,
       stdio: 'inherit',
-      env,
+      env: finalEnv,
     });
     return true;
   }
