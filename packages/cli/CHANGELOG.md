@@ -1,5 +1,17 @@
 # vercel
 
+## 48.9.1
+
+### Patch Changes
+
+- Include account info in curl requests ([#14221](https://github.com/vercel/vercel/pull/14221))
+
+- feat: [vercel curl & vercel httpstat] validation for full url ([#14209](https://github.com/vercel/vercel/pull/14209))
+
+- Updated dependencies [[`3dbaa57ed7061d40c82a70d48e57f0d3ca38f32d`](https://github.com/vercel/vercel/commit/3dbaa57ed7061d40c82a70d48e57f0d3ca38f32d), [`62651e302de8c2913b658b5cfd5c9e1dd192a03c`](https://github.com/vercel/vercel/commit/62651e302de8c2913b658b5cfd5c9e1dd192a03c), [`d485db0fe0ceaeddea8993f6d6d81348df0762ea`](https://github.com/vercel/vercel/commit/d485db0fe0ceaeddea8993f6d6d81348df0762ea), [`fd83a14365e529930c77fd03358a1d4e42c125f0`](https://github.com/vercel/vercel/commit/fd83a14365e529930c77fd03358a1d4e42c125f0), [`b2f517bcf1b9af299d9b381cf329a24e86dc2686`](https://github.com/vercel/vercel/commit/b2f517bcf1b9af299d9b381cf329a24e86dc2686)]:
+  - @vercel/python@6.0.3
+  - @vercel/backends@0.0.6
+
 ## 48.9.0
 
 ### Minor Changes
