@@ -6,6 +6,10 @@ export default defineConfig([
     outDir: 'dist',
     format: 'esm',
     dts: true,
+    outputOptions: {
+      entryFileNames: '[name].js',
+      chunkFileNames: '[name].js',
+    },
   },
   {
     entry: 'src/loaders/cjs.ts',
