@@ -66,6 +66,7 @@ export async function writeBuildResult(
   if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
     version = 2;
   }
+  outputManager.debug(`writeBuildResult version: ${version}`);
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       repoRootPath,
