@@ -366,7 +366,7 @@ export const routesSchema = {
             patternProperties: {
               '^.{1,256}$': {
                 type: 'string',
-                maxLength: 4096,
+                maxLength: 32768,
               },
             },
           },
@@ -575,7 +575,7 @@ export const headersSchema = {
             },
             value: {
               type: 'string',
-              maxLength: 4096,
+              maxLength: 32768,
             },
           },
         },
