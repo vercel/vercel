@@ -6,7 +6,9 @@ import {
   EdgeFunction,
   execCommand,
   getEnvForPackageManager,
+  getNodeVersion,
   getPrefixedEnvVars,
+  getSpawnOptions,
   glob,
   readConfigFile,
   runNpmInstall,
@@ -40,6 +42,15 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointDir = join(workPath, mountpoint);
 
+  // Run "Install Command"
+  const nodeVersion = await getNodeVersion(
+    entrypointDir,
+    undefined,
+    config,
+    meta
+  );
+
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,
     lockfileVersion,
@@ -47,11 +58,11 @@ export const build: BuildV2 = async ({
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointDir, true);
 
-  const spawnEnv = getEnvForPackageManager({
+  spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: process.env,
+    env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -60,7 +71,7 @@ export const build: BuildV2 = async ({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointDir,
       });
     } else {
@@ -70,7 +81,7 @@ export const build: BuildV2 = async ({
     await runNpmInstall(
       entrypointDir,
       [],
-      { env: spawnEnv },
+      spawnOpts,
       meta,
       config.projectSettings?.createdAt
     );
@@ -92,16 +103,16 @@ export const build: BuildV2 = async ({
   await fs.writeFile(edgeEntryDest, edgeEntryContents);
 
   // Make `shopify hydrogen build` output a Edge Function compatible bundle
-  spawnEnv.SHOPIFY_FLAG_BUILD_TARGET = 'worker';
+  spawnOpts.env.SHOPIFY_FLAG_BUILD_TARGET = 'worker';
 
   // Use this file as the entrypoint for the Edge Function bundle build
-  spawnEnv.SHOPIFY_FLAG_BUILD_SSR_ENTRY = edgeEntryDest;
+  spawnOpts.env.SHOPIFY_FLAG_BUILD_SSR_ENTRY = edgeEntryDest;
 
   // Run "Build Command"
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
     await execCommand(buildCommand, {
-      env: spawnEnv,
+      ...spawnOpts,
       cwd: entrypointDir,
     });
   } else {
@@ -113,7 +124,7 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointDir,
         'vercel-build',
-        { env: spawnEnv },
+        spawnOpts,
         config.projectSettings?.createdAt
       );
     } else if (hasScript('build', pkg)) {
@@ -121,12 +132,12 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointDir,
         'build',
-        { env: spawnEnv },
+        spawnOpts,
         config.projectSettings?.createdAt
       );
     } else {
       await execCommand('shopify hydrogen build', {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointDir,
       });
     }

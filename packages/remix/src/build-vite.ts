@@ -8,6 +8,7 @@ import {
   execCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getSpawnOptions,
   glob,
   runNpmInstall,
   runPackageJsonScript,
@@ -309,11 +310,16 @@ export const build: BuildV2 = async ({
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
-  const spawnEnv = getEnvForPackageManager({
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+  if (!spawnOpts.env) {
+    spawnOpts.env = {};
+  }
+
+  spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: process.env,
+    env: spawnOpts.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -322,7 +328,7 @@ export const build: BuildV2 = async ({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -332,7 +338,7 @@ export const build: BuildV2 = async ({
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      { env: spawnEnv },
+      spawnOpts,
       meta,
       config.projectSettings?.createdAt
     );
@@ -351,7 +357,7 @@ export const build: BuildV2 = async ({
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
     await execCommand(buildCommand, {
-      env: spawnEnv,
+      ...spawnOpts,
       cwd: entrypointFsDirname,
     });
   } else {
@@ -360,7 +366,7 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointFsDirname,
         'vercel-build',
-        { env: spawnEnv },
+        spawnOpts,
         config.projectSettings?.createdAt
       );
     } else if (hasScript('build', packageJson)) {
@@ -368,12 +374,12 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointFsDirname,
         'build',
-        { env: spawnEnv },
+        spawnOpts,
         config.projectSettings?.createdAt
       );
     } else {
       await execCommand(frameworkSettings.buildCommand, {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointFsDirname,
       });
     }

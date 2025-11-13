@@ -1,4 +1,10 @@
-import { defaultCachePathGlob, glob, runNpmInstall } from '@vercel/build-utils';
+import {
+  defaultCachePathGlob,
+  getNodeVersion,
+  getSpawnOptions,
+  glob,
+  runNpmInstall,
+} from '@vercel/build-utils';
 import { dirname, join, relative } from 'path';
 import { require_, chdirAndReadConfig, isVite } from './utils';
 import type { Files, PrepareCache } from '@vercel/build-utils';
@@ -18,10 +24,17 @@ export const prepareCache: PrepareCache = async ({
     // Because the `node_modules` directory was modified to install
     // the forked Remix compiler, re-install to the "fresh" dependencies
     // state before the cache gets created.
+    const nodeVersion = await getNodeVersion(
+      entrypointFsDirname,
+      undefined,
+      config
+    );
+    const spawnOpts = getSpawnOptions({}, nodeVersion);
     await runNpmInstall(
       entrypointFsDirname,
       [],
       {
+        ...spawnOpts,
         stdio: 'ignore',
       },
       undefined,
