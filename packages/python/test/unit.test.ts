@@ -681,7 +681,7 @@ describe('python version fallback logging', () => {
     });
 
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.11 from pyproject.toml')
+      expect.stringContaining('Using Python 3.12 from pyproject.toml')
     );
   });
 });
