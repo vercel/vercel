@@ -268,7 +268,10 @@ async function writeBuildResultV3(
   const routesJsonPath = join(outputDir, '..', 'routes.json');
 
   outputManager.log(`isBackendBuilder(build): ${isBackendBuilder(build)}`);
-  outputManager.log(`routesJsonPath: ${routesJsonPath}`);
+  outputManager.log(`outputdir: ${outputDir}`);
+  outputManager.log(
+    `routesJsonPath: ${existsSync(routesJsonPath)}: ${routesJsonPath}`
+  );
   if (isBackendBuilder(build) && existsSync(routesJsonPath)) {
     try {
       const newOutput: Record<string, Lambda | EdgeFunction> = {

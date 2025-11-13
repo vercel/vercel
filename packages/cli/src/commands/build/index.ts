@@ -712,6 +712,9 @@ async function doBuild(
         isBackendBuilder(build)
       ) {
         const routesJsonPath = join(outputDir, '..', 'routes.json');
+        output.log(
+          `writing routesJsonPath: ${existsSync(routesJsonPath)}: ${routesJsonPath}`
+        );
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
