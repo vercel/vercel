@@ -36,9 +36,6 @@ export default async function openCommandHandler(
     return 0;
   }
 
-  // Track command execution
-  telemetry.trackCliCommandOpen('open');
-
   // Check if project is linked first to avoid prompting in non-interactive mode
   const { getLinkedProject } = await import('../../util/projects/link');
   const linkCheck = await getLinkedProject(client, client.cwd);

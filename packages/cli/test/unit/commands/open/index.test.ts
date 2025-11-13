@@ -80,21 +80,6 @@ describe('open', () => {
         `Opening https://vercel.com/${team.slug}/static-project in your browser...`
       );
     });
-
-    it('tracks telemetry for command execution', async () => {
-      await setupLinkedProject();
-
-      client.setArgv('open');
-      const exitCode = await openCommand(client);
-
-      expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'command:open',
-          value: 'open',
-        },
-      ]);
-    });
   });
 
   describe('without linked project', () => {
