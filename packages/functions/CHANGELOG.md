@@ -1,5 +1,18 @@
 # @vercel/functions
 
+## 3.3.2
+
+### Patch Changes
+
+- Fix `addCacheTag()` which was previously not working (no-op). ([#14241](https://github.com/vercel/vercel/pull/14241))
+
+## 3.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`4221033be06182c11c9fe153a58810a2a393c3ce`](https://github.com/vercel/vercel/commit/4221033be06182c11c9fe153a58810a2a393c3ce)]:
+  - @vercel/oidc@3.0.4
+
 ## 3.3.0
 
 ### Minor Changes

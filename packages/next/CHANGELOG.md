@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.3
+
+### Patch Changes
+
+- skip generating pages routes when only using app dir ([#14235](https://github.com/vercel/vercel/pull/14235))
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
 ## 4.15.2
 
 ### Patch Changes
