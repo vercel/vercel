@@ -1,5 +1,13 @@
 # @vercel/python
 
+## 6.0.4
+
+### Patch Changes
+
+- [python] build command support ([#14244](https://github.com/vercel/vercel/pull/14244))
+
+- Adding tests for fast api middleware ([#14236](https://github.com/vercel/vercel/pull/14236))
+
 ## 6.0.3
 
 ### Patch Changes
