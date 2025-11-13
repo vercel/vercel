@@ -1690,7 +1690,15 @@ export async function serverBuild({
     ];
   });
 
+  // Check if the app has Pages Router
+  // Use the appType property from routes manifest if available
+  // Otherwise, assume Pages Router exists (for backward compatibility with older Next.js versions)
+  const hasPagesRouter = routesManifest.appType
+    ? routesManifest.appType === 'pages' || routesManifest.appType === 'hybrid'
+    : true;
+
   const isNextDataServerResolving =
+    hasPagesRouter &&
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
@@ -2426,7 +2434,7 @@ export async function serverBuild({
       // normalize _next/data URL before processing rewrites
       ...normalizeNextDataRoute(),
 
-      ...(!isNextDataServerResolving
+      ...(!isNextDataServerResolving && hasPagesRouter
         ? [
             // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
             // if no match to prevent rewriting _next/data unexpectedly
@@ -2686,7 +2694,7 @@ export async function serverBuild({
             .filter(Boolean)
         : dataRoutes),
 
-      ...(!isNextDataServerResolving
+      ...(!isNextDataServerResolving && hasPagesRouter
         ? [
             // ensure we 404 for non-existent _next/data routes before
             // trying page dynamic routes
