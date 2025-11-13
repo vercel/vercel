@@ -87,7 +87,7 @@ fastify.get('/', async function handler (request, reply) {
         <p>A fast and low overhead web framework running on Vercel</p>
         <div class="features">
           <div class="feature">
-            <a href="https://vercel.com/docs/frameworks/fastify" target="_blank" rel="noreferrer">Vercel docs</a>
+            <a href="https://vercel.com/docs/frameworks/backend/fastify" target="_blank" rel="noreferrer">Vercel docs</a>
           </div>
           <div class="feature">
             <a href="https://fastify.dev" target="_blank" rel="noreferrer">Fastify docs</a>

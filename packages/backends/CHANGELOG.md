@@ -1,5 +1,20 @@
 # @vercel/backends
 
+## 0.0.6
+
+### Patch Changes
+
+- Pull introspection module out of backends for external use ([#14210](https://github.com/vercel/vercel/pull/14210))
+
+- Updated dependencies [[`62651e302de8c2913b658b5cfd5c9e1dd192a03c`](https://github.com/vercel/vercel/commit/62651e302de8c2913b658b5cfd5c9e1dd192a03c)]:
+  - @vercel/introspection@0.0.2
+
+## 0.0.5
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
 ## 0.0.4
 
 ### Patch Changes

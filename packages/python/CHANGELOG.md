@@ -1,5 +1,41 @@
 # @vercel/python
 
+## 6.0.3
+
+### Patch Changes
+
+- [python] avoid installing dev dependencies ([#14232](https://github.com/vercel/vercel/pull/14232))
+
+- [python] swaps custom http server handler for asgi apps with uvicorn ([#14192](https://github.com/vercel/vercel/pull/14192))
+
+- Exclude JS package manager lock files ([#14233](https://github.com/vercel/vercel/pull/14233))
+
+- [python] surface tracebacks on user code import error ([#14250](https://github.com/vercel/vercel/pull/14250))
+
+## 6.0.2
+
+### Patch Changes
+
+- [python] surface tracebacks on error logs ([#14193](https://github.com/vercel/vercel/pull/14193))
+
+- write to stderr on startup error logs ([#14198](https://github.com/vercel/vercel/pull/14198))
+
+## 6.0.1
+
+### Patch Changes
+
+- [python] allow arbitrary entrypoints in pyproject.toml ([#14181](https://github.com/vercel/vercel/pull/14181))
+
+- [python] update predefined excludes ([#14166](https://github.com/vercel/vercel/pull/14166))
+
+- [python] fix logging ([#14165](https://github.com/vercel/vercel/pull/14165))
+
+## 6.0.0
+
+### Major Changes
+
+- [python] allowing /api folder entrypoints for FastAPI + Flask ([#14168](https://github.com/vercel/vercel/pull/14168))
+
 ## 5.0.10
 
 ### Patch Changes

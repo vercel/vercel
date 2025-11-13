@@ -1,5 +1,24 @@
 # @vercel/functions
 
+## 3.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`4221033be06182c11c9fe153a58810a2a393c3ce`](https://github.com/vercel/vercel/commit/4221033be06182c11c9fe153a58810a2a393c3ce)]:
+  - @vercel/oidc@3.0.4
+
+## 3.3.0
+
+### Minor Changes
+
+- Introduce Vercel AddCacheTag API: addCacheTag ([#14096](https://github.com/vercel/vercel/pull/14096))
+
+## 3.2.0
+
+### Minor Changes
+
+- Add new API for invalidateBySrcImage and dangerouslyDeleteBySrcImage ([#14111](https://github.com/vercel/vercel/pull/14111))
+
 ## 3.1.4
 
 ### Patch Changes

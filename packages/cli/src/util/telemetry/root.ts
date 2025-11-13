@@ -54,6 +54,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandCurl(actual: string) {
+    this.trackCliCommand({
+      command: 'curl',
+      value: actual,
+    });
+  }
+
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
@@ -106,6 +113,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandHelp(actual: string) {
     this.trackCliCommand({
       command: 'help',
+      value: actual,
+    });
+  }
+
+  trackCliCommandHttpstat(actual: string) {
+    this.trackCliCommand({
+      command: 'httpstat',
       value: actual,
     });
   }

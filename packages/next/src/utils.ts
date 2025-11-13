@@ -50,12 +50,14 @@ import {
   KIB,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
   INTERNAL_PAGES,
 } from './constants';
 import {
   getContentTypeFromFile,
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
+import { isDynamicRoute } from './is-dynamic-route';
 
 type stringMap = { [key: string]: string };
 
@@ -64,24 +66,23 @@ export const require_ = createRequire(__filename);
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
-  Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
-)
-  ? Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
-  : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+/**
+ * Get the maximum uncompressed lambda size based on the runtime.
+ * Bun runtime has a lower limit than Node.js runtimes.
+ */
+export function getMaxUncompressedLambdaSize(runtime: string): number {
+  if (!isNaN(Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE))) {
+    return Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE);
+  }
+
+  return runtime.startsWith('bun')
+    ? DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN
+    : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+}
 
 const skipDefaultLocaleRewrite = Boolean(
   process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
 );
-
-// Identify /[param]/ in route string
-// eslint-disable-next-line no-useless-escape
-const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
-
-function isDynamicRoute(route: string): boolean {
-  route = route.startsWith('/') ? route : `/${route}`;
-  return TEST_DYNAMIC_ROUTE.test(route);
-}
 
 /**
  * Validate if the entrypoint is allowed to be used
@@ -335,6 +336,12 @@ type RoutesManifestOld = {
       headers: Readonly<Record<string, string>>;
     };
   };
+  /**
+   * Indicates whether the app uses Pages Router, App Router, or both.
+   * May be undefined in older versions of Next.js, in which case we treat everything
+   * as though pages router were being used.
+   */
+  appType?: 'app' | 'pages' | 'hybrid';
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -840,6 +847,7 @@ export function filterStaticPages(
   entryDirectory: string,
   htmlContentType: string,
   prerenderManifest: NextPrerenderedRoutes,
+  nextVersion: string,
   routesManifest?: RoutesManifest
 ) {
   const staticPages: FileMap = {};
@@ -869,7 +877,7 @@ export function filterStaticPages(
     staticPages[staticRoute] = staticPageFiles[page];
     staticPages[staticRoute].contentType = htmlContentType;
 
-    if (isDynamicRoute(pathname)) {
+    if (isDynamicRoute(pathname, nextVersion)) {
       dynamicPages.push(routeName);
       return;
     }
@@ -1872,6 +1880,7 @@ export async function getPageLambdaGroups({
   inversedAppPathManifest,
   experimentalAllowBundling,
   isRouteHandlers,
+  nodeVersion,
 }: {
   isRouteHandlers?: boolean;
   entryPath: string;
@@ -1896,6 +1905,7 @@ export async function getPageLambdaGroups({
   inversedAppPathManifest?: Record<string, string>;
   experimentalAllowBundling?: boolean;
   experimentalTriggers?: Lambda['experimentalTriggers'];
+  nodeVersion: { runtime: string };
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -2003,9 +2013,12 @@ export async function getPageLambdaGroups({
                 compressedPages[newPage].uncompressedSize;
             }
 
+            const maxLambdaSize = getMaxUncompressedLambdaSize(
+              nodeVersion.runtime
+            );
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
-              MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+              maxLambdaSize - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
 
             return underUncompressedLimit;
           }
@@ -2182,10 +2195,12 @@ export const detectLambdaLimitExceeding = async (
   lambdaGroups: LambdaGroup[],
   compressedPages: {
     [page: string]: PseudoFile;
-  }
+  },
+  runtime: string
 ) => {
+  const maxLambdaSize = getMaxUncompressedLambdaSize(runtime);
   // show debug info if within 5 MB of exceeding the limit
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
+  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = maxLambdaSize - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2194,8 +2209,7 @@ export const detectLambdaLimitExceeding = async (
   // pre-iterate to see if we are going to exceed the limit
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
-    const exceededLimit =
-      group.pseudoLayerUncompressedBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE;
+    const exceededLimit = group.pseudoLayerUncompressedBytes > maxLambdaSize;
 
     const closeToLimit =
       group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
@@ -2221,7 +2235,7 @@ export const detectLambdaLimitExceeding = async (
       if (numExceededLimit || numCloseToLimit) {
         console.log(
           `Warning: Max serverless function size of ${prettyBytes(
-            MAX_UNCOMPRESSED_LAMBDA_SIZE
+            maxLambdaSize
           )} uncompressed${numExceededLimit ? '' : ' almost'} reached`
         );
       } else {
@@ -2331,6 +2345,7 @@ type OnPrerenderRouteArgs = {
   isSharedLambdas: boolean;
   isServerMode: boolean;
   canUsePreviewMode: boolean;
+  nextVersion: string;
   lambdas: { [key: string]: Lambda };
   experimentalStreamingLambdaPaths:
     | ReadonlyMap<
@@ -2410,6 +2425,7 @@ export const onPrerenderRoute =
       isAppClientSegmentCacheEnabled,
       isAppClientParamParsingEnabled,
       appPathnameFilesMap,
+      nextVersion,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2858,7 +2874,7 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
-      const isDynamic = isDynamicRoute(routeKey);
+      const isDynamic = isDynamicRoute(routeKey, nextVersion);
       const routeKeys = route?.routeKeys;
 
       // by default allowQuery should be undefined and only set when
@@ -2879,7 +2895,7 @@ export const onPrerenderRoute =
           allowQuery = Object.values(routeKeys);
         }
       } else {
-        const isDynamic = isDynamicRoute(pageKey);
+        const isDynamic = isDynamicRoute(pageKey, nextVersion);
 
         if (routeKeys) {
           // if we have routeKeys in the routes-manifest we use those
@@ -4090,7 +4106,10 @@ export async function getMiddlewareBundle({
           route.override = true;
         }
 
-        if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
+        if (
+          routesManifest.version > 3 &&
+          isDynamicRoute(worker.page, nextVersion)
+        ) {
           source.dynamicRouteMap.set(worker.page, route);
         } else {
           source.staticRoutes.push(route);

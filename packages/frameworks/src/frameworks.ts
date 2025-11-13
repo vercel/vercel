@@ -1906,6 +1906,43 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'TanStack Start',
+    slug: 'tanstack-start',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/tanstack-start.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/tanstack-start-dark.svg',
+    tagline:
+      'Full-stack Framework powered by TanStack Router for React and Solid.',
+    description:
+      'Full-document SSR, Streaming, Server Functions, bundling and more, powered by TanStack Router and Vite - Ready to deploy to your favorite hosting provider.',
+    website: 'https://tanstack.com/start',
+    supersedes: ['ionic-react', 'vite'],
+    detectors: {
+      every: [
+        { matchPackage: '@tanstack/router-plugin' },
+        { matchPackage: 'nitro' },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vite build`',
+        value: 'vite build',
+      },
+      devCommand: {
+        placeholder: 'vite',
+        value: 'vite --port $PORT',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'VitePress',
     slug: 'vitepress',
     demo: 'https://vitepress-starter-template.vercel.app',
@@ -2087,15 +2124,15 @@ export const frameworks = [
       some: [
         {
           path: 'requirements.txt',
-          matchContent: 'flask',
+          matchContent: '[Ff]lask',
         },
         {
           path: 'pyproject.toml',
-          matchContent: 'flask',
+          matchContent: '[Ff]lask',
         },
         {
           path: 'Pipfile',
-          matchContent: 'flask',
+          matchContent: '[Ff]lask',
         },
       ],
     },

@@ -1,5 +1,25 @@
 # @vercel/next
 
+## 4.15.2
+
+### Patch Changes
+
+- Fix dynamic interception routes not being recognized during prerendering when cache components is enabled ([#14177](https://github.com/vercel/vercel/pull/14177))
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+## 4.15.1
+
+### Patch Changes
+
+- version gate clientSegmentCache flag ([#14200](https://github.com/vercel/vercel/pull/14200))
+
+## 4.15.0
+
+### Minor Changes
+
+- Update functions size threshold when using Bun as a runtime ([#14171](https://github.com/vercel/vercel/pull/14171))
+
 ## 4.14.1
 
 ### Patch Changes

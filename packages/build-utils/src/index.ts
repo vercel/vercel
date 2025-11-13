@@ -30,7 +30,6 @@ import {
   getNodeVersion,
   getPathForPackageManager,
   detectPackageManager,
-  getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
@@ -90,7 +89,6 @@ export {
   getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
-  getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
   streamToBuffer,
@@ -131,6 +129,7 @@ export {
   BACKEND_FRAMEWORKS,
   BackendFramework,
   isBackendFramework,
+  isBackendBuilder,
   isExperimentalBackendsEnabled,
   shouldUseExperimentalBackends,
 } from './framework-helpers';

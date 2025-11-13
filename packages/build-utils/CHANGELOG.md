@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 13.0.0
+
+### Major Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+## 12.2.4
+
+### Patch Changes
+
+- Add helper for detecting backend builders ([#14182](https://github.com/vercel/vercel/pull/14182))
+
+## 12.2.3
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
 ## 12.2.2
 
 ### Patch Changes

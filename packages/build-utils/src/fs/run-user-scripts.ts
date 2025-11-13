@@ -23,7 +23,6 @@ import {
   getLatestNodeVersion,
   getAvailableNodeVersions,
   getSupportedBunVersion,
-  isBunVersion,
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
@@ -257,41 +256,6 @@ export async function runShellScript(
     prettyCommand: command,
   });
   return true;
-}
-
-export function getSpawnOptions(
-  meta: Meta,
-  nodeVersion: NodeVersion
-): SpawnOptions {
-  const opts = {
-    env: cloneEnv(process.env),
-  };
-
-  if (isBunVersion(nodeVersion)) {
-    return opts;
-  }
-
-  if (!meta.isDev) {
-    let found = false;
-    const oldPath = opts.env.PATH || process.env.PATH || '';
-
-    const pathSegments = oldPath.split(path.delimiter).map(segment => {
-      if (/^\/node[0-9]+\/bin/.test(segment)) {
-        found = true;
-        return `/node${nodeVersion.major}/bin`;
-      }
-      return segment;
-    });
-
-    if (!found) {
-      // If we didn't find & replace, prepend at beginning of PATH
-      pathSegments.unshift(`/node${nodeVersion.major}/bin`);
-    }
-
-    opts.env.PATH = pathSegments.filter(Boolean).join(path.delimiter);
-  }
-
-  return opts;
 }
 
 export async function getNodeVersion(
