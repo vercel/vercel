@@ -36,7 +36,20 @@ export default async function openCommandHandler(
     return 0;
   }
 
-  // Ensure the project is linked
+  // Track command execution
+  telemetry.trackCliCommandOpen('open');
+
+  // Check if project is linked first to avoid prompting in non-interactive mode
+  const { getLinkedProject } = await import('../../util/projects/link');
+  const linkCheck = await getLinkedProject(client, client.cwd);
+
+  if (linkCheck.status !== 'linked' || !linkCheck.org || !linkCheck.project) {
+    output.error('This command requires a linked project. Please run:');
+    output.print(`  vercel link\n`);
+    return 1;
+  }
+
+  // Ensure the project is linked (this will validate the link but won't prompt if already linked)
   const link = await ensureLink('open', client, client.cwd);
 
   if (typeof link === 'number') {
@@ -45,7 +58,7 @@ export default async function openCommandHandler(
 
   if (link.status !== 'linked' || !link.org || !link.project) {
     output.error('This command requires a linked project. Please run:');
-    output.print('  vercel link');
+    output.print('  vercel link\n');
     return 1;
   }
 
