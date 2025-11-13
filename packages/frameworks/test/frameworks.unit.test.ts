@@ -319,6 +319,11 @@ describe('frameworks', () => {
         })
     );
   });
+
+  it('ensure Astro has cachePattern defined', () => {
+    const astro = frameworkList.find(f => f.slug === 'astro');
+    expect(astro?.cachePattern).toBe('.astro/**');
+  });
 });
 
 function getValidator() {
