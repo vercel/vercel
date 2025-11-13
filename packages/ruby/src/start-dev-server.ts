@@ -102,8 +102,12 @@ function discoverRackEntrypoint(
   workPath: string,
   rawEntrypoint: string
 ): string | null {
-  // If the provided entrypoint is already a Rack file, use it
-  if (rawEntrypoint.endsWith('.ru')) return rawEntrypoint;
+  // If the provided entrypoint is already a Rack file, use it (if it exists)
+  if (rawEntrypoint.endsWith('.ru')) {
+    if (existsSync(join(workPath, rawEntrypoint))) {
+      return rawEntrypoint;
+    }
+  }
   // Zero-config discovery for Rails: prefer config.ru in common roots
   const candidateDirs = ['', 'src', 'app'];
   for (const d of candidateDirs) {
