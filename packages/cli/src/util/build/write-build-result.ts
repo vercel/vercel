@@ -66,7 +66,6 @@ export async function writeBuildResult(
   if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
     version = 2;
   }
-  outputManager.debug(`writeBuildResult version: ${version}`);
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       repoRootPath,
@@ -267,14 +266,6 @@ async function writeBuildResultV3(
   const { output } = buildResult;
   const routesJsonPath = join(repoRootPath, '.vercel', 'routes.json');
 
-  outputManager.log(`isBackendBuilder(build): ${isBackendBuilder(build)}`);
-  outputManager.log(`root files: ${fs.readdirSync(repoRootPath)}`);
-  outputManager.log(
-    `.vercel files: ${fs.readdirSync(join(repoRootPath, '.vercel'))}`
-  );
-  outputManager.log(
-    `routesJsonPath: ${existsSync(routesJsonPath)}: ${routesJsonPath}`
-  );
   if (isBackendBuilder(build) && existsSync(routesJsonPath)) {
     try {
       const newOutput: Record<string, Lambda | EdgeFunction> = {
@@ -297,8 +288,6 @@ async function writeBuildResultV3(
         }
       }
 
-      outputManager.log(JSON.stringify(newOutput, null, 2));
-      outputManager.log(JSON.stringify(buildResult.routes, null, 2));
       return writeBuildResultV2(
         repoRootPath,
         outputDir,
