@@ -2694,7 +2694,7 @@ export async function serverBuild({
             .filter(Boolean)
         : dataRoutes),
 
-      ...(!isNextDataServerResolving
+      ...(!isNextDataServerResolving && hasPagesRouter
         ? [
             // ensure we 404 for non-existent _next/data routes before
             // trying page dynamic routes
