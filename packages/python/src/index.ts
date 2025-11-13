@@ -8,6 +8,9 @@ import {
   FileBlob,
   debug,
   NowBuildError,
+  execCommand,
+  scanParentDirs,
+  getEnvForPackageManager,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -26,6 +29,7 @@ import {
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
+import { runPyprojectScript } from './utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -110,6 +114,55 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
+  }
+
+  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
+  if (framework === 'fastapi' || framework === 'flask') {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    const spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      if (installCommand.trim()) {
+        console.log(`Running "install" command: \`${installCommand}\`...`);
+        await execCommand(installCommand, {
+          env: spawnEnv,
+          cwd: workPath,
+        });
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: spawnEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        spawnEnv
+      );
+    }
   }
 
   let fsFiles = await glob('**', workPath);
