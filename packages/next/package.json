@@ -41,7 +41,7 @@
     "@types/text-table": "0.2.1",
     "@types/webpack-sources": "3.2.0",
     "@vercel/build-utils": "13.0.1",
-    "@vercel/routing-utils": "5.2.1",
+    "@vercel/routing-utils": "5.2.2",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
     "bytes": "3.1.2",
