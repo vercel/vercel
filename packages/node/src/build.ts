@@ -23,7 +23,6 @@ import {
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
-  getNodeVersion,
   debug,
   isSymbolicLink,
   walkParentDirs,
@@ -31,6 +30,7 @@ import {
   getEnvForPackageManager,
   scanParentDirs,
   isBunVersion,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -75,12 +75,7 @@ async function downloadInstallAndBundle({
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const nodeVersion = await getNodeVersion(
-    entrypointFsDirname,
-    undefined,
-    config,
-    meta
-  );
+  const nodeVersion = await getRuntimeNodeVersion(entrypointFsDirname);
 
   const {
     cliType,

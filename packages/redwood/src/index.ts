@@ -16,7 +16,6 @@ import {
   download,
   glob,
   debug,
-  getNodeVersion,
   getPrefixedEnvVars,
   runNpmInstall,
   runPackageJsonScript,
@@ -33,6 +32,7 @@ import {
   BuildV2,
   PrepareCache,
   defaultCachePathGlob,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { getTransformedRoutes, Route } from '@vercel/routing-utils';
@@ -68,12 +68,7 @@ export const build: BuildV2 = async ({
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
-  const nodeVersion = await getNodeVersion(
-    entrypointFsDirname,
-    undefined,
-    config,
-    meta
-  );
+  const nodeVersion = await getRuntimeNodeVersion(entrypointFsDirname);
 
   const {
     cliType,

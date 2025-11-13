@@ -30,13 +30,13 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
-  getNodeVersion,
   debug,
   NowBuildError,
   scanParentDirs,
   cloneEnv,
   getInstalledPackageVersion,
   defaultCachePathGlob,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -478,12 +478,7 @@ export const build: BuildV2 = async ({
       }
     }
 
-    const nodeVersion = await getNodeVersion(
-      entrypointDir,
-      undefined,
-      config,
-      meta
-    );
+    const nodeVersion = await getRuntimeNodeVersion(entrypointDir);
 
     const {
       cliType,

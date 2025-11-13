@@ -10,7 +10,6 @@ import {
   debug,
   download,
   getLambdaOptionsFromFunction,
-  getNodeVersion,
   getPrefixedEnvVars,
   getScriptName,
   glob,
@@ -31,6 +30,7 @@ import {
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
   type TriggerEvent,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -268,7 +268,7 @@ export const build: BuildV2 = async buildOptions => {
 
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
-  const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
+  const nodeVersion = await getRuntimeNodeVersion(entryPath);
   const {
     cliType,
     lockfileVersion,
