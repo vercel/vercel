@@ -62,6 +62,44 @@ it('should ignore minor version in vercel dev', () => {
   expect(warningMessages).toStrictEqual([]);
 });
 
+describe('requires-python range parsing', () => {
+  it('selects latest installed within range ">=3.10,<3.12"', () => {
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.10,<3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.11');
+  });
+
+  it('selects highest allowed when upper bound inclusive (>=3.10,<=3.12)', () => {
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.10,<=3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('respects compatible release "~=3.10" (>=3.10,<3.11)', () => {
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '~=3.10',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.10');
+  });
+});
+
 it('should select latest supported installed version when no Piplock detected', () => {
   makeMockPython('3.10');
   const result = getSupportedPythonVersion({

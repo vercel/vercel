@@ -241,17 +241,12 @@ export const build: BuildV3 = async ({
     } catch (err) {
       debug('Failed to parse pyproject.toml', err);
     }
-    const VERSION_REGEX = /\b\d+\.\d+\b/;
-    const exact = requiresPython?.trim().match(VERSION_REGEX)?.[0];
-    if (exact) {
-      declaredPythonVersion = { version: exact, source: 'pyproject.toml' };
-      debug(
-        `Found Python version ${exact} in pyproject.toml (requires-python: "${requiresPython}")`
-      );
-    } else if (requiresPython) {
-      debug(
-        `Could not parse Python version from pyproject.toml requires-python: "${requiresPython}"`
-      );
+    if (typeof requiresPython === 'string' && requiresPython.trim()) {
+      declaredPythonVersion = {
+        version: requiresPython.trim(),
+        source: 'pyproject.toml',
+      };
+      debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
     }
   } else if (pipfileLockDir) {
     let lock: {
