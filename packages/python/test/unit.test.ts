@@ -21,6 +21,9 @@ beforeEach(() => {
   console.warn = m => {
     warningMessages.push(m);
   };
+  // Isolate PATH so discovery relies only on mocked binaries
+  fs.mkdirSync(tmpPythonDir, { recursive: true });
+  process.env.PATH = tmpPythonDir;
 });
 
 afterEach(() => {
@@ -60,6 +63,44 @@ it('should ignore minor version in vercel dev', () => {
     })
   ).toHaveProperty('runtime', 'python3');
   expect(warningMessages).toStrictEqual([]);
+});
+
+describe('requires-python range parsing', () => {
+  it('selects latest installed within range ">=3.10,<3.12"', () => {
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.10,<3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.11');
+  });
+
+  it('selects highest allowed when upper bound inclusive (>=3.10,<=3.12)', () => {
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.10,<=3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('respects compatible release "~=3.10" (>=3.10,<3.11)', () => {
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '~=3.10',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.10');
+  });
 });
 
 it('should select latest supported installed version when no Piplock detected', () => {
@@ -125,7 +166,7 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
 function makeMockPython(version: string) {
   fs.mkdirSync(tmpPythonDir, { recursive: true });
   const isWin = process.platform === 'win32';
-  const posixScript = '#!/usr/bin/env sh\n# mock binary\nexit 0\n';
+  const posixScript = '#!/bin/sh\n# mock binary\nexit 0\n';
   const winScript = '@echo off\r\nrem mock binary\r\nexit /b 0\r\n';
 
   for (const name of ['python', 'pip']) {
@@ -135,6 +176,14 @@ function makeMockPython(version: string) {
     );
     fs.writeFileSync(bin, isWin ? winScript : posixScript, 'utf8');
     if (!isWin) fs.chmodSync(bin, 0o755);
+
+    // Also provide unversioned "python3"/"pip3" shims for dev mode
+    const major = version.split('.')[0];
+    if (major === '3') {
+      const shim = path.join(tmpPythonDir, `${name}3${isWin ? '.cmd' : ''}`);
+      fs.writeFileSync(shim, isWin ? winScript : posixScript, 'utf8');
+      if (!isWin) fs.chmodSync(shim, 0o755);
+    }
   }
 
   const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
