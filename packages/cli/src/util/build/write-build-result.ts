@@ -265,7 +265,7 @@ async function writeBuildResultV3(
   standalone: boolean = false
 ) {
   const { output } = buildResult;
-  const routesJsonPath = join(outputDir, '..', 'routes.json');
+  const routesJsonPath = join(repoRootPath, '.vercel', 'routes.json');
 
   outputManager.log(`isBackendBuilder(build): ${isBackendBuilder(build)}`);
   outputManager.log(`outputdir: ${outputDir}`);

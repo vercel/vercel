@@ -711,13 +711,7 @@ async function doBuild(
         buildResult.output &&
         isBackendBuilder(build)
       ) {
-        const routesJsonPath = join(outputDir, '..', 'routes.json');
-        output.log(
-          `writing routesJsonPath: ${existsSync(routesJsonPath)}: ${routesJsonPath}`
-        );
-        output.log(`outputdir: ${outputDir}`);
-        output.log(`workpath: ${workPath}`);
-        output.log(`repoRootPath: ${repoRootPath}`);
+        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
