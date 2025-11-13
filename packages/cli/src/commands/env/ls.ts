@@ -93,7 +93,22 @@ export default async function ls(client: Client, argv: string[]) {
     output.log(
       `Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
-    client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
+    if (flags['--json']) {
+      const jsonEnvs = envs.map(env => {
+        return {
+          key: env.key,
+          value: env.value,
+          type: env.type,
+          target: env.target,
+          gitBranch: env.gitBranch,
+          createdAt: env.createdAt,
+          updatedAt: env.updatedAt,
+        };
+      });
+      client.stdout.write(`${JSON.stringify(jsonEnvs, null, 2)}\n`);
+    } else {
+      client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
+    }
   }
 
   const { isAgent } = await determineAgent();
