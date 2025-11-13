@@ -604,7 +604,7 @@ async function doBuild(
       }
 
       const isFrontendBuilder = build.config && 'framework' in build.config;
-      output.debug(`isFrontendBuilder: ${isFrontendBuilder}`);
+      output.log(`isFrontendBuilder: ${isFrontendBuilder}`);
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
