@@ -1,8 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "status": 200, "mustContain": "Hello, World!" },
-    { "path": "/up", "status": 200 },
-    { "path": "/dummy", "status": 200, "mustContain": "ok" },
-    { "path": "/robots.txt", "status": 200, "mustContain": "robots.txt file" }
-  ]
-}
