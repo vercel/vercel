@@ -290,6 +290,9 @@ async function writeBuildResultV3(
           }
         }
       }
+
+      outputManager.log(JSON.stringify(newOutput, null, 2));
+      outputManager.log(JSON.stringify(buildResult.routes, null, 2));
       return writeBuildResultV2(
         repoRootPath,
         outputDir,
