@@ -1,5 +1,11 @@
 # vercel
 
+## 48.10.0
+
+### Minor Changes
+
+- Adding in command vc open, to open project in browser ([#14237](https://github.com/vercel/vercel/pull/14237))
+
 ## 48.9.2
 
 ### Patch Changes
