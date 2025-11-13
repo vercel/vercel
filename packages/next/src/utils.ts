@@ -336,6 +336,12 @@ type RoutesManifestOld = {
       headers: Readonly<Record<string, string>>;
     };
   };
+  /**
+   * Indicates whether the app uses Pages Router, App Router, or both.
+   * May be undefined in older versions of Next.js, in which case we treat everything
+   * as though pages router were being used.
+   */
+  appType?: 'app' | 'pages' | 'hybrid';
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
