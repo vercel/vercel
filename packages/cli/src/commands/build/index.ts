@@ -715,6 +715,9 @@ async function doBuild(
         output.log(
           `writing routesJsonPath: ${existsSync(routesJsonPath)}: ${routesJsonPath}`
         );
+        output.log(`outputdir: ${outputDir}`);
+        output.log(`workpath: ${workPath}`);
+        output.log(`repoRootPath: ${repoRootPath}`);
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
