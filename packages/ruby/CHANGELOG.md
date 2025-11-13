@@ -1,5 +1,13 @@
 # @vercel/ruby
 
+## 2.2.2
+
+### Patch Changes
+
+- [ruby] support local `vercel build` with ruby ([#14216](https://github.com/vercel/vercel/pull/14216))
+
+- [ruby] support `vc dev` ([#14220](https://github.com/vercel/vercel/pull/14220))
+
 ## 2.2.1
 
 ### Patch Changes

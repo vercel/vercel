@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 5.5.6
+
+### Patch Changes
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
+- Use typescript 5 for backend builders ([#14252](https://github.com/vercel/vercel/pull/14252))
+
+- Updated dependencies [[`6221d3c49375450891d4bb1bba9e9702132f671b`](https://github.com/vercel/vercel/commit/6221d3c49375450891d4bb1bba9e9702132f671b)]:
+  - @vercel/build-utils@13.0.1
+
 ## 5.5.5
 
 ### Patch Changes

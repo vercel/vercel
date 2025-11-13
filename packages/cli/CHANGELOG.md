@@ -1,5 +1,26 @@
 # vercel
 
+## 48.9.2
+
+### Patch Changes
+
+- Updated dependencies [[`69f56e68bf56677a2c97dcd2cc83388a9cde0f08`](https://github.com/vercel/vercel/commit/69f56e68bf56677a2c97dcd2cc83388a9cde0f08), [`e77b39019d09be29896298cb992423f4f23f61e1`](https://github.com/vercel/vercel/commit/e77b39019d09be29896298cb992423f4f23f61e1), [`6221d3c49375450891d4bb1bba9e9702132f671b`](https://github.com/vercel/vercel/commit/6221d3c49375450891d4bb1bba9e9702132f671b), [`9727b014cfe8f1d79af8d489c532e1ec0a9c9d51`](https://github.com/vercel/vercel/commit/9727b014cfe8f1d79af8d489c532e1ec0a9c9d51), [`4e8d707ea94feb5fed1775fa2db7e276447e70cb`](https://github.com/vercel/vercel/commit/4e8d707ea94feb5fed1775fa2db7e276447e70cb), [`51e6515580668731b47d4ae7c75b2f5df4caf8d3`](https://github.com/vercel/vercel/commit/51e6515580668731b47d4ae7c75b2f5df4caf8d3), [`4c310f1e747d4e3281b279a42ea5601aa6efe6c2`](https://github.com/vercel/vercel/commit/4c310f1e747d4e3281b279a42ea5601aa6efe6c2)]:
+  - @vercel/next@4.15.3
+  - @vercel/ruby@2.2.2
+  - @vercel/static-build@2.8.6
+  - @vercel/build-utils@13.0.1
+  - @vercel/backends@0.0.7
+  - @vercel/hydrogen@1.3.2
+  - @vercel/redwood@2.4.2
+  - @vercel/remix-builder@5.5.2
+  - @vercel/node@5.5.6
+  - @vercel/python@6.0.4
+  - @vercel/elysia@0.1.4
+  - @vercel/express@0.1.7
+  - @vercel/fastify@0.1.7
+  - @vercel/h3@0.1.13
+  - @vercel/hono@0.2.7
+
 ## 48.9.1
 
 ### Patch Changes
