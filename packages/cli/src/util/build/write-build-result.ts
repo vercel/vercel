@@ -268,7 +268,10 @@ async function writeBuildResultV3(
   const routesJsonPath = join(repoRootPath, '.vercel', 'routes.json');
 
   outputManager.log(`isBackendBuilder(build): ${isBackendBuilder(build)}`);
-  outputManager.log(`outputdir: ${outputDir}`);
+  outputManager.log(`root files: ${fs.readdirSync(repoRootPath)}`);
+  outputManager.log(
+    `.vercel files: ${fs.readdirSync(join(repoRootPath, '.vercel'))}`
+  );
   outputManager.log(
     `routesJsonPath: ${existsSync(routesJsonPath)}: ${routesJsonPath}`
   );
