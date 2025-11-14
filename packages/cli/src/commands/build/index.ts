@@ -711,7 +711,7 @@ async function doBuild(
         buildResult.output &&
         isBackendBuilder(build)
       ) {
-        const routesJsonPath = join(outputDir, '..', 'routes.json');
+        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
@@ -771,16 +771,17 @@ async function doBuild(
             buildOutputLength: String(buildOutputLength),
           })
           .trace<Record<string, PathOverride> | undefined | void>(() =>
-            writeBuildResult(
+            writeBuildResult({
               repoRootPath,
               outputDir,
               buildResult,
               build,
               builder,
               builderPkg,
-              localConfig,
-              standalone
-            )
+              vercelConfig: localConfig,
+              standalone,
+              workPath,
+            })
           )
           .then(
             (override: Record<string, PathOverride> | undefined | void) => {
