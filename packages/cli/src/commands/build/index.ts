@@ -530,9 +530,8 @@ async function doBuild(
 
     const hasFrontend = selectedDetectedBuilders.some(b => {
       if (!b.use) return false;
-      if (b.use === '@vercel/static') return true;
       const fr = frameworkList.find(f => f.useRuntime?.use === b.use) as any;
-      return !fr || fr.kind !== 'backend';
+      return !!fr && fr.kind !== 'backend';
     });
     if (hasFrontend && hasServices) {
       const servicesArr = (localConfig as any).services as any[];
