@@ -1,5 +1,11 @@
 # vercel
 
+## 48.10.2
+
+### Patch Changes
+
+- Fix issue where manual routes was checking wrong path for routes.json ([#14266](https://github.com/vercel/vercel/pull/14266))
+
 ## 48.10.1
 
 ### Patch Changes
