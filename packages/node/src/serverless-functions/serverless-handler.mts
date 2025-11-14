@@ -101,7 +101,7 @@ async function compileUserCode(
     // eslint-disable-next-line
     Bun.serve = function (...args: any[]) {
       throw new Error(
-        'Bun.serve() is currently not supported in Vercel serverless functions. Please export your handler as the default export instead.'
+        'Bun.serve() is currently not supported in Vercel serverless functions. Export your handler as the default export instead.'
       );
     };
   }
