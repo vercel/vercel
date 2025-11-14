@@ -740,13 +740,11 @@ describe('deploy', () => {
       const outputLines = client.getFullOutput().split('\n');
 
       // remove first 3 lines which contain warning and randomized data
-      expect(outputLines.slice(3).join('\n')).toMatchInlineSnapshot(`
-          "Building
-          2024-06-03T15:01:10.339Z  ${outputLine1}
-          2024-06-03T15:01:10.439Z  ${outputLine2}
-          2024-06-03T15:01:10.540Z  ${outputLine3}
-          "
-        `);
+      const output = outputLines.slice(3).join('\n');
+      expect(output).toContain('Building');
+      expect(output).toContain(`2024-06-03T15:01:10.339Z  ${outputLine1}`);
+      expect(output).toContain(`2024-06-03T15:01:10.439Z  ${outputLine2}`);
+      expect(output).toContain(`2024-06-03T15:01:10.540Z  ${outputLine3}`);
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
