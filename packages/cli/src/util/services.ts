@@ -1,12 +1,16 @@
 import path from 'path';
 import fs from 'fs-extra';
-import type { Builder, Config as BuilderConfig } from '@vercel/build-utils';
+import type {
+  Builder,
+  Config as BuilderConfig,
+  Cron,
+} from '@vercel/build-utils';
 import { NowBuildError } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 import { frameworkList } from '@vercel/frameworks';
 import type { VercelConfig } from './dev/types';
 
-type ServiceInput = {
+type WebServiceInput = {
   type: 'web';
   entry: string;
   prefix?: string;
@@ -15,6 +19,26 @@ type ServiceInput = {
   memory?: number;
   maxDuration?: number;
 };
+
+type CronServiceInput = {
+  type: 'cron';
+  entry: string;
+  /**
+   * Cron schedule in the same format as `crons[]` in `vercel.json`.
+   */
+  schedule: string;
+  /**
+   * Optional handler function name. Defaults to "main".
+   * In the future this may be populated automatically via decorators.
+   */
+  handler?: string;
+  framework?: string;
+  builder?: string;
+  memory?: number;
+  maxDuration?: number;
+};
+
+export type ServiceInput = WebServiceInput | CronServiceInput;
 
 function normalizePrefix(prefix?: string): string | undefined {
   if (typeof prefix !== 'string') return undefined;
@@ -32,6 +56,18 @@ function getBuilderFromFramework(framework?: string): string | undefined {
   const f = frameworkList.find(fr => fr.slug === framework);
   if (f?.useRuntime) return f.useRuntime.use;
   return undefined;
+}
+
+function buildCronInternalPath(entry: string, handler: string): string {
+  // Normalize to posix-style path segments for stability
+  let normalizedEntry = entry.replace(/\\/g, '/').replace(/^\/+/, '');
+  // Strip the trailing file extension (e.g. ".py") for the public cron path
+  normalizedEntry = normalizedEntry.replace(/\.[^/.]+$/, '');
+  return `/_vc/crons/${normalizedEntry}/${handler}`;
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function detectBuilderFromEntry(
@@ -108,16 +144,24 @@ function addFunctionLimits(
 export async function servicesToBuildsAndRoutes(
   services: ServiceInput[],
   cwd: string
-): Promise<{ builds: Builder[]; rewriteRoutes: Route[] }> {
+): Promise<{ builds: Builder[]; rewriteRoutes: Route[]; crons: Cron[] }> {
   const builds: Builder[] = [];
   const rewriteRoutes: Route[] = [];
+  const crons: Cron[] = [];
 
-  const normalized = services.map(s => ({
+  const webServices = services.filter(
+    (s): s is WebServiceInput => s.type === 'web'
+  );
+  const cronServices = services.filter(
+    (s): s is CronServiceInput => s.type === 'cron'
+  );
+
+  const normalizedWeb = webServices.map(s => ({
     ...s,
     prefix: normalizePrefix(s.prefix),
   }));
 
-  const prefixes = normalized
+  const prefixes = normalizedWeb
     .map(s => s.prefix)
     .filter((p): p is string => Boolean(p));
 
@@ -129,7 +173,8 @@ export async function servicesToBuildsAndRoutes(
 
   let rootServiceEntry: string | undefined;
 
-  for (const service of normalized) {
+  // Web services: create builders + user-facing rewrites
+  for (const service of normalizedWeb) {
     const entry = service.entry.replace(/\\/g, '/');
     const abs = path.join(cwd, entry);
     const exists = await fs.pathExists(abs);
@@ -197,12 +242,57 @@ export async function servicesToBuildsAndRoutes(
     }
   }
 
+  // Cron services: create builders + internal cron routes
+  for (const service of cronServices) {
+    const entry = service.entry.replace(/\\/g, '/');
+    const abs = path.join(cwd, entry);
+    const exists = await fs.pathExists(abs);
+    if (!exists) {
+      throw new Error(`Service entry "${entry}" does not exist.`);
+    }
+
+    // Determine builder use and optional framework
+    let use = service.builder || getBuilderFromFramework(service.framework);
+    let framework = service.framework;
+    if (!use) {
+      const detected = await detectBuilderFromEntry(cwd, entry);
+      use = detected.use;
+      framework = framework || detected.framework;
+    }
+
+    const config: BuilderConfig = {};
+    if (framework) {
+      (config as any).framework = framework;
+    }
+
+    // Apply per-service function limits
+    addFunctionLimits(config, entry, service.memory, service.maxDuration);
+
+    builds.push({
+      src: entry,
+      use,
+      config,
+    });
+
+    const handler = service.handler || 'main';
+    const cronPath = buildCronInternalPath(entry, handler);
+
+    crons.push({
+      path: cronPath,
+      schedule: service.schedule,
+    });
+
+    // Internal cron path rewrites to the cron entrypoint function
+    const src = `^${escapeRegex(cronPath)}$`;
+    rewriteRoutes.push({ src, dest: `/${entry}`, check: true });
+  }
+
   if (rootServiceEntry) {
     const src = prefixes.length ? `^(?!${prefixAlternation}).*` : '^/.*';
     rewriteRoutes.push({ src, dest: `/${rootServiceEntry}`, check: true });
   }
 
-  return { builds, rewriteRoutes };
+  return { builds, rewriteRoutes, crons };
 }
 
 export function validateServices(config: VercelConfig): NowBuildError | null {
@@ -230,13 +320,17 @@ export function validateServices(config: VercelConfig): NowBuildError | null {
   }
 
   const services: any[] = cfgAny.services as any[];
-  const prefixes: string[] = services
+
+  // Only web services participate in prefix/root validation.
+  const webServices = services.filter((s: any) => !s.type || s.type === 'web');
+
+  const prefixes: string[] = webServices
     .map((s: any) =>
       typeof s.prefix === 'string' ? normalizePrefix(s.prefix) : undefined
     )
     .filter((p: string | undefined): p is string => Boolean(p));
 
-  const noPrefixCount = services.length - prefixes.length;
+  const noPrefixCount = webServices.length - prefixes.length;
   if (noPrefixCount > 1) {
     return new NowBuildError({
       code: 'SERVICES_MULTIPLE_ROOT',
@@ -269,6 +363,20 @@ export function validateServices(config: VercelConfig): NowBuildError | null {
         return new NowBuildError({
           code: 'SERVICES_PREFIX_CONFLICT',
           message: `Conflicting service prefixes detected: "${a}" and "${b}" overlap. Please choose non-overlapping prefixes.`,
+          link: 'https://vercel.link/services-config',
+        });
+      }
+    }
+  }
+
+  // Cron services: require a schedule
+  for (const s of services) {
+    if (s.type === 'cron') {
+      if (typeof s.schedule !== 'string' || !s.schedule.trim()) {
+        return new NowBuildError({
+          code: 'SERVICES_CRON_MISSING_SCHEDULE',
+          message:
+            'Service entries with `type: "cron"` must define a non-empty `schedule` string.',
           link: 'https://vercel.link/services-config',
         });
       }

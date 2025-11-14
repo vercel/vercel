@@ -470,13 +470,21 @@ async function doBuild(
   let builds: Builder[] = [];
   let zeroConfigRoutes: Route[] = [];
   let serviceRoutes: Route[] = [];
+  let serviceCrons: Cron[] = [];
   let isZeroConfig = false;
 
   // Process services if present
   if (Array.isArray((localConfig as any).services)) {
-    const { builds: serviceBuilds, rewriteRoutes } =
-      await servicesToBuildsAndRoutes((localConfig as any).services, workPath);
+    const {
+      builds: serviceBuilds,
+      rewriteRoutes,
+      crons: serviceCronsFromServices,
+    } = await servicesToBuildsAndRoutes(
+      (localConfig as any).services,
+      workPath
+    );
     builds = builds.concat(serviceBuilds);
+    serviceCrons = serviceCronsFromServices;
     // Insert service rewrites into filesystem phase before user routes
     serviceRoutes = appendRoutesToPhase({
       routes: [],
@@ -944,7 +952,8 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
+  const baseCrons = (localConfig.crons || []).concat(serviceCrons);
+  const mergedCrons = mergeCrons(baseCrons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
