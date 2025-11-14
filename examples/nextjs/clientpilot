@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Objednávka Webstránky</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(145deg, #0f1a2c, #192b45);
+    overflow-x: hidden;
+    color: #e5eef7;
+  }
+
+  .card-wrapper {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .card {
+    background: #1e2733;
+    border-radius: 20px;
+    padding: 40px 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    transition: all 0.3s ease;
+  }
+
+  h1 {
+    font-size: 28px;
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+  }
+
+  label {
+    font-size: 14px;
+    margin-top: 16px;
+    display: block;
+    color: #a0b0c0;
+    transition: color 0.3s ease;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #3a4758;
+    background: #1f2a38;
+    color: #e5eef7;
+    font-size: 14px;
+    resize: none;
+    transition: all 0.3s ease;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: #3fa7ff;
+    box-shadow: 0 0 10px rgba(63,167,255,0.5);
+    outline: none;
+  }
+
+  .note {
+    margin-top: 16px;
+    padding: 14px;
+    background: #26333e;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #cbd4df;
+    border-left: 4px solid #3fa7ff;
+    transition: all 0.3s ease;
+  }
+
+  .checkbox-line {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    color: #b7c2cd;
+  }
+
+  .checkbox-line input { width: 18px; height: 18px; accent-color: #3fa7ff; }
+
+  button {
+    width: 100%;
+    margin-top: 26px;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg,#3fa7ff,#1a73e8);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(63,167,255,0.4);
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(63,167,255,0.6);
+  }
+
+  .lang-select {
+    margin-bottom: 26px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #3a4758;
+    background: #1f2a38;
+    color: white;
+    font-size: 14px;
+    width: 100%;
+  }
+
+  @media (max-width:480px) {
+    .card { padding: 32px 20px; }
+    h1 { font-size: 24px; }
+    input, textarea, select { font-size: 13px; padding: 12px; }
+    button { font-size: 15px; padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card-wrapper">
+  <div class="card" id="card">
+    <select class="lang-select" id="language">
+      <option value="sk">Slovensky</option>
+      <option value="cs">Česky</option>
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+    </select>
+
+    <h1 id="title">Objednaj si vlastnú stránku</h1>
+
+    <form action="https://formsubmit.co/clientpilot0@gmail.com" method="POST">
+      <input type="hidden" name="_subject" value="Nová objednávka webstránky">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_captcha" value="false">
+
+      <label id="label-name">Meno:</label>
+      <input type="text" name="meno" required>
+
+      <label id="label-contact">Email alebo telefón:</label>
+      <input type="text" name="kontakt" required>
+
+      <label id="label-type">Typ stránky (čo chceš vytvoriť):</label>
+      <select name="typ" id="type" required>
+        <option value="Landing Page">Landing Page</option>
+        <option value="Predajná stránka">Predajná stránka</option>
+        <option value="Link-in-bio stránka">Link-in-bio stránka</option>
+        <option value="Osobná mini stránka">Osobná mini stránka</option>
+      </select>
+
+      <label id="label-desc">Popis (čo chceš na stránke):</label>
+      <textarea name="popis" rows="4" required placeholder="Napíš svoju predstavu..."></textarea>
+
+      <label id="label-pay">Stripe / PayPal link (POVINNÉ):</label>
+      <input type="url" name="platba" required placeholder="https://www.paypal.me/ncncnfmcm/20">
+
+      <div class="note" id="note">
+        Záloha <strong>20€</strong> je povinná.  
+        Zvyšná cena sa doplatí <strong>po odovzdaní hotovej stránky.</strong>
+      </div>
+
+      <label class="checkbox-line" id="checkbox-label">
+        <input type="checkbox" required>
+        <span id="checkbox-text">Súhlasím s podmienkami zálohy 20€ a doplatkom po dokončení.</span>
+      </label>
+
+      <button type="submit" id="btn-submit">KÚPIŤ / OBJEDNAŤ</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const texts = {
+    sk: {
+      title:"Objednaj si vlastnú stránku",
+      name:"Meno:",
+      contact:"Email alebo telefón:",
+      type:"Typ stránky (čo chceš vytvoriť):",
+      typeOptions:["Landing Page","Predajná stránka","Link-in-bio stránka","Osobná mini stránka"],
+      desc:"Popis (čo chceš na stránke):",
+      descPlaceholder:"Napíš svoju predstavu...",
+      pay:"Stripe / PayPal link (POVINNÉ):",
+      note:"Záloha 20€ je povinná. Zvyšná cena sa doplatí po odovzdaní hotovej stránky.",
+      checkbox:"Súhlasím s podmienkami zálohy 20€ a doplatkom po dokončení.",
+      button:"KÚPIŤ / OBJEDNAŤ"
+    },
+    cs: {
+      title:"Objednej si vlastní stránku",
+      name:"Jméno:",
+      contact:"Email nebo telefon:",
+      type:"Typ stránky (co chceš vytvořit):",
+      typeOptions:["Landing Page","Prodejní stránka","Link-in-bio stránka","Osobní mini stránka"],
+      desc:"Popis (co chceš na stránce):",
+      descPlaceholder:"Napiš svůj nápad...",
+      pay:"Stripe / PayPal odkaz (POVINNÉ):",
+      note:"Záloha 20€ je povinná. Zbývající cena se doplatí po dokončení stránky.",
+      checkbox:"Souhlasím s podmínkami zálohy 20€ a doplatkem po dokončení.",
+      button:"KUPIT / OBJEDNAT"
+    },
+    en: {
+      title:"Order Your Own Website",
+      name:"Name:",
+      contact:"Email or phone:",
+      type:"Website type (what do you want to create):",
+      typeOptions:["Landing Page","Sales Page","Link-in-bio page","Personal mini page"],
+      desc:"Description (what do you want on the page):",
+      descPlaceholder:"Write your idea...",
+      pay:"Stripe / PayPal link (REQUIRED):",
+      note:"Deposit of 20€ is required. Remaining price is paid after website is delivered.",
+      checkbox:"I agree with the deposit terms of 20€ and final payment upon completion.",
+      button:"BUY / ORDER"
+    },
+    de: {
+      title:"Bestelle deine eigene Webseite",
+      name:"Name:",
+      contact:"E-Mail oder Telefon:",
+      type:"Seitentyp (was möchtest du erstellen):",
+      typeOptions:["Landing Page","Verkaufsseite","Link-in-bio Seite","Persönliche Mini-Seite"],
+      desc:"Beschreibung (was möchtest du auf der Seite haben):",
+      descPlaceholder:"Schreibe deine Idee...",
+      pay:"Stripe / PayPal Link (PFLICHT):",
+      note:"Anzahlung von 20€ ist erforderlich. Restbetrag wird nach Fertigstellung gezahlt.",
+      checkbox:"Ich stimme den Anzahlungbedingungen von 20€ und der Restzahlung nach Fertigstellung zu.",
+      button:"KAUFEN / BESTELLEN"
+    }
+  };
+
+  const langSelect = document.getElementById("language");
+  const titleEl = document.getElementById("title");
+  const labelName = document.getElementById("label-name");
+  const labelContact = document.getElementById("label-contact");
+  const labelType = document.getElementById("label-type");
+  const typeSelect = document.getElementById("type");
+  const labelDesc = document.getElementById("label-desc");
+  const labelPay = document.getElementById("label-pay");
+  const note = document.getElementById("note");
+  const checkboxText = document.getElementById("checkbox-text");
+  const btn = document.getElementById("btn-submit");
+
+  function setLanguage(lang){
+    titleEl.textContent = texts[lang].title;
+    labelName.textContent = texts[lang].name;
+    labelContact.textContent = texts[lang].contact;
+    labelType.textContent = texts[lang].type;
+    typeSelect.querySelectorAll("option").forEach((opt,i)=>{
+      opt.textContent = texts[lang].typeOptions[i];
+    });
+    labelDesc.textContent = texts[lang].desc;
+
+    const textarea = document.querySelector('textarea[name="popis"]');
+    textarea.placeholder = texts[lang].descPlaceholder;
+
+    labelPay.textContent = texts[lang].pay;
+    note.textContent = texts[lang].note;
+    checkboxText.textContent = texts[lang].checkbox;
+    btn.textContent = texts[lang].button;
+  }
+
+  const browserLang = navigator.language.slice(0,2);
+  langSelect.value = texts[browserLang] ? browserLang : 'sk';
+  setLanguage(langSelect.value);
+  langSelect.addEventListener("change", ()=>setLanguage(langSelect.value));
+</script>
+
+</body>
+</html>
