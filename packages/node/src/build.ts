@@ -210,6 +210,14 @@ async function compile(
       ? ['bun']
       : undefined;
 
+  if (config.framework === 'elysia') {
+    if (!isBun) {
+      console.warn(
+        'Warning: Currently using Elysia with Node.js. To use Bun, add `"bunVersion": "1.x"` to `vercel.json`.'
+      );
+    }
+  }
+
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
