@@ -92,6 +92,20 @@ async function compileUserCode(
     serverFound();
     return this;
   };
+
+  // TODO: remove when Bun.serve() is supported
+  // @ts-expect-error Bun types not recognized
+  // eslint-disable-next-line
+  if (typeof Bun !== 'undefined' && typeof Bun.serve === 'function') {
+    // @ts-expect-error Bun types not recognized
+    // eslint-disable-next-line
+    Bun.serve = function (...args: any[]) {
+      throw new Error(
+        'Bun.serve() is currently not supported in Vercel serverless functions. Please export your handler as the default export instead.'
+      );
+    };
+  }
+
   let listener = await import(id);
 
   /**
