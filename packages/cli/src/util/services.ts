@@ -17,10 +17,13 @@ type ServiceInput = {
 };
 
 function normalizePrefix(prefix?: string): string | undefined {
+  if (typeof prefix !== 'string') return undefined;
+  prefix = prefix.trim();
   if (!prefix) return undefined;
   if (!prefix.startsWith('/')) prefix = '/' + prefix;
   // remove trailing slash except root
   if (prefix.length > 1 && prefix.endsWith('/')) prefix = prefix.slice(0, -1);
+  if (prefix === '/') return undefined;
   return prefix;
 }
 
@@ -228,7 +231,9 @@ export function validateServices(config: VercelConfig): NowBuildError | null {
 
   const services: any[] = cfgAny.services as any[];
   const prefixes: string[] = services
-    .map((s: any) => (typeof s.prefix === 'string' ? s.prefix : undefined))
+    .map((s: any) =>
+      typeof s.prefix === 'string' ? normalizePrefix(s.prefix) : undefined
+    )
     .filter((p: string | undefined): p is string => Boolean(p));
 
   const noPrefixCount = services.length - prefixes.length;
