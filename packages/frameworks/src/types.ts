@@ -64,6 +64,12 @@ export type Redirect = Rewrite & {
  */
 export interface Framework {
   /**
+   * Classify frameworks for DX and routing behavior.
+   * frontend: SPA/SSR/SSG site builders (e.g., Next.js, Gatsby, Nuxt)
+   * backend: server frameworks or API-first (e.g., Express, Fastify, Hono)
+   */
+  kind?: 'frontend' | 'backend';
+  /**
    * Name of the framework
    * @example "Next.js"
    */
