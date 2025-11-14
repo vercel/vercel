@@ -20,6 +20,7 @@ import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
+import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 
@@ -203,7 +204,7 @@ export default async function processDeployment({
             `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
               previewUrl
             )} ${deployStamp()}`,
-            emoji('success')
+            emoji('loading')
           ) + `\n`
         );
 
@@ -261,6 +262,18 @@ export default async function processDeployment({
           : true) &&
         !withLogs
       ) {
+        stopSpinner();
+        process.stderr.write(eraseLines(2));
+        const isProdDeployment = event.payload.target === 'production';
+        const previewUrl = `https://${event.payload.url}`;
+        output.print(
+          prependEmoji(
+            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+              previewUrl
+            )} ${deployStamp()}`,
+            emoji('success')
+          ) + `\n`
+        );
         output.spinner('Completing', 0);
       }
 
