@@ -117,10 +117,12 @@ export async function buildFileTree(
     };
     fileList = await readdir(path, [ignores]);
 
+    // Check for special files that should be included even if ignored
+    const refs = new Set<string>();
+
     if (prebuilt) {
       // Traverse over the `.vc-config.json` files and include
       // the files referenced by the "filePathMap" properties
-      const refs = new Set<string>();
       const vcConfigFilePaths = fileList.filter(
         file => basename(file) === '.vc-config.json'
       );
@@ -153,10 +155,22 @@ export async function buildFileTree(
       } catch (e) {
         debug(`Error detecting microfrontend config: ${e}`);
       }
+    }
 
-      if (refs.size > 0) {
-        fileList = fileList.concat(Array.from(refs));
+    // Check for .vercel/routes.json and include it if it exists
+    try {
+      const routesJsonPath = join(path, '.vercel', 'routes.json');
+      const routesJsonContent = await maybeRead(routesJsonPath, null);
+      if (routesJsonContent !== null) {
+        refs.add(routesJsonPath);
+        debug('Including .vercel/routes.json in deployment');
       }
+    } catch (e) {
+      debug(`Error checking for .vercel/routes.json: ${e}`);
+    }
+
+    if (refs.size > 0) {
+      fileList = fileList.concat(Array.from(refs));
     }
 
     debug(`Found ${fileList.length} files in the specified directory`);
