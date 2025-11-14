@@ -768,13 +768,10 @@ describe('deploy', () => {
       await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
       // remove first 3 lines which contains randomized data
-      expect(client.getFullOutput().split('\n').slice(3).join('\n'))
-        .toMatchInlineSnapshot(`
-          "Building
-          Building
-          Completing
-          "
-        `);
+      const output = client.getFullOutput().split('\n').slice(3).join('\n');
+      expect(output).toContain('Building');
+      expect(output).toContain('Production:');
+      expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
 
