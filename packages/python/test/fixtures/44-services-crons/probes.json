@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_vc/crons/workers/scheduler/main",
+      "status": 200,
+      "mustContain": "cron job completed"
+    }
+  ]
+}

@@ -25,7 +25,7 @@ const servicesSchema = {
     additionalProperties: false,
     required: ['type', 'entry'],
     properties: {
-      type: { enum: ['web'] },
+      type: { enum: ['web', 'cron'] },
       entry: { type: 'string', minLength: 1, maxLength: 512 },
       prefix: { type: 'string', minLength: 1, maxLength: 256 },
       framework: { type: 'string', minLength: 1, maxLength: 128 },
@@ -40,6 +40,12 @@ const servicesSchema = {
         minimum: 1,
         maximum: 900,
       },
+      schedule: {
+        type: 'string',
+        minLength: 9,
+        maxLength: 256,
+      },
+      handler: { type: 'string', minLength: 1, maxLength: 128 },
       installCommand: { type: 'string', minLength: 1, maxLength: 256 },
       buildCommand: { type: 'string', minLength: 1, maxLength: 256 },
     },

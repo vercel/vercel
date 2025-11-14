@@ -16,7 +16,7 @@ import socket
 import functools
 import logging
 import builtins
-from typing import Callable, Literal, TextIO
+from typing import Callable, Literal, TextIO, Any
 import contextvars
 import contextlib
 
@@ -223,6 +223,68 @@ except Exception:
     exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
+
+
+def _wrap_main_as_wsgi_app(main_func: Callable[..., Any]):
+    """
+    Fallback adapter for modules that only define a `main()` function.
+    This allows simple cron-style entrypoints without requiring a WSGI/ASGI app.
+    """
+
+    def app(environ, start_response):
+        try:
+            result = main_func()
+            if inspect.isawaitable(result):
+                if _use_legacy_asyncio:
+                    loop = asyncio.new_event_loop()
+                    try:
+                        asyncio.set_event_loop(loop)
+                        result = loop.run_until_complete(result)
+                    finally:
+                        loop.close()
+                else:
+                    result = asyncio.run(result)
+
+            if result is None:
+                body = b""
+            elif isinstance(result, (bytes, bytearray, memoryview)):
+                body = bytes(result)
+            else:
+                body = str(result).encode("utf-8")
+
+            headers = [
+                ("Content-Type", "text/plain"),
+                ("Content-Length", str(len(body))),
+            ]
+            start_response("200 OK", headers)
+            return [body]
+        except Exception:
+            tb = traceback.format_exc()
+            _stderr(tb)
+            body = b"Internal Server Error"
+            headers = [
+                ("Content-Type", "text/plain"),
+                ("Content-Length", str(len(body))),
+            ]
+            start_response("500 Internal Server Error", headers)
+            return [body]
+
+    return app
+
+
+# If the user module does not define a handler or app, but does define a
+# callable `main`, then wrap it as a minimal WSGI app so it can be invoked
+# over HTTP (e.g. for cron-style functions).
+if (
+    "handler" not in __vc_variables
+    and "Handler" not in __vc_variables
+    and "app" not in __vc_variables
+    and "main" in __vc_variables
+):
+    main_func = getattr(__vc_module, "main", None)
+    if callable(main_func):
+        __vc_module.app = _wrap_main_as_wsgi_app(main_func)
+        __vc_variables = dir(__vc_module)
 
 def format_headers(headers, decode=False):
     keyToList = {}
