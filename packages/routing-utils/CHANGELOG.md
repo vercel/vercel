@@ -1,5 +1,27 @@
 # @vercel/routing-utils
 
+## 5.2.2
+
+### Patch Changes
+
+- Allow header values of up to 32kb in length in routes. ([#14263](https://github.com/vercel/vercel/pull/14263))
+
+## 5.2.1
+
+### Patch Changes
+
+- Add experimental support for routes.json ([#14138](https://github.com/vercel/vercel/pull/14138))
+
+## 5.2.0
+
+### Minor Changes
+
+- support bulk redirects in routing-utils ([#14032](https://github.com/vercel/vercel/pull/14032))
+
+### Patch Changes
+
+- fix: support underscores in named capture groups for routing patterns ([#14017](https://github.com/vercel/vercel/pull/14017))
+
 ## 5.1.1
 
 ### Patch Changes

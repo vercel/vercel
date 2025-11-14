@@ -1,5 +1,36 @@
 # @vercel/remix-builder
 
+## 5.5.2
+
+### Patch Changes
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
+## 5.5.1
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+## 5.5.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+## 5.4.13
+
+### Patch Changes
+
+- Add support for using routes() helper for top-level index routes ([#13933](https://github.com/vercel/vercel/pull/13933))
+
+## 5.4.12
+
+### Patch Changes
+
+- Updated dependencies [[`6260486192ca407fc2d91f317ed81533548b8629`](https://github.com/vercel/vercel/commit/6260486192ca407fc2d91f317ed81533548b8629)]:
+  - @vercel/static-config@3.1.2
+
 ## 5.4.11
 
 ### Patch Changes

@@ -29,6 +29,9 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  getEnvForPackageManager,
+  scanParentDirs,
+  isBunVersion,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -81,6 +84,22 @@ async function downloadInstallAndBundle({
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
+
+  spawnOpts.env = getEnvForPackageManager({
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
+  });
+
   const installCommand = config.projectSettings?.installCommand;
   if (typeof installCommand === 'string' && considerBuildCommand) {
     if (installCommand.trim()) {
@@ -98,7 +117,6 @@ async function downloadInstallAndBundle({
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -116,6 +134,9 @@ function renameTStoJS(path: string) {
   if (path.endsWith('.mts')) {
     return path.slice(0, -4) + '.mjs';
   }
+  if (path.endsWith('.cts')) {
+    return path.slice(0, -4) + '.cjs';
+  }
   return path;
 }
 
@@ -126,7 +147,8 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean
+  isEdgeFunction: boolean,
+  useTypescript5 = false
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -168,6 +190,7 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
+        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -179,10 +202,13 @@ async function compile(
     shouldAddSourcemapSupport = true;
     return source;
   }
+  const isBun = isBunVersion(nodeVersion);
 
   const conditions = isEdgeFunction
     ? ['edge-light', 'browser', 'module', 'import', 'require']
-    : undefined;
+    : isBun
+      ? ['bun']
+      : undefined;
 
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
@@ -242,7 +268,8 @@ async function compile(
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
             fsPath.endsWith('.tsx') ||
-            fsPath.endsWith('.mts')
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
@@ -399,14 +426,10 @@ export const build = async ({
   useWebApi?: boolean;
   considerBuildCommand?: boolean;
   /**
-   * It's possible to specify a build script that may result in a different entrypoint.
-   * For example `tsc -p tsconfig.builds.json` which puts things in a `dist` directory.
-   *
-   * If the project settings output directory is specified, we will look there for a valid
-   * entrypoint for the node app. To find it, then entrypointCallback allows the builders calling
-   * this function to provide the entrypoint detection logic
+   * This is called once any user build scripts have run so that the entrypoint can be detected
+   * from files that may have been created by the build script.
    */
-  entrypointCallback?: (preparedFiles: Files) => string | undefined;
+  entrypointCallback?: () => Promise<string>;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -457,6 +480,24 @@ export const build = async ({
       config.projectSettings?.createdAt
     );
   }
+  if (entrypointCallback) {
+    const entrypoint = await entrypointCallback();
+    entrypointPath = join(entrypointFsDirname, entrypoint);
+    const functionConfig = config.functions?.[entrypoint];
+    if (functionConfig) {
+      const normalizeArray = (value: any) =>
+        Array.isArray(value) ? value : value ? [value] : [];
+
+      config.includeFiles = [
+        ...normalizeArray(config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      config.excludeFiles = [
+        ...normalizeArray(config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
+  }
 
   const isMiddleware = config.middleware === true;
   let isEdgeFunction = isMiddleware;
@@ -471,31 +512,8 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
-  /**
-   * Even if the project handles the build process, we still want to run the output
-   * through our compiler so it can be processed by NFT. The code below allows us
-   * to set the entrypoint to the output directory if it's specified.
-   */
-  if (config.projectSettings?.outputDirectory) {
-    const outputDirFiles = await glob(
-      '**/*',
-      join(workPath, config.projectSettings.outputDirectory)
-    );
-    const outputDirEntrypoint = entrypointCallback?.(outputDirFiles);
-    if (outputDirEntrypoint) {
-      const outputDirEntrypointPath = join(
-        workPath,
-        config.projectSettings.outputDirectory,
-        outputDirEntrypoint
-      );
-      entrypointPath = outputDirEntrypointPath;
-    } else {
-      console.warn(
-        `No entrypoint found in output directory ${config.projectSettings.outputDirectory}. Using the original entrypoint of ${entrypoint}.`
-      );
-    }
-  }
-
+  // Opt backend builders to use typescript5
+  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -505,7 +523,8 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction
+    isEdgeFunction,
+    useTypescript5
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 

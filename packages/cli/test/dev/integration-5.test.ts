@@ -437,6 +437,27 @@ test(
   })
 );
 
+describe('[vercel dev] Express', () => {
+  test(
+    '[vercel dev] Express no export',
+    testFixtureStdio(
+      'express-no-export',
+      async (_testPath: any, port: any) => {
+        const res = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(res);
+        const json = await res.json();
+        expect(json).toHaveProperty('message', 'Hello Express!');
+
+        const res2 = await fetch(`http://localhost:${port}/test.json`);
+        validateResponseHeaders(res2);
+        const json2 = await res2.json();
+        expect(json2).toHaveProperty('message', 'Hello Express!');
+      },
+      { skipDeploy: true }
+    )
+  );
+});
+
 describe('[vercel dev] ESM edge functions', () => {
   test(
     '[vercel dev] ESM .js type=module',
@@ -528,10 +549,11 @@ describe('[vercel dev] ESM serverless functions', () => {
     '[vercel dev] ESM .js type=commonjs',
     testFixtureStdio(
       'esm-js-nodejs-no-module',
-      async (testPath: any) => {
-        // bad gateway
-        // require() of ESM Module
-        await testPath(500, '/api/data');
+      async (_testPath: any, port: any) => {
+        const res = await fetch(`http://localhost:${port}/api/data`);
+        validateResponseHeaders(res);
+        const json = await res.json();
+        expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
     )
@@ -541,10 +563,11 @@ describe('[vercel dev] ESM serverless functions', () => {
     '[vercel dev] ESM .ts type=commonjs',
     testFixtureStdio(
       'esm-ts-nodejs-no-module',
-      async (testPath: any) => {
-        // bad gateway
-        // require() of ESM Module
-        await testPath(500, '/api/data');
+      async (_testPath: any, port: any) => {
+        const res = await fetch(`http://localhost:${port}/api/data`);
+        validateResponseHeaders(res);
+        const json = await res.json();
+        expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
     )
@@ -559,6 +582,22 @@ describe('[vercel dev] ESM serverless functions', () => {
         validateResponseHeaders(res);
         const text = await res.text();
         expect(text).toEqual('Hello, Batman!');
+      },
+      { skipDeploy: true }
+    )
+  );
+});
+
+describe('[vercel dev] Hono', () => {
+  test(
+    '[vercel dev] Hono with public folder',
+    testFixtureStdio(
+      'hono-no-export',
+      async (_testPath: any, port: number) => {
+        const res = await fetch(`http://localhost:${port}/test.json`);
+        validateResponseHeaders(res);
+        const json2 = await res.json();
+        expect(json2).toHaveProperty('message', 'Hello Hono!');
       },
       { skipDeploy: true }
     )

@@ -321,6 +321,22 @@ export class UnsupportedTLD extends NowError<
 }
 
 /**
+ * Returned when a given TLD can not be purchased via the CLI.
+ */
+export class TLDNotSupportedViaCLI extends NowError<
+  'UNSUPPORTED_TLD_VIA_CLI',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'UNSUPPORTED_TLD_VIA_CLI',
+      meta: { domain },
+      message: `Purchased for the TLD for domain name ${domain} are not supported via the CLI. Use the REST API or the dashboard to purchase.`,
+    });
+  }
+}
+
+/**
  * Returned when the user tries to purchase a domain but the API returns
  * an error telling that it is not available.
  */
@@ -333,23 +349,6 @@ export class DomainNotAvailable extends NowError<
       code: 'DOMAIN_NOT_AVAILABLE',
       meta: { domain },
       message: `The domain ${domain} is not available to be purchased.`,
-    });
-  }
-}
-
-/**
- * Returned when the domain purchase service is not available for reasons
- * that are out of our control.
- */
-export class DomainServiceNotAvailable extends NowError<
-  'DOMAIN_SERVICE_NOT_AVAILABLE',
-  { domain: string }
-> {
-  constructor(domain: string) {
-    super({
-      code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
-      meta: { domain },
-      message: `The domain purchase is unavailable, try again later.`,
     });
   }
 }
@@ -383,6 +382,22 @@ export class UnexpectedDomainPurchaseError extends NowError<
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
       meta: { domain },
       message: `An unexpected error happened while purchasing.`,
+    });
+  }
+}
+
+/**
+ * Returned when there is an expected error during the domain transfer.
+ */
+export class UnexpectedDomainTransferError extends NowError<
+  'UNEXPECTED_DOMAIN_TRANSFER_ERROR',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'UNEXPECTED_DOMAIN_TRANSFER_ERROR',
+      meta: { domain },
+      message: `An unexpected error happened while transferring.`,
     });
   }
 }

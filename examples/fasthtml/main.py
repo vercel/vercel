@@ -29,7 +29,7 @@ def get():
                             href="https://vercel.com/templates/python/fasthtml-python-boilerplate",
                         ),
                         " or ",
-                        A("learn more", href="https://docs.fastht.ml/"),
+                        A("learn more", href="https://www.fastht.ml/"),
                         "about FastHTML.",
                     )
                 ),

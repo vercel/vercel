@@ -7,7 +7,6 @@ import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
 import getDomainPrice from '../../util/domains/get-domain-price';
-import checkTransfer from '../../util/domains/check-transfer';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
 import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
@@ -58,22 +57,19 @@ export default async function transferIn(client: Client, argv: string[]) {
   }
 
   const availableStamp = stamp();
-  const [domainPrice, { transferable, transferPolicy }] = await Promise.all([
-    getDomainPrice(client, domainName, 'renewal'),
-    checkTransfer(client, domainName),
-  ]);
+  const domainPrice = await getDomainPrice(client, domainName);
 
   if (domainPrice instanceof Error) {
     output.prettyError(domainPrice);
     return 1;
   }
 
-  if (!transferable) {
+  const { transferPrice, years } = domainPrice;
+  if (transferPrice === null) {
     output.error(`The domain ${param(domainName)} is not transferable.`);
     return 1;
   }
 
-  const { price } = domainPrice;
   const { contextName } = await getScope(client);
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
@@ -84,9 +80,7 @@ export default async function transferIn(client: Client, argv: string[]) {
   const authCode = await getAuthCode(client, opts['--code']);
 
   const shouldTransfer = await client.input.confirm(
-    transferPolicy === 'no-change'
-      ? `Transfer now for ${chalk.bold(`$${price}`)}?`
-      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
+    `Transfer now with 1yr renewal for ${chalk.bold(`$${transferPrice}`)}?`,
     false
   );
 
@@ -101,7 +95,8 @@ export default async function transferIn(client: Client, argv: string[]) {
     client,
     domainName,
     authCode,
-    price
+    transferPrice,
+    years
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
@@ -109,32 +104,27 @@ export default async function transferIn(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (
-    transferInResult instanceof ERRORS.DomainNotAvailable ||
-    transferInResult instanceof ERRORS.DomainNotTransferable
-  ) {
+  if (transferInResult instanceof ERRORS.DomainNotAvailable) {
     output.error(
       `The domain "${transferInResult.meta.domain}" is not transferable.`
     );
     return 1;
   }
 
-  if (transferInResult instanceof ERRORS.InvalidTransferAuthCode) {
+  if (transferInResult instanceof ERRORS.UnsupportedTLD) {
     output.error(
-      `The provided auth code does not match with the one expected by the current registar`
+      `The TLD for domain name ${transferInResult.meta.domain} is not supported.`
     );
     return 1;
   }
 
-  if (transferInResult instanceof ERRORS.SourceNotFound) {
-    output.error(
-      `Could not purchase domain. Please add a payment method using the dashboard.`
-    );
+  if (transferInResult instanceof ERRORS.DomainPaymentError) {
+    output.error(`Your card was declined.`);
     return 1;
   }
 
-  if (transferInResult instanceof ERRORS.DomainRegistrationFailed) {
-    output.error(`Could not transfer domain. ${transferInResult.message}`);
+  if (transferInResult instanceof ERRORS.UnexpectedDomainTransferError) {
+    output.error(`An unexpected error happened while initiating the transfer.`);
     return 1;
   }
 

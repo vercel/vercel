@@ -124,7 +124,7 @@ export class TelemetryClient {
     });
   }
 
-  protected trackAgenticUse(agent: string | false) {
+  protected trackAgenticUse(agent: string | undefined) {
     if (agent) {
       this.track({
         key: 'agent',
@@ -179,6 +179,17 @@ export class TelemetryClient {
     });
   }
 
+  protected loginAttempt?: string;
+  protected trackLoginState(
+    state: 'started' | 'error' | 'canceled' | 'success'
+  ) {
+    if (state === 'started') this.loginAttempt = randomUUID();
+    if (this.loginAttempt) {
+      this.track({ key: `login:attempt:${this.loginAttempt}`, value: state });
+    }
+    if (state !== 'started') this.loginAttempt = undefined;
+  }
+
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {
     let subcommand: string | undefined;
     if (subcommands) {
@@ -189,10 +200,6 @@ export class TelemetryClient {
       key: 'flag:help',
       value: subcommand ? `${command}:${subcommand}` : command,
     });
-  }
-
-  trackCliFlagFuture(command: 'login') {
-    this.track({ key: 'flag:future', value: command });
   }
 }
 

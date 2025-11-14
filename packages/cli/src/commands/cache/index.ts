@@ -5,7 +5,14 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import purge from './purge';
-import { cacheCommand, purgeSubcommand } from './command';
+import invalidate from './invalidate';
+import dangerouslyDelete from './dangerously-delete';
+import {
+  cacheCommand,
+  purgeSubcommand,
+  invalidateSubcommand,
+  dangerouslyDeleteSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
@@ -13,6 +20,8 @@ import { CacheTelemetryClient } from '../../util/telemetry/commands/cache';
 
 const COMMAND_CONFIG = {
   purge: getCommandAliases(purgeSubcommand),
+  invalidate: getCommandAliases(invalidateSubcommand),
+  'dangerously-delete': getCommandAliases(dangerouslyDeleteSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -62,6 +71,20 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPurge(subcommandOriginal);
       return purge(client, args);
+    case 'invalidate':
+      if (needHelp) {
+        printHelp(invalidateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandInvalidate(subcommandOriginal);
+      return invalidate(client, args);
+    case 'dangerously-delete':
+      if (needHelp) {
+        printHelp(dangerouslyDeleteSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandDangerouslyDelete(subcommandOriginal);
+      return dangerouslyDelete(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(cacheCommand, { columns: client.stderr.columns }));

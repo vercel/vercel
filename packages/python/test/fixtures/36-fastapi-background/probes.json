@@ -1,0 +1,29 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "Hello, World!" },
+    { "path": "/bg-file?ns=RANDOMNESS_PLACEHOLDER&token=1", "status": 200, "mustContain": "queued" },
+    { "delay": 3200 },
+    { "path": "/bg-status?ns=RANDOMNESS_PLACEHOLDER&token=1", "status": 200, "mustContain": "true", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-file?ns=RANDOMNESS_PLACEHOLDER&token=2", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-file?ns=RANDOMNESS_PLACEHOLDER&token=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-file?ns=RANDOMNESS_PLACEHOLDER&token=4", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-file?ns=RANDOMNESS_PLACEHOLDER&token=5", "status": 200, "mustContain": "queued" },
+    { "delay": 3200 },
+    { "path": "/bg-logs?ns=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "5 log files", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-files-sequential?ns=RANDOMNESS_PLACEHOLDER&token=S1&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?ns=RANDOMNESS_PLACEHOLDER&token=S2&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?ns=RANDOMNESS_PLACEHOLDER&token=S3&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?ns=RANDOMNESS_PLACEHOLDER&token=S4&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?ns=RANDOMNESS_PLACEHOLDER&token=S5&count=3", "status": 200, "mustContain": "queued" },
+    { "delay": 10000 },
+    { "path": "/bg-logs?ns=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "20 log files", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-files-concurrent?ns=RANDOMNESS_PLACEHOLDER&token=C&count=10", "status": 200, "mustContain": "queued" },
+    { "delay": 3200 },
+    { "path": "/bg-logs?ns=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "30 log files", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-crash?ns=RANDOMNESS_PLACEHOLDER&token=K", "status": 200, "mustContain": "queued" }
+  ]
+}

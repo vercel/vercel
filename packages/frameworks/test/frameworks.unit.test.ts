@@ -217,8 +217,6 @@ async function getDeployment(host: string) {
 describe('frameworks', () => {
   const skipExamples = [
     'dojo',
-    'hono', // FIXME: hono-framework once builder lands in builder container because integration tests will fail if there's an example with no tests
-    'express', // FIXME: express-framework once builder lands in builder container because integration tests will fail if there's an example with no tests
     'saber',
     'gridsome',
     'sanity-v3',
@@ -316,7 +314,7 @@ describe('frameworks', () => {
           assert.equal(
             deployment.public,
             true,
-            `Demo URL ${f.demo} is not "public"`
+            `Demo URL ${f.demo} is not "public". Disable "build logs and source protection" in project settings.`
           );
         })
     );

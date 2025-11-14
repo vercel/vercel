@@ -10,11 +10,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "browser": "./dist/index-browser.js",
+      "react-native": "./dist/index-browser.js",
+      "workflow": "./dist/index-browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     }
   },
-  "version": "2.0.2",
+  "version": "3.0.4",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",
@@ -33,7 +36,7 @@
   },
   "peerDependenciesMeta": {},
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "scripts": {
     "pretest": "pnpm run build:code",
@@ -45,9 +48,5 @@
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "@types/ms": "2.1.0",
-    "ms": "2.1.3"
   }
 }
