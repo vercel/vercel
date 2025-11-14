@@ -462,7 +462,7 @@ importers:
         specifier: 5.5.6
         version: link:../node
       '@vercel/python':
-        specifier: 6.0.4
+        specifier: 6.0.5
         version: link:../python
       '@vercel/redwood':
         specifier: 2.4.2

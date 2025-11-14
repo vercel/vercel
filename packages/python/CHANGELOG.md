@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.0.5
+
+### Patch Changes
+
+- make python version range detection in requires-python in pyproject.toml more robust ([#14258](https://github.com/vercel/vercel/pull/14258))
+
 ## 6.0.4
 
 ### Patch Changes
