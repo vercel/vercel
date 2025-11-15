@@ -90,41 +90,6 @@
       "responseHeaders": {
         "content-type": "image/png"
       }
-    },
-    {
-      "path": "/dynamic-catch/single/icon.svg",
-      "status": 200,
-      "responseHeaders": {
-        "content-type": "image/svg+xml"
-      }
-    },
-    {
-      "path": "/dynamic-catch/a/b/icon.svg",
-      "status": 200,
-      "responseHeaders": {
-        "content-type": "image/svg+xml"
-      }
-    },
-    {
-      "path": "/dynamic-catch-all/icon.svg",
-      "status": 200,
-      "responseHeaders": {
-        "content-type": "image/svg+xml"
-      }
-    },
-    {
-      "path": "/dynamic-catch-all/single/icon.svg",
-      "status": 200,
-      "responseHeaders": {
-        "content-type": "image/svg+xml"
-      }
-    },
-    {
-      "path": "/dynamic-catch-all/a/b/icon.svg",
-      "status": 200,
-      "responseHeaders": {
-        "content-type": "image/svg+xml"
-      }
     }
   ]
 }
