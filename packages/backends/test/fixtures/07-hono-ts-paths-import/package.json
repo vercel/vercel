@@ -5,6 +5,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
+    "@vercel/functions": "3.3.2",
     "typescript": "^5.8.3"
   }
 }
