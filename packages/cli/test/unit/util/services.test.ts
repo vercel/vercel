@@ -115,6 +115,35 @@ describe('services utilities', () => {
     ]);
   });
 
+  it('creates worker builds and internal routes for worker services', async () => {
+    const cwd = await createFixture({
+      'workers/worker.py': 'print("worker")\n',
+    });
+
+    const { builds, rewriteRoutes } = await servicesToBuildsAndRoutes(
+      [
+        {
+          type: 'worker',
+          entry: 'workers/worker.py',
+          topic: 'default',
+        },
+      ] as any,
+      cwd
+    );
+
+    expect(builds).toHaveLength(1);
+    expect(builds[0].src).toBe('workers/worker.py');
+    expect(builds[0].use).toBe('@vercel/python');
+
+    expect(rewriteRoutes).toEqual([
+      {
+        src: '^/_vc/workers/workers/worker/worker$',
+        dest: '/workers/worker.py',
+        check: true,
+      },
+    ]);
+  });
+
   it('requires schedule for cron services during validation', () => {
     const error = validateServices({
       services: [{ type: 'cron', entry: 'crons/daily.py' }],

@@ -4,6 +4,7 @@ import type {
   Builder,
   Config as BuilderConfig,
   Cron,
+  TriggerEvent,
 } from '@vercel/build-utils';
 import { NowBuildError } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
@@ -38,7 +39,51 @@ type CronServiceInput = {
   maxDuration?: number;
 };
 
-export type ServiceInput = WebServiceInput | CronServiceInput;
+type WorkerServiceInput = {
+  type: 'worker';
+  entry: string;
+  /**
+   * Queue topic name for this worker.
+   */
+  topic: string;
+  /**
+   * Optional consumer group name.
+   */
+  consumer?: string;
+  /**
+   * Optional handler function name. Defaults to "worker".
+   */
+  handler?: string;
+  /**
+   * Maximum delivery attempts for this worker.
+   */
+  maxDeliveries?: number;
+  /**
+   * Retry delay after failure, in seconds.
+   */
+  retryAfterSeconds?: number;
+  /**
+   * Initial delay before first execution, in seconds.
+   */
+  initialDelaySeconds?: number;
+  framework?: string;
+  builder?: string;
+  memory?: number;
+  maxDuration?: number;
+};
+
+export type ServiceInput =
+  | WebServiceInput
+  | CronServiceInput
+  | WorkerServiceInput;
+
+export interface WorkerTrigger extends TriggerEvent {
+  /**
+   * The entry file that this trigger is associated with
+   * (e.g. "workers/worker.py").
+   */
+  entry: string;
+}
 
 function normalizePrefix(prefix?: string): string | undefined {
   if (typeof prefix !== 'string') return undefined;
@@ -64,6 +109,14 @@ function buildCronInternalPath(entry: string, handler: string): string {
   // Strip the trailing file extension (e.g. ".py") for the public cron path
   normalizedEntry = normalizedEntry.replace(/\.[^/.]+$/, '');
   return `/_vc/crons/${normalizedEntry}/${handler}`;
+}
+
+function buildWorkerInternalPath(entry: string, handler: string): string {
+  // Normalize to posix-style path segments for stability
+  let normalizedEntry = entry.replace(/\\/g, '/').replace(/^\/+/, '');
+  // Strip the trailing file extension (e.g. ".py") for the public worker path
+  normalizedEntry = normalizedEntry.replace(/\.[^/.]+$/, '');
+  return `/_vc/workers/${normalizedEntry}/${handler}`;
 }
 
 function escapeRegex(str: string): string {
@@ -144,16 +197,25 @@ function addFunctionLimits(
 export async function servicesToBuildsAndRoutes(
   services: ServiceInput[],
   cwd: string
-): Promise<{ builds: Builder[]; rewriteRoutes: Route[]; crons: Cron[] }> {
+): Promise<{
+  builds: Builder[];
+  rewriteRoutes: Route[];
+  crons: Cron[];
+  workers: WorkerTrigger[];
+}> {
   const builds: Builder[] = [];
   const rewriteRoutes: Route[] = [];
   const crons: Cron[] = [];
+  const workers: WorkerTrigger[] = [];
 
   const webServices = services.filter(
     (s): s is WebServiceInput => s.type === 'web'
   );
   const cronServices = services.filter(
     (s): s is CronServiceInput => s.type === 'cron'
+  );
+  const workerServices = services.filter(
+    (s): s is WorkerServiceInput => s.type === 'worker'
   );
 
   const normalizedWeb = webServices.map(s => ({
@@ -287,12 +349,63 @@ export async function servicesToBuildsAndRoutes(
     rewriteRoutes.push({ src, dest: `/${entry}`, check: true });
   }
 
+  // Worker services: create builders + internal worker routes and queue triggers
+  for (const service of workerServices) {
+    const entry = service.entry.replace(/\\/g, '/');
+    const abs = path.join(cwd, entry);
+    const exists = await fs.pathExists(abs);
+    if (!exists) {
+      throw new Error(`Service entry "${entry}" does not exist.`);
+    }
+
+    // Determine builder use and optional framework
+    let use = service.builder || getBuilderFromFramework(service.framework);
+    let framework = service.framework;
+    if (!use) {
+      const detected = await detectBuilderFromEntry(cwd, entry);
+      use = detected.use;
+      framework = framework || detected.framework;
+    }
+
+    const config: BuilderConfig = {};
+    if (framework) {
+      (config as any).framework = framework;
+    }
+
+    // Apply per-service function limits
+    addFunctionLimits(config, entry, service.memory, service.maxDuration);
+
+    builds.push({
+      src: entry,
+      use,
+      config,
+    });
+
+    const handler = service.handler || 'worker';
+    const workerPath = buildWorkerInternalPath(entry, handler);
+
+    // Internal worker path rewrites to the worker entrypoint function
+    const src = `^${escapeRegex(workerPath)}$`;
+    rewriteRoutes.push({ src, dest: `/${entry}`, check: true });
+
+    // Record worker trigger so the build step can attach experimentalTriggers
+    workers.push({
+      entry,
+      type: 'queue/v1beta',
+      topic: service.topic,
+      consumer: service.consumer || 'default',
+      maxDeliveries: service.maxDeliveries,
+      retryAfterSeconds: service.retryAfterSeconds,
+      initialDelaySeconds: service.initialDelaySeconds,
+    });
+  }
+
   if (rootServiceEntry) {
     const src = prefixes.length ? `^(?!${prefixAlternation}).*` : '^/.*';
     rewriteRoutes.push({ src, dest: `/${rootServiceEntry}`, check: true });
   }
 
-  return { builds, rewriteRoutes, crons };
+  return { builds, rewriteRoutes, crons, workers };
 }
 
 export function validateServices(config: VercelConfig): NowBuildError | null {
@@ -377,6 +490,20 @@ export function validateServices(config: VercelConfig): NowBuildError | null {
           code: 'SERVICES_CRON_MISSING_SCHEDULE',
           message:
             'Service entries with `type: "cron"` must define a non-empty `schedule` string.',
+          link: 'https://vercel.link/services-config',
+        });
+      }
+    }
+  }
+
+  // Worker services: require a topic
+  for (const s of services) {
+    if (s.type === 'worker') {
+      if (typeof s.topic !== 'string' || !s.topic.trim()) {
+        return new NowBuildError({
+          code: 'SERVICES_WORKER_MISSING_TOPIC',
+          message:
+            'Service entries with `type: "worker"` must define a non-empty `topic` string.',
           link: 'https://vercel.link/services-config',
         });
       }
