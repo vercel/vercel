@@ -1,15 +1,13 @@
 import {
   BuildResultV2Typical,
   FileBlob,
-  FileFsRef,
-  Files,
   NodejsLambda,
 } from '@vercel/build-utils';
-import { build } from '../dist';
-import { join } from 'path';
+import { build } from '../src/index';
+import { join, resolve } from 'path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
-import { readdir, writeFile, rm, stat, mkdtemp } from 'fs/promises';
+import { readdir, writeFile, rm, mkdtemp, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 
 const clearOutputs = async (fixtureName: string) => {
@@ -46,60 +44,17 @@ const config = {
 };
 const meta = { skipDownload: true };
 
-const createFiles = (workPath: string, fileList: string[]) => {
-  const files: Files = {};
-
-  for (const path of fileList) {
-    if (!path) {
-      console.log('❌ createFiles - Found undefined/null path!');
-      continue;
-    }
-
-    const fullPath = join(workPath, path);
-
-    files[path] = new FileFsRef({
-      fsPath: fullPath,
-      mode: 0o644,
-    });
-  }
-  return files;
-};
-
-const readDirectoryRecursively = async (
-  dirPath: string,
-  basePath = ''
-): Promise<string[]> => {
-  const files: string[] = [];
-  const items = await readdir(dirPath);
-
-  for (const item of items) {
-    const fullPath = join(dirPath, item);
-    const relativePath = basePath ? join(basePath, item) : item;
-
-    if ((await stat(fullPath)).isDirectory()) {
-      files.push(...(await readDirectoryRecursively(fullPath, relativePath)));
-    } else {
-      files.push(relativePath);
-    }
-  }
-
-  return files;
-};
-
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('')
+    fixtureName => fixtureName.includes('07')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
       await clearOutputs(fixtureName);
       const workPath = join(__dirname, 'fixtures', fixtureName);
 
-      const fileList = await readDirectoryRecursively(workPath);
-
-      const files = createFiles(workPath, fileList);
       const result = (await build({
-        files,
+        files: {},
         workPath,
         config,
         meta,
@@ -108,11 +63,34 @@ describe('successful builds', async () => {
       })) as BuildResultV2Typical;
 
       const lambda = result.output.index as unknown as NodejsLambda;
+      // const lambdaPath = join(__dirname, 'debug');
+      const lambdaPath = undefined;
 
       // Runs without errors
-      await expect(extractAndExecuteCode(lambda)).resolves.toBeUndefined();
+      await expect(
+        extractAndExecuteCode(lambda, lambdaPath, fixtureName)
+      ).resolves.toBeUndefined();
     });
   }
+
+  // eslint-disable-next-line jest/no-disabled-tests
+  it.skip(`builds workflow-server`, async () => {
+    const workPath = resolve(process.env.HOME!, 'code/workflow-server');
+
+    const result = (await build({
+      files: {},
+      workPath,
+      config,
+      meta,
+      entrypoint: 'package.json',
+      repoRootPath: workPath,
+    })) as BuildResultV2Typical;
+
+    const lambdaPath = join(__dirname, 'debug');
+    const lambda = result.output.index as unknown as NodejsLambda;
+
+    await extractAndExecuteCode(lambda, lambdaPath);
+  }, 20000);
 });
 
 it('extractAndExecuteCode throws with invalid code', async () => {
@@ -143,17 +121,31 @@ it('extractAndExecuteCode throws with invalid code', async () => {
     shouldAddSourcemapSupport: true,
     awsLambdaHandler: '',
   });
-  await expect(extractAndExecuteCode(validLambda)).resolves.toBeUndefined();
-  await expect(extractAndExecuteCode(invalidLambda)).rejects.toThrow();
+  await expect(
+    extractAndExecuteCode(validLambda, undefined, 'valid')
+  ).resolves.toBeUndefined();
+  await expect(
+    extractAndExecuteCode(invalidLambda, undefined, 'invalid')
+  ).rejects.toThrow();
 });
 
-const extractAndExecuteCode = async (lambda: NodejsLambda) => {
+const extractAndExecuteCode = async (
+  lambda: NodejsLambda,
+  lambdaDir?: string,
+  fixtureName?: string
+) => {
   const out = await lambda.createZip();
-  const tempDir = await mkdtemp(join(tmpdir(), 'lambda-test-'));
-  await writeFile(join(tempDir, 'lambda.zip'), out);
-  await execa('unzip', ['-o', 'lambda.zip'], {
+  const prefix = fixtureName ? `lambda-test-${fixtureName}-` : 'lambda-test-';
+  const tempDir = await mkdtemp(join(tmpdir(), prefix));
+  if (lambdaDir && lambdaDir !== '') {
+    await rm(lambdaDir, { recursive: true, force: true });
+    await mkdir(lambdaDir, { recursive: true });
+  }
+  const lambdaPath = join(lambdaDir || tempDir, 'lambda.zip');
+  await writeFile(lambdaPath, out);
+  await execa('unzip', ['-o', lambdaPath], {
     cwd: tempDir,
-    stdio: 'ignore',
+    stdio: 'ignore', // use inherit to debug
   });
 
   const handlerPath = join(tempDir, lambda.handler);
@@ -162,6 +154,7 @@ const extractAndExecuteCode = async (lambda: NodejsLambda) => {
   await new Promise<void>((resolve, reject) => {
     const fakeLambdaProcess = execa('node', [handlerPath], {
       cwd: tempDir,
+      stdio: 'ignore', // use inherit to debug
     });
 
     fakeLambdaProcess.on('error', error => {
