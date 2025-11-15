@@ -1,3 +1,14 @@
 {
-  "version": 2
+  "version": 2,
+  "services": [
+    {
+      "type": "web",
+      "entry": "web/main.py"
+    },
+    {
+      "type": "cron",
+      "entry": "workers/scheduler.py",
+      "schedule": "* * * * *"
+    }
+  ]
 }

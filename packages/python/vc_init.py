@@ -272,19 +272,35 @@ def _wrap_main_as_wsgi_app(main_func: Callable[..., Any]):
     return app
 
 
-# If the user module does not define a handler or app, but does define a
-# callable `main`, then wrap it as a minimal WSGI app so it can be invoked
-# over HTTP (e.g. for cron-style functions).
-if (
-    "handler" not in __vc_variables
-    and "Handler" not in __vc_variables
-    and "app" not in __vc_variables
-    and "main" in __vc_variables
-):
-    main_func = getattr(__vc_module, "main", None)
-    if callable(main_func):
-        __vc_module.app = _wrap_main_as_wsgi_app(main_func)
-        __vc_variables = dir(__vc_module)
+# If the user module does not define a handler or app, try a couple of
+# convenience adapters:
+#   1) If there is a callable `main`, wrap it as a minimal WSGI app (cron-style).
+#   2) If `vercel.workers` is installed and has active subscriptions, use its
+#      WSGI app as the handler (queue worker-style).
+if "handler" not in __vc_variables and "Handler" not in __vc_variables and "app" not in __vc_variables:
+    # 1) Cron-style: main() function
+    if "main" in __vc_variables:
+        main_func = getattr(__vc_module, "main", None)
+        if callable(main_func):
+            __vc_module.app = _wrap_main_as_wsgi_app(main_func)
+            __vc_variables = dir(__vc_module)
+    # 2) Worker-style: vercel.workers subscriptions
+    if "app" not in __vc_variables:
+        try:
+            import vercel.workers as _vc_workers  # type: ignore[import-not-found]
+        except Exception:
+            _vc_workers = None  # type: ignore[assignment]
+        if _vc_workers is not None:
+            has_subs = getattr(_vc_workers, "has_subscriptions", None)
+            queue_app = getattr(_vc_workers, "wsgi_app", None)
+            try:
+                if callable(has_subs) and has_subs() and callable(queue_app):
+                    __vc_module.app = queue_app
+                    __vc_variables = dir(__vc_module)
+            except Exception:
+                # If the workers package misbehaves, fall back to the default
+                # error handling below rather than failing import-time.
+                pass
 
 def format_headers(headers, decode=False):
     keyToList = {}

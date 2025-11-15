@@ -84,7 +84,10 @@ import { validateConfig } from '../../util/validate-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
-import { servicesToBuildsAndRoutes } from '../../util/services';
+import {
+  servicesToBuildsAndRoutes,
+  type WorkerTrigger,
+} from '../../util/services';
 import { mkdir, writeFile } from 'fs/promises';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
@@ -471,6 +474,7 @@ async function doBuild(
   let zeroConfigRoutes: Route[] = [];
   let serviceRoutes: Route[] = [];
   let serviceCrons: Cron[] = [];
+  let serviceWorkers: WorkerTrigger[] = [];
   let isZeroConfig = false;
 
   // Process services if present
@@ -479,12 +483,14 @@ async function doBuild(
       builds: serviceBuilds,
       rewriteRoutes,
       crons: serviceCronsFromServices,
+      workers: serviceWorkersFromServices,
     } = await servicesToBuildsAndRoutes(
       (localConfig as any).services,
       workPath
     );
     builds = builds.concat(serviceBuilds);
     serviceCrons = serviceCronsFromServices;
+    serviceWorkers = serviceWorkersFromServices;
     // Insert service rewrites into filesystem phase before user routes
     serviceRoutes = appendRoutesToPhase({
       routes: [],
@@ -728,6 +734,37 @@ async function doBuild(
           if (framework) {
             const defaultRoutes = await getFrameworkRoutes(framework, workPath);
             buildResult.routes = defaultRoutes;
+          }
+        }
+        // Attach queue triggers for worker services directly to the Lambda
+        // output so that they become `experimentalTriggers` in `.vc-config.json`.
+        if (
+          serviceWorkers.length > 0 &&
+          buildResult &&
+          'output' in buildResult &&
+          buildResult.output &&
+          'type' in buildResult.output &&
+          buildResult.output.type === 'Lambda'
+        ) {
+          const matchingWorkers = serviceWorkers.filter(
+            w => w.entry === build.src
+          );
+          if (matchingWorkers.length) {
+            const lambda: any = buildResult.output;
+            const existingTriggers: any[] = Array.isArray(
+              lambda.experimentalTriggers
+            )
+              ? lambda.experimentalTriggers
+              : [];
+            const extraTriggers = matchingWorkers.map(w => {
+              const {
+                entry, // eslint-disable-line @typescript-eslint/no-unused-vars
+                ...trigger
+              } = w;
+              return trigger;
+            });
+            lambda.experimentalTriggers =
+              existingTriggers.concat(extraTriggers);
           }
         }
       } finally {
