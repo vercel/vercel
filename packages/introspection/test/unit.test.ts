@@ -6,7 +6,7 @@ import execa from 'execa';
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('02')
+    fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
