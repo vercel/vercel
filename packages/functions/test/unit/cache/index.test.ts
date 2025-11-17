@@ -8,8 +8,8 @@ import {
   vitest,
 } from 'vitest';
 
-import { getCache } from '../../../src/cache/index';
 import { InMemoryCache } from '../../../src/cache/in-memory-cache';
+import { getCache } from '../../../src/cache/index';
 import { getContext } from '../../../src/get-context';
 
 vitest.mock('../../../src/get-context', () => ({
@@ -123,5 +123,12 @@ describe('getCache', () => {
       `${namespace}$b876d32`,
       undefined
     );
+  });
+
+  test('should handle zero ttl correctly', async () => {
+    const cache = getCache();
+    await cache.set('key', 'value', { ttl: 0 });
+    const result = await cache.get('key');
+    expect(result).toBe(null);
   });
 });
