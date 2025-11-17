@@ -421,7 +421,7 @@ export const build = async ({
   meta = {},
   considerBuildCommand = false,
   entrypointCallback,
-  checks = (config: Config, nodeVersion: string) => {},
+  checks = () => {},
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
@@ -431,6 +431,7 @@ export const build = async ({
    * from files that may have been created by the build script.
    */
   entrypointCallback?: () => Promise<string>;
+  checks?: (project: { config: Config; isBun: boolean }) => void;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
