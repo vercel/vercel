@@ -1,5 +1,11 @@
 # @vercel/cervel
 
+## 0.0.4
+
+### Patch Changes
+
+- Fix build issue with experimental backends builder ([#14281](https://github.com/vercel/vercel/pull/14281))
+
 ## 0.0.3
 
 ### Patch Changes
