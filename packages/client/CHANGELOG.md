@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.5
+
+### Patch Changes
+
+- Include `.vercel/routes.json` during `vc deploy` ([#14279](https://github.com/vercel/vercel/pull/14279))
+
 ## 17.2.4
 
 ### Patch Changes
