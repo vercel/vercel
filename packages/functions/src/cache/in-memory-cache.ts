@@ -13,7 +13,7 @@ export class InMemoryCache implements RuntimeCache {
   async get(key: string): Promise<unknown | null> {
     const entry = this.cache[key];
     if (entry) {
-      if (entry.ttl && entry.lastModified + entry.ttl * 1000 < Date.now()) {
+      if (entry.ttl != null && entry.lastModified + entry.ttl * 1000 < Date.now()) {
         // If the entry is expired, delete it and return null
         await this.delete(key);
         return null;
