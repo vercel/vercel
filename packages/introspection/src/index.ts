@@ -34,6 +34,7 @@ export const introspectApp = async (args: {
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
+          // stdio: 'inherit',
           cwd: args.dir,
           env: {
             ...process.env,
