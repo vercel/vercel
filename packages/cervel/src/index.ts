@@ -24,6 +24,11 @@ export const build = async (args: {
   out: string;
 }) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
+  const tsPromise = typescript({
+    ...args,
+    entrypoint,
+    workPath: args.cwd,
+  });
   const rolldownResult = await rolldown({
     ...args,
     entrypoint,
@@ -36,11 +41,6 @@ export const build = async (args: {
     JSON.stringify({ handler: rolldownResult.result.handler }, null, 2)
   );
 
-  const tsPromise = typescript({
-    ...args,
-    entrypoint,
-    workPath: args.cwd,
-  });
   console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
   return { rolldownResult: rolldownResult.result, tsPromise };
 };
