@@ -8,7 +8,7 @@ import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
 import minimatch from 'minimatch';
-import httpProxy from 'http-proxy';
+import httpProxy from 'http-proxy-node16';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, type FSWatcher } from 'chokidar';

@@ -540,9 +540,6 @@ importers:
       '@types/fs-extra':
         specifier: 9.0.13
         version: 9.0.13
-      '@types/http-proxy':
-        specifier: 1.16.2
-        version: 1.16.2
       '@types/ini':
         specifier: 1.3.31
         version: 1.3.31
@@ -726,9 +723,9 @@ importers:
       git-last-commit:
         specifier: 1.0.1
         version: 1.0.1
-      http-proxy:
-        specifier: 1.18.1
-        version: 1.18.1(debug@3.1.0)
+      http-proxy-node16:
+        specifier: 1.0.6
+        version: 1.0.6(debug@3.1.0)
       ini:
         specifier: 3.0.0
         version: 3.0.0
@@ -8021,13 +8018,6 @@ packages:
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
     dev: true
 
-  /@types/http-proxy@1.16.2:
-    resolution: {integrity: sha512-GgqePmC3rlsn1nv+kx5OviPuUBU2omhnlXOaJSXFgOdsTcScNFap+OaCb2ip9Bm4m5L8EOehgT5d9M4uNB90zg==}
-    dependencies:
-      '@types/events': 3.0.3
-      '@types/node': 22.5.0
-    dev: true
-
   /@types/ini@1.3.31:
     resolution: {integrity: sha512-8ecxxaG4AlVEM1k9+BsziMw8UsX0qy3jYI1ad/71RrDZ+rdL6aZB0wLfAuflQiDhkD5o4yJ0uPK3OSUic3fG0w==}
     dev: true
@@ -9194,7 +9184,7 @@ packages:
       commander: 12.1.0
       cookie: 0.4.0
       fast-glob: 3.3.3
-      http-proxy: 1.18.1(debug@3.1.0)
+      http-proxy: 1.18.1
       jsonc-parser: 3.3.1
       nanoid: 3.3.11
       path-to-regexp: 6.2.1
@@ -13447,7 +13437,18 @@ packages:
       - supports-color
     dev: true
 
-  /http-proxy@1.18.1(debug@3.1.0):
+  /http-proxy-node16@1.0.6(debug@3.1.0):
+    resolution: {integrity: sha512-RLtYkbmbLmh+To4lmqLpiEitu0igXb/j1SOW8F6w/esXsapGT5dSShMF9vg7shtxGJSXaWiFE3wYWCoLOuiibg==}
+    engines: {node: '>=8.0.0'}
+    dependencies:
+      eventemitter3: 4.0.7
+      follow-redirects: 1.15.9(debug@3.1.0)
+      requires-port: 1.0.0
+    transitivePeerDependencies:
+      - debug
+    dev: true
+
+  /http-proxy@1.18.1:
     resolution: {integrity: sha512-7mz/721AbnJwIVbnaSv1Cz3Am0ZLT/UBwkC92VlxhXv/k/BBQfM2fXElQNC27BVGr0uwUpplYPQM9LnaBMR5NQ==}
     engines: {node: '>=8.0.0'}
     dependencies:
@@ -13456,6 +13457,7 @@ packages:
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
+    dev: false
 
   /http2-wrapper@1.0.3:
     resolution: {integrity: sha512-V+23sDMr12Wnz7iTcDeJr3O6AIxlnvT/bmaAAAP/Xda35C90p9599p0F1eHR/N1KILWSoWVAiOMFjBBXaXSMxg==}
