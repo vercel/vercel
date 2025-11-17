@@ -821,11 +821,10 @@ test('deploys with only vercel.json and README.md', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // assert timing order of showing URLs vs status updates
-  expect(stderr).toContain('Inspect:');
-  expect(stderr).toContain('Preview:');
-  expect(stderr).toContain('Queued');
-  expect(stderr).toContain('Building');
-  expect(stderr).toContain('Completing');
+  // Preview URL appears twice: once with loading emoji, then again with success emoji
+  expect(stderr).toMatch(
+    /Inspect.*\nPreview.*\nQueued.*\n.*\nPreview.*\nCompleting/
+  );
 
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
