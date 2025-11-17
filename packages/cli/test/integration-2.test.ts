@@ -821,7 +821,6 @@ test('deploys with only vercel.json and README.md', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // assert timing order of showing URLs vs status updates
-  // Preview URL appears twice: once with loading emoji, then again with success emoji
   expect(stderr).toContain('Inspect:');
   expect(stderr).toContain('Preview:');
   expect(stderr).toContain('Queued');
