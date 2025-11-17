@@ -1,7 +1,7 @@
 import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 import { extname, join, relative } from 'path';
-import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
+import { build as rolldownBuild } from 'rolldown';
 import { findNearestTsconfig } from './typescript.js';
 
 export const rolldown = async (args: {
@@ -62,16 +62,6 @@ export const rolldown = async (args: {
     }
   }
 
-  const absoluteImportPlugin: RolldownPlugin = {
-    name: 'absolute-import-resolver',
-    resolveId(source: string) {
-      if (external.includes(source)) {
-        return { id: source, external: true };
-      }
-      return null;
-    },
-  };
-
   const tsconfig = await findNearestTsconfig(baseDir);
   const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
@@ -81,8 +71,15 @@ export const rolldown = async (args: {
     input: entrypointPath,
     cwd: baseDir,
     platform: 'node',
-    external: /node_modules/,
-    plugins: [absoluteImportPlugin],
+    external: (source: string) => {
+      if (source.startsWith('.') || source.startsWith('/')) {
+        return false;
+      }
+
+      return external.some(pkg => {
+        return source === pkg || source.startsWith(pkg + '/');
+      });
+    },
     tsconfig,
     output: {
       dir: outputDir,

@@ -24,6 +24,11 @@ export const build = async (args: {
   out: string;
 }) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
+  const tsPromise = typescript({
+    ...args,
+    entrypoint,
+    workPath: args.cwd,
+  });
   const rolldownResult = await rolldown({
     ...args,
     entrypoint,
@@ -36,12 +41,19 @@ export const build = async (args: {
     JSON.stringify({ handler: rolldownResult.result.handler }, null, 2)
   );
 
-  const tsPromise = typescript({
-    ...args,
-    entrypoint,
-    workPath: args.cwd,
-  });
   console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
+
+  // Check if typecheck is still running
+  const typecheckComplete = true;
+  const result = await Promise.race([
+    tsPromise.then(() => typecheckComplete),
+    Promise.resolve(false),
+  ]);
+
+  if (!result) {
+    console.log(c.gray(`${c.bold(c.gray('*'))} Waiting for typecheck...`));
+  }
+
   return { rolldownResult: rolldownResult.result, tsPromise };
 };
 
