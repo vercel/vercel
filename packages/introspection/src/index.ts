@@ -15,7 +15,7 @@ export const introspectApp = async (args: {
   const cjsLoaderPath = fileURLToPath(
     new URL('loaders/cjs.cjs', import.meta.url)
   );
-  const esmLoaderPath = new URL('loaders/esm.js', import.meta.url).href;
+  const esmLoaderPath = new URL('loaders/esm.mjs', import.meta.url).href;
   const handlerPath = join(args.dir, args.handler);
 
   let introspectionResult: {
