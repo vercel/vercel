@@ -210,14 +210,6 @@ async function compile(
       ? ['bun']
       : undefined;
 
-  if (config.framework === 'elysia') {
-    if (!isBun) {
-      console.warn(
-        'Warning: Currently using Elysia with Node.js. To use Bun, add `"bunVersion": "1.x"` to `vercel.json`.'
-      );
-    }
-  }
-
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -429,6 +421,7 @@ export const build = async ({
   meta = {},
   considerBuildCommand = false,
   entrypointCallback,
+  checks = (config: Config, nodeVersion: string) => {},
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
@@ -519,6 +512,11 @@ export const build = async ({
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
   }
+
+  checks({
+    config,
+    isBun: isBunVersion(nodeVersion),
+  });
 
   // Opt backend builders to use typescript5
   const useTypescript5 = considerBuildCommand;
