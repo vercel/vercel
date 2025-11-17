@@ -42,6 +42,18 @@ export const build = async (args: {
   );
 
   console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
+
+  // Check if typecheck is still running
+  const typecheckComplete = true;
+  const result = await Promise.race([
+    tsPromise.then(() => typecheckComplete),
+    Promise.resolve(false),
+  ]);
+
+  if (!result) {
+    console.log(c.gray(`${c.bold(c.gray('*'))} Waiting for typecheck...`));
+  }
+
   return { rolldownResult: rolldownResult.result, tsPromise };
 };
 
