@@ -1,3 +1,4 @@
+// invalidate
 export const version = 3;
 export * from './build';
 // @ts-expect-error - FIXME: startDevServer types are not exported
