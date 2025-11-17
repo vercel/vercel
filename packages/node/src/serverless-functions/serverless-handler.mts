@@ -92,7 +92,6 @@ async function compileUserCode(
     serverFound();
     return this;
   };
-
   let listener = await import(id);
 
   /**
