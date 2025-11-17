@@ -39,9 +39,8 @@ if _app is None:
         f"Missing 'app' in module '{USER_MODULE}'. Define `app = ...` (ASGI app)."
     )
 
-# Prefer a callable app.asgi when available; some frameworks expose a boolean here
-_CAND = getattr(_app, 'asgi', None)
-USER_ASGI_APP = _CAND if callable(_CAND) else _app
+# Sanic compatibility: prefer `app.asgi` when available
+USER_ASGI_APP = getattr(_app, 'asgi', _app)
 
 PUBLIC_DIR = 'public'
 
