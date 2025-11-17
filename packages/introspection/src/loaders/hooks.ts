@@ -1,5 +1,6 @@
 let honoUrl: string | null = null;
 let expressUrl: string | null = null;
+let fastifyModule: any = null;
 
 export async function resolve(
   specifier: string,
@@ -8,10 +9,13 @@ export async function resolve(
 ) {
   const result = await nextResolve(specifier, context);
 
+  // console.log({ specifier, result });
   if (specifier === 'hono') {
     honoUrl = result.url;
   } else if (specifier === 'express') {
     expressUrl = result.url;
+  } else if (specifier === 'fastify') {
+    fastifyModule = result.url;
   }
 
   return result;
@@ -60,6 +64,24 @@ export const Hono = handle(originalHono);
     };
   }
 
+  if (fastifyModule === url) {
+    const pathToFastifyExtract = new URL('../fastify.mjs', import.meta.url);
+    const shimSource = `
+import { handle } from ${JSON.stringify(pathToFastifyExtract.toString())};
+import originalFastify from ${JSON.stringify(url + '?original')};
+
+const extendedFastify = handle(originalFastify);
+
+export * from ${JSON.stringify(url + '?original')};
+export default extendedFastify;
+`;
+
+    return {
+      format: 'module',
+      source: shimSource,
+      shortCircuit: true,
+    };
+  }
   // Handle the ?original redirect to actual source
   if (url.endsWith('?original')) {
     const originalUrl = url.replace('?original', '');

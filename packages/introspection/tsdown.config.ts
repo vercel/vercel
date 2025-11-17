@@ -1,5 +1,6 @@
 import { defineConfig } from 'tsdown';
 
+// export default defineConfig([
 export default defineConfig([
   {
     entry: 'src/index.ts',
@@ -29,6 +30,11 @@ export default defineConfig([
   },
   {
     entry: 'src/hono.ts',
+    outDir: 'dist',
+    format: 'esm',
+  },
+  {
+    entry: 'src/fastify.ts',
     outDir: 'dist',
     format: 'esm',
   },

@@ -1,6 +1,7 @@
 import Module from 'module';
 import { handle as handleHono } from '../hono.js';
 import { handle as handleExpress } from '../express.js';
+import { handle as handleFastify, handleFindMyWay } from '../fastify.js';
 
 const originalRequire = Module.prototype.require;
 
@@ -11,6 +12,12 @@ const originalRequire = Module.prototype.require;
 ) {
   const result = originalRequire.apply(this, [id, ...args] as [string]);
 
+  if (id === 'find-my-way') {
+    return handleFindMyWay(result);
+  }
+  if (id === 'fastify') {
+    return handleFastify(result);
+  }
   if (id === 'express') {
     return handleExpress(result);
   }

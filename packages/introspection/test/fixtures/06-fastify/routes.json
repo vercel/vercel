@@ -1,0 +1,29 @@
+{
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^(?:\\/users\\/([^\\/]+))(?:\\/$)?$",
+      "dest": "/users/:id",
+      "methods": [
+        "GET",
+        "HEAD"
+      ]
+    },
+    {
+      "src": "^(?:\\/users)(?:\\/$)?$",
+      "dest": "/users",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
+  "framework": {
+    "slug": "hono"
+  }
+}

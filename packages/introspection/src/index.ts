@@ -34,6 +34,7 @@ export const introspectApp = async (args: {
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
+          // stdio: 'inherit',
           cwd: args.dir,
           env: {
             ...process.env,
@@ -43,6 +44,7 @@ export const introspectApp = async (args: {
       );
 
       child.stdout?.on('data', data => {
+        // console.log(data.toString());
         try {
           const introspection = JSON.parse(data.toString());
           const introspectionSchema = z.object({
@@ -69,6 +71,7 @@ export const introspectApp = async (args: {
       }, 3000);
 
       child.on('error', err => {
+        // console.log('error', err);
         clearTimeout(timeout);
         clearTimeout(timeout2);
         console.log(`Loader error: ${err.message}`);
