@@ -41,7 +41,13 @@ async function buildHandler(
   options: BuildOptions
 ): Promise<BuildResultV2Typical> {
   const BUILDER_DEBUG = Boolean(process.env.VERCEL_BUILDER_DEBUG ?? false);
+  const isVercelBuild = Boolean(process.env.VERCEL_BUILD_IMAGE ?? false);
+
   const { files, entrypoint, workPath, config, meta } = options;
+
+  // If we are not building on Vercel and we are not initiainted from `vercel dev`,
+  // we are building for a prebuilt deployment, so we need to cross-compile
+  const crossCompilationEnabled = !isVercelBuild && !meta?.isDev;
 
   await installRustToolchain();
 
@@ -66,6 +72,8 @@ async function buildHandler(
   const binaryName = findBinaryName(cargoWorkspace, entryPath);
   const cargoBuildConfiguration =
     await findCargoBuildConfiguration(cargoWorkspace);
+
+  const buildVariant = BUILDER_DEBUG || meta?.isDev ? 'debug' : 'release';
   const buildTarget = cargoBuildConfiguration?.build.target ?? '';
 
   await runUserScripts(workPath);
@@ -74,18 +82,21 @@ async function buildHandler(
 
   debug(`Running \`cargo build\` for \`${binaryName}\``);
   try {
-    await execa(
-      'cargo',
-      ['build', '--bin', binaryName].concat(
-        BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
-        meta?.isDev ? [] : ['--release']
-      ),
-      {
-        cwd: workPath,
-        env: rustEnv,
-        stdio: 'inherit',
-      }
-    );
+    // If we are not building on Vercel (it means we are building for a prebuilt deployment),
+    // We cross-compile it for linux x86_64 using `zigbuild`
+    const args = crossCompilationEnabled
+      ? ['build', '--bin', binaryName].concat(
+          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
+          meta?.isDev ? [] : ['--release']
+        )
+      : [
+          'zigbuild',
+          '--target',
+          'x86_64-unknown-linux-gnu',
+          '--bin',
+          binaryName,
+        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release']);
+    await execa('cargo', args);
   } catch (err) {
     debug(`Running \`cargo build\` for \`${binaryName}\` failed`);
     throw err;
@@ -98,9 +109,11 @@ async function buildHandler(
     env: rustEnv,
   });
 
+  // If we are building for a prebuilt deployment, adjust the target directory to the cross compilation dir
+  if (crossCompilationEnabled) {
+    targetDirectory = path.join(targetDirectory, 'x86_64-unknown-linux-gnu');
+  }
   targetDirectory = path.join(targetDirectory, buildTarget);
-
-  const buildVariant = BUILDER_DEBUG || meta?.isDev ? 'debug' : 'release';
 
   const bin = path.join(
     targetDirectory,
