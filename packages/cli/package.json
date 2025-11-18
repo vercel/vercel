@@ -52,6 +52,8 @@
     "@vercel/redwood": "2.4.2",
     "@vercel/remix-builder": "5.5.2",
     "@vercel/ruby": "2.2.2",
+    "@vercel/fs-detectors": "workspace:*",
+    "@vercel/rust": "workspace:*",
     "@vercel/static-build": "2.8.6",
     "chokidar": "4.0.0",
     "jose": "5.9.6"
@@ -104,7 +106,7 @@
     "@vercel/client": "17.2.4",
     "@vercel/error-utils": "2.0.3",
     "@vercel/frameworks": "3.15.3",
-    "@vercel/fs-detectors": "5.7.6",
+    "@vercel/fs-detectors": "workspace:*",
     "@vercel/routing-utils": "5.2.2",
     "@vitest/expect": "2.1.3",
     "ajv": "6.12.3",

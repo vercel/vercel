@@ -440,6 +440,9 @@ importers:
       '@vercel/fastify':
         specifier: 0.1.7
         version: link:../fastify
+      '@vercel/fs-detectors':
+        specifier: workspace:*
+        version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.1.6
         version: 1.1.6
@@ -473,6 +476,9 @@ importers:
       '@vercel/ruby':
         specifier: 2.2.2
         version: link:../ruby
+      '@vercel/rust':
+        specifier: workspace:*
+        version: link:../rust
       '@vercel/static-build':
         specifier: 2.8.6
         version: link:../static-build
@@ -624,9 +630,6 @@ importers:
       '@vercel/frameworks':
         specifier: 3.15.3
         version: link:../frameworks
-      '@vercel/fs-detectors':
-        specifier: 5.7.6
-        version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.2.2
         version: link:../routing-utils

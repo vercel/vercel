@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import {
   FileFsRef,
   debug,
@@ -9,7 +10,7 @@ import {
   type BuildOptions,
   type BuildResultV2Typical,
   getLambdaOptionsFromFunction,
-  getProvidedRuntime,
+  StartDevServer,
 } from '@vercel/build-utils';
 import execa from 'execa';
 import { installRustToolchain } from './lib/rust-toolchain';
@@ -27,6 +28,12 @@ import {
   runUserScripts,
 } from './lib/utils';
 import { generateRoutes, parseRoute } from './lib/routes';
+import { buildExecutableForDev } from './lib/dev-build';
+import {
+  waitForServerStart,
+  waitForProcessExit,
+  createDevServerEnv,
+} from './lib/dev-server';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 
@@ -106,17 +113,20 @@ async function buildHandler(
     config,
   });
 
-  const bootstrap = getExecutableName('bootstrap');
-  const runtime = meta?.isDev ? 'provided' : await getProvidedRuntime();
+  const handler = getExecutableName('executable');
+  const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
+
   const lambda = new Lambda({
     files: {
       ...extraFiles,
-      [bootstrap]: new FileFsRef({ mode: 0o755, fsPath: bin }),
+      [handler]: executableFile,
     },
-    handler: bootstrap,
-    runtime,
+    handler,
+    runtime: 'executable',
+    supportsResponseStreaming: true,
     ...lambdaOptions,
   });
+
   lambda.zipBuffer = await lambda.createZip();
 
   if (isBundledRoute()) {
@@ -138,11 +148,12 @@ async function buildHandler(
     };
   }
 
-  debug(`generating lambda for \`${entrypoint}\``);
+  debug(`generating function for \`${entrypoint}\``);
   const route = parseRoute(entrypoint);
+
   return {
     output: {
-      [route.path]: lambda,
+      [entrypoint]: lambda,
     },
     routes: [{ src: route.src, dest: route.dest }],
   };
@@ -156,6 +167,66 @@ function isBundledRoute(): boolean {
 
   return false;
 }
+
+export const startDevServer: StartDevServer = async opts => {
+  const { entrypoint, workPath, meta = {} } = opts;
+
+  debug(`Starting dev server for executable runtime: ${entrypoint}`);
+
+  try {
+    // Install Rust toolchain if needed
+    await installRustToolchain();
+
+    // Build the executable for development
+    const executablePath = await buildExecutableForDev(workPath, entrypoint);
+
+    debug(`Starting executable dev server: ${executablePath}`);
+
+    // Create development environment
+    const devEnv = createDevServerEnv(process.env, meta);
+
+    // Start the executable as a dev server
+    const child = spawn(executablePath, [], {
+      cwd: workPath,
+      env: devEnv,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    if (!child.pid) {
+      throw new Error('Failed to start dev server process');
+    }
+
+    debug(`Dev server process started with PID: ${child.pid}`);
+
+    // Wait for the server to start and get the port
+    const port = await waitForServerStart(child);
+
+    debug(`Dev server listening on port ${port}`);
+
+    // Return dev server info
+    return {
+      port,
+      pid: child.pid,
+      shutdown: async () => {
+        debug(`Shutting down dev server (PID: ${child.pid})`);
+
+        // Send SIGTERM for graceful shutdown
+        child.kill('SIGTERM');
+
+        // Wait for process to exit
+        await waitForProcessExit(child);
+
+        debug('Dev server shutdown complete');
+      },
+    };
+  } catch (error) {
+    debug(`Failed to start dev server: ${error}`);
+
+    // Return null to indicate dev server couldn't be started
+    // This will cause vercel dev to fall back to build-and-invoke mode
+    return null;
+  }
+};
 
 // Reference -  https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#runtime-developer-reference
 const runtime: Runtime = {
@@ -179,6 +250,7 @@ const runtime: Runtime = {
     }
     return cacheFiles;
   },
+  startDevServer,
   shouldServe: async (options): Promise<boolean> => {
     debug(`Requested ${options.requestPath} for ${options.entrypoint}`);
 
