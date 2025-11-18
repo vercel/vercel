@@ -78,17 +78,17 @@ async function buildHandler(
     // If we are not building on Vercel (it means we are building for a prebuilt deployment),
     // We cross-compile it for linux x86_64 using `zigbuild`
     const args = crossCompilationEnabled
-      ? ['build', '--bin', binaryName].concat(
-          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
-          meta?.isDev ? [] : ['--release']
-        )
-      : [
+      ? [
           'zigbuild',
           '--target',
           'x86_64-unknown-linux-gnu',
           '--bin',
           binaryName,
-        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release']);
+        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
+      : ['build', '--bin', binaryName].concat(
+          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
+          meta?.isDev ? [] : ['--release']
+        );
     await execa('cargo', args);
   } catch (err) {
     debug(`Running \`cargo build\` for \`${binaryName}\` failed`);
@@ -129,7 +129,7 @@ async function buildHandler(
       [handler]: executableFile,
     },
     handler,
-    runtime: 'provided',
+    runtime: 'executable',
     supportsResponseStreaming: true,
     ...lambdaOptions,
   });
