@@ -113,20 +113,34 @@ async function buildHandler(
     config,
   });
 
-  const handler = getExecutableName('executable');
-  const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
+  let lambda: Lambda;
+  const runtime = meta?.isDev ? 'provided' : 'executable';
 
-  const lambda = new Lambda({
-    files: {
-      ...extraFiles,
-      [handler]: executableFile,
-    },
-    handler,
-    runtime: 'executable',
-    supportsResponseStreaming: true,
-    ...lambdaOptions,
-  });
-
+  if (meta?.isDev) {
+    const bootstrap = getExecutableName('bootstrap');
+    lambda = new Lambda({
+      files: {
+        ...extraFiles,
+        [bootstrap]: new FileFsRef({ mode: 0o755, fsPath: bin }),
+      },
+      handler: bootstrap,
+      runtime,
+      ...lambdaOptions,
+    });
+  } else {
+    const handler = getExecutableName('executable');
+    const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
+    lambda = new Lambda({
+      files: {
+        ...extraFiles,
+        [handler]: executableFile,
+      },
+      handler,
+      runtime,
+      supportsResponseStreaming: true,
+      ...lambdaOptions,
+    });
+  }
   lambda.zipBuffer = await lambda.createZip();
 
   if (isBundledRoute()) {
@@ -168,7 +182,7 @@ function isBundledRoute(): boolean {
   return false;
 }
 
-export const startDevServer: StartDevServer = async opts => {
+export const devServer: StartDevServer = async opts => {
   const { entrypoint, workPath, meta = {} } = opts;
 
   debug(`Starting dev server for executable runtime: ${entrypoint}`);
@@ -250,7 +264,7 @@ const runtime: Runtime = {
     }
     return cacheFiles;
   },
-  startDevServer,
+  startDevServer: devServer,
   shouldServe: async (options): Promise<boolean> => {
     debug(`Requested ${options.requestPath} for ${options.entrypoint}`);
 
@@ -262,4 +276,5 @@ const runtime: Runtime = {
   },
 };
 
-export const { version, build, prepareCache, shouldServe } = runtime;
+export const { version, build, prepareCache, startDevServer, shouldServe } =
+  runtime;
