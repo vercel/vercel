@@ -18,6 +18,7 @@ import {
 import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
 import type { CLIProcess } from './helpers/types';
+import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -822,7 +823,7 @@ test('deploys with only vercel.json and README.md', async () => {
 
   // assert timing order of showing URLs vs status updates
   // Preview URL appears twice: once with loading emoji, then again with success emoji
-  expect(stderr).toMatch(
+  expect(stripAnsi(stderr)).toMatch(
     /Inspect.*\nPreview.*\nQueued.*\nBuilding.*\nPreview.*\nCompleting/
   );
 
