@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
 import {
   FileFsRef,
   debug,
@@ -10,7 +9,6 @@ import {
   type BuildOptions,
   type BuildResultV2Typical,
   getLambdaOptionsFromFunction,
-  StartDevServer,
 } from '@vercel/build-utils';
 import execa from 'execa';
 import { installRustToolchain } from './lib/rust-toolchain';
@@ -28,12 +26,7 @@ import {
   runUserScripts,
 } from './lib/utils';
 import { generateRoutes, parseRoute } from './lib/routes';
-import { buildExecutableForDev } from './lib/dev-build';
-import {
-  waitForServerStart,
-  waitForProcessExit,
-  createDevServerEnv,
-} from './lib/dev-server';
+import { startDevServer as devServer } from './start-dev-server';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 
@@ -126,34 +119,20 @@ async function buildHandler(
     config,
   });
 
-  let lambda: Lambda;
-  const runtime = meta?.isDev ? 'provided' : 'executable';
+  // const runtime = meta?.isDev ? 'provided' : 'executable';
 
-  if (meta?.isDev) {
-    const bootstrap = getExecutableName('bootstrap');
-    lambda = new Lambda({
-      files: {
-        ...extraFiles,
-        [bootstrap]: new FileFsRef({ mode: 0o755, fsPath: bin }),
-      },
-      handler: bootstrap,
-      runtime,
-      ...lambdaOptions,
-    });
-  } else {
-    const handler = getExecutableName('executable');
-    const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
-    lambda = new Lambda({
-      files: {
-        ...extraFiles,
-        [handler]: executableFile,
-      },
-      handler,
-      runtime,
-      supportsResponseStreaming: true,
-      ...lambdaOptions,
-    });
-  }
+  const handler = getExecutableName('executable');
+  const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
+  const lambda = new Lambda({
+    files: {
+      ...extraFiles,
+      [handler]: executableFile,
+    },
+    handler,
+    runtime: 'provided',
+    supportsResponseStreaming: true,
+    ...lambdaOptions,
+  });
   lambda.zipBuffer = await lambda.createZip();
 
   if (isBundledRoute()) {
@@ -195,66 +174,6 @@ function isBundledRoute(): boolean {
   return false;
 }
 
-export const devServer: StartDevServer = async opts => {
-  const { entrypoint, workPath, meta = {} } = opts;
-
-  debug(`Starting dev server for executable runtime: ${entrypoint}`);
-
-  try {
-    // Install Rust toolchain if needed
-    await installRustToolchain();
-
-    // Build the executable for development
-    const executablePath = await buildExecutableForDev(workPath, entrypoint);
-
-    debug(`Starting executable dev server: ${executablePath}`);
-
-    // Create development environment
-    const devEnv = createDevServerEnv(process.env, meta);
-
-    // Start the executable as a dev server
-    const child = spawn(executablePath, [], {
-      cwd: workPath,
-      env: devEnv,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    if (!child.pid) {
-      throw new Error('Failed to start dev server process');
-    }
-
-    debug(`Dev server process started with PID: ${child.pid}`);
-
-    // Wait for the server to start and get the port
-    const port = await waitForServerStart(child);
-
-    debug(`Dev server listening on port ${port}`);
-
-    // Return dev server info
-    return {
-      port,
-      pid: child.pid,
-      shutdown: async () => {
-        debug(`Shutting down dev server (PID: ${child.pid})`);
-
-        // Send SIGTERM for graceful shutdown
-        child.kill('SIGTERM');
-
-        // Wait for process to exit
-        await waitForProcessExit(child);
-
-        debug('Dev server shutdown complete');
-      },
-    };
-  } catch (error) {
-    debug(`Failed to start dev server: ${error}`);
-
-    // Return null to indicate dev server couldn't be started
-    // This will cause vercel dev to fall back to build-and-invoke mode
-    return null;
-  }
-};
-
 // Reference -  https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#runtime-developer-reference
 const runtime: Runtime = {
   version: 2,
@@ -289,5 +208,5 @@ const runtime: Runtime = {
   },
 };
 
-export const { version, build, prepareCache, startDevServer, shouldServe } =
-  runtime;
+export const { version, build, prepareCache, shouldServe } = runtime;
+export const { startDevServer } = runtime;
