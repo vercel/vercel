@@ -6,7 +6,7 @@
  * for multiple instances of this file to be running at the same time leading
  * to a race condition where the most recent instance will overwrite the
  * previous cache file resetting the `notified` flag and cause the update
- * notification to appear for multiple consequetive commands. Not the end of
+ * notification to appear for multiple consecutive commands. Not the end of
  * the world, but something to be aware of.
  *
  * IMPORTANT! This file must NOT depend on any 3rd party dependencies. This
