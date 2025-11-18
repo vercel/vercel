@@ -605,6 +605,22 @@ describe('curl', () => {
 });
 
 describe('getDeploymentUrlById', () => {
+  it('should accept a bare vercel.app host and return https origin', async () => {
+    const mockClient = {
+      fetch: vi.fn().mockResolvedValue({
+        url: 'should-not-be-used.vercel.app',
+      }),
+    } as any;
+
+    const result = await getDeploymentUrlById(
+      mockClient,
+      'my-app-abc123.vercel.app'
+    );
+
+    expect(result).toBe('https://my-app-abc123.vercel.app');
+    expect(mockClient.fetch).not.toHaveBeenCalled();
+  });
+
   it('should add dpl_ prefix when missing', async () => {
     const mockClient = {
       fetch: vi.fn().mockResolvedValue({
