@@ -23,6 +23,10 @@ export async function getDeploymentUrlById(
       }
     }
 
+    if (deploymentIdOrUrl.includes('vercel.app')) {
+      return `https://${deploymentIdOrUrl}`;
+    }
+
     let fullDeploymentId = deploymentIdOrUrl;
     if (!fullDeploymentId.startsWith('dpl_')) {
       fullDeploymentId = `dpl_${deploymentIdOrUrl}`;
