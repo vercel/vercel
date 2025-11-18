@@ -125,10 +125,21 @@ describe('getCache', () => {
     );
   });
 
-  test('should handle zero ttl correctly', async () => {
+  test('should not get entry with zero ttl', async () => {
     const cache = getCache();
     await cache.set('key', 'value', { ttl: 0 });
     const result = await cache.get('key');
+    expect(result).toBe(null);
+  });
+
+  test('should overwrite existing entry with zero ttl entry', async () => {
+    const cache = getCache();
+    await cache.set('key', 'initial-value');
+    let result = await cache.get('key');
+    expect(result).toBe('initial-value');
+
+    await cache.set('key', 'new-value', { ttl: 0 });
+    result = await cache.get('key');
     expect(result).toBe(null);
   });
 });
