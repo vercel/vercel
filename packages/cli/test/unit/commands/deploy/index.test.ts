@@ -1096,7 +1096,7 @@ describe('deploy', () => {
         ...Object.values({
           ...baseCreateDeployArgs,
           createArgs: expect.objectContaining({
-            withLogs: true,
+            withFullLogs: true,
           }),
         })
       );
