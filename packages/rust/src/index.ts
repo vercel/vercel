@@ -167,7 +167,7 @@ async function buildHandler(
 
   return {
     output: {
-      [entrypoint]: lambda,
+      [route.path]: lambda,
     },
     routes: [{ src: route.src, dest: route.dest }],
   };
