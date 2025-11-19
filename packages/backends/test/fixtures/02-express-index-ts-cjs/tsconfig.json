@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "types": ["bun-types"],
+    "types": ["node"],
     "strict": true,
     "skipLibCheck": true
   },

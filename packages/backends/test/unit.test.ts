@@ -33,7 +33,7 @@ const meta = { skipDownload: true };
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('08')
+    fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
@@ -57,7 +57,7 @@ describe('successful builds', async () => {
       await expect(
         extractAndExecuteCode(lambda, lambdaPath, fixtureName)
       ).resolves.toBeUndefined();
-    });
+    }, 10000);
   }
 
   // eslint-disable-next-line jest/no-disabled-tests
