@@ -14,9 +14,9 @@ export const startDevServer: StartDevServer = async opts => {
 
     debug(`Starting Rust executable dev server: ${executablePath}`);
 
-    // Create development environment (no IPC needed like Bun)
+    // Create development environment
     const devEnv = createDevServerEnv(process.env, meta);
-    // Start the executable as a dev server using spawn (like Bun)
+    // Start the executable as a dev server using spawn
     const child = spawn(executablePath, [], {
       cwd: workPath,
       env: devEnv,
@@ -29,28 +29,18 @@ export const startDevServer: StartDevServer = async opts => {
 
     debug(`Dev server process started with PID: ${child.pid}`);
 
-    // Parse stdout to get the port (following Bun pattern)
+    // Parse stdout to get the port
     let buffer = '';
     let portEmitted = false;
 
     child.stdout?.on('data', data => {
-      console.log('[RUST DEV] Child stdout data received');
-
       const output = data.toString();
       buffer += output;
-
-      console.log(`[RUST DEV] Output: ${output.trim()}`);
-      console.log(`[RUST DEV] Buffer: ${buffer.trim()}`);
-
-      // Look for server ready patterns - similar to Bun's "Dev server listening:"
+      // Look for server ready patterns (emitted in `lib.rs`)
       if (!portEmitted && buffer.includes('Dev server listening:')) {
-        console.log('[RUST DEV] Found "Dev server listening:" pattern!');
         const portMatch = buffer.match(/Dev server listening: (\d+)/);
         if (portMatch) {
           const port = parseInt(portMatch[1], 10);
-          console.log(
-            `[RUST DEV] Detected port ${port}, emitting message event`
-          );
           debug(
             `Rust dev server detected port ${port}, emitting message event`
           );

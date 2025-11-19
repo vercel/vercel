@@ -274,14 +274,14 @@ where
 
 #[derive(Clone)]
 pub struct LogContext {
-    ipc_stream: Arc<Mutex<UnixStream>>,
+    ipc_stream: Option<Arc<Mutex<UnixStream>>>,
     invocation_id: Option<String>,
     request_id: Option<u64>,
 }
 
 impl LogContext {
     pub fn new(
-        ipc_stream: Arc<Mutex<UnixStream>>,
+        ipc_stream: Option<Arc<Mutex<UnixStream>>>,
         invocation_id: Option<String>,
         request_id: Option<u64>,
     ) -> Self {
@@ -309,11 +309,16 @@ impl LogContext {
     }
 
     fn log(&self, level: Level, msg: &str) {
-        if let (Some(inv_id), Some(req_id)) = (&self.invocation_id, &self.request_id) {
+        if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
+            (&self.ipc_stream, &self.invocation_id, &self.request_id)
+        {
             let log = LogMessage::with_level(inv_id.clone(), *req_id, msg, level);
-            send_message(&self.ipc_stream, log).unwrap_or_else(|e| {
+            send_message(ipc_stream, log).unwrap_or_else(|e| {
                 eprintln!("Failed to send log message: {}", e);
             });
+        } else {
+            // Fall back to regular println when IPC is not available
+            println!("{:?}: {}", level, msg);
         }
     }
 }
@@ -345,34 +350,51 @@ where
     H: Fn(AppState, hyper::Request<hyper::body::Incoming>) -> F + Send + Sync + 'static + Copy,
     F: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
 {
-    let ipc_path = env::var("VERCEL_IPC_PATH")?;
-    let ipc_stream = Arc::new(Mutex::new(UnixStream::connect(ipc_path)?));
+    let ipc_stream = match env::var("VERCEL_IPC_PATH") {
+        Ok(ipc_path) => match UnixStream::connect(ipc_path) {
+            Ok(stream) => Some(Arc::new(Mutex::new(stream))),
+            Err(e) => {
+                eprintln!(
+                    "Warning: Failed to connect to IPC stream: {}. Running without IPC support.",
+                    e
+                );
+                None
+            }
+        },
+        Err(_) => {
+            // No IPC available (dev mode like Bun)
+            None
+        }
+    };
 
     let port = 3000;
-
-    let start_message = StartMessage::new(0, port);
-    send_message(&ipc_stream, start_message)?;
-
-    let state = AppState::new(LogContext::new(Arc::clone(&ipc_stream), None, None));
-
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
+
+    // Send IPC start message
+    if let Some(ref ipc_stream) = ipc_stream {
+        let start_message = StartMessage::new(0, port);
+        send_message(ipc_stream, start_message)?;
+    } else {
+        // If we couldn't find an IPC stream, we are in `vercel dev` mode,
+        // Print to stdout for dev server to parse (see ./start-dev-server.ts)
+        println!("Dev server listening: {}", port);
+    };
 
     loop {
         let (stream, _) = listener.accept().await?;
 
         let io = TokioIo::new(stream);
-        let _state = state.clone();
-        let ipc_stream_clone = Arc::clone(&ipc_stream);
+        let ipc_stream_clone = ipc_stream.clone();
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
                 .serve_connection(
                     io,
                     service_fn(move |req| {
-                        let ipc_stream_clone = Arc::clone(&ipc_stream_clone);
+                        let ipc_stream_clone = ipc_stream_clone.clone();
 
-                        // Extract IPC info before calling handler
+                        // Extract information for IPC before calling handler
                         let invocation_id = req
                             .headers()
                             .get("x-vercel-internal-invocation-id")
@@ -392,7 +414,7 @@ where
                         ));
 
                         async move {
-                            let ipc_stream_for_end = Arc::clone(&app_state.log_context.ipc_stream);
+                            let ipc_stream_for_end = app_state.log_context.ipc_stream.clone();
 
                             if req.uri().path() == "/_vercel/ping" {
                                 let response = hyper::Response::builder()
@@ -416,13 +438,13 @@ where
                                 }
                             };
 
-                            if let (Some(inv_id), Some(req_id)) = (invocation_id, request_id) {
-                                let end_message = EndMessage::new(inv_id, req_id, None);
-                                send_message(&ipc_stream_for_end, end_message).unwrap_or_else(
-                                    |e| {
-                                        eprintln!("Failed to send end message: {}", e);
-                                    },
-                                );
+                            if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
+                                (&ipc_stream_for_end, &invocation_id, &request_id)
+                            {
+                                let end_message = EndMessage::new(inv_id.clone(), *req_id, None);
+                                send_message(ipc_stream, end_message).unwrap_or_else(|e| {
+                                    eprintln!("Failed to send end message: {}", e);
+                                });
                             }
 
                             Ok::<_, Infallible>(response)
