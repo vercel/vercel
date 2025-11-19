@@ -42,6 +42,14 @@ export async function compileVercelConfig(
 
   const hasVercelTs = existsSync(vercelTsPath);
 
+  if (hasVercelTs && hasNowJson) {
+    throw new ConflictingConfigFiles(
+      [vercelTsPath, nowJsonPath],
+      'Both vercel.ts and now.json exist in your project. Please use only one configuration method.',
+      'https://vercel.com/docs/projects/project-configuration'
+    );
+  }
+
   if (hasVercelTs && hasVercelJson) {
     throw new ConflictingConfigFiles(
       [vercelTsPath, vercelJsonPath],
