@@ -1,5 +1,11 @@
 # @vercel/cervel
 
+## 0.0.5
+
+### Patch Changes
+
+- Add more frameworks to entrypoint detection ([#14299](https://github.com/vercel/vercel/pull/14299))
+
 ## 0.0.4
 
 ### Patch Changes

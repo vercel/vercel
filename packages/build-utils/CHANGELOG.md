@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.0.2
+
+### Patch Changes
+
+- Improve warning messages surrounding Elysia ([#14272](https://github.com/vercel/vercel/pull/14272))
+
 ## 13.0.1
 
 ### Patch Changes
