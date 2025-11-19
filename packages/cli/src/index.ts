@@ -711,6 +711,10 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = require('./commands/microfrontends').default;
           break;
+        case 'open':
+          telemetry.trackCliCommandOpen(userSuppliedSubCommand);
+          func = require('./commands/open').default;
+          break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);
           func = require('./commands/project').default;

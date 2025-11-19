@@ -2,7 +2,14 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-const frameworks = ['express', 'hono'];
+const frameworks = [
+  'express',
+  'hono',
+  'elysia',
+  'fastify',
+  '@nestjs/core',
+  'h3',
+];
 
 const entrypointFilenames = ['app', 'index', 'server'];
 

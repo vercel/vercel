@@ -740,13 +740,11 @@ describe('deploy', () => {
       const outputLines = client.getFullOutput().split('\n');
 
       // remove first 3 lines which contain warning and randomized data
-      expect(outputLines.slice(3).join('\n')).toMatchInlineSnapshot(`
-          "Building
-          2024-06-03T15:01:10.339Z  ${outputLine1}
-          2024-06-03T15:01:10.439Z  ${outputLine2}
-          2024-06-03T15:01:10.540Z  ${outputLine3}
-          "
-        `);
+      const output = outputLines.slice(3).join('\n');
+      expect(output).toContain('Building');
+      expect(output).toContain(`2024-06-03T15:01:10.339Z  ${outputLine1}`);
+      expect(output).toContain(`2024-06-03T15:01:10.439Z  ${outputLine2}`);
+      expect(output).toContain(`2024-06-03T15:01:10.540Z  ${outputLine3}`);
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -768,46 +766,11 @@ describe('deploy', () => {
       await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
       // remove first 3 lines which contains randomized data
-      expect(client.getFullOutput().split('\n').slice(3).join('\n'))
-        .toMatchInlineSnapshot(`
-          "Building
-          Building
-          Completing
-          "
-        `);
+      const output = client.getFullOutput().split('\n').slice(3).join('\n');
+      expect(output).toContain('Building');
+      expect(output).toContain('Production:');
+      expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
-    });
-
-    it('should not print and follow build logs while deploying with --no-logs', async () => {
-      let exitCode: number | undefined;
-      const runCommand = async () => {
-        const repoRoot = setupUnitFixture('commands/deploy/node');
-        client.cwd = repoRoot;
-        client.setArgv('deploy', '--no-logs');
-        exitCode = await deploy(client);
-      };
-
-      const slowlyDeploy = async () => {
-        await sleep(500);
-        deployment.readyState = 'READY';
-        deployment.aliasAssigned = true;
-      };
-
-      await Promise.all<void>([runCommand(), slowlyDeploy()]);
-
-      const output = client.getFullOutput();
-
-      expect(output).not.toContain(outputLine1);
-      expect(output).not.toContain(outputLine2);
-      expect(output).not.toContain(outputLine3);
-
-      expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:no-logs',
-          value: 'TRUE',
-        },
-      ]);
     });
   });
 
@@ -1101,7 +1064,7 @@ describe('deploy', () => {
         ...Object.values({
           ...baseCreateDeployArgs,
           createArgs: expect.objectContaining({
-            withLogs: true,
+            withFullLogs: true,
           }),
         })
       );

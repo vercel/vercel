@@ -4,16 +4,37 @@ import type { Deployment } from '@vercel-internals/types';
 
 export async function getDeploymentUrlById(
   client: Client,
-  deploymentId: string
+  deploymentIdOrUrl: string,
+  accountId?: string
 ): Promise<string | null> {
   try {
-    let fullDeploymentId = deploymentId;
+    // Accept a full deployment URL directly
+    if (
+      deploymentIdOrUrl.startsWith('http://') ||
+      deploymentIdOrUrl.startsWith('https://')
+    ) {
+      try {
+        const url = new URL(deploymentIdOrUrl);
+        // Normalize to origin (scheme + host), ignore path/query/fragment
+        return url.origin;
+      } catch (err) {
+        output.debug(`Invalid deployment URL provided: ${deploymentIdOrUrl}`);
+        return null;
+      }
+    }
+
+    if (deploymentIdOrUrl.includes('vercel.app')) {
+      return `https://${deploymentIdOrUrl}`;
+    }
+
+    let fullDeploymentId = deploymentIdOrUrl;
     if (!fullDeploymentId.startsWith('dpl_')) {
-      fullDeploymentId = `dpl_${deploymentId}`;
+      fullDeploymentId = `dpl_${deploymentIdOrUrl}`;
     }
 
     const deployment = await client.fetch<Deployment>(
-      `/v13/deployments/${fullDeploymentId}`
+      `/v13/deployments/${fullDeploymentId}`,
+      { accountId }
     );
 
     if (!deployment || !deployment.url) {

@@ -1,5 +1,32 @@
 # @vercel/client
 
+## 17.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`2329dff0836e8699922eed7e70326511f93dd9f8`](https://github.com/vercel/vercel/commit/2329dff0836e8699922eed7e70326511f93dd9f8)]:
+  - @vercel/build-utils@13.0.2
+
+## 17.2.5
+
+### Patch Changes
+
+- Include `.vercel/routes.json` during `vc deploy` ([#14279](https://github.com/vercel/vercel/pull/14279))
+
+## 17.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`7faa102e3ff50f54921465ec56162120cb9146ff`](https://github.com/vercel/vercel/commit/7faa102e3ff50f54921465ec56162120cb9146ff)]:
+  - @vercel/routing-utils@5.2.2
+
+## 17.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`6221d3c49375450891d4bb1bba9e9702132f671b`](https://github.com/vercel/vercel/commit/6221d3c49375450891d4bb1bba9e9702132f671b)]:
+  - @vercel/build-utils@13.0.1
+
 ## 17.2.2
 
 ### Patch Changes
