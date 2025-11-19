@@ -61,12 +61,12 @@ export async function compileVercelConfig(
     };
   }
 
+  const tempOutPath = join(vercelDir, 'vercel-temp.js');
+
   try {
     const { build } = await import('esbuild');
 
     await mkdir(vercelDir, { recursive: true });
-
-    const tempOutPath = join(vercelDir, 'vercel-temp.js');
 
     await build({
       entryPoints: [vercelTsPath],
@@ -91,12 +91,6 @@ export async function compileVercelConfig(
 
     output.debug(`Compiled vercel.ts -> ${compiledConfigPath}`);
 
-    try {
-      await unlink(tempOutPath);
-    } catch (err) {
-      output.debug(`Failed to cleanup temp file: ${err}`);
-    }
-
     return {
       configPath: compiledConfigPath,
       wasCompiled: true,
@@ -107,6 +101,14 @@ export async function compileVercelConfig(
       message: `Failed to compile vercel.ts: ${error.message}`,
       link: 'https://vercel.com/docs/projects/project-configuration',
     });
+  } finally {
+    try {
+      await unlink(tempOutPath);
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') {
+        output.debug(`Failed to cleanup temp file: ${err}`);
+      }
+    }
   }
 }
 
