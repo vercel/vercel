@@ -9,6 +9,7 @@ import type Client from '../util/client';
 import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
 import output from '../output-manager';
+import stripAnsi from 'strip-ansi';
 
 type Printer = (l: string) => void;
 
@@ -218,9 +219,10 @@ function printBuildLog(log: BuildLog, print: Printer) {
   if (!log.created) return; // ignore keepalive which are the only logs without a creation date.
 
   const date = new Date(log.created).toISOString();
+  const cleanText = parseLogLines(log).join('\n');
 
-  for (const line of colorize(sanitize(log), log).split('\n')) {
-    print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
+  for (const line of colorize(cleanText, log).split('\n')) {
+    print(`${chalk.dim(date)}  ${line}\n`);
   }
 }
 
@@ -290,15 +292,16 @@ function getSourceIcon(source: string) {
 }
 
 function sanitize(log: BuildLog): string {
-  return (
-    (log.text || '')
-      .replace(/\n$/, '')
-      .replace(/^\n/, '')
-      // eslint-disable-next-line no-control-regex
-      .replace(/\x1b\[1000D/g, '')
-      .replace(/\x1b\[0K/g, '')
-      .replace(/\x1b\[1A/g, '')
-  );
+  return stripAnsi(log.text || '')
+    .replace(/\n$/, '')
+    .replace(/^\n/, '');
+}
+
+export function parseLogLines(log: BuildLog): string[] {
+  const text = sanitize(log);
+  return text
+    .split('\n')
+    .map(line => line.replace('[now-builder-debug] ', '').trim());
 }
 
 function colorize(text: string, log: BuildLog): string {
