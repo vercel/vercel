@@ -1,6 +1,5 @@
 import fs from 'fs';
 import { join, dirname, delimiter as pathDelimiter } from 'path';
-import execa from 'execa';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
 import { getUvBinaryOrInstall } from './install';
 
@@ -78,29 +77,9 @@ export async function runPyprojectScript(
     const uvDir = dirname(uvPath);
     finalEnv.PATH = `${uvDir}${pathDelimiter}${finalEnv.PATH || ''}`;
 
-    // If the script already starts with "uv", execute it directly via the shell.
-    if (/^\s*uv(\s|$)/i.test(scriptCommand)) {
-      console.log(`Executing: ${scriptCommand}`);
-      await execCommand(scriptCommand, {
-        cwd: workPath,
-        env: finalEnv,
-      });
-      return true;
-    }
-
-    // Otherwise, run the command within `uv run` using the OS shell to preserve quoting.
-    const args =
-      process.platform === 'win32'
-        ? ['run', 'cmd', '/d', '/s', '/c', scriptCommand]
-        : ['run', 'sh', '-lc', scriptCommand];
-    console.log(
-      `Executing: ${uvPath} ${args
-        .map(a => (/\s/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
-        .join(' ')}`
-    );
-    await execa(uvPath, args, {
+    console.log(`Executing: ${scriptCommand}`);
+    await execCommand(scriptCommand, {
       cwd: workPath,
-      stdio: 'inherit',
       env: finalEnv,
     });
     return true;
