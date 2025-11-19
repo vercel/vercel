@@ -46,7 +46,10 @@ export const build: BuildV2 = async args => {
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: true,
-    framework,
+    framework: {
+      slug: framework?.slug ?? '',
+      version: framework?.version ?? '',
+    },
     awsLambdaHandler: '',
   });
 
