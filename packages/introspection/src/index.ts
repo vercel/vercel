@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, isAbsolute, join, relative } from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
@@ -18,13 +18,31 @@ export const introspectApp = async (args: {
   const esmLoaderPath = new URL('loaders/esm.mjs', import.meta.url).href;
   const handlerPath = join(args.dir, args.handler);
 
-  let introspectionResult: {
-    frameworkSlug: string;
-    routes: { src: string; dest: string; methods: string[] }[];
-  } = {
-    frameworkSlug: '',
-    routes: [],
-  };
+  let introspectionData: string | null = null;
+  const introspectionSchema = z.object({
+    frameworkSlug: z.string().optional(),
+    routes: z.array(
+      z.object({
+        src: z.string(),
+        dest: z.string(),
+        methods: z.array(z.string()),
+      })
+    ),
+    additionalFolders: z
+      .array(z.string())
+      .optional()
+      .transform(values => {
+        // if is absolute, make relative to dir
+        return values?.map(val => {
+          if (isAbsolute(val)) {
+            return relative(args.dir, val);
+          }
+          // else, assume relative to dir
+          return val;
+        });
+      }),
+    additionalDeps: z.array(z.string()).optional(),
+  });
 
   await new Promise(resolvePromise => {
     try {
@@ -34,6 +52,7 @@ export const introspectApp = async (args: {
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
+          // stdio: 'inherit',
           cwd: args.dir,
           env: {
             ...process.env,
@@ -44,18 +63,7 @@ export const introspectApp = async (args: {
 
       child.stdout?.on('data', data => {
         try {
-          const introspection = JSON.parse(data.toString());
-          const introspectionSchema = z.object({
-            frameworkSlug: z.string(),
-            routes: z.array(
-              z.object({
-                src: z.string(),
-                dest: z.string(),
-                methods: z.array(z.string()),
-              })
-            ),
-          });
-          introspectionResult = introspectionSchema.parse(introspection);
+          introspectionData = data.toString();
         } catch (error) {
           // Ignore errors
         }
@@ -84,13 +92,33 @@ export const introspectApp = async (args: {
       resolvePromise(undefined);
     }
   });
+  const introspectionResult = introspectionSchema.safeParse(
+    JSON.parse(introspectionData || '{}')
+  );
+  if (!introspectionResult.success) {
+    return {
+      routes: [
+        {
+          handle: 'filesystem',
+        },
+        {
+          src: '/(.*)',
+          dest: '/',
+        },
+      ],
+      framework: {
+        slug: '',
+        version: '',
+      },
+    };
+  }
 
   // For now, return empty routes
   const routes = [
     {
       handle: 'filesystem',
     },
-    ...introspectionResult.routes,
+    ...introspectionResult.data.routes,
     {
       src: '/(.*)',
       dest: '/',
@@ -98,10 +126,10 @@ export const introspectApp = async (args: {
   ];
 
   let version: string | undefined;
-  if (introspectionResult.frameworkSlug) {
+  if (introspectionResult.data.frameworkSlug) {
     // Resolve to package.json specifically
     const frameworkLibPath = require.resolve(
-      `${introspectionResult.frameworkSlug}`,
+      `${introspectionResult.data.frameworkSlug}`,
       {
         paths: [args.dir],
       }
@@ -127,8 +155,10 @@ export const introspectApp = async (args: {
   return {
     routes,
     framework: {
-      slug: introspectionResult.frameworkSlug,
+      slug: introspectionResult.data.frameworkSlug,
       version,
     },
+    additionalFolders: introspectionResult.data.additionalFolders ?? [],
+    additionalDeps: introspectionResult.data.additionalDeps ?? [],
   };
 };
