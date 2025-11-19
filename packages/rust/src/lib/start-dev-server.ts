@@ -12,9 +12,7 @@ export const startDevServer: StartDevServer = async opts => {
     await installRustToolchain();
     const executablePath = await buildExecutableForDev(workPath, entrypoint);
 
-    debug(`Starting Rust executable dev server: ${executablePath}`);
-
-    // Create development environment
+    debug(`Starting Rust dev server: ${executablePath}`);
     const devEnv = createDevServerEnv(process.env, meta);
     // Start the executable as a dev server using spawn
     const child = spawn(executablePath, [], {
