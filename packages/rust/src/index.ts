@@ -26,7 +26,7 @@ import {
   runUserScripts,
 } from './lib/utils';
 
-import { startDevServer as rustStartDevServer } from './start-dev-server';
+import { startDevServer as rustStartDevServer } from './lib/start-dev-server';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 
@@ -61,9 +61,8 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   });
 
   const binaryName = findBinaryName(cargoWorkspace, entryPath);
-  const cargoBuildConfiguration = await findCargoBuildConfiguration(
-    cargoWorkspace
-  );
+  const cargoBuildConfiguration =
+    await findCargoBuildConfiguration(cargoWorkspace);
 
   const buildVariant = BUILDER_DEBUG || meta?.isDev ? 'debug' : 'release';
   const buildTarget = cargoBuildConfiguration?.build.target ?? '';
@@ -78,16 +77,16 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
     // We cross-compile it for linux x86_64 using `zigbuild`
     const args = crossCompilationEnabled
       ? [
-        'zigbuild',
-        '--target',
-        'x86_64-unknown-linux-gnu',
-        '--bin',
-        binaryName,
-      ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
+          'zigbuild',
+          '--target',
+          'x86_64-unknown-linux-gnu',
+          '--bin',
+          binaryName,
+        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
       : ['build', '--bin', binaryName].concat(
-        BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
-        meta?.isDev ? [] : ['--release']
-      );
+          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
+          meta?.isDev ? [] : ['--release']
+        );
     await execa('cargo', args);
   } catch (err) {
     debug(`Running \`cargo build\` for \`${binaryName}\` failed`);
