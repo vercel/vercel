@@ -50,7 +50,7 @@ export interface CreateOptions {
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
   noWait?: boolean;
-  withLogs?: boolean;
+  withFullLogs?: boolean;
   autoAssignCustomDomains?: boolean;
 }
 
@@ -125,7 +125,7 @@ export default class Now {
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
-      withLogs,
+      withFullLogs,
       autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
@@ -174,7 +174,7 @@ export default class Now {
       vercelOutputDir,
       rootDirectory,
       noWait,
-      withLogs,
+      withFullLogs,
     });
 
     if (deployment && deployment.warnings) {
