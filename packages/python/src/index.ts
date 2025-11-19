@@ -273,6 +273,31 @@ export const build: BuildV3 = async ({
     declaredPythonVersion,
   });
 
+  const pythonVersionFile = join(workPath, '.python-version');
+  if (fs.existsSync(pythonVersionFile)) {
+    try {
+      const versionContent = await readFile(pythonVersionFile, 'utf8');
+      const requestedVersion = versionContent.trim();
+      if (
+        requestedVersion &&
+        !requestedVersion.startsWith(pythonVersion.version)
+      ) {
+        console.warn(
+          `Warning: .python-version file specifies "${requestedVersion}", but the project is configured to run with Python ${pythonVersion.version}. ` +
+            `Ignoring .python-version to prevent version mismatch during build.`
+        );
+        await fs.promises.rename(pythonVersionFile, `${pythonVersionFile}.bak`);
+      } else if (requestedVersion) {
+        debug(
+          `Renaming .python-version to prevent uv from creating a virtual environment (matches runtime version ${pythonVersion.version}).`
+        );
+        await fs.promises.rename(pythonVersionFile, `${pythonVersionFile}.bak`);
+      }
+    } catch (err) {
+      debug('Failed to check or rename .python-version', err);
+    }
+  }
+
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
