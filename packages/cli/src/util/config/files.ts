@@ -1,4 +1,4 @@
-import { join, basename } from 'path';
+import { join, basename, sep } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
@@ -138,6 +138,7 @@ export function readLocalConfig(
     return;
   }
 
-  config[fileNameSymbol] = basename(target);
+  const isCompiledConfig = target.includes(`${sep}.vercel${sep}vercel.json`);
+  config[fileNameSymbol] = isCompiledConfig ? 'vercel.ts' : basename(target);
   return config;
 }
