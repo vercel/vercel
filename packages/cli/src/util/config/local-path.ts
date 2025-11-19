@@ -4,6 +4,7 @@ import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
 import getArgs from '../../util/get-args';
 import { VERCEL_DIR } from '../projects/link';
+import { isVercelTsEnabled } from '../is-vercel-ts-enabled';
 
 export default function getLocalPathConfig(prefix: string) {
   const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
@@ -17,23 +18,26 @@ export default function getLocalPathConfig(prefix: string) {
     return path.resolve(prefix, customPath);
   }
 
-  // Otherwise check for compiled vercel.ts, then `vercel.json` or `now.json`.
-  // Throw an error if both JSON configs exist.
-  const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
+  // Otherwise check for either `vercel.json` or `now.json`.
+  // Throw an error if both exist.
   const vercelConfigPath = path.join(prefix, 'vercel.json');
   const nowConfigPath = path.join(prefix, 'now.json');
 
-  const compiledConfigExists = existsSync(compiledConfigPath);
   const vercelConfigExists = existsSync(vercelConfigPath);
   const nowConfigExists = existsSync(nowConfigPath);
 
-  if (vercelConfigExists && nowConfigExists) {
+  if (nowConfigExists && vercelConfigExists) {
     throw new ConflictingConfigFiles([vercelConfigPath, nowConfigPath]);
   }
 
-  // If vercel.ts was compiled, use that
-  if (compiledConfigExists) {
-    return compiledConfigPath;
+  // If feature flag is enabled, check for compiled vercel.ts first
+  if (isVercelTsEnabled()) {
+    const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
+    const compiledConfigExists = existsSync(compiledConfigPath);
+
+    if (compiledConfigExists) {
+      return compiledConfigPath;
+    }
   }
 
   if (vercelConfigExists) {

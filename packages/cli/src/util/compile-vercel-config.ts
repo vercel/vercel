@@ -5,6 +5,7 @@ import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
+import { isVercelTsEnabled } from './is-vercel-ts-enabled';
 
 export interface CompileConfigResult {
   configPath: string | null;
@@ -14,15 +15,33 @@ export interface CompileConfigResult {
 export async function compileVercelConfig(
   workPath: string
 ): Promise<CompileConfigResult> {
-  const vercelTsPath = join(workPath, 'vercel.ts');
   const vercelJsonPath = join(workPath, 'vercel.json');
   const nowJsonPath = join(workPath, 'now.json');
+  const hasVercelJson = existsSync(vercelJsonPath);
+  const hasNowJson = existsSync(nowJsonPath);
+
+  // Check for conflicting vercel.json and now.json
+  if (hasVercelJson && hasNowJson) {
+    throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
+  }
+
+  // Only check for vercel.ts if feature flag is enabled
+  if (!isVercelTsEnabled()) {
+    return {
+      configPath: hasVercelJson
+        ? vercelJsonPath
+        : hasNowJson
+          ? nowJsonPath
+          : null,
+      wasCompiled: false,
+    };
+  }
+
+  const vercelTsPath = join(workPath, 'vercel.ts');
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
   const hasVercelTs = existsSync(vercelTsPath);
-  const hasVercelJson = existsSync(vercelJsonPath);
-  const hasNowJson = existsSync(nowJsonPath);
 
   if (hasVercelTs && hasVercelJson) {
     throw new NowBuildError({
@@ -31,10 +50,6 @@ export async function compileVercelConfig(
         'Both vercel.ts and vercel.json exist in your project. Please use only one configuration method.',
       link: 'https://vercel.com/docs/projects/project-configuration',
     });
-  }
-
-  if (hasVercelJson && hasNowJson) {
-    throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
   }
 
   if (!hasVercelTs) {

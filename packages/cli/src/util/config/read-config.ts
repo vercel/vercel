@@ -3,11 +3,18 @@ import readJSONFile from '../read-json-file';
 import type { VercelConfig } from '../dev/types';
 import getLocalConfigPath from './local-path';
 import { compileVercelConfig } from '../compile-vercel-config';
+import { isVercelTsEnabled } from '../is-vercel-ts-enabled';
 
 export default async function readConfig(dir: string) {
-  const compileResult = await compileVercelConfig(dir);
+  let pkgFilePath: string;
 
-  const pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+  if (isVercelTsEnabled()) {
+    const compileResult = await compileVercelConfig(dir);
+    pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+  } else {
+    pkgFilePath = getLocalConfigPath(dir);
+  }
+
   const result = await readJSONFile<VercelConfig>(pkgFilePath);
 
   if (result instanceof CantParseJSONFile) {
