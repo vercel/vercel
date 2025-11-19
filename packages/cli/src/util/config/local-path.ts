@@ -4,7 +4,6 @@ import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
 import getArgs from '../../util/get-args';
 import { VERCEL_DIR } from '../projects/link';
-import { isVercelTsEnabled } from '../is-vercel-ts-enabled';
 
 export default function getLocalPathConfig(prefix: string) {
   const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
@@ -31,7 +30,7 @@ export default function getLocalPathConfig(prefix: string) {
   }
 
   // If feature flag is enabled, check for compiled vercel.ts first
-  if (isVercelTsEnabled()) {
+  if (process.env.VERCEL_TS_CONFIG_ENABLED) {
     const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
     const compiledConfigExists = existsSync(compiledConfigPath);
 

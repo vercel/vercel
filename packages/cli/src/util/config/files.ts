@@ -10,7 +10,6 @@ import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import { isVercelTsEnabled } from '../is-vercel-ts-enabled';
 import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
 
 import output from '../../output-manager';
@@ -142,7 +141,7 @@ export function readLocalConfig(
 
   // If reading from .vercel/vercel.json (compiled vercel.ts), set symbol to 'vercel.ts'
   const isCompiledConfig =
-    isVercelTsEnabled() &&
+    process.env.VERCEL_TS_CONFIG_ENABLED &&
     basename(target) === 'vercel.json' &&
     basename(dirname(target)) === PROJECT_VERCEL_DIR;
   config[fileNameSymbol] = isCompiledConfig ? 'vercel.ts' : basename(target);

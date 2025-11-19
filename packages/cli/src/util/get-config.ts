@@ -12,7 +12,6 @@ import type { VercelConfig } from './dev/types';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../output-manager';
 import { compileVercelConfig } from './compile-vercel-config';
-import { isVercelTsEnabled } from './is-vercel-ts-enabled';
 
 let config: VercelConfig;
 
@@ -55,7 +54,7 @@ export default async function getConfig(
   }
 
   // Then try with `vercel.ts`, `vercel.json` or `now.json` in the same directory
-  if (isVercelTsEnabled()) {
+  if (process.env.VERCEL_TS_CONFIG_ENABLED) {
     const compileResult = await compileVercelConfig(localPath);
 
     if (compileResult.configPath) {

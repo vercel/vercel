@@ -5,7 +5,6 @@ import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
-import { isVercelTsEnabled } from './is-vercel-ts-enabled';
 
 export interface CompileConfigResult {
   configPath: string | null;
@@ -26,7 +25,7 @@ export async function compileVercelConfig(
   }
 
   // Only check for vercel.ts if feature flag is enabled
-  if (!isVercelTsEnabled()) {
+  if (!process.env.VERCEL_TS_CONFIG_ENABLED) {
     return {
       configPath: hasVercelJson
         ? vercelJsonPath
