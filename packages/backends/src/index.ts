@@ -7,6 +7,7 @@ import {
   defaultCachePathGlob,
   glob,
   NodejsLambda,
+  debug,
   type PrepareCache,
   type BuildV2,
 } from '@vercel/build-utils';
@@ -20,6 +21,7 @@ export const build: BuildV2 = async args => {
 
   const { files } = await nodeFileTrace(args, downloadResult, outputConfig);
 
+  debug('Building route mapping..');
   const { routes, framework } = await introspectApp({
     ...outputConfig,
     env: {
@@ -27,6 +29,11 @@ export const build: BuildV2 = async args => {
       ...(args.meta?.buildEnv ?? {}),
     },
   });
+  if (routes.length > 2) {
+    debug(`Route mapping built successfully with ${routes.length} routes`);
+  } else {
+    debug(`Route mapping failed to detect routes`);
+  }
 
   const handler = relative(
     args.repoRootPath,
