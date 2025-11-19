@@ -2,4 +2,4 @@
 "@vercel/python": patch
 ---
 
-[python] patch: ignore .python-version
+[python] patch: build commands uv bugfix
