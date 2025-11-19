@@ -3,7 +3,6 @@ import { fileNameSymbol } from '@vercel/client';
 import {
   CantParseJSONFile,
   CantFindConfig,
-  ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
 } from './errors-ts';
 import humanizePath from './humanize-path';
@@ -11,6 +10,7 @@ import readJSONFile from './read-json-file';
 import type { VercelConfig } from './dev/types';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../output-manager';
+import { compileVercelConfig } from './compile-vercel-config';
 
 let config: VercelConfig;
 
@@ -52,35 +52,29 @@ export default async function getConfig(
     return config;
   }
 
-  // Then try with `vercel.json` or `now.json` in the same directory
-  const vercelFilePath = path.resolve(localPath, 'vercel.json');
-  const nowFilePath = path.resolve(localPath, 'now.json');
-  const [vercelConfig, nowConfig] = await Promise.all([
-    readJSONFile<VercelConfig>(vercelFilePath),
-    readJSONFile<VercelConfig>(nowFilePath),
-  ]);
-  if (vercelConfig instanceof CantParseJSONFile) {
-    return vercelConfig;
-  }
-  if (nowConfig instanceof CantParseJSONFile) {
-    return nowConfig;
-  }
-  if (vercelConfig && nowConfig) {
-    return new ConflictingConfigFiles([vercelFilePath, nowFilePath]);
-  }
-  if (vercelConfig !== null) {
-    output.debug(`Found config in file "${vercelFilePath}"`);
-    config = vercelConfig;
-    config[fileNameSymbol] = 'vercel.json';
-    return config;
-  }
-  if (nowConfig !== null) {
-    output.debug(`Found config in file "${nowFilePath}"`);
-    config = nowConfig;
-    config[fileNameSymbol] = 'now.json';
-    return config;
+  // Then try with `vercel.ts`, `vercel.json` or `now.json` in the same directory
+  const compileResult = await compileVercelConfig(localPath);
+
+  if (compileResult.configPath) {
+    const localConfig = await readJSONFile<VercelConfig>(
+      compileResult.configPath
+    );
+    if (localConfig instanceof CantParseJSONFile) {
+      return localConfig;
+    }
+    if (localConfig !== null) {
+      const fileName = path.basename(compileResult.configPath);
+      output.debug(`Found config in file "${compileResult.configPath}"`);
+      config = localConfig;
+      config[fileNameSymbol] = compileResult.wasCompiled
+        ? 'vercel.ts'
+        : fileName;
+      return config;
+    }
   }
 
   // If we couldn't find the config anywhere return error
+  const vercelFilePath = path.resolve(localPath, 'vercel.json');
+  const nowFilePath = path.resolve(localPath, 'now.json');
   return new CantFindConfig([vercelFilePath, nowFilePath].map(humanizePath));
 }
