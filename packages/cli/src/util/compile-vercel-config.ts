@@ -4,6 +4,7 @@ import { join } from 'path';
 import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
+import { ConflictingConfigFiles } from './errors-ts';
 
 export interface CompileConfigResult {
   configPath: string | null;
@@ -15,11 +16,13 @@ export async function compileVercelConfig(
 ): Promise<CompileConfigResult> {
   const vercelTsPath = join(workPath, 'vercel.ts');
   const vercelJsonPath = join(workPath, 'vercel.json');
+  const nowJsonPath = join(workPath, 'now.json');
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
   const hasVercelTs = existsSync(vercelTsPath);
   const hasVercelJson = existsSync(vercelJsonPath);
+  const hasNowJson = existsSync(nowJsonPath);
 
   if (hasVercelTs && hasVercelJson) {
     throw new NowBuildError({
@@ -30,9 +33,17 @@ export async function compileVercelConfig(
     });
   }
 
+  if (hasVercelJson && hasNowJson) {
+    throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
+  }
+
   if (!hasVercelTs) {
     return {
-      configPath: hasVercelJson ? vercelJsonPath : null,
+      configPath: hasVercelJson
+        ? vercelJsonPath
+        : hasNowJson
+          ? nowJsonPath
+          : null,
       wasCompiled: false,
     };
   }
