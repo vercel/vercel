@@ -77,8 +77,9 @@ export async function compileVercelConfig(
       platform: 'node',
       format: 'cjs',
       outfile: tempOutPath,
-      external: ['@vercel/router-sdk'],
-      target: 'node14',
+      packages: 'external',
+      target: 'node18',
+      sourcemap: 'inline',
     });
 
     delete require.cache[require.resolve(tempOutPath)];
