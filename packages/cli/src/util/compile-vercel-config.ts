@@ -61,8 +61,6 @@ export async function compileVercelConfig(
     };
   }
 
-  output.debug(`Compiling vercel.ts to ${compiledConfigPath}`);
-
   try {
     const { build } = await import('esbuild');
 
