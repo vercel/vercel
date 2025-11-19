@@ -1,6 +1,6 @@
 import type {
   BuildOptions,
-  BuildResultV2Typical,
+  BuildResultV3,
   Files,
   PrepareCacheOptions,
   ShouldServeOptions,

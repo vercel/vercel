@@ -7,7 +7,7 @@ import {
   glob,
   Lambda,
   type BuildOptions,
-  type BuildResultV2Typical,
+  type BuildResultV3,
   getLambdaOptionsFromFunction,
 } from '@vercel/build-utils';
 import execa from 'execa';
@@ -25,14 +25,12 @@ import {
   gatherExtraFiles,
   runUserScripts,
 } from './lib/utils';
-import { generateRoutes, parseRoute } from './lib/routes';
-import { startDevServer as devServer } from './start-dev-server';
+
+import { startDevServer as rustStartDevServer } from './start-dev-server';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 
-async function buildHandler(
-  options: BuildOptions
-): Promise<BuildResultV2Typical> {
+async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   const BUILDER_DEBUG = Boolean(process.env.VERCEL_BUILDER_DEBUG ?? false);
   const isVercelBuild = Boolean(process.env.VERCEL_BUILD_IMAGE ?? false);
 
@@ -63,8 +61,9 @@ async function buildHandler(
   });
 
   const binaryName = findBinaryName(cargoWorkspace, entryPath);
-  const cargoBuildConfiguration =
-    await findCargoBuildConfiguration(cargoWorkspace);
+  const cargoBuildConfiguration = await findCargoBuildConfiguration(
+    cargoWorkspace
+  );
 
   const buildVariant = BUILDER_DEBUG || meta?.isDev ? 'debug' : 'release';
   const buildTarget = cargoBuildConfiguration?.build.target ?? '';
@@ -79,16 +78,16 @@ async function buildHandler(
     // We cross-compile it for linux x86_64 using `zigbuild`
     const args = crossCompilationEnabled
       ? [
-          'zigbuild',
-          '--target',
-          'x86_64-unknown-linux-gnu',
-          '--bin',
-          binaryName,
-        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
+        'zigbuild',
+        '--target',
+        'x86_64-unknown-linux-gnu',
+        '--bin',
+        binaryName,
+      ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
       : ['build', '--bin', binaryName].concat(
-          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
-          meta?.isDev ? [] : ['--release']
-        );
+        BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
+        meta?.isDev ? [] : ['--release']
+      );
     await execa('cargo', args);
   } catch (err) {
     debug(`Running \`cargo build\` for \`${binaryName}\` failed`);
@@ -119,8 +118,6 @@ async function buildHandler(
     config,
   });
 
-  // const runtime = meta?.isDev ? 'provided' : 'executable';
-
   const handler = getExecutableName('executable');
   const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
   const lambda = new Lambda({
@@ -139,29 +136,15 @@ async function buildHandler(
     debug(
       `experimental \`route-bundling\` detected - generating single entrypoint`
     );
-    const handlerFiles = await glob('api/**/*.rs', workPath);
-    const handlerKeysWithoutMain = Object.keys(handlerFiles).filter(
-      filename => !filename.endsWith('/main.rs')
-    );
-    const routes = generateRoutes(handlerKeysWithoutMain);
-
     return {
-      output: routes.reduce<Record<string, Lambda>>((acc, route) => {
-        acc[route.path] = lambda;
-        return acc;
-      }, {}),
-      routes: routes.map(({ src, dest }) => ({ src, dest })),
+      output: lambda,
     };
   }
 
   debug(`generating function for \`${entrypoint}\``);
-  const route = parseRoute(entrypoint);
 
   return {
-    output: {
-      [route.path]: lambda,
-    },
-    routes: [{ src: route.src, dest: route.dest }],
+    output: lambda,
   };
 }
 
@@ -176,7 +159,7 @@ function isBundledRoute(): boolean {
 
 // Reference -  https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#runtime-developer-reference
 const runtime: Runtime = {
-  version: 2,
+  version: 3,
   build: buildHandler,
   prepareCache: async ({ workPath }) => {
     debug(`Caching \`${workPath}\``);
@@ -196,17 +179,15 @@ const runtime: Runtime = {
     }
     return cacheFiles;
   },
-  startDevServer: devServer,
+  startDevServer: rustStartDevServer,
   shouldServe: async (options): Promise<boolean> => {
     debug(`Requested ${options.requestPath} for ${options.entrypoint}`);
-
     if (isBundledRoute()) {
       return Promise.resolve(options.entrypoint === 'api/main');
     }
-
     return Promise.resolve(options.requestPath === options.entrypoint);
   },
 };
 
-export const { version, build, prepareCache, shouldServe } = runtime;
-export const { startDevServer } = runtime;
+export const { version, build, prepareCache, startDevServer, shouldServe } =
+  runtime;
