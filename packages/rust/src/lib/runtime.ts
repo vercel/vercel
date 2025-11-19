@@ -10,10 +10,10 @@ import type {
 
 export interface Runtime {
   version: number;
-  build: (options: BuildOptions) => Promise<BuildResultV2Typical>;
-  prepareCache?: (options: PrepareCacheOptions) => Promise<Files>;
-  shouldServe?: (options: ShouldServeOptions) => Promise<boolean>;
-  startDevServer?: (
+  build: (options: BuildOptions) => Promise<BuildResultV3>;
+  prepareCache: (options: PrepareCacheOptions) => Promise<Files> | undefined;
+  shouldServe: (options: ShouldServeOptions) => Promise<boolean> | undefined;
+  startDevServer: (
     options: StartDevServerOptions
-  ) => Promise<StartDevServerResult>;
+  ) => Promise<StartDevServerResult> | undefined;
 }
