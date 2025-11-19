@@ -435,7 +435,7 @@ importers:
         specifier: 0.1.4
         version: link:../elysia
       '@vercel/express':
-        specifier: 0.1.7
+        specifier: 0.1.8
         version: link:../express
       '@vercel/fastify':
         specifier: 0.1.7
@@ -616,7 +616,7 @@ importers:
         specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 17.2.4
+        specifier: 17.2.5
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
