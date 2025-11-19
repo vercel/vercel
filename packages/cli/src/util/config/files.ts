@@ -1,4 +1,4 @@
-import { join, basename } from 'path';
+import { join, basename, dirname } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
@@ -10,6 +10,7 @@ import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
+import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
 
 import output from '../../output-manager';
 
@@ -138,6 +139,11 @@ export function readLocalConfig(
     return;
   }
 
-  config[fileNameSymbol] = basename(target);
+  // If reading from .vercel/vercel.json (compiled vercel.ts), set symbol to 'vercel.ts'
+  const isCompiledConfig =
+    process.env.VERCEL_TS_CONFIG_ENABLED &&
+    basename(target) === 'vercel.json' &&
+    basename(dirname(target)) === PROJECT_VERCEL_DIR;
+  config[fileNameSymbol] = isCompiledConfig ? 'vercel.ts' : basename(target);
   return config;
 }
