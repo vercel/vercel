@@ -1,7 +1,6 @@
 import fs from 'fs';
-import { join, dirname, delimiter as pathDelimiter } from 'path';
+import { join, delimiter as pathDelimiter } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
-import { getUvBinaryOrInstall } from './install';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
@@ -65,18 +64,13 @@ export async function runPyprojectScript(
   const scriptToRun = candidates.find(name => Boolean(scripts[name]));
   if (!scriptToRun) return false;
 
-  // Use the Python from the virtualenv if present to resolve uv, else system python
+  // Use the Python from the virtualenv if present to resolve tooling, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
   const finalEnv = { ...process.env, ...env };
-  const { pythonCmd } = useVirtualEnv(workPath, finalEnv, systemPython);
-  const uvPath = await getUvBinaryOrInstall(pythonCmd);
+  useVirtualEnv(workPath, finalEnv, systemPython);
 
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
-    // Ensure our resolved uv is discoverable when the script uses `uv ...`
-    const uvDir = dirname(uvPath);
-    finalEnv.PATH = `${uvDir}${pathDelimiter}${finalEnv.PATH || ''}`;
-
     console.log(`Executing: ${scriptCommand}`);
     await execCommand(scriptCommand, {
       cwd: workPath,
