@@ -60,6 +60,7 @@ type Transform = {
         };
   };
   args?: string | string[];
+  env?: string[];
 };
 
 export type RouteWithSrc = {
