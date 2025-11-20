@@ -29,6 +29,7 @@ import {
   type PackageJson,
   shouldUseExperimentalBackends,
   isBackendBuilder,
+  type Lambda,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -719,10 +720,13 @@ async function doBuild(
               routesJson &&
               typeof routesJson === 'object' &&
               'routes' in routesJson &&
-              Array.isArray(routesJson.routes)
+              Array.isArray(routesJson.routes) &&
+              'index' in buildResult.output
             ) {
+              const indexLambda = buildResult.output['index'] as Lambda;
               // Convert routes from introspection format to Vercel routing format
               const convertedRoutes = [];
+              const convertedOutputs: Record<string, Lambda> = {};
               for (const route of routesJson.routes) {
                 if (typeof route.source !== 'string') {
                   continue;
@@ -738,6 +742,7 @@ async function doBuild(
                 if (route.source === '/') {
                   continue;
                 }
+                convertedOutputs[route.source] = indexLambda;
                 convertedRoutes.push(newRoute);
               }
               // Wrap routes with filesystem handler and catch-all
@@ -746,6 +751,7 @@ async function doBuild(
                 ...convertedRoutes,
                 { src: '/(.*)', dest: '/' },
               ];
+              (buildResult as BuildResultV2Typical).output = convertedOutputs;
             }
           } catch (error) {
             output.error(`Failed to read routes.json: ${error}`);
