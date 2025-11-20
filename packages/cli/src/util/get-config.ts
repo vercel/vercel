@@ -58,7 +58,15 @@ export default async function getConfig(
 
   // Then try with `vercel.ts`, `vercel.json` or `now.json` in the same directory
   if (process.env.VERCEL_TS_CONFIG_ENABLED) {
-    const compileResult = await compileVercelConfig(localPath);
+    let compileResult;
+    try {
+      compileResult = await compileVercelConfig(localPath);
+    } catch (err) {
+      if (err instanceof Error) {
+        return err;
+      }
+      throw err;
+    }
 
     if (compileResult.configPath) {
       const localConfig = await readJSONFile<VercelConfig>(

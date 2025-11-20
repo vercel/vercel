@@ -8,8 +8,15 @@ export default async function readConfig(dir: string) {
   let pkgFilePath: string;
 
   if (process.env.VERCEL_TS_CONFIG_ENABLED) {
-    const compileResult = await compileVercelConfig(dir);
-    pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+    try {
+      const compileResult = await compileVercelConfig(dir);
+      pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+    } catch (err) {
+      if (err instanceof Error) {
+        return err as any;
+      }
+      throw err;
+    }
   } else {
     pkgFilePath = getLocalConfigPath(dir);
   }
