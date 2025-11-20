@@ -35,10 +35,7 @@ export function isBackendFramework(
 
 // Opt builds into experimental builder, but don't introspect the app
 export function isExperimentalBackendsWithoutIntrospectionEnabled(): boolean {
-  return (
-    process.env.VERCEL_EXPERIMENTAL_BACKENDS_BUILDS_WITHOUT_INTROSPECTION ===
-    '1'
-  );
+  return process.env.VERCEL_BACKENDS_BUILDS === '1';
 }
 
 export function isExperimentalBackendsEnabled(): boolean {
