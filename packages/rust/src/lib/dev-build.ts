@@ -17,7 +17,7 @@ export async function buildExecutableForDev(
   const PATH = assertEnv('PATH');
 
   const rustEnv: RustEnv = {
-    PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
+    PATH: `${path.join(HOME, '.cargo/bin')}${path.delimiter}${PATH}`,
     RUSTFLAGS: [process.env.RUSTFLAGS].filter(Boolean).join(' '),
   };
 

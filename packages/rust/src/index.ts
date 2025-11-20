@@ -51,7 +51,7 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   const PATH = assertEnv('PATH');
 
   const rustEnv: RustEnv = {
-    PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
+    PATH: `${path.join(HOME, '.cargo/bin')}${path.delimiter}${PATH}`,
     RUSTFLAGS: [process.env.RUSTFLAGS].filter(Boolean).join(' '),
   };
 
