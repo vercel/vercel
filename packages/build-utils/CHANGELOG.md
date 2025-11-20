@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.1.0
+
+### Minor Changes
+
+- Remove --unsafe-perm from npm install command ([#14302](https://github.com/vercel/vercel/pull/14302))
+
 ## 13.0.2
 
 ### Patch Changes

@@ -1,5 +1,25 @@
 # vercel
 
+## 48.10.5
+
+### Patch Changes
+
+- Shows more descriptive log message while building ([#14301](https://github.com/vercel/vercel/pull/14301))
+
+- Bump @vercel/fun to support executable runtimes ([#14305](https://github.com/vercel/vercel/pull/14305))
+
+- Updated dependencies [[`0a1db0d2f42aa5c6f80541d6cadf3904d6131a80`](https://github.com/vercel/vercel/commit/0a1db0d2f42aa5c6f80541d6cadf3904d6131a80), [`e20394a5a76207267966393edf0e66e4e9a1d213`](https://github.com/vercel/vercel/commit/e20394a5a76207267966393edf0e66e4e9a1d213)]:
+  - @vercel/build-utils@13.1.0
+  - @vercel/python@6.0.6
+  - @vercel/backends@0.0.9
+  - @vercel/elysia@0.1.6
+  - @vercel/express@0.1.10
+  - @vercel/fastify@0.1.9
+  - @vercel/h3@0.1.15
+  - @vercel/hono@0.2.9
+  - @vercel/node@5.5.8
+  - @vercel/static-build@2.8.8
+
 ## 48.10.4
 
 ### Patch Changes

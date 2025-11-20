@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.0.6
+
+### Patch Changes
+
+- [python] patch: build commands uv bugfix ([#14303](https://github.com/vercel/vercel/pull/14303))
+
 ## 6.0.5
 
 ### Patch Changes
