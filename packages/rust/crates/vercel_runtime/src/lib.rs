@@ -101,7 +101,7 @@ impl MetricMessage {
         metric_payload: Option<serde_json::Value>,
     ) -> Self {
         Self {
-            message_type: "end".to_string(),
+            message_type: "metric".to_string(),
             payload: MetricPayload {
                 context: RequestContext {
                     invocation_id,
