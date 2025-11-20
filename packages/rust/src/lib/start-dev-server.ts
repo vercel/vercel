@@ -46,7 +46,7 @@ export const startDevServer: StartDevServer = async opts => {
           child.emit('message', { port }, null);
           portEmitted = true;
         }
-        buffer = ''; // Clear buffer after processing
+        buffer = ''; // Clear buffer only after successful extraction
       }
       console.log(output);
     });

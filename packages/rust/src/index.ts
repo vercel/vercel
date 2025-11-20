@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
 import {
   FileFsRef,
   debug,
@@ -87,7 +86,11 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
           BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
           meta?.isDev ? [] : ['--release']
         );
-    await execa('cargo', args);
+
+    await execa('cargo', args, {
+      cwd: workPath,
+      env: rustEnv,
+    });
   } catch (err) {
     debug(`Running \`cargo build\` for \`${binaryName}\` failed`);
     throw err;
@@ -131,29 +134,11 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   });
   lambda.zipBuffer = await lambda.createZip();
 
-  if (isBundledRoute()) {
-    debug(
-      `experimental \`route-bundling\` detected - generating single entrypoint`
-    );
-    return {
-      output: lambda,
-    };
-  }
-
   debug(`generating function for \`${entrypoint}\``);
 
   return {
     output: lambda,
   };
-}
-
-function isBundledRoute(): boolean {
-  if (existsSync('api/main.rs')) {
-    const content = readFileSync('api/main.rs', 'utf8');
-    return content.includes('bundled_api]') || content.includes('bundled_api(');
-  }
-
-  return false;
 }
 
 // Reference -  https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#runtime-developer-reference
@@ -181,9 +166,6 @@ const runtime: Runtime = {
   startDevServer: rustStartDevServer,
   shouldServe: async (options): Promise<boolean> => {
     debug(`Requested ${options.requestPath} for ${options.entrypoint}`);
-    if (isBundledRoute()) {
-      return Promise.resolve(options.entrypoint === 'api/main');
-    }
     return Promise.resolve(options.requestPath === options.entrypoint);
   },
 };
