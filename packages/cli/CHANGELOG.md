@@ -1,5 +1,34 @@
 # vercel
 
+## 48.10.4
+
+### Patch Changes
+
+- adds support for missing protocol when using the `--deployment` flag of `vercel curl` ([#14297](https://github.com/vercel/vercel/pull/14297))
+
+- Update deployment status emoji to show loading indicator (⏳) initially, then change to success (✅) when deployment is ready. This provides better visual feedback during the deployment process. ([#14278](https://github.com/vercel/vercel/pull/14278))
+
+- Updated dependencies [[`2329dff0836e8699922eed7e70326511f93dd9f8`](https://github.com/vercel/vercel/commit/2329dff0836e8699922eed7e70326511f93dd9f8)]:
+  - @vercel/build-utils@13.0.2
+  - @vercel/node@5.5.7
+  - @vercel/backends@0.0.9
+  - @vercel/elysia@0.1.5
+  - @vercel/express@0.1.9
+  - @vercel/fastify@0.1.8
+  - @vercel/h3@0.1.14
+  - @vercel/hono@0.2.8
+  - @vercel/static-build@2.8.7
+
+## 48.10.3
+
+### Patch Changes
+
+- Updated http-proxy dependency to http-proxy-node16 ([#14251](https://github.com/vercel/vercel/pull/14251))
+
+- Updated dependencies [[`cf1183cb80e407238af2dd2a8d5e605f621c5d91`](https://github.com/vercel/vercel/commit/cf1183cb80e407238af2dd2a8d5e605f621c5d91)]:
+  - @vercel/backends@0.0.8
+  - @vercel/express@0.1.8
+
 ## 48.10.2
 
 ### Patch Changes

@@ -1,5 +1,23 @@
 # @vercel/backends
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`06a9b9a8281fa327e9f04a689d512f09eb85201d`](https://github.com/vercel/vercel/commit/06a9b9a8281fa327e9f04a689d512f09eb85201d)]:
+  - @vercel/cervel@0.0.5
+  - @vercel/introspection@0.0.2
+
+## 0.0.8
+
+### Patch Changes
+
+- Fix build issue with experimental backends builder ([#14281](https://github.com/vercel/vercel/pull/14281))
+
+- Updated dependencies [[`cf1183cb80e407238af2dd2a8d5e605f621c5d91`](https://github.com/vercel/vercel/commit/cf1183cb80e407238af2dd2a8d5e605f621c5d91)]:
+  - @vercel/cervel@0.0.4
+  - @vercel/introspection@0.0.2
+
 ## 0.0.7
 
 ### Patch Changes

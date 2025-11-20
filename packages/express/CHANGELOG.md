@@ -1,5 +1,20 @@
 # @vercel/express
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [[`2329dff0836e8699922eed7e70326511f93dd9f8`](https://github.com/vercel/vercel/commit/2329dff0836e8699922eed7e70326511f93dd9f8), [`06a9b9a8281fa327e9f04a689d512f09eb85201d`](https://github.com/vercel/vercel/commit/06a9b9a8281fa327e9f04a689d512f09eb85201d)]:
+  - @vercel/node@5.5.7
+  - @vercel/cervel@0.0.5
+
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [[`cf1183cb80e407238af2dd2a8d5e605f621c5d91`](https://github.com/vercel/vercel/commit/cf1183cb80e407238af2dd2a8d5e605f621c5d91)]:
+  - @vercel/cervel@0.0.4
+
 ## 0.1.7
 
 ### Patch Changes
