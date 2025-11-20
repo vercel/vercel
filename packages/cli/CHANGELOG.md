@@ -1,5 +1,11 @@
 # vercel
 
+## 48.10.6
+
+### Patch Changes
+
+- Bugfix: stop streaming logs after successful deploy ([#14321](https://github.com/vercel/vercel/pull/14321))
+
 ## 48.10.5
 
 ### Patch Changes
