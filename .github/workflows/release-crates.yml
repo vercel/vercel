@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/rust/crates/**"
-      - "packages/rust/**/*.toml"
+      - 'packages/rust/crates/**'
+      - 'packages/rust/**/*.toml'
   workflow_dispatch:
 jobs:
   publish:
