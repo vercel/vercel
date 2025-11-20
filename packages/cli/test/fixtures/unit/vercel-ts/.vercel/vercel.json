@@ -1,0 +1,71 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/posts/(.*)",
+      "destination": "https://jsonplaceholder.typicode.com/posts/$1"
+    },
+    {
+      "source": "/users/:userId",
+      "destination": "https://jsonplaceholder.typicode.com/users/$1"
+    },
+    {
+      "source": "/gh/(.*)",
+      "destination": "https://api.github.com/$1"
+    },
+    {
+      "source": "/http/(.*)",
+      "destination": "https://httpbin.org/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, immutable"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/old-blog",
+      "destination": "/blog"
+    },
+    {
+      "source": "/home",
+      "destination": "/"
+    },
+    {
+      "source": "/region",
+      "destination": "https://us-east-1-staging.example.com"
+    },
+    {
+      "source": "/posts/:slug",
+      "destination": "/blog?post=$1"
+    },
+    {
+      "source": "/legacy",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/docs",
+      "destination": "https://vercel.com/docs"
+    },
+    {
+      "source": "/github",
+      "destination": "https://github.com/vercel/vercel"
+    },
+    {
+      "source": "/dash",
+      "destination": "https://vercel.com"
+    }
+  ],
+  "build": {
+    "env": {
+      "VERCEL_DEBUG": "0"
+    }
+  }
+}

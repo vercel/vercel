@@ -1,0 +1,8 @@
+{
+  "name": "vercel-ts-config-test",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@vercel/config": "^0.0.20"
+  }
+}
