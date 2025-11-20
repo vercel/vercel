@@ -555,7 +555,11 @@ export default class DevServer {
   }
 
   async _getVercelConfig(): Promise<VercelConfig> {
-    const configPath = getVercelConfigPath(this.cwd);
+    const { compileVercelConfig } = await import('../compile-vercel-config');
+    const compileResult = await compileVercelConfig(this.cwd);
+
+    const configPath =
+      compileResult.configPath || getVercelConfigPath(this.cwd);
 
     const [
       pkg = null,

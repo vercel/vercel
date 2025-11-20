@@ -18,6 +18,7 @@ import { join, resolve } from 'path';
 import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
+import { compileVercelConfig } from '../../util/compile-vercel-config';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
@@ -156,6 +157,10 @@ export default async (client: Client): Promise<number> => {
   // #endregion
 
   // #region Config loading
+
+  // Compile vercel.ts to .vercel/vercel.json if it exists
+  await compileVercelConfig(paths[0]);
+
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
 
   if (localConfig) {
@@ -351,7 +356,9 @@ export default async (client: Client): Promise<number> => {
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(join(cwd, rootDirectory));
+    const rootDirectoryPath = join(cwd, rootDirectory);
+    await compileVercelConfig(rootDirectoryPath);
+    const rootDirectoryConfig = readLocalConfig(rootDirectoryPath);
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
