@@ -4,8 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/rust/crates/**'
-      - 'packages/rust/**/*.toml'
+      - "packages/crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
   workflow_dispatch:
 jobs:
   publish:
@@ -18,6 +19,6 @@ jobs:
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - run: cargo publish
-        working-directory: packages/rust/crates/vercel_runtime
+        working-directory: crates/vercel_runtime
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

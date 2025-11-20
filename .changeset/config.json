@@ -15,9 +15,6 @@
   "ignore": [
     "api",
     "examples",
-    "@vercel-internals/*",
-    "packages/rust/crates/*",
-    "packages/rust/**/Cargo.toml",
-    "packages/rust/**/Cargo.lock"
+    "@vercel-internals/*"
   ]
 }
