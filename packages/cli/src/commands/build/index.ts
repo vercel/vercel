@@ -709,7 +709,7 @@ async function doBuild(
       if (
         'output' in buildResult &&
         buildResult.output &&
-        isBackendBuilder(build)
+        (isBackendBuilder(build) || build.use === '@vercel/python')
       ) {
         const routesJsonPath = join(workPath, '.vercel', 'routes.json');
         if (existsSync(routesJsonPath)) {
