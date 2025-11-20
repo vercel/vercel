@@ -89,7 +89,7 @@ export async function compileVercelConfig(
 
     delete require.cache[require.resolve(tempOutPath)];
     const configModule = require(tempOutPath);
-    const config = configModule.default || configModule;
+    const config = configModule.default || configModule.config || configModule;
 
     await writeFile(
       compiledConfigPath,
