@@ -730,7 +730,9 @@ async function doBuild(
                   : undefined;
               // Convert routes from introspection format to Vercel routing format
               const convertedRoutes = [];
-              const convertedOutputs: Record<string, Lambda> = {};
+              const convertedOutputs: Record<string, Lambda> = indexLambda
+                ? { index: indexLambda }
+                : {};
               for (const route of routesJson.routes) {
                 if (typeof route.source !== 'string') {
                   continue;
