@@ -1,8 +1,6 @@
 import fs from 'fs';
-import { join, dirname, delimiter as pathDelimiter } from 'path';
-import execa from 'execa';
+import { join, delimiter as pathDelimiter } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
-import { getUvBinaryOrInstall } from './install';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
@@ -66,41 +64,16 @@ export async function runPyprojectScript(
   const scriptToRun = candidates.find(name => Boolean(scripts[name]));
   if (!scriptToRun) return false;
 
-  // Use the Python from the virtualenv if present to resolve uv, else system python
+  // Use the Python from the virtualenv if present to resolve tooling, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
   const finalEnv = { ...process.env, ...env };
-  const { pythonCmd } = useVirtualEnv(workPath, finalEnv, systemPython);
-  const uvPath = await getUvBinaryOrInstall(pythonCmd);
+  useVirtualEnv(workPath, finalEnv, systemPython);
 
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
-    // Ensure our resolved uv is discoverable when the script uses `uv ...`
-    const uvDir = dirname(uvPath);
-    finalEnv.PATH = `${uvDir}${pathDelimiter}${finalEnv.PATH || ''}`;
-
-    // If the script already starts with "uv", execute it directly via the shell.
-    if (/^\s*uv(\s|$)/i.test(scriptCommand)) {
-      console.log(`Executing: ${scriptCommand}`);
-      await execCommand(scriptCommand, {
-        cwd: workPath,
-        env: finalEnv,
-      });
-      return true;
-    }
-
-    // Otherwise, run the command within `uv run` using the OS shell to preserve quoting.
-    const args =
-      process.platform === 'win32'
-        ? ['run', 'cmd', '/d', '/s', '/c', scriptCommand]
-        : ['run', 'sh', '-lc', scriptCommand];
-    console.log(
-      `Executing: ${uvPath} ${args
-        .map(a => (/\s/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
-        .join(' ')}`
-    );
-    await execa(uvPath, args, {
+    console.log(`Executing: ${scriptCommand}`);
+    await execCommand(scriptCommand, {
       cwd: workPath,
-      stdio: 'inherit',
       env: finalEnv,
     });
     return true;
