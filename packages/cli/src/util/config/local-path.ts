@@ -39,5 +39,9 @@ export default function getLocalPathConfig(prefix: string) {
     }
   }
 
-  return nowConfigExists ? nowConfigPath : vercelConfigPath;
+  if (nowConfigExists) {
+    return nowConfigPath;
+  }
+
+  return vercelConfigPath;
 }
