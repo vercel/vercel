@@ -720,10 +720,14 @@ async function doBuild(
               routesJson &&
               typeof routesJson === 'object' &&
               'routes' in routesJson &&
-              Array.isArray(routesJson.routes) &&
-              'index' in buildResult.output
+              Array.isArray(routesJson.routes)
             ) {
-              const indexLambda = buildResult.output['index'] as Lambda;
+              // This is a v2 build output, so only remap the outputs
+              // if we have an index lambda
+              const indexLambda =
+                'index' in buildResult.output
+                  ? (buildResult.output['index'] as Lambda)
+                  : undefined;
               // Convert routes from introspection format to Vercel routing format
               const convertedRoutes = [];
               const convertedOutputs: Record<string, Lambda> = {};
@@ -742,7 +746,9 @@ async function doBuild(
                 if (route.source === '/') {
                   continue;
                 }
-                convertedOutputs[route.source] = indexLambda;
+                if (indexLambda) {
+                  convertedOutputs[route.source] = indexLambda;
+                }
                 convertedRoutes.push(newRoute);
               }
               // Wrap routes with filesystem handler and catch-all
@@ -751,7 +757,9 @@ async function doBuild(
                 ...convertedRoutes,
                 { src: '/(.*)', dest: '/' },
               ];
-              (buildResult as BuildResultV2Typical).output = convertedOutputs;
+              if (indexLambda) {
+                (buildResult as BuildResultV2Typical).output = convertedOutputs;
+              }
             }
           } catch (error) {
             output.error(`Failed to read routes.json: ${error}`);
