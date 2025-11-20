@@ -772,38 +772,6 @@ describe('deploy', () => {
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
-
-    it('should not print and follow build logs while deploying with --no-logs', async () => {
-      let exitCode: number | undefined;
-      const runCommand = async () => {
-        const repoRoot = setupUnitFixture('commands/deploy/node');
-        client.cwd = repoRoot;
-        client.setArgv('deploy', '--no-logs');
-        exitCode = await deploy(client);
-      };
-
-      const slowlyDeploy = async () => {
-        await sleep(500);
-        deployment.readyState = 'READY';
-        deployment.aliasAssigned = true;
-      };
-
-      await Promise.all<void>([runCommand(), slowlyDeploy()]);
-
-      const output = client.getFullOutput();
-
-      expect(output).not.toContain(outputLine1);
-      expect(output).not.toContain(outputLine2);
-      expect(output).not.toContain(outputLine3);
-
-      expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:no-logs',
-          value: 'TRUE',
-        },
-      ]);
-    });
   });
 
   describe('calls createDeploy with the appropriate arguments', () => {
@@ -1096,7 +1064,7 @@ describe('deploy', () => {
         ...Object.values({
           ...baseCreateDeployArgs,
           createArgs: expect.objectContaining({
-            withLogs: true,
+            withFullLogs: true,
           }),
         })
       );
