@@ -275,7 +275,7 @@ export default async function processDeployment({
 
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing...', 0);
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
