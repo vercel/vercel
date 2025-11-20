@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/crates/**"
+      - "crates/vercel_runtime/**"
       - "Cargo.toml"
       - "Cargo.lock"
   workflow_dispatch:
