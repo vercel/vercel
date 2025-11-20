@@ -133,5 +133,6 @@ export {
   isBackendFramework,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
+  isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
 } from './framework-helpers';

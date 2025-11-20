@@ -33,11 +33,17 @@ export function isBackendFramework(
   return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
 }
 
-/**
- * Checks if experimental backends are enabled via environment variable
- */
+// Opt builds into experimental builder, but don't introspect the app
+export function isExperimentalBackendsWithoutIntrospectionEnabled(): boolean {
+  return (
+    process.env.VERCEL_EXPERIMENTAL_BACKENDS_BUILDS_WITHOUT_INTROSPECTION ===
+    '1'
+  );
+}
+
 export function isExperimentalBackendsEnabled(): boolean {
   return (
+    isExperimentalBackendsWithoutIntrospectionEnabled() ||
     process.env.VERCEL_EXPERIMENTAL_BACKENDS === '1' ||
     // Previously used for experimental express and hono builds
     process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' ||

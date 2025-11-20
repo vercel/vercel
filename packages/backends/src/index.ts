@@ -24,6 +24,7 @@ export const build: BuildV2 = async args => {
   debug('Building route mapping..');
   const { routes, framework } = await introspectApp({
     ...outputConfig,
+    framework: args.config.framework,
     env: {
       ...(args.meta?.env ?? {}),
       ...(args.meta?.buildEnv ?? {}),
