@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.3.0
+
+### Minor Changes
+
+- add support for the env field in transforms for explicit environment variable usage ([#14223](https://github.com/vercel/vercel/pull/14223))
+
 ## 5.2.2
 
 ### Patch Changes
