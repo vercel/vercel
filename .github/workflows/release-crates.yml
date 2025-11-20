@@ -1,9 +1,11 @@
 name: Release Rust Crates
+
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths:
-      - 'packages/rust/crates/**'
-      - 'packages/rust/**/*.toml'
+      - "packages/rust/crates/**"
+      - "packages/rust/**/*.toml"
   workflow_dispatch:
 jobs:
   publish:
