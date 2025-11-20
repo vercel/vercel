@@ -38,6 +38,7 @@
     "@vercel/blob": "1.0.2",
     "@vercel/build-utils": "13.0.2",
     "@vercel/detect-agent": "workspace:*",
+    "@vercel/rust": "workspace:*",
     "@vercel/elysia": "0.1.5",
     "@vercel/express": "0.1.9",
     "@vercel/fastify": "0.1.8",
