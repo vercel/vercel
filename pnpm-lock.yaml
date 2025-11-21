@@ -435,7 +435,7 @@ importers:
         specifier: 0.1.6
         version: link:../elysia
       '@vercel/express':
-        specifier: 0.1.10
+        specifier: 0.1.11
         version: link:../express
       '@vercel/fastify':
         specifier: 0.1.9
