@@ -56,6 +56,7 @@
     "@vercel/rust": "1.0.3",
     "@vercel/static-build": "2.8.12",
     "chokidar": "4.0.0",
+    "esbuild": "0.27.0",
     "jose": "5.9.6"
   },
   "devDependencies": {
