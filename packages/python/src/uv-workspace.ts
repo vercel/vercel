@@ -61,7 +61,7 @@ export async function installUvWorkspaceDependencies({
   }
 
   // Detect a uv workspace at the repo root so we can include internal
-  // workspace projects (e.g. "python-lib") as proper runtime dependencies.
+  // workspace projects as proper runtime dependencies.
   let rootPyproject: UvWorkspaceConfig | null = null;
   try {
     rootPyproject = await readConfigFile<UvWorkspaceConfig>(
