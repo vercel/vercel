@@ -1,5 +1,6 @@
 ---
 '@vercel/build-utils': patch
+'@vercel/introspection': patch
 ---
 
-Add util method for isExperimentalBackendsWithoutIntrospectionEnabled
+Only run introspection when isExperimentalBackendsWithoutIntrospectionEnabled is truthy
