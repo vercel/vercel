@@ -1,6 +1,6 @@
 import { existsSync } from 'fs';
 import { mkdir, writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { config as dotenvConfig } from 'dotenv';
 import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
@@ -10,6 +10,33 @@ import { ConflictingConfigFiles } from './errors-ts';
 export interface CompileConfigResult {
   configPath: string | null;
   wasCompiled: boolean;
+}
+
+const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
+
+function findAllVercelConfigFiles(workPath: string): string[] {
+  const foundFiles: string[] = [];
+  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
+    const configPath = join(workPath, `vercel.${ext}`);
+    if (existsSync(configPath)) {
+      foundFiles.push(configPath);
+    }
+  }
+  return foundFiles;
+}
+
+function findVercelConfigFile(workPath: string): string | null {
+  const foundFiles = findAllVercelConfigFiles(workPath);
+
+  if (foundFiles.length > 1) {
+    throw new ConflictingConfigFiles(
+      foundFiles,
+      'Multiple vercel config files found. Please use only one configuration file.',
+      'https://vercel.com/docs/projects/project-configuration'
+    );
+  }
+
+  return foundFiles[0] || null;
 }
 
 export async function compileVercelConfig(
@@ -25,7 +52,7 @@ export async function compileVercelConfig(
     throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
   }
 
-  // Only check for vercel.ts if feature flag is enabled
+  // Only check for vercel.{ext} if feature flag is enabled
   if (!process.env.VERCEL_TS_CONFIG_ENABLED) {
     return {
       configPath: hasVercelJson
@@ -37,29 +64,27 @@ export async function compileVercelConfig(
     };
   }
 
-  const vercelTsPath = join(workPath, 'vercel.ts');
+  const vercelConfigPath = findVercelConfigFile(workPath);
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
-  const hasVercelTs = existsSync(vercelTsPath);
-
-  if (hasVercelTs && hasNowJson) {
+  if (vercelConfigPath && hasNowJson) {
     throw new ConflictingConfigFiles(
-      [vercelTsPath, nowJsonPath],
-      'Both vercel.ts and now.json exist in your project. Please use only one configuration method.',
+      [vercelConfigPath, nowJsonPath],
+      `Both ${basename(vercelConfigPath)} and now.json exist in your project. Please use only one configuration method.`,
       'https://vercel.com/docs/projects/project-configuration'
     );
   }
 
-  if (hasVercelTs && hasVercelJson) {
+  if (vercelConfigPath && hasVercelJson) {
     throw new ConflictingConfigFiles(
-      [vercelTsPath, vercelJsonPath],
-      'Both vercel.ts and vercel.json exist in your project. Please use only one configuration method.',
+      [vercelConfigPath, vercelJsonPath],
+      `Both ${basename(vercelConfigPath)} and vercel.json exist in your project. Please use only one configuration method.`,
       'https://vercel.com/docs/projects/project-configuration'
     );
   }
 
-  if (!hasVercelTs) {
+  if (!vercelConfigPath) {
     return {
       configPath: hasVercelJson
         ? vercelJsonPath
@@ -81,7 +106,7 @@ export async function compileVercelConfig(
     await mkdir(vercelDir, { recursive: true });
 
     await build({
-      entryPoints: [vercelTsPath],
+      entryPoints: [vercelConfigPath],
       bundle: true,
       platform: 'node',
       format: 'cjs',
@@ -101,7 +126,7 @@ export async function compileVercelConfig(
       'utf-8'
     );
 
-    output.debug(`Compiled vercel.ts -> ${compiledConfigPath}`);
+    output.debug(`Compiled ${vercelConfigPath} -> ${compiledConfigPath}`);
 
     return {
       configPath: compiledConfigPath,
@@ -110,7 +135,7 @@ export async function compileVercelConfig(
   } catch (error: any) {
     throw new NowBuildError({
       code: 'vercel_ts_compilation_failed',
-      message: `Failed to compile vercel.ts: ${error.message}`,
+      message: `Failed to compile ${vercelConfigPath}: ${error.message}`,
       link: 'https://vercel.com/docs/projects/project-configuration',
     });
   } finally {
