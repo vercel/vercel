@@ -48,6 +48,10 @@ export const functionsSchema = {
           type: 'string',
           maxLength: 256,
         },
+        runtimeLanguage: {
+          type: 'string',
+          enum: ['rust', 'go'],
+        },
         memory: {
           minimum: 128,
           maximum: 10240,
@@ -72,6 +76,14 @@ export const functionsSchema = {
         supportsCancellation: {
           type: 'boolean',
         },
+      },
+      if: {
+        properties: {
+          runtime: { const: 'executable' },
+        },
+      },
+      then: {
+        required: ['runtimeLanguage'],
       },
     },
   },
