@@ -45,12 +45,14 @@ export const build = async (args: {
 
   // Check if typecheck is still running
   const typecheckComplete = true;
-  const result = await Promise.race([
-    tsPromise.then(() => typecheckComplete),
-    Promise.resolve(false),
-  ]);
+  const result = tsPromise
+    ? await Promise.race([
+        tsPromise.then(() => typecheckComplete),
+        Promise.resolve(false),
+      ])
+    : true;
 
-  if (!result) {
+  if (tsPromise && !result) {
     console.log(c.gray(`${c.bold(c.gray('*'))} Waiting for typecheck...`));
   }
 

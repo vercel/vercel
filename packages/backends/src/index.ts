@@ -1,9 +1,16 @@
-import { type BuildV2, NodejsLambda } from '@vercel/build-utils';
 import { downloadInstallAndBundle } from './utils.js';
 import { introspectApp } from '@vercel/introspection';
 import { nodeFileTrace } from './node-file-trace.js';
 import { relative, join } from 'node:path';
 import { doBuild } from './build.js';
+import {
+  defaultCachePathGlob,
+  glob,
+  NodejsLambda,
+  type PrepareCache,
+  type BuildV2,
+} from '@vercel/build-utils';
+
 export const version = 2;
 
 export const build: BuildV2 = async args => {
@@ -11,7 +18,7 @@ export const build: BuildV2 = async args => {
 
   const outputConfig = await doBuild(args, downloadResult);
 
-  const { files } = await nodeFileTrace(args, outputConfig);
+  const { files } = await nodeFileTrace(args, downloadResult, outputConfig);
 
   const { routes, framework } = await introspectApp({
     ...outputConfig,
@@ -56,4 +63,8 @@ export const build: BuildV2 = async args => {
     routes,
     output,
   };
+};
+
+export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
+  return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
