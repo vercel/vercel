@@ -473,6 +473,9 @@ importers:
       '@vercel/ruby':
         specifier: 2.2.2
         version: link:../ruby
+      '@vercel/rust':
+        specifier: workspace:*
+        version: link:../rust
       '@vercel/static-build':
         specifier: 2.8.8
         version: link:../static-build
@@ -625,7 +628,7 @@ importers:
         specifier: 3.15.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.7.7
+        specifier: workspace:*
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.3.0
