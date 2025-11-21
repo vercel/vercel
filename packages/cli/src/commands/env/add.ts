@@ -143,8 +143,12 @@ export default async function add(client: Client, argv: string[]) {
   if (stdInput) {
     envValue = stdInput;
   } else {
-    envValue = await client.input.text({
+    output.log(
+      `🔐 Your value will be encrypted. Use --sensitive to keep it hidden after creation.`
+    );
+    envValue = await client.input.password({
       message: `What's the value of ${envName}?`,
+      mask: true,
     });
   }
 
