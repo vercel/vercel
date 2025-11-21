@@ -1,0 +1,24 @@
+name: Release Rust Crates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/vercel_runtime/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - run: cargo publish
+        working-directory: crates/vercel_runtime
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
