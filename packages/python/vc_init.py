@@ -201,7 +201,7 @@ def enqueue_or_send_message(msg: dict):
 
 def flush_init_log_buf_to_stderr():
     global _init_log_buf, _init_log_buf_bytes
-    with contextlib.suppress(Exception):
+    try:
         combined: list[str] = []
         for m in _init_log_buf:
             payload = m.get("payload", {})
@@ -213,6 +213,9 @@ def flush_init_log_buf_to_stderr():
                 combined.append(decoded)
         if combined:
             _stderr("".join(combined))
+    except Exception:
+        pass
+    finally:
         _init_log_buf.clear()
         _init_log_buf_bytes = 0
 
