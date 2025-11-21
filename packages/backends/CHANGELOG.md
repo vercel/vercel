@@ -1,5 +1,15 @@
 # @vercel/backends
 
+## 0.0.10
+
+### Patch Changes
+
+- Add bun detection for experimental backends ([#14311](https://github.com/vercel/vercel/pull/14311))
+
+- Updated dependencies [[`10de9d8d6ebdef57f4b0ca7dabc277651b317d7c`](https://github.com/vercel/vercel/commit/10de9d8d6ebdef57f4b0ca7dabc277651b317d7c)]:
+  - @vercel/cervel@0.0.6
+  - @vercel/introspection@0.0.2
+
 ## 0.0.9
 
 ### Patch Changes
