@@ -10,6 +10,7 @@ import { ConflictingConfigFiles } from './errors-ts';
 export interface CompileConfigResult {
   configPath: string | null;
   wasCompiled: boolean;
+  sourceFile?: string;
 }
 
 const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
@@ -23,6 +24,21 @@ function findAllVercelConfigFiles(workPath: string): string[] {
     }
   }
   return foundFiles;
+}
+
+/**
+ * Finds the source vercel config file basename (e.g., 'vercel.ts', 'vercel.js')
+ * @param workPath - The directory to search in
+ * @returns The basename of the config file, or null if not found
+ */
+export function findSourceVercelConfigFile(workPath: string): string | null {
+  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
+    const configPath = join(workPath, `vercel.${ext}`);
+    if (existsSync(configPath)) {
+      return basename(configPath);
+    }
+  }
+  return null;
 }
 
 function findVercelConfigFile(workPath: string): string | null {
@@ -131,6 +147,7 @@ export async function compileVercelConfig(
     return {
       configPath: compiledConfigPath,
       wasCompiled: true,
+      sourceFile: findSourceVercelConfigFile(workPath) ?? undefined,
     };
   } catch (error: any) {
     throw new NowBuildError({
