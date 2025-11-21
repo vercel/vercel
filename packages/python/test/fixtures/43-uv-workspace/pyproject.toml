@@ -1,0 +1,19 @@
+[project]
+name = "fixture-uv-workspace-fastapi"
+version = "0.0.1"
+requires-python = ">=3.10,<=3.12"
+dependencies = [
+  "fastapi==0.116.2",
+  "python-lib",
+]
+
+[tool.uv.workspace]
+members = ["python-lib"]
+
+[tool.uv.sources]
+python-lib = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "ruff",
+]

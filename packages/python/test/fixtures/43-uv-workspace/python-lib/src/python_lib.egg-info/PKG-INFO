@@ -1,0 +1,4 @@
+Metadata-Version: 2.4
+Name: python-lib
+Version: 0.1.0
+Requires-Python: <=3.12,>=3.10
