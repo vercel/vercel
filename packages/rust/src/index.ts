@@ -63,12 +63,19 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   const cargoBuildConfiguration =
     await findCargoBuildConfiguration(cargoWorkspace);
 
-  const buildVariant = BUILDER_DEBUG || meta?.isDev ? 'debug' : 'release';
-  const buildTarget = cargoBuildConfiguration?.build.target ?? '';
-
   await runUserScripts(workPath);
 
   const extraFiles = await gatherExtraFiles(config.includeFiles, workPath);
+
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+
+  const architecture = lambdaOptions?.architecture || 'x86_64';
+
+  const buildVariant = meta?.isDev ? 'debug' : 'release';
+  const buildTarget = cargoBuildConfiguration?.build.target ?? '';
 
   debug(`Running \`cargo build\` for \`${binaryName}\``);
   try {
@@ -78,7 +85,9 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
       ? [
           'zigbuild',
           '--target',
-          'x86_64-unknown-linux-gnu',
+          architecture === 'x86_64'
+            ? 'x86_64-unknown-linux-gnu'
+            : 'aarch64-unknown-linux-gnu',
           '--bin',
           binaryName,
         ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
@@ -105,7 +114,12 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
 
   // If we are building for a prebuilt deployment, adjust the target directory to the cross compilation dir
   if (crossCompilationEnabled) {
-    targetDirectory = path.join(targetDirectory, 'x86_64-unknown-linux-gnu');
+    targetDirectory = path.join(
+      targetDirectory,
+      architecture === 'x86_64'
+        ? 'x86_64-unknown-linux-gnu'
+        : 'aarch64-unknown-linux-gnu'
+    );
   }
   targetDirectory = path.join(targetDirectory, buildTarget);
 
@@ -115,11 +129,6 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
     getExecutableName(binaryName)
   );
 
-  const lambdaOptions = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
-
   const handler = getExecutableName('executable');
   const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
   const lambda = new Lambda({
@@ -128,6 +137,7 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
       [handler]: executableFile,
     },
     handler,
+    architecture,
     runtime: 'executable',
     supportsResponseStreaming: true,
     ...lambdaOptions,
