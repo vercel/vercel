@@ -1,0 +1,19 @@
+[package]
+name = "vercel_runtime"
+version = "2.0.0-alpha.2"
+edition = "2024"
+description = "Vercel Runtime for Rust"
+license = "Apache-2.0"
+repository = "https://github.com/vercel/vercel"
+homepage = "https://vercel.com/docs/runtimes"
+keywords = ["vercel", "runtime", "serverless", "rust", "fluid"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+base64 = "0.22"
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+http-body-util = "0.1"
+tokio-stream = "0.1"
