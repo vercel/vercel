@@ -1,5 +1,12 @@
 # @vercel/h3
 
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.9
+
 ## 0.1.15
 
 ### Patch Changes
