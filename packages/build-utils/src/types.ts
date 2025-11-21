@@ -393,6 +393,7 @@ export interface BuilderFunctions {
     memory?: number;
     maxDuration?: number;
     runtime?: string;
+    runtimeLanguage?: string;
     includeFiles?: string;
     excludeFiles?: string;
     experimentalTriggers?: TriggerEvent[];
