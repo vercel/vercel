@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
+import { getDeploymentUrlAndToken } from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -691,5 +692,95 @@ describe('getDeploymentUrlById', () => {
       '/v13/deployments/dpl_XYZ789ABC123',
       { accountId: MOCK_ACCOUNT_ID }
     );
+  });
+});
+
+describe('getDeploymentUrlAndToken target selection', () => {
+  it('uses production target alias when available', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      targets: {
+        production: { alias: ['prod-alias.vercel.app'] },
+      },
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
+
+    const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+      protectionBypassFlag: 'test-secret',
+    });
+
+    expect(typeof res).toBe('object');
+    if (typeof res === 'number') {
+      throw new Error('expected object result');
+    }
+    expect(res.fullUrl).toBe('https://prod-alias.vercel.app/api/hello');
+  });
+
+  it('falls back to latest deployment url when no production alias', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
+
+    const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+      protectionBypassFlag: 'test-secret',
+    });
+
+    expect(typeof res).toBe('object');
+    if (typeof res === 'number') {
+      throw new Error('expected object result');
+    }
+    expect(res.fullUrl).toBe(
+      'https://static-project-abc123.vercel.app/api/hello'
+    );
+  });
+
+  it('throws when no target or latest deployments exist', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      latestDeployments: [],
+      targets: {},
+    } as any);
+
+    await expect(
+      getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+        protectionBypassFlag: 'test-secret',
+      })
+    ).rejects.toThrow('No deployment URL found for the project');
   });
 });
