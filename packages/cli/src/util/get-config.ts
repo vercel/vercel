@@ -80,7 +80,7 @@ export default async function getConfig(
         output.debug(`Found config in file "${compileResult.configPath}"`);
         config = localConfig;
         config[fileNameSymbol] = compileResult.wasCompiled
-          ? 'vercel.ts'
+          ? compileResult.sourceFile || 'vercel.ts'
           : fileName;
         return config;
       }
