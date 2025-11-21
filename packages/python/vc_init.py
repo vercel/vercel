@@ -19,6 +19,7 @@ import builtins
 from typing import Callable, Literal, TextIO
 import contextvars
 import contextlib
+import atexit
 
 
 _here = os.path.dirname(__file__)
@@ -196,6 +197,30 @@ def enqueue_or_send_message(msg: dict):
             payload = msg.get("payload", {})
             decoded = base64.b64decode(payload.get("message", "")).decode(errors="ignore")
             _original_stderr.write(decoded + "\n")
+
+
+def flush_init_log_buf_to_stderr():
+    global _init_log_buf, _init_log_buf_bytes
+    try:
+        combined: list[str] = []
+        for m in _init_log_buf:
+            payload = m.get("payload", {})
+            msg = payload.get("message")
+            if not msg:
+                continue
+            with contextlib.suppress(Exception):
+                decoded = base64.b64decode(msg).decode(errors="ignore")
+                combined.append(decoded)
+        if combined:
+            _stderr("".join(combined))
+    except Exception:
+        pass
+    finally:
+        _init_log_buf.clear()
+        _init_log_buf_bytes = 0
+
+
+atexit.register(flush_init_log_buf_to_stderr)
 
 
 if 'VERCEL_IPC_PATH' in os.environ:
