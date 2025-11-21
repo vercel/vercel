@@ -438,6 +438,9 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  // eslint-disable-next-line no-console
+  console.log({ MY_ENV_VAR: process.env.MY_ENV_VAR });
+
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
     pkg?.scripts?.['vercel-build'] === undefined &&
