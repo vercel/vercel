@@ -44,12 +44,12 @@ jobs:
 
           # Extract affected packages count and strategy
           PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" || echo "0")
-          if echo "$AFFECTED_OUTPUT" | grep -q "Infrastructure changes detected"; then
+          if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
             STRATEGY="all-e2e"
           elif [ "$PACKAGE_COUNT" -gt "0" ]; then
             STRATEGY="affected-only"
           else
-            STRATEGY="full-test"
+            STRATEGY="no-tests"
           fi
 
           # Get the list of affected packages
@@ -112,9 +112,13 @@ jobs:
                 message += packageList + '\n\n';
               }
               message += '**E2E Tests**: Only affected package e2e tests will run';
+            } else if (strategy === 'no-tests') {
+              message += '**Strategy**: No tests needed\n\n';
+              message += '✨ No packages affected - skipping tests\n\n';
+              message += '**E2E Tests**: None';
             } else {
               message += '**Strategy**: Full test suite\n\n';
-              message += '🔄 Running all tests (no base SHA available for affected package detection)\n\n';
+              message += '🔄 Running all tests\n\n';
               message += '**E2E Tests**: All e2e tests will run';
             }
 
