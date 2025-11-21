@@ -1,5 +1,11 @@
 # @vercel/rust
 
+## 1.0.2
+
+### Patch Changes
+
+- Fix default architecture, support cross compile to arm64 ([#14329](https://github.com/vercel/vercel/pull/14329))
+
 ## 1.0.1
 
 ### Patch Changes
