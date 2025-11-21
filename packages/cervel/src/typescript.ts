@@ -6,10 +6,7 @@ import { existsSync } from 'fs';
 
 const require_ = createRequire(import.meta.url);
 
-export const typescript = async (args: {
-  entrypoint: string;
-  workPath: string;
-}) => {
+export const typescript = (args: { entrypoint: string; workPath: string }) => {
   const extension = extname(args.entrypoint);
   const isTypeScript = ['.ts', '.mts', '.cts'].includes(extension);
 
@@ -26,7 +23,7 @@ export const typescript = async (args: {
         )}`
       )
     );
-    return Promise.resolve();
+    return null;
   }
 
   return doTypeCheck(args, tscPath);

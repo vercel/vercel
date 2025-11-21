@@ -22,17 +22,24 @@ export const handle = (expressModule: any) => {
 };
 
 setupCloseHandlers(() => {
-  const routes = extractRoutes();
+  const { routes, additionalFolders, additionalDeps } = extractRoutes();
   if (routes.length > 0) {
-    return { frameworkSlug: 'express', routes };
+    return {
+      frameworkSlug: 'express',
+      routes,
+      additionalFolders,
+      additionalDeps,
+    };
   }
   return undefined;
 });
 
 const extractRoutes = () => {
   if (!app) {
-    return [];
+    return { routes: [], additionalFolders: [], additionalDeps: [] };
   }
+  const additionalFolders: string[] = [];
+  const additionalDeps: string[] = [];
   const routes: { src: string; dest: string; methods: string[] }[] = [];
   const methods = [
     'all',
@@ -45,6 +52,17 @@ const extractRoutes = () => {
     'head',
   ];
   const router = app._router || app.router;
+  if ('settings' in app) {
+    if ('views' in app.settings && typeof app.settings.views === 'string') {
+      additionalFolders.push(app.settings.views as string);
+    }
+    if (
+      'view engine' in app.settings &&
+      typeof app.settings['view engine'] === 'string'
+    ) {
+      additionalDeps.push(app.settings['view engine'] as string);
+    }
+  }
   for (const route of router.stack) {
     if (route.route) {
       const m = [];
@@ -66,5 +84,5 @@ const extractRoutes = () => {
       });
     }
   }
-  return routes;
+  return { routes, additionalFolders, additionalDeps };
 };

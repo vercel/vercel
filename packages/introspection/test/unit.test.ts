@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { readdir } from 'fs/promises';
-import { introspectApp } from '../dist/index.js';
+import { introspectApp } from '../dist/index.mjs';
 import execa from 'execa';
 
 describe('successful builds', async () => {

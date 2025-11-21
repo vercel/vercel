@@ -32,5 +32,9 @@
   "framework": {
     "slug": "express",
     "version": "4.21.2"
-  }
+  },
+  "additionalFolders": [
+    "views"
+  ],
+  "additionalDeps": []
 }

@@ -1,0 +1,9 @@
+{
+  "bunVersion": "1.x",
+  "build": {
+    "env": {
+      "VERCEL_CLI_VERSION": "vercel@48.10.4",
+      "VERCEL_EXPERIMENTAL_BACKENDS": "1"
+    }
+  }
+}
