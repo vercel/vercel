@@ -1,6 +1,7 @@
 import { existsSync } from 'fs';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
+import { config as dotenvConfig } from 'dotenv';
 import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
@@ -68,6 +69,9 @@ export async function compileVercelConfig(
       wasCompiled: false,
     };
   }
+
+  dotenvConfig({ path: join(workPath, '.env') });
+  dotenvConfig({ path: join(workPath, '.env.local') });
 
   const tempOutPath = join(vercelDir, 'vercel-temp.js');
 
