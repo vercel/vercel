@@ -1,5 +1,13 @@
 # vercel
 
+## 48.10.7
+
+### Patch Changes
+
+- Support python builder for manual routes ([#14319](https://github.com/vercel/vercel/pull/14319))
+
+- prefer the first production alias for `vercel curl` when no deployment is provided ([#14307](https://github.com/vercel/vercel/pull/14307))
+
 ## 48.10.6
 
 ### Patch Changes
