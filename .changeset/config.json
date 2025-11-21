@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@2.3.0/schema.json",
   "changelog": [
     "@svitejs/changesets-changelog-github-compact",
-    { "repo": "vercel/vercel" }
+    {
+      "repo": "vercel/vercel"
+    }
   ],
   "commit": false,
   "fixed": [],
