@@ -1,6 +1,6 @@
 // @ts-check
-const child_process = require('child_process');
-const path = require('path');
+const child_process = require('node:child_process');
+const path = require('node:path');
 const { getAffectedPackages } = require('./get-affected-packages');
 
 const runnersMap = new Map([
@@ -11,7 +11,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['20', '22'],
+      nodeVersions: ['20', '22', '24'],
     },
   ],
   [
@@ -58,7 +58,7 @@ const runnersMap = new Map([
       max: 7,
       testScript: 'test',
       runners: ['ubuntu-latest'],
-      nodeVersions: ['20', '22'],
+      nodeVersions: ['20', '22', '24'],
     },
   ],
   [
