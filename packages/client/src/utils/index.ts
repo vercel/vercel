@@ -7,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
+import { readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -160,8 +160,8 @@ export async function buildFileTree(
     // Check for .vercel/routes.json and include it if it exists
     try {
       const routesJsonPath = join(path, '.vercel', 'routes.json');
-      const routesJsonContent = await maybeRead(routesJsonPath, null);
-      if (routesJsonContent !== null) {
+      const routesJsonContent = await stat(routesJsonPath);
+      if (routesJsonContent.isFile()) {
         refs.add(routesJsonPath);
         debug('Including .vercel/routes.json in deployment');
       }
