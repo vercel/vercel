@@ -6,7 +6,14 @@ import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
 import { DeploymentFile, FilesMap } from './utils/hashes';
-import { fetch, API_FILES, createDebug } from './utils';
+import {
+  fetch,
+  API_FILES,
+  createDebug,
+  getDefaultDeploymentName,
+  prepareFiles,
+  getPreUploadedFiles,
+} from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import { VercelClientOptions, DeploymentOptions } from './types';
@@ -41,11 +48,21 @@ export async function* upload(
     return;
   }
 
+  const defaultDeploymentName = getDefaultDeploymentName(files, clientOptions);
   let shas: string[] = [];
 
   debug('Determining necessary files for upload...');
 
-  for await (const event of deploy(files, clientOptions, deploymentOptions)) {
+  let preparedFiles = prepareFiles(files, clientOptions);
+  for await (const event of deploy(
+    defaultDeploymentName,
+    clientOptions,
+    deploymentOptions,
+    {
+      inline: [],
+      preUploaded: getPreUploadedFiles(preparedFiles),
+    }
+  )) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
         shas = event.payload.missing;
@@ -235,7 +252,13 @@ export async function* upload(
 
   try {
     debug('Starting deployment creation');
-    for await (const event of deploy(files, clientOptions, deploymentOptions)) {
+    preparedFiles = prepareFiles(files, clientOptions);
+    for await (const event of deploy(
+      defaultDeploymentName,
+      clientOptions,
+      deploymentOptions,
+      { inline: [], preUploaded: getPreUploadedFiles(preparedFiles) }
+    )) {
       if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;
