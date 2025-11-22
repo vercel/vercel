@@ -28,25 +28,12 @@ const clearOutputs = async (fixtureName: string) => {
 const config = {
   outputDirectory: undefined,
   zeroConfig: true,
-  framework: 'express-experimental',
-  projectSettings: {
-    createdAt: 1752690985471,
-    framework: 'express-experimental',
-    devCommand: null,
-    installCommand: null,
-    buildCommand: null,
-    outputDirectory: null,
-    rootDirectory: null,
-    directoryListing: false,
-    nodeVersion: '22.x',
-  },
-  nodeVersion: '22.x',
 };
 const meta = { skipDownload: true };
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('07')
+    fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
@@ -70,7 +57,7 @@ describe('successful builds', async () => {
       await expect(
         extractAndExecuteCode(lambda, lambdaPath, fixtureName)
       ).resolves.toBeUndefined();
-    });
+    }, 10000);
   }
 
   // eslint-disable-next-line jest/no-disabled-tests

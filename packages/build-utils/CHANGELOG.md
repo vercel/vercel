@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.1.1
+
+### Patch Changes
+
+- Only run introspection when isExperimentalBackendsWithoutIntrospectionEnabled is truthy ([#14336](https://github.com/vercel/vercel/pull/14336))
+
 ## 13.1.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vercel/introspection
 
+## 0.0.3
+
+### Patch Changes
+
+- Only run introspection when isExperimentalBackendsWithoutIntrospectionEnabled is truthy ([#14336](https://github.com/vercel/vercel/pull/14336))
+
 ## 0.0.2
 
 ### Patch Changes

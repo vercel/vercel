@@ -24,5 +24,7 @@
   ],
   "framework": {
     "slug": "hono"
-  }
+  },
+  "additionalFolders": [],
+  "additionalDeps": []
 }

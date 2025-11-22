@@ -96,7 +96,7 @@ export const doBuild = async (
       cwd: args.workPath,
       out: defaultOutputDirectory,
     });
-    tsPromise = buildResult.tsPromise;
+    tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
     );
@@ -114,7 +114,7 @@ export const doBuild = async (
       cwd: args.workPath,
       out: outputDir,
     });
-    tsPromise = buildResult.tsPromise;
+    tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
     );
