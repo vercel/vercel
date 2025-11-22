@@ -1,5 +1,12 @@
 # vercel
 
+## 48.10.10
+
+### Patch Changes
+
+- Updated dependencies [[`e9566780378abc94828a6e00320add54c95bdc0c`](https://github.com/vercel/vercel/commit/e9566780378abc94828a6e00320add54c95bdc0c)]:
+  - @vercel/python@6.0.8
+
 ## 48.10.9
 
 ### Patch Changes
