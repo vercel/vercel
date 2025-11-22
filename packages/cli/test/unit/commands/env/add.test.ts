@@ -106,6 +106,8 @@ describe('env add', () => {
           '--force'
         );
         const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Mark as sensitive?');
+        client.stdin.write('n\n');
         await expect(client.stderr).toOutput("What's the value of FORCE_FLAG?");
         client.stdin.write('testvalue\n');
         await expect(exitCodePromise).resolves.toBe(0);
@@ -147,6 +149,8 @@ describe('env add', () => {
           '--guidance'
         );
         const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Mark as sensitive?');
+        client.stdin.write('n\n');
         await expect(client.stderr).toOutput("What's the value of FORCE_FLAG?");
         client.stdin.write('testvalue\n');
         await expect(exitCodePromise).resolves.toBe(0);
@@ -184,6 +188,8 @@ describe('env add', () => {
       it('should redact custom [environment] values', async () => {
         client.setArgv('env', 'add', 'environment-variable', 'custom-env-name');
         const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Mark as sensitive?');
+        client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of environment-variable?"
         );
@@ -216,6 +222,8 @@ describe('env add', () => {
             'branchName'
           );
           const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Mark as sensitive?');
+          client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             "What's the value of REDIS_CONNECTION_STRING?"
           );
@@ -236,6 +244,8 @@ describe('env add', () => {
             'branchName'
           );
           const exitCodePromise = env(client);
+          await expect(client.stderr).toOutput('Mark as sensitive?');
+          client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             "What's the value of TELEMETRY_EVENTS?"
           );

@@ -138,13 +138,26 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
+  let type: 'encrypted' | 'sensitive' = opts['--sensitive']
+    ? 'sensitive'
+    : 'encrypted';
   let envValue: string;
 
   if (stdInput) {
     envValue = stdInput;
   } else {
-    envValue = await client.input.text({
+    if (type === 'encrypted') {
+      const isSensitive = await client.input.confirm(
+        `Your value will be encrypted. Mark as sensitive?`,
+        false
+      );
+      if (isSensitive) {
+        type = 'sensitive';
+      }
+    }
+    envValue = await client.input.password({
       message: `What's the value of ${envName}?`,
+      mask: true,
     });
   }
 
@@ -170,7 +183,6 @@ export default async function add(client: Client, argv: string[]) {
     });
   }
 
-  const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
   const upsert = opts['--force'] ? 'true' : '';
 
   const addStamp = stamp();
