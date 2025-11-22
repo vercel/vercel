@@ -21,6 +21,12 @@ export class LogsTelemetryClient
     }
   }
 
+  trackCliFlagError(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('error');
+    }
+  }
+
   trackCliFlagFollow(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('follow');
