@@ -1,5 +1,5 @@
 export {
   getVercelOidcToken,
   getVercelOidcTokenSync,
-} from './get-vercel-oidc-token';
-export { getContext } from './get-context';
+} from './get-vercel-oidc-token.js';
+export { getContext } from './get-context.js';
