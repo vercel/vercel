@@ -97,7 +97,7 @@ export function saveToken(token: VercelTokenResponse, projectId: string): void {
     }
     const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
     const tokenJson = JSON.stringify(token);
-    fs.mkdirSync(path.dirname(tokenPath), { mode: 0o660, recursive: true }); // read/write perms for owner only
+    fs.mkdirSync(path.dirname(tokenPath), { mode: 0o770, recursive: true }); // read/write/exec perms for owner/group only, x required for dir ops
     fs.writeFileSync(tokenPath, tokenJson);
     fs.chmodSync(tokenPath, 0o660); // read/write perms for owner only
     return;
@@ -144,8 +144,6 @@ export function getTokenPayload(token: string): TokenPayload {
   return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
 }
 
-const TIME_15_MINUTES_IN_MS = 15 * 60 * 1000;
-
 export function isExpired(token: TokenPayload): boolean {
-  return token.exp * 1000 < Date.now() + TIME_15_MINUTES_IN_MS;
+  return token.exp * 1000 < Date.now();
 }

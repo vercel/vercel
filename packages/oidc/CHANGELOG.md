@@ -1,5 +1,29 @@
 # @vercel/oidc
 
+## 3.0.5
+
+### Patch Changes
+
+- Fix OIDC token expiry check ([#14306](https://github.com/vercel/vercel/pull/14306))
+
+## 3.0.4
+
+### Patch Changes
+
+- Fix directory permissions so that files can be created under the OIDC data directory in linux ([#14214](https://github.com/vercel/vercel/pull/14214))
+
+## 3.0.3
+
+### Patch Changes
+
+- fix(oidc): add `"workflow"` as export condition ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+## 3.0.2
+
+### Patch Changes
+
+- fix(oidc): add `"react-native"` as export condition ([#14066](https://github.com/vercel/vercel/pull/14066))
+
 ## 3.0.1
 
 ### Patch Changes

@@ -3,6 +3,7 @@ import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
@@ -10,6 +11,7 @@ import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
+import { httpstatCommand } from './httpstat/command';
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
@@ -22,6 +24,7 @@ import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { microfrontendsCommand } from './microfrontends/command';
+import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
@@ -44,12 +47,14 @@ const commandsStructs = [
   buildCommand,
   cacheCommand,
   certsCommand,
+  curlCommand,
   deployCommand,
   devCommand,
   dnsCommand,
   domainsCommand,
   envCommand,
   gitCommand,
+  httpstatCommand,
   initCommand,
   inspectCommand,
   installCommand,
@@ -62,6 +67,7 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
+  openCommand,
   projectCommand,
   promoteCommand,
   pullCommand,

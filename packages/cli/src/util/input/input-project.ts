@@ -70,23 +70,49 @@ export default async function inputProject(
   }
 
   if (shouldLinkProject) {
-    // user wants to link a project
-    let toLink: Project;
-    await client.input.text({
-      message: 'What’s the name of your existing project?',
-      validate: async val => {
-        if (!val) {
-          return 'Project name cannot be empty';
-        }
-        const project = await getProjectByIdOrName(client, val, org.id);
-        if (project instanceof ProjectNotFound) {
-          return 'Project not found';
-        }
-        toLink = project;
-        return true;
-      },
-    });
-    return toLink!;
+    const firstPage = await client.fetch<{
+      projects: Project[];
+      pagination: { count: number; next: number | null };
+    }>(`/v9/projects?limit=100`, { accountId: org.id });
+    const projects = firstPage.projects;
+    const hasMoreProjects = firstPage.pagination.next !== null;
+
+    if (projects.length === 0) {
+      output.log(
+        `No existing projects found under ${chalk.bold(org.slug)}. Creating new project.`
+      );
+    } else if (hasMoreProjects) {
+      let toLink: Project;
+      await client.input.text({
+        message: "What's the name of your existing project?",
+        validate: async val => {
+          if (!val) {
+            return 'Project name cannot be empty';
+          }
+          const project = await getProjectByIdOrName(client, val, org.id);
+          if (project instanceof ProjectNotFound) {
+            return 'Project not found';
+          }
+          toLink = project;
+          return true;
+        },
+      });
+      return toLink!;
+    } else {
+      const choices = projects
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .map(project => ({
+          name: project.name,
+          value: project,
+        }));
+
+      const toLink = await client.input.select<Project>({
+        message: 'Which existing project do you want to link?',
+        choices,
+      });
+
+      return toLink;
+    }
   }
 
   // user wants to create a new project

@@ -16,6 +16,7 @@ import { buySubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import collectContactInformation from '../../util/domains/collect-contact-information';
 
 export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({
@@ -60,18 +61,17 @@ export default async function buy(client: Client, argv: string[]) {
   }
 
   const availableStamp = stamp();
-  const [domainPrice, renewalPrice] = await Promise.all([
-    getDomainPrice(client, domainName),
-    getDomainPrice(client, domainName, 'renewal'),
-  ]);
+  const domainPrice = await getDomainPrice(client, domainName);
 
   if (domainPrice instanceof Error) {
     output.prettyError(domainPrice);
     return 1;
   }
 
-  if (renewalPrice instanceof Error) {
-    output.prettyError(renewalPrice);
+  const { years, purchasePrice, renewalPrice } = domainPrice;
+
+  if (purchasePrice === null || renewalPrice === null) {
+    output.error('Domain price not found');
     return 1;
   }
 
@@ -84,44 +84,55 @@ export default async function buy(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { period, price } = domainPrice;
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
       'available'
     )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
 
-  let autoRenew;
   if (skipConfirmation) {
-    autoRenew = true;
-  } else {
-    if (
-      !(await client.input.confirm(
-        `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
-          period > 1 ? 's' : ''
-        }`})?`,
-        false
-      ))
-    ) {
-      return 0;
-    }
-
-    autoRenew = await client.input.confirm(
-      renewalPrice.period === 1
-        ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
-        : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
-            `$${price}`
-          )}?`,
-      true
+    output.error(
+      'Domain purchase in CI mode is not supported. Please run this command interactively to provide contact information.'
     );
+    return 1;
   }
+
+  if (
+    !(await client.input.confirm(
+      `Buy now for ${chalk.bold(`$${purchasePrice}`)} (${`${years}yr${
+        years > 1 ? 's' : ''
+      }`})?`,
+      false
+    ))
+  ) {
+    return 0;
+  }
+
+  const autoRenew = await client.input.confirm(
+    years === 1
+      ? `Auto renew yearly for ${chalk.bold(`$${renewalPrice}`)}?`
+      : `Auto renew every ${years} years for ${chalk.bold(
+          `$${renewalPrice}`
+        )}?`,
+    true
+  );
+
+  // Collect contact information
+  const contactInformation = await collectContactInformation(client);
 
   let buyResult;
   const purchaseStamp = stamp();
   output.spinner('Purchasing');
 
   try {
-    buyResult = await purchaseDomain(client, domainName, price, autoRenew);
+    buyResult = await purchaseDomain(
+      client,
+      domainName,
+      purchasePrice,
+      years,
+      autoRenew,
+      contactInformation
+    );
   } catch (err: unknown) {
     output.error(
       'An unexpected error occurred while purchasing your domain. Please try again later.'
@@ -132,16 +143,16 @@ export default async function buy(client: Client, argv: string[]) {
 
   output.stopSpinner();
 
-  if (buyResult instanceof ERRORS.SourceNotFound) {
+  if (buyResult instanceof ERRORS.UnsupportedTLD) {
     output.error(
-      `Could not purchase domain. Please add a payment method using the dashboard.`
+      `The TLD for domain name ${buyResult.meta.domain} is not supported.`
     );
     return 1;
   }
 
-  if (buyResult instanceof ERRORS.UnsupportedTLD) {
+  if (buyResult instanceof ERRORS.TLDNotSupportedViaCLI) {
     output.error(
-      `The TLD for domain name ${buyResult.meta.domain} is not supported.`
+      `Purchased for the TLD for domain name ${buyResult.meta.domain} are not supported via the CLI. Use the REST API or the dashboard to purchase.`
     );
     return 1;
   }
@@ -156,13 +167,6 @@ export default async function buy(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (buyResult instanceof ERRORS.DomainServiceNotAvailable) {
-    output.error(
-      `The domain purchase service is not available. Please try again later.`
-    );
-    return 1;
-  }
-
   if (buyResult instanceof ERRORS.UnexpectedDomainPurchaseError) {
     output.error(`An unexpected error happened while performing the purchase.`);
     return 1;
@@ -173,33 +177,12 @@ export default async function buy(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (buyResult.pending) {
-    output.success(
-      `Domain ${param(domainName)} order was submitted ${purchaseStamp()}`
-    );
-    output.note(
-      `Your domain is processing and will be available once the order is completed.`
-    );
-    output.print(
-      `  An email will be sent upon completion for you to start using your new domain.\n`
-    );
-  } else {
-    output.success(`Domain ${param(domainName)} purchased ${purchaseStamp()}`);
-    if (!buyResult.verified) {
-      output.note(
-        `Your domain is not fully configured yet so it may appear as not verified.`
-      );
-      output.print(
-        `  It might take a few minutes, but you will get an email as soon as it is ready.\n`
-      );
-    } else {
-      output.note(
-        `You may now use your domain as an alias to your deployments. Run ${getCommandName(
-          `alias --help`
-        )}`
-      );
-    }
-  }
+  output.success(`Domain ${param(domainName)} purchased ${purchaseStamp()}`);
+  output.note(
+    `You may now use your domain as an alias to your deployments. Run ${getCommandName(
+      `alias --help`
+    )}`
+  );
 
   return 0;
 }

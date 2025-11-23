@@ -1,34 +1,6 @@
-import { spawn } from 'child_process';
 import fs from 'fs';
 import { join, delimiter as pathDelimiter } from 'path';
-
-type AsgiServer = 'uvicorn' | 'hypercorn';
-
-export const tryImport = (pythonPath: string, mod: 'uvicorn' | 'hypercorn') =>
-  new Promise<boolean>(res => {
-    const check = spawn(pythonPath, ['-c', `import ${mod}`], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    check.once('error', () => res(false));
-    check.once('exit', code => res(code === 0));
-  });
-
-export const detectAsgiServer = async (workPath: string, pythonPath: string) =>
-  new Promise<AsgiServer>((resolve, reject) => {
-    tryImport(pythonPath, 'uvicorn').then(hasUvicorn => {
-      if (hasUvicorn) return resolve('uvicorn');
-      tryImport(pythonPath, 'hypercorn').then(hasHypercorn => {
-        if (hasHypercorn) return resolve('hypercorn');
-        const { venvRoot } = useVirtualEnv(workPath, {}, pythonPath);
-        const baseErrorMessage =
-          'No ASGI server found. Please install either "uvicorn" or "hypercorn" (e.g. "pip install uvicorn").';
-        const errorMessage = !venvRoot
-          ? `${baseErrorMessage} If you are using a virtual environment, please activate it and try again.`
-          : baseErrorMessage;
-        reject(new Error(errorMessage));
-      });
-    });
-  });
+import { readConfigFile, execCommand } from '@vercel/build-utils';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
@@ -60,4 +32,53 @@ export function useVirtualEnv(
     }
   }
   return { pythonCmd };
+}
+
+export async function runPyprojectScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>,
+  env?: NodeJS.ProcessEnv
+) {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) return false;
+
+  type Pyproject = {
+    tool?: {
+      vercel?: { scripts?: Record<string, string> };
+    };
+  };
+
+  let pyproject: Pyproject | null = null;
+  try {
+    pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  } catch {
+    console.error('Failed to parse pyproject.toml');
+    return false;
+  }
+
+  // Read scripts from [tool.vercel.scripts]
+  const scripts: Record<string, string> =
+    pyproject?.tool?.vercel?.scripts || {};
+  const candidates =
+    typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
+  const scriptToRun = candidates.find(name => Boolean(scripts[name]));
+  if (!scriptToRun) return false;
+
+  // Use the Python from the virtualenv if present to resolve tooling, else system python
+  const systemPython = process.platform === 'win32' ? 'python' : 'python3';
+  const finalEnv = { ...process.env, ...env };
+  useVirtualEnv(workPath, finalEnv, systemPython);
+
+  const scriptCommand = scripts[scriptToRun];
+  if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
+    console.log(`Executing: ${scriptCommand}`);
+    await execCommand(scriptCommand, {
+      cwd: workPath,
+      env: finalEnv,
+    });
+    return true;
+  }
+
+  // No command string was provided for the found script name
+  return false;
 }

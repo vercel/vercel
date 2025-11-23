@@ -1319,6 +1319,49 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
+  it.skipIf(process.platform === 'win32')(
+    'should apply routes from `.vercel/routes.json` for backend frameworks',
+    async () => {
+      const cwd = fixture('express-with-routes-json');
+      const output = join(cwd, '.vercel/output');
+
+      try {
+        client.cwd = cwd;
+        const exitCode = await build(client);
+        expect(exitCode).toEqual(0);
+
+        // `config.json` should include routes from `.vercel/routes.json`
+        const config = await fs.readJSON(join(output, 'config.json'));
+        expect(config).toMatchObject({
+          version: 3,
+          routes: [
+            { handle: 'filesystem' },
+            {
+              src: expect.stringMatching(/^\^.*users.*\$$/),
+              dest: '/users/:id',
+              methods: ['GET'],
+            },
+            {
+              src: expect.stringMatching(/^\^.*api.*posts.*\$$/),
+              dest: '/api/posts/:postId',
+              methods: ['GET'],
+            },
+            {
+              src: '/(.*)',
+              dest: '/',
+            },
+          ],
+        });
+
+        // "functions" directory should have the express function
+        const functions = await fs.readdir(join(output, 'functions'));
+        expect(functions).toContain('index.func');
+      } finally {
+        delete process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON;
+      }
+    }
+  );
+
   it('should build with `repo.json` link', async () => {
     const cwd = fixture('../../monorepo-link');
 
