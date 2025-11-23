@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import fs from 'fs-extra';
+import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
@@ -27,6 +27,9 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  shouldUseExperimentalBackends,
+  isBackendBuilder,
+  type Lambda,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -42,6 +45,7 @@ import {
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
+  sourceToRegex,
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
@@ -611,8 +615,12 @@ async function doBuild(
             buildCommand: projectSettings.buildCommand ?? undefined,
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
+            bunVersion: localConfig.bunVersion ?? undefined,
           }
-        : build.config || {};
+        : {
+            ...(build.config || {}),
+            bunVersion: localConfig.bunVersion ?? undefined,
+          };
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,
@@ -633,23 +641,17 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          () => {
+          async () => {
+            // Use experimental backends builder only for backend framework builders,
+            // not for static builders (which handle public/ directories)
             if (
-              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-              'name' in builder &&
-              builder.name === 'express' &&
-              'experimentalBuild' in builder &&
-              typeof builder.experimentalBuild === 'function'
+              shouldUseExperimentalBackends(buildConfig.framework) &&
+              builderPkg.name !== '@vercel/static'
             ) {
-              return builder.experimentalBuild(buildOptions);
-            } else if (
-              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-              'name' in builder &&
-              builder.name === 'hono' &&
-              'experimentalBuild' in builder &&
-              typeof builder.experimentalBuild === 'function'
-            ) {
-              return builder.experimentalBuild(buildOptions);
+              const experimentalBackendBuilder = await import(
+                '@vercel/backends'
+              );
+              return experimentalBackendBuilder.build(buildOptions);
             }
             return builder.build(buildOptions);
           }
@@ -705,6 +707,68 @@ async function doBuild(
         }
       }
 
+      if (
+        'output' in buildResult &&
+        buildResult.output &&
+        (isBackendBuilder(build) || build.use === '@vercel/python')
+      ) {
+        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
+        if (existsSync(routesJsonPath)) {
+          try {
+            const routesJson = await readJSONFile(routesJsonPath);
+            if (
+              routesJson &&
+              typeof routesJson === 'object' &&
+              'routes' in routesJson &&
+              Array.isArray(routesJson.routes)
+            ) {
+              // This is a v2 build output, so only remap the outputs
+              // if we have an index lambda
+              const indexLambda =
+                'index' in buildResult.output
+                  ? (buildResult.output['index'] as Lambda)
+                  : undefined;
+              // Convert routes from introspection format to Vercel routing format
+              const convertedRoutes = [];
+              const convertedOutputs: Record<string, Lambda> = indexLambda
+                ? { index: indexLambda }
+                : {};
+              for (const route of routesJson.routes) {
+                if (typeof route.source !== 'string') {
+                  continue;
+                }
+                const { src } = sourceToRegex(route.source);
+                const newRoute: Route = {
+                  src,
+                  dest: route.source,
+                };
+                if (route.methods) {
+                  newRoute.methods = route.methods;
+                }
+                if (route.source === '/') {
+                  continue;
+                }
+                if (indexLambda) {
+                  convertedOutputs[route.source] = indexLambda;
+                }
+                convertedRoutes.push(newRoute);
+              }
+              // Wrap routes with filesystem handler and catch-all
+              (buildResult as BuildResultV2Typical).routes = [
+                { handle: 'filesystem' },
+                ...convertedRoutes,
+                { src: '/(.*)', dest: '/' },
+              ];
+              if (indexLambda) {
+                (buildResult as BuildResultV2Typical).output = convertedOutputs;
+              }
+            }
+          } catch (error) {
+            output.error(`Failed to read routes.json: ${error}`);
+          }
+        }
+      }
+
       // Store the build result to generate the final `config.json` after
       // all builds have completed
       buildResults.set(build, buildResult);
@@ -723,16 +787,17 @@ async function doBuild(
             buildOutputLength: String(buildOutputLength),
           })
           .trace<Record<string, PathOverride> | undefined | void>(() =>
-            writeBuildResult(
+            writeBuildResult({
               repoRootPath,
               outputDir,
               buildResult,
               build,
               builder,
               builderPkg,
-              localConfig,
-              standalone
-            )
+              vercelConfig: localConfig,
+              standalone,
+              workPath,
+            })
           )
           .then(
             (override: Record<string, PathOverride> | undefined | void) => {

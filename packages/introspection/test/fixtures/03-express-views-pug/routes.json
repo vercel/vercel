@@ -1,0 +1,35 @@
+{
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^(?:\\/user\\/([^\\/]+))(?:\\/$)?$",
+      "dest": "/user/:id",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "src": "^(?:\\/api\\/data)(?:\\/$)?$",
+      "dest": "/api/data",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
+  "framework": {
+    "slug": "express",
+    "version": "5.1.0"
+  },
+  "additionalFolders": [
+    "pug-views"
+  ],
+  "additionalDeps": [
+    "pug"
+  ]
+}

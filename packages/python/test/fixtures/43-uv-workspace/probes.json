@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/api/greet/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "Hello, RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

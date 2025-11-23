@@ -51,7 +51,7 @@ import {
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
   LambdaGroup,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  getMaxUncompressedLambdaSize,
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
@@ -687,7 +687,7 @@ export async function serverBuild({
       }
       const normalizedPathname = normalizePage(pathname);
 
-      if (isDynamicRoute(normalizedPathname)) {
+      if (isDynamicRoute(normalizedPathname, nextVersion)) {
         dynamicPages.push(normalizedPathname);
       }
 
@@ -823,10 +823,11 @@ export async function serverBuild({
       )
     );
 
-    if (uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
+    const maxLambdaSize = getMaxUncompressedLambdaSize(nodeVersion.runtime);
+    if (uncompressedInitialSize > maxLambdaSize) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          MAX_UNCOMPRESSED_LAMBDA_SIZE
+          maxLambdaSize
         )} uncompressed reached`
       );
 
@@ -838,7 +839,7 @@ export async function serverBuild({
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${maxLambdaSize} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -1062,6 +1063,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      nodeVersion,
     });
 
     for (const group of pageLambdaGroups) {
@@ -1084,6 +1086,7 @@ export async function serverBuild({
       internalPages,
       pageExtensions,
       inversedAppPathManifest,
+      nodeVersion,
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
@@ -1103,6 +1106,7 @@ export async function serverBuild({
       pageExtensions,
       inversedAppPathManifest,
       isRouteHandlers: true,
+      nodeVersion,
     });
 
     const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
@@ -1134,6 +1138,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      nodeVersion,
     });
 
     for (const group of apiLambdaGroups) {
@@ -1200,7 +1205,11 @@ export async function serverBuild({
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
+    await detectLambdaLimitExceeding(
+      combinedGroups,
+      compressedPages,
+      nodeVersion.runtime
+    );
 
     const appNotFoundTraces = pageTraces['_not-found.js'];
     const appNotFoundPsuedoLayer =
@@ -1259,7 +1268,10 @@ export async function serverBuild({
             }
             case 'server/pages-manifest.json': {
               for (const key of Object.keys(manifestData)) {
-                if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                if (
+                  isDynamicRoute(key, nextVersion) &&
+                  !normalizedPages.has(key)
+                ) {
                   delete manifestData[key];
                 }
               }
@@ -1272,7 +1284,7 @@ export async function serverBuild({
                   key.replace(/(^|\/)(page|route)$/, '');
 
                 if (
-                  isDynamicRoute(normalizedKey) &&
+                  isDynamicRoute(normalizedKey, nextVersion) &&
                   !normalizedPages.has(normalizedKey)
                 ) {
                   delete manifestData[key];
@@ -1625,6 +1637,7 @@ export async function serverBuild({
     isAppClientSegmentCacheEnabled,
     isAppClientParamParsingEnabled,
     appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
+    nextVersion,
   });
 
   await Promise.all(
@@ -1664,7 +1677,7 @@ export async function serverBuild({
       // they are in the prerender manifest since a dynamic
       // route can have some prerendered paths and the rest SSR
       inversedAppPathManifest[route] &&
-      isDynamicRoute(route)
+      isDynamicRoute(route, nextVersion)
     ) {
       return;
     }
@@ -1677,7 +1690,15 @@ export async function serverBuild({
     ];
   });
 
+  // Check if the app has Pages Router
+  // Use the appType property from routes manifest if available
+  // Otherwise, assume Pages Router exists (for backward compatibility with older Next.js versions)
+  const hasPagesRouter = routesManifest.appType
+    ? routesManifest.appType === 'pages' || routesManifest.appType === 'hybrid'
+    : true;
+
   const isNextDataServerResolving =
+    hasPagesRouter &&
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
@@ -2413,7 +2434,7 @@ export async function serverBuild({
       // normalize _next/data URL before processing rewrites
       ...normalizeNextDataRoute(),
 
-      ...(!isNextDataServerResolving
+      ...(!isNextDataServerResolving && hasPagesRouter
         ? [
             // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
             // if no match to prevent rewriting _next/data unexpectedly
@@ -2599,7 +2620,10 @@ export async function serverBuild({
             // filter to only static data routes as dynamic routes will be handled
             // below
             const { pathname } = new URL(route.dest || '/', 'http://n');
-            return !isDynamicRoute(pathname.replace(/(\\)?\.json$/, ''));
+            return !isDynamicRoute(
+              pathname.replace(/(\\)?\.json$/, ''),
+              nextVersion
+            );
           })
         : []),
 
@@ -2670,7 +2694,7 @@ export async function serverBuild({
             .filter(Boolean)
         : dataRoutes),
 
-      ...(!isNextDataServerResolving
+      ...(!isNextDataServerResolving && hasPagesRouter
         ? [
             // ensure we 404 for non-existent _next/data routes before
             // trying page dynamic routes

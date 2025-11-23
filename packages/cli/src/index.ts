@@ -166,7 +166,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['curl'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
@@ -621,6 +621,10 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = require('./commands/certs').default;
           break;
+        case 'curl':
+          telemetry.trackCliCommandCurl(userSuppliedSubCommand);
+          func = require('./commands/curl').default;
+          break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           telemetry.trackCliDefaultDeploy(defaultDeploy);
@@ -655,6 +659,10 @@ const main = async () => {
             func = null;
             break;
           }
+        case 'httpstat':
+          telemetry.trackCliCommandHttpstat(userSuppliedSubCommand);
+          func = require('./commands/httpstat').default;
+          break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
@@ -702,6 +710,10 @@ const main = async () => {
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = require('./commands/microfrontends').default;
+          break;
+        case 'open':
+          telemetry.trackCliCommandOpen(userSuppliedSubCommand);
+          func = require('./commands/open').default;
           break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);

@@ -1,5 +1,73 @@
 # @vercel/python
 
+## 6.0.8
+
+### Patch Changes
+
+- [python] uv workspaces support ([#14327](https://github.com/vercel/vercel/pull/14327))
+
+## 6.0.7
+
+### Patch Changes
+
+- [python] flush startup logs atexit ([#14334](https://github.com/vercel/vercel/pull/14334))
+
+## 6.0.6
+
+### Patch Changes
+
+- [python] patch: build commands uv bugfix ([#14303](https://github.com/vercel/vercel/pull/14303))
+
+## 6.0.5
+
+### Patch Changes
+
+- make python version range detection in requires-python in pyproject.toml more robust ([#14258](https://github.com/vercel/vercel/pull/14258))
+
+## 6.0.4
+
+### Patch Changes
+
+- [python] build command support ([#14244](https://github.com/vercel/vercel/pull/14244))
+
+- Adding tests for fast api middleware ([#14236](https://github.com/vercel/vercel/pull/14236))
+
+## 6.0.3
+
+### Patch Changes
+
+- [python] avoid installing dev dependencies ([#14232](https://github.com/vercel/vercel/pull/14232))
+
+- [python] swaps custom http server handler for asgi apps with uvicorn ([#14192](https://github.com/vercel/vercel/pull/14192))
+
+- Exclude JS package manager lock files ([#14233](https://github.com/vercel/vercel/pull/14233))
+
+- [python] surface tracebacks on user code import error ([#14250](https://github.com/vercel/vercel/pull/14250))
+
+## 6.0.2
+
+### Patch Changes
+
+- [python] surface tracebacks on error logs ([#14193](https://github.com/vercel/vercel/pull/14193))
+
+- write to stderr on startup error logs ([#14198](https://github.com/vercel/vercel/pull/14198))
+
+## 6.0.1
+
+### Patch Changes
+
+- [python] allow arbitrary entrypoints in pyproject.toml ([#14181](https://github.com/vercel/vercel/pull/14181))
+
+- [python] update predefined excludes ([#14166](https://github.com/vercel/vercel/pull/14166))
+
+- [python] fix logging ([#14165](https://github.com/vercel/vercel/pull/14165))
+
+## 6.0.0
+
+### Major Changes
+
+- [python] allowing /api folder entrypoints for FastAPI + Flask ([#14168](https://github.com/vercel/vercel/pull/14168))
+
 ## 5.0.10
 
 ### Patch Changes

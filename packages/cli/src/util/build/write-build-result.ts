@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs, { existsSync } from 'fs-extra';
 import mimeTypes from 'mime-types';
 import {
   basename,
@@ -28,12 +28,15 @@ import {
   getLambdaOptionsFromFunction,
   normalizePath,
   type TriggerEvent,
+  isExperimentalBackendsEnabled,
+  isBackendBuilder,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
 import { fileNameSymbol, type VercelConfig } from '@vercel/client';
+import outputManager from '../../output-manager';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
@@ -49,51 +52,52 @@ interface FunctionConfiguration {
   supportsCancellation?: boolean;
 }
 
-export async function writeBuildResult(
-  repoRootPath: string,
-  outputDir: string,
-  buildResult: BuildResultV2 | BuildResultV3,
-  build: Builder,
-  builder: BuilderV2 | BuilderV3,
-  builderPkg: PackageJson,
-  vercelConfig: VercelConfig | null,
-  standalone: boolean = false
-) {
+export async function writeBuildResult(args: {
+  repoRootPath: string;
+  outputDir: string;
+  buildResult: BuildResultV2 | BuildResultV3;
+  build: Builder;
+  builder: BuilderV2 | BuilderV3;
+  builderPkg: PackageJson;
+  vercelConfig: VercelConfig | null;
+  standalone: boolean;
+  workPath: string;
+}) {
+  const {
+    repoRootPath,
+    outputDir,
+    buildResult,
+    build,
+    builder,
+    builderPkg,
+    vercelConfig,
+    standalone,
+    workPath,
+  } = args;
   let version = builder.version;
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'express'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
-  }
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'hono'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
+  if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
+    version = 2;
   }
   if (typeof version !== 'number' || version === 2) {
-    return writeBuildResultV2(
+    return writeBuildResultV2({
       repoRootPath,
       outputDir,
-      buildResult as BuildResultV2,
+      buildResult: buildResult as BuildResultV2,
       build,
       vercelConfig,
-      standalone
-    );
+      standalone,
+      workPath,
+    });
   } else if (version === 3) {
-    return writeBuildResultV3(
+    return writeBuildResultV3({
       repoRootPath,
       outputDir,
-      buildResult as BuildResultV3,
+      buildResult: buildResult as BuildResultV3,
       build,
       vercelConfig,
-      standalone
-    );
+      standalone,
+      workPath,
+    });
   }
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
@@ -133,14 +137,23 @@ function stripDuplicateSlashes(path: string): string {
  * Writes the output from the `build()` return value of a v2 Builder to
  * the filesystem.
  */
-async function writeBuildResultV2(
-  repoRootPath: string,
-  outputDir: string,
-  buildResult: BuildResultV2,
-  build: Builder,
-  vercelConfig: VercelConfig | null,
-  standalone: boolean = false
-) {
+async function writeBuildResultV2(args: {
+  repoRootPath: string;
+  outputDir: string;
+  buildResult: BuildResultV2;
+  build: Builder;
+  vercelConfig: VercelConfig | null;
+  standalone: boolean;
+  workPath: string;
+}) {
+  const {
+    repoRootPath,
+    outputDir,
+    buildResult,
+    build,
+    vercelConfig,
+    standalone,
+  } = args;
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
     return;
@@ -265,15 +278,65 @@ async function writeBuildResultV2(
  * Writes the output from the `build()` return value of a v3 Builder to
  * the filesystem.
  */
-async function writeBuildResultV3(
-  repoRootPath: string,
-  outputDir: string,
-  buildResult: BuildResultV3,
-  build: Builder,
-  vercelConfig: VercelConfig | null,
-  standalone: boolean = false
-) {
+async function writeBuildResultV3(args: {
+  repoRootPath: string;
+  outputDir: string;
+  buildResult: BuildResultV3;
+  build: Builder;
+  vercelConfig: VercelConfig | null;
+  standalone: boolean;
+  workPath: string;
+}) {
+  const {
+    repoRootPath,
+    outputDir,
+    buildResult,
+    build,
+    vercelConfig,
+    standalone,
+    workPath,
+  } = args;
   const { output } = buildResult;
+  const routesJsonPath = join(workPath, '.vercel', 'routes.json');
+
+  if (
+    (isBackendBuilder(build) || build.use === '@vercel/python') &&
+    existsSync(routesJsonPath)
+  ) {
+    try {
+      const newOutput: Record<string, Lambda | EdgeFunction> = {
+        index: output,
+      };
+      const routesJson = await fs.readJSON(routesJsonPath);
+      if (
+        routesJson &&
+        typeof routesJson === 'object' &&
+        'routes' in routesJson &&
+        Array.isArray(routesJson.routes)
+      ) {
+        for (const route of routesJson.routes) {
+          if (route.source === '/') {
+            continue;
+          }
+          if (route.source) {
+            newOutput[route.source] = output;
+          }
+        }
+      }
+
+      return writeBuildResultV2({
+        repoRootPath,
+        outputDir,
+        buildResult: { output: newOutput, routes: buildResult.routes },
+        build,
+        vercelConfig,
+        standalone,
+        workPath,
+      });
+    } catch (error) {
+      outputManager.error(`Failed to read routes.json: ${error}`);
+    }
+  }
   const src = build.src;
   if (typeof src !== 'string') {
     throw new Error(`Expected "build.src" to be a string`);

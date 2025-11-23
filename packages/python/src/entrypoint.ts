@@ -1,10 +1,11 @@
 import fs from 'fs';
-import { posix as pathPosix } from 'path';
+import { join, posix as pathPosix } from 'path';
 import type { FileFsRef } from '@vercel/build-utils';
 import { glob, debug } from '@vercel/build-utils';
+import { readConfigFile } from '@vercel/build-utils';
 
 export const FASTAPI_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
-export const FASTAPI_ENTRYPOINT_DIRS = ['', 'src', 'app'];
+export const FASTAPI_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
 export const FASTAPI_CONTENT_REGEX =
   /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
 
@@ -30,7 +31,7 @@ export function isFastapiEntrypoint(
 
 // Flask zero-config detection
 export const FLASK_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
-export const FLASK_ENTRYPOINT_DIRS = ['', 'src', 'app'];
+export const FLASK_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
 export const FLASK_CONTENT_REGEX =
   /(from\s+flask\s+import\s+Flask|import\s+flask|Flask\s*\()/;
 
@@ -123,4 +124,59 @@ export async function detectFastapiEntrypoint(
     debug('Failed to discover entrypoint for FastAPI');
     return null;
   }
+}
+
+export async function getPyprojectEntrypoint(
+  workPath: string
+): Promise<string | null> {
+  const pyprojectData = await readConfigFile<{
+    project?: { scripts?: Record<string, unknown> };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
+  // If `pyproject.toml` has a [project.scripts] table and contains a script
+  // named "app", parse the value (format: "module:attr") to determine the
+  // module and map it to a file path.
+  const scripts = pyprojectData.project?.scripts as
+    | Record<string, unknown>
+    | undefined;
+  const appScript = scripts?.app;
+  if (typeof appScript !== 'string') return null;
+
+  // Expect values like "package.module:app". Extract the module portion.
+  const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
+  if (!match) return null;
+  const modulePath = match[1];
+  const relPath = modulePath.replace(/\./g, '/');
+
+  // Prefer an existing file match if present; otherwise fall back to "<module>.py".
+  try {
+    const fsFiles = await glob('**', workPath);
+    const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
+    for (const candidate of candidates) {
+      if (fsFiles[candidate]) return candidate;
+    }
+    return null;
+  } catch {
+    debug('Failed to discover Python entrypoint from pyproject.toml');
+    return null;
+  }
+}
+
+/**
+ * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
+ */
+export async function detectPythonEntrypoint(
+  framework: 'fastapi' | 'flask',
+  workPath: string,
+  configuredEntrypoint: string
+): Promise<string | null> {
+  let entrypoint = null;
+  if (framework === 'fastapi') {
+    entrypoint = await detectFastapiEntrypoint(workPath, configuredEntrypoint);
+  } else if (framework === 'flask') {
+    entrypoint = await detectFlaskEntrypoint(workPath, configuredEntrypoint);
+  }
+  if (entrypoint) return entrypoint;
+  return await getPyprojectEntrypoint(workPath);
 }
