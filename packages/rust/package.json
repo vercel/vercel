@@ -20,12 +20,10 @@
   ],
   "dependencies": {
     "@iarna/toml": "^2.2.5",
-    "execa": "5",
-    "lodash": "^4.17.21"
+    "execa": "5"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
-    "@types/lodash": "^4.14.191",
     "@types/ms": "^0.7.31",
     "@types/node": "^18.11.18",
     "@vercel/build-utils": "13.1.2",
