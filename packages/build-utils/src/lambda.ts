@@ -111,8 +111,8 @@ export class Lambda {
   handler: string;
   runtime: string;
   /**
-   * When using a generic runtime such as "executable" or "provided" (custom runtimes) for compiled languages,
-   * this field can be used to specify the language of the runtime.
+   * When using a generic runtime such as "executable" or "provided" (custom runtimes),
+   * this field can be used to specify the language the executable was compiled with.
    */
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
