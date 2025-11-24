@@ -2238,9 +2238,6 @@ importers:
       '@types/node':
         specifier: ^18.11.18
         version: 18.19.125
-      '@types/node-fetch':
-        specifier: ^2.6.2
-        version: 2.6.2
       '@vercel/build-utils':
         specifier: 13.1.2
         version: link:../build-utils
@@ -2262,9 +2259,6 @@ importers:
       ms:
         specifier: ^2.1.3
         version: 2.1.3
-      node-fetch:
-        specifier: 2.6.0
-        version: 2.6.0
       prettier:
         specifier: ^2.8.4
         version: 2.8.8
@@ -8321,13 +8315,6 @@ packages:
 
   /@types/node-fetch@2.5.8:
     resolution: {integrity: sha512-fbjI6ja0N5ZA8TV53RUqzsKNkl9fv8Oj3T7zxW7FGv1GSH7gwJaNF8dzCjrqKaxKeUpTz4yT1DaJFq/omNpGfw==}
-    dependencies:
-      '@types/node': 22.5.0
-      form-data: 3.0.3
-    dev: true
-
-  /@types/node-fetch@2.6.2:
-    resolution: {integrity: sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==}
     dependencies:
       '@types/node': 22.5.0
       form-data: 3.0.3
@@ -16064,11 +16051,6 @@ packages:
 
   /nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
-    dev: true
-
-  /node-fetch@2.6.0:
-    resolution: {integrity: sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==}
-    engines: {node: 4.x || >=6.0.0}
     dev: true
 
   /node-fetch@2.6.7:
