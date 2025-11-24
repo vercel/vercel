@@ -263,6 +263,17 @@ const transformsSchema = {
           },
         ],
       },
+      env: {
+        description:
+          'An array of environment variable names that should be replaced at runtime in the args value',
+        type: 'array',
+        minItems: 1,
+        maxItems: 64,
+        items: {
+          type: 'string',
+          maxLength: 256,
+        },
+      },
     },
     allOf: [
       {
@@ -366,7 +377,7 @@ export const routesSchema = {
             patternProperties: {
               '^.{1,256}$': {
                 type: 'string',
-                maxLength: 4096,
+                maxLength: 32768,
               },
             },
           },
@@ -575,7 +586,7 @@ export const headersSchema = {
             },
             value: {
               type: 'string',
-              maxLength: 4096,
+              maxLength: 32768,
             },
           },
         },

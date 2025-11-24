@@ -1,5 +1,17 @@
 # @vercel/routing-utils
 
+## 5.3.0
+
+### Minor Changes
+
+- add support for the env field in transforms for explicit environment variable usage ([#14223](https://github.com/vercel/vercel/pull/14223))
+
+## 5.2.2
+
+### Patch Changes
+
+- Allow header values of up to 32kb in length in routes. ([#14263](https://github.com/vercel/vercel/pull/14263))
+
 ## 5.2.1
 
 ### Patch Changes

@@ -8,6 +8,9 @@ import {
   FileBlob,
   debug,
   NowBuildError,
+  execCommand,
+  scanParentDirs,
+  getEnvForPackageManager,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -26,6 +29,8 @@ import {
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
+import { runPyprojectScript } from './utils';
+import { installUvWorkspaceDependencies } from './uv-workspace';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -82,6 +87,7 @@ export async function downloadFilesInWorkPath({
 
 export const build: BuildV3 = async ({
   workPath,
+  repoRootPath,
   files: originalFiles,
   entrypoint,
   meta = {},
@@ -110,6 +116,55 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
+  }
+
+  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
+  if (framework === 'fastapi' || framework === 'flask') {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    const spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      if (installCommand.trim()) {
+        console.log(`Running "install" command: \`${installCommand}\`...`);
+        await execCommand(installCommand, {
+          env: spawnEnv,
+          cwd: workPath,
+        });
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: spawnEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        spawnEnv
+      );
+    }
   }
 
   let fsFiles = await glob('**', workPath);
@@ -188,17 +243,12 @@ export const build: BuildV3 = async ({
     } catch (err) {
       debug('Failed to parse pyproject.toml', err);
     }
-    const VERSION_REGEX = /\b\d+\.\d+\b/;
-    const exact = requiresPython?.trim().match(VERSION_REGEX)?.[0];
-    if (exact) {
-      declaredPythonVersion = { version: exact, source: 'pyproject.toml' };
-      debug(
-        `Found Python version ${exact} in pyproject.toml (requires-python: "${requiresPython}")`
-      );
-    } else if (requiresPython) {
-      debug(
-        `Could not parse Python version from pyproject.toml requires-python: "${requiresPython}"`
-      );
+    if (typeof requiresPython === 'string' && requiresPython.trim()) {
+      declaredPythonVersion = {
+        version: requiresPython.trim(),
+        source: 'pyproject.toml',
+      };
+      debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
     }
   } else if (pipfileLockDir) {
     let lock: {
@@ -289,6 +339,20 @@ export const build: BuildV3 = async ({
     targetDir: vendorBaseDir,
     meta,
   });
+
+  // Flask is a WSGI framework, so we don't need uvicorn
+  if (framework !== 'flask') {
+    await installRequirement({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      uvPath,
+      dependency: 'uvicorn',
+      version: '0.38.0',
+      workPath,
+      targetDir: vendorBaseDir,
+      meta,
+    });
+  }
 
   let installedFromProjectFiles = false;
 
@@ -383,6 +447,21 @@ export const build: BuildV3 = async ({
     });
   }
 
+  // For uv workspaces (monorepos), also install any internal workspace
+  // projects that are referenced as dependencies of this app
+  if (pyprojectDir && repoRootPath) {
+    await installUvWorkspaceDependencies({
+      repoRootPath,
+      pyprojectDir,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      uvPath,
+      workPath,
+      vendorBaseDir,
+      meta,
+    });
+  }
+
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
@@ -412,6 +491,9 @@ export const build: BuildV3 = async ({
     '**/.mypy_cache/**',
     '**/.ruff_cache/**',
     '**/public/**',
+    '**/pnpm-lock.yaml',
+    '**/yarn.lock',
+    '**/package-lock.json',
   ];
 
   const lambdaEnv = {} as Record<string, string>;

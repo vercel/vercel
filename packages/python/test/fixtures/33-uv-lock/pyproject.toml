@@ -5,3 +5,13 @@ requires-python = ">=3.11,<=3.12"
 dependencies = [
   "fastapi",
 ]
+
+[project.optional-dependencies]
+mypy = [
+  "mypy",
+]
+
+[dependency-groups]
+dev = [
+  "ruff",
+]

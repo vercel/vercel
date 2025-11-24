@@ -343,7 +343,16 @@ export async function exportRequirementsFromUv(
   if (!uvPath) {
     throw new Error('uv is not available to export requirements');
   }
-  const args: string[] = ['export'];
+  // Export only runtime deps:
+  // - --no-default-groups: exclude configured default groups (e.g. dev)
+  // - --no-emit-workspace: do not include the workspace/root project (avoids extras/editable)
+  // - --no-editable: ensure no editable installs are emitted
+  const args: string[] = [
+    'export',
+    '--no-default-groups',
+    '--no-emit-workspace',
+    '--no-editable',
+  ];
   // Prefer using the lockfile strictly if present
   if (locked) {
     // "--frozen" ensures the lock is respected and not updated during export

@@ -1,0 +1,40 @@
+{
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^(?:\\/user\\/([^\\/]+))(?:\\/$)?$",
+      "dest": "/user/:id",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "src": "^(?:\\/user\\/([^\\/]+)\\/posts)(?:\\/$)?$",
+      "dest": "/user/:id/posts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "src": "^(?:\\/blog\\/([\\s\\S]+))(?:\\/$)?$",
+      "dest": "/blog/*slugs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
+  "framework": {
+    "slug": "express",
+    "version": "4.21.2"
+  },
+  "additionalFolders": [
+    "views"
+  ],
+  "additionalDeps": []
+}

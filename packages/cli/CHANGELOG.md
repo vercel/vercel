@@ -1,5 +1,151 @@
 # vercel
 
+## 48.10.10
+
+### Patch Changes
+
+- Updated dependencies [[`e9566780378abc94828a6e00320add54c95bdc0c`](https://github.com/vercel/vercel/commit/e9566780378abc94828a6e00320add54c95bdc0c)]:
+  - @vercel/python@6.0.8
+
+## 48.10.9
+
+### Patch Changes
+
+- Updated dependencies [[`ac51c0e5a0258cf8c5547984ab488cd61ab4c944`](https://github.com/vercel/vercel/commit/ac51c0e5a0258cf8c5547984ab488cd61ab4c944), [`a9340f6f5022eed96d1e42344b5bb67f1239ca41`](https://github.com/vercel/vercel/commit/a9340f6f5022eed96d1e42344b5bb67f1239ca41)]:
+  - @vercel/python@6.0.7
+  - @vercel/build-utils@13.1.1
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.7
+  - @vercel/express@0.1.12
+  - @vercel/fastify@0.1.10
+  - @vercel/h3@0.1.16
+  - @vercel/hono@0.2.10
+  - @vercel/node@5.5.9
+  - @vercel/static-build@2.8.9
+
+## 48.10.8
+
+### Patch Changes
+
+- Updated dependencies [[`10de9d8d6ebdef57f4b0ca7dabc277651b317d7c`](https://github.com/vercel/vercel/commit/10de9d8d6ebdef57f4b0ca7dabc277651b317d7c)]:
+  - @vercel/backends@0.0.10
+  - @vercel/express@0.1.11
+
+## 48.10.7
+
+### Patch Changes
+
+- Support python builder for manual routes ([#14319](https://github.com/vercel/vercel/pull/14319))
+
+- prefer the first production alias for `vercel curl` when no deployment is provided ([#14307](https://github.com/vercel/vercel/pull/14307))
+
+## 48.10.6
+
+### Patch Changes
+
+- Bugfix: stop streaming logs after successful deploy ([#14321](https://github.com/vercel/vercel/pull/14321))
+
+## 48.10.5
+
+### Patch Changes
+
+- Shows more descriptive log message while building ([#14301](https://github.com/vercel/vercel/pull/14301))
+
+- Bump @vercel/fun to support executable runtimes ([#14305](https://github.com/vercel/vercel/pull/14305))
+
+- Updated dependencies [[`0a1db0d2f42aa5c6f80541d6cadf3904d6131a80`](https://github.com/vercel/vercel/commit/0a1db0d2f42aa5c6f80541d6cadf3904d6131a80), [`e20394a5a76207267966393edf0e66e4e9a1d213`](https://github.com/vercel/vercel/commit/e20394a5a76207267966393edf0e66e4e9a1d213)]:
+  - @vercel/build-utils@13.1.0
+  - @vercel/python@6.0.6
+  - @vercel/backends@0.0.9
+  - @vercel/elysia@0.1.6
+  - @vercel/express@0.1.10
+  - @vercel/fastify@0.1.9
+  - @vercel/h3@0.1.15
+  - @vercel/hono@0.2.9
+  - @vercel/node@5.5.8
+  - @vercel/static-build@2.8.8
+
+## 48.10.4
+
+### Patch Changes
+
+- adds support for missing protocol when using the `--deployment` flag of `vercel curl` ([#14297](https://github.com/vercel/vercel/pull/14297))
+
+- Update deployment status emoji to show loading indicator (⏳) initially, then change to success (✅) when deployment is ready. This provides better visual feedback during the deployment process. ([#14278](https://github.com/vercel/vercel/pull/14278))
+
+- Updated dependencies [[`2329dff0836e8699922eed7e70326511f93dd9f8`](https://github.com/vercel/vercel/commit/2329dff0836e8699922eed7e70326511f93dd9f8)]:
+  - @vercel/build-utils@13.0.2
+  - @vercel/node@5.5.7
+  - @vercel/backends@0.0.9
+  - @vercel/elysia@0.1.5
+  - @vercel/express@0.1.9
+  - @vercel/fastify@0.1.8
+  - @vercel/h3@0.1.14
+  - @vercel/hono@0.2.8
+  - @vercel/static-build@2.8.7
+
+## 48.10.3
+
+### Patch Changes
+
+- Updated http-proxy dependency to http-proxy-node16 ([#14251](https://github.com/vercel/vercel/pull/14251))
+
+- Updated dependencies [[`cf1183cb80e407238af2dd2a8d5e605f621c5d91`](https://github.com/vercel/vercel/commit/cf1183cb80e407238af2dd2a8d5e605f621c5d91)]:
+  - @vercel/backends@0.0.8
+  - @vercel/express@0.1.8
+
+## 48.10.2
+
+### Patch Changes
+
+- Fix issue where manual routes was checking wrong path for routes.json ([#14266](https://github.com/vercel/vercel/pull/14266))
+
+## 48.10.1
+
+### Patch Changes
+
+- Updated dependencies [[`6c9fdcc6632b6572e662fb15f5ede7ccdad9c23d`](https://github.com/vercel/vercel/commit/6c9fdcc6632b6572e662fb15f5ede7ccdad9c23d)]:
+  - @vercel/python@6.0.5
+
+## 48.10.0
+
+### Minor Changes
+
+- Adding in command vc open, to open project in browser ([#14237](https://github.com/vercel/vercel/pull/14237))
+
+## 48.9.2
+
+### Patch Changes
+
+- Updated dependencies [[`69f56e68bf56677a2c97dcd2cc83388a9cde0f08`](https://github.com/vercel/vercel/commit/69f56e68bf56677a2c97dcd2cc83388a9cde0f08), [`e77b39019d09be29896298cb992423f4f23f61e1`](https://github.com/vercel/vercel/commit/e77b39019d09be29896298cb992423f4f23f61e1), [`6221d3c49375450891d4bb1bba9e9702132f671b`](https://github.com/vercel/vercel/commit/6221d3c49375450891d4bb1bba9e9702132f671b), [`9727b014cfe8f1d79af8d489c532e1ec0a9c9d51`](https://github.com/vercel/vercel/commit/9727b014cfe8f1d79af8d489c532e1ec0a9c9d51), [`4e8d707ea94feb5fed1775fa2db7e276447e70cb`](https://github.com/vercel/vercel/commit/4e8d707ea94feb5fed1775fa2db7e276447e70cb), [`51e6515580668731b47d4ae7c75b2f5df4caf8d3`](https://github.com/vercel/vercel/commit/51e6515580668731b47d4ae7c75b2f5df4caf8d3), [`4c310f1e747d4e3281b279a42ea5601aa6efe6c2`](https://github.com/vercel/vercel/commit/4c310f1e747d4e3281b279a42ea5601aa6efe6c2)]:
+  - @vercel/next@4.15.3
+  - @vercel/ruby@2.2.2
+  - @vercel/static-build@2.8.6
+  - @vercel/build-utils@13.0.1
+  - @vercel/backends@0.0.7
+  - @vercel/hydrogen@1.3.2
+  - @vercel/redwood@2.4.2
+  - @vercel/remix-builder@5.5.2
+  - @vercel/node@5.5.6
+  - @vercel/python@6.0.4
+  - @vercel/elysia@0.1.4
+  - @vercel/express@0.1.7
+  - @vercel/fastify@0.1.7
+  - @vercel/h3@0.1.13
+  - @vercel/hono@0.2.7
+
+## 48.9.1
+
+### Patch Changes
+
+- Include account info in curl requests ([#14221](https://github.com/vercel/vercel/pull/14221))
+
+- feat: [vercel curl & vercel httpstat] validation for full url ([#14209](https://github.com/vercel/vercel/pull/14209))
+
+- Updated dependencies [[`3dbaa57ed7061d40c82a70d48e57f0d3ca38f32d`](https://github.com/vercel/vercel/commit/3dbaa57ed7061d40c82a70d48e57f0d3ca38f32d), [`62651e302de8c2913b658b5cfd5c9e1dd192a03c`](https://github.com/vercel/vercel/commit/62651e302de8c2913b658b5cfd5c9e1dd192a03c), [`d485db0fe0ceaeddea8993f6d6d81348df0762ea`](https://github.com/vercel/vercel/commit/d485db0fe0ceaeddea8993f6d6d81348df0762ea), [`fd83a14365e529930c77fd03358a1d4e42c125f0`](https://github.com/vercel/vercel/commit/fd83a14365e529930c77fd03358a1d4e42c125f0), [`b2f517bcf1b9af299d9b381cf329a24e86dc2686`](https://github.com/vercel/vercel/commit/b2f517bcf1b9af299d9b381cf329a24e86dc2686)]:
+  - @vercel/python@6.0.3
+  - @vercel/backends@0.0.6
+
 ## 48.9.0
 
 ### Minor Changes

@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 13.1.1
+
+### Patch Changes
+
+- Only run introspection when isExperimentalBackendsWithoutIntrospectionEnabled is truthy ([#14336](https://github.com/vercel/vercel/pull/14336))
+
+## 13.1.0
+
+### Minor Changes
+
+- Remove --unsafe-perm from npm install command ([#14302](https://github.com/vercel/vercel/pull/14302))
+
+## 13.0.2
+
+### Patch Changes
+
+- Improve warning messages surrounding Elysia ([#14272](https://github.com/vercel/vercel/pull/14272))
+
+## 13.0.1
+
+### Patch Changes
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
 ## 13.0.0
 
 ### Major Changes
