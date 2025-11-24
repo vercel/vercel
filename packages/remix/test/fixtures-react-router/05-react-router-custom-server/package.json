@@ -14,7 +14,7 @@
 		"@react-router/serve": "^7.1.5",
 		"@vercel/react-router": "^1.0.2",
 		"express": "^4.21.2",
-		"hono": "^4.7.0",
+		"hono": "^4.10.3",
 		"isbot": "^5.1.17",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
