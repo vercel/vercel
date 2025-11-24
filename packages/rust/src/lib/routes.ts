@@ -1,5 +1,3 @@
-import { orderBy } from 'lodash';
-
 const CatchPriority = {
   Static: 0,
   Dynamic: 1,
@@ -85,11 +83,18 @@ export function generateRoutes(files: string[]): Route[] {
     })
     .filter(r => r.src !== '/api/main');
 
-  const orderedRoutes = orderBy(
-    routes,
-    ['catchType', 'depth'],
-    ['asc', 'desc']
-  );
+  const orderedRoutes = routes.sort((a, b) => {
+    // First sort by catchType ascending
+    if (a.catchType !== b.catchType) {
+      // Handle null values - null should come first (lowest priority)
+      if (a.catchType === null) return -1;
+      if (b.catchType === null) return 1;
+      return a.catchType - b.catchType;
+    }
+
+    // Then sort by depth descending (higher depth first)
+    return b.depth - a.depth;
+  });
 
   return orderedRoutes.map<Route>(r => ({
     src: r.src,
