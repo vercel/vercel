@@ -1,5 +1,4 @@
-import { existsSync } from 'fs';
-import { mkdir, writeFile, unlink } from 'fs/promises';
+import { mkdir, writeFile, unlink, access } from 'fs/promises';
 import { join, basename } from 'path';
 import { config as dotenvConfig } from 'dotenv';
 import output from '../output-manager';
@@ -15,11 +14,20 @@ export interface CompileConfigResult {
 
 const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
 
-function findAllVercelConfigFiles(workPath: string): string[] {
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findAllVercelConfigFiles(workPath: string): Promise<string[]> {
   const foundFiles: string[] = [];
   for (const ext of VERCEL_CONFIG_EXTENSIONS) {
     const configPath = join(workPath, `vercel.${ext}`);
-    if (existsSync(configPath)) {
+    if (await fileExists(configPath)) {
       foundFiles.push(configPath);
     }
   }
@@ -31,18 +39,20 @@ function findAllVercelConfigFiles(workPath: string): string[] {
  * @param workPath - The directory to search in
  * @returns The basename of the config file, or null if not found
  */
-export function findSourceVercelConfigFile(workPath: string): string | null {
+export async function findSourceVercelConfigFile(
+  workPath: string
+): Promise<string | null> {
   for (const ext of VERCEL_CONFIG_EXTENSIONS) {
     const configPath = join(workPath, `vercel.${ext}`);
-    if (existsSync(configPath)) {
+    if (await fileExists(configPath)) {
       return basename(configPath);
     }
   }
   return null;
 }
 
-function findVercelConfigFile(workPath: string): string | null {
-  const foundFiles = findAllVercelConfigFiles(workPath);
+async function findVercelConfigFile(workPath: string): Promise<string | null> {
+  const foundFiles = await findAllVercelConfigFiles(workPath);
 
   if (foundFiles.length > 1) {
     throw new ConflictingConfigFiles(
@@ -60,8 +70,8 @@ export async function compileVercelConfig(
 ): Promise<CompileConfigResult> {
   const vercelJsonPath = join(workPath, 'vercel.json');
   const nowJsonPath = join(workPath, 'now.json');
-  const hasVercelJson = existsSync(vercelJsonPath);
-  const hasNowJson = existsSync(nowJsonPath);
+  const hasVercelJson = await fileExists(vercelJsonPath);
+  const hasNowJson = await fileExists(nowJsonPath);
 
   // Check for conflicting vercel.json and now.json
   if (hasVercelJson && hasNowJson) {
@@ -80,7 +90,7 @@ export async function compileVercelConfig(
     };
   }
 
-  const vercelConfigPath = findVercelConfigFile(workPath);
+  const vercelConfigPath = await findVercelConfigFile(workPath);
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
@@ -147,7 +157,7 @@ export async function compileVercelConfig(
     return {
       configPath: compiledConfigPath,
       wasCompiled: true,
-      sourceFile: findSourceVercelConfigFile(workPath) ?? undefined,
+      sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
     };
   } catch (error: any) {
     throw new NowBuildError({
@@ -166,11 +176,11 @@ export async function compileVercelConfig(
   }
 }
 
-export function getVercelConfigPath(workPath: string): string {
+export async function getVercelConfigPath(workPath: string): Promise<string> {
   const vercelJsonPath = join(workPath, 'vercel.json');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
-  if (existsSync(compiledConfigPath)) {
+  if (await fileExists(compiledConfigPath)) {
     return compiledConfigPath;
   }
 
