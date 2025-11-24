@@ -112,6 +112,14 @@ export async function compileVercelConfig(
   }
 
   if (!vercelConfigPath) {
+    if (existsSync(compiledConfigPath)) {
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: findSourceVercelConfigFile(workPath) ?? undefined,
+      };
+    }
+
     return {
       configPath: hasVercelJson
         ? vercelJsonPath
