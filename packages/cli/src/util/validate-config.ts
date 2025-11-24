@@ -172,12 +172,6 @@ const vercelConfigSchema = {
     images: imagesSchema,
     crons: cronsSchema,
     bunVersion: { type: 'string' },
-    env: {
-      type: 'object',
-      additionalProperties: {
-        type: 'string',
-      },
-    },
   },
 };
 

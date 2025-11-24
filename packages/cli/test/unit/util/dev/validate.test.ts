@@ -678,43 +678,4 @@ describe('validateConfig', () => {
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'
     );
   });
-
-  it('should not error with routes containing transforms with env', async () => {
-    const config = {
-      routes: [
-        {
-          src: '/(.*)',
-          dest: 'https://example.com/$1',
-          transforms: [
-            {
-              type: 'request.headers',
-              op: 'set',
-              target: { key: 'cdck-trust-proxy' },
-              args: '$CDCK_TRUST_PROXY',
-              env: ['CDCK_TRUST_PROXY'],
-            },
-          ],
-        },
-      ],
-    };
-    const error = validateConfig(config);
-    expect(error).toBeNull();
-  });
-
-  it('should not error with top-level env property', async () => {
-    const config = {
-      env: {
-        MY_VAR: 'value',
-        ANOTHER_VAR: 'another_value',
-      },
-      routes: [
-        {
-          src: '/(.*)',
-          dest: 'https://example.com/$1',
-        },
-      ],
-    };
-    const error = validateConfig(config);
-    expect(error).toBeNull();
-  });
 });
