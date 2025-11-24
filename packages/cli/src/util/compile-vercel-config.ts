@@ -112,20 +112,30 @@ export async function compileVercelConfig(
   }
 
   if (!vercelConfigPath) {
-    if (existsSync(compiledConfigPath)) {
+    if (hasVercelJson) {
+      return {
+        configPath: vercelJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (hasNowJson) {
+      return {
+        configPath: nowJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (await fileExists(compiledConfigPath)) {
       return {
         configPath: compiledConfigPath,
         wasCompiled: true,
-        sourceFile: findSourceVercelConfigFile(workPath) ?? undefined,
+        sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
       };
     }
 
     return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
+      configPath: null,
       wasCompiled: false,
     };
   }
