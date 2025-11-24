@@ -353,17 +353,12 @@ export async function linkFolderToProject(
   );
 
   if (shouldPullEnv) {
+    const originalCwd = client.cwd;
     try {
-      // Set the current working directory to the project path
-      const originalCwd = client.cwd;
       client.cwd = path;
 
-      // Call the env pull command, only skip confirmation if user used --yes for link
       const args = autoConfirm ? ['--yes'] : [];
       const exitCode = await pull(client, args);
-
-      // Restore original cwd
-      client.cwd = originalCwd;
 
       if (exitCode !== 0) {
         output.error(
@@ -374,6 +369,8 @@ export async function linkFolderToProject(
       output.error(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );
+    } finally {
+      client.cwd = originalCwd;
     }
   }
 }
