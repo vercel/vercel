@@ -188,6 +188,10 @@ export class Lambda {
       );
     }
 
+    if (runtimeLanguage !== undefined) {
+      assert(runtimeLanguage === 'rust', '"runtimeLanguage" must be "rust"');
+    }
+
     if (
       'experimentalAllowBundling' in opts &&
       opts.experimentalAllowBundling !== undefined
