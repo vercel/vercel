@@ -1,5 +1,20 @@
 # vercel
 
+## 48.10.11
+
+### Patch Changes
+
+- Updated dependencies [[`fb70f3eef445879bcb28962a86c5691bff618f73`](https://github.com/vercel/vercel/commit/fb70f3eef445879bcb28962a86c5691bff618f73)]:
+  - @vercel/build-utils@13.1.2
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.8
+  - @vercel/express@0.1.13
+  - @vercel/fastify@0.1.11
+  - @vercel/h3@0.1.17
+  - @vercel/hono@0.2.11
+  - @vercel/node@5.5.10
+  - @vercel/static-build@2.8.10
+
 ## 48.10.10
 
 ### Patch Changes

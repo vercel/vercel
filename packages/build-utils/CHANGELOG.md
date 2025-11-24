@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.1.2
+
+### Patch Changes
+
+- Support `runtimeLanguage` in build-utils ([#14344](https://github.com/vercel/vercel/pull/14344))
+
 ## 13.1.1
 
 ### Patch Changes
