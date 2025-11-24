@@ -2222,25 +2222,16 @@ importers:
       execa:
         specifier: '5'
         version: 5.1.1
-      lodash:
-        specifier: ^4.17.21
-        version: 4.17.21
     devDependencies:
       '@types/jest':
         specifier: ^29.4.0
         version: 29.5.0
-      '@types/lodash':
-        specifier: ^4.14.191
-        version: 4.14.191
       '@types/ms':
         specifier: ^0.7.31
         version: 0.7.31
       '@types/node':
         specifier: ^18.11.18
         version: 18.19.125
-      '@types/node-fetch':
-        specifier: ^2.6.2
-        version: 2.6.2
       '@vercel/build-utils':
         specifier: 13.1.2
         version: link:../build-utils
@@ -2262,9 +2253,6 @@ importers:
       ms:
         specifier: ^2.1.3
         version: 2.1.3
-      node-fetch:
-        specifier: 2.6.0
-        version: 2.6.0
       prettier:
         specifier: ^2.8.4
         version: 2.8.8
@@ -8244,10 +8232,6 @@ packages:
     resolution: {integrity: sha512-NrH6jPlV77QCVPhAHofWeiOr77TgpKt82c2RVxSBChWBJqyY/u4ngl3CA4mcsAg/w7rNLrkR7dkObMV0ihLLXw==}
     dev: true
 
-  /@types/lodash@4.14.191:
-    resolution: {integrity: sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==}
-    dev: true
-
   /@types/mime-types@2.1.0:
     resolution: {integrity: sha512-8LDSKVdJxwfJXZAcHRwFDxozsTCo3UmIpDjN1cOnYMTr0h4ivK9I+IdEMdtjnssFm0y66vbnpd21mAgGZ1oGAQ==}
     dev: true
@@ -8321,13 +8305,6 @@ packages:
 
   /@types/node-fetch@2.5.8:
     resolution: {integrity: sha512-fbjI6ja0N5ZA8TV53RUqzsKNkl9fv8Oj3T7zxW7FGv1GSH7gwJaNF8dzCjrqKaxKeUpTz4yT1DaJFq/omNpGfw==}
-    dependencies:
-      '@types/node': 22.5.0
-      form-data: 3.0.3
-    dev: true
-
-  /@types/node-fetch@2.6.2:
-    resolution: {integrity: sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==}
     dependencies:
       '@types/node': 22.5.0
       form-data: 3.0.3
@@ -15554,6 +15531,7 @@ packages:
 
   /lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
+    dev: true
 
   /log-symbols@1.0.2:
     resolution: {integrity: sha512-mmPrW0Fh2fxOzdBbFv4g1m6pR72haFLPJ2G5SJEELf1y+iaQrDG6cWCPjy54RHYbZAt7X+ls690Kw62AdWXBzQ==}
@@ -16064,11 +16042,6 @@ packages:
 
   /nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
-    dev: true
-
-  /node-fetch@2.6.0:
-    resolution: {integrity: sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==}
-    engines: {node: 4.x || >=6.0.0}
     dev: true
 
   /node-fetch@2.6.7:
