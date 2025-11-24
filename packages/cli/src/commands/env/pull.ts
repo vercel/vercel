@@ -165,7 +165,7 @@ export async function envPullCommandLogic(
   const downloadMessage = gitBranch
     ? `Downloading \`${chalk.cyan(
         environment
-      )}\` Environment Variables for ${projectSlugLink} and branch ${chalk.cyan(
+      )}\` Environment Variables for ${projectSlugLink} and any overrides for branch ${chalk.cyan(
         gitBranch
       )}`
     : `Downloading \`${chalk.cyan(

@@ -121,7 +121,9 @@ describe('env pull', () => {
     await expect(client.stderr).toOutput(
       'Downloading `preview` Environment Variables for'
     );
-    await expect(client.stderr).toOutput('and branch feat/awesome-thing');
+    await expect(client.stderr).toOutput(
+      'and any overrides for branch feat/awesome-thing'
+    );
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
     );
