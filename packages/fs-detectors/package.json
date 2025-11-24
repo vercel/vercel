@@ -25,7 +25,7 @@
     "@vercel/frameworks": "3.15.3",
     "@vercel/routing-utils": "5.3.0",
     "glob": "8.0.3",
-    "js-yaml": "4.1.0",
+    "js-yaml": "4.1.1",
     "json5": "2.2.2",
     "minimatch": "3.1.2",
     "semver": "6.3.1"
