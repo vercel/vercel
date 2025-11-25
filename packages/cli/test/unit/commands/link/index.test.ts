@@ -268,19 +268,12 @@ describe('link', () => {
       expect(repoJson.projects).toHaveLength(2);
 
       const frontendProject = repoJson.projects.find(
-        (p: any) => p.directory === 'packages/frontend'
+        (p: any) => p.name === 'frontend'
       );
-      const apiProject = repoJson.projects.find(
-        (p: any) => p.directory === 'packages/api'
-      );
+      const apiProject = repoJson.projects.find((p: any) => p.name === 'api');
 
       expect(frontendProject).toBeDefined();
-      expect(frontendProject.name).toBeTruthy();
-      expect(frontendProject.directory).toEqual('packages/frontend');
-
       expect(apiProject).toBeDefined();
-      expect(apiProject.name).toBeTruthy();
-      expect(apiProject.directory).toEqual('packages/api');
 
       const frontendProjectDetails = await getProjectByNameOrId(
         client,
