@@ -60,7 +60,7 @@ test('[vc link] should prompt for env pull and handle acceptance', async () => {
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, /What's your project's name\?/);
+  await waitForPrompt(vc, `What's your project's name? (${projectName})`);
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'In which directory is your code located?');
@@ -104,7 +104,7 @@ test('[vc link] should handle env pull prompt decline', async () => {
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, /What's your project's name\?/);
+  await waitForPrompt(vc, `What's your project's name? (${projectName})`);
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'In which directory is your code located?');
