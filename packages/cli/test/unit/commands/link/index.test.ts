@@ -433,7 +433,6 @@ describe('link', () => {
       expect(projectJson.projectName).toEqual(project.name);
 
       // Verify env pull was called with --yes flag since link used --yes
-      // Note: confirm should NOT be called when --yes is used (auto-confirmed)
       expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
         '--yes',
       ]);
@@ -619,8 +618,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('project');
-    await expect(client.stderr).toOutput('name');
+    await expect(client.stderr).toOutput('What’s your project’s name?');
     client.stdin.write('awesome-app\n');
 
     await expect(client.stderr).toOutput(
@@ -759,7 +757,6 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
-      // Verify env pull was called (without --yes flag since link didn't use --yes)
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
         []
