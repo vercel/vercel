@@ -25,6 +25,7 @@ export interface Files {
 }
 
 export interface Config {
+  bunVersion?: string;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -180,12 +181,22 @@ export interface ShouldServeOptions {
    * in `vercel.json`.
    */
   config: Config;
+
+  /**
+   * Whether another builder has already matched the given request.
+   */
+  hasMatched?: boolean;
 }
 
 /**
  * `startDevServer()` is given the same parameters as `build()`.
  */
-export type StartDevServerOptions = BuildOptions;
+export type StartDevServerOptions = BuildOptions & {
+  /**
+   * Directory to serve static files from in dev mode
+   */
+  publicDir?: string;
+};
 
 export interface StartDevServerSuccess {
   /**
@@ -368,6 +379,8 @@ export class Version implements BaseVersion {
 
 export class NodeVersion extends Version {}
 
+export class BunVersion extends Version {}
+
 export interface Builder {
   use: string;
   src?: string;
@@ -383,6 +396,7 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
     experimentalTriggers?: TriggerEvent[];
+    supportsCancellation?: boolean;
   };
 }
 

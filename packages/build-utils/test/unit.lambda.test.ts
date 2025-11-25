@@ -110,7 +110,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'nodejs18.x',
+        runtime: 'nodejs22.x',
         experimentalTriggers: [trigger],
       });
 
@@ -135,7 +135,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'nodejs18.x',
+        runtime: 'nodejs22.x',
         experimentalTriggers: [trigger],
       });
 
@@ -167,7 +167,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'nodejs18.x',
+        runtime: 'nodejs22.x',
         experimentalTriggers: triggers,
       });
 
@@ -184,7 +184,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: [
                 {
                   type: 'invalid.type' as any,
@@ -202,7 +202,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: [
                 {
                   type: 'queue/v1beta',
@@ -220,7 +220,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: [
                 {
                   type: 'queue/v1beta',
@@ -238,7 +238,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: 'invalid' as any,
             })
         ).toThrow('"experimentalTriggers" is not an Array');
@@ -250,7 +250,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: ['invalid'] as any,
             })
         ).toThrow('"experimentalTriggers[0]" is not an object');
@@ -262,7 +262,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: [
                 {
                   type: 'queue/v1beta',
@@ -281,7 +281,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: [
                 {
                   type: 'queue/v1beta',
@@ -302,7 +302,7 @@ describe('Lambda', () => {
             new Lambda({
               files,
               handler: 'index.handler',
-              runtime: 'nodejs18.x',
+              runtime: 'nodejs22.x',
               experimentalTriggers: [
                 {
                   type: 'queue/v1beta',
@@ -323,7 +323,7 @@ describe('Lambda', () => {
         const lambda = new Lambda({
           files,
           handler: 'index.handler',
-          runtime: 'nodejs18.x',
+          runtime: 'nodejs22.x',
         });
 
         expect(lambda.experimentalTriggers).toBeUndefined();
@@ -333,7 +333,7 @@ describe('Lambda', () => {
         const lambda = new Lambda({
           files,
           handler: 'index.handler',
-          runtime: 'nodejs18.x',
+          runtime: 'nodejs22.x',
           experimentalTriggers: [],
         });
 
@@ -351,12 +351,76 @@ describe('Lambda', () => {
         const lambda = new Lambda({
           files,
           handler: 'index.handler',
-          runtime: 'nodejs18.x',
+          runtime: 'nodejs22.x',
           experimentalTriggers: [trigger],
         });
 
         expect(lambda.experimentalTriggers![0].initialDelaySeconds).toBe(0);
       });
+    });
+  });
+
+  describe('runtimeLanguage validation', () => {
+    it('should create Lambda with valid runtimeLanguage (rust)', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'provided.al2',
+        runtimeLanguage: 'rust',
+      });
+
+      expect(lambda.runtimeLanguage).toBe('rust');
+    });
+
+    it('should create Lambda without runtimeLanguage', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+      });
+
+      expect(lambda.runtimeLanguage).toBeUndefined();
+    });
+
+    it('should throw error for invalid runtimeLanguage (python)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: 'python' as any,
+          })
+      ).toThrow('"runtimeLanguage" must be "rust"');
+    });
+
+    it('should throw error for invalid runtimeLanguage (number)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: 123 as any,
+          })
+      ).toThrow('"runtimeLanguage" must be "rust"');
+    });
+
+    it('should throw error for invalid runtimeLanguage (empty string)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: '' as any,
+          })
+      ).toThrow('"runtimeLanguage" must be "rust"');
     });
   });
 });

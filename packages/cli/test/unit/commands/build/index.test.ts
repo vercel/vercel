@@ -816,7 +816,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // top level "error" also contains the same error
@@ -826,7 +826,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // `config.json` contains `version`
@@ -1024,7 +1024,7 @@ describe.skipIf(flakey)('build', () => {
       VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `node build.cjs`,
       VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND: '',
       VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY: 'out',
-      VERCEL_PROJECT_SETTINGS_NODE_VERSION: '18.x',
+      VERCEL_PROJECT_SETTINGS_NODE_VERSION: '22.x',
     });
   });
 
@@ -1319,6 +1319,49 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
+  it.skipIf(process.platform === 'win32')(
+    'should apply routes from `.vercel/routes.json` for backend frameworks',
+    async () => {
+      const cwd = fixture('express-with-routes-json');
+      const output = join(cwd, '.vercel/output');
+
+      try {
+        client.cwd = cwd;
+        const exitCode = await build(client);
+        expect(exitCode).toEqual(0);
+
+        // `config.json` should include routes from `.vercel/routes.json`
+        const config = await fs.readJSON(join(output, 'config.json'));
+        expect(config).toMatchObject({
+          version: 3,
+          routes: [
+            { handle: 'filesystem' },
+            {
+              src: expect.stringMatching(/^\^.*users.*\$$/),
+              dest: '/users/:id',
+              methods: ['GET'],
+            },
+            {
+              src: expect.stringMatching(/^\^.*api.*posts.*\$$/),
+              dest: '/api/posts/:postId',
+              methods: ['GET'],
+            },
+            {
+              src: '/(.*)',
+              dest: '/',
+            },
+          ],
+        });
+
+        // "functions" directory should have the express function
+        const functions = await fs.readdir(join(output, 'functions'));
+        expect(functions).toContain('index.func');
+      } finally {
+        delete process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON;
+      }
+    }
+  );
+
   it('should build with `repo.json` link', async () => {
     const cwd = fixture('../../monorepo-link');
 
@@ -1527,6 +1570,75 @@ describe.skipIf(flakey)('build', () => {
 
       const env = await fs.readJSON(join(output, 'static', 'env.json'));
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
+  });
+
+  describe('--standalone flag', () => {
+    it('should convert FileFsRef to FileBlob when --standalone is used', async () => {
+      const cwd = fixture('node');
+      const output = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      client.setArgv('build', '--standalone');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // Check that functions were created
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual([
+        'es6.func',
+        'index.func',
+        'mjs.func',
+        'typescript.func',
+      ]);
+
+      // Check that vc-config.json files exist and don't have filePathMap after standalone processing
+      for (const funcDir of functions) {
+        const vcConfigPath = join(
+          output,
+          'functions/api',
+          funcDir,
+          '.vc-config.json'
+        );
+        const vcConfig = await fs.readJSON(vcConfigPath);
+
+        // After standalone processing, filePathMap should be null (no file references)
+        expect(vcConfig.filePathMap).toBeUndefined();
+
+        // Check that the function files are present in the function directory
+        const funcFiles = await fs.readdir(
+          join(output, 'functions/api', funcDir)
+        );
+        expect(funcFiles).toContain('.vc-config.json');
+        // The actual function files should be inlined as FileBlob, so we should see more than just the config
+        expect(funcFiles.length).toBeGreaterThan(1);
+      }
+    });
+
+    it('should work with static builds and --standalone flag', async () => {
+      const cwd = fixture('static');
+      const output = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      client.setArgv('build', '--standalone');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // Static builds should work normally with standalone flag
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['index.html']);
     });
   });
 });

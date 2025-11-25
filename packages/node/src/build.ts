@@ -28,6 +28,10 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  execCommand,
+  getEnvForPackageManager,
+  scanParentDirs,
+  isBunVersion,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -54,6 +58,7 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
+  considerBuildCommand: boolean;
 }
 
 const require_ = createRequire(__filename);
@@ -67,6 +72,7 @@ async function downloadInstallAndBundle({
   workPath,
   config,
   meta,
+  considerBuildCommand,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -77,14 +83,43 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    [],
-    spawnOpts,
-    meta,
-    nodeVersion,
-    config.projectSettings?.createdAt
-  );
+
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
+
+  spawnOpts.env = getEnvForPackageManager({
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
+  });
+
+  const installCommand = config.projectSettings?.installCommand;
+  if (typeof installCommand === 'string' && considerBuildCommand) {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      config.projectSettings?.createdAt
+    );
+  }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
@@ -96,6 +131,12 @@ function renameTStoJS(path: string) {
   if (path.endsWith('.tsx')) {
     return path.slice(0, -4) + '.js';
   }
+  if (path.endsWith('.mts')) {
+    return path.slice(0, -4) + '.mjs';
+  }
+  if (path.endsWith('.cts')) {
+    return path.slice(0, -4) + '.cjs';
+  }
   return path;
 }
 
@@ -106,7 +147,8 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean
+  isEdgeFunction: boolean,
+  useTypescript5 = false
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -148,6 +190,7 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
+        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -159,10 +202,13 @@ async function compile(
     shouldAddSourcemapSupport = true;
     return source;
   }
+  const isBun = isBunVersion(nodeVersion);
 
   const conditions = isEdgeFunction
     ? ['edge-light', 'browser', 'module', 'import', 'require']
-    : undefined;
+    : isBun
+      ? ['bun']
+      : undefined;
 
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
@@ -221,7 +267,9 @@ async function compile(
 
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-            fsPath.endsWith('.tsx')
+            fsPath.endsWith('.tsx') ||
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
@@ -291,6 +339,7 @@ async function compile(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
+      !file.endsWith('.mts') &&
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
@@ -370,29 +419,87 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  considerBuildCommand = false,
+  entrypointCallback,
+  checks = () => {},
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
+  considerBuildCommand?: boolean;
+  /**
+   * This is called once any user build scripts have run so that the entrypoint can be detected
+   * from files that may have been created by the build script.
+   */
+  entrypointCallback?: () => Promise<string>;
+  checks?: (project: { config: Config; isBun: boolean }) => void;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
-    await downloadInstallAndBundle({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta,
-    });
-
-  await runPackageJsonScript(
+  const {
+    entrypointPath: _entrypointPath,
     entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
+    nodeVersion,
     spawnOpts,
-    config.projectSettings?.createdAt
-  );
+  } = await downloadInstallAndBundle({
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta,
+    considerBuildCommand,
+  });
+
+  let entrypointPath = _entrypointPath;
+
+  const projectBuildCommand = config.projectSettings?.buildCommand;
+
+  // For traditional api-folder builds, the `build` script or project build command isn't used.
+  // but we're reusing the node builder for hono and express, where they should be treated as the
+  // primary builder
+  if (projectBuildCommand && considerBuildCommand) {
+    await execCommand(projectBuildCommand, {
+      ...spawnOpts,
+
+      // Yarn v2 PnP mode may be activated, so force
+      // "node-modules" linker style
+      env: {
+        YARN_NODE_LINKER: 'node-modules',
+        ...spawnOpts.env,
+      },
+
+      cwd: workPath,
+    });
+  } else {
+    const possibleScripts = considerBuildCommand
+      ? ['vercel-build', 'now-build', 'build']
+      : ['vercel-build', 'now-build'];
+
+    await runPackageJsonScript(
+      entrypointFsDirname,
+      possibleScripts,
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
+  }
+  if (entrypointCallback) {
+    const entrypoint = await entrypointCallback();
+    entrypointPath = join(entrypointFsDirname, entrypoint);
+    const functionConfig = config.functions?.[entrypoint];
+    if (functionConfig) {
+      const normalizeArray = (value: any) =>
+        Array.isArray(value) ? value : value ? [value] : [];
+
+      config.includeFiles = [
+        ...normalizeArray(config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      config.excludeFiles = [
+        ...normalizeArray(config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
+  }
 
   const isMiddleware = config.middleware === true;
   let isEdgeFunction = isMiddleware;
@@ -407,6 +514,13 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
+  checks({
+    config,
+    isBun: isBunVersion(nodeVersion),
+  });
+
+  // Opt backend builders to use typescript5
+  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -416,7 +530,8 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction
+    isEdgeFunction,
+    useTypescript5
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 

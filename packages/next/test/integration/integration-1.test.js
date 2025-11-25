@@ -88,7 +88,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(7);
+    expect(lambdas.size).toBe(6);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();
@@ -155,6 +155,31 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     // );
   });
 
+  it('should not generate /_next/data routes for pure App Router apps', async () => {
+    // Test pure App Router (no Pages Router)
+    const { buildResult: appOnlyResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-edge')
+    );
+
+    const appOnlyDataRoutes = appOnlyResult.routes.filter(
+      route => route.src && route.src.includes('_next/data')
+    );
+
+    expect(appOnlyDataRoutes.length).toBe(0);
+  });
+
+  it('should generate /_next/data routes when pages routes are present', async () => {
+    // Test mixed App Router + Pages Router
+    const { buildResult: mixedResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
+    );
+
+    const mixedDataRoutes = mixedResult.routes.filter(
+      route => route.src && route.src.includes('_next/data')
+    );
+    expect(mixedDataRoutes.length).toBeGreaterThan(0);
+  });
+
   it('should build with app-dir with segment options correctly', async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-app-dir-segment-options')
@@ -175,7 +200,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(3);
 
     expect(buildResult.output['api/hello']).toBeDefined();
     expect(buildResult.output['api/hello'].type).toBe('Lambda');
@@ -202,7 +227,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(edgeFunctions.size).toBe(3);
+    expect(edgeFunctions.size).toBe(2);
     expect(buildResult.output['edge']).toBeDefined();
     expect(buildResult.output['index']).toBeDefined();
     // expect(buildResult.output['index/index']).toBeDefined();

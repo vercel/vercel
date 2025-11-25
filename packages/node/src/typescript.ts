@@ -124,7 +124,9 @@ const configFileToBuildMap = new Map<string, GetOutputFunction>();
 /**
  * Register TypeScript compiler.
  */
-export function register(opts: Options = {}): Register {
+export function register(
+  opts: Options & { useTypescript5?: boolean } = {}
+): Register {
   const options = Object.assign({}, DEFAULTS, opts);
 
   const ignoreDiagnostics = [
@@ -142,11 +144,11 @@ export function register(opts: Options = {}): Register {
       paths: [options.project || cwd],
     });
   } catch (e) {
-    compiler = 'typescript';
+    compiler = opts.useTypescript5 ? 'typescript5' : 'typescript';
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
-  if (compiler === 'typescript') {
+  if (compiler === 'typescript' || compiler === 'typescript5') {
     console.log(
       `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
     );
@@ -271,6 +273,21 @@ export function register(opts: Options = {}): Register {
       getCompilationSettings: () => config.options,
       getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
       getCustomTransformers: () => transformers,
+      // This hurts performance, but for Express, type checking will fail to find @types/express without it
+      // so keeping it on for now for Express/Hono projects
+      resolveModuleNames: process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS
+        ? (moduleNames: string[], containingFile: string) => {
+            return moduleNames.map(moduleName => {
+              const result = ts.resolveModuleName(
+                moduleName,
+                containingFile,
+                config.options,
+                ts.sys
+              );
+              return result.resolvedModule;
+            });
+          }
+        : undefined,
     };
 
     const registry = ts.createDocumentRegistry(
@@ -490,9 +507,12 @@ export function fixConfig(
     config.compilerOptions.esModuleInterop = true;
   }
 
-  // If not specified, the default Node.js module is CommonJS.
+  // nodenext will defer to the package.json#type field
+  // but still respect .mts and .cts files
   if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'CommonJS';
+    config.compilerOptions.module = 'NodeNext';
+    config.compilerOptions.moduleResolution = 'NodeNext';
+    config.compilerOptions.strict = false;
   }
 
   return config;

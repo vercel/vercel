@@ -8,7 +8,7 @@ import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
 import minimatch from 'minimatch';
-import httpProxy from 'http-proxy';
+import httpProxy from 'http-proxy-node16';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, type FSWatcher } from 'chokidar';
@@ -39,6 +39,7 @@ import {
   FileFsRef,
   type PackageJson,
   spawnCommand,
+  isExperimentalBackendsEnabled,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -542,6 +543,12 @@ export default class DevServer {
         if (defaults) {
           return defaults;
         }
+      }
+
+      // Once we're happy with this approach, the backend framework definitions
+      // can be updated to contain a dev command. And we can remove this
+      if (isExperimentalBackendsEnabled()) {
+        return 'npx @vercel/cervel dev';
       }
     }
     return undefined;
@@ -2410,7 +2417,8 @@ async function findBuildMatch(
         requestPath,
         devServer,
         vercelConfig,
-        isFilesystem
+        isFilesystem,
+        !!bestIndexMatch
       )
     ) {
       if (!isIndex(match.src)) {
@@ -2436,7 +2444,8 @@ async function shouldServe(
   requestPath: string,
   devServer: DevServer,
   vercelConfig: VercelConfig,
-  isFilesystem = false
+  isFilesystem = false,
+  hasMatched = false
 ): Promise<boolean> {
   const {
     src,
@@ -2483,6 +2492,7 @@ async function shouldServe(
       config: config || {},
       requestPath,
       workPath: devServer.cwd,
+      hasMatched,
     });
     if (shouldServe) {
       return true;

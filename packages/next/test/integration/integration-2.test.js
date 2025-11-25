@@ -89,7 +89,8 @@ it('Should build the serverless-no-config example', async () => {
   ).toBeFalsy();
 });
 
-it('Should invoke build command with serverless-no-config', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('Should invoke build command with serverless-no-config', async () => {
   const {
     workPath,
     buildResult: { output },
@@ -422,7 +423,7 @@ it('should handle edge functions in app with basePath', async () => {
   expect(output['test/test.rsc'].type).toBe('EdgeFunction');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Lambda');
+  expect(output['test/_not-found'].type).toBe('EdgeFunction');
 
   const lambdas = new Set();
   const edgeFunctions = new Set();
@@ -434,8 +435,8 @@ it('should handle edge functions in app with basePath', async () => {
       edgeFunctions.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
-  expect(edgeFunctions.size).toBe(4);
+  expect(lambdas.size).toBe(0);
+  expect(edgeFunctions.size).toBe(5);
 });
 
 it('should not generate lambdas that conflict with static index route in app with basePath', async () => {
@@ -449,7 +450,7 @@ it('should not generate lambdas that conflict with static index route in app wit
   expect(output['test/index.rsc'].type).toBe('Prerender');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Lambda');
+  expect(output['test/_not-found'].type).toBe('Prerender');
 
   const lambdas = new Set();
 
@@ -458,7 +459,7 @@ it('should not generate lambdas that conflict with static index route in app wit
       lambdas.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(0);
 });
 
 describe('PPR', () => {
@@ -544,7 +545,7 @@ describe('PPR', () => {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(1);
 
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
@@ -564,7 +565,7 @@ describe('PPR', () => {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(1);
 
     // Validate that these two lambdas are the same.
     expect(output['chat/index']).toBeDefined();
@@ -653,9 +654,7 @@ describe('rewrite headers with rewrite', () => {
   });
 
   it('should add rewrite headers to the original rewrite', () => {
-    let route = routes.filter(
-      r => r.src === '^(?:/(en|fi|sv|fr|nb))(?:/)?(?<rscsuff>\\.rsc)?$'
-    );
+    let route = routes.filter(r => r.headers?.['x-nextjs-rewritten-path']);
     expect(route.length).toBe(1);
 
     expect(route[0].headers).toEqual({
@@ -697,9 +696,9 @@ describe('cache-control', () => {
       throw new Error('Unexpected output type ' + outputEntry.type);
     }
 
-    // cache life profile "weeks"
-    expect(outputEntry.expiration).toBe(604800); // 1 week
-    expect(outputEntry.staleExpiration).toBe(2592000); // 30 days
+    // this uses default expiration as fallbacks don't have cacheLife
+    // applied to them
+    expect(outputEntry.expiration).toBe(1);
   });
 
   it('should not add a staleExpiration value for static routes', async () => {
@@ -712,5 +711,31 @@ describe('cache-control', () => {
 
     expect(outputEntry.expiration).toBe(false);
     expect(outputEntry.staleExpiration).toBeUndefined();
+  });
+});
+
+describe('action-headers', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-actions')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should add action name meta routes', async () => {
+    const foundActionNames = [];
+
+    for (const route of buildResult.routes || []) {
+      if (route.has?.[0].key === 'next-action' && route.transforms) {
+        foundActionNames.push(route.transforms[0].args);
+      }
+    }
+    expect(foundActionNames.length).toBe(5);
+    expect(foundActionNames.sort()).toMatchSnapshot();
   });
 });

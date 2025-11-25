@@ -5,7 +5,6 @@ import _fetch, { Request, Response } from 'node-fetch';
 
 import whoami from '../../../../src/commands/whoami';
 import { Chance } from 'chance';
-import { inspectToken as inspectTokenActual } from '../../../../src/util/oauth';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
@@ -13,18 +12,11 @@ vi.mock('node-fetch', async () => ({
   default: vi.fn(),
 }));
 
-const inspectToken = vi.mocked(inspectTokenActual);
-vi.mock('../../../../src/util/oauth', async () => ({
-  ...(await vi.importActual('../../../../src/util/oauth')),
-  inspectToken: vi.fn(),
-}));
-
 describe('OAuth Token Refresh', () => {
   it('should refresh the token when it is expired', async () => {
     const refreshToken = randomUUID();
     const accessToken = randomUUID();
     client.authConfig = {
-      type: 'oauth',
       token: accessToken,
       expiresAt: 0,
       refreshToken,
@@ -41,6 +33,7 @@ describe('OAuth Token Refresh', () => {
       token_endpoint: 'https://token/',
       revocation_endpoint: 'https://revoke/',
       jwks_uri: 'https://jwks/',
+      introspection_endpoint: 'https://introspection/',
     };
     fetch.mockImplementation(init => {
       const url = init instanceof Request ? init.url : init.toString();
@@ -70,15 +63,6 @@ describe('OAuth Token Refresh', () => {
       throw new Error(`Unexpected URL: ${url}`);
     });
 
-    inspectToken.mockReturnValueOnce([
-      null,
-      {
-        active: true,
-        token_type: 'access_token',
-        exp: Number.POSITIVE_INFINITY,
-      },
-    ]);
-
     const exitCode = await whoami(client);
     expect(exitCode).toBe(0);
 
@@ -89,7 +73,6 @@ describe('OAuth Token Refresh', () => {
 
   it('should empty the token config if the refresh token is missing', async () => {
     client.authConfig = {
-      type: 'oauth',
       token: randomUUID(),
       expiresAt: 0,
     };

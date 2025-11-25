@@ -1,5 +1,4 @@
 import fetch, { type Response } from 'node-fetch';
-import { decodeJwt } from 'jose';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -13,6 +12,7 @@ interface AuthorizationServerMetadata {
   token_endpoint: URL;
   revocation_endpoint: URL;
   jwks_uri: URL;
+  introspection_endpoint: URL;
 }
 
 let _as: AuthorizationServerMetadata;
@@ -64,7 +64,8 @@ async function processDiscoveryEndpointResponse(
     !canParseURL(json.device_authorization_endpoint) ||
     !canParseURL(json.token_endpoint) ||
     !canParseURL(json.revocation_endpoint) ||
-    !canParseURL(json.jwks_uri)
+    !canParseURL(json.jwks_uri) ||
+    !canParseURL(json.introspection_endpoint)
   ) {
     return [new TypeError('Invalid discovery response')];
   }
@@ -85,6 +86,7 @@ async function processDiscoveryEndpointResponse(
       token_endpoint: new URL(json.token_endpoint),
       revocation_endpoint: new URL(json.revocation_endpoint),
       jwks_uri: new URL(json.jwks_uri),
+      introspection_endpoint: new URL(json.introspection_endpoint),
     },
   ];
 }
@@ -319,7 +321,7 @@ export async function refreshTokenRequest(options: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
@@ -400,33 +402,50 @@ function canParseURL(url: string) {
   }
 }
 
-/** @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
-interface AccessToken {
-  /**
-   * Integer timestamp, measured in the number of seconds
-   * since January 1 1970 UTC, indicating when this token will expire.
-   */
-  exp: number;
-  /** Whether or not the presented token is active. */
-  active: boolean;
-  token_type: 'access_token';
-  /** The authorizing principal's team. */
-  team_id?: string;
+/**
+ * Perform Token Introspection Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.1
+ */
+export async function inspectTokenRequest(token: string): Promise<Response> {
+  return fetch((await as()).introspection_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': userAgent,
+    },
+    body: new URLSearchParams({ token }),
+  });
 }
 
 /**
- * Inspects and returns the content of an access_token.
- * If the token is invalid, an {@link InspectionError} is returned.
- * @todo Use [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
+interface AccessToken {
+  /** Whether or not the presented token is active. */
+  active: boolean;
+  client_id?: string;
+  session_id?: string;
+}
+
+/**
+ * Process Token Introspection Response.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2
  */
-export function inspectToken(
-  token: TokenSet['access_token']
-): [InspectionError] | [null, AccessToken] {
+export async function processInspectTokenResponse(
+  response: Response
+): Promise<[IntrospectionError] | [null, AccessToken]> {
   try {
-    return [null, decodeJwt<AccessToken>(token)];
+    const token = await response.json();
+    if (!token || typeof token !== 'object' || !('active' in token)) {
+      throw new IntrospectionError('Invalid token introspection response');
+    }
+    return [null, token];
   } catch (cause) {
-    return [new InspectionError('Could not inspect token.', { cause })];
+    return [new IntrospectionError('Could not introspect token.', { cause })];
   }
 }
 
-class InspectionError extends Error {}
+class IntrospectionError extends Error {
+  name = 'IntrospectionError';
+}

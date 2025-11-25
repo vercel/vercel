@@ -115,14 +115,21 @@ export const deployCommand = {
       name: 'logs',
       shorthand: 'l',
       type: Boolean,
-      deprecated: true,
+      deprecated: false,
       description: 'Print the build logs',
+    },
+    {
+      name: 'guidance',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Receive command suggestions once deployment is complete',
     },
     {
       name: 'no-logs',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
+      deprecated: true,
       description: 'Do not print the build logs',
     },
     {

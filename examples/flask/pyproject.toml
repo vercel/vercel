@@ -1,0 +1,7 @@
+[project]
+name = "vercel-flask-starter"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "flask>=3.1",
+]

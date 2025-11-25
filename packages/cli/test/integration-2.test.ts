@@ -18,6 +18,7 @@ import {
 import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
 import type { CLIProcess } from './helpers/types';
+import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -83,20 +84,31 @@ async function setupProject(
     process.stdin?.write('no\n');
   }
 
+  const hasAdditionalProjectSettingsToChange = vercelAuth !== 'standard';
   await waitForPrompt(
     process,
-    'Want to use the default Deployment Protection settings?'
+    'Do you want to change additional project settings?'
   );
 
+  if (hasAdditionalProjectSettingsToChange) {
+    process.stdin?.write('y\n');
+  } else {
+    process.stdin?.write('\n');
+  }
+
   if (vercelAuth === 'none') {
+    await waitForPrompt(
+      process,
+      'Want to use the default Deployment Protection settings?'
+    );
     process.stdin?.write('n\n');
+
     await waitForPrompt(
       process,
       'What setting do you want to use for Vercel Authentication?'
     );
+    // select "none"
     process.stdin?.write('\x1b[B'); // Down Arrow
-    process.stdin?.write('\n');
-  } else {
     process.stdin?.write('\n');
   }
 
@@ -312,7 +324,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 
   await waitForPrompt(
     now,
-    'Want to use the default Deployment Protection settings?'
+    'Do you want to change additional project settings?'
   );
   now.stdin?.write('\n');
 
@@ -810,7 +822,10 @@ test('deploys with only vercel.json and README.md', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // assert timing order of showing URLs vs status updates
-  expect(stderr).toMatch(/Inspect.*\nPreview.*\nQueued.*\n.*\nCompleting/);
+  // Preview URL appears twice: once with loading emoji, then again with success emoji
+  expect(stripAnsi(stderr)).toMatch(
+    /Inspect.*\nPreview.*\n(Queued|Building).*[\s\S]*Completing/
+  );
 
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
@@ -1103,10 +1118,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(
-    vc,
-    'Want to use the default Deployment Protection settings?'
-  );
+  await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Linked to');
@@ -1294,10 +1306,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, "What's your Output Directory?");
   vc.stdin?.write('output\n');
-  await waitForPrompt(
-    vc,
-    'Want to use the default Deployment Protection settings?'
-  );
+  await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('n\n');
   await waitForPrompt(
     vc,
@@ -1412,7 +1421,7 @@ test.each([
     expectedStatus: 401,
   },
 ] as const)(
-  '[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts',
+  '[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s',
   async ({ vercelAuth, expectedStatus }) => {
     const dir = await setupE2EFixture('project-vercel-auth');
     const projectName = `project-vercel-auth-${

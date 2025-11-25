@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import fs from 'fs-extra';
+import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
@@ -27,6 +27,9 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  shouldUseExperimentalBackends,
+  isBackendBuilder,
+  type Lambda,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -42,6 +45,7 @@ import {
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
+  sourceToRegex,
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
@@ -171,6 +175,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
+    telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
   } catch (error) {
     printError(error);
     return 1;
@@ -190,6 +195,20 @@ export default async function main(client: Client): Promise<number> {
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
+
+  // Check for deprecated env var
+  const hasDeprecatedEnvVar =
+    process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
+  if (hasDeprecatedEnvVar) {
+    output.warn(
+      'The VERCEL_EXPERIMENTAL_STANDALONE_BUILD environment variable is deprecated. Please use the --standalone flag instead.'
+    );
+  }
+
+  // Use flag first, fall back to deprecated env var
+  const standalone = Boolean(
+    parsedArgs.flags['--standalone'] || hasDeprecatedEnvVar
+  );
 
   try {
     await validateNpmrc(cwd);
@@ -323,7 +342,7 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span)
+          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
     } finally {
       await rootSpan.stop();
@@ -375,7 +394,8 @@ async function doBuild(
   buildsJson: BuildsManifest,
   cwd: string,
   outputDir: string,
-  span: Span
+  span: Span,
+  standalone: boolean = false
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -595,8 +615,12 @@ async function doBuild(
             buildCommand: projectSettings.buildCommand ?? undefined,
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
+            bunVersion: localConfig.bunVersion ?? undefined,
           }
-        : build.config || {};
+        : {
+            ...(build.config || {}),
+            bunVersion: localConfig.bunVersion ?? undefined,
+          };
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,
@@ -617,7 +641,20 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          () => builder.build(buildOptions)
+          async () => {
+            // Use experimental backends builder only for backend framework builders,
+            // not for static builders (which handle public/ directories)
+            if (
+              shouldUseExperimentalBackends(buildConfig.framework) &&
+              builderPkg.name !== '@vercel/static'
+            ) {
+              const experimentalBackendBuilder = await import(
+                '@vercel/backends'
+              );
+              return experimentalBackendBuilder.build(buildOptions);
+            }
+            return builder.build(buildOptions);
+          }
         );
 
         // If the build result has no routes and the framework has default routes,
@@ -665,8 +702,70 @@ async function doBuild(
           throw new NowBuildError({
             code: 'NODEJS_DISCONTINUED_VERSION',
             message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
-            link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+            link: 'https://vercel.link/function-runtimes',
           });
+        }
+      }
+
+      if (
+        'output' in buildResult &&
+        buildResult.output &&
+        (isBackendBuilder(build) || build.use === '@vercel/python')
+      ) {
+        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
+        if (existsSync(routesJsonPath)) {
+          try {
+            const routesJson = await readJSONFile(routesJsonPath);
+            if (
+              routesJson &&
+              typeof routesJson === 'object' &&
+              'routes' in routesJson &&
+              Array.isArray(routesJson.routes)
+            ) {
+              // This is a v2 build output, so only remap the outputs
+              // if we have an index lambda
+              const indexLambda =
+                'index' in buildResult.output
+                  ? (buildResult.output['index'] as Lambda)
+                  : undefined;
+              // Convert routes from introspection format to Vercel routing format
+              const convertedRoutes = [];
+              const convertedOutputs: Record<string, Lambda> = indexLambda
+                ? { index: indexLambda }
+                : {};
+              for (const route of routesJson.routes) {
+                if (typeof route.source !== 'string') {
+                  continue;
+                }
+                const { src } = sourceToRegex(route.source);
+                const newRoute: Route = {
+                  src,
+                  dest: route.source,
+                };
+                if (route.methods) {
+                  newRoute.methods = route.methods;
+                }
+                if (route.source === '/') {
+                  continue;
+                }
+                if (indexLambda) {
+                  convertedOutputs[route.source] = indexLambda;
+                }
+                convertedRoutes.push(newRoute);
+              }
+              // Wrap routes with filesystem handler and catch-all
+              (buildResult as BuildResultV2Typical).routes = [
+                { handle: 'filesystem' },
+                ...convertedRoutes,
+                { src: '/(.*)', dest: '/' },
+              ];
+              if (indexLambda) {
+                (buildResult as BuildResultV2Typical).output = convertedOutputs;
+              }
+            }
+          } catch (error) {
+            output.error(`Failed to read routes.json: ${error}`);
+          }
         }
       }
 
@@ -688,15 +787,17 @@ async function doBuild(
             buildOutputLength: String(buildOutputLength),
           })
           .trace<Record<string, PathOverride> | undefined | void>(() =>
-            writeBuildResult(
+            writeBuildResult({
               repoRootPath,
               outputDir,
               buildResult,
               build,
               builder,
               builderPkg,
-              localConfig
-            )
+              vercelConfig: localConfig,
+              standalone,
+              workPath,
+            })
           )
           .then(
             (override: Record<string, PathOverride> | undefined | void) => {

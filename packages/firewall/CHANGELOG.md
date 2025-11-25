@@ -1,5 +1,23 @@
 # @vercel/firewall
 
+## 1.1.1
+
+### Patch Changes
+
+- Allow users to set a path prefix to the Rate Limit request to support microfrontends. ([#14123](https://github.com/vercel/vercel/pull/14123))
+
+## 1.1.0
+
+### Minor Changes
+
+- Automatically handle vercel auth and support magic header injection for all frameworks ([#13943](https://github.com/vercel/vercel/pull/13943))
+
+## 1.0.1
+
+### Patch Changes
+
+- Fix headers being awaited for nextjs 15+ ([#13688](https://github.com/vercel/vercel/pull/13688))
+
 ## 1.0.0
 
 ### Major Changes

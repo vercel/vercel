@@ -100,6 +100,7 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -108,6 +109,8 @@ const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 // related PR: https://github.com/vercel/next.js/pull/27143
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
+// related PR: https://github.com/vercel/next.js/pull/84643
+const IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION = 'v16.0.0';
 
 export const MAX_AGE_ONE_YEAR = 31536000;
 
@@ -279,7 +282,6 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -390,7 +392,6 @@ export const build: BuildV2 = async buildOptions => {
             [],
             spawnOpts,
             meta,
-            nodeVersion,
             config.projectSettings?.createdAt
           );
         }
@@ -1024,14 +1025,17 @@ export const build: BuildV2 = async buildOptions => {
         // /_next
         { handle: 'miss' },
         {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-          ),
+          src: path.posix.join('/', entryDirectory, '_next/static/.+'),
           status: 404,
           check: true,
-          dest: '$0',
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/not-found.txt'
+          ),
+          headers: {
+            'content-type': 'text/plain; charset=utf-8',
+          },
         },
 
         // Dynamic routes
@@ -1083,7 +1087,6 @@ export const build: BuildV2 = async buildOptions => {
       ['--production'],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -1275,6 +1278,7 @@ export const build: BuildV2 = async buildOptions => {
       entryDirectory,
       htmlContentType,
       prerenderManifest,
+      nextVersion,
       routesManifest
     );
     hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
@@ -1463,10 +1467,30 @@ export const build: BuildV2 = async buildOptions => {
           true
       : false;
 
-    const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
-      ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
-        true
+    // When this is true, then it means all routes are PPR enabled.
+    const isAppFullPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
       : false;
+
+    const isAppClientSegmentCacheEnabled =
+      semver.gte(nextVersion, IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION) ||
+      (requiredServerFilesManifest
+        ? requiredServerFilesManifest.config.experimental
+            ?.clientSegmentCache === true
+        : false);
+
+    // We read this from the routes manifest instead of the config because we
+    // expect that the flag will be deprecated in the future and the manifest
+    // will be the source of truth.
+    const isAppClientParamParsingEnabled =
+      routesManifest?.rsc?.clientParamParsing ?? false;
+
+    const clientParamParsingOrigins = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental
+          ?.clientParamParsingOrigins
+      : undefined;
 
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
@@ -1524,7 +1548,11 @@ export const build: BuildV2 = async buildOptions => {
         variantsManifest,
         experimentalPPRRoutes,
         isAppPPREnabled,
+        isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
+        isAppClientParamParsingEnabled,
+        clientParamParsingOrigins,
+        files,
       });
     }
 
@@ -1758,6 +1786,7 @@ export const build: BuildV2 = async buildOptions => {
         // like builds
         internalPages: [],
         experimentalPPRRoutes: undefined,
+        nodeVersion,
       });
 
       const initialApiLambdaGroups = await getPageLambdaGroups({
@@ -1773,6 +1802,7 @@ export const build: BuildV2 = async buildOptions => {
         initialPseudoLayerUncompressed: 0,
         internalPages: [],
         experimentalPPRRoutes: undefined,
+        nodeVersion,
       });
 
       for (const group of initialApiLambdaGroups) {
@@ -1804,7 +1834,8 @@ export const build: BuildV2 = async buildOptions => {
       ];
       await detectLambdaLimitExceeding(
         combinedInitialLambdaGroups,
-        compressedPages
+        compressedPages,
+        nodeVersion.runtime
       );
 
       let apiLambdaGroupIndex = 0;
@@ -1833,7 +1864,7 @@ export const build: BuildV2 = async buildOptions => {
             path.relative(workPath, pages[page].fsPath)
           );
           const pathname = page.replace(/\.js$/, '');
-          const routeIsDynamic = isDynamicRoute(pathname);
+          const routeIsDynamic = isDynamicRoute(pathname, nextVersion);
           routeIsApi = isApiPage(pageFileName);
 
           if (routeIsDynamic) {
@@ -1946,7 +1977,7 @@ export const build: BuildV2 = async buildOptions => {
 
           const pathname = page.replace(/\.js$/, '');
 
-          if (isDynamicRoute(pathname)) {
+          if (isDynamicRoute(pathname, nextVersion)) {
             dynamicPages.push(normalizePage(pathname));
           }
 
@@ -1969,6 +2000,7 @@ export const build: BuildV2 = async buildOptions => {
             memory?: number;
             maxDuration?: number;
             experimentalTriggers?: TriggerEvent[];
+            supportsCancellation?: boolean;
           } = {};
 
           if (config && config.functions) {
@@ -2049,6 +2081,9 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
+      isAppClientParamParsingEnabled,
+      isAppClientSegmentCacheEnabled,
+      prerenderManifest,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -2079,6 +2114,9 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
+        isAppClientParamParsingEnabled: false,
+        isAppClientSegmentCacheEnabled: false,
+        prerenderManifest,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2276,8 +2314,12 @@ export const build: BuildV2 = async buildOptions => {
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      // The following flags are not supported in this version of the builder.
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
+      isAppClientParamParsingEnabled: false,
+      appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
+      nextVersion,
     });
 
     await Promise.all(
@@ -2670,14 +2712,13 @@ export const build: BuildV2 = async buildOptions => {
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
       {
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-        ),
+        src: path.join('/', entryDirectory, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: '$0',
+        dest: path.join('/', entryDirectory, '_next/static/not-found.txt'),
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+        },
       },
 
       // remove locale prefixes to check public files
@@ -2879,9 +2920,19 @@ export const diagnostics: Diagnostics = async ({
       'trace',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
+    // Collect `.next/trace-build` file
+    ...(await glob(
+      'trace-build',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
     // Collect `.next/turbopack` file
     ...(await glob(
       'turbopack',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
+    // Collect `.next/trace-turbopack` file
+    ...(await glob(
+      'trace-turbopack',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
   };

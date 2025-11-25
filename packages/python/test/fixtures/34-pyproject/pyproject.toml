@@ -1,0 +1,17 @@
+[project]
+name = "fixture-pyproject-fastapi"
+version = "0.0.1"
+requires-python = ">=3.10,<=3.12"
+dependencies = [
+  "fastapi==0.116.2",
+]
+
+[project.optional-dependencies]
+mypy = [
+  "mypy",
+]
+
+[dependency-groups]
+dev = [
+  "ruff",
+]
