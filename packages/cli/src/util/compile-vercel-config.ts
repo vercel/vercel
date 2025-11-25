@@ -154,7 +154,6 @@ export async function compileVercelConfig(
     const config = await new Promise((resolve, reject) => {
       const child = fork(loaderPath, [tempOutPath], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-        env: process.env,
       });
 
       child.on('message', message => {
