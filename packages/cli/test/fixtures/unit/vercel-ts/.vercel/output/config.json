@@ -2,90 +2,11 @@
   "version": 3,
   "routes": [
     {
-      "src": "^/old-blog$",
-      "headers": {
-        "Location": "/blog"
-      },
-      "status": 308
-    },
-    {
-      "src": "^/home$",
-      "headers": {
-        "Location": "/"
-      },
-      "status": 308
-    },
-    {
       "src": "^/region$",
       "headers": {
         "Location": "https://us-east-1-staging.example.com"
       },
       "status": 308
-    },
-    {
-      "src": "^/posts(?:/([^/]+?))$",
-      "headers": {
-        "Location": "/blog?post=$1"
-      },
-      "status": 308
-    },
-    {
-      "src": "^/legacy$",
-      "headers": {
-        "Location": "/"
-      },
-      "status": 308
-    },
-    {
-      "src": "^/docs$",
-      "headers": {
-        "Location": "https://vercel.com/docs"
-      },
-      "status": 308
-    },
-    {
-      "src": "^/github$",
-      "headers": {
-        "Location": "https://github.com/vercel/vercel"
-      },
-      "status": 308
-    },
-    {
-      "src": "^/dash$",
-      "headers": {
-        "Location": "https://vercel.com"
-      },
-      "status": 308
-    },
-    {
-      "src": "^/static(?:/(.*))$",
-      "headers": {
-        "Cache-Control": "public, max-age=604800, immutable"
-      },
-      "continue": true
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "^/api/posts(?:/(.*))$",
-      "dest": "https://jsonplaceholder.typicode.com/posts/$1",
-      "check": true
-    },
-    {
-      "src": "^/users(?:/([^/]+?))$",
-      "dest": "https://jsonplaceholder.typicode.com/users/$1?userId=$1",
-      "check": true
-    },
-    {
-      "src": "^/gh(?:/(.*))$",
-      "dest": "https://api.github.com/$1",
-      "check": true
-    },
-    {
-      "src": "^/http(?:/(.*))$",
-      "dest": "https://httpbin.org/$1",
-      "check": true
     },
     {
       "handle": "error"
