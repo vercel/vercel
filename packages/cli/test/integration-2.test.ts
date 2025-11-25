@@ -1017,17 +1017,17 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['link', '--yes'],
-    {
-      cwd: dir,
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
+  const vc = execCli(binaryPath, ['link', '--yes'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
+  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
+  vc.stdin?.write('n\n');
+
+  const { exitCode, stdout, stderr } = await vc;
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
