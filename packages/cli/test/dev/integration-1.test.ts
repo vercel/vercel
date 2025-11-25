@@ -591,6 +591,7 @@ test('[vercel dev] should support directory listing', async () => {
     let body = await res.text();
     expect(res.status).toEqual(200);
     expect(body).toContain('Index of');
+    expect(body).toContain('Index of');
 
     // Get a file
     res = await fetch(`http://localhost:${port}/file.txt`);
