@@ -584,6 +584,11 @@ describe('link', () => {
       `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
     );
 
+    await expect(client.stderr).toOutput(
+      'Would you like to pull environment variables now?'
+    );
+    client.stdin.write('n\n');
+
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -614,7 +619,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('project');
+    await expect(client.stderr).toOutput('name');
     client.stdin.write('awesome-app\n');
 
     await expect(client.stderr).toOutput(
@@ -636,6 +642,11 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       `Linked to ${user.username}/awesome-app (created .vercel and added it to .gitignore)`
     );
+
+    await expect(client.stderr).toOutput(
+      'Would you like to pull environment variables now?'
+    );
+    client.stdin.write('n\n');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
@@ -725,6 +736,17 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
@@ -759,6 +781,17 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
@@ -792,6 +825,17 @@ describe('link', () => {
       client.cwd = cwd;
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
@@ -832,6 +876,17 @@ describe('link', () => {
       client.cwd = cwd;
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
