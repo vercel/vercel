@@ -150,7 +150,8 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm
+      autoConfirm,
+      true
     );
     return { status: 'linked', org, project };
   }
@@ -244,7 +245,9 @@ export default async function setupAndLink(
       },
       project.name,
       org.slug,
-      successEmoji
+      successEmoji,
+      autoConfirm,
+      false
     );
 
     await connectGitRepository(client, path, project, autoConfirm, org);

@@ -112,14 +112,14 @@ describe('[vc link] environment variable pull integration', () => {
     expect(await pathExists(join(dir, '.env.local'))).toBe(false);
   });
 
-  it('should work with --yes flag and skip env pull prompt', async () => {
+  it('should work with --yes flag and auto-confirm all prompts', async () => {
     const dir = await setupE2EFixture('project-link-gitignore');
     const projectName = `link-env-yes-${Math.random().toString(36).split('.')[1]}`;
 
     // Remove previously linked project if it exists
     await remove(join(dir, '.vercel'));
 
-    const vc = execCli(
+    const { exitCode } = await execCli(
       binaryPath,
       ['link', `--project=${projectName}`, '--yes'],
       {
@@ -130,36 +130,6 @@ describe('[vc link] environment variable pull integration', () => {
       }
     );
 
-    // Handle initial link prompts (--yes doesn't skip all prompts)
-    await waitForPrompt(vc, /Set up[^?]+\?/);
-    vc.stdin?.write('yes\n');
-
-    await waitForPrompt(vc, 'Which scope should contain your project?');
-    vc.stdin?.write('\n');
-
-    await waitForPrompt(vc, 'Link to existing project?');
-    vc.stdin?.write('no\n');
-
-    await waitForPrompt(vc, "What's your project's name?");
-    vc.stdin?.write(`${projectName}\n`);
-
-    await waitForPrompt(vc, 'In which directory is your code located?');
-    vc.stdin?.write('\n');
-
-    await waitForPrompt(vc, 'Want to modify these settings?');
-    vc.stdin?.write('no\n');
-
-    // Wait for successful linking message
-    await waitForPrompt(vc, /Linked to/);
-
-    // Should still get env pull prompt even with --yes
-    await waitForPrompt(
-      vc,
-      'Would you like to pull environment variables now?'
-    );
-    vc.stdin?.write('yes\n');
-
-    const { exitCode } = await vc;
     expect(exitCode).toBe(0);
 
     // Verify project was linked
