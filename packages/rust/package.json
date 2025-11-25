@@ -1,6 +1,6 @@
 {
   "name": "@vercel/rust",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/rust",
@@ -26,7 +26,7 @@
     "@types/jest": "^29.4.0",
     "@types/ms": "^0.7.31",
     "@types/node": "^18.11.18",
-    "@vercel/build-utils": "13.1.2",
+    "@vercel/build-utils": "13.2.0",
     "@vercel/routing-utils": "5.3.0",
     "@vercel/style-guide": "^4.0.2",
     "eslint": "^8.35.0",
