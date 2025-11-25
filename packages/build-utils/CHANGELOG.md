@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.0
+
+### Minor Changes
+
+- Remove env var check for node24 ([#14355](https://github.com/vercel/vercel/pull/14355))
+
 ## 13.1.2
 
 ### Patch Changes
