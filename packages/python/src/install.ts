@@ -3,7 +3,8 @@ import fs from 'fs';
 import os from 'os';
 import { join } from 'path';
 import which from 'which';
-import { Meta, debug } from '@vercel/build-utils';
+import { Meta, NowBuildError, debug } from '@vercel/build-utils';
+import { compareTuples, parseVersionTuple } from './version';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -430,4 +431,125 @@ export async function exportRequirementsFromPipfile({
   await fs.promises.writeFile(outPath, stdout);
   debug(`Exported pipfile requirements to ${outPath}`);
   return outPath;
+}
+
+export async function harvestVenvSitePackagesToVendor({
+  workPath,
+  vendorBaseDir,
+  pythonVersion,
+}: {
+  workPath: string;
+  vendorBaseDir: string;
+  pythonVersion: { version: string };
+}): Promise<void> {
+  const venvDir = '.venv';
+  const vendorDir = join(vendorBaseDir, resolveVendorDir());
+
+  const venvRoot = join(workPath, venvDir);
+  if (!fs.existsSync(venvRoot))
+    throw new NowBuildError({
+      code: 'PYTHON_CUSTOM_INSTALL_VENV_NOT_FOUND',
+      message:
+        'Custom Python install script ran but no virtualenv was found at ".venv". ' +
+        'Ensure your script creates a virtualenv and installs dependencies into it.',
+    });
+
+  const venvPythonCandidates =
+    process.platform === 'win32'
+      ? [
+          join(venvRoot, 'Scripts', 'python.exe'),
+          join(venvRoot, 'Scripts', 'python'),
+        ]
+      : [join(venvRoot, 'bin', 'python3'), join(venvRoot, 'bin', 'python')];
+  const venvPython =
+    venvPythonCandidates.find(candidate => fs.existsSync(candidate)) || null;
+  if (!venvPython) {
+    throw new NowBuildError({
+      code: 'PYTHON_CUSTOM_INSTALL_VENV_VERSION_NOT_FOUND',
+      message:
+        'Custom Python install script ran but no Python interpreter was found in ".venv". ' +
+        'Ensure your script creates a virtualenv and installs dependencies into it.',
+    });
+  }
+
+  const pythonInfoScript = [
+    'import json, os, sys, sysconfig',
+    'print(json.dumps({',
+    '  "version": ".".join(map(str, sys.version_info[:2])),',
+    '  "purelib": os.path.abspath(sysconfig.get_path("purelib") or ""),',
+    '}))',
+  ].join('\n');
+
+  let venvVersion = '';
+  let sitePackagesDir = '';
+  try {
+    const { stdout } = await execa(venvPython, ['-c', pythonInfoScript]);
+    const parsed = JSON.parse(stdout.trim()) as {
+      version?: string;
+      purelib?: string;
+    };
+    venvVersion = parsed.version?.trim() || '';
+    sitePackagesDir = parsed.purelib?.trim() || '';
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'PYTHON_CUSTOM_INSTALL_VENV_VERSION_NOT_FOUND',
+      message:
+        'Custom Python install script ran but the virtualenv Python interpreter could not be executed. ' +
+        'Ensure your script creates a virtualenv and installs dependencies into it.',
+    });
+  }
+
+  if (!venvVersion) {
+    throw new NowBuildError({
+      code: 'PYTHON_CUSTOM_INSTALL_VENV_VERSION_NOT_FOUND',
+      message:
+        'Custom Python install script ran but the virtualenv Python version could not be determined. ' +
+        'Ensure your script creates a virtualenv and installs dependencies into it.',
+    });
+  }
+
+  const runtimeTuple = parseVersionTuple(pythonVersion.version);
+  const venvTuple = parseVersionTuple(venvVersion);
+  if (
+    runtimeTuple &&
+    venvTuple &&
+    compareTuples(runtimeTuple, venvTuple) !== 0
+  ) {
+    throw new NowBuildError({
+      code: 'PYTHON_CUSTOM_INSTALL_VENV_VERSION_MISMATCH',
+      message:
+        `Custom Python install script ran but the virtualenv version ${venvVersion} does not match the runtime Python version ${pythonVersion.version}. ` +
+        'Ensure your script creates a virtualenv with the same Python version as the runtime.',
+    });
+  }
+
+  if (!fs.existsSync(sitePackagesDir)) {
+    throw new NowBuildError({
+      code: 'PYTHON_CUSTOM_INSTALL_VENV_SITE_PACKAGES_DIRECTORY_NOT_FOUND',
+      message:
+        `Custom Python install script ran but no virtualenv site-packages were found at "${sitePackagesDir}". ` +
+        'Ensure your script creates a virtualenv with site-packages and installs dependencies into it.',
+    });
+  }
+
+  debug(
+    `Copying Python virtualenv site-packages from "${sitePackagesDir}" to vendor dir "${vendorDir}".`
+  );
+
+  try {
+    await fs.promises.mkdir(vendorDir, { recursive: true });
+    await fs.promises.cp(sitePackagesDir, vendorDir, {
+      recursive: true,
+      force: true,
+    });
+  } catch (err) {
+    console.log(
+      'Failed to copy virtualenv site-packages into vendor directory'
+    );
+    throw err;
+  }
+
+  console.log(
+    `Harvested Python dependencies from virtualenv at "${venvRoot}" into "${vendorDir}".`
+  );
 }

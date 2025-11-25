@@ -25,11 +25,17 @@ import {
   exportRequirementsFromUv,
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
+  harvestVenvSitePackagesToVendor,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
-import { runPyprojectScript } from './utils';
+import {
+  containsVercelPyprojectScript,
+  ensureVirtualEnv,
+  runPyprojectScript,
+  useVirtualEnv,
+} from './utils';
 import { installUvWorkspaceDependencies } from './uv-workspace';
 
 const readFile = promisify(fs.readFile);
@@ -116,55 +122,6 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
-  }
-
-  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
-  if (framework === 'fastapi' || framework === 'flask') {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    const spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      if (installCommand.trim()) {
-        console.log(`Running "install" command: \`${installCommand}\`...`);
-        await execCommand(installCommand, {
-          env: spawnEnv,
-          cwd: workPath,
-        });
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    if (projectBuildCommand) {
-      console.log(`Running "${projectBuildCommand}"`);
-      await execCommand(projectBuildCommand, {
-        env: spawnEnv,
-        cwd: workPath,
-      });
-    } else {
-      await runPyprojectScript(
-        workPath,
-        ['vercel-build', 'now-build', 'build'],
-        spawnEnv
-      );
-    }
   }
 
   let fsFiles = await glob('**', workPath);
@@ -275,6 +232,78 @@ export const build: BuildV3 = async ({
     declaredPythonVersion,
   });
 
+  let hasCustomInstallCommand = false;
+
+  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
+  if (framework === 'fastapi' || framework === 'flask') {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    const spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    const hasProjectInstallCommand =
+      typeof installCommand === 'string' && installCommand.trim();
+    const hasPyprojectInstallCommand = await containsVercelPyprojectScript(
+      workPath,
+      ['vercel-install', 'now-install', 'install']
+    );
+
+    if (hasProjectInstallCommand || hasPyprojectInstallCommand) {
+      await ensureVirtualEnv(pythonVersion.pythonPath, workPath);
+      useVirtualEnv(workPath, spawnEnv, pythonVersion.pythonPath);
+      hasCustomInstallCommand = true;
+    }
+
+    if (hasProjectInstallCommand) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        env: spawnEnv,
+        cwd: workPath,
+      });
+    } else if (hasPyprojectInstallCommand) {
+      const installed = await runPyprojectScript(
+        workPath,
+        ['vercel-install', 'now-install', 'install'],
+        spawnEnv
+      );
+      if (!installed) {
+        throw new NowBuildError({
+          code: 'PYTHON_CUSTOM_INSTALL_FAILED',
+          message: 'Failed to run custom install command from pyproject.toml',
+        });
+      }
+    }
+
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: spawnEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        spawnEnv
+      );
+    }
+  }
+
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
@@ -294,23 +323,29 @@ export const build: BuildV3 = async ({
   }
 
   let installationSource: string | undefined;
-  if (uvLockDir && pyprojectDir) {
-    installationSource = 'uv.lock';
-  } else if (pyprojectDir) {
-    installationSource = 'pyproject.toml';
-  } else if (pipfileLockDir) {
-    installationSource = 'Pipfile.lock';
-  } else if (pipfileDir) {
-    installationSource = 'Pipfile';
-  } else if (fsFiles[requirementsTxt] || fsFiles['requirements.txt']) {
-    installationSource = 'requirements.txt';
-  }
-  if (installationSource) {
-    console.log(
-      `Installing required dependencies from ${installationSource}...`
-    );
+  if (!hasCustomInstallCommand) {
+    if (uvLockDir && pyprojectDir) {
+      installationSource = 'uv.lock';
+    } else if (pyprojectDir) {
+      installationSource = 'pyproject.toml';
+    } else if (pipfileLockDir) {
+      installationSource = 'Pipfile.lock';
+    } else if (pipfileDir) {
+      installationSource = 'Pipfile';
+    } else if (fsFiles[requirementsTxt] || fsFiles['requirements.txt']) {
+      installationSource = 'requirements.txt';
+    }
+    if (installationSource) {
+      console.log(
+        `Installing required dependencies from ${installationSource}...`
+      );
+    } else {
+      console.log('Installing required dependencies...');
+    }
   } else {
-    console.log('Installing required dependencies...');
+    debug(
+      'Skipping default Python dependency installation; using custom install from virtualenv.'
+    );
   }
 
   let uvPath: string | null = null;
@@ -318,7 +353,10 @@ export const build: BuildV3 = async ({
     uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     console.log(`Using uv at "${uvPath}"`);
   } catch (err) {
-    if (uvLockDir || (pyprojectDir && !hasReqLocal && !hasReqGlobal)) {
+    if (
+      !hasCustomInstallCommand &&
+      (uvLockDir || (pyprojectDir && !hasReqLocal && !hasReqGlobal))
+    ) {
       console.log('Failed to install uv');
       throw new Error(
         `uv is required for this project but failed to install: ${
@@ -356,110 +394,123 @@ export const build: BuildV3 = async ({
 
   let installedFromProjectFiles = false;
 
-  // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
-  if (uvLockDir) {
-    debug('Found "uv.lock"');
-    if (pyprojectDir) {
-      const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
-        locked: true,
-      });
-      await installRequirementsFile({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        uvPath,
-        filePath: exportedReq,
-        workPath,
-        targetDir: vendorBaseDir,
-        meta,
-      });
-      installedFromProjectFiles = true;
-    } else {
-      debug('Skipping uv export because "pyproject.toml" was not found');
-    }
-  } else if (pyprojectDir) {
-    debug('Found "pyproject.toml"');
-    if (hasReqLocal || hasReqGlobal) {
-      console.log(
-        'Detected both pyproject.toml and requirements.txt but no lockfile; using pyproject.toml'
-      );
-    }
-    const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
-      locked: false,
-    });
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
-      filePath: exportedReq,
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
-    });
-    installedFromProjectFiles = true;
-  } else if (pipfileLockDir || pipfileDir) {
-    debug(`Found ${pipfileLockDir ? '"Pipfile.lock"' : '"Pipfile"'}`);
-    if (hasReqLocal || hasReqGlobal) {
-      debug('Skipping Pipfile export because "requirements.txt" exists');
-    } else {
-      const exportedReq = await exportRequirementsFromPipfile({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        uvPath,
-        projectDir: pipfileLockDir || pipfileDir!,
-        meta,
-      });
-      await installRequirementsFile({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        uvPath,
-        filePath: exportedReq,
-        workPath,
-        targetDir: vendorBaseDir,
-        meta,
-      });
-      installedFromProjectFiles = true;
-    }
-  }
-
-  if (!installedFromProjectFiles && fsFiles[requirementsTxt]) {
-    debug('Found local "requirements.txt"');
-    const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
-      filePath: requirementsTxtPath,
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
-    });
-  } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
-    debug('Found global "requirements.txt"');
-    const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
-      filePath: requirementsTxtPath,
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
-    });
-  }
-
-  // For uv workspaces (monorepos), also install any internal workspace
-  // projects that are referenced as dependencies of this app
-  if (pyprojectDir && repoRootPath) {
-    await installUvWorkspaceDependencies({
-      repoRootPath,
-      pyprojectDir,
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
+  if (hasCustomInstallCommand) {
+    // harvest .venv site-packages into _vendor directory
+    await harvestVenvSitePackagesToVendor({
       workPath,
       vendorBaseDir,
-      meta,
+      pythonVersion,
     });
+  } else {
+    // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
+    if (uvLockDir) {
+      debug('Found "uv.lock"');
+      if (pyprojectDir) {
+        const exportedReq = await exportRequirementsFromUv(
+          pyprojectDir,
+          uvPath,
+          {
+            locked: true,
+          }
+        );
+        await installRequirementsFile({
+          pythonPath: pythonVersion.pythonPath,
+          pipPath: pythonVersion.pipPath,
+          uvPath,
+          filePath: exportedReq,
+          workPath,
+          targetDir: vendorBaseDir,
+          meta,
+        });
+        installedFromProjectFiles = true;
+      } else {
+        debug('Skipping uv export because "pyproject.toml" was not found');
+      }
+    } else if (pyprojectDir) {
+      debug('Found "pyproject.toml"');
+      if (hasReqLocal || hasReqGlobal) {
+        console.log(
+          'Detected both pyproject.toml and requirements.txt but no lockfile; using pyproject.toml'
+        );
+      }
+      const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
+        locked: false,
+      });
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        filePath: exportedReq,
+        workPath,
+        targetDir: vendorBaseDir,
+        meta,
+      });
+      installedFromProjectFiles = true;
+    } else if (pipfileLockDir || pipfileDir) {
+      debug(`Found ${pipfileLockDir ? '"Pipfile.lock"' : '"Pipfile"'}`);
+      if (hasReqLocal || hasReqGlobal) {
+        debug('Skipping Pipfile export because "requirements.txt" exists');
+      } else {
+        const exportedReq = await exportRequirementsFromPipfile({
+          pythonPath: pythonVersion.pythonPath,
+          pipPath: pythonVersion.pipPath,
+          uvPath,
+          projectDir: pipfileLockDir || pipfileDir!,
+          meta,
+        });
+        await installRequirementsFile({
+          pythonPath: pythonVersion.pythonPath,
+          pipPath: pythonVersion.pipPath,
+          uvPath,
+          filePath: exportedReq,
+          workPath,
+          targetDir: vendorBaseDir,
+          meta,
+        });
+        installedFromProjectFiles = true;
+      }
+    }
+
+    if (!installedFromProjectFiles && fsFiles[requirementsTxt]) {
+      debug('Found local "requirements.txt"');
+      const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        filePath: requirementsTxtPath,
+        workPath,
+        targetDir: vendorBaseDir,
+        meta,
+      });
+    } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
+      debug('Found global "requirements.txt"');
+      const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        filePath: requirementsTxtPath,
+        workPath,
+        targetDir: vendorBaseDir,
+        meta,
+      });
+    }
+
+    // For uv workspaces (monorepos), also install any internal workspace
+    // projects that are referenced as dependencies of this app
+    if (pyprojectDir && repoRootPath) {
+      await installUvWorkspaceDependencies({
+        repoRootPath,
+        pyprojectDir,
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        workPath,
+        vendorBaseDir,
+        meta,
+      });
+    }
   }
 
   const originalPyPath = join(__dirname, '..', 'vc_init.py');

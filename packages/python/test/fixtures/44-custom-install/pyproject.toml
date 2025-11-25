@@ -1,0 +1,9 @@
+[project]
+name = "fixture-custom-install"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+install = "uv pip install -r requirements-vercel.txt"
+build = "python build.py"

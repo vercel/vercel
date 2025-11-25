@@ -1,6 +1,13 @@
 import fs from 'fs';
 import { join, delimiter as pathDelimiter } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
+import execa = require('execa');
+
+type PyprojectScriptsConfig = {
+  tool?: {
+    vercel?: { scripts?: Record<string, string> };
+  };
+};
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
@@ -34,6 +41,37 @@ export function useVirtualEnv(
   return { pythonCmd };
 }
 
+export async function ensureVirtualEnv(
+  pythonPath: string,
+  workPath: string
+): Promise<string> {
+  const venvRoot = join(workPath, '.venv');
+  if (!fs.existsSync(venvRoot)) {
+    await execa(pythonPath, ['-m', 'venv', venvRoot], { cwd: workPath });
+    if (!fs.existsSync(venvRoot)) {
+      throw new Error(`Failed to create virtualenv at ${venvRoot}`);
+    }
+    console.log(`Created virtualenv at ${venvRoot}`);
+  }
+  return venvRoot;
+}
+
+export async function containsVercelPyprojectScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>
+): Promise<boolean> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) return false;
+  const pyproject = await readConfigFile<PyprojectScriptsConfig>(pyprojectPath);
+  const scripts = pyproject?.tool?.vercel?.scripts || {};
+  const candidates =
+    typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
+  return candidates.some(name => {
+    const command = scripts[name];
+    return typeof command === 'string' && command.trim().length > 0;
+  });
+}
+
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
@@ -42,26 +80,22 @@ export async function runPyprojectScript(
   const pyprojectPath = join(workPath, 'pyproject.toml');
   if (!fs.existsSync(pyprojectPath)) return false;
 
-  type Pyproject = {
-    tool?: {
-      vercel?: { scripts?: Record<string, string> };
-    };
-  };
-
-  let pyproject: Pyproject | null = null;
+  let pyproject: PyprojectScriptsConfig | null = null;
   try {
-    pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+    pyproject = await readConfigFile<PyprojectScriptsConfig>(pyprojectPath);
   } catch {
     console.error('Failed to parse pyproject.toml');
     return false;
   }
 
   // Read scripts from [tool.vercel.scripts]
-  const scripts: Record<string, string> =
-    pyproject?.tool?.vercel?.scripts || {};
+  const scripts = pyproject?.tool?.vercel?.scripts || {};
   const candidates =
     typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
-  const scriptToRun = candidates.find(name => Boolean(scripts[name]));
+  const scriptToRun = candidates.find(name => {
+    const command = scripts[name];
+    return typeof command === 'string' && command.trim().length > 0;
+  });
   if (!scriptToRun) return false;
 
   // Use the Python from the virtualenv if present to resolve tooling, else system python
