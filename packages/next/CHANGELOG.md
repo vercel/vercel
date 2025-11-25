@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.5
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
 ## 4.15.4
 
 ### Patch Changes
