@@ -36,8 +36,6 @@ describe('link', () => {
     vi.clearAllMocks();
     // Default mock implementation for env pull command
     mockPull.mockResolvedValue(0);
-    // Mock client.input.confirm for env pull prompt
-    client.input.confirm = vi.fn().mockResolvedValue(true);
   });
   describe('--help', () => {
     it('tracks telemetry', async () => {
@@ -736,14 +734,13 @@ describe('link', () => {
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
 
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-
-      // Verify the env pull prompt was called
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to pull environment variables now?',
-        true
-      );
 
       // Verify env pull was called with --yes flag
       expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
@@ -762,9 +759,6 @@ describe('link', () => {
       });
       useUnknownProject();
 
-      // Mock user declining the prompt
-      client.input.confirm = vi.fn().mockResolvedValue(false);
-
       client.cwd = cwd;
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
@@ -773,14 +767,13 @@ describe('link', () => {
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
 
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-
-      // Verify the env pull prompt was called
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to pull environment variables now?',
-        true
-      );
 
       // Verify env pull was NOT called
       expect(mockPull).not.toHaveBeenCalled();
@@ -807,6 +800,11 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
@@ -843,6 +841,11 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );
 
@@ -873,14 +876,13 @@ describe('link', () => {
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
 
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-
-      // Verify the env pull prompt was called
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to pull environment variables now?',
-        true
-      );
 
       // Verify env pull was called with empty args since link didn't use --yes
       expect(mockPull).toHaveBeenCalledWith(
