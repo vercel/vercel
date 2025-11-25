@@ -79,4 +79,35 @@ describe('compileVercelConfig', () => {
       /Both vercel.ts and vercel.json exist/
     );
   });
+
+  it('should compile vercel.mjs to vercel.json', async () => {
+    const vercelMjsPath = join(tmpDir, 'vercel.mjs');
+    const vercelMjsContent = `
+      export default {
+        rewrites: [
+          {
+            source: '/api/:path*',
+            destination: '/backend/:path*'
+          }
+        ]
+      };
+    `;
+    await writeFile(vercelMjsPath, vercelMjsContent);
+
+    const result = await compileVercelConfig(tmpDir);
+
+    expect(result.wasCompiled).toBe(true);
+    expect(result.configPath).toBe(join(tmpDir, VERCEL_DIR, 'vercel.json'));
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const compiledConfig = require(result.configPath!);
+    expect(compiledConfig).toEqual({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: '/backend/:path*',
+        },
+      ],
+    });
+  });
 });
