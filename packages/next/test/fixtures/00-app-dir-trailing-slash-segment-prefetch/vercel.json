@@ -1,0 +1,62 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/?_rsc=1r34m",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/index.segments/_tree.segment.rsc"
+      }
+    },
+    {
+      "path": "/about/",
+      "status": 200,
+      "mustContain": "about page"
+    },
+    {
+      "path": "/about/",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/about/?_rsc=1r34m",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/about.segments/_tree.segment.rsc"
+      }
+    }
+  ]
+}

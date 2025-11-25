@@ -2279,7 +2279,11 @@ export async function serverBuild({
             prefetchSegmentSuffix
               ? [
                   {
-                    src: path.posix.join('/', entryDirectory, '/(?<path>.+)$'),
+                    src: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/(?<path>.+?)(?:/)?$'
+                    ),
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
@@ -2306,7 +2310,7 @@ export async function serverBuild({
                     override: true,
                   },
                   {
-                    src: path.posix.join('^/', entryDirectory, '$'),
+                    src: path.posix.join('^/', entryDirectory, '/?$'),
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
