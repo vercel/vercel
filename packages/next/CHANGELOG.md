@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.4
+
+### Patch Changes
+
+- fix trailing slash handling for next build ([#14356](https://github.com/vercel/vercel/pull/14356))
+
 ## 4.15.3
 
 ### Patch Changes
