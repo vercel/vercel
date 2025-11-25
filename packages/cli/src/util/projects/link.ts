@@ -304,7 +304,8 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string,
   successEmoji: EmojiLabel = 'link',
-  autoConfirm: boolean = false
+  autoConfirm: boolean = false,
+  shouldPullEnv: boolean = true
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -346,31 +347,34 @@ export async function linkFolderToProject(
     ) + '\n'
   );
 
-  // Prompt user to run env pull after successful linking
-  const shouldPullEnv = await client.input.confirm(
-    'Would you like to pull environment variables now?',
-    true
-  );
-
   if (shouldPullEnv) {
-    const originalCwd = client.cwd;
-    try {
-      client.cwd = path;
+    const pullEnvConfirmed =
+      autoConfirm ||
+      (await client.input.confirm(
+        'Would you like to pull environment variables now?',
+        true
+      ));
 
-      const args = autoConfirm ? ['--yes'] : [];
-      const exitCode = await pull(client, args);
+    if (pullEnvConfirmed) {
+      const originalCwd = client.cwd;
+      try {
+        client.cwd = path;
 
-      if (exitCode !== 0) {
+        const args = autoConfirm ? ['--yes'] : [];
+        const exitCode = await pull(client, args);
+
+        if (exitCode !== 0) {
+          output.error(
+            'Failed to pull environment variables. You can run `vc env pull` manually.'
+          );
+        }
+      } catch (error) {
         output.error(
           'Failed to pull environment variables. You can run `vc env pull` manually.'
         );
+      } finally {
+        client.cwd = originalCwd;
       }
-    } catch (error) {
-      output.error(
-        'Failed to pull environment variables. You can run `vc env pull` manually.'
-      );
-    } finally {
-      client.cwd = originalCwd;
     }
   }
 }

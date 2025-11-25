@@ -21,14 +21,13 @@ jest.setTimeout(TEST_TIMEOUT);
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 
 async function vcLink(projectPath: string) {
-  const vc = execCli(binaryPath, ['link', '--yes'], {
-    cwd: projectPath,
-  });
-
-  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
-  vc.stdin?.write('n\n');
-
-  const { exitCode, stdout, stderr } = await vc;
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['link', '--yes'],
+    {
+      cwd: projectPath,
+    }
+  );
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
@@ -273,14 +272,13 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
     'vercel-json-configuration-overrides-link'
   );
 
-  const vc = execCli(binaryPath, ['link', '--yes'], {
-    cwd: directory,
-  });
-
-  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
-  vc.stdin?.write('n\n');
-
-  const { exitCode, stdout, stderr } = await vc;
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['link', '--yes'],
+    {
+      cwd: directory,
+    }
+  );
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const link = require(path.join(directory, '.vercel/project.json'));
@@ -297,10 +295,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 test('deploy using only now.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-    target,
-    '--yes',
-  ]);
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [target]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -320,7 +315,6 @@ test('deploy using --local-config flag v2', async () => {
     target,
     '--local-config',
     configPath,
-    '--yes',
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -440,7 +434,7 @@ test('deploy using --local-config flag above target', async () => {
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['deploy', target, '--local-config', './now-root.json', '--yes'],
+    ['deploy', target, '--local-config', './now-root.json'],
     {
       cwd: root,
     }
@@ -470,17 +464,13 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
   const previewEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
 
   async function vcLink() {
-    const vc = execCli(binaryPath, ['link', '--yes'], {
-      cwd: target,
-    });
-
-    await waitForPrompt(
-      vc,
-      'Would you like to pull environment variables now?'
+    const { exitCode, stdout, stderr } = await execCli(
+      binaryPath,
+      ['link', '--yes'],
+      {
+        cwd: target,
+      }
     );
-    vc.stdin?.write('n\n');
-
-    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 

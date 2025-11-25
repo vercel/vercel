@@ -432,13 +432,8 @@ describe('link', () => {
       expect(projectJson.projectId).toEqual(project.id);
       expect(projectJson.projectName).toEqual(project.name);
 
-      // Verify the env pull prompt was called
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to pull environment variables now?',
-        true
-      );
-
       // Verify env pull was called with --yes flag since link used --yes
+      // Note: confirm should NOT be called when --yes is used (auto-confirmed)
       expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
         '--yes',
       ]);
@@ -727,7 +722,7 @@ describe('link', () => {
       useUnknownProject();
 
       client.cwd = cwd;
-      client.setArgv('--project', project.name!, '--yes');
+      client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
@@ -742,10 +737,11 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
-      // Verify env pull was called with --yes flag
-      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
-        '--yes',
-      ]);
+      // Verify env pull was called (without --yes flag since link didn't use --yes)
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        []
+      );
     });
 
     it('should not call env pull when user declines the prompt', async () => {
@@ -760,7 +756,7 @@ describe('link', () => {
       useUnknownProject();
 
       client.cwd = cwd;
-      client.setArgv('--project', project.name!, '--yes');
+      client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
@@ -794,7 +790,7 @@ describe('link', () => {
       mockPull.mockResolvedValue(1);
 
       client.cwd = cwd;
-      client.setArgv('--project', project.name!, '--yes');
+      client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
@@ -813,9 +809,10 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0); // Link should still succeed even if env pull fails
 
-      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
-        '--yes',
-      ]);
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        []
+      );
     });
 
     it('should handle env pull command throwing an error', async () => {
@@ -833,7 +830,7 @@ describe('link', () => {
       mockPull.mockRejectedValue(new Error('Network error'));
 
       client.cwd = cwd;
-      client.setArgv('--project', project.name!, '--yes');
+      client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
@@ -852,9 +849,10 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0); // Link should still succeed even if env pull throws
 
-      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
-        '--yes',
-      ]);
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        []
+      );
     });
 
     it('should pass empty args to env pull when link command does not use --yes', async () => {
