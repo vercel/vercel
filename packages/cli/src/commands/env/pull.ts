@@ -35,7 +35,7 @@ function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
   const fd = openSync(path, 'r');
   try {
-    readSync(fd, new Uint8Array(buffer), 0, buffer.length, null);
+    readSync(fd, buffer, 0, buffer.length, null);
   } finally {
     closeSync(fd);
   }
@@ -58,11 +58,7 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(
-  client: Client,
-  argv: string[],
-  source: EnvRecordsSource = 'vercel-cli:env:pull'
-) {
+export default async function pull(client: Client, argv: string[]) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -126,7 +122,7 @@ export default async function pull(
     link,
     gitBranch,
     client.cwd,
-    source
+    'vercel-cli:env:pull'
   );
 
   return 0;
