@@ -334,6 +334,11 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   );
   now.stdin?.write('\n');
 
+  await waitForPrompt(now, /Linked to/);
+
+  await waitForPrompt(now, 'Would you like to pull environment variables now?');
+  now.stdin?.write('n\n');
+
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
