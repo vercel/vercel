@@ -5,6 +5,7 @@
     "/Users/pranavkarthik/.nvm/versions/node/v22.19.0/bin/node",
     "/Users/pranavkarthik/vercel/packages/cli/dist/vc.js",
     "build",
+    "--debug",
     "--cwd",
     "/Users/pranavkarthik/vercel/packages/cli/test/fixtures/unit/vercel-ts"
   ],
