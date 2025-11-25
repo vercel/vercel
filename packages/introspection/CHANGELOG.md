@@ -1,5 +1,11 @@
 # @vercel/introspection
 
+## 0.0.4
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
 ## 0.0.3
 
 ### Patch Changes

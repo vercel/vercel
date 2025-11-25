@@ -1,5 +1,12 @@
 # @vercel/fastify
 
+## 0.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/node@5.5.12
+
 ## 0.1.12
 
 ### Patch Changes
