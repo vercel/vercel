@@ -43,6 +43,7 @@ test('[vc link] should prompt for env pull and handle acceptance', async () => {
   const projectName = `link-env-pull-${Math.random().toString(36).split('.')[1]}`;
 
   await fs.remove(path.join(dir, '.vercel'));
+  await fs.remove(path.join(dir, '.env.local'));
 
   const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
     cwd: dir,
@@ -90,6 +91,7 @@ test('[vc link] should handle env pull prompt decline', async () => {
   const projectName = `link-env-decline-${Math.random().toString(36).split('.')[1]}`;
 
   await fs.remove(path.join(dir, '.vercel'));
+  await fs.remove(path.join(dir, '.env.local'));
 
   const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
     cwd: dir,
@@ -139,6 +141,7 @@ test('[vc link] should work with --yes flag and auto-confirm all prompts', async
   const projectName = `link-env-yes-${Math.random().toString(36).split('.')[1]}`;
 
   await fs.remove(path.join(dir, '.vercel'));
+  await fs.remove(path.join(dir, '.env.local'));
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
