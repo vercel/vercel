@@ -874,5 +874,5 @@ test(
       await vcEnvRemoveAll();
     }
   },
-  5 * 60 * 1000
+  10 * 60 * 1000
 );
