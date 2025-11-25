@@ -276,9 +276,6 @@ export async function ensureRepoLink(
         ...selection,
         framework: selection.framework.slug,
       }));
-      if (selection.rootDirectory) {
-        (project as any).rootDirectory = selection.rootDirectory;
-      }
       await connectGitProvider(
         client,
         project.id,
