@@ -1,5 +1,5 @@
 import execa from 'execa';
-import fs from 'fs';
+import * as fs from 'fs-extra';
 import os from 'os';
 import { join } from 'path';
 import which from 'which';
@@ -537,11 +537,7 @@ export async function harvestVenvSitePackagesToVendor({
   );
 
   try {
-    await fs.promises.mkdir(vendorDir, { recursive: true });
-    await fs.promises.cp(sitePackagesDir, vendorDir, {
-      recursive: true,
-      force: true,
-    });
+    await fs.copy(sitePackagesDir, vendorDir);
   } catch (err) {
     console.log(
       'Failed to copy virtualenv site-packages into vendor directory'
