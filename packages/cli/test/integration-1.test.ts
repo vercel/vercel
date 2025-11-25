@@ -461,6 +461,7 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
+/* eslint-disable no-console */
 test(
   'deploy `api-env` fixture and test `vercel env` command',
   async () => {
@@ -661,11 +662,14 @@ test(
     }
 
     async function vcDevWithEnv() {
+      console.log('[vcDevWithEnv] Starting dev server');
       const vc = execCli(binaryPath, ['dev', '--debug'], {
         cwd: target,
       });
 
+      console.log('[vcDevWithEnv] Waiting for localhost');
       const localhost = await getLocalhost(vc);
+      console.log('[vcDevWithEnv] Got localhost:', localhost[0]);
       const apiUrl = `${localhost[0]}/api/get-env`;
       const apiRes = await fetch(apiUrl);
 
@@ -681,20 +685,26 @@ test(
       const homeJson = await homeRes.json();
       expect(homeJson[promptEnvVar]).toBe('my plaintext value');
 
+      console.log('[vcDevWithEnv] Tests passed, killing server');
       // sleep before kill, otherwise the dev process doesn't clean up and exit properly
       await sleep(100);
       vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
 
+      console.log('[vcDevWithEnv] Waiting for process to exit');
       const { exitCode, stdout, stderr } = await vc;
+      console.log('[vcDevWithEnv] Process exited with code:', exitCode);
       expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     }
 
     async function vcDevAndFetchCloudVars() {
+      console.log('[vcDevAndFetchCloudVars] Starting dev server');
       const vc = execCli(binaryPath, ['dev'], {
         cwd: target,
       });
 
+      console.log('[vcDevAndFetchCloudVars] Waiting for localhost');
       const localhost = await getLocalhost(vc);
+      console.log('[vcDevAndFetchCloudVars] Got localhost:', localhost[0]);
       const apiUrl = `${localhost[0]}/api/get-env`;
       const apiRes = await fetch(apiUrl);
       expect(apiRes.status).toBe(200);
@@ -714,11 +724,17 @@ test(
       // though the dev server now has this
       expect(homeJson['VERCEL']).toBe('1');
 
+      console.log('[vcDevAndFetchCloudVars] Tests passed, killing server');
       // sleep before kill, otherwise the dev process doesn't clean up and exit properly
       await sleep(100);
       vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
 
+      console.log('[vcDevAndFetchCloudVars] Waiting for process to exit');
       const { exitCode, stdout, stderr } = await vc;
+      console.log(
+        '[vcDevAndFetchCloudVars] Process exited with code:',
+        exitCode
+      );
       expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     }
 
@@ -762,11 +778,14 @@ test(
     }
 
     async function vcDevAndFetchSystemVars() {
+      console.log('[vcDevAndFetchSystemVars] Starting dev server');
       const vc = execCli(binaryPath, ['dev'], {
         cwd: target,
       });
 
+      console.log('[vcDevAndFetchSystemVars] Waiting for localhost');
       const localhost = await getLocalhost(vc);
+      console.log('[vcDevAndFetchSystemVars] Got localhost:', localhost[0]);
       const apiUrl = `${localhost[0]}/api/get-env`;
       const apiRes = await fetch(apiUrl);
 
@@ -792,11 +811,17 @@ test(
       expect(homeJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
       expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
 
+      console.log('[vcDevAndFetchSystemVars] Tests passed, killing server');
       // sleep before kill, otherwise the dev process doesn't clean up and exit properly
       await sleep(100);
       vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
 
+      console.log('[vcDevAndFetchSystemVars] Waiting for process to exit');
       const { exitCode, stdout, stderr } = await vc;
+      console.log(
+        '[vcDevAndFetchSystemVars] Process exited with code:',
+        exitCode
+      );
       expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     }
 
@@ -847,32 +872,62 @@ test(
     }
 
     try {
+      console.log('[api-env test] Starting: vcEnvRemoveAll');
       await vcEnvRemoveAll();
+      console.log('[api-env test] Starting: vcLink');
       await vcLink();
+      console.log('[api-env test] Starting: vcEnvLsDoesNotIncludeVars');
       await vcEnvLsDoesNotIncludeVars();
+      console.log('[api-env test] Starting: vcEnvAddWithPrompts');
       await vcEnvAddWithPrompts();
+      console.log('[api-env test] Starting: vcEnvAddFromStdin');
       await vcEnvAddFromStdin();
+      console.log('[api-env test] Starting: vcEnvAddFromStdinPreview');
       await vcEnvAddFromStdinPreview();
+      console.log(
+        '[api-env test] Starting: vcEnvAddFromStdinPreviewWithBranch'
+      );
       await vcEnvAddFromStdinPreviewWithBranch();
+      console.log('[api-env test] Starting: vcEnvLsIncludesVar');
       await vcEnvLsIncludesVar();
+      console.log('[api-env test] Starting: vcEnvPull');
       await vcEnvPull();
+      console.log('[api-env test] Starting: vcEnvPullOverwrite');
       await vcEnvPullOverwrite();
+      console.log('[api-env test] Starting: vcEnvPullConfirm');
       await vcEnvPullConfirm();
+      console.log('[api-env test] Starting: vcDeployWithVar');
       await vcDeployWithVar();
+      console.log('[api-env test] Starting: vcDevWithEnv');
       await vcDevWithEnv();
+      console.log('[api-env test] Completed: vcDevWithEnv');
       fs.unlinkSync(path.join(target, '.env.local'));
+      console.log('[api-env test] Starting: vcDevAndFetchCloudVars');
       await vcDevAndFetchCloudVars();
+      console.log('[api-env test] Completed: vcDevAndFetchCloudVars');
+      console.log('[api-env test] Starting: enableAutoExposeSystemEnvs');
       await enableAutoExposeSystemEnvs();
+      console.log('[api-env test] Starting: vcEnvPullFetchSystemVars');
       await vcEnvPullFetchSystemVars();
       fs.unlinkSync(path.join(target, '.env.local'));
+      console.log('[api-env test] Starting: vcDevAndFetchSystemVars');
       await vcDevAndFetchSystemVars();
+      console.log('[api-env test] Completed: vcDevAndFetchSystemVars');
+      console.log('[api-env test] Starting: vcEnvRemove');
       await vcEnvRemove();
+      console.log('[api-env test] Starting: vcEnvRemoveWithArgs');
       await vcEnvRemoveWithArgs();
+      console.log('[api-env test] Starting: vcEnvRemoveWithNameOnly');
       await vcEnvRemoveWithNameOnly();
+      console.log('[api-env test] Starting: vcEnvLsDoesNotIncludeVars (final)');
       await vcEnvLsDoesNotIncludeVars();
+      console.log('[api-env test] Test completed successfully!');
     } finally {
+      console.log('[api-env test] Starting cleanup: vcEnvRemoveAll');
       await vcEnvRemoveAll();
+      console.log('[api-env test] Cleanup completed');
     }
   },
   10 * 60 * 1000
 );
+/* eslint-enable no-console */
