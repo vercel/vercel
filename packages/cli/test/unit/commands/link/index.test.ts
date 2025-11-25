@@ -111,7 +111,7 @@ describe('link', () => {
       });
     });
 
-    it('should create new Project with Git connection linked', async () => {
+    it('should create new Project at repo root using repo folder name', async () => {
       const user = useUser();
       const cwd = setupTmpDir();
 
@@ -183,9 +183,116 @@ describe('link', () => {
         throw project;
       }
       expect(project.name).toEqual(repoJson.projects[0].name);
+      expect(project.name).toEqual(basename(cwd));
       expect(project.framework).toEqual('nextjs');
       expect(project.link?.repo).toEqual('user/repo');
       expect(project.link?.type).toEqual('github');
+    });
+
+    it('should create projects using subdirectory names for monorepo workspaces', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      await writeJSON(join(cwd, 'package.json'), {
+        name: 'my-monorepo',
+        private: true,
+        workspaces: ['packages/frontend', 'packages/api'],
+      });
+
+      await mkdirp(join(cwd, 'packages/frontend'));
+      await writeJSON(join(cwd, 'packages/frontend/package.json'), {
+        name: 'frontend',
+        dependencies: {
+          next: 'latest',
+        },
+      });
+
+      await mkdirp(join(cwd, 'packages/api'));
+      await writeJSON(join(cwd, 'packages/api/package.json'), {
+        name: 'api',
+        dependencies: {
+          '@remix-run/dev': 'latest',
+        },
+      });
+
+      useTeams('team_dummy');
+      useUnknownProject();
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+
+      client.cwd = cwd;
+      client.setArgv('--repo');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        'The `--repo` flag is in alpha, please report issues'
+      );
+
+      await expect(client.stderr).toOutput('Link Git repository at ');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your Project(s)?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
+      await expect(client.stderr).toOutput(`No Projects are linked`);
+      await expect(client.stderr).toOutput(
+        `Detected 2 new Projects that may be created.`
+      );
+      await expect(client.stderr).toOutput(`Which Projects should be created?`);
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      expect(repoJson.orgId).toEqual(user.id);
+      expect(repoJson.remoteName).toEqual('origin');
+      expect(repoJson.projects).toHaveLength(2);
+
+      const frontendProject = repoJson.projects.find(
+        (p: any) => p.name === 'frontend'
+      );
+      const apiProject = repoJson.projects.find((p: any) => p.name === 'api');
+
+      expect(frontendProject).toBeDefined();
+      expect(apiProject).toBeDefined();
+
+      const frontendProjectDetails = await getProjectByNameOrId(
+        client,
+        frontendProject.id
+      );
+      const apiProjectDetails = await getProjectByNameOrId(
+        client,
+        apiProject.id
+      );
+
+      if (
+        frontendProjectDetails instanceof ProjectNotFound ||
+        apiProjectDetails instanceof ProjectNotFound
+      ) {
+        throw new Error('Projects not found');
+      }
+
+      expect(frontendProjectDetails.framework).toEqual('nextjs');
+      expect(apiProjectDetails.framework).toEqual('remix');
     });
 
     it('should gracefully report error when creating new Project fails', async () => {
