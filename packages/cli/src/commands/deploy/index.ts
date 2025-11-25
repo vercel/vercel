@@ -33,6 +33,7 @@ import {
   AliasDomainConfigured,
   BuildError,
   BuildsRateLimited,
+  ConflictingConfigFiles,
   ConflictingFilePath,
   ConflictingPathSegment,
   DeploymentNotFound,
@@ -670,7 +671,8 @@ export default async (client: Client): Promise<number> => {
       err instanceof AliasDomainConfigured ||
       err instanceof MissingBuildScript ||
       err instanceof ConflictingFilePath ||
-      err instanceof ConflictingPathSegment
+      err instanceof ConflictingPathSegment ||
+      err instanceof ConflictingConfigFiles
     ) {
       handleCreateDeployError(err, localConfig);
       return 1;
@@ -783,7 +785,8 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
     error instanceof AliasDomainConfigured ||
     error instanceof MissingBuildScript ||
     error instanceof ConflictingFilePath ||
-    error instanceof ConflictingPathSegment
+    error instanceof ConflictingPathSegment ||
+    error instanceof ConflictingConfigFiles
   ) {
     output.error(error.message);
     return 1;
