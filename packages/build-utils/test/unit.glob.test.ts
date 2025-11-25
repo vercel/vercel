@@ -68,6 +68,7 @@ describe('glob()', () => {
     const rootDir = await fs.mkdtemp(join(tmpdir(), 'build-utils-test'));
     const dir = await fs.mkdtemp(join(rootDir, 'build-utils-test'));
     try {
+      // Create files and directories first
       await Promise.all([
         fs.writeFile(join(rootDir, 'root.txt'), 'file outside of "dir"'),
         fs.writeFile(join(dir, 'root.txt'), 'file at the root'),
@@ -78,15 +79,29 @@ describe('glob()', () => {
             fs.writeFile(join(dir, 'dir-with-file/data.json'), '{"a":"b"}')
           ),
         fs.mkdirp(join(dir, 'another/subdir')),
+      ]);
+
+      // On Windows, use 'junction' type for directory symlinks to avoid permission issues.
+      // Junctions don't require elevated permissions unlike directory symlinks.
+      const dirSymlinkType = process.platform === 'win32' ? 'junction' : 'dir';
+
+      await Promise.all([
+        // File symlinks (work on all platforms)
         fs.symlink('root.txt', join(dir, 'root-link')),
         fs.symlink(join(dir, 'root.txt'), join(dir, 'abs-root-link')),
-        fs.symlink('dir-with-file', join(dir, 'dir-link')),
-        fs.symlink('empty-dir', join(dir, 'empty-dir-link')),
+        fs.symlink('dir-with-file', join(dir, 'dir-link'), dirSymlinkType),
+        fs.symlink('empty-dir', join(dir, 'empty-dir-link'), dirSymlinkType),
         fs.symlink('../root.txt', join(dir, 'outside-cwd-link')),
-        fs.symlink(join(dir, '../root.txt'), join(dir, 'abs-outside-cwd-link')),
+        fs.symlink(
+          join(rootDir, 'root.txt'),
+          join(dir, 'abs-outside-cwd-link')
+        ),
       ]);
+
       const files = await glob('**', { cwd: dir, follow: true });
       const fileNames = Object.keys(files).sort();
+
+      // Should only include symlinks pointing within cwd, not outside
       expect(fileNames).toHaveLength(5);
       expect(fileNames).toEqual([
         'abs-root-link',
@@ -95,6 +110,8 @@ describe('glob()', () => {
         'root-link',
         'root.txt',
       ]);
+
+      // When following symlinks, the mode should be of the target file, not the symlink
       for (const file of Object.values(files)) {
         expect(isSymbolicLink(file.mode)).toEqual(false);
       }
