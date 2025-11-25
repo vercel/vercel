@@ -1,5 +1,6 @@
 import { mkdir, writeFile, unlink, access } from 'fs/promises';
 import { join, basename } from 'path';
+import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
 import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
@@ -124,7 +125,8 @@ export async function compileVercelConfig(
   dotenvConfig({ path: join(workPath, '.env') });
   dotenvConfig({ path: join(workPath, '.env.local') });
 
-  const tempOutPath = join(vercelDir, 'vercel-temp.js');
+  const tempOutPath = join(vercelDir, 'vercel-temp.mjs');
+  const loaderPath = join(vercelDir, 'vercel-loader.mjs');
 
   try {
     const { build } = await import('esbuild');
@@ -135,16 +137,40 @@ export async function compileVercelConfig(
       entryPoints: [vercelConfigPath],
       bundle: true,
       platform: 'node',
-      format: 'cjs',
+      format: 'esm',
       outfile: tempOutPath,
       packages: 'external',
-      target: 'node18',
+      target: 'node20',
       sourcemap: 'inline',
     });
 
-    delete require.cache[require.resolve(tempOutPath)];
-    const configModule = require(tempOutPath);
-    const config = configModule.default || configModule.config || configModule;
+    const loaderScript = `
+      const configModule = await import(process.argv[2]);
+      const config = configModule.default || configModule.config || configModule;
+      process.send(config);
+    `;
+    await writeFile(loaderPath, loaderScript, 'utf-8');
+
+    const config = await new Promise((resolve, reject) => {
+      const child = fork(loaderPath, [tempOutPath], {
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        env: process.env,
+      });
+
+      child.on('message', message => {
+        resolve(message);
+      });
+
+      child.on('error', err => {
+        reject(err);
+      });
+
+      child.on('exit', code => {
+        if (code !== 0) {
+          reject(new Error(`Config loader exited with code ${code}`));
+        }
+      });
+    });
 
     await writeFile(
       compiledConfigPath,
@@ -166,13 +192,18 @@ export async function compileVercelConfig(
       link: 'https://vercel.com/docs/projects/project-configuration',
     });
   } finally {
-    try {
-      await unlink(tempOutPath);
-    } catch (err: any) {
-      if (err.code !== 'ENOENT') {
-        output.debug(`Failed to cleanup temp file: ${err}`);
-      }
-    }
+    await Promise.all([
+      unlink(tempOutPath).catch(err => {
+        if (err.code !== 'ENOENT') {
+          output.debug(`Failed to cleanup temp file: ${err}`);
+        }
+      }),
+      unlink(loaderPath).catch(err => {
+        if (err.code !== 'ENOENT') {
+          output.debug(`Failed to cleanup loader file: ${err}`);
+        }
+      }),
+    ]);
   }
 }
 
