@@ -628,6 +628,9 @@ test(
 
       const vc = execCli(binaryPath, ['env', 'pull'], {
         cwd: target,
+        env: {
+          FORCE_TTY: '1',
+        },
       });
 
       await waitForPrompt(
