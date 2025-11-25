@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "3.3.3",
+  "version": "3.3.4",
   "repository": {
     "directory": "packages/functions",
     "type": "git",

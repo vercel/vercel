@@ -1,5 +1,22 @@
 # vercel
 
+## 48.10.12
+
+### Patch Changes
+
+- Fix project naming with vc link --repo ([#14335](https://github.com/vercel/vercel/pull/14335))
+
+- Updated dependencies [[`2beb1222fbdde06e8a153521871c0a3b33228045`](https://github.com/vercel/vercel/commit/2beb1222fbdde06e8a153521871c0a3b33228045)]:
+  - @vercel/build-utils@13.2.0
+  - @vercel/node@5.5.11
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.9
+  - @vercel/express@0.1.14
+  - @vercel/fastify@0.1.12
+  - @vercel/h3@0.1.18
+  - @vercel/hono@0.2.12
+  - @vercel/static-build@2.8.11
+
 ## 48.10.11
 
 ### Patch Changes
