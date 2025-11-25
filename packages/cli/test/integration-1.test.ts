@@ -28,6 +28,7 @@ async function vcLink(projectPath: string) {
       cwd: projectPath,
     }
   );
+
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
@@ -279,6 +280,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
       cwd: directory,
     }
   );
+
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const link = require(path.join(directory, '.vercel/project.json'));
@@ -295,7 +297,10 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 test('deploy using only now.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, [target]);
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    target,
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -315,6 +320,7 @@ test('deploy using --local-config flag v2', async () => {
     target,
     '--local-config',
     configPath,
+    '--yes',
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -434,7 +440,7 @@ test('deploy using --local-config flag above target', async () => {
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['deploy', target, '--local-config', './now-root.json'],
+    ['deploy', target, '--local-config', './now-root.json', '--yes'],
     {
       cwd: root,
     }

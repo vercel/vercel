@@ -1027,6 +1027,7 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
       },
     }
   );
+
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
