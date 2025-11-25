@@ -255,7 +255,7 @@ describe('integration', () => {
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: Cannot specify more than one integration at a time'
+          'Error: Invalid number of arguments. Usage: `vercel integration list [project]'
         );
       });
     });
