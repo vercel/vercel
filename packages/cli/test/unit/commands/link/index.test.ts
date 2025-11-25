@@ -432,10 +432,12 @@ describe('link', () => {
       expect(projectJson.projectId).toEqual(project.id);
       expect(projectJson.projectName).toEqual(project.name);
 
-      // Verify env pull was called with --yes flag since link used --yes
-      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
-        '--yes',
-      ]);
+      // Verify env pull was called with --yes flag and correct source
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        ['--yes'],
+        'vercel-cli:link'
+      );
     });
 
     it('should track use of redacted `--project` option', async () => {
@@ -759,7 +761,8 @@ describe('link', () => {
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        []
+        [],
+        'vercel-cli:link'
       );
     });
 
@@ -852,7 +855,8 @@ describe('link', () => {
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        []
+        [],
+        'vercel-cli:link'
       );
     });
 
@@ -903,7 +907,8 @@ describe('link', () => {
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        []
+        [],
+        'vercel-cli:link'
       );
     });
 
@@ -948,7 +953,8 @@ describe('link', () => {
       // Verify env pull was called with empty args since link didn't use --yes
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),
-        []
+        [],
+        'vercel-cli:link'
       );
     });
   });

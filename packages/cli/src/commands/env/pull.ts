@@ -58,7 +58,11 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(client: Client, argv: string[]) {
+export default async function pull(
+  client: Client,
+  argv: string[],
+  source: EnvRecordsSource = 'vercel-cli:env:pull'
+) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -122,7 +126,7 @@ export default async function pull(client: Client, argv: string[]) {
     link,
     gitBranch,
     client.cwd,
-    'vercel-cli:env:pull'
+    source
   );
 
   return 0;

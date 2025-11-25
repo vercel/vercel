@@ -359,7 +359,7 @@ export async function linkFolderToProject(
       client.cwd = path;
 
       const args = autoConfirm ? ['--yes'] : [];
-      const exitCode = await pull(client, args);
+      const exitCode = await pull(client, args, 'vercel-cli:link');
 
       if (exitCode !== 0) {
         output.error(
