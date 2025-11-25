@@ -178,10 +178,7 @@ export function useUnknownProject() {
     }
     if (
       (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
-      (repo === 'user/repo' ||
-        repo === 'user2/repo2' ||
-        repo === 'user3/repo3' ||
-        repo === 'user/repo4')
+      (repo === 'user/repo' || repo === 'user2/repo2' || repo === 'user3/repo3')
     ) {
       project.link = {
         type,
@@ -374,10 +371,7 @@ export function useProject(
     const { type, repo, org } = req.body;
     if (
       (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
-      (repo === 'user/repo' ||
-        repo === 'user2/repo2' ||
-        repo === 'user3/repo3' ||
-        repo === 'user/repo4')
+      (repo === 'user/repo' || repo === 'user2/repo2' || repo === 'user3/repo3')
     ) {
       project.link = {
         type,

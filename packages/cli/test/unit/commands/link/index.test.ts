@@ -194,7 +194,7 @@ describe('link', () => {
       const cwd = setupTmpDir();
 
       await mkdirp(join(cwd, '.git'));
-      const repoUrl = 'https://github.com/user/repo4.git';
+      const repoUrl = 'https://github.com/user/repo.git';
       await writeFile(
         join(cwd, '.git/config'),
         `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
