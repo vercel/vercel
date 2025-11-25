@@ -461,410 +461,444 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-test('deploy `api-env` fixture and test `vercel env` command', async () => {
-  const target = await setupE2EFixture('api-env');
-  // Randomness is required so that tests can run in
-  // parallel on the same project
-  const promptEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
-  const stdinEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
-  const previewEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
+test(
+  'deploy `api-env` fixture and test `vercel env` command',
+  async () => {
+    const target = await setupE2EFixture('api-env');
+    // Randomness is required so that tests can run in
+    // parallel on the same project
+    const promptEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
+    const stdinEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
+    const previewEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
 
-  async function vcLink() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['link', '--yes'],
-      {
-        cwd: target,
-      }
-    );
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcEnvLsDoesNotIncludeVars() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['env', 'ls'],
-      {
-        cwd: target,
-      }
-    );
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stdout).not.toContain(previewEnvVar);
-    expect(stdout).not.toContain(stdinEnvVar);
-    expect(stdout).not.toContain(promptEnvVar);
-  }
-
-  async function vcEnvAddWithPrompts() {
-    const vc = execCli(binaryPath, ['env', 'add'], {
-      cwd: target,
-    });
-
-    await waitForPrompt(vc, "What's the name of the variable?");
-    vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes("What's the value of") && chunk.includes(promptEnvVar)
-    );
-    vc.stdin?.write('my plaintext value\n');
-
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes('which Environments') && chunk.includes(promptEnvVar)
-    );
-    vc.stdin?.write('a\n'); // select all
-
-    const { exitCode, stdout, stderr } = await vc;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcEnvAddFromStdin() {
-    const vc = execCli(binaryPath, ['env', 'add', stdinEnvVar, 'development'], {
-      cwd: target,
-    });
-    vc.stdin?.end('{"expect":"quotes"}');
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcEnvAddFromStdinPreview() {
-    const vc = execCli(binaryPath, ['env', 'add', previewEnvVar, 'preview'], {
-      cwd: target,
-    });
-    vc.stdin?.end('preview-no-branch');
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcEnvAddFromStdinPreviewWithBranch() {
-    const vc = execCli(
-      binaryPath,
-      ['env', 'add', previewEnvVar, 'preview', 'staging'],
-      {
-        cwd: target,
-      }
-    );
-    vc.stdin?.end('preview-with-branch');
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-    expect(stderr).toMatch(/does not have a connected Git repository/gm);
-  }
-
-  async function vcEnvLsIncludesVar() {
-    const { exitCode, stderr, stdout } = await execCli(
-      binaryPath,
-      ['env', 'ls'],
-      {
-        cwd: target,
-      }
-    );
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Environment Variables found for (.*)\/api-env/gm);
-
-    const lines = stdout.split('\n');
-
-    const plaintextEnvs = lines.filter(line => line.includes(promptEnvVar));
-    expect(plaintextEnvs.length).toBe(1);
-    expect(plaintextEnvs[0]).toMatch(/Production, Preview, Development/gm);
-
-    const stdinEnvs = lines.filter(line => line.includes(stdinEnvVar));
-    expect(stdinEnvs.length).toBe(1);
-    expect(stdinEnvs[0]).toMatch(/Development/gm);
-
-    const previewEnvs = lines.filter(line => line.includes(previewEnvVar));
-    expect(previewEnvs.length).toBe(1);
-    expect(previewEnvs[0]).toMatch(/Encrypted .* Preview /gm);
-  }
-
-  async function vcEnvPull() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['env', 'pull', '-y'],
-      {
-        cwd: target,
-      }
-    );
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Updated .env.local file/gm);
-
-    const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
-    expect(contents).toMatch(/^# Created by Vercel CLI\n/);
-    expect(contents).toMatch(
-      new RegExp(`${promptEnvVar}="my plaintext value"`)
-    );
-    expect(contents).toMatch(
-      new RegExp(`${stdinEnvVar}="{"expect":"quotes"}"`)
-    );
-    expect(contents).not.toMatch(new RegExp(`${previewEnvVar}`));
-  }
-
-  async function vcEnvPullOverwrite() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['env', 'pull'],
-      {
-        cwd: target,
-      }
-    );
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Overwriting existing .env.local file/gm);
-    expect(stderr).toMatch(/Updated .env.local file/gm);
-  }
-
-  async function vcEnvPullConfirm() {
-    fs.writeFileSync(path.join(target, '.env.local'), 'hahaha');
-
-    const vc = execCli(binaryPath, ['env', 'pull'], {
-      cwd: target,
-    });
-
-    await waitForPrompt(
-      vc,
-      'Found existing file ".env.local". Do you want to overwrite?'
-    );
-    vc.stdin?.end('y\n');
-
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcDeployWithVar() {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [], {
-      cwd: target,
-    });
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    const { host } = new URL(stdout);
-
-    const apiUrl = `https://${host}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
-    expect(apiRes.status, apiUrl).toBe(200);
-    const apiJson = await apiRes.json();
-    expect(apiJson[promptEnvVar]).toBe('my plaintext value');
-
-    const homeUrl = `https://${host}`;
-    const homeRes = await fetch(homeUrl);
-    expect(homeRes.status, homeUrl).toBe(200);
-    const homeJson = await homeRes.json();
-    expect(homeJson[promptEnvVar]).toBe('my plaintext value');
-  }
-
-  async function vcDevWithEnv() {
-    const vc = execCli(binaryPath, ['dev', '--debug'], {
-      cwd: target,
-    });
-
-    const localhost = await getLocalhost(vc);
-    const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
-
-    expect(apiRes.status).toBe(200);
-
-    const apiJson = await apiRes.json();
-
-    expect(apiJson[promptEnvVar]).toBe('my plaintext value');
-
-    const homeUrl = localhost[0];
-
-    const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
-    expect(homeJson[promptEnvVar]).toBe('my plaintext value');
-
-    // sleep before kill, otherwise the dev process doesn't clean up and exit properly
-    await sleep(100);
-    vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
-
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcDevAndFetchCloudVars() {
-    const vc = execCli(binaryPath, ['dev'], {
-      cwd: target,
-    });
-
-    const localhost = await getLocalhost(vc);
-    const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
-    expect(apiRes.status).toBe(200);
-
-    const apiJson = await apiRes.json();
-    expect(apiJson[promptEnvVar]).toBe('my plaintext value');
-    expect(apiJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
-
-    const homeUrl = localhost[0];
-    const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
-    expect(homeJson[promptEnvVar]).toBe('my plaintext value');
-    expect(homeJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
-
-    // system env vars are hidden in dev
-    expect(apiJson['VERCEL']).toBeUndefined();
-    // though the dev server now has this
-    expect(homeJson['VERCEL']).toBe('1');
-
-    // sleep before kill, otherwise the dev process doesn't clean up and exit properly
-    await sleep(100);
-    vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
-
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function enableAutoExposeSystemEnvs() {
-    const link = require(path.join(target, '.vercel/project.json'));
-
-    const res = await apiFetch(`/v2/projects/${link.projectId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ autoExposeSystemEnvs: true }),
-    });
-
-    expect(res.status).toBe(200);
-    if (res.status === 200) {
-      // eslint-disable-next-line no-console
-      console.log(
-        `Set autoExposeSystemEnvs=true for project ${link.projectId}`
+    async function vcLink() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['link', '--yes'],
+        {
+          cwd: target,
+        }
       );
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     }
-  }
 
-  async function vcEnvPullFetchSystemVars() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['env', 'pull', '-y', '--environment', 'production'],
-      {
+    async function vcEnvLsDoesNotIncludeVars() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['env', 'ls'],
+        {
+          cwd: target,
+        }
+      );
+
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+      expect(stdout).not.toContain(previewEnvVar);
+      expect(stdout).not.toContain(stdinEnvVar);
+      expect(stdout).not.toContain(promptEnvVar);
+    }
+
+    async function vcEnvAddWithPrompts() {
+      const vc = execCli(binaryPath, ['env', 'add'], {
         cwd: target,
-      }
-    );
+      });
 
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+      await waitForPrompt(vc, "What's the name of the variable?");
+      vc.stdin?.write(`${promptEnvVar}\n`);
+      await waitForPrompt(
+        vc,
+        chunk =>
+          chunk.includes("What's the value of") && chunk.includes(promptEnvVar)
+      );
+      vc.stdin?.write('my plaintext value\n');
 
-    const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
+      await waitForPrompt(
+        vc,
+        chunk =>
+          chunk.includes('which Environments') && chunk.includes(promptEnvVar)
+      );
+      vc.stdin?.write('a\n'); // select all
 
-    const lines = new Set(contents.split('\n'));
+      const { exitCode, stdout, stderr } = await vc;
 
-    expect(lines).toContain('VERCEL="1"');
-    expect(lines).toContain('VERCEL_URL=""');
-    expect(lines).toContain('VERCEL_ENV="production"');
-    expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
-    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
-  }
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
 
-  async function vcDevAndFetchSystemVars() {
-    const vc = execCli(binaryPath, ['dev'], {
-      cwd: target,
-    });
+    async function vcEnvAddFromStdin() {
+      const vc = execCli(
+        binaryPath,
+        ['env', 'add', stdinEnvVar, 'development'],
+        {
+          cwd: target,
+        }
+      );
+      vc.stdin?.end('{"expect":"quotes"}');
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
 
-    const localhost = await getLocalhost(vc);
-    const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
-
-    const localhostNoProtocol = localhost[0].slice('http://'.length);
-
-    const apiJson = await apiRes.json();
-    // environment variables are not set in dev
-    expect(apiJson['VERCEL']).toBeUndefined();
-    expect(apiJson['VERCEL_ENV']).toBeUndefined();
-    expect(apiJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
-    expect(apiJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
-    // except for these because vc dev
-    expect(apiJson['VERCEL_URL']).toBe(localhostNoProtocol);
-    expect(apiJson['VERCEL_REGION']).toBe('dev1');
-
-    const homeUrl = localhost[0];
-    const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
-    expect(homeJson['VERCEL']).toBe('1');
-    expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);
-    expect(homeJson['VERCEL_ENV']).toBe('development');
-    expect(homeJson['VERCEL_REGION']).toBeUndefined();
-    expect(homeJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
-    expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
-
-    // sleep before kill, otherwise the dev process doesn't clean up and exit properly
-    await sleep(100);
-    vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
-
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcEnvRemove() {
-    const vc = execCli(binaryPath, ['env', 'rm', '-y'], {
-      cwd: target,
-    });
-    await waitForPrompt(vc, "What's the name of the variable?");
-    vc.stdin?.write(`${previewEnvVar}\n`);
-    const { exitCode, stdout, stderr } = await vc;
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
-
-  async function vcEnvRemoveWithArgs() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['env', 'rm', stdinEnvVar, 'development', '-y'],
-      {
+    async function vcEnvAddFromStdinPreview() {
+      const vc = execCli(binaryPath, ['env', 'add', previewEnvVar, 'preview'], {
         cwd: target,
-      }
-    );
+      });
+      vc.stdin?.end('preview-no-branch');
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
 
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
+    async function vcEnvAddFromStdinPreviewWithBranch() {
+      const vc = execCli(
+        binaryPath,
+        ['env', 'add', previewEnvVar, 'preview', 'staging'],
+        {
+          cwd: target,
+        }
+      );
+      vc.stdin?.end('preview-with-branch');
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
+      expect(stderr).toMatch(/does not have a connected Git repository/gm);
+    }
 
-  async function vcEnvRemoveWithNameOnly() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['env', 'rm', promptEnvVar, '-y'],
-      {
+    async function vcEnvLsIncludesVar() {
+      const { exitCode, stderr, stdout } = await execCli(
+        binaryPath,
+        ['env', 'ls'],
+        {
+          cwd: target,
+        }
+      );
+
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+      expect(stderr).toMatch(/Environment Variables found for (.*)\/api-env/gm);
+
+      const lines = stdout.split('\n');
+
+      const plaintextEnvs = lines.filter(line => line.includes(promptEnvVar));
+      expect(plaintextEnvs.length).toBe(1);
+      expect(plaintextEnvs[0]).toMatch(/Production, Preview, Development/gm);
+
+      const stdinEnvs = lines.filter(line => line.includes(stdinEnvVar));
+      expect(stdinEnvs.length).toBe(1);
+      expect(stdinEnvs[0]).toMatch(/Development/gm);
+
+      const previewEnvs = lines.filter(line => line.includes(previewEnvVar));
+      expect(previewEnvs.length).toBe(1);
+      expect(previewEnvs[0]).toMatch(/Encrypted .* Preview /gm);
+    }
+
+    async function vcEnvPull() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['env', 'pull', '-y'],
+        {
+          cwd: target,
+        }
+      );
+
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+      expect(stderr).toMatch(/Updated .env.local file/gm);
+
+      const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
+      expect(contents).toMatch(/^# Created by Vercel CLI\n/);
+      expect(contents).toMatch(
+        new RegExp(`${promptEnvVar}="my plaintext value"`)
+      );
+      expect(contents).toMatch(
+        new RegExp(`${stdinEnvVar}="{"expect":"quotes"}"`)
+      );
+      expect(contents).not.toMatch(new RegExp(`${previewEnvVar}`));
+    }
+
+    async function vcEnvPullOverwrite() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['env', 'pull'],
+        {
+          cwd: target,
+        }
+      );
+
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+      expect(stderr).toMatch(/Overwriting existing .env.local file/gm);
+      expect(stderr).toMatch(/Updated .env.local file/gm);
+    }
+
+    async function vcEnvPullConfirm() {
+      fs.writeFileSync(path.join(target, '.env.local'), 'hahaha');
+
+      const vc = execCli(binaryPath, ['env', 'pull'], {
         cwd: target,
+      });
+
+      await waitForPrompt(
+        vc,
+        'Found existing file ".env.local". Do you want to overwrite?'
+      );
+      vc.stdin?.end('y\n');
+
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    async function vcDeployWithVar() {
+      const { exitCode, stdout, stderr } = await execCli(binaryPath, [], {
+        cwd: target,
+      });
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+      const { host } = new URL(stdout);
+
+      const apiUrl = `https://${host}/api/get-env`;
+      const apiRes = await fetch(apiUrl);
+      expect(apiRes.status, apiUrl).toBe(200);
+      const apiJson = await apiRes.json();
+      expect(apiJson[promptEnvVar]).toBe('my plaintext value');
+
+      const homeUrl = `https://${host}`;
+      const homeRes = await fetch(homeUrl);
+      expect(homeRes.status, homeUrl).toBe(200);
+      const homeJson = await homeRes.json();
+      expect(homeJson[promptEnvVar]).toBe('my plaintext value');
+    }
+
+    async function vcDevWithEnv() {
+      const vc = execCli(binaryPath, ['dev', '--debug'], {
+        cwd: target,
+      });
+
+      const localhost = await getLocalhost(vc);
+      const apiUrl = `${localhost[0]}/api/get-env`;
+      const apiRes = await fetch(apiUrl);
+
+      expect(apiRes.status).toBe(200);
+
+      const apiJson = await apiRes.json();
+
+      expect(apiJson[promptEnvVar]).toBe('my plaintext value');
+
+      const homeUrl = localhost[0];
+
+      const homeRes = await fetch(homeUrl);
+      const homeJson = await homeRes.json();
+      expect(homeJson[promptEnvVar]).toBe('my plaintext value');
+
+      // sleep before kill, otherwise the dev process doesn't clean up and exit properly
+      await sleep(100);
+      vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
+
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    async function vcDevAndFetchCloudVars() {
+      const vc = execCli(binaryPath, ['dev'], {
+        cwd: target,
+      });
+
+      const localhost = await getLocalhost(vc);
+      const apiUrl = `${localhost[0]}/api/get-env`;
+      const apiRes = await fetch(apiUrl);
+      expect(apiRes.status).toBe(200);
+
+      const apiJson = await apiRes.json();
+      expect(apiJson[promptEnvVar]).toBe('my plaintext value');
+      expect(apiJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
+
+      const homeUrl = localhost[0];
+      const homeRes = await fetch(homeUrl);
+      const homeJson = await homeRes.json();
+      expect(homeJson[promptEnvVar]).toBe('my plaintext value');
+      expect(homeJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
+
+      // system env vars are hidden in dev
+      expect(apiJson['VERCEL']).toBeUndefined();
+      // though the dev server now has this
+      expect(homeJson['VERCEL']).toBe('1');
+
+      // sleep before kill, otherwise the dev process doesn't clean up and exit properly
+      await sleep(100);
+      vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
+
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    async function enableAutoExposeSystemEnvs() {
+      const link = require(path.join(target, '.vercel/project.json'));
+
+      const res = await apiFetch(`/v2/projects/${link.projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ autoExposeSystemEnvs: true }),
+      });
+
+      expect(res.status).toBe(200);
+      if (res.status === 200) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `Set autoExposeSystemEnvs=true for project ${link.projectId}`
+        );
       }
-    );
+    }
 
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
+    async function vcEnvPullFetchSystemVars() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['env', 'pull', '-y', '--environment', 'production'],
+        {
+          cwd: target,
+        }
+      );
 
-  function vcEnvRemoveByName(name: string) {
-    return execCli(binaryPath, ['env', 'rm', name, '-y'], {
-      cwd: target,
-    });
-  }
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  async function vcEnvRemoveAll() {
-    await vcEnvRemoveByName(previewEnvVar);
-    await vcEnvRemoveByName(stdinEnvVar);
-    await vcEnvRemoveByName(promptEnvVar);
-  }
+      const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
 
-  try {
-    await vcEnvRemoveAll();
-    await vcLink();
-    await vcEnvLsDoesNotIncludeVars();
-    await vcEnvAddWithPrompts();
-    await vcEnvAddFromStdin();
-    await vcEnvAddFromStdinPreview();
-    await vcEnvAddFromStdinPreviewWithBranch();
-    await vcEnvLsIncludesVar();
-    await vcEnvPull();
-    await vcEnvPullOverwrite();
-    await vcEnvPullConfirm();
-    await vcDeployWithVar();
-    await vcDevWithEnv();
-    fs.unlinkSync(path.join(target, '.env.local'));
-    await vcDevAndFetchCloudVars();
-    await enableAutoExposeSystemEnvs();
-    await vcEnvPullFetchSystemVars();
-    fs.unlinkSync(path.join(target, '.env.local'));
-    await vcDevAndFetchSystemVars();
-    await vcEnvRemove();
-    await vcEnvRemoveWithArgs();
-    await vcEnvRemoveWithNameOnly();
-    await vcEnvLsDoesNotIncludeVars();
-  } finally {
-    await vcEnvRemoveAll();
-  }
-});
+      const lines = new Set(contents.split('\n'));
+
+      expect(lines).toContain('VERCEL="1"');
+      expect(lines).toContain('VERCEL_URL=""');
+      expect(lines).toContain('VERCEL_ENV="production"');
+      expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
+      expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
+    }
+
+    async function vcDevAndFetchSystemVars() {
+      const vc = execCli(binaryPath, ['dev'], {
+        cwd: target,
+      });
+
+      const localhost = await getLocalhost(vc);
+      const apiUrl = `${localhost[0]}/api/get-env`;
+      const apiRes = await fetch(apiUrl);
+
+      const localhostNoProtocol = localhost[0].slice('http://'.length);
+
+      const apiJson = await apiRes.json();
+      // environment variables are not set in dev
+      expect(apiJson['VERCEL']).toBeUndefined();
+      expect(apiJson['VERCEL_ENV']).toBeUndefined();
+      expect(apiJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
+      expect(apiJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
+      // except for these because vc dev
+      expect(apiJson['VERCEL_URL']).toBe(localhostNoProtocol);
+      expect(apiJson['VERCEL_REGION']).toBe('dev1');
+
+      const homeUrl = localhost[0];
+      const homeRes = await fetch(homeUrl);
+      const homeJson = await homeRes.json();
+      expect(homeJson['VERCEL']).toBe('1');
+      expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);
+      expect(homeJson['VERCEL_ENV']).toBe('development');
+      expect(homeJson['VERCEL_REGION']).toBeUndefined();
+      expect(homeJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
+      expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
+
+      // sleep before kill, otherwise the dev process doesn't clean up and exit properly
+      await sleep(100);
+      vc.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
+
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    async function vcEnvRemove() {
+      const vc = execCli(binaryPath, ['env', 'rm', '-y'], {
+        cwd: target,
+      });
+      await waitForPrompt(vc, "What's the name of the variable?");
+      vc.stdin?.write(`${previewEnvVar}\n`);
+      const { exitCode, stdout, stderr } = await vc;
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    async function vcEnvRemoveWithArgs() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['env', 'rm', stdinEnvVar, 'development', '-y'],
+        {
+          cwd: target,
+        }
+      );
+
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    async function vcEnvRemoveWithNameOnly() {
+      const { exitCode, stdout, stderr } = await execCli(
+        binaryPath,
+        ['env', 'rm', promptEnvVar, '-y'],
+        {
+          cwd: target,
+        }
+      );
+
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
+
+    function vcEnvRemoveByName(name: string) {
+      return execCli(binaryPath, ['env', 'rm', name, '-y'], {
+        cwd: target,
+      });
+    }
+
+    async function vcEnvRemoveAll() {
+      await vcEnvRemoveByName(previewEnvVar);
+      await vcEnvRemoveByName(stdinEnvVar);
+      await vcEnvRemoveByName(promptEnvVar);
+    }
+
+    try {
+      /* eslint-disable no-console */
+      console.log('[TEST] Step 1: vcEnvRemoveAll');
+      await vcEnvRemoveAll();
+      console.log('[TEST] Step 2: vcLink');
+      await vcLink();
+      console.log('[TEST] Step 3: vcEnvLsDoesNotIncludeVars');
+      await vcEnvLsDoesNotIncludeVars();
+      console.log('[TEST] Step 4: vcEnvAddWithPrompts');
+      await vcEnvAddWithPrompts();
+      console.log('[TEST] Step 5: vcEnvAddFromStdin');
+      await vcEnvAddFromStdin();
+      console.log('[TEST] Step 6: vcEnvAddFromStdinPreview');
+      await vcEnvAddFromStdinPreview();
+      console.log('[TEST] Step 7: vcEnvAddFromStdinPreviewWithBranch');
+      await vcEnvAddFromStdinPreviewWithBranch();
+      console.log('[TEST] Step 8: vcEnvLsIncludesVar');
+      await vcEnvLsIncludesVar();
+      console.log('[TEST] Step 9: vcEnvPull');
+      await vcEnvPull();
+      console.log('[TEST] Step 10: vcEnvPullOverwrite');
+      await vcEnvPullOverwrite();
+      console.log('[TEST] Step 11: vcEnvPullConfirm');
+      await vcEnvPullConfirm();
+      console.log('[TEST] Step 12: vcDeployWithVar');
+      await vcDeployWithVar();
+      console.log('[TEST] Step 13: vcDevWithEnv');
+      await vcDevWithEnv();
+      console.log('[TEST] Step 14: Cleanup .env.local');
+      fs.unlinkSync(path.join(target, '.env.local'));
+      console.log('[TEST] Step 15: vcDevAndFetchCloudVars');
+      await vcDevAndFetchCloudVars();
+      console.log('[TEST] Step 16: enableAutoExposeSystemEnvs');
+      await enableAutoExposeSystemEnvs();
+      console.log('[TEST] Step 17: vcEnvPullFetchSystemVars');
+      await vcEnvPullFetchSystemVars();
+      console.log('[TEST] Step 18: Cleanup .env.local');
+      fs.unlinkSync(path.join(target, '.env.local'));
+      console.log('[TEST] Step 19: vcDevAndFetchSystemVars');
+      await vcDevAndFetchSystemVars();
+      console.log('[TEST] Step 20: vcEnvRemove');
+      await vcEnvRemove();
+      console.log('[TEST] Step 21: vcEnvRemoveWithArgs');
+      await vcEnvRemoveWithArgs();
+      console.log('[TEST] Step 22: vcEnvRemoveWithNameOnly');
+      await vcEnvRemoveWithNameOnly();
+      console.log('[TEST] Step 23: vcEnvLsDoesNotIncludeVars');
+      await vcEnvLsDoesNotIncludeVars();
+      console.log('[TEST] All steps completed successfully!');
+      /* eslint-enable no-console */
+    } finally {
+      await vcEnvRemoveAll();
+    }
+  },
+  10 * 60 * 1000 // 10 minute timeout for this comprehensive test
+);
