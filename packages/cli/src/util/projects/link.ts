@@ -354,6 +354,7 @@ export async function linkFolderToProject(
     ));
 
   if (pullEnvConfirmed) {
+    const originalCwd = client.cwd;
     try {
       client.cwd = path;
 
@@ -369,6 +370,8 @@ export async function linkFolderToProject(
       output.error(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );
+    } finally {
+      client.cwd = originalCwd;
     }
   }
 }

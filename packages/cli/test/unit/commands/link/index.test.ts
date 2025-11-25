@@ -957,5 +957,83 @@ describe('link', () => {
         'vercel-cli:link'
       );
     });
+
+    it('should restore client.cwd after env pull completes', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      const originalCwd = '/some/original/path';
+      client.cwd = originalCwd;
+      client.setArgv('link', '--yes', cwd);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+
+      await expect(client.stderr).toOutput('Link to it?');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify client.cwd is restored to original value after env pull
+      expect(client.cwd).toEqual(originalCwd);
+    });
+
+    it('should restore client.cwd even when env pull throws exception', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      mockPull.mockImplementation(() => {
+        throw new Error('Env pull failed');
+      });
+
+      const originalCwd = '/some/original/path';
+      client.cwd = originalCwd;
+      client.setArgv('link', '--yes', cwd);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+
+      await expect(client.stderr).toOutput('Link to it?');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify client.cwd is restored even when env pull throws
+      expect(client.cwd).toEqual(originalCwd);
+    });
   });
 });
