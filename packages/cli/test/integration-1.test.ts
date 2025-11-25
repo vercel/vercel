@@ -590,7 +590,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Created .env.local file/gm);
+    expect(stderr).toMatch(/Updated .env.local file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
