@@ -194,7 +194,7 @@ describe('link', () => {
       const cwd = setupTmpDir();
 
       await mkdirp(join(cwd, '.git'));
-      const repoUrl = 'https://github.com/user/my-monorepo.git';
+      const repoUrl = 'https://github.com/user/repo4.git';
       await writeFile(
         join(cwd, '.git/config'),
         `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
@@ -218,7 +218,7 @@ describe('link', () => {
       await writeJSON(join(cwd, 'packages/api/package.json'), {
         name: 'api',
         dependencies: {
-          remix: 'latest',
+          '@remix-run/dev': 'latest',
         },
       });
 
