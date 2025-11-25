@@ -8,12 +8,14 @@ import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 import table from '../../util/output/table';
 import title from 'title';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
 import output from '../../output-manager';
+import { getCommandName } from '../../util/pkg-name';
 
 export async function list(client: Client) {
   let parsedArguments = null;
@@ -37,11 +39,15 @@ export async function list(client: Client) {
   // Note: the `--integration` flag is tracked later, after validating
   // whether the value is a known integration name or not.
 
-  if (parsedArguments.args.length > 2) {
-    output.error(
-      'Cannot specify more than one project at a time. Use `--all` to show all resources.'
-    );
-    return 1;
+  const validationResult = validateLsArgs(
+    'integration list',
+    parsedArguments.args,
+    2,
+    1,
+    getCommandName('integration list [project]')
+  );
+  if (validationResult !== 0) {
+    return validationResult;
   }
 
   let project: { id?: string; name?: string } | undefined;

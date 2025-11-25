@@ -13,6 +13,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 export default async function list(
   client: Client,
@@ -32,6 +33,11 @@ export default async function list(
   } catch (error) {
     printError(error);
     return 1;
+  }
+
+  const validationResult = validateLsArgs('teams ls', parsedArgs.args, 0, 2);
+  if (validationResult !== 0) {
+    return validationResult;
   }
 
   const next = parsedArgs.flags['--next'];
