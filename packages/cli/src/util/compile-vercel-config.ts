@@ -178,11 +178,16 @@ export async function compileVercelConfig(
 
 export async function getVercelConfigPath(workPath: string): Promise<string> {
   const vercelJsonPath = join(workPath, 'vercel.json');
+  const nowJsonPath = join(workPath, 'now.json');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
   if (await fileExists(compiledConfigPath)) {
     return compiledConfigPath;
   }
 
-  return vercelJsonPath;
+  if (await fileExists(vercelJsonPath)) {
+    return vercelJsonPath;
+  }
+
+  return nowJsonPath;
 }
