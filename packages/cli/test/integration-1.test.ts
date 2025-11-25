@@ -21,14 +21,14 @@ jest.setTimeout(TEST_TIMEOUT);
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 
 async function vcLink(projectPath: string) {
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['link', '--yes'],
-    {
-      cwd: projectPath,
-    }
-  );
+  const vc = execCli(binaryPath, ['link', '--yes'], {
+    cwd: projectPath,
+  });
 
+  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
+  vc.stdin?.write('n\n');
+
+  const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
@@ -273,14 +273,14 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
     'vercel-json-configuration-overrides-link'
   );
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['link', '--yes'],
-    {
-      cwd: directory,
-    }
-  );
+  const vc = execCli(binaryPath, ['link', '--yes'], {
+    cwd: directory,
+  });
 
+  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
+  vc.stdin?.write('n\n');
+
+  const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const link = require(path.join(directory, '.vercel/project.json'));
@@ -470,13 +470,17 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
   const previewEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
 
   async function vcLink() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      ['link', '--yes'],
-      {
-        cwd: target,
-      }
+    const vc = execCli(binaryPath, ['link', '--yes'], {
+      cwd: target,
+    });
+
+    await waitForPrompt(
+      vc,
+      'Would you like to pull environment variables now?'
     );
+    vc.stdin?.write('n\n');
+
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
