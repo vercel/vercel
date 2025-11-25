@@ -4,14 +4,12 @@ import { validateLsArgs } from '../../../src/util/validate-ls-args';
 import output from '../../../src/output-manager';
 import { getCommandName } from '../../../src/util/pkg-name';
 
-// Mock the output module
 vi.mock('../../../src/output-manager', () => ({
   default: {
     error: vi.fn(),
   },
 }));
 
-// Mock the pkg-name module
 vi.mock('../../../src/util/pkg-name', () => ({
   getCommandName: vi.fn((cmd: string) => `vercel ${cmd}`),
 }));
@@ -196,7 +194,6 @@ describe('validateLsArgs', () => {
     });
 
     it('should handle integration list with project argument', () => {
-      // Integration list uses client.argv.slice(3) so it includes command name
       expect(validateLsArgs('integration list', ['list'], 2)).toBe(0);
       expect(validateLsArgs('integration list', ['list', 'project'], 2)).toBe(
         0
@@ -212,12 +209,10 @@ describe('validateLsArgs', () => {
       validateLsArgs('test ls', ['extra']);
       const errorCall = mockOutput.error.mock.calls[0][0];
 
-      // Should have correct text (chalk may or may not colorize in test mode)
       expect(stripAnsi(errorCall)).toBe(
         'Invalid number of arguments. Usage: vercel test ls'
       );
 
-      // Should contain the basic structure
       expect(errorCall).toContain('Invalid number of arguments. Usage:');
       expect(errorCall).toContain('vercel test ls');
     });
