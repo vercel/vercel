@@ -1,5 +1,91 @@
 # vercel
 
+## 48.10.14
+
+### Patch Changes
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/backends@0.0.12
+  - @vercel/express@0.1.15
+  - @vercel/redwood@2.4.3
+  - @vercel/remix-builder@5.5.3
+  - @vercel/hono@0.2.13
+  - @vercel/next@4.15.5
+  - @vercel/node@5.5.12
+  - @vercel/elysia@0.1.10
+  - @vercel/fastify@0.1.13
+  - @vercel/h3@0.1.19
+
+## 48.10.13
+
+### Patch Changes
+
+- Updated dependencies [[`611b2432b600381d5bebb4245765d411e62895b3`](https://github.com/vercel/vercel/commit/611b2432b600381d5bebb4245765d411e62895b3)]:
+  - @vercel/next@4.15.4
+
+## 48.10.12
+
+### Patch Changes
+
+- Fix project naming with vc link --repo ([#14335](https://github.com/vercel/vercel/pull/14335))
+
+- Updated dependencies [[`2beb1222fbdde06e8a153521871c0a3b33228045`](https://github.com/vercel/vercel/commit/2beb1222fbdde06e8a153521871c0a3b33228045)]:
+  - @vercel/build-utils@13.2.0
+  - @vercel/node@5.5.11
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.9
+  - @vercel/express@0.1.14
+  - @vercel/fastify@0.1.12
+  - @vercel/h3@0.1.18
+  - @vercel/hono@0.2.12
+  - @vercel/static-build@2.8.11
+
+## 48.10.11
+
+### Patch Changes
+
+- Updated dependencies [[`fb70f3eef445879bcb28962a86c5691bff618f73`](https://github.com/vercel/vercel/commit/fb70f3eef445879bcb28962a86c5691bff618f73)]:
+  - @vercel/build-utils@13.1.2
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.8
+  - @vercel/express@0.1.13
+  - @vercel/fastify@0.1.11
+  - @vercel/h3@0.1.17
+  - @vercel/hono@0.2.11
+  - @vercel/node@5.5.10
+  - @vercel/static-build@2.8.10
+
+## 48.10.10
+
+### Patch Changes
+
+- Updated dependencies [[`e9566780378abc94828a6e00320add54c95bdc0c`](https://github.com/vercel/vercel/commit/e9566780378abc94828a6e00320add54c95bdc0c)]:
+  - @vercel/python@6.0.8
+
+## 48.10.9
+
+### Patch Changes
+
+- Updated dependencies [[`ac51c0e5a0258cf8c5547984ab488cd61ab4c944`](https://github.com/vercel/vercel/commit/ac51c0e5a0258cf8c5547984ab488cd61ab4c944), [`a9340f6f5022eed96d1e42344b5bb67f1239ca41`](https://github.com/vercel/vercel/commit/a9340f6f5022eed96d1e42344b5bb67f1239ca41)]:
+  - @vercel/python@6.0.7
+  - @vercel/build-utils@13.1.1
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.7
+  - @vercel/express@0.1.12
+  - @vercel/fastify@0.1.10
+  - @vercel/h3@0.1.16
+  - @vercel/hono@0.2.10
+  - @vercel/node@5.5.9
+  - @vercel/static-build@2.8.9
+
+## 48.10.8
+
+### Patch Changes
+
+- Updated dependencies [[`10de9d8d6ebdef57f4b0ca7dabc277651b317d7c`](https://github.com/vercel/vercel/commit/10de9d8d6ebdef57f4b0ca7dabc277651b317d7c)]:
+  - @vercel/backends@0.0.10
+  - @vercel/express@0.1.11
+
 ## 48.10.7
 
 ### Patch Changes

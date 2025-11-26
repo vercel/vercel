@@ -1,5 +1,31 @@
 # @vercel/backends
 
+## 0.0.12
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/introspection@0.0.4
+
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [[`a9340f6f5022eed96d1e42344b5bb67f1239ca41`](https://github.com/vercel/vercel/commit/a9340f6f5022eed96d1e42344b5bb67f1239ca41)]:
+  - @vercel/introspection@0.0.3
+
+## 0.0.10
+
+### Patch Changes
+
+- Add bun detection for experimental backends ([#14311](https://github.com/vercel/vercel/pull/14311))
+
+- Updated dependencies [[`10de9d8d6ebdef57f4b0ca7dabc277651b317d7c`](https://github.com/vercel/vercel/commit/10de9d8d6ebdef57f4b0ca7dabc277651b317d7c)]:
+  - @vercel/cervel@0.0.6
+  - @vercel/introspection@0.0.2
+
 ## 0.0.9
 
 ### Patch Changes

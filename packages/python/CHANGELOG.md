@@ -1,5 +1,17 @@
 # @vercel/python
 
+## 6.0.8
+
+### Patch Changes
+
+- [python] uv workspaces support ([#14327](https://github.com/vercel/vercel/pull/14327))
+
+## 6.0.7
+
+### Patch Changes
+
+- [python] flush startup logs atexit ([#14334](https://github.com/vercel/vercel/pull/14334))
+
 ## 6.0.6
 
 ### Patch Changes
