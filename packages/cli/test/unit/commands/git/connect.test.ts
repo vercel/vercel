@@ -67,6 +67,11 @@ describe('git connect', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
+          'Would you like to pull environment variables now?'
+        );
+        client.stdin.write('n\n');
+
+        await expect(client.stderr).toOutput(
           `Do you still want to connect https://github.com/user2/repo2?`
         );
         client.stdin.write('y\n');
@@ -113,6 +118,10 @@ describe('git connect', () => {
             key: 'flag:yes',
             value: 'TRUE',
           },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
         ]);
       });
     });
@@ -139,6 +148,10 @@ describe('git connect', () => {
             key: 'flag:confirm',
             value: 'TRUE',
           },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
         ]);
       });
     });
@@ -159,6 +172,11 @@ describe('git connect', () => {
 
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user/repo`
@@ -207,6 +225,11 @@ describe('git connect', () => {
 
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
         `Do you still want to connect https://github.com/user2/repo2?`
