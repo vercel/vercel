@@ -1,5 +1,26 @@
 # @vercel/h3
 
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/node@5.5.12
+
+## 0.1.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.11
+
+## 0.1.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.10
+
 ## 0.1.16
 
 ### Patch Changes

@@ -237,8 +237,7 @@ export async function ensureRepoLink(
               frameworks.map((framework, i) => {
                 const name = slugify(
                   [
-                    basename(rootPath),
-                    basename(rootDirectory),
+                    basename(rootDirectory) || basename(rootPath),
                     i > 0 ? framework.slug : '',
                   ]
                     .filter(Boolean)

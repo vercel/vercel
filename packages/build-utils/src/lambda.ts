@@ -17,11 +17,13 @@ export type { TriggerEvent };
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+export type LambdaExecutableRuntimeLanguages = 'rust';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
+  runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
@@ -114,6 +116,11 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
+  /**
+   * When using a generic runtime such as "executable" or "provided" (custom runtimes),
+   * this field can be used to specify the language the executable was compiled with.
+   */
+  runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
@@ -160,6 +167,7 @@ export class Lambda {
     const {
       handler,
       runtime,
+      runtimeLanguage,
       maxDuration,
       architecture,
       memory,
@@ -191,6 +199,10 @@ export class Lambda {
         architecture === 'x86_64' || architecture === 'arm64',
         '"architecture" must be either "x86_64" or "arm64"'
       );
+    }
+
+    if (runtimeLanguage !== undefined) {
+      assert(runtimeLanguage === 'rust', '"runtimeLanguage" must be "rust"');
     }
 
     if (
@@ -341,6 +353,7 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
+    this.runtimeLanguage = runtimeLanguage;
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
