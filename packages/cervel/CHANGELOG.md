@@ -1,5 +1,17 @@
 # @vercel/cervel
 
+## 0.0.6
+
+### Patch Changes
+
+- Add bun detection for experimental backends ([#14311](https://github.com/vercel/vercel/pull/14311))
+
+## 0.0.5
+
+### Patch Changes
+
+- Add more frameworks to entrypoint detection ([#14299](https://github.com/vercel/vercel/pull/14299))
+
 ## 0.0.4
 
 ### Patch Changes

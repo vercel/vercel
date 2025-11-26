@@ -25,6 +25,7 @@ import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
+import pull from '../../commands/env/pull';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -302,7 +303,8 @@ export async function linkFolderToProject(
   projectLink: ProjectLink,
   projectName: string,
   orgSlug: string,
-  successEmoji: EmojiLabel = 'link'
+  successEmoji: EmojiLabel = 'link',
+  autoConfirm: boolean = false
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -343,4 +345,33 @@ export async function linkFolderToProject(
       emoji(successEmoji)
     ) + '\n'
   );
+
+  const pullEnvConfirmed =
+    autoConfirm ||
+    (await client.input.confirm(
+      'Would you like to pull environment variables now?',
+      true
+    ));
+
+  if (pullEnvConfirmed) {
+    const originalCwd = client.cwd;
+    try {
+      client.cwd = path;
+
+      const args = autoConfirm ? ['--yes'] : [];
+      const exitCode = await pull(client, args, 'vercel-cli:link');
+
+      if (exitCode !== 0) {
+        output.error(
+          'Failed to pull environment variables. You can run `vc env pull` manually.'
+        );
+      }
+    } catch (error) {
+      output.error(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+    } finally {
+      client.cwd = originalCwd;
+    }
+  }
 }

@@ -1,30 +1,53 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, isAbsolute, join, relative } from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+import { isExperimentalBackendsWithoutIntrospectionEnabled } from '@vercel/build-utils';
 
 const require = createRequire(import.meta.url);
 
 export const introspectApp = async (args: {
   dir: string;
   handler: string;
+  framework: string | null | undefined;
   env: Record<string, string | undefined>;
 }) => {
+  if (isExperimentalBackendsWithoutIntrospectionEnabled()) {
+    return defaultResult(args);
+  }
   const cjsLoaderPath = fileURLToPath(
     new URL('loaders/cjs.cjs', import.meta.url)
   );
   const esmLoaderPath = new URL('loaders/esm.mjs', import.meta.url).href;
   const handlerPath = join(args.dir, args.handler);
 
-  let introspectionResult: {
-    frameworkSlug: string;
-    routes: { src: string; dest: string; methods: string[] }[];
-  } = {
-    frameworkSlug: '',
-    routes: [],
-  };
+  let introspectionData: string | null = null;
+  const introspectionSchema = z.object({
+    frameworkSlug: z.string().optional(),
+    routes: z.array(
+      z.object({
+        src: z.string(),
+        dest: z.string(),
+        methods: z.array(z.string()),
+      })
+    ),
+    additionalFolders: z
+      .array(z.string())
+      .optional()
+      .transform(values => {
+        // if is absolute, make relative to dir
+        return values?.map(val => {
+          if (isAbsolute(val)) {
+            return relative(args.dir, val);
+          }
+          // else, assume relative to dir
+          return val;
+        });
+      }),
+    additionalDeps: z.array(z.string()).optional(),
+  });
 
   await new Promise(resolvePromise => {
     try {
@@ -34,6 +57,7 @@ export const introspectApp = async (args: {
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
+          // stdio: 'inherit',
           cwd: args.dir,
           env: {
             ...process.env,
@@ -44,18 +68,7 @@ export const introspectApp = async (args: {
 
       child.stdout?.on('data', data => {
         try {
-          const introspection = JSON.parse(data.toString());
-          const introspectionSchema = z.object({
-            frameworkSlug: z.string(),
-            routes: z.array(
-              z.object({
-                src: z.string(),
-                dest: z.string(),
-                methods: z.array(z.string()),
-              })
-            ),
-          });
-          introspectionResult = introspectionSchema.parse(introspection);
+          introspectionData = data.toString();
         } catch (error) {
           // Ignore errors
         }
@@ -84,28 +97,62 @@ export const introspectApp = async (args: {
       resolvePromise(undefined);
     }
   });
+  const introspectionResult = introspectionSchema.safeParse(
+    JSON.parse(introspectionData || '{}')
+  );
+  const framework = getFramework(args);
+  if (!introspectionResult.success) {
+    return defaultResult(args);
+  }
 
   // For now, return empty routes
   const routes = [
     {
       handle: 'filesystem',
     },
-    ...introspectionResult.routes,
+    ...introspectionResult.data.routes,
     {
       src: '/(.*)',
       dest: '/',
     },
   ];
 
-  let version: string | undefined;
-  if (introspectionResult.frameworkSlug) {
-    // Resolve to package.json specifically
-    const frameworkLibPath = require.resolve(
-      `${introspectionResult.frameworkSlug}`,
+  return {
+    routes,
+    framework,
+    additionalFolders: introspectionResult.data.additionalFolders ?? [],
+    additionalDeps: introspectionResult.data.additionalDeps ?? [],
+  };
+};
+
+const defaultResult = (args: {
+  dir: string;
+  framework: string | null | undefined;
+}) => {
+  return {
+    routes: [
       {
-        paths: [args.dir],
-      }
-    );
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    framework: getFramework(args),
+  };
+};
+
+const getFramework = (args: {
+  dir: string;
+  framework: string | null | undefined;
+}) => {
+  let version: string | undefined;
+  if (args.framework) {
+    // Resolve to package.json specifically
+    const frameworkLibPath = require.resolve(`${args.framework}`, {
+      paths: [args.dir],
+    });
     const findNearestPackageJson = (dir: string): string | undefined => {
       const packageJsonPath = join(dir, 'package.json');
       if (existsSync(packageJsonPath)) {
@@ -123,12 +170,8 @@ export const introspectApp = async (args: {
       version = frameworkPackageJson.version;
     }
   }
-
   return {
-    routes,
-    framework: {
-      slug: introspectionResult.frameworkSlug,
-      version,
-    },
+    slug: args.framework ?? '',
+    version: version ?? '',
   };
 };

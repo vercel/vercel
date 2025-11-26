@@ -665,7 +665,7 @@ function getInstallCommandForPackageManager(
         prettyCommand: 'npm install',
         commandArguments: args
           .filter(a => a !== '--prefer-offline')
-          .concat(['install', '--no-audit', '--unsafe-perm']),
+          .concat(['install', '--no-audit']),
       };
     case 'pnpm':
       return {

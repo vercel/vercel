@@ -299,7 +299,10 @@ async function writeBuildResultV3(args: {
   const { output } = buildResult;
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
 
-  if (isBackendBuilder(build) && existsSync(routesJsonPath)) {
+  if (
+    (isBackendBuilder(build) || build.use === '@vercel/python') &&
+    existsSync(routesJsonPath)
+  ) {
     try {
       const newOutput: Record<string, Lambda | EdgeFunction> = {
         index: output,

@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.0.5
+
+### Patch Changes
+
+- Fix OIDC token expiry check ([#14306](https://github.com/vercel/vercel/pull/14306))
+
 ## 3.0.4
 
 ### Patch Changes

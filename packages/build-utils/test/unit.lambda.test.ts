@@ -359,4 +359,68 @@ describe('Lambda', () => {
       });
     });
   });
+
+  describe('runtimeLanguage validation', () => {
+    it('should create Lambda with valid runtimeLanguage (rust)', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'provided.al2',
+        runtimeLanguage: 'rust',
+      });
+
+      expect(lambda.runtimeLanguage).toBe('rust');
+    });
+
+    it('should create Lambda without runtimeLanguage', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+      });
+
+      expect(lambda.runtimeLanguage).toBeUndefined();
+    });
+
+    it('should throw error for invalid runtimeLanguage (python)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: 'python' as any,
+          })
+      ).toThrow('"runtimeLanguage" must be "rust"');
+    });
+
+    it('should throw error for invalid runtimeLanguage (number)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: 123 as any,
+          })
+      ).toThrow('"runtimeLanguage" must be "rust"');
+    });
+
+    it('should throw error for invalid runtimeLanguage (empty string)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: '' as any,
+          })
+      ).toThrow('"runtimeLanguage" must be "rust"');
+    });
+  });
 });

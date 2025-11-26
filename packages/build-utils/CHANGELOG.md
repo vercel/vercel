@@ -1,5 +1,35 @@
 # @vercel/build-utils
 
+## 13.2.0
+
+### Minor Changes
+
+- Remove env var check for node24 ([#14355](https://github.com/vercel/vercel/pull/14355))
+
+## 13.1.2
+
+### Patch Changes
+
+- Support `runtimeLanguage` in build-utils ([#14344](https://github.com/vercel/vercel/pull/14344))
+
+## 13.1.1
+
+### Patch Changes
+
+- Only run introspection when isExperimentalBackendsWithoutIntrospectionEnabled is truthy ([#14336](https://github.com/vercel/vercel/pull/14336))
+
+## 13.1.0
+
+### Minor Changes
+
+- Remove --unsafe-perm from npm install command ([#14302](https://github.com/vercel/vercel/pull/14302))
+
+## 13.0.2
+
+### Patch Changes
+
+- Improve warning messages surrounding Elysia ([#14272](https://github.com/vercel/vercel/pull/14272))
+
 ## 13.0.1
 
 ### Patch Changes
