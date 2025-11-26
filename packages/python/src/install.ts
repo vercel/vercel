@@ -544,8 +544,4 @@ export async function harvestVenvSitePackagesToVendor({
     );
     throw err;
   }
-
-  console.log(
-    `Harvested Python dependencies from virtualenv at "${venvRoot}" into "${vendorDir}".`
-  );
 }
