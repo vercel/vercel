@@ -23,6 +23,7 @@ describe('successful builds', async () => {
       const result = await introspectApp({
         dir,
         handler,
+        framework: undefined,
         env: {},
       });
       expect(JSON.stringify(result, null, 2)).toMatchFileSnapshot(
