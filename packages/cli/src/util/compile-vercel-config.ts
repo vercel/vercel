@@ -146,7 +146,7 @@ export async function compileVercelConfig(
 
     const loaderScript = `
       const configModule = await import(process.argv[2]);
-      const config = configModule.default || configModule.config || configModule;
+      const config = ('default' in configModule) ? configModule.default : (configModule.config || configModule);
       process.send(config);
     `;
     await writeFile(loaderPath, loaderScript, 'utf-8');
