@@ -52,6 +52,7 @@
     "@vercel/redwood": "2.4.3",
     "@vercel/remix-builder": "5.5.3",
     "@vercel/ruby": "2.2.2",
+    "@vercel/rust": "1.0.3",
     "@vercel/static-build": "2.8.11",
     "chokidar": "4.0.0",
     "jose": "5.9.6"
