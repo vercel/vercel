@@ -1,5 +1,15 @@
 # vercel
 
+## 48.11.0
+
+### Minor Changes
+
+- Prompt to pull environment variables after successful project linking ([#13697](https://github.com/vercel/vercel/pull/13697))
+
+### Patch Changes
+
+- Enable `@vercel/rust` cli fs detection ([#14330](https://github.com/vercel/vercel/pull/14330))
+
 ## 48.10.14
 
 ### Patch Changes
