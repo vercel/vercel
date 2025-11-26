@@ -62,7 +62,7 @@ export interface LambdaOptionsBase {
 
   /**
    * Whether to disable automatic fetch instrumentation.
-   * When true, the Lambda runtime will not automatically instrument fetch calls.
+   * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
 }
@@ -159,7 +159,7 @@ export class Lambda {
 
   /**
    * Whether to disable automatic fetch instrumentation.
-   * When true, the Lambda runtime will not automatically instrument fetch calls.
+   * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
 
