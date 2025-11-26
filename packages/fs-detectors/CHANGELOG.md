@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.7.8
+
+### Patch Changes
+
+- Enable `@vercel/rust` cli fs detection ([#14330](https://github.com/vercel/vercel/pull/14330))
+
 ## 5.7.7
 
 ### Patch Changes
