@@ -145,8 +145,9 @@ export async function compileVercelConfig(
     });
 
     const loaderScript = `
-      const configModule = await import(process.argv[2]);
-      const config = ('default' in configModule) ? configModule.default : (configModule.config || configModule);
+      import { pathToFileURL } from 'url';
+      const configModule = await import(pathToFileURL(process.argv[2]).href);
+      const config = ('default' in configModule) ? configModule.default : ('config' in configModule) ? configModule.config : configModule;
       process.send(config);
     `;
     await writeFile(loaderPath, loaderScript, 'utf-8');
