@@ -969,22 +969,30 @@ describe('link', () => {
       });
       useUnknownProject();
 
-      const originalCwd = '/some/original/path';
-      client.cwd = originalCwd;
-      client.setArgv('link', '--yes', cwd);
+      client.cwd = cwd;
+      const originalCwd = client.cwd;
+      client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -1008,22 +1016,30 @@ describe('link', () => {
         throw new Error('Env pull failed');
       });
 
-      const originalCwd = '/some/original/path';
-      client.cwd = originalCwd;
-      client.setArgv('link', '--yes', cwd);
+      client.cwd = cwd;
+      const originalCwd = client.cwd;
+      client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
