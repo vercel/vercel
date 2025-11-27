@@ -502,6 +502,8 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     await waitForPrompt(vc, "What's the name of the variable?");
     vc.stdin?.write(`${promptEnvVar}\n`);
+    await waitForPrompt(vc, 'Mark as sensitive?');
+    vc.stdin?.write('n\n');
     await waitForPrompt(
       vc,
       chunk =>

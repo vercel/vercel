@@ -3,6 +3,7 @@ import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
 import input from '@inquirer/input';
+import password from '@inquirer/password';
 import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -122,6 +123,11 @@ export default class Client extends EventEmitter implements Stdio {
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
         input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      password: (opts: Parameters<typeof password>[0]) =>
+        password(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
         checkbox<T>(
           { theme, ...opts },
