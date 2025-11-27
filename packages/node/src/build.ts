@@ -623,6 +623,9 @@ export const build = async ({
       regions: normalizeRequestedRegions(
         staticConfig?.preferredRegion ?? staticConfig?.regions
       ),
+      shouldDisableAutomaticFetchInstrumentation:
+        process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+        '1',
     });
   }
 

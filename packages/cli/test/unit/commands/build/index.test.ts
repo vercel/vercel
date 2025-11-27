@@ -924,6 +924,17 @@ describe.skipIf(flakey)('build', () => {
             'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
           )
         ).toEqual(expected);
+
+        // "functions/api" directory has output Functions
+        const functions = await fs.readdir(join(output, 'functions/api'));
+        expect(functions.sort()).toEqual(['index.func']);
+
+        const vcConfig = await fs.readJSON(
+          join(output, 'functions/api/index.func/.vc-config.json')
+        );
+        expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
+          expected
+        );
       });
     }
   );
