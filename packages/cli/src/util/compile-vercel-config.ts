@@ -157,15 +157,24 @@ export async function compileVercelConfig(
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
+      const timeout = setTimeout(() => {
+        child.kill();
+        reject(new Error('Config loader timed out after 10 seconds'));
+      }, 10000);
+
       child.on('message', message => {
+        clearTimeout(timeout);
+        child.kill();
         resolve(message);
       });
 
       child.on('error', err => {
+        clearTimeout(timeout);
         reject(err);
       });
 
       child.on('exit', code => {
+        clearTimeout(timeout);
         if (code !== 0) {
           reject(new Error(`Config loader exited with code ${code}`));
         }
