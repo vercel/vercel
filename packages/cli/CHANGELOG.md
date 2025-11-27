@@ -1,5 +1,11 @@
 # vercel
 
+## 48.12.0
+
+### Minor Changes
+
+- Install nestjs builder in cli ([#14377](https://github.com/vercel/vercel/pull/14377))
+
 ## 48.11.1
 
 ### Patch Changes
