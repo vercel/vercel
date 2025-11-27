@@ -1,13 +1,6 @@
 import { Hono } from 'hono'
-import Redis from 'ioredis'
 
-const response = await fetch('https://example.com')
-console.log({ response })
-if (!response.ok) {
-  throw new Error('Failed to fetch')
-}
-// const data = await response.json()
-// console.log({ data })
+await fetch(process.env.MOCK_SERVER_URL)
 
 const app = new Hono()
 
