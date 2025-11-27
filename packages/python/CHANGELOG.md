@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.1.0
+
+### Minor Changes
+
+- Improved error message for missing entrypoint ([#14369](https://github.com/vercel/vercel/pull/14369))
+
 ## 6.0.8
 
 ### Patch Changes

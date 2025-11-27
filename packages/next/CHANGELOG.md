@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.6
+
+### Patch Changes
+
+- Fix Node.js proxy/middleware with basePath and matcher not being invoked on Vercel ([#14372](https://github.com/vercel/vercel/pull/14372))
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
 ## 4.15.5
 
 ### Patch Changes
