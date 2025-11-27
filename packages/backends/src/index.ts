@@ -52,6 +52,9 @@ export const build: BuildV2 = async args => {
       version: framework?.version ?? '',
     },
     awsLambdaHandler: '',
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   const output: Record<string, NodejsLambda> = { index: lambda };

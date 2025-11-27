@@ -1093,6 +1093,9 @@ export async function createLambdaFromPseudoLayers({
       version: nextVersion,
     },
     experimentalAllowBundling,
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
 
@@ -3871,6 +3874,9 @@ export async function getNodeMiddleware({
       [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
         new FileBlob({ data: launcherData }),
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return {
