@@ -1,5 +1,26 @@
 # vercel
 
+## 48.11.1
+
+### Patch Changes
+
+- Prompts if environment vairables should be sensitive. Masks value when inputting new environment variable. ([#14326](https://github.com/vercel/vercel/pull/14326))
+
+- Updated dependencies [[`d5586f84dc67740626011cebd18625e993d9e2b2`](https://github.com/vercel/vercel/commit/d5586f84dc67740626011cebd18625e993d9e2b2), [`99ead3d90328874b0f42d338e1e397b9f9d2c2bf`](https://github.com/vercel/vercel/commit/99ead3d90328874b0f42d338e1e397b9f9d2c2bf), [`2ac2f0ea5597a9cd242707fba3ed28a521a75da3`](https://github.com/vercel/vercel/commit/2ac2f0ea5597a9cd242707fba3ed28a521a75da3)]:
+  - @vercel/python@6.1.0
+  - @vercel/next@4.15.6
+  - @vercel/static-build@2.8.12
+  - @vercel/build-utils@13.2.1
+  - @vercel/backends@0.0.13
+  - @vercel/redwood@2.4.4
+  - @vercel/remix-builder@5.5.4
+  - @vercel/node@5.5.13
+  - @vercel/elysia@0.1.11
+  - @vercel/express@0.1.16
+  - @vercel/fastify@0.1.14
+  - @vercel/h3@0.1.20
+  - @vercel/hono@0.2.14
+
 ## 48.11.0
 
 ### Minor Changes

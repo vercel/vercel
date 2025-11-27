@@ -1,5 +1,14 @@
 # @vercel/backends
 
+## 0.0.13
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+- Updated dependencies []:
+  - @vercel/introspection@0.0.4
+
 ## 0.0.12
 
 ### Patch Changes
