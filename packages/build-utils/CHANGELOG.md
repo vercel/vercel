@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.1
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
 ## 13.2.0
 
 ### Minor Changes
