@@ -191,7 +191,7 @@ export const build: BuildV3 = async ({
           : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
-        message: `No ${framework} entrypoint found. Define a valid application entrypoint in one of the following locations: ${searchedList} or add an 'app' script in pyproject.toml.`,
+        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
         action: 'Learn More',
       });
