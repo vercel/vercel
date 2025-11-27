@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/new",
+      "status": 200,
+      "responseHeaders": {
+        "x-from-proxy": "true"
+      }
+    }
+  ]
+}
