@@ -3842,6 +3842,53 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'Python App (pyproject)',
+    slug: 'pyproject',
+    demo: 'https://vercel-python-app-pyproject-gamma-smoky.vercel.app/',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
+    darkModeLogo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
+    tagline: 'Generic Python app defined via pyproject.toml',
+    description:
+      'A Python web app whose entrypoint is defined via `[project.scripts].app` in `pyproject.toml`.',
+    website: 'https://python.org',
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'pyproject.toml',
+          matchContent: '\\[project\\.scripts\\][\\s\\S]*\\bapp\\s*=\\s*["\']',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`uv sync`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',

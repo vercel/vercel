@@ -167,7 +167,7 @@ export async function getPyprojectEntrypoint(
  * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
  */
 export async function detectPythonEntrypoint(
-  framework: 'fastapi' | 'flask',
+  framework: 'fastapi' | 'flask' | 'pyproject',
   workPath: string,
   configuredEntrypoint: string
 ): Promise<string | null> {

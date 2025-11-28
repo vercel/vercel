@@ -1,0 +1,12 @@
+[project]
+name = "45-pyproject-app"
+version = "0.1.0"
+description = "Fixture to test generic Python apps defined via pyproject.toml"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "starlette",
+]
+
+[project.scripts]
+app = "main:app"

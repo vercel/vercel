@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello World"
+    },
+    {
+      "path": "/greet/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "Hello RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}
