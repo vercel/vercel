@@ -118,8 +118,12 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
-  if (framework === 'fastapi' || framework === 'flask') {
+  // For FastAPI/Flask/Pyproject, also honor project install/build commands (vercel.json/dashboard)
+  if (
+    framework === 'fastapi' ||
+    framework === 'flask' ||
+    framework === 'pyproject'
+  ) {
     const {
       cliType,
       lockfileVersion,
