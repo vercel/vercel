@@ -14,6 +14,10 @@ use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
+use base64::prelude::*;
+use std::collections::VecDeque;
+use std::sync::atomic::{AtomicBool, Ordering};
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RequestContext {
     #[serde(rename = "invocationId")]
@@ -216,14 +220,6 @@ pub type ResponseBody = http_body_util::combinators::BoxBody<Bytes, Error>;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub use hyper::Response;
 pub type Request = hyper::Request<hyper::body::Incoming>;
-pub struct ResponseBuilder;
-
-impl ResponseBuilder {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> hyper::http::response::Builder {
-        hyper::Response::builder()
-    }
-}
 
 /// Trait for automatic body conversion to ResponseBody
 pub trait IntoResponseBody {
@@ -240,7 +236,9 @@ impl IntoResponseBody for &str {
 
 impl IntoResponseBody for String {
     fn into_response_body(self) -> ResponseBody {
-        http_body_util::Full::new(Bytes::from(self))
+        // For large strings, ensure we have proper buffering
+        let bytes = Bytes::from(self);
+        http_body_util::Full::new(bytes)
             .map_err(|e| Box::new(e) as Error)
             .boxed()
     }
@@ -269,6 +267,35 @@ where
 {
     fn into_response_body(self) -> ResponseBody {
         self.boxed()
+    }
+}
+
+pub struct ResponseBuilder;
+
+impl ResponseBuilder {
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new() -> hyper::http::response::Builder {
+        hyper::Response::builder()
+    }
+}
+
+static IPC_READY: AtomicBool = AtomicBool::new(false);
+static INIT_LOG_BUF_MAX_BYTES: usize = 1_000_000;
+
+lazy_static::lazy_static! {
+    static ref INIT_LOG_BUFFER: Arc<Mutex<(VecDeque<String>, usize)>> = {
+        register_exit_handler();
+        Arc::new(Mutex::new((VecDeque::new(), 0)))
+    };
+}
+
+// Register exit handler to flush buffered messages (like Python's atexit.register)
+fn register_exit_handler() {
+    extern "C" fn exit_handler() {
+        flush_init_log_buf_to_stderr();
+    }
+    unsafe {
+        libc::atexit(exit_handler);
     }
 }
 
@@ -309,15 +336,13 @@ impl LogContext {
     }
 
     fn log(&self, level: Level, msg: &str) {
-        if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
-            (&self.ipc_stream, &self.invocation_id, &self.request_id)
-        {
+        if let (Some(inv_id), Some(req_id)) = (&self.invocation_id, &self.request_id) {
             let log = LogMessage::with_level(inv_id.clone(), *req_id, msg, level);
-            send_message(ipc_stream, log).unwrap_or_else(|e| {
-                eprintln!("Failed to send log message: {}", e);
-            });
+            if let Err(e) = enqueue_or_send_message(&self.ipc_stream, log) {
+                eprintln!("Failed to send/queue log message: {}", e);
+            }
         } else {
-            // Fall back to regular println when IPC is not available
+            // Fall back to regular println when no request context
             println!("{:?}: {}", level, msg);
         }
     }
@@ -338,11 +363,96 @@ pub fn send_message<T: Serialize>(
     stream: &Arc<Mutex<UnixStream>>,
     message: T,
 ) -> Result<(), Error> {
-    let mut stream = stream.lock().unwrap();
     let json_str = serde_json::to_string(&message)?;
     let msg = format!("{json_str}\0");
+
+    let mut stream = stream.lock().map_err(|e| {
+        Box::new(std::io::Error::other(format!(
+            "Failed to acquire stream lock: {}",
+            e
+        ))) as Error
+    })?;
+
     stream.write_all(msg.as_bytes())?;
+    stream.flush()?;
     Ok(())
+}
+
+pub fn enqueue_or_send_message<T: Serialize>(
+    stream: &Option<Arc<Mutex<UnixStream>>>,
+    message: T,
+) -> Result<(), Error> {
+    if IPC_READY.load(Ordering::Relaxed)
+        && let Some(stream) = stream
+    {
+        return send_message(stream, message);
+    }
+
+    // Buffer the message if IPC is not ready
+    let json_str = serde_json::to_string(&message)?;
+    let msg_len = json_str.len();
+
+    if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
+        if buffer.1 + msg_len <= INIT_LOG_BUF_MAX_BYTES {
+            buffer.0.push_back(json_str);
+            buffer.1 += msg_len;
+        } else {
+            // Fallback to stderr if buffer is full - decode base64 like Python does
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
+                && let Some(payload) = parsed.get("payload")
+                && let Some(msg) = payload.get("message")
+                && let Some(msg_str) = msg.as_str()
+                && let Ok(decoded) = BASE64_STANDARD.decode(msg_str)
+                && let Ok(text) = String::from_utf8(decoded)
+            {
+                eprint!("{}", text);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
+    if let Some(stream) = stream {
+        if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
+            while let Some(json_str) = buffer.0.pop_front() {
+                if let Ok(message) = serde_json::from_str::<serde_json::Value>(&json_str)
+                    && let Err(e) = send_message(stream, message)
+                {
+                    eprintln!("Failed to send buffered message: {}", e);
+                    break;
+                }
+            }
+            buffer.1 = 0; // Reset byte count
+        }
+    } else {
+        flush_init_log_buf_to_stderr();
+    }
+}
+
+pub fn flush_init_log_buf_to_stderr() {
+    if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
+        let mut combined: Vec<String> = Vec::new();
+
+        while let Some(json_str) = buffer.0.pop_front() {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
+                && let Some(payload) = parsed.get("payload")
+                && let Some(msg) = payload.get("message")
+                && let Some(msg_str) = msg.as_str()
+                && let Ok(decoded) = BASE64_STANDARD.decode(msg_str)
+                && let Ok(text) = String::from_utf8(decoded)
+            {
+                combined.push(text);
+            }
+        }
+
+        if !combined.is_empty() {
+            eprint!("{}", combined.join(""));
+        }
+
+        buffer.1 = 0;
+    }
 }
 
 pub async fn run<H, F>(handler: H) -> Result<(), Error>
@@ -353,11 +463,8 @@ where
     let ipc_stream = match env::var("VERCEL_IPC_PATH") {
         Ok(ipc_path) => match UnixStream::connect(ipc_path) {
             Ok(stream) => Some(Arc::new(Mutex::new(stream))),
-            Err(e) => {
-                eprintln!(
-                    "Warning: Failed to connect to IPC stream: {}. Running without IPC support.",
-                    e
-                );
+            Err(_) => {
+                // Failed to connect to the IPC socket
                 None
             }
         },
@@ -372,13 +479,24 @@ where
     let listener = TcpListener::bind(addr).await?;
 
     // Send IPC start message
-    if let Some(ref ipc_stream) = ipc_stream {
+    if let Some(ref ipc_stream_ref) = ipc_stream {
         let start_message = StartMessage::new(0, port);
-        send_message(ipc_stream, start_message)?;
+        if let Err(e) = send_message(ipc_stream_ref, start_message) {
+            eprintln!(
+                "Warning: Failed to send start message to IPC: {}. Continuing without IPC support.",
+                e
+            );
+        } else {
+            // Mark IPC as ready and flush buffered messages
+            IPC_READY.store(true, Ordering::Relaxed);
+            flush_init_log_buffer(&ipc_stream);
+        }
     } else {
         // If we couldn't find an IPC stream, we are in `vercel dev` mode,
         // Print to stdout for dev server to parse (see ./start-dev-server.ts)
         println!("Dev server listening: {}", port);
+        // Still flush any buffered messages to stderr
+        flush_init_log_buffer(&ipc_stream);
     };
 
     loop {
@@ -389,6 +507,8 @@ where
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
+                .keep_alive(true)
+                .half_close(true)
                 .serve_connection(
                     io,
                     service_fn(move |req| {
@@ -433,6 +553,7 @@ where
                                     ));
                                     hyper::Response::builder()
                                         .status(500)
+                                        .header("connection", "close")
                                         .body(error_body.map_err(|e| Box::new(e) as Error).boxed())
                                         .unwrap()
                                 }
@@ -442,9 +563,9 @@ where
                                 (&ipc_stream_for_end, &invocation_id, &request_id)
                             {
                                 let end_message = EndMessage::new(inv_id.clone(), *req_id, None);
-                                send_message(ipc_stream, end_message).unwrap_or_else(|e| {
-                                    eprintln!("Failed to send end message: {}", e);
-                                });
+                                if let Err(_e) = send_message(ipc_stream, end_message) {
+                                    // Failed to send end message
+                                }
                             }
 
                             Ok::<_, Infallible>(response)
