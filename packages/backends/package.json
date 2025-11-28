@@ -28,7 +28,7 @@
   ],
   "dependencies": {
     "@vercel/cervel": "workspace:*",
-    "@vercel/nft": "1.1.0",
+    "@vercel/nft": "1.1.1",
     "@vercel/static-config": "3.1.2",
     "@vercel/introspection": "workspace:*",
     "fs-extra": "11.1.0",

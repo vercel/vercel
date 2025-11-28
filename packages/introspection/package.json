@@ -40,7 +40,7 @@
     "@types/jest": "27.5.1",
     "@vercel/cervel": "workspace:*",
     "@vercel/static-config": "3.1.2",
-    "@vercel/nft": "1.1.0",
+    "@vercel/nft": "1.1.1",
     "@types/node": "22",
     "fs-extra": "11.1.0",
     "@vercel/build-utils": "13.2.1",
