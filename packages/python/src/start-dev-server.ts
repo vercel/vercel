@@ -114,14 +114,25 @@ export const startDevServer: StartDevServer = async opts => {
     rawEntrypoint
   );
   if (!entry) {
-    const searched =
-      framework === 'fastapi'
-        ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
-        : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+    let message: string;
+    let link: string | undefined;
+
+    if (framework === 'pyproject') {
+      message =
+        "No Python entrypoint found. Define an 'app' script in pyproject.toml under [project.scripts] or ensure the configured entrypoint file exists.";
+    } else {
+      const searched =
+        framework === 'fastapi'
+          ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
+          : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+      message = `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`;
+      link = `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`;
+    }
+
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
-      link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
+      message,
+      link,
       action: 'Learn More',
     });
   }
