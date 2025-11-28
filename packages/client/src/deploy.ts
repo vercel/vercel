@@ -46,6 +46,10 @@ async function* postDeployment(
   }
 
   debug('Sending deployment creation API request');
+  console.log({
+    url: `${apiDeployments}${generateQueryString(clientOptions)}`,
+    deploymentOptions,
+  });
   try {
     const response = await fetch(
       `${apiDeployments}${generateQueryString(clientOptions)}`,
