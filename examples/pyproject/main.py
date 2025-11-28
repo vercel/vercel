@@ -4,7 +4,7 @@ from starlette.routing import Route
 
 
 async def homepage(request):
-    return PlainTextResponse("Hello Express!")
+    return PlainTextResponse("Hello Starlette!")
 
 
 async def get_user(request):

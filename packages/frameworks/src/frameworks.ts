@@ -3844,7 +3844,7 @@ export const frameworks = [
   {
     name: 'Python App (pyproject)',
     slug: 'pyproject',
-    demo: 'https://vercel-python-app-pyproject-gamma-smoky.vercel.app/',
+    demo: 'https://vercel-pyproject-app.vercel.app/',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     darkModeLogo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline: 'Generic Python app defined via pyproject.toml',
