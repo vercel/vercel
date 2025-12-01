@@ -51,6 +51,8 @@ jobs:
 
           if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
             STRATEGY="all-e2e"
+          elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
+            STRATEGY="test-all"
           elif [ "$PACKAGE_COUNT" -gt "0" ]; then
             STRATEGY="affected-only"
           else
@@ -120,10 +122,9 @@ jobs:
             if (strategy === 'all-e2e') {
               message += '**Strategy**: Code changed outside of a package - running ALL tests\n\n';
               message += '⚠️ All tests will run because global code changes could impact all packages.\n\n';
-              message += `**Affected packages - ${affectedCount} (${percentage}%)**:\n\n`;
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `<details>\n<summary>View packages</summary>\n\n${packageList}\n\n</details>\n\n`;
+                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
               if (unaffectedCount > 0) {
                 message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
@@ -135,10 +136,9 @@ jobs:
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
               message += '✅ Only testing packages that have been modified or depend on modified packages.\n\n';
-              message += `**Affected packages - ${affectedCount} (${percentage}%)**:\n\n`;
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += packageList + '\n\n';
+                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
               if (unaffectedCount > 0) {
                 message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
@@ -154,13 +154,12 @@ jobs:
               message += '- **Unit tests**: None\n';
               message += '- **E2E tests**: None\n';
               message += '- **Type checks**: None';
-            } else {
+            } else if (strategy === 'test-all') {
               message += '**Strategy**: Full test suite\n\n';
-              message += '🔄 Running all tests\n\n';
-              message += `**Affected packages - ${affectedCount} (${percentage}%)**\n\n`;
+              message += '🔄 Running all tests (unable to determine affected packages)\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `<details>\n<summary>View packages</summary>\n\n${packageList}\n\n</details>\n\n`;
+                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
               if (unaffectedCount > 0) {
                 message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
@@ -169,6 +168,13 @@ jobs:
               message += '- **Unit tests**: All packages will run unit tests\n';
               message += '- **E2E tests**: All e2e tests will run\n';
               message += '- **Type checks**: All packages will run type checks';
+            } else {
+              message += '**Strategy**: Unknown\n\n';
+              message += `⚠️ Unknown strategy: ${strategy}\n\n`;
+              message += '### Results\n\n';
+              message += '- **Unit tests**: Unknown\n';
+              message += '- **E2E tests**: Unknown\n';
+              message += '- **Type checks**: Unknown';
             }
 
             message += '\n\n---\n*This comment is automatically generated based on the [affected testing strategy](.github/AFFECTED_TESTING.md)*';

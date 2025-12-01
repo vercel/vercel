@@ -16,12 +16,12 @@ const E2E_TASK_NAMES = ['test-e2e', 'vitest-e2e'];
 /**
  * Get affected packages based on git changes since the given commit
  * @param {string} baseSha - The base commit SHA to compare against
- * @returns {Promise<string[]>} Array of affected package names
+ * @returns {Promise<{result: 'test-all' | 'test-none'} | { result: 'test-affected', packages: string[]}>} Array of affected package names
  */
 async function getAffectedPackages(baseSha) {
   if (!baseSha) {
     console.error('No base SHA provided, testing all packages');
-    return [];
+    return { result: 'test-all' };
   }
 
   try {
@@ -43,7 +43,7 @@ async function getAffectedPackages(baseSha) {
 
     if (!data.data || !data.data.affectedPackages) {
       console.error('No affected packages data found, testing all packages');
-      return [];
+      return { result: 'test-all' };
     }
 
     // Get changed files for additional e2e logic
@@ -69,15 +69,20 @@ async function getAffectedPackages(baseSha) {
       ];
     }
 
+    if (finalPackages.length === 0) {
+      console.error('No affected packages found, no tests will be run');
+      return { result: 'test-none' };
+    }
+
     console.error(
       `Found ${finalPackages.length} affected packages:`,
       finalPackages
     );
-    return finalPackages;
+    return { result: 'test-affected', packages: finalPackages };
   } catch (error) {
     console.warn('Error getting affected packages:', error.message);
     console.error('Falling back to testing all packages');
-    return [];
+    return { result: 'test-all' };
   }
 }
 
