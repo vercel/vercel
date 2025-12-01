@@ -48,6 +48,8 @@ async function main() {
 
     if (result.result === 'test-all') {
       console.log('All packages will be tested');
+      console.log('Affected packages that would be tested:');
+      allPackages.forEach(pkg => console.log(`  - ${pkg}`));
       console.error(`Found ${allPackages.length} affected packages`);
       console.error('test-all result detected');
     } else if (result.result === 'test-none') {

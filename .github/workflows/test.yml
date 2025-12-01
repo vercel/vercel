@@ -46,8 +46,8 @@ jobs:
           AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ github.event.pull_request.base.sha }}" 2>&1)
 
           # Extract affected packages count and total packages count
-          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" || echo "0")
-          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" || echo "0")
+          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
+          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
 
           if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
             STRATEGY="all-e2e"
@@ -62,8 +62,13 @@ jobs:
           # Get the list of affected packages
           PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
 
-          # Get all packages
-          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //')
+          # Get all packages (trim whitespace and newlines)
+          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
+
+          # Debug output
+          echo "PACKAGE_COUNT=$PACKAGE_COUNT"
+          echo "TOTAL_COUNT=$TOTAL_COUNT"
+          echo "STRATEGY=$STRATEGY"
 
           echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
           echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
