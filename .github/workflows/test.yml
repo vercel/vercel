@@ -127,8 +127,8 @@ jobs:
               issue_number: context.issue.number,
             });
 
-            const existingComment = comments.find(comment => 
-              comment.user.login === 'github-actions[bot]' && 
+            const existingComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
               comment.body.includes('## 🧪 Test Strategy')
             );
 
@@ -201,7 +201,7 @@ jobs:
           echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: 'Upload Test Report to Datadog'
         if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
-        run: 'npx @datadog/datadog-ci@2.36.0 junit upload --service vercel-cli .junit-reports'
+        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
           DD_ENV: ci

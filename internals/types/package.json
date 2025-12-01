@@ -10,7 +10,7 @@
   "dependencies": {
     "@types/node": "14.14.31",
     "@vercel-internals/constants": "workspace:*",
-    "@vercel/build-utils": "13.2.0",
+    "@vercel/build-utils": "13.2.1",
     "@vercel/routing-utils": "5.3.0"
   },
   "devDependencies": {
