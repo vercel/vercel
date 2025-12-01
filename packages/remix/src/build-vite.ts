@@ -700,6 +700,9 @@ function createNodeFunction({
       slug: frameworkSlug,
       version: frameworkVersion,
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
 

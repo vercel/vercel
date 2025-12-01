@@ -1,5 +1,25 @@
 # @vercel/next
 
+## 4.15.6
+
+### Patch Changes
+
+- Fix Node.js proxy/middleware with basePath and matcher not being invoked on Vercel ([#14372](https://github.com/vercel/vercel/pull/14372))
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 4.15.5
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
+## 4.15.4
+
+### Patch Changes
+
+- fix trailing slash handling for next build ([#14356](https://github.com/vercel/vercel/pull/14356))
+
 ## 4.15.3
 
 ### Patch Changes

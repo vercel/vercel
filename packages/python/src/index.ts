@@ -30,6 +30,7 @@ import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript } from './utils';
+import { installUvWorkspaceDependencies } from './uv-workspace';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -86,6 +87,7 @@ export async function downloadFilesInWorkPath({
 
 export const build: BuildV3 = async ({
   workPath,
+  repoRootPath,
   files: originalFiles,
   entrypoint,
   meta = {},
@@ -189,7 +191,7 @@ export const build: BuildV3 = async ({
           : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
-        message: `No ${framework} entrypoint found. Define a valid application entrypoint in one of the following locations: ${searchedList} or add an 'app' script in pyproject.toml.`,
+        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
         action: 'Learn More',
       });
@@ -441,6 +443,21 @@ export const build: BuildV3 = async ({
       filePath: requirementsTxtPath,
       workPath,
       targetDir: vendorBaseDir,
+      meta,
+    });
+  }
+
+  // For uv workspaces (monorepos), also install any internal workspace
+  // projects that are referenced as dependencies of this app
+  if (pyprojectDir && repoRootPath) {
+    await installUvWorkspaceDependencies({
+      repoRootPath,
+      pyprojectDir,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      uvPath,
+      workPath,
+      vendorBaseDir,
       meta,
     });
   }

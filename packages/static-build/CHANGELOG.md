@@ -1,5 +1,49 @@
 # @vercel/static-build
 
+## 2.8.12
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.111
+
+## 2.8.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.110
+
+## 2.8.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.109
+
+## 2.8.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.108
+
+## 2.8.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.107
+
+## 2.8.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.106
+
 ## 2.8.6
 
 ### Patch Changes

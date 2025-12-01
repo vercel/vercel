@@ -1,5 +1,181 @@
 # vercel
 
+## 48.12.0
+
+### Minor Changes
+
+- Install nestjs builder in cli ([#14377](https://github.com/vercel/vercel/pull/14377))
+
+## 48.11.1
+
+### Patch Changes
+
+- Prompts if environment vairables should be sensitive. Masks value when inputting new environment variable. ([#14326](https://github.com/vercel/vercel/pull/14326))
+
+- Updated dependencies [[`d5586f84dc67740626011cebd18625e993d9e2b2`](https://github.com/vercel/vercel/commit/d5586f84dc67740626011cebd18625e993d9e2b2), [`99ead3d90328874b0f42d338e1e397b9f9d2c2bf`](https://github.com/vercel/vercel/commit/99ead3d90328874b0f42d338e1e397b9f9d2c2bf), [`2ac2f0ea5597a9cd242707fba3ed28a521a75da3`](https://github.com/vercel/vercel/commit/2ac2f0ea5597a9cd242707fba3ed28a521a75da3)]:
+  - @vercel/python@6.1.0
+  - @vercel/next@4.15.6
+  - @vercel/static-build@2.8.12
+  - @vercel/build-utils@13.2.1
+  - @vercel/backends@0.0.13
+  - @vercel/redwood@2.4.4
+  - @vercel/remix-builder@5.5.4
+  - @vercel/node@5.5.13
+  - @vercel/elysia@0.1.11
+  - @vercel/express@0.1.16
+  - @vercel/fastify@0.1.14
+  - @vercel/h3@0.1.20
+  - @vercel/hono@0.2.14
+
+## 48.11.0
+
+### Minor Changes
+
+- Prompt to pull environment variables after successful project linking ([#13697](https://github.com/vercel/vercel/pull/13697))
+
+### Patch Changes
+
+- Enable `@vercel/rust` cli fs detection ([#14330](https://github.com/vercel/vercel/pull/14330))
+
+## 48.10.14
+
+### Patch Changes
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/backends@0.0.12
+  - @vercel/express@0.1.15
+  - @vercel/redwood@2.4.3
+  - @vercel/remix-builder@5.5.3
+  - @vercel/hono@0.2.13
+  - @vercel/next@4.15.5
+  - @vercel/node@5.5.12
+  - @vercel/elysia@0.1.10
+  - @vercel/fastify@0.1.13
+  - @vercel/h3@0.1.19
+
+## 48.10.13
+
+### Patch Changes
+
+- Updated dependencies [[`611b2432b600381d5bebb4245765d411e62895b3`](https://github.com/vercel/vercel/commit/611b2432b600381d5bebb4245765d411e62895b3)]:
+  - @vercel/next@4.15.4
+
+## 48.10.12
+
+### Patch Changes
+
+- Fix project naming with vc link --repo ([#14335](https://github.com/vercel/vercel/pull/14335))
+
+- Updated dependencies [[`2beb1222fbdde06e8a153521871c0a3b33228045`](https://github.com/vercel/vercel/commit/2beb1222fbdde06e8a153521871c0a3b33228045)]:
+  - @vercel/build-utils@13.2.0
+  - @vercel/node@5.5.11
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.9
+  - @vercel/express@0.1.14
+  - @vercel/fastify@0.1.12
+  - @vercel/h3@0.1.18
+  - @vercel/hono@0.2.12
+  - @vercel/static-build@2.8.11
+
+## 48.10.11
+
+### Patch Changes
+
+- Updated dependencies [[`fb70f3eef445879bcb28962a86c5691bff618f73`](https://github.com/vercel/vercel/commit/fb70f3eef445879bcb28962a86c5691bff618f73)]:
+  - @vercel/build-utils@13.1.2
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.8
+  - @vercel/express@0.1.13
+  - @vercel/fastify@0.1.11
+  - @vercel/h3@0.1.17
+  - @vercel/hono@0.2.11
+  - @vercel/node@5.5.10
+  - @vercel/static-build@2.8.10
+
+## 48.10.10
+
+### Patch Changes
+
+- Updated dependencies [[`e9566780378abc94828a6e00320add54c95bdc0c`](https://github.com/vercel/vercel/commit/e9566780378abc94828a6e00320add54c95bdc0c)]:
+  - @vercel/python@6.0.8
+
+## 48.10.9
+
+### Patch Changes
+
+- Updated dependencies [[`ac51c0e5a0258cf8c5547984ab488cd61ab4c944`](https://github.com/vercel/vercel/commit/ac51c0e5a0258cf8c5547984ab488cd61ab4c944), [`a9340f6f5022eed96d1e42344b5bb67f1239ca41`](https://github.com/vercel/vercel/commit/a9340f6f5022eed96d1e42344b5bb67f1239ca41)]:
+  - @vercel/python@6.0.7
+  - @vercel/build-utils@13.1.1
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.7
+  - @vercel/express@0.1.12
+  - @vercel/fastify@0.1.10
+  - @vercel/h3@0.1.16
+  - @vercel/hono@0.2.10
+  - @vercel/node@5.5.9
+  - @vercel/static-build@2.8.9
+
+## 48.10.8
+
+### Patch Changes
+
+- Updated dependencies [[`10de9d8d6ebdef57f4b0ca7dabc277651b317d7c`](https://github.com/vercel/vercel/commit/10de9d8d6ebdef57f4b0ca7dabc277651b317d7c)]:
+  - @vercel/backends@0.0.10
+  - @vercel/express@0.1.11
+
+## 48.10.7
+
+### Patch Changes
+
+- Support python builder for manual routes ([#14319](https://github.com/vercel/vercel/pull/14319))
+
+- prefer the first production alias for `vercel curl` when no deployment is provided ([#14307](https://github.com/vercel/vercel/pull/14307))
+
+## 48.10.6
+
+### Patch Changes
+
+- Bugfix: stop streaming logs after successful deploy ([#14321](https://github.com/vercel/vercel/pull/14321))
+
+## 48.10.5
+
+### Patch Changes
+
+- Shows more descriptive log message while building ([#14301](https://github.com/vercel/vercel/pull/14301))
+
+- Bump @vercel/fun to support executable runtimes ([#14305](https://github.com/vercel/vercel/pull/14305))
+
+- Updated dependencies [[`0a1db0d2f42aa5c6f80541d6cadf3904d6131a80`](https://github.com/vercel/vercel/commit/0a1db0d2f42aa5c6f80541d6cadf3904d6131a80), [`e20394a5a76207267966393edf0e66e4e9a1d213`](https://github.com/vercel/vercel/commit/e20394a5a76207267966393edf0e66e4e9a1d213)]:
+  - @vercel/build-utils@13.1.0
+  - @vercel/python@6.0.6
+  - @vercel/backends@0.0.9
+  - @vercel/elysia@0.1.6
+  - @vercel/express@0.1.10
+  - @vercel/fastify@0.1.9
+  - @vercel/h3@0.1.15
+  - @vercel/hono@0.2.9
+  - @vercel/node@5.5.8
+  - @vercel/static-build@2.8.8
+
+## 48.10.4
+
+### Patch Changes
+
+- adds support for missing protocol when using the `--deployment` flag of `vercel curl` ([#14297](https://github.com/vercel/vercel/pull/14297))
+
+- Update deployment status emoji to show loading indicator (⏳) initially, then change to success (✅) when deployment is ready. This provides better visual feedback during the deployment process. ([#14278](https://github.com/vercel/vercel/pull/14278))
+
+- Updated dependencies [[`2329dff0836e8699922eed7e70326511f93dd9f8`](https://github.com/vercel/vercel/commit/2329dff0836e8699922eed7e70326511f93dd9f8)]:
+  - @vercel/build-utils@13.0.2
+  - @vercel/node@5.5.7
+  - @vercel/backends@0.0.9
+  - @vercel/elysia@0.1.5
+  - @vercel/express@0.1.9
+  - @vercel/fastify@0.1.8
+  - @vercel/h3@0.1.14
+  - @vercel/hono@0.2.8
+  - @vercel/static-build@2.8.7
+
 ## 48.10.3
 
 ### Patch Changes

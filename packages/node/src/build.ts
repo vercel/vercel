@@ -421,6 +421,7 @@ export const build = async ({
   meta = {},
   considerBuildCommand = false,
   entrypointCallback,
+  checks = () => {},
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
@@ -430,6 +431,7 @@ export const build = async ({
    * from files that may have been created by the build script.
    */
   entrypointCallback?: () => Promise<string>;
+  checks?: (project: { config: Config; isBun: boolean }) => void;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -511,6 +513,11 @@ export const build = async ({
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
   }
+
+  checks({
+    config,
+    isBun: isBunVersion(nodeVersion),
+  });
 
   // Opt backend builders to use typescript5
   const useTypescript5 = considerBuildCommand;
@@ -616,6 +623,9 @@ export const build = async ({
       regions: normalizeRequestedRegions(
         staticConfig?.preferredRegion ?? staticConfig?.regions
       ),
+      shouldDisableAutomaticFetchInstrumentation:
+        process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+        '1',
     });
   }
 

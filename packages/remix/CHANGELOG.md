@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 5.5.4
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 5.5.3
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
 ## 5.5.2
 
 ### Patch Changes

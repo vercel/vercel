@@ -135,6 +135,9 @@ async function readFunctions({
         ...config,
         shouldAddHelpers: false,
         shouldAddSourcemapSupport: false,
+        shouldDisableAutomaticFetchInstrumentation:
+          process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+          '1',
       });
     } else {
       if (!runtime) {

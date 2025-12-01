@@ -144,8 +144,6 @@ export function getTokenPayload(token: string): TokenPayload {
   return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
 }
 
-const TIME_15_MINUTES_IN_MS = 15 * 60 * 1000;
-
 export function isExpired(token: TokenPayload): boolean {
-  return token.exp * 1000 < Date.now() + TIME_15_MINUTES_IN_MS;
+  return token.exp * 1000 < Date.now();
 }

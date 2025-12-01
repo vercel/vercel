@@ -471,7 +471,7 @@ export default async (client: Client): Promise<number> => {
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
-  const withLogs = parsedArguments.flags['--logs'] ? true : false;
+  const withFullLogs = parsedArguments.flags['--logs'] ? true : false;
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -514,7 +514,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
-      withLogs,
+      withFullLogs,
       autoAssignCustomDomains,
     };
 
@@ -670,7 +670,7 @@ export default async (client: Client): Promise<number> => {
     }
 
     if (err instanceof BuildError) {
-      if (withLogs === false) {
+      if (withFullLogs === false) {
         try {
           if (now.url) {
             const failedDeployment = await getDeployment(
