@@ -224,3 +224,99 @@ export interface Framework {
    */
   supersedes?: string[];
 }
+
+/**
+ * Runtime detection information.
+ */
+export interface Runtime {
+  /**
+   * Name of the runtime
+   * @example "Node.js"
+   */
+  name: string;
+  /**
+   * A unique identifier for the runtime
+   * @example "nodejs"
+   */
+  slug: string | null;
+  /**
+   * A URL to the logo of the runtime
+   * @example "https://api-frameworks.vercel.sh/runtime-logos/node.svg"
+   */
+  logo: string;
+  /**
+   * An additional URL to the logo of the runtime optimized for dark mode
+   * @example "https://api-frameworks.vercel.sh/framework-logos/next-dark.svg"
+   */
+  darkModeLogo?: string;
+  /**
+   * A URL to a screenshot of the demo
+   * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png"
+   */
+  screenshot?: string;
+  /**
+   * A URL to a deployed example of the runtime
+   * @example "https://nextjs-template.vercel.app"
+   */
+  demo?: string;
+  /**
+   * A marketing tagline for the runtime
+   * @example "Node.js is a runtime for JavaScript and TypeScript."
+   */
+  tagline?: string;
+  /**
+   * A URL to the official website of the runtime
+   * @example "https://www.python.org/"
+   */
+  website?: string;
+  /**
+   * Short description of the runtime
+   * @example "Python is a programming language that lets you work quickly
+   * and integrate systems more effectively."
+   */
+  description: string;
+  /**
+   * The builder to use to run the runtime in Vercel
+   * @example "@vercel/node"
+   */
+  builder?: string;
+  /**
+   * Detectors used to find out the runtime
+   */
+  detectors?: {
+    /**
+     * Collection of detectors that must be matched for the framework
+     * to be detected.
+     */
+    every?: FrameworkDetectionItem[];
+    /**
+     * Collection of detectors where one match triggers the framework
+     * to be detected.
+     */
+    some?: FrameworkDetectionItem[];
+  };
+  settings: {
+    /**
+     * Default Install Command or a placeholder
+     */
+    installCommand: Setting;
+    /**
+     * Default Build Command or a placeholder
+     */
+    buildCommand: SettingValue;
+    /**
+     * Default Development Command or a placeholder
+     */
+    devCommand: SettingValue;
+  };
+  /**
+   * An array (or a function that returns an array) of default `Route` rules that
+   * the runtime uses.
+   * @example [{ handle: 'filesystem' }, { src: '.*', status: 404, dest: '404.html' }]
+   */
+  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
+  /**
+   * Array of slugs for other runtime presets which this runtime supersedes.
+   */
+  supersedes?: string[];
+}

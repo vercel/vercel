@@ -2,7 +2,11 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
-import frameworkList, { Framework } from '@vercel/frameworks';
+import frameworkList, {
+  Framework,
+  runtimeList,
+  type Runtime,
+} from '@vercel/frameworks';
 import type {
   PackageJson,
   Builder,
@@ -29,6 +33,10 @@ export const REGEX_NON_VERCEL_PLATFORM_FILES = `!{${REGEX_VERCEL_PLATFORM_FILES}
 
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
+);
+
+const slugToRuntime = new Map<string | null, Runtime>(
+  runtimeList.map(r => [r.slug, r])
 );
 
 export interface ErrorResponse {
@@ -146,22 +154,30 @@ export async function detectBuilders(
   const absolutePathCache = new Map<string, string>();
 
   const { projectSettings = {} } = options;
-  const { buildCommand, outputDirectory, framework } = projectSettings;
+  const { buildCommand, outputDirectory, framework, runtime } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
-  const apiMatches = getApiMatches()
-    .filter(
-      b =>
-        // Root-level middleware is enabled, unless `disableRootMiddleware: true`
-        (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
-        // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
-        !ignoreRuntimes.has(b.use)
-    )
-    .map(b => {
-      b.use = `${b.use}${withTag}`;
-      return b;
-    });
+  // When a project-level runtime is explicitly selected and no framework
+  // is configured, prefer that runtime over the legacy `/api` directory
+  // builders. In this case we skip auto-scheduling `/api` language
+  // runtimes and let the runtime builder handle the app.
+  const shouldSkipApiMatches = !!runtime && !framework;
+
+  const apiMatches = shouldSkipApiMatches
+    ? []
+    : getApiMatches()
+        .filter(
+          b =>
+            // Root-level middleware is enabled, unless `disableRootMiddleware: true`
+            (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
+            // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
+            !ignoreRuntimes.has(b.use)
+        )
+        .map(b => {
+          b.use = `${b.use}${withTag}`;
+          return b;
+        });
 
   // If either is missing we'll make the frontend static
   const makeFrontendStatic = buildCommand === '' || outputDirectory === '';
@@ -249,7 +265,7 @@ export async function detectBuilders(
 
   if (
     !makeFrontendStatic &&
-    (hasBuildScript(pkg) || buildCommand || framework)
+    (hasBuildScript(pkg) || buildCommand || framework || runtime)
   ) {
     // Framework or Build
     frontendBuilder = detectFrontBuilder(
@@ -522,7 +538,7 @@ function detectFrontBuilder(
 ): Builder {
   const { tag, projectSettings = {} } = options;
   const withTag = tag ? `@${tag}` : '';
-  const { createdAt = 0 } = projectSettings;
+  const { createdAt = 0, runtime } = projectSettings;
   let { framework } = projectSettings;
 
   const config: Config = {
@@ -582,6 +598,29 @@ function detectFrontBuilder(
   if (f && f.useRuntime) {
     const { src, use } = f.useRuntime;
     return { src, use: `${use}${withTag}`, config };
+  }
+
+  // If no framework preset is selected but a project-level runtime
+  // has been configured, then use that runtime's builder instead of
+  // falling back to the `/api` directory builders or the
+  // generic static-build builder.
+  if (!framework && runtime) {
+    const r = slugToRuntime.get(runtime || '');
+    if (r) {
+      // For runtime-based projects, use the repo root (or package.json)
+      // as the entrypoint and let the runtime builder decide how to
+      // serve the application.
+      const source =
+        pkg || files.includes('package.json')
+          ? 'package.json'
+          : fallbackEntrypoint || 'package.json';
+
+      return {
+        src: source,
+        use: `${r.builder}${withTag}`,
+        config,
+      };
+    }
   }
 
   // Entrypoints for other frameworks

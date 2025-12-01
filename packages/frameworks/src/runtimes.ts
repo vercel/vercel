@@ -1,0 +1,93 @@
+import { Runtime } from './types';
+
+export const runtimes = [
+  {
+    name: 'Node.js',
+    slug: 'node',
+    logo: 'https://api-frameworks.vercel.sh/runtime-logos/node.svg',
+    builder: '@vercel/node',
+    detectors: {
+      every: [
+        {
+          matchPackage: 'node',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `node build`',
+        value: '`npm run build`',
+      },
+      devCommand: {
+        placeholder: '`npm run dev`',
+        value: '`npm run dev`',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+  },
+  {
+    name: 'Python',
+    slug: 'python',
+    logo: 'https://api-frameworks.vercel.sh/runtime-logos/python.svg',
+    builder: '@vercel/python',
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+        },
+        {
+          path: 'pyproject.toml',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+  },
+  {
+    name: 'Other',
+    slug: null,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
+    description: 'No framework or an unoptimized framework.',
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run vercel-build` or `npm run build`',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        placeholder: '`public` if it exists, or `.`',
+      },
+    },
+    getOutputDirName: async () => 'public',
+  },
+] as const;
+
+export const runtimeList = runtimes as readonly Runtime[];
+export default runtimeList;
