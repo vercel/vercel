@@ -23,6 +23,9 @@ jobs:
       dplUrl: ${{ steps.waitForTarball.outputs.url }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
+      affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
+      totalCount: ${{ steps['affected-packages'].outputs['total'] }}
+      allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,22 +45,36 @@ jobs:
           # Get affected packages info for PR comment
           AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ github.event.pull_request.base.sha }}" 2>&1)
 
-          # Extract affected packages count and strategy
-          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" || echo "0")
-          if echo "$AFFECTED_OUTPUT" | grep -q "Infrastructure changes detected"; then
+          # Extract affected packages count and total packages count
+          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
+          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
+
+          if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
             STRATEGY="all-e2e"
+          elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
+            STRATEGY="test-all"
           elif [ "$PACKAGE_COUNT" -gt "0" ]; then
             STRATEGY="affected-only"
           else
-            STRATEGY="full-test"
+            STRATEGY="no-tests"
           fi
 
           # Get the list of affected packages
           PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
 
+          # Get all packages (trim whitespace and newlines)
+          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
+
+          # Debug output
+          echo "PACKAGE_COUNT=$PACKAGE_COUNT"
+          echo "TOTAL_COUNT=$TOTAL_COUNT"
+          echo "STRATEGY=$STRATEGY"
+
           echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
           echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
           echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+          echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
           # Set base SHA for affected package detection
@@ -87,35 +104,82 @@ jobs:
           script: |
             const strategy = '${{ needs.setup.outputs.testStrategy }}';
             const packages = '${{ needs.setup.outputs.affectedPackages }}';
-            const packageCount = packages ? packages.split(',').length : 0;
+            const allPackages = '${{ needs.setup.outputs.allPackages }}';
+            const affectedCount = parseInt('${{ needs.setup.outputs.affectedCount }}') || 0;
+            const totalCount = parseInt('${{ needs.setup.outputs.totalCount }}') || 0;
             const baseSha = '${{ github.event.pull_request.base.sha }}';
             const headSha = '${{ github.event.pull_request.head.sha }}';
+
+            // Calculate percentage and unaffected packages
+            const percentage = totalCount > 0 ? Math.round((affectedCount / totalCount) * 100) : 0;
+            const unaffectedCount = totalCount - affectedCount;
+            const unaffectedPercentage = totalCount > 0 ? Math.round((unaffectedCount / totalCount) * 100) : 0;
+
+            // Calculate unaffected package list
+            const affectedSet = packages ? new Set(packages.split(',').map(p => p.trim())) : new Set();
+            const allPackagesList = allPackages ? allPackages.split(',').map(p => p.trim()) : [];
+            const unaffectedPackages = allPackagesList.filter(pkg => !affectedSet.has(pkg));
+            const unaffectedList = unaffectedPackages.map(p => `1. \`${p}\``).join('\n');
 
             let message = '## 🧪 Test Strategy\n\n';
             message += `**Comparing**: [\`${baseSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${baseSha}) → [\`${headSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${headSha}) ([view diff](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${baseSha}...${headSha}))\n\n`;
 
             if (strategy === 'all-e2e') {
-              message += '**Strategy**: Infrastructure changes detected - running ALL tests\n\n';
-              message += '⚠️ Infrastructure or core utility changes were detected, so we\'re running the full test suite to ensure integration between packages is properly tested.\n\n';
-              message += `**Affected packages** (${packageCount}): All packages will be tested\n\n`;
+              message += '**Strategy**: Code changed outside of a package - running ALL tests\n\n';
+              message += '⚠️ All tests will run because global code changes could impact all packages.\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `Includes:\n${packageList}\n\n`;
+                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
-              message += '**E2E Tests**: All e2e tests will run';
+              if (unaffectedCount > 0) {
+                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
+              }
+              message += '### Results\n\n';
+              message += '- **Unit tests**: All affected packages will run unit tests\n';
+              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
-              message += '✅ Only testing packages that have been modified or depend on modified packages. This saves time while maintaining safety.\n\n';
-              message += `**Affected packages** (${packageCount}):\n`;
+              message += '✅ Only testing packages that have been modified or depend on modified packages.\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += packageList + '\n\n';
+                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
-              message += '**E2E Tests**: Only affected package e2e tests will run';
-            } else {
+              if (unaffectedCount > 0) {
+                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
+              }
+              message += '### Results\n\n';
+              message += '- **Unit tests**: Only affected packages will run unit tests\n';
+              message += '- **E2E tests**: Only affected packages will run e2e tests\n';
+              message += '- **Type checks**: Only affected packages will run type checks';
+            } else if (strategy === 'no-tests') {
+              message += '**Strategy**: No tests needed\n\n';
+              message += '✨ No packages affected - skipping tests\n\n';
+              message += '### Results\n\n';
+              message += '- **Unit tests**: None\n';
+              message += '- **E2E tests**: None\n';
+              message += '- **Type checks**: None';
+            } else if (strategy === 'test-all') {
               message += '**Strategy**: Full test suite\n\n';
-              message += '🔄 Running all tests (no base SHA available for affected package detection)\n\n';
-              message += '**E2E Tests**: All e2e tests will run';
+              message += '🔄 Running all tests (unable to determine affected packages)\n\n';
+              if (packages) {
+                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
+                message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
+              }
+              if (unaffectedCount > 0) {
+                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
+              }
+              message += '### Results\n\n';
+              message += '- **Unit tests**: All packages will run unit tests\n';
+              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **Type checks**: All packages will run type checks';
+            } else {
+              message += '**Strategy**: Unknown\n\n';
+              message += `⚠️ Unknown strategy: ${strategy}\n\n`;
+              message += '### Results\n\n';
+              message += '- **Unit tests**: Unknown\n';
+              message += '- **E2E tests**: Unknown\n';
+              message += '- **Type checks**: Unknown';
             }
 
             message += '\n\n---\n*This comment is automatically generated based on the [affected testing strategy](.github/AFFECTED_TESTING.md)*';

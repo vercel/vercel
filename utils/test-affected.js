@@ -6,7 +6,10 @@
  * Usage: node utils/test-affected.js [base-sha]
  */
 
-const { getAffectedPackages } = require('./get-affected-packages');
+const {
+  getAffectedPackages,
+  getAllPackagesWithTests,
+} = require('./get-affected-packages');
 const child_process = require('child_process');
 
 async function main() {
@@ -35,22 +38,37 @@ async function main() {
     console.log(gitDiff);
     console.log('');
 
-    // Now show what turbo thinks is affected
-    const affectedPackages = await getAffectedPackages(baseSha);
+    // Get total packages for percentage calculation
+    const allPackages = await getAllPackagesWithTests();
+    console.error(`Total packages with tests: ${allPackages.length}`);
+    console.error(`All packages with tests: ${allPackages.join(',')}`);
 
-    if (affectedPackages.length === 0) {
-      console.log('No affected packages found - would test all packages');
+    // Now show what turbo thinks is affected
+    const result = await getAffectedPackages(baseSha);
+
+    if (result.result === 'test-all') {
+      console.log('All packages will be tested');
+      console.log('Affected packages that would be tested:');
+      allPackages.forEach(pkg => console.log(`  - ${pkg}`));
+      console.error(`Found ${allPackages.length} affected packages`);
+      console.error('test-all result detected');
+    } else if (result.result === 'test-none') {
+      console.log('No packages will be tested');
+      console.error('Found 0 affected packages');
     } else {
       console.log('Affected packages that would be tested:');
-      affectedPackages.forEach(pkg => console.log(`  - ${pkg}`));
+      result.packages.forEach(pkg => console.log(`  - ${pkg}`));
+      console.error(`Found ${result.packages.length} affected packages`);
     }
 
     console.log('');
     console.log('This would result in the following turbo filters:');
-    if (affectedPackages.length === 0) {
+    if (result.result === 'test-all') {
       console.log('  (no filters - test all packages)');
+    } else if (result.result === 'test-none') {
+      console.log('  (no tests will run)');
     } else {
-      affectedPackages.forEach(pkg => console.log(`  --filter=${pkg}...`));
+      result.packages.forEach(pkg => console.log(`  --filter=${pkg}...`));
     }
 
     // Show e2e test strategy
