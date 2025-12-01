@@ -10,6 +10,7 @@ const DEVIN = 'devin' as const;
 const REPLIT = 'replit' as const;
 const GEMINI = 'gemini' as const;
 const CODEX = 'codex' as const;
+const TRAE = 'trae' as const;
 
 export type KnownAgentNames =
   | typeof CURSOR
@@ -18,7 +19,8 @@ export type KnownAgentNames =
   | typeof DEVIN
   | typeof REPLIT
   | typeof GEMINI
-  | typeof CODEX;
+  | typeof CODEX
+  | typeof TRAE;
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
@@ -42,6 +44,7 @@ export const KNOWN_AGENTS = {
   REPLIT,
   GEMINI,
   CODEX,
+  TRAE,
 } as const;
 
 export async function determineAgent(): Promise<AgentResult> {
@@ -73,6 +76,10 @@ export async function determineAgent(): Promise<AgentResult> {
 
   if (process.env.CLAUDECODE || process.env.CLAUDE_CODE) {
     return { isAgent: true, agent: { name: CLAUDE } };
+  }
+
+  if (process.env.TRAE_AI_SHELL_ID) {
+    return { isAgent: true, agent: { name: TRAE } };
   }
 
   if (process.env.REPL_ID) {
