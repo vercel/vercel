@@ -15,7 +15,6 @@ import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
 import output from '../../output-manager';
-import { getCommandName } from '../../util/pkg-name';
 
 export async function list(client: Client) {
   let parsedArguments = null;
