@@ -126,10 +126,12 @@ jobs:
                 message += `<details>\n<summary>View packages</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
               if (unaffectedCount > 0) {
-                message += `**Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)**:\n\n`;
-                message += `<details>\n<summary>View packages</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
+                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
               }
-              message += '**E2E Tests**: All e2e tests will run';
+              message += '### Results\n\n';
+              message += '- **Unit tests**: All affected packages will run unit tests\n';
+              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
               message += '✅ Only testing packages that have been modified or depend on modified packages.\n\n';
@@ -139,14 +141,19 @@ jobs:
                 message += packageList + '\n\n';
               }
               if (unaffectedCount > 0) {
-                message += `**Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)**:\n\n`;
-                message += `<details>\n<summary>View packages</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
+                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
               }
-              message += '**E2E Tests**: Only affected package e2e tests will run';
+              message += '### Results\n\n';
+              message += '- **Unit tests**: Only affected packages will run unit tests\n';
+              message += '- **E2E tests**: Only affected packages will run e2e tests\n';
+              message += '- **Type checks**: Only affected packages will run type checks';
             } else if (strategy === 'no-tests') {
               message += '**Strategy**: No tests needed\n\n';
               message += '✨ No packages affected - skipping tests\n\n';
-              message += '**E2E Tests**: None';
+              message += '### Results\n\n';
+              message += '- **Unit tests**: None\n';
+              message += '- **E2E tests**: None\n';
+              message += '- **Type checks**: None';
             } else {
               message += '**Strategy**: Full test suite\n\n';
               message += '🔄 Running all tests\n\n';
@@ -156,10 +163,12 @@ jobs:
                 message += `<details>\n<summary>View packages</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
               if (unaffectedCount > 0) {
-                message += `**Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)**:\n\n`;
-                message += `<details>\n<summary>View packages</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
+                message += `<details>\n<summary>Unaffected packages - ${unaffectedCount} (${unaffectedPercentage}%)</summary>\n\n${unaffectedList || '_No unaffected packages_'}\n\n</details>\n\n`;
               }
-              message += '**E2E Tests**: All e2e tests will run';
+              message += '### Results\n\n';
+              message += '- **Unit tests**: All packages will run unit tests\n';
+              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **Type checks**: All packages will run type checks';
             }
 
             message += '\n\n---\n*This comment is automatically generated based on the [affected testing strategy](.github/AFFECTED_TESTING.md)*';
