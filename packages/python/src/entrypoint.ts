@@ -135,35 +135,23 @@ export async function getPyprojectEntrypoint(
   if (!pyprojectData) return null;
 
   // If `pyproject.toml` has a [project.scripts] table and contains a script
-  // named "app", interpret the value as either:
-  //   - a direct file path, e.g. "main.py" or "api/my_server.py", or
-  //   - a classic entrypoint string, e.g. "package.module:app"
+  // named "app", parse the value (format: "module:attr") to determine the
+  // module and map it to a file path.
   const scripts = pyprojectData.project?.scripts as
     | Record<string, unknown>
     | undefined;
   const appScript = scripts?.app;
   if (typeof appScript !== 'string') return null;
 
-  const raw = appScript.trim();
-  if (!raw) return null;
+  // Expect values like "package.module:app". Extract the module portion.
+  const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
+  if (!match) return null;
+  const modulePath = match[1];
+  const relPath = modulePath.replace(/\./g, '/');
 
+  // Prefer an existing file match if present; otherwise fall back to "<module>.py".
   try {
     const fsFiles = await glob('**', workPath);
-
-    // First, support direct file paths such as "main.py" or "src/server.py".
-    if (raw.endsWith('.py')) {
-      // Normalize to the glob/FS key format (POSIX-style, no leading "./").
-      const candidate = raw.replace(/^\.\/+/, '').replace(/\\/g, '/');
-      if (fsFiles[candidate]) return candidate;
-    }
-
-    // Next, support classic "package.module:attr" style entrypoints.
-    const match = raw.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
-    if (!match) return null;
-    const modulePath = match[1];
-    const relPath = modulePath.replace(/\./g, '/');
-
-    // Prefer an existing file match if present; otherwise fall back to "<module>.py".
     const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
     for (const candidate of candidates) {
       if (fsFiles[candidate]) return candidate;
