@@ -99,23 +99,22 @@ jobs:
 
             // Calculate percentage
             const percentage = totalCount > 0 ? Math.round((affectedCount / totalCount) * 100) : 0;
-            const isAll = percentage === 100 || strategy === 'all-e2e';
 
             let message = '## 🧪 Test Strategy\n\n';
             message += `**Comparing**: [\`${baseSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${baseSha}) → [\`${headSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${headSha}) ([view diff](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${baseSha}...${headSha}))\n\n`;
 
             if (strategy === 'all-e2e') {
-              message += '**Strategy**: Infrastructure changes detected - running ALL tests\n\n';
-              message += '⚠️ Infrastructure or core utility changes were detected, so we\'re running the full test suite to ensure integration between packages is properly tested.\n\n';
-              message += `**Affected packages - ${affectedCount} (all)**:\n\n`;
+              message += '**Strategy**: Code changed outside of a package - running ALL tests\n\n';
+              message += '⚠️ Code changed outside of a package was detected, so we\'re running the full test suite to ensure integration between packages is properly tested.\n\n';
+              message += `**Affected packages - ${affectedCount} (${percentage}%)**:\n\n`;
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
-                message += `${packageList}\n\n`;
+                message += `<details>\n<summary>View all affected packages</summary>\n\n${packageList}\n\n</details>\n\n`;
               }
               message += '**E2E Tests**: All e2e tests will run';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
-              message += '✅ Only testing packages that have been modified or depend on modified packages. This saves time while maintaining safety.\n\n';
+              message += '✅ Only testing packages that have been modified or depend on modified packages.\n\n';
               message += `**Affected packages - ${affectedCount} (${percentage}%)**:\n\n`;
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
@@ -129,7 +128,11 @@ jobs:
             } else {
               message += '**Strategy**: Full test suite\n\n';
               message += '🔄 Running all tests\n\n';
-              message += `**Affected packages - ${affectedCount} (all)**\n\n`;
+              message += `**Affected packages - ${affectedCount} (${percentage}%)**\n\n`;
+              if (packages) {
+                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
+                message += `<details>\n<summary>View all affected packages</summary>\n\n${packageList}\n\n</details>\n\n`;
+              }
               message += '**E2E Tests**: All e2e tests will run';
             }
 
