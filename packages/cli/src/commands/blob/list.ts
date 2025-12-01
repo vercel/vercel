@@ -39,7 +39,10 @@ export default async function list(
 
   const { args, flags } = parsedArgs;
 
-  const validationResult = validateLsArgs('blob list', args);
+  const validationResult = validateLsArgs({
+    commandName: 'blob list',
+    args: args,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

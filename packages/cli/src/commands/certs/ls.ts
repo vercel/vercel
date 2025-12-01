@@ -35,7 +35,10 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   }
   const { args, flags: opts } = parsedArgs;
 
-  const validationResult = validateLsArgs('certs ls', args);
+  const validationResult = validateLsArgs({
+    commandName: 'certs ls',
+    args: args,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

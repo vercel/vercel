@@ -43,13 +43,15 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const { args, flags } = parsedArgs;
 
-  const validationResult = validateLsArgs(
-    'env ls',
-    args,
-    2,
-    1,
-    getCommandName(`env ls ${getEnvTargetPlaceholder()} <gitbranch>`)
-  );
+  const validationResult = validateLsArgs({
+    commandName: 'env ls',
+    args: args,
+    maxArgs: 2,
+    exitCode: 1,
+    usageString: getCommandName(
+      `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
+    ),
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

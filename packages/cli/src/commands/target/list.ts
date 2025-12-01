@@ -49,7 +49,12 @@ const BRANCH_TRACKING_MAP: Record<
 export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
 
-  const validationResult = validateLsArgs('target ls', argv, 0, 2);
+  const validationResult = validateLsArgs({
+    commandName: 'target ls',
+    args: argv,
+    maxArgs: 0,
+    exitCode: 2,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

@@ -32,13 +32,12 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const { args, flags: opts } = parsedArgs;
 
-  const validationResult = validateLsArgs(
-    'dns ls [domain]',
-    args,
-    1,
-    1,
-    getCommandName('dns ls [domain]')
-  );
+  const validationResult = validateLsArgs({
+    commandName: 'dns ls [domain]',
+    args: args,
+    maxArgs: 1,
+    exitCode: 1,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

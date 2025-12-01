@@ -31,7 +31,10 @@ export default async function ls(client: Client, argv: string[]) {
 
   const { args, flags: opts } = parsedArguments;
 
-  const validationResult = validateLsArgs('alias ls', args);
+  const validationResult = validateLsArgs({
+    commandName: 'alias ls',
+    args: args,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

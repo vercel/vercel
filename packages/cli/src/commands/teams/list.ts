@@ -35,7 +35,12 @@ export default async function list(
     return 1;
   }
 
-  const validationResult = validateLsArgs('teams ls', parsedArgs.args, 0, 2);
+  const validationResult = validateLsArgs({
+    commandName: 'teams ls',
+    args: parsedArgs.args,
+    maxArgs: 0,
+    exitCode: 2,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

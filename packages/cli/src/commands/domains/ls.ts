@@ -39,7 +39,12 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const { args, flags: opts } = parsedArgs;
 
-  const validationResult = validateLsArgs('domains ls', args, 0, 2);
+  const validationResult = validateLsArgs({
+    commandName: 'domains ls',
+    args: args,
+    maxArgs: 0,
+    exitCode: 2,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

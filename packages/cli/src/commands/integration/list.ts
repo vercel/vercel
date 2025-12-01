@@ -39,13 +39,12 @@ export async function list(client: Client) {
   // Note: the `--integration` flag is tracked later, after validating
   // whether the value is a known integration name or not.
 
-  const validationResult = validateLsArgs(
-    'integration list',
-    parsedArguments.args,
-    2,
-    1,
-    getCommandName('integration list [project]')
-  );
+  const validationResult = validateLsArgs({
+    commandName: 'integration list [project]',
+    args: parsedArguments.args,
+    maxArgs: 2,
+    exitCode: 1,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }

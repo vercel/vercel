@@ -71,7 +71,12 @@ export default async function list(client: Client) {
     return 0;
   }
 
-  const validationResult = validateLsArgs('ls [app]', parsedArgs.args, 2, 2);
+  const validationResult = validateLsArgs({
+    commandName: 'ls [app]',
+    args: parsedArgs.args,
+    maxArgs: 2,
+    exitCode: 2,
+  });
   if (validationResult !== 0) {
     return validationResult;
   }
