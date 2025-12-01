@@ -6,7 +6,10 @@
  * Usage: node utils/test-affected.js [base-sha]
  */
 
-const { getAffectedPackages } = require('./get-affected-packages');
+const {
+  getAffectedPackages,
+  getAllPackagesWithTests,
+} = require('./get-affected-packages');
 const child_process = require('child_process');
 
 async function main() {
@@ -34,6 +37,10 @@ async function main() {
     console.log('Files changed according to git:');
     console.log(gitDiff);
     console.log('');
+
+    // Get total packages for percentage calculation
+    const allPackages = await getAllPackagesWithTests();
+    console.error(`Total packages with tests: ${allPackages.length}`);
 
     // Now show what turbo thinks is affected
     const affectedPackages = await getAffectedPackages(baseSha);

@@ -4,6 +4,16 @@ const path = require('path');
 const fs = require('fs');
 
 /**
+ * Task names that indicate a package has tests
+ */
+const TEST_TASK_NAMES = ['test', 'vitest', 'type-check'];
+
+/**
+ * Task names that indicate a package has e2e tests
+ */
+const E2E_TASK_NAMES = ['test-e2e', 'vitest-e2e'];
+
+/**
  * Get affected packages based on git changes since the given commit
  * @param {string} baseSha - The base commit SHA to compare against
  * @returns {Promise<string[]>} Array of affected package names
@@ -42,18 +52,7 @@ async function getAffectedPackages(baseSha) {
 
     // Filter packages that have test tasks (similar to API repo logic)
     const affectedPackages = data.data.affectedPackages.items
-      .filter(pkg => {
-        if (!pkg.name || pkg.name === '//') return false;
-
-        // Check if package has test-related tasks
-        const taskNames = pkg.tasks.items.map(task => task.name);
-        return taskNames.some(
-          name =>
-            name.includes('test') ||
-            name.includes('vitest') ||
-            name === 'type-check'
-        );
-      })
+      .filter(hasTestTasks)
       .map(pkg => pkg.name);
 
     // Handle e2e test special cases
@@ -61,7 +60,7 @@ async function getAffectedPackages(baseSha) {
 
     if (shouldRunAllE2E) {
       console.error(
-        'Infrastructure changes detected - including all e2e test packages'
+        'config or workflow changes detected - including all e2e test packages'
       );
       // Get all packages with e2e tests
       const allPackagesWithE2E = await getAllPackagesWithE2ETests();
@@ -113,6 +112,20 @@ async function turboQuery(args) {
       }
     });
   });
+}
+
+/**
+ * Check if a package has test-related tasks
+ * @param {Object} pkg - Package object with tasks
+ * @returns {boolean} Whether the package has test tasks
+ */
+function hasTestTasks(pkg) {
+  if (!pkg.name || pkg.name === '//') return false;
+  if (!pkg.tasks || !pkg.tasks.items) return false;
+  const taskNames = pkg.tasks.items.map(task => task.name);
+  return taskNames.some(name =>
+    TEST_TASK_NAMES.some(testTask => name.includes(testTask))
+  );
 }
 
 /**
@@ -192,9 +205,8 @@ async function getAllPackagesWithE2ETests() {
         // Check if package has e2e test tasks
         if (!pkg.tasks || !pkg.tasks.items) return false;
         const taskNames = pkg.tasks.items.map(task => task.name);
-        return taskNames.some(
-          taskName =>
-            taskName.includes('test-e2e') || taskName.includes('vitest-e2e')
+        return taskNames.some(taskName =>
+          E2E_TASK_NAMES.some(e2eTask => taskName.includes(e2eTask))
         );
       })
       .map(pkg => pkg.name);
@@ -210,9 +222,46 @@ async function getAllPackagesWithE2ETests() {
   }
 }
 
+/**
+ * Get all packages with test tasks
+ * @returns {Promise<string[]>} Array of all package names with test tasks
+ */
+async function getAllPackagesWithTests() {
+  try {
+    const variablesPath = path.resolve(
+      __dirname,
+      'all-packages-variables.json'
+    );
+    const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
+
+    const response = await turboQuery([
+      '--variables',
+      variablesPath,
+      queryPath,
+    ]);
+
+    const data = JSON.parse(response.toString('utf8'));
+
+    if (!data.data || !data.data.packages) {
+      console.warn('No packages data found in GraphQL response');
+      return [];
+    }
+
+    const packagesWithTests = data.data.packages.items
+      .filter(hasTestTasks)
+      .map(pkg => pkg.name);
+
+    return packagesWithTests;
+  } catch (error) {
+    console.warn('Error getting all packages with tests:', error.message);
+    return [];
+  }
+}
+
 module.exports = {
   getAffectedPackages,
   getChangedFiles,
   shouldRunAllE2ETests,
   getAllPackagesWithE2ETests,
+  getAllPackagesWithTests,
 };
