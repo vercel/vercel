@@ -41,6 +41,7 @@ async function main() {
     // Get total packages for percentage calculation
     const allPackages = await getAllPackagesWithTests();
     console.error(`Total packages with tests: ${allPackages.length}`);
+    console.error(`All packages with tests: ${allPackages.join(',')}`);
 
     // Now show what turbo thinks is affected
     const affectedPackages = await getAffectedPackages(baseSha);
