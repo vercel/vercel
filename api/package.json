@@ -16,6 +16,6 @@
     "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
     "@types/tar-fs": "1.16.1",
-    "@vercel/node": "*"
+    "@vercel/node": "workspace:*"
   }
 }

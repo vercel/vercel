@@ -24,20 +24,20 @@
   ],
   "dependencies": {
     "@vercel/nft": "1.1.1",
-    "@vercel/static-config": "3.1.2",
+    "@vercel/static-config": "workspace:*",
     "fs-extra": "11.1.0",
     "path-to-regexp": "8.3.0",
     "rolldown": "1.0.0-beta.35",
     "ts-morph": "12.0.0",
     "zod": "3.22.4",
     "@vercel/cervel": "workspace:*",
-    "@vercel/node": "5.5.14"
+    "@vercel/node": "workspace:*"
   },
   "devDependencies": {
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "13.2.2",
+    "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "jest-junit": "16.0.0",
     "vite": "^5.1.6",
