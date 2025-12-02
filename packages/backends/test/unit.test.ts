@@ -53,6 +53,10 @@ describe('successful builds', async () => {
       // const lambdaPath = join(__dirname, 'debug');
       const lambdaPath = undefined;
 
+      expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
+        `${workPath}/routes.json`
+      );
+
       // Runs without errors
       await expect(
         extractAndExecuteCode(lambda, lambdaPath, fixtureName)

@@ -1,0 +1,16 @@
+[
+  {
+    "handle": "filesystem"
+  },
+  {
+    "src": "^(?:\\/blog\\/([\\s\\S]+))(?:\\/$)?$",
+    "dest": "/blog/*slugs",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/"
+  }
+]
