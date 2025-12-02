@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.4.5
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
 ## 2.4.4
 
 ### Patch Changes

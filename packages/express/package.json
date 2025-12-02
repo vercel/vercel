@@ -1,6 +1,6 @@
 {
   "name": "@vercel/express",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -31,13 +31,13 @@
     "ts-morph": "12.0.0",
     "zod": "3.22.4",
     "@vercel/cervel": "workspace:*",
-    "@vercel/node": "5.5.13"
+    "@vercel/node": "5.5.14"
   },
   "devDependencies": {
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "13.2.1",
+    "@vercel/build-utils": "13.2.2",
     "execa": "3.2.0",
     "jest-junit": "16.0.0",
     "vite": "^5.1.6",
