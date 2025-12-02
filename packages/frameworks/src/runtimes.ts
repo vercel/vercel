@@ -4,7 +4,7 @@ export const runtimes = [
   {
     name: 'Node.js',
     slug: 'node',
-    logo: 'https://api-frameworks.vercel.sh/runtime-logos/node.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/node.png',
     description:
       'Node.js is a runtime for JavaScript and TypeScript built on the V8 JavaScript engine.',
     builder: '@vercel/node',
@@ -37,7 +37,7 @@ export const runtimes = [
   {
     name: 'Python',
     slug: 'python',
-    logo: 'https://api-frameworks.vercel.sh/runtime-logos/python.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     description:
       'Python is a programming language that lets you work quickly and integrate systems more effectively.',
     builder: '@vercel/python',
