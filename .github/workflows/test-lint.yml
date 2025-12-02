@@ -4,10 +4,10 @@ on:
   pull_request:
 
 env:
-  TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'vercel'
+  TURBO_REMOTE_ONLY: "true"
+  TURBO_TEAM: "vercel"
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  NODE_VERSION: '22'
+  NODE_VERSION: "22"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,8 +26,8 @@ jobs:
           token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.24.0
+        run: npm i -g pnpm@10.24.0
       - run: pnpm install
       # Enforce a changeset file to be present
       - run: pnpm exec changeset status --since=main
@@ -42,8 +42,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.24.0
+        run: npm i -g pnpm@10.24.0
       - run: pnpm install
       - run: pnpm run lint
       - run: pnpm run prettier-check
