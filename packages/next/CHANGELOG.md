@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.7
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
 ## 4.15.6
 
 ### Patch Changes
