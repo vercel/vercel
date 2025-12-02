@@ -219,6 +219,9 @@ export async function syncProjectWithUv({
 }
 
 async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
+  // Ask the venv’s interpreter which directories it adds to sys.path for pure
+  // Python packages and platform-specific packages so we mirror the exact same
+  // paths when mounting `_vendor` in the Lambda bundle.
   const code = `
 import json
 import sysconfig
@@ -241,46 +244,11 @@ print(json.dumps(paths))
   return [];
 }
 
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await fs.promises.access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function copyDirContents(src: string, dest: string) {
-  let entries: string[];
-  try {
-    entries = await fs.promises.readdir(src);
-  } catch (err) {
-    debug(`Failed to read directory "${src}"`, err);
-    return;
-  }
-  for (const entry of entries) {
-    const from = join(src, entry);
-    const to = join(dest, entry);
-    await fs.promises.cp(from, to, { recursive: true, force: true });
-  }
-}
-
-export async function syncVenvSitePackagesToVendor({
-  venvPath,
-  vendorDir,
-}: {
-  venvPath: string;
-  vendorDir: string;
-}) {
+export async function getVenvSitePackagesDirs(
+  venvPath: string
+): Promise<string[]> {
   const pythonBin = getVenvPythonBin(venvPath);
-  const sitePackageDirs = await getSitePackagesDirs(pythonBin);
-  await fs.promises.rm(vendorDir, { recursive: true, force: true });
-  await fs.promises.mkdir(vendorDir, { recursive: true });
-  for (const dir of sitePackageDirs) {
-    if (await pathExists(dir)) {
-      await copyDirContents(dir, vendorDir);
-    }
-  }
+  return getSitePackagesDirs(pythonBin);
 }
 
 async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {

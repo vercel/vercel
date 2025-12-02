@@ -25,9 +25,7 @@ import {
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
   syncProjectWithUv,
-  syncVenvSitePackagesToVendor,
-  installRequirement,
-  installRequirementsFile,
+  getVenvSitePackagesDirs,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
@@ -406,11 +404,20 @@ export const build: BuildV3 = async ({
   }
 
   const vendorDirName = resolveVendorDir();
-  const vendorTargetDir = join(vendorBaseDir, vendorDirName);
-  await syncVenvSitePackagesToVendor({
-    venvPath,
-    vendorDir: vendorTargetDir,
-  });
+  const vendorFiles: Files = {};
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+      const dirFiles = await glob('**', dir, vendorDirName);
+      for (const [p, f] of Object.entries(dirFiles)) {
+        vendorFiles[p] = f;
+      }
+    }
+  } catch (err) {
+    console.log('Failed to collect site-packages from virtual environment');
+    throw err;
+  }
 
   const vendorDir = vendorDirName;
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
@@ -459,18 +466,8 @@ export const build: BuildV3 = async ({
 
   const files: Files = await glob('**', globOptions);
 
-  // Mount cached vendor directory into the Lambda output under `_vendor`
-  try {
-    const cachedVendorAbs = join(vendorBaseDir, vendorDir);
-    if (fs.existsSync(cachedVendorAbs)) {
-      const vendorFiles = await glob('**', cachedVendorAbs, resolveVendorDir());
-      for (const [p, f] of Object.entries(vendorFiles)) {
-        files[p] = f;
-      }
-    }
-  } catch (err) {
-    console.log('Failed to include cached vendor directory');
-    throw err;
+  for (const [p, f] of Object.entries(vendorFiles)) {
+    files[p] = f;
   }
 
   // in order to allow the user to have `server.py`, we
@@ -543,6 +540,3 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
-
-// internal only - expect breaking changes if other packages depend on these exports
-export { installRequirement, installRequirementsFile };
