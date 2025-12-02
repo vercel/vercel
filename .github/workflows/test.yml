@@ -4,9 +4,9 @@ on:
   pull_request:
 
 env:
-  VERCEL_TELEMETRY_DISABLED: "1"
-  TURBO_REMOTE_ONLY: "true"
-  TURBO_TEAM: "vercel"
+  VERCEL_TELEMETRY_DISABLED: '1'
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
@@ -244,7 +244,7 @@ jobs:
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
-          FORCE_COLOR: "1"
+          FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
         run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
@@ -254,8 +254,8 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          FORCE_COLOR: "1"
-      - name: "Determine Turbo HIT or MISS"
+          FORCE_COLOR: '1'
+      - name: 'Determine Turbo HIT or MISS'
         if: ${{ !cancelled() }}
         id: turbo-summary
         shell: bash
@@ -263,9 +263,9 @@ jobs:
           TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
           echo "MISS COUNT: $TURBO_MISS_COUNT"
           echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
-      - name: "Upload Test Report to Datadog"
+      - name: 'Upload Test Report to Datadog'
         if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
-        run: "pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports"
+        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
           DD_ENV: ci
