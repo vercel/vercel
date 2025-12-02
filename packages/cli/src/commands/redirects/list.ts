@@ -129,7 +129,6 @@ export default async function list(client: Client, argv: string[]) {
 
 function formatRedirectsTable(
   redirects: Array<{
-    id: string;
     source: string;
     destination: string;
     permanent?: boolean;
