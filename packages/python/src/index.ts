@@ -19,13 +19,13 @@ import {
   FileFsRef,
 } from '@vercel/build-utils';
 import {
-  installPackagesIntoVenv,
   installRequirementsIntoVenv,
   resolveVendorDir,
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
   syncProjectWithUv,
   getVenvSitePackagesDirs,
+  ensureRuntimeDependencies,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
@@ -332,18 +332,15 @@ export const build: BuildV3 = async ({
     debug('Failed to install uv', err);
   }
 
-  const pinnedDeps = ['werkzeug==1.0.1'];
-  if (framework !== 'flask') {
-    pinnedDeps.push('uvicorn==0.38.0');
-  }
-  await installPackagesIntoVenv({
-    uvPath,
-    venvPath,
-    cwd: workPath,
-    packages: pinnedDeps,
-  });
-
   let installedFromProjectFiles = false;
+
+  const runtimeDependencies =
+    framework === 'flask'
+      ? [{ packageSpecifier: 'werkzeug==1.0.1', moduleName: 'werkzeug' }]
+      : [
+          { packageSpecifier: 'werkzeug==1.0.1', moduleName: 'werkzeug' },
+          { packageSpecifier: 'uvicorn==0.38.0', moduleName: 'uvicorn' },
+        ];
 
   // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
   const shouldUseUvSync = Boolean(uvLockDir || pyprojectDir);
@@ -402,6 +399,13 @@ export const build: BuildV3 = async ({
       requirementsFile: requirementsTxtPath,
     });
   }
+
+  await ensureRuntimeDependencies({
+    uvPath,
+    venvPath,
+    cwd: workPath,
+    dependencies: runtimeDependencies,
+  });
 
   const vendorDirName = resolveVendorDir();
   const vendorFiles: Files = {};

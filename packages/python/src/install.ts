@@ -71,6 +71,26 @@ export function resolveVendorDir() {
   return vendorDir;
 }
 
+async function isModuleAvailableInVenv(
+  venvPath: string,
+  moduleName: string
+): Promise<boolean> {
+  const pythonBin = getVenvPythonBin(venvPath);
+  const code = `
+from importlib import util
+spec = util.find_spec('${moduleName}'.replace('-', '_'))
+raise SystemExit(0 if spec else 1)
+`.trim();
+  try {
+    await execa(pythonBin, ['-c', code], {
+      env: createVenvEnv(venvPath),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function tryRunUvCommand({
   uvPath,
   args,
@@ -172,6 +192,41 @@ export async function installPackagesIntoVenv({
     venvPath,
     cwd,
     pipArgs: packages,
+  });
+}
+
+interface RuntimeDependency {
+  packageSpecifier: string;
+  moduleName: string;
+}
+
+export async function ensureRuntimeDependencies({
+  uvPath,
+  venvPath,
+  cwd,
+  dependencies,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  dependencies: RuntimeDependency[];
+}) {
+  if (!dependencies.length) return;
+  const missing: string[] = [];
+  for (const dep of dependencies) {
+    const installed = await isModuleAvailableInVenv(venvPath, dep.moduleName);
+    if (!installed) {
+      missing.push(dep.packageSpecifier);
+    }
+  }
+  if (!missing.length) {
+    return;
+  }
+  await installPackagesIntoVenv({
+    uvPath,
+    venvPath,
+    cwd,
+    packages: missing,
   });
 }
 
