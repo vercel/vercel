@@ -29,7 +29,7 @@
   "dependencies": {
     "@vercel/cervel": "workspace:*",
     "@vercel/nft": "1.1.1",
-    "@vercel/static-config": "3.1.2",
+    "@vercel/static-config": "workspace:*",
     "@vercel/introspection": "workspace:*",
     "fs-extra": "11.1.0",
     "rolldown": "1.0.0-beta.35"
@@ -39,7 +39,7 @@
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
     "@types/node": "22",
-    "@vercel/build-utils": "13.2.2",
+    "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "hono": "4.10.1",
     "jest-junit": "16.0.0",

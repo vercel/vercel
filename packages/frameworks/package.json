@@ -21,14 +21,14 @@
   "dependencies": {
     "@iarna/toml": "2.2.3",
     "js-yaml": "3.13.1",
-    "@vercel/error-utils": "2.0.3"
+    "@vercel/error-utils": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "14.18.33",
     "@types/node-fetch": "2.5.8",
-    "@vercel/routing-utils": "5.3.0",
+    "@vercel/routing-utils": "workspace:*",
     "ajv": "6.12.3",
     "jest-junit": "16.0.0",
     "typescript": "4.9.5"
