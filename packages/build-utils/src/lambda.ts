@@ -59,6 +59,12 @@ export interface LambdaOptionsBase {
    * When true, the Lambda runtime can be terminated mid-execution if the request is cancelled.
    */
   supportsCancellation?: boolean;
+
+  /**
+   * Whether to disable automatic fetch instrumentation.
+   * When true, the Function runtime will not automatically instrument fetch calls.
+   */
+  shouldDisableAutomaticFetchInstrumentation?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -151,6 +157,12 @@ export class Lambda {
    */
   supportsCancellation?: boolean;
 
+  /**
+   * Whether to disable automatic fetch instrumentation.
+   * When true, the Function runtime will not automatically instrument fetch calls.
+   */
+  shouldDisableAutomaticFetchInstrumentation?: boolean;
+
   constructor(opts: LambdaOptions) {
     const {
       handler,
@@ -170,6 +182,7 @@ export class Lambda {
       framework,
       experimentalTriggers,
       supportsCancellation,
+      shouldDisableAutomaticFetchInstrumentation,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -359,6 +372,8 @@ export class Lambda {
         : undefined;
     this.experimentalTriggers = experimentalTriggers;
     this.supportsCancellation = supportsCancellation;
+    this.shouldDisableAutomaticFetchInstrumentation =
+      shouldDisableAutomaticFetchInstrumentation;
   }
 
   async createZip(): Promise<Buffer> {

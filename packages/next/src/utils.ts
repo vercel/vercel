@@ -1093,6 +1093,9 @@ export async function createLambdaFromPseudoLayers({
       version: nextVersion,
     },
     experimentalAllowBundling,
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
 
@@ -3741,8 +3744,12 @@ export async function getNodeMiddleware({
     return null;
   }
   const routes: RouteWithSrc[] = [];
+  // Pass page: '/' to skip basePath addition in getRouteMatchers(), since
+  // functions-config-manifest matchers already have basePath baked in by
+  // Next.js build. This matches the behavior for edge middleware where
+  // page is '/' (root middleware) and basePath is not added.
   const routeMatchers = getRouteMatchers(
-    { matchers: middlewareFunctionConfig.matchers },
+    { matchers: middlewareFunctionConfig.matchers, page: '/' },
     routesManifest
   );
 
@@ -3867,6 +3874,9 @@ export async function getNodeMiddleware({
       [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
         new FileBlob({ data: launcherData }),
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return {
