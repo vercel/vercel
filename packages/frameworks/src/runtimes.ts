@@ -30,6 +30,7 @@ export const runtimes = [
         value: 'N/A',
       },
     },
+    sort: 1,
   },
   {
     name: 'Python',
@@ -62,6 +63,7 @@ export const runtimes = [
         value: 'N/A',
       },
     },
+    sort: 2,
   },
   {
     name: 'Other',
@@ -86,6 +88,7 @@ export const runtimes = [
       },
     },
     getOutputDirName: async () => 'public',
+    sort: 3,
   },
 ] as const;
 
