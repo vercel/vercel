@@ -1,7 +1,7 @@
-import { join, basename } from 'path';
+import { join, basename, dirname } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
-import { existsSync } from 'fs';
+import { accessSync, constants } from 'fs';
 import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
@@ -10,6 +10,7 @@ import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
+import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
 
 import output from '../../output-manager';
 
@@ -118,8 +119,11 @@ export function readLocalConfig(
   }
 
   try {
-    if (existsSync(target)) {
+    try {
+      accessSync(target, constants.F_OK);
       config = loadJSON.sync(target);
+    } catch {
+      // File doesn't exist, config remains undefined
     }
   } catch (err: unknown) {
     if (isError(err) && err.name === 'JSONError') {
@@ -138,6 +142,28 @@ export function readLocalConfig(
     return;
   }
 
-  config[fileNameSymbol] = basename(target);
+  // If reading from .vercel/vercel.json (compiled config), detect the source file
+  const isCompiledConfig =
+    process.env.VERCEL_TS_CONFIG_ENABLED &&
+    basename(target) === 'vercel.json' &&
+    basename(dirname(target)) === PROJECT_VERCEL_DIR;
+
+  if (isCompiledConfig) {
+    const workPath = dirname(dirname(target));
+    const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
+    let sourceFile: string | null = null;
+    for (const ext of VERCEL_CONFIG_EXTENSIONS) {
+      const configPath = join(workPath, `vercel.${ext}`);
+      try {
+        accessSync(configPath, constants.F_OK);
+        sourceFile = basename(configPath);
+        break;
+      } catch {}
+    }
+    config[fileNameSymbol] = sourceFile || 'vercel.ts';
+  } else {
+    config[fileNameSymbol] = basename(target);
+  }
+
   return config;
 }
