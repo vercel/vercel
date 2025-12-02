@@ -2,8 +2,13 @@ use axum::response::Response;
 use axum::{body::Body, response::IntoResponse};
 use http_body_util::BodyExt;
 use hyper::body::{Bytes, Frame};
+use std::convert::Infallible;
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
+use tower::{Layer, Service};
 
 use crate::{AppState, Error, Request, ResponseBody};
 
@@ -69,12 +74,6 @@ impl StreamingUtils {
         }
     }
 }
-
-use std::convert::Infallible;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use tower::{Layer, Service};
 
 /// A Tower layer that automatically handles streaming responses.
 ///
@@ -224,14 +223,15 @@ where
     }
 }
 
-pub fn stream_response<F>(generator: F) -> impl IntoResponse
+pub fn stream_response<F, Fut>(generator: F) -> impl IntoResponse
 where
-    F: FnOnce(mpsc::Sender<Result<Bytes, std::io::Error>>) + Send + 'static,
+    F: FnOnce(mpsc::Sender<Result<Bytes, std::io::Error>>) -> Fut + Send + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
 {
     let (tx, rx) = mpsc::channel::<Result<Bytes, std::io::Error>>(10);
 
     tokio::spawn(async move {
-        generator(tx);
+        generator(tx).await;
     });
 
     let stream = ReceiverStream::new(rx);
