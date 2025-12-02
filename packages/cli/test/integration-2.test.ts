@@ -113,12 +113,6 @@ async function setupProject(
   }
 
   await waitForPrompt(process, 'Linked to');
-
-  await waitForPrompt(
-    process,
-    'Would you like to pull environment variables now?'
-  );
-  process.stdin?.write('n\n');
 }
 
 beforeAll(async () => {
