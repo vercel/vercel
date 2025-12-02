@@ -1,10 +1,17 @@
 import fs from 'fs';
-import { join, delimiter as pathDelimiter } from 'path';
+import { delimiter, join, delimiter as pathDelimiter } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
+import execa = require('execa');
+
+const isWin = process.platform === 'win32';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };
+
+export function getVenvBinDir(venvPath: string) {
+  return join(venvPath, isWin ? 'Scripts' : 'bin');
+}
 
 export function useVirtualEnv(
   workPath: string,
@@ -32,6 +39,45 @@ export function useVirtualEnv(
     }
   }
   return { pythonCmd };
+}
+
+export function createVenvEnv(
+  venvPath: string,
+  baseEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const pathKey = isWin ? 'Path' : 'PATH';
+  const env = { ...baseEnv, VIRTUAL_ENV: venvPath };
+  const binDir = getVenvBinDir(venvPath);
+  const existingPath = env[pathKey] || process.env[pathKey] || '';
+  env[pathKey] = existingPath ? `${binDir}${delimiter}${existingPath}` : binDir;
+  return env;
+}
+
+export async function ensureVenv({
+  pythonPath,
+  venvPath,
+}: {
+  pythonPath: string;
+  venvPath: string;
+}) {
+  const marker = join(venvPath, 'pyvenv.cfg');
+  try {
+    await fs.promises.access(marker);
+    return;
+  } catch {
+    // fall through to creation
+  }
+  await fs.promises.mkdir(venvPath, { recursive: true });
+  console.log(`Creating virtual environment at "${venvPath}"...`);
+  await execa(pythonPath, ['-m', 'venv', venvPath]);
+}
+
+export function getVenvPythonBin(venvPath: string) {
+  return join(getVenvBinDir(venvPath), isWin ? 'python.exe' : 'python');
+}
+
+export function getVenvPipBin(venvPath: string) {
+  return join(getVenvBinDir(venvPath), isWin ? 'pip.exe' : 'pip');
 }
 
 export async function runPyprojectScript(

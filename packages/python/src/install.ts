@@ -4,6 +4,7 @@ import os from 'os';
 import { join } from 'path';
 import which from 'which';
 import { Meta, debug } from '@vercel/build-utils';
+import { getVenvPythonBin, getVenvPipBin, createVenvEnv } from './utils';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -68,6 +69,218 @@ async function areRequirementsInstalled(
 export function resolveVendorDir() {
   const vendorDir = process.env.VERCEL_PYTHON_VENDOR_DIR || '_vendor';
   return vendorDir;
+}
+
+async function tryRunUvCommand({
+  uvPath,
+  args,
+  cwd,
+  venvPath,
+}: {
+  uvPath: string | null;
+  args: string[];
+  cwd: string;
+  venvPath: string;
+}): Promise<boolean> {
+  if (!uvPath) {
+    return false;
+  }
+  const pretty = `${uvPath} ${args.join(' ')}`;
+  debug(`Running "${pretty}"...`);
+  try {
+    await execa(uvPath, args, {
+      cwd,
+      env: createVenvEnv(venvPath),
+    });
+    return true;
+  } catch (err) {
+    console.log(`Failed to run "${pretty}"`);
+    debug('uv command failed', err);
+    return false;
+  }
+}
+
+async function runUvCommandOrThrow(options: {
+  uvPath: string | null;
+  args: string[];
+  cwd: string;
+  venvPath: string;
+}) {
+  const ok = await tryRunUvCommand(options);
+  if (!ok) {
+    throw new Error('uv is required for this project but failed to run.');
+  }
+}
+
+async function runUvPipInstallArgs({
+  uvPath,
+  venvPath,
+  cwd,
+  pipArgs,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  pipArgs: string[];
+}) {
+  const pythonBin = getVenvPythonBin(venvPath);
+  const uvArgs = [
+    'pip',
+    'install',
+    '--python',
+    pythonBin,
+    '--no-compile',
+    '--upgrade',
+    ...pipArgs,
+  ];
+  const ranUv = await tryRunUvCommand({ uvPath, args: uvArgs, cwd, venvPath });
+  if (ranUv) {
+    return;
+  }
+  const pipBin = getVenvPipBin(venvPath);
+  const pipInstallArgs = [
+    'install',
+    '--disable-pip-version-check',
+    '--no-compile',
+    '--upgrade',
+    ...pipArgs,
+  ];
+  const pretty = `${pipBin} ${pipInstallArgs.join(' ')}`;
+  debug(`Running "${pretty}"...`);
+  await execa(pipBin, pipInstallArgs, {
+    cwd,
+    env: createVenvEnv(venvPath),
+  });
+}
+
+export async function installPackagesIntoVenv({
+  uvPath,
+  venvPath,
+  cwd,
+  packages,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  packages: string[];
+}) {
+  if (!packages.length) {
+    return;
+  }
+  await runUvPipInstallArgs({
+    uvPath,
+    venvPath,
+    cwd,
+    pipArgs: packages,
+  });
+}
+
+export async function installRequirementsIntoVenv({
+  uvPath,
+  venvPath,
+  cwd,
+  requirementsFile,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  requirementsFile: string;
+}) {
+  await runUvPipInstallArgs({
+    uvPath,
+    venvPath,
+    cwd,
+    pipArgs: ['-r', requirementsFile],
+  });
+}
+
+export async function syncProjectWithUv({
+  uvPath,
+  venvPath,
+  projectDir,
+  locked,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  projectDir: string;
+  locked: boolean;
+}) {
+  const args = ['sync', '--active'];
+  if (locked) {
+    args.push('--locked');
+  }
+  args.push('--no-editable');
+  await runUvCommandOrThrow({
+    uvPath,
+    args,
+    cwd: projectDir,
+    venvPath,
+  });
+}
+
+async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
+  const code = `
+import json
+import sysconfig
+paths = []
+for key in ("purelib", "platlib"):
+    candidate = sysconfig.get_path(key)
+    if candidate and candidate not in paths:
+        paths.append(candidate)
+print(json.dumps(paths))
+`.trim();
+  const { stdout } = await execa(pythonBin, ['-c', code]);
+  try {
+    const parsed = JSON.parse(stdout);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((p): p is string => typeof p === 'string');
+    }
+  } catch (err) {
+    debug('Failed to parse site-packages output', err);
+  }
+  return [];
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await fs.promises.access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function copyDirContents(src: string, dest: string) {
+  let entries: string[];
+  try {
+    entries = await fs.promises.readdir(src);
+  } catch (err) {
+    debug(`Failed to read directory "${src}"`, err);
+    return;
+  }
+  for (const entry of entries) {
+    const from = join(src, entry);
+    const to = join(dest, entry);
+    await fs.promises.cp(from, to, { recursive: true, force: true });
+  }
+}
+
+export async function syncVenvSitePackagesToVendor({
+  venvPath,
+  vendorDir,
+}: {
+  venvPath: string;
+  vendorDir: string;
+}) {
+  const pythonBin = getVenvPythonBin(venvPath);
+  const sitePackageDirs = await getSitePackagesDirs(pythonBin);
+  await fs.promises.rm(vendorDir, { recursive: true, force: true });
+  await fs.promises.mkdir(vendorDir, { recursive: true });
+  for (const dir of sitePackageDirs) {
+    if (await pathExists(dir)) {
+      await copyDirContents(dir, vendorDir);
+    }
+  }
 }
 
 async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
@@ -302,6 +515,7 @@ interface InstallRequirementsFileArg {
   args?: string[];
 }
 
+// Deprecated
 export async function installRequirementsFile({
   pythonPath,
   pipPath,
@@ -332,49 +546,6 @@ export async function installRequirementsFile({
     ['--upgrade', '-r', filePath, ...args],
     targetDir
   );
-}
-
-export async function exportRequirementsFromUv(
-  projectDir: string,
-  uvPath: string | null,
-  options: { locked?: boolean } = {}
-): Promise<string> {
-  const { locked = false } = options;
-  if (!uvPath) {
-    throw new Error('uv is not available to export requirements');
-  }
-  // Export only runtime deps:
-  // - --no-default-groups: exclude configured default groups (e.g. dev)
-  // - --no-emit-workspace: do not include the workspace/root project (avoids extras/editable)
-  // - --no-editable: ensure no editable installs are emitted
-  const args: string[] = [
-    'export',
-    '--no-default-groups',
-    '--no-emit-workspace',
-    '--no-editable',
-  ];
-  // Prefer using the lockfile strictly if present
-  if (locked) {
-    // "--frozen" ensures the lock is respected and not updated during export
-    args.push('--frozen');
-  }
-  debug(`Running "${uvPath} ${args.join(' ')}" in ${projectDir}...`);
-  let stdout: string;
-  try {
-    const { stdout: out } = await execa(uvPath, args, { cwd: projectDir });
-    stdout = out;
-  } catch (err) {
-    throw new Error(
-      `Failed to run "${uvPath} ${args.join(' ')}": ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
-  const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'vercel-uv-'));
-  const outPath = join(tmpDir, 'requirements.uv.txt');
-  await fs.promises.writeFile(outPath, stdout);
-  debug(`Exported requirements to ${outPath}`);
-  return outPath;
 }
 
 export async function exportRequirementsFromPipfile({
