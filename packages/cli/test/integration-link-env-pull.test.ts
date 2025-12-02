@@ -61,7 +61,7 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What's your project's name? (${projectName})`);
+  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'In which directory is your code located?');
@@ -106,7 +106,7 @@ test('[vc link] should not create .env.local when linking new project', async ()
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What's your project's name? (${projectName})`);
+  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'In which directory is your code located?');
