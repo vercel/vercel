@@ -5,6 +5,15 @@ import path from 'path';
 import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
 
+jest.mock('../src/install', () => {
+  const actual =
+    jest.requireActual<typeof import('../src/install')>('../src/install');
+  return {
+    ...actual,
+    getVenvSitePackagesDirs: jest.fn(async () => []),
+  };
+});
+
 const tmpPythonDir = path.join(
   tmpdir(),
   `vc-test-python-${Math.floor(Math.random() * 1e6)}`
