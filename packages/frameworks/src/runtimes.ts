@@ -91,7 +91,6 @@ export const runtimes = [
         placeholder: '`public` if it exists, or `.`',
       },
     },
-    getOutputDirName: async () => 'public',
     sort: 3,
   },
 ] as const;
