@@ -1,6 +1,6 @@
 [package]
 name = "vercel_runtime"
-version = "2.0.0-alpha.4"
+version = "2.0.0"
 edition = "2024"
 description = "Vercel Runtime for Rust"
 license = "Apache-2.0"
