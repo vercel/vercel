@@ -96,35 +96,11 @@ export const addSubcommand = {
       required: true,
     },
   ],
-  options: [
-    {
-      name: 'permanent',
-      description: 'Create a permanent redirect (308)',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-    },
-    {
-      name: 'status',
-      description: 'HTTP status code for the redirect',
-      shorthand: null,
-      type: Number,
-      argument: 'CODE',
-      deprecated: false,
-    },
-  ],
+  options: [],
   examples: [
     {
-      name: 'Add a temporary redirect',
+      name: 'Add a new redirect',
       value: `${packageName} redirects add /old-path /new-path`,
-    },
-    {
-      name: 'Add a permanent redirect',
-      value: `${packageName} redirects add /old-path /new-path --permanent`,
-    },
-    {
-      name: 'Add a redirect with a specific status code',
-      value: `${packageName} redirects add /old-path /new-path --status 301`,
     },
   ],
 } as const;
