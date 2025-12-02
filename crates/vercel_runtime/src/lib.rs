@@ -192,10 +192,7 @@ impl AppState {
     }
 }
 
-pub fn send_message<T: Serialize>(
-    stream: &Arc<Mutex<UnixStream>>,
-    message: T,
-) -> Result<(), Error> {
+fn send_message<T: Serialize>(stream: &Arc<Mutex<UnixStream>>, message: T) -> Result<(), Error> {
     let json_str = serde_json::to_string(&message)?;
     let msg = format!("{json_str}\0");
 
@@ -211,7 +208,7 @@ pub fn send_message<T: Serialize>(
     Ok(())
 }
 
-pub fn enqueue_or_send_message<T: Serialize>(
+fn enqueue_or_send_message<T: Serialize>(
     stream: &Option<Arc<Mutex<UnixStream>>>,
     message: T,
 ) -> Result<(), Error> {
@@ -246,7 +243,7 @@ pub fn enqueue_or_send_message<T: Serialize>(
     Ok(())
 }
 
-pub fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
+fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
     if let Some(stream) = stream {
         if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
             while let Some(json_str) = buffer.0.pop_front() {
@@ -264,7 +261,7 @@ pub fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
     }
 }
 
-pub fn flush_init_log_buf_to_stderr() {
+fn flush_init_log_buf_to_stderr() {
     if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
         let mut combined: Vec<String> = Vec::new();
 
@@ -297,7 +294,7 @@ where
     ServiceFn { f }
 }
 
-/// A Tower service wrapper around a function  
+/// A Tower service wrapper around a function
 #[derive(Clone)]
 pub struct ServiceFn<F> {
     f: F,
