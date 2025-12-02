@@ -45,9 +45,11 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  detectRuntime,
   isOfficialRuntime,
+  LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
-import { frameworkList } from '@vercel/frameworks';
+import { frameworkList, runtimeList } from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
 import link from '../output/link';
@@ -573,6 +575,27 @@ export default class DevServer {
       ...this.originalProjectSettings,
       ...pickOverrides(vercelConfig),
     };
+
+    // If neither a framework nor a runtime has been configured, attempt to
+    // detect a project-level runtime (for example, a Python app without a
+    // framework) so that zero-config dev uses the appropriate builder.
+    const effectiveProjectSettings =
+      vercelConfig.projectSettings || this.projectSettings;
+    if (
+      !effectiveProjectSettings?.framework &&
+      !effectiveProjectSettings?.runtime
+    ) {
+      const runtimeRecord = await detectRuntime({
+        fs: new LocalFileSystemDetector(this.cwd),
+        runtimeList,
+      });
+      if (runtimeRecord?.slug) {
+        this.projectSettings = {
+          ...this.projectSettings,
+          runtime: runtimeRecord.slug,
+        };
+      }
+    }
 
     const { error: routeError, routes: maybeRoutes } =
       getTransformedRoutes(vercelConfig);

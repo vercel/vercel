@@ -241,7 +241,7 @@ export interface Runtime {
   slug: string | null;
   /**
    * A URL to the logo of the runtime
-   * @example "https://api-frameworks.vercel.sh/runtime-logos/node.svg"
+   * @example "https://api-frameworks.vercel.sh/framework-logos/node.png"
    */
   logo: string;
   /**

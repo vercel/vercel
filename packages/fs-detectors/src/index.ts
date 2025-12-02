@@ -11,6 +11,7 @@ export {
   detectFrameworkRecord,
   detectFrameworkVersion,
 } from './detect-framework';
+export { detectRuntime } from './detect-runtime';
 export { getProjectPaths } from './get-project-paths';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { LocalFileSystemDetector } from './detectors/local-file-system-detector';
