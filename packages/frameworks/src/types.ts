@@ -319,4 +319,9 @@ export interface Runtime {
    * Array of slugs for other runtime presets which this runtime supersedes.
    */
   supersedes?: string[];
+  /**
+   * A ponderated value to sort matching frameworks
+   * @example 1
+   */
+  sort?: number;
 }
