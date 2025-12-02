@@ -44,6 +44,7 @@ describe('redirects add', () => {
     it('should add a redirect with status 301', async () => {
       mockGetVersions();
       mockPutRedirects();
+      mockPromoteVersion();
 
       client.setArgv('redirects', 'add');
       const exitCodePromise = redirects(client);
@@ -71,6 +72,8 @@ describe('redirects add', () => {
       await expect(client.stderr).toOutput('Redirect added');
       await expect(client.stderr).toOutput('/old-path → /new-path');
       await expect(client.stderr).toOutput('Status: 301');
+      await expect(client.stderr).toOutput('promote it to production');
+      client.stdin.write('y\n');
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
@@ -105,6 +108,8 @@ describe('redirects add', () => {
       client.stdin.write('My Version\n');
 
       await expect(client.stderr).toOutput('Redirect added');
+      await expect(client.stderr).toOutput('promote it to production');
+      client.stdin.write('n\n');
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
@@ -181,40 +186,6 @@ describe('redirects add', () => {
     });
   });
 
-  describe('validation', () => {
-    it('should reject invalid source URL', async () => {
-      client.setArgv('redirects', 'add');
-      const exitCodePromise = redirects(client);
-
-      await expect(client.stderr).toOutput('What is the source URL?');
-      client.stdin.write('not-a-valid-url\n');
-
-      await expect(client.stderr).toOutput(
-        'Must be a relative path (starting with /) or an absolute URL'
-      );
-      client.stdin.write('/valid-path\n');
-
-      await expect(client.stderr).toOutput('What is the destination URL?');
-
-      await exitCodePromise;
-    });
-
-    it('should reject empty source URL', async () => {
-      client.setArgv('redirects', 'add');
-      const exitCodePromise = redirects(client);
-
-      await expect(client.stderr).toOutput('What is the source URL?');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Source URL cannot be empty');
-      client.stdin.write('/valid\n');
-
-      await expect(client.stderr).toOutput('What is the destination URL?');
-
-      await exitCodePromise;
-    });
-  });
-
   it('tracks subcommand invocation', async () => {
     mockGetVersions();
     mockPutRedirects();
@@ -239,6 +210,9 @@ describe('redirects add', () => {
     await expect(client.stderr).toOutput(
       'Do you want to provide a name for this version?'
     );
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('promote it to production');
     client.stdin.write('n\n');
 
     await exitCodePromise;

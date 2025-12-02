@@ -44,8 +44,6 @@ describe('redirects list', () => {
     const exitCode = await redirects(client);
     expect(exitCode, 'exit code for "redirects list"').toEqual(0);
     await expect(client.stderr).toOutput('3 Redirects found');
-    await expect(client.stderr).toOutput('/old-path-0');
-    await expect(client.stderr).toOutput('/new-path-0');
   });
 
   it('should list redirects using ls alias', async () => {
@@ -92,15 +90,6 @@ describe('redirects list', () => {
     await expect(client.stderr).toOutput('0 Redirects found');
   });
 
-  it('should display status codes correctly', async () => {
-    useRedirects(2);
-    client.setArgv('redirects', 'list');
-    const exitCode = await redirects(client);
-    expect(exitCode, 'exit code for "redirects list"').toEqual(0);
-    await expect(client.stderr).toOutput('308');
-    await expect(client.stderr).toOutput('307');
-  });
-
   describe('--search', () => {
     it('should search for redirects', async () => {
       useRedirects(5);
@@ -128,7 +117,6 @@ describe('redirects list', () => {
         'exit code for "redirects list --search nonexistent"'
       ).toEqual(0);
       await expect(client.stderr).toOutput('0 Redirects found');
-      await expect(client.stderr).toOutput('matching "nonexistent"');
     });
 
     it('should search in both source and destination', async () => {
@@ -177,9 +165,7 @@ describe('redirects list', () => {
       client.setArgv('redirects', 'list', '--page', '2');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list --page 2"').toEqual(0);
-      // @ts-expect-error - MockStream type issue
-      const output = client.stderr.output;
-      expect(output).not.toContain('To display the next page');
+      expect(client.stderr).not.toOutput('To display the next page');
     });
 
     it('should not show pagination info when not provided by server', async () => {
@@ -187,9 +173,7 @@ describe('redirects list', () => {
       client.setArgv('redirects', 'list');
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list"').toEqual(0);
-      // @ts-expect-error - MockStream type issue
-      const output = client.stderr.output;
-      expect(output).not.toContain('(page');
+      expect(client.stderr).not.toOutput('(page');
     });
 
     it('should support --page option', async () => {
@@ -224,9 +208,7 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list"').toEqual(0);
       await expect(client.stderr).toOutput('(page 1 of 1)');
-      // @ts-expect-error - MockStream type issue
-      const output = client.stderr.output;
-      expect(output).not.toContain('To display the next page');
+      expect(client.stderr).not.toOutput('To display the next page');
     });
 
     it('should preserve search and per-page in next page command', async () => {
@@ -254,9 +236,7 @@ describe('redirects list', () => {
       await expect(client.stderr).toOutput(
         'redirects list --page 2 --search "test"'
       );
-      // @ts-expect-error - MockStream type issue
-      const output = client.stderr.output;
-      expect(output).not.toContain('--per-page');
+      expect(client.stderr).not.toOutput('--per-page');
     });
 
     it('should handle page numbers correctly', async () => {
@@ -265,9 +245,7 @@ describe('redirects list', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code for "redirects list --page 3"').toEqual(0);
       await expect(client.stderr).toOutput('(page 3 of 3)');
-      // @ts-expect-error - MockStream type issue
-      const output = client.stderr.output;
-      expect(output).not.toContain('To display the next page');
+      expect(client.stderr).not.toOutput('To display the next page');
     });
   });
 

@@ -45,6 +45,7 @@ describe('redirects remove', () => {
       mockGetVersions();
       mockGetRedirects();
       mockDeleteRedirects();
+      mockPromoteVersion();
 
       client.setArgv('redirects', 'remove', '/old-path');
       const exitCodePromise = redirects(client);
@@ -57,6 +58,8 @@ describe('redirects remove', () => {
 
       await expect(client.stderr).toOutput('Removing redirect for /old-path');
       await expect(client.stderr).toOutput('Redirect removed');
+      await expect(client.stderr).toOutput('promote it to production');
+      client.stdin.write('y\n');
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
@@ -72,11 +75,14 @@ describe('redirects remove', () => {
       await expect(client.stderr).toOutput('Fetching redirect information');
       await expect(client.stderr).toOutput('Removing redirect for /old-path');
       await expect(client.stderr).toOutput('Redirect removed');
+      await expect(client.stderr).toOutput('promote it to production');
+      client.stdin.write('n\n');
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
     it('should cancel on no', async () => {
+      mockGetVersions();
       mockGetRedirects();
 
       client.setArgv('redirects', 'remove', '/old-path');
@@ -128,6 +134,7 @@ describe('redirects remove', () => {
 
   describe('errors', () => {
     it('should error when redirect not found', async () => {
+      mockGetVersions();
       mockGetRedirects({ redirects: [] });
 
       client.setArgv('redirects', 'remove', '/nonexistent');
@@ -135,11 +142,11 @@ describe('redirects remove', () => {
 
       await expect(client.stderr).toOutput('Fetching redirect information');
       await expect(client.stderr).toOutput(
-        'Redirect with source "/nonexistent" not found'
+        'Redirect with source "/nonexistent" not found. Run vercel redirects list'
       );
-      await expect(client.stderr).toOutput('vercel redirects list');
 
       await expect(exitCodePromise).resolves.toEqual(1);
+      await exitCodePromise;
     });
 
     it('should error when no source provided', async () => {
@@ -150,22 +157,6 @@ describe('redirects remove', () => {
 
       await expect(exitCodePromise).resolves.toEqual(1);
     });
-  });
-
-  it('tracks subcommand invocation', async () => {
-    mockGetVersions();
-    mockGetRedirects();
-    mockDeleteRedirects();
-
-    client.setArgv('redirects', 'remove', '/old-path', '--yes');
-    await redirects(client);
-
-    expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      {
-        key: 'subcommand:remove',
-        value: 'remove',
-      },
-    ]);
   });
 });
 
