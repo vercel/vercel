@@ -3,3 +3,6 @@ packages:
   - 'api'
   - 'examples'
   - 'internals/*'
+
+catalog:
+  '@vercel/nft': '1.1.1'
