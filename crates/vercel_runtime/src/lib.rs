@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::convert::Infallible;
 use std::env;
 use std::future::Future;
@@ -10,272 +10,105 @@ use std::sync::{Arc, Mutex};
 use http_body_util::BodyExt;
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
-use hyper::service::service_fn;
+use hyper::service::service_fn as hyper_service_fn;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
 use base64::prelude::*;
 use std::collections::VecDeque;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::task::{Context, Poll};
+use tower::Service;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RequestContext {
-    #[serde(rename = "invocationId")]
-    pub invocation_id: String,
-    #[serde(rename = "requestId")]
-    pub request_id: u64,
-}
+mod ipc;
+use ipc::core::{EndMessage, StartMessage};
+use ipc::log::{Level, LogMessage};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct StartMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: StartPayload,
-}
+#[cfg(feature = "axum")]
+pub mod axum;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct StartPayload {
-    #[serde(rename = "initDuration")]
-    pub init_duration: u64,
-    #[serde(rename = "httpPort")]
-    pub http_port: u16,
-}
-
-impl StartMessage {
-    pub fn new(init_duration: u64, http_port: u16) -> Self {
-        Self {
-            message_type: "server-started".to_string(),
-            payload: StartPayload {
-                init_duration,
-                http_port,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EndMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: EndPayload,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EndPayload {
-    pub context: RequestContext,
-    pub error: Option<serde_json::Value>,
-}
-
-impl EndMessage {
-    pub fn new(invocation_id: String, request_id: u64, error: Option<serde_json::Value>) -> Self {
-        Self {
-            message_type: "end".to_string(),
-            payload: EndPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                error,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MetricMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: MetricPayload,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MetricPayload {
-    pub context: RequestContext,
-    #[serde(rename = "type")]
-    pub metric_type: Option<String>,
-    #[serde(rename = "payload")]
-    pub metric_payload: Option<serde_json::Value>,
-}
-
-impl MetricMessage {
-    pub fn new(
-        invocation_id: String,
-        request_id: u64,
-        metric_type: Option<String>,
-        metric_payload: Option<serde_json::Value>,
-    ) -> Self {
-        Self {
-            message_type: "metric".to_string(),
-            payload: MetricPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                metric_type,
-                metric_payload,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum Stream {
-    Stdout,
-    Stderr,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum Level {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum LogType {
-    Stream { stream: Stream },
-    Level { level: Level },
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LogPayload {
-    pub context: RequestContext,
-    pub message: String,
-    #[serde(flatten)]
-    pub log_type: LogType,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LogMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: LogPayload,
-}
-
-impl LogMessage {
-    pub fn stream(invocation_id: String, request_id: u64, message: String, stream: Stream) -> Self {
-        Self {
-            message_type: "log".to_string(),
-            payload: LogPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                message,
-                log_type: LogType::Stream { stream },
-            },
-        }
-    }
-
-    pub fn level(invocation_id: String, request_id: u64, message: String, level: Level) -> Self {
-        Self {
-            message_type: "log".to_string(),
-            payload: LogPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                message,
-                log_type: LogType::Level { level },
-            },
-        }
-    }
-
-    pub fn encode_message(message: &str) -> String {
-        use base64::Engine;
-        use base64::engine::general_purpose::STANDARD as BASE64_ENCODER;
-        BASE64_ENCODER.encode(message)
-    }
-
-    pub fn with_stream(
-        invocation_id: String,
-        request_id: u64,
-        message: &str,
-        stream: Stream,
-    ) -> Self {
-        Self::stream(
-            invocation_id,
-            request_id,
-            Self::encode_message(message),
-            stream,
-        )
-    }
-
-    pub fn with_level(invocation_id: String, request_id: u64, message: &str, level: Level) -> Self {
-        Self::level(
-            invocation_id,
-            request_id,
-            Self::encode_message(message),
-            level,
-        )
-    }
-}
-
-pub type ResponseBody = http_body_util::combinators::BoxBody<Bytes, Error>;
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub use hyper::Response;
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Request = hyper::Request<hyper::body::Incoming>;
 
-/// Trait for automatic body conversion to ResponseBody
-pub trait IntoResponseBody {
-    fn into_response_body(self) -> ResponseBody;
-}
+/// A wrapper around BoxBody that allows implementing From traits
+#[derive(Debug)]
+pub struct ResponseBody(pub http_body_util::combinators::BoxBody<Bytes, Error>);
 
-impl IntoResponseBody for &str {
-    fn into_response_body(self) -> ResponseBody {
-        http_body_util::Full::new(Bytes::from(self.to_string()))
-            .map_err(|e| Box::new(e) as Error)
-            .boxed()
+impl std::ops::Deref for ResponseBody {
+    type Target = http_body_util::combinators::BoxBody<Bytes, Error>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl IntoResponseBody for String {
-    fn into_response_body(self) -> ResponseBody {
-        // For large strings, ensure we have proper buffering
-        let bytes = Bytes::from(self);
-        http_body_util::Full::new(bytes)
-            .map_err(|e| Box::new(e) as Error)
-            .boxed()
+impl std::ops::DerefMut for ResponseBody {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
-impl IntoResponseBody for Bytes {
-    fn into_response_body(self) -> ResponseBody {
-        http_body_util::Full::new(self)
-            .map_err(|e| Box::new(e) as Error)
-            .boxed()
+impl http_body::Body for ResponseBody {
+    type Data = Bytes;
+    type Error = Error;
+
+    fn poll_frame(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        std::pin::Pin::new(&mut self.0).poll_frame(cx)
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.0.is_end_stream()
+    }
+
+    fn size_hint(&self) -> http_body::SizeHint {
+        self.0.size_hint()
     }
 }
 
-impl IntoResponseBody for http_body_util::Full<Bytes> {
-    fn into_response_body(self) -> ResponseBody {
-        self.map_err(|e| Box::new(e) as Error).boxed()
+impl From<&str> for ResponseBody {
+    fn from(value: &str) -> Self {
+        let body = http_body_util::Full::new(Bytes::from(value.to_string()))
+            .map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
     }
 }
 
-impl<T> IntoResponseBody for http_body_util::StreamBody<T>
+impl From<String> for ResponseBody {
+    fn from(value: String) -> Self {
+        let bytes = Bytes::from(value);
+        let body = http_body_util::Full::new(bytes).map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
+    }
+}
+
+impl From<Bytes> for ResponseBody {
+    fn from(value: Bytes) -> Self {
+        let body = http_body_util::Full::new(value).map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
+    }
+}
+
+impl From<http_body_util::Full<Bytes>> for ResponseBody {
+    fn from(value: http_body_util::Full<Bytes>) -> Self {
+        let body = value.map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
+    }
+}
+
+impl<T> From<http_body_util::StreamBody<T>> for ResponseBody
 where
     T: tokio_stream::Stream<Item = Result<hyper::body::Frame<Bytes>, Error>>
         + Send
         + Sync
         + 'static,
 {
-    fn into_response_body(self) -> ResponseBody {
-        self.boxed()
-    }
-}
-
-pub struct ResponseBuilder;
-
-impl ResponseBuilder {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> hyper::http::response::Builder {
-        hyper::Response::builder()
+    fn from(value: http_body_util::StreamBody<T>) -> Self {
+        ResponseBody(value.boxed())
     }
 }
 
@@ -289,7 +122,7 @@ lazy_static::lazy_static! {
     };
 }
 
-// Register exit handler to flush buffered messages (like Python's atexit.register)
+// Register exit handler to flush buffered messages
 fn register_exit_handler() {
     extern "C" fn exit_handler() {
         flush_init_log_buf_to_stderr();
@@ -359,10 +192,7 @@ impl AppState {
     }
 }
 
-pub fn send_message<T: Serialize>(
-    stream: &Arc<Mutex<UnixStream>>,
-    message: T,
-) -> Result<(), Error> {
+fn send_message<T: Serialize>(stream: &Arc<Mutex<UnixStream>>, message: T) -> Result<(), Error> {
     let json_str = serde_json::to_string(&message)?;
     let msg = format!("{json_str}\0");
 
@@ -378,7 +208,7 @@ pub fn send_message<T: Serialize>(
     Ok(())
 }
 
-pub fn enqueue_or_send_message<T: Serialize>(
+fn enqueue_or_send_message<T: Serialize>(
     stream: &Option<Arc<Mutex<UnixStream>>>,
     message: T,
 ) -> Result<(), Error> {
@@ -397,7 +227,7 @@ pub fn enqueue_or_send_message<T: Serialize>(
             buffer.0.push_back(json_str);
             buffer.1 += msg_len;
         } else {
-            // Fallback to stderr if buffer is full - decode base64 like Python does
+            // Fallback to stderr if buffer is full - decode base64
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
                 && let Some(payload) = parsed.get("payload")
                 && let Some(msg) = payload.get("message")
@@ -413,14 +243,14 @@ pub fn enqueue_or_send_message<T: Serialize>(
     Ok(())
 }
 
-pub fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
+fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
     if let Some(stream) = stream {
         if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
             while let Some(json_str) = buffer.0.pop_front() {
                 if let Ok(message) = serde_json::from_str::<serde_json::Value>(&json_str)
-                    && let Err(e) = send_message(stream, message)
+                    && let Err(_e) = send_message(stream, message)
                 {
-                    eprintln!("Failed to send buffered message: {}", e);
+                    // Failed to send buffered message
                     break;
                 }
             }
@@ -431,7 +261,7 @@ pub fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
     }
 }
 
-pub fn flush_init_log_buf_to_stderr() {
+fn flush_init_log_buf_to_stderr() {
     if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
         let mut combined: Vec<String> = Vec::new();
 
@@ -455,30 +285,134 @@ pub fn flush_init_log_buf_to_stderr() {
     }
 }
 
-pub async fn run<H, F>(handler: H) -> Result<(), Error>
+/// Trait that abstracts over handler function signatures
+pub trait Handler {
+    type Future: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static;
+    fn call(&self, req: Request, state: AppState) -> Self::Future;
+}
+
+/// Implementation for handlers that take both Request and AppState
+impl<F, Fut> Handler for F
 where
-    H: Fn(AppState, hyper::Request<hyper::body::Incoming>) -> F + Send + Sync + 'static + Copy,
-    F: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Future = Fut;
+
+    fn call(&self, req: Request, state: AppState) -> Self::Future {
+        self(req, state)
+    }
+}
+
+/// Wrapper for stateless handlers that only take Request
+#[derive(Clone)]
+pub struct StatelessHandler<F> {
+    f: F,
+}
+
+impl<F, Fut> Handler for StatelessHandler<F>
+where
+    F: Fn(Request) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Future = Fut;
+
+    fn call(&self, req: Request, _state: AppState) -> Self::Future {
+        (self.f)(req)
+    }
+}
+
+/// Service function creation trait for different handler signatures
+pub trait IntoServiceFn<Args> {
+    type Handler: Handler;
+    fn into_service_fn(self) -> ServiceFn<Self::Handler>;
+}
+
+/// Implementation for handlers that take Request and AppState (new signature)
+impl<F, Fut> IntoServiceFn<(Request, AppState)> for F
+where
+    F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Handler = F;
+
+    fn into_service_fn(self) -> ServiceFn<Self::Handler> {
+        ServiceFn { f: self }
+    }
+}
+
+/// Implementation for handlers that only take Request (stateless)
+impl<F, Fut> IntoServiceFn<(Request,)> for F
+where
+    F: Fn(Request) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Handler = StatelessHandler<F>;
+
+    fn into_service_fn(self) -> ServiceFn<Self::Handler> {
+        ServiceFn {
+            f: StatelessHandler { f: self },
+        }
+    }
+}
+
+/// Creates a Tower service from a handler function
+pub fn service_fn<F, Args>(handler: F) -> ServiceFn<F::Handler>
+where
+    F: IntoServiceFn<Args>,
+{
+    handler.into_service_fn()
+}
+
+/// A Tower service wrapper around a handler function
+#[derive(Clone)]
+pub struct ServiceFn<H> {
+    f: H,
+}
+
+impl<H> Service<(AppState, Request)> for ServiceFn<H>
+where
+    H: Handler + Clone + Send + 'static,
+    H::Future: Send + 'static,
+{
+    type Response = Response<ResponseBody>;
+    type Error = Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, (state, req): (AppState, Request)) -> Self::Future {
+        let f = self.f.clone();
+        Box::pin(async move { f.call(req, state).await })
+    }
+}
+
+/// Run a Tower service with Vercel's runtime
+pub async fn run<S>(service: S) -> Result<(), Error>
+where
+    S: tower::Service<
+            (AppState, hyper::Request<hyper::body::Incoming>),
+            Response = Response<ResponseBody>,
+            Error = Error,
+        > + Send
+        + Clone
+        + 'static,
+    S::Future: Send + 'static,
 {
     let ipc_stream = match env::var("VERCEL_IPC_PATH") {
         Ok(ipc_path) => match UnixStream::connect(ipc_path) {
             Ok(stream) => Some(Arc::new(Mutex::new(stream))),
-            Err(_) => {
-                // Failed to connect to the IPC socket
-                None
-            }
+            Err(_) => None,
         },
-        Err(_) => {
-            // No IPC available (dev mode like Bun)
-            None
-        }
+        Err(_) => None,
     };
 
     let port = 3000;
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
 
-    // Send IPC start message
     if let Some(ref ipc_stream_ref) = ipc_stream {
         let start_message = StartMessage::new(0, port);
         if let Err(e) = send_message(ipc_stream_ref, start_message) {
@@ -487,23 +421,19 @@ where
                 e
             );
         } else {
-            // Mark IPC as ready and flush buffered messages
             IPC_READY.store(true, Ordering::Relaxed);
             flush_init_log_buffer(&ipc_stream);
         }
     } else {
-        // If we couldn't find an IPC stream, we are in `vercel dev` mode,
-        // Print to stdout for dev server to parse (see ./start-dev-server.ts)
         println!("Dev server listening: {}", port);
-        // Still flush any buffered messages to stderr
         flush_init_log_buffer(&ipc_stream);
     };
 
     loop {
         let (stream, _) = listener.accept().await?;
-
         let io = TokioIo::new(stream);
         let ipc_stream_clone = ipc_stream.clone();
+        let service_clone = service.clone();
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
@@ -511,8 +441,9 @@ where
                 .half_close(true)
                 .serve_connection(
                     io,
-                    service_fn(move |req| {
+                    hyper_service_fn(move |req| {
                         let ipc_stream_clone = ipc_stream_clone.clone();
+                        let mut service_clone = service_clone.clone();
 
                         // Extract information for IPC before calling handler
                         let invocation_id = req
@@ -539,22 +470,34 @@ where
                             if req.uri().path() == "/_vercel/ping" {
                                 let response = hyper::Response::builder()
                                     .status(200)
-                                    .body("OK".into_response_body())
+                                    .body(ResponseBody::from("OK"))
                                     .unwrap();
                                 return Ok::<_, Infallible>(response);
                             }
 
-                            let response = match handler(app_state, req).await {
-                                Ok(resp) => resp,
-                                Err(e) => {
-                                    eprintln!("Handler error: {}", e);
-                                    let error_body = http_body_util::Full::new(Bytes::from(
-                                        "Internal Server Error",
-                                    ));
+                            let response = match tower::ServiceExt::ready(&mut service_clone).await
+                            {
+                                Ok(ready_service) => {
+                                    match tower::Service::call(ready_service, (app_state, req))
+                                        .await
+                                    {
+                                        Ok(resp) => resp,
+                                        Err(_e) => {
+                                            // Service error
+                                            hyper::Response::builder()
+                                                .status(500)
+                                                .header("connection", "close")
+                                                .body(ResponseBody::from("Internal Server Error"))
+                                                .unwrap()
+                                        }
+                                    }
+                                }
+                                Err(_e) => {
+                                    // Service not ready
                                     hyper::Response::builder()
                                         .status(500)
                                         .header("connection", "close")
-                                        .body(error_body.map_err(|e| Box::new(e) as Error).boxed())
+                                        .body(ResponseBody::from("Service Not Ready"))
                                         .unwrap()
                                 }
                             };
