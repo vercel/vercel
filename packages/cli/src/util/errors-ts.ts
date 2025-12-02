@@ -698,12 +698,13 @@ export class CantParseJSONFile extends NowError<
 export class ConflictingConfigFiles extends NowBuildError {
   files: string[];
 
-  constructor(files: string[]) {
+  constructor(files: string[], message?: string, link?: string) {
     super({
       code: 'CONFLICTING_CONFIG_FILES',
       message:
+        message ||
         'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
-      link: 'https://vercel.link/combining-old-and-new-config',
+      link: link || 'https://vercel.link/combining-old-and-new-config',
     });
     this.files = files;
   }
