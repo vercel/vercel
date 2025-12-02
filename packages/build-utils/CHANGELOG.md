@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.2
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
 ## 13.2.1
 
 ### Patch Changes

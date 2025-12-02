@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.5.5
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
 ## 5.5.4
 
 ### Patch Changes
