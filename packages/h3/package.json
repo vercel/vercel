@@ -23,13 +23,13 @@
     "edge-entry.js"
   ],
   "dependencies": {
-    "@vercel/static-config": "3.1.2",
-    "@vercel/node": "5.5.14"
+    "@vercel/static-config": "workspace:*",
+    "@vercel/node": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "13.2.2",
+    "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "jest-junit": "16.0.0",

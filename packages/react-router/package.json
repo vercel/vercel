@@ -41,7 +41,7 @@
     "router"
   ],
   "dependencies": {
-    "@vercel/static-config": "3.1.2",
+    "@vercel/static-config": "workspace:*",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
