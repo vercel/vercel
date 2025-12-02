@@ -24,9 +24,6 @@
 "@vercel/ruby": patch
 "@vercel/rust": patch
 "@vercel/static-build": patch
-"api": patch
-"examples": patch
-"@vercel-internals/types": patch
 ---
 
 Use `workspace:*` for workspace dependencies
