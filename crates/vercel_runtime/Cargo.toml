@@ -23,7 +23,7 @@ http-body = "1.0"
 tower = { version = "0.5", features = ["util"] }
 
 axum = { version = "0.8", optional = true }
-axum-streams = { version = "0.22", features = ["json", "text"], optional = true }
+axum-streams = { version = "0.24", features = ["json", "text"], optional = true }
 
 [features]
 default = []

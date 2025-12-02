@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::convert::Infallible;
 use std::env;
 use std::future::Future;
@@ -21,207 +21,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::task::{Context, Poll};
 use tower::Service;
 
+mod ipc;
+use ipc::core::{EndMessage, StartMessage};
+use ipc::log::{Level, LogMessage};
+
 #[cfg(feature = "axum")]
 pub mod axum;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RequestContext {
-    #[serde(rename = "invocationId")]
-    pub invocation_id: String,
-    #[serde(rename = "requestId")]
-    pub request_id: u64,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct StartMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: StartPayload,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct StartPayload {
-    #[serde(rename = "initDuration")]
-    pub init_duration: u64,
-    #[serde(rename = "httpPort")]
-    pub http_port: u16,
-}
-
-impl StartMessage {
-    pub fn new(init_duration: u64, http_port: u16) -> Self {
-        Self {
-            message_type: "server-started".to_string(),
-            payload: StartPayload {
-                init_duration,
-                http_port,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EndMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: EndPayload,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EndPayload {
-    pub context: RequestContext,
-    pub error: Option<serde_json::Value>,
-}
-
-impl EndMessage {
-    pub fn new(invocation_id: String, request_id: u64, error: Option<serde_json::Value>) -> Self {
-        Self {
-            message_type: "end".to_string(),
-            payload: EndPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                error,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MetricMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: MetricPayload,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MetricPayload {
-    pub context: RequestContext,
-    #[serde(rename = "type")]
-    pub metric_type: Option<String>,
-    #[serde(rename = "payload")]
-    pub metric_payload: Option<serde_json::Value>,
-}
-
-impl MetricMessage {
-    pub fn new(
-        invocation_id: String,
-        request_id: u64,
-        metric_type: Option<String>,
-        metric_payload: Option<serde_json::Value>,
-    ) -> Self {
-        Self {
-            message_type: "metric".to_string(),
-            payload: MetricPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                metric_type,
-                metric_payload,
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum Stream {
-    Stdout,
-    Stderr,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum Level {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum LogType {
-    Stream { stream: Stream },
-    Level { level: Level },
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LogPayload {
-    pub context: RequestContext,
-    pub message: String,
-    #[serde(flatten)]
-    pub log_type: LogType,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LogMessage {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub payload: LogPayload,
-}
-
-impl LogMessage {
-    pub fn stream(invocation_id: String, request_id: u64, message: String, stream: Stream) -> Self {
-        Self {
-            message_type: "log".to_string(),
-            payload: LogPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                message,
-                log_type: LogType::Stream { stream },
-            },
-        }
-    }
-
-    pub fn level(invocation_id: String, request_id: u64, message: String, level: Level) -> Self {
-        Self {
-            message_type: "log".to_string(),
-            payload: LogPayload {
-                context: RequestContext {
-                    invocation_id,
-                    request_id,
-                },
-                message,
-                log_type: LogType::Level { level },
-            },
-        }
-    }
-
-    pub fn encode_message(message: &str) -> String {
-        use base64::Engine;
-        use base64::engine::general_purpose::STANDARD as BASE64_ENCODER;
-        BASE64_ENCODER.encode(message)
-    }
-
-    pub fn with_stream(
-        invocation_id: String,
-        request_id: u64,
-        message: &str,
-        stream: Stream,
-    ) -> Self {
-        Self::stream(
-            invocation_id,
-            request_id,
-            Self::encode_message(message),
-            stream,
-        )
-    }
-
-    pub fn with_level(invocation_id: String, request_id: u64, message: &str, level: Level) -> Self {
-        Self::level(
-            invocation_id,
-            request_id,
-            Self::encode_message(message),
-            level,
-        )
-    }
-}
-
+pub use hyper::Response;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Request = hyper::Request<hyper::body::Incoming>;
 
@@ -262,8 +69,6 @@ impl http_body::Body for ResponseBody {
         self.0.size_hint()
     }
 }
-
-pub use hyper::Response;
 
 impl From<&str> for ResponseBody {
     fn from(value: &str) -> Self {
@@ -317,7 +122,7 @@ lazy_static::lazy_static! {
     };
 }
 
-// Register exit handler to flush buffered messages (like Python's atexit.register)
+// Register exit handler to flush buffered messages
 fn register_exit_handler() {
     extern "C" fn exit_handler() {
         flush_init_log_buf_to_stderr();
@@ -425,7 +230,7 @@ pub fn enqueue_or_send_message<T: Serialize>(
             buffer.0.push_back(json_str);
             buffer.1 += msg_len;
         } else {
-            // Fallback to stderr if buffer is full - decode base64 like Python does
+            // Fallback to stderr if buffer is full - decode base64
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
                 && let Some(payload) = parsed.get("payload")
                 && let Some(msg) = payload.get("message")
@@ -446,9 +251,9 @@ pub fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
         if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
             while let Some(json_str) = buffer.0.pop_front() {
                 if let Ok(message) = serde_json::from_str::<serde_json::Value>(&json_str)
-                    && let Err(e) = send_message(stream, message)
+                    && let Err(_e) = send_message(stream, message)
                 {
-                    eprintln!("Failed to send buffered message: {}", e);
+                    // Failed to send buffered message
                     break;
                 }
             }
@@ -483,7 +288,7 @@ pub fn flush_init_log_buf_to_stderr() {
     }
 }
 
-/// Creates a Tower service from a function, similar to lambda_runtime::service_fn
+/// Creates a Tower service from a function
 pub fn service_fn<F, Fut>(f: F) -> ServiceFn<F>
 where
     F: Fn(AppState, Request) -> Fut,
@@ -492,7 +297,7 @@ where
     ServiceFn { f }
 }
 
-/// A Tower service wrapper around a function
+/// A Tower service wrapper around a function  
 #[derive(Clone)]
 pub struct ServiceFn<F> {
     f: F,
@@ -517,7 +322,7 @@ where
     }
 }
 
-/// Run a Tower service with Vercel's runtime (now the single entry point)
+/// Run a Tower service with Vercel's runtime
 pub async fn run<S>(service: S) -> Result<(), Error>
 where
     S: tower::Service<
@@ -610,8 +415,8 @@ where
                                         .await
                                     {
                                         Ok(resp) => resp,
-                                        Err(e) => {
-                                            eprintln!("Service error: {}", e);
+                                        Err(_e) => {
+                                            // Service error
                                             hyper::Response::builder()
                                                 .status(500)
                                                 .header("connection", "close")
@@ -620,8 +425,8 @@ where
                                         }
                                     }
                                 }
-                                Err(e) => {
-                                    eprintln!("Service not ready: {}", e);
+                                Err(_e) => {
+                                    // Service not ready
                                     hyper::Response::builder()
                                         .status(500)
                                         .header("connection", "close")
@@ -634,8 +439,8 @@ where
                                 (&ipc_stream_for_end, &invocation_id, &request_id)
                             {
                                 let end_message = EndMessage::new(inv_id.clone(), *req_id, None);
-                                if let Err(e) = send_message(ipc_stream, end_message) {
-                                    eprintln!("Failed to send end message: {}", e);
+                                if let Err(_e) = send_message(ipc_stream, end_message) {
+                                    // Failed to send end message
                                 }
                             }
 

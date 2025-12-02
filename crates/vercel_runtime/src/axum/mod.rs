@@ -1,5 +1,3 @@
-#![cfg(feature = "axum")]
-
 use axum::response::Response;
 use axum::{body::Body, response::IntoResponse};
 use http_body_util::BodyExt;
@@ -72,7 +70,6 @@ impl StreamingUtils {
     }
 }
 
-// Keep the original layer implementation but with a simpler approach
 use std::convert::Infallible;
 use std::future::Future;
 use std::pin::Pin;
