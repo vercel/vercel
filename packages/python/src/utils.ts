@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { delimiter, join, delimiter as pathDelimiter } from 'path';
+import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
 import execa = require('execa');
 
@@ -49,7 +49,9 @@ export function createVenvEnv(
   const env: NodeJS.ProcessEnv = { ...baseEnv, VIRTUAL_ENV: venvPath };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env[pathKey] || process.env[pathKey] || '';
-  env[pathKey] = existingPath ? `${binDir}${delimiter}${existingPath}` : binDir;
+  env[pathKey] = existingPath
+    ? `${binDir}${pathDelimiter}${existingPath}`
+    : binDir;
   return env;
 }
 
