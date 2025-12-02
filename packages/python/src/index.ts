@@ -411,6 +411,9 @@ export const build: BuildV3 = async ({
       if (!fs.existsSync(dir)) continue;
       const dirFiles = await glob('**', dir, vendorDirName);
       for (const [p, f] of Object.entries(dirFiles)) {
+        if (p.endsWith('.pyc') || p.includes('__pycache__')) {
+          continue;
+        }
         vendorFiles[p] = f;
       }
     }
