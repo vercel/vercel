@@ -285,25 +285,95 @@ fn flush_init_log_buf_to_stderr() {
     }
 }
 
-/// Creates a Tower service from a function
-pub fn service_fn<F, Fut>(f: F) -> ServiceFn<F>
-where
-    F: Fn(AppState, Request) -> Fut,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>>,
-{
-    ServiceFn { f }
+/// Trait that abstracts over handler function signatures
+pub trait Handler {
+    type Future: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static;
+    fn call(&self, req: Request, state: AppState) -> Self::Future;
 }
 
-/// A Tower service wrapper around a function
+/// Implementation for handlers that take both Request and AppState
+impl<F, Fut> Handler for F
+where
+    F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Future = Fut;
+
+    fn call(&self, req: Request, state: AppState) -> Self::Future {
+        self(req, state)
+    }
+}
+
+/// Wrapper for stateless handlers that only take Request
 #[derive(Clone)]
-pub struct ServiceFn<F> {
+pub struct StatelessHandler<F> {
     f: F,
 }
 
-impl<F, Fut> Service<(AppState, Request)> for ServiceFn<F>
+impl<F, Fut> Handler for StatelessHandler<F>
 where
-    F: Fn(AppState, Request) -> Fut + Clone + Send + 'static,
+    F: Fn(Request) -> Fut + Clone + Send + 'static,
     Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Future = Fut;
+
+    fn call(&self, req: Request, _state: AppState) -> Self::Future {
+        (self.f)(req)
+    }
+}
+
+/// Service function creation trait for different handler signatures
+pub trait IntoServiceFn<Args> {
+    type Handler: Handler;
+    fn into_service_fn(self) -> ServiceFn<Self::Handler>;
+}
+
+/// Implementation for handlers that take Request and AppState (new signature)
+impl<F, Fut> IntoServiceFn<(Request, AppState)> for F
+where
+    F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Handler = F;
+
+    fn into_service_fn(self) -> ServiceFn<Self::Handler> {
+        ServiceFn { f: self }
+    }
+}
+
+/// Implementation for handlers that only take Request (stateless)
+impl<F, Fut> IntoServiceFn<(Request,)> for F
+where
+    F: Fn(Request) -> Fut + Clone + Send + 'static,
+    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+{
+    type Handler = StatelessHandler<F>;
+
+    fn into_service_fn(self) -> ServiceFn<Self::Handler> {
+        ServiceFn {
+            f: StatelessHandler { f: self },
+        }
+    }
+}
+
+/// Creates a Tower service from a handler function
+pub fn service_fn<F, Args>(handler: F) -> ServiceFn<F::Handler>
+where
+    F: IntoServiceFn<Args>,
+{
+    handler.into_service_fn()
+}
+
+/// A Tower service wrapper around a handler function
+#[derive(Clone)]
+pub struct ServiceFn<H> {
+    f: H,
+}
+
+impl<H> Service<(AppState, Request)> for ServiceFn<H>
+where
+    H: Handler + Clone + Send + 'static,
+    H::Future: Send + 'static,
 {
     type Response = Response<ResponseBody>;
     type Error = Error;
@@ -315,7 +385,7 @@ where
 
     fn call(&mut self, (state, req): (AppState, Request)) -> Self::Future {
         let f = self.f.clone();
-        Box::pin(async move { f(state, req).await })
+        Box::pin(async move { f.call(req, state).await })
     }
 }
 
