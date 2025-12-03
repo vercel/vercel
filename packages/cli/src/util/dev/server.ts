@@ -556,23 +556,8 @@ export default class DevServer {
 
   async _getVercelConfig(): Promise<VercelConfig> {
     const { compileVercelConfig } = await import('../compile-vercel-config');
-    const { parseArguments } = await import('../../util/get-args');
-
-    const parsedArgs = parseArguments(
-      process.argv.slice(2),
-      {},
-      { permissive: true }
-    );
-    const hasLocalConfigFlag = !!parsedArgs.flags['--local-config'];
-
-    let configPath: string;
-
-    if (hasLocalConfigFlag) {
-      configPath = getVercelConfigPath(this.cwd);
-    } else {
-      const compileResult = await compileVercelConfig(this.cwd);
-      configPath = compileResult.configPath || getVercelConfigPath(this.cwd);
-    }
+    await compileVercelConfig(this.cwd);
+    const configPath = getVercelConfigPath(this.cwd);
 
     const [
       pkg = null,
