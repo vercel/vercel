@@ -26,65 +26,22 @@ _here = os.path.dirname(__file__)
 _vendor_rel = '__VC_HANDLER_VENDOR_DIR'
 _vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
 
-
-def _add_site_dir_to_sys_path(path):
-    if not os.path.isdir(path):
-        return
+if os.path.isdir(_vendor):
     # Process .pth files like a real site-packages dir
-    site.addsitedir(path)
+    site.addsitedir(_vendor)
 
-    # Move the path to the front (after script dir if present)
+    # Move _vendor to the front (after script dir if present)
     try:
-        while path in sys.path:
-            sys.path.remove(path)
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
     except ValueError:
         pass
 
     # Put vendored deps ahead of site-packages but after the script dir
     idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
-    sys.path.insert(idx, path)
+    sys.path.insert(idx, _vendor)
 
-
-def _configure_dependency_paths():
-    """
-    Configure sys.path so that dependencies installed into the builder-managed
-    virtualenv (".vercel/python/.venv") are importable at runtime, while
-    preserving the legacy behaviour of using a plain vendored directory when
-    present.
-    """
-    # When _vendor points at a virtualenv root (".vercel/python/.venv"),
-    # add its site-packages directories.
-    if os.path.isdir(_vendor) and os.path.isfile(os.path.join(_vendor, "pyvenv.cfg")):
-        site_dirs = []
-
-        lib_root = os.path.join(_vendor, "lib")
-        if os.path.isdir(lib_root):
-            for name in os.listdir(lib_root):
-                if name.startswith("python"):
-                    candidate = os.path.join(lib_root, name, "site-packages")
-                    if os.path.isdir(candidate):
-                        site_dirs.append(candidate)
-
-        win_lib_root = os.path.join(_vendor, "Lib")
-        if os.path.isdir(win_lib_root):
-            candidate = os.path.join(win_lib_root, "site-packages")
-            if os.path.isdir(candidate):
-                site_dirs.append(candidate)
-
-        for d in site_dirs:
-            _add_site_dir_to_sys_path(d)
-
-        if site_dirs:
-            importlib.invalidate_caches()
-            return
-
-    # Fallback: treat _vendor as a plain site-packages directory (legacy behaviour)
-    if os.path.isdir(_vendor):
-        _add_site_dir_to_sys_path(_vendor)
-        importlib.invalidate_caches()
-
-
-_configure_dependency_paths()
+    importlib.invalidate_caches()
 
 
 def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
