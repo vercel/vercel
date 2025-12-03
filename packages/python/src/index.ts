@@ -394,16 +394,9 @@ export const build: BuildV3 = async ({
     dependencies: runtimeDependencies,
   });
 
-  // Compute cache vendor dir keyed by Python version and entrypoint directory.
-  // This directory is used to store a mirrored copy of the venv's site-packages
-  // that is actually bundled into the Lambda.
-  const vendorBaseDir = join(
-    workPath,
-    '.vercel',
-    'python',
-    `py${pythonVersion.version}`,
-    entryDirectory
-  );
+  // Create a _vendor folder for dependencies under ".vercel/python/_vendor"
+  // this is to avoid shipping the full virtual environment to Lambda
+  const vendorBaseDir = join(workPath, '.vercel', 'python');
   try {
     await fs.promises.mkdir(vendorBaseDir, { recursive: true });
   } catch (err) {
