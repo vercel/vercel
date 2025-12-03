@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "hono": "4.10.4",
+    "ioredis": "5.8.2"
+  }
+}

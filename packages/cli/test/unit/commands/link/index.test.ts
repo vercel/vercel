@@ -643,11 +643,6 @@ describe('link', () => {
       `Linked to ${user.username}/awesome-app (created .vercel and added it to .gitignore)`
     );
 
-    await expect(client.stderr).toOutput(
-      'Would you like to pull environment variables now?'
-    );
-    client.stdin.write('n\n');
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
   });
