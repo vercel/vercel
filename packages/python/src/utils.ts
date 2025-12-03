@@ -45,13 +45,10 @@ export function createVenvEnv(
   venvPath: string,
   baseEnv: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
-  const pathKey = isWin ? 'Path' : 'PATH';
   const env: NodeJS.ProcessEnv = { ...baseEnv, VIRTUAL_ENV: venvPath };
   const binDir = getVenvBinDir(venvPath);
-  const existingPath = env[pathKey] || process.env[pathKey] || '';
-  env[pathKey] = existingPath
-    ? `${binDir}${pathDelimiter}${existingPath}`
-    : binDir;
+  const existingPath = env.PATH || process.env.PATH || '';
+  env.PATH = existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir;
   return env;
 }
 
