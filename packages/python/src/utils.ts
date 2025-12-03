@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
-import { readConfigFile, execCommand } from '@vercel/build-utils';
+import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
 import execa = require('execa');
 
 const isWin = process.platform === 'win32';
@@ -126,4 +126,32 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
+}
+
+export async function runUvCommand(options: {
+  uvPath: string | null;
+  args: string[];
+  cwd: string;
+  venvPath: string;
+}) {
+  const { uvPath, args, cwd, venvPath } = options;
+
+  const pretty = `${uvPath} ${args.join(' ')}`;
+  debug(`Running "${pretty}"...`);
+
+  if (!uvPath) {
+    throw new Error(`uv is required to run "${pretty}" but is not available`);
+  }
+
+  try {
+    await execa(uvPath, args, {
+      cwd,
+      env: createVenvEnv(venvPath),
+    });
+    return true;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
 }

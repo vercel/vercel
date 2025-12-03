@@ -4,7 +4,12 @@ import os from 'os';
 import { dirname, join } from 'path';
 import which from 'which';
 import { FileFsRef, Files, Meta, debug, glob } from '@vercel/build-utils';
-import { getVenvPythonBin, getVenvPipBin, createVenvEnv } from './utils';
+import {
+  getVenvPythonBin,
+  getVenvPipBin,
+  createVenvEnv,
+  runUvCommand,
+} from './utils';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -91,48 +96,6 @@ raise SystemExit(0 if spec else 1)
   }
 }
 
-async function tryRunUvCommand({
-  uvPath,
-  args,
-  cwd,
-  venvPath,
-}: {
-  uvPath: string | null;
-  args: string[];
-  cwd: string;
-  venvPath: string;
-}): Promise<boolean> {
-  if (!uvPath) {
-    return false;
-  }
-  const pretty = `${uvPath} ${args.join(' ')}`;
-  debug(`Running "${pretty}"...`);
-  try {
-    await execa(uvPath, args, {
-      cwd,
-      env: createVenvEnv(venvPath),
-    });
-    return true;
-  } catch (err) {
-    console.log(`Failed to run "${pretty}"`);
-    console.log(err instanceof Error ? err.message : String(err));
-    debug('uv command failed', err);
-    return false;
-  }
-}
-
-async function runUvCommandOrThrow(options: {
-  uvPath: string | null;
-  args: string[];
-  cwd: string;
-  venvPath: string;
-}) {
-  const ok = await tryRunUvCommand(options);
-  if (!ok) {
-    throw new Error('uv is required for this project but failed to run.');
-  }
-}
-
 function filterUnsafeUvPipArgs(args: string[]): string[] {
   // `--no-warn-script-location` is not supported/safe with `uv pip install`,
   // so strip it out when using uv while still allowing it for plain pip.
@@ -160,10 +123,17 @@ async function runUvPipInstallArgs({
     '--upgrade',
     ...filterUnsafeUvPipArgs(pipArgs),
   ];
-  const ranUv = await tryRunUvCommand({ uvPath, args: uvArgs, cwd, venvPath });
-  if (ranUv) {
+
+  const prettyUv = `uv ${uvArgs.join(' ')}`;
+  try {
+    await runUvCommand({ uvPath, args: uvArgs, cwd, venvPath });
     return;
+  } catch (err) {
+    console.log(
+      `Failed to run "${prettyUv}": ${err instanceof Error ? err.message : String(err)}`
+    );
   }
+
   const pipBin = getVenvPipBin(venvPath);
   const pipInstallArgs = [
     'install',
