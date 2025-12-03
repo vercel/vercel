@@ -24,7 +24,7 @@ import {
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
   syncProjectWithUv,
-  getVenvSitePackagesDirs,
+  mirrorSitePackagesIntoVendor,
   ensureRuntimeDependencies,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
@@ -63,63 +63,6 @@ function findDir({
 
   // Case 3: File not found in either location
   return null;
-}
-
-async function mirrorSitePackagesIntoVendor({
-  venvPath,
-  vendorBaseDir,
-  vendorDirName,
-}: {
-  venvPath: string;
-  vendorBaseDir: string;
-  vendorDirName: string;
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-  const vendorDirOnDisk = join(vendorBaseDir, vendorDirName);
-
-  // Mirror the venv's site-packages into a vendored directory under
-  // `.vercel/python/.../_vendor`
-  // this is to avoid bundling the entire virtual environment into Lambda.
-  try {
-    try {
-      await fs.promises.rm(vendorDirOnDisk, { recursive: true, force: true });
-    } catch (err: any) {
-      debug('Failed to remove existing vendor directory', err);
-    }
-
-    await fs.promises.mkdir(vendorDirOnDisk, { recursive: true });
-
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const dirFiles = await glob('**', dir);
-      for (const relativePath of Object.keys(dirFiles)) {
-        if (
-          relativePath.endsWith('.pyc') ||
-          relativePath.includes('__pycache__')
-        ) {
-          continue;
-        }
-
-        const srcFsPath = join(dir, relativePath);
-        const destFsPath = join(vendorDirOnDisk, relativePath);
-        await fs.promises.mkdir(dirname(destFsPath), { recursive: true });
-        await fs.promises.copyFile(srcFsPath, destFsPath);
-
-        const bundlePath = join(vendorDirName, relativePath).replace(
-          /\\/g,
-          '/'
-        );
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: destFsPath });
-      }
-    }
-  } catch (err) {
-    console.log('Failed to collect site-packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
 }
 
 export async function downloadFilesInWorkPath({
