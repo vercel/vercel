@@ -38,7 +38,7 @@ afterAll(async () => {
   }
 });
 
-test('[vc link] should prompt for env pull and handle acceptance', async () => {
+test('[vc link] should skip env pull prompt when creating new project', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-pull-${Math.random().toString(36).split('.')[1]}`;
 
@@ -75,9 +75,6 @@ test('[vc link] should prompt for env pull and handle acceptance', async () => {
 
   await waitForPrompt(vc, /Linked to/);
 
-  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
-  vc.stdin?.write('y\n');
-
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -86,7 +83,7 @@ test('[vc link] should prompt for env pull and handle acceptance', async () => {
   );
 });
 
-test('[vc link] should handle env pull prompt decline', async () => {
+test('[vc link] should not create .env.local when linking new project', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
   const projectName = `link-env-decline-${Math.random().toString(36).split('.')[1]}`;
 
@@ -122,9 +119,6 @@ test('[vc link] should handle env pull prompt decline', async () => {
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Linked to/);
-
-  await waitForPrompt(vc, 'Would you like to pull environment variables now?');
-  vc.stdin?.write('n\n');
 
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);

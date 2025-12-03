@@ -1298,11 +1298,6 @@ describe('deploy', () => {
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Would you like to pull environment variables now?'
-        );
-        client.stdin.write('n\n');
-
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
       });
@@ -1342,11 +1337,6 @@ describe('deploy', () => {
           'Do you want to change additional project settings?'
         );
         client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput(
-          'Would you like to pull environment variables now?'
-        );
-        client.stdin.write('n\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);

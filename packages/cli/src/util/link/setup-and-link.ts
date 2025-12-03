@@ -245,7 +245,8 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm
+      autoConfirm,
+      false // don't prompt to pull env for newly created projects
     );
 
     await connectGitRepository(client, path, project, autoConfirm, org);
