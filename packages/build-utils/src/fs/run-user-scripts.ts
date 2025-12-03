@@ -360,12 +360,12 @@ export async function getConfiguredAndLocalNodeVersion(
   return [configuredVersion, packageJsonVersion];
 }
 
-export async function validateConfiguredAndLocalNodeVersion(
+export function validateConfiguredAndLocalNodeVersion(
   configuredVersion: string | undefined,
   packageJsonVersion: string | undefined,
   supportedNodeVersion: NodeVersion,
   availableVersions = getAvailableNodeVersions()
-): Promise<void> {
+): void {
   const latestVersion = getLatestNodeVersion(availableVersions);
 
   if (packageJsonVersion) {
