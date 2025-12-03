@@ -112,6 +112,116 @@ where
     }
 }
 
+/// An interface for producing a HTTP Response from a given output value.
+pub trait IntoFunctionResponse {
+    /// Transform the output of a handler function into a response object
+    fn into_response(self) -> Result<Response<ResponseBody>, Error>;
+}
+
+impl IntoFunctionResponse for Response<ResponseBody> {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        Ok(self)
+    }
+}
+
+impl<T> IntoFunctionResponse for Result<T, Error>
+where
+    T: IntoFunctionResponse,
+{
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        match self {
+            Ok(value) => value.into_response(),
+            Err(err) => {
+                let error_msg = format!("{{\"error\": \"{}\"}}", err);
+                let response = Response::builder()
+                    .status(500)
+                    .header("content-type", "application/json")
+                    .body(ResponseBody::from(error_msg))?;
+                Ok(response)
+            }
+        }
+    }
+}
+
+impl IntoFunctionResponse for String {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let response = Response::builder()
+            .status(200)
+            .header("content-type", "text/plain")
+            .body(ResponseBody::from(self))?;
+        Ok(response)
+    }
+}
+
+impl IntoFunctionResponse for &str {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let response = Response::builder()
+            .status(200)
+            .header("content-type", "text/plain")
+            .body(ResponseBody::from(self))?;
+        Ok(response)
+    }
+}
+
+impl IntoFunctionResponse for Bytes {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let response = Response::builder()
+            .status(200)
+            .body(ResponseBody::from(self))?;
+        Ok(response)
+    }
+}
+
+impl IntoFunctionResponse for serde_json::Value {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let json = serde_json::to_string(&self)?;
+        let response = Response::builder()
+            .status(200)
+            .header("content-type", "application/json")
+            .body(ResponseBody::from(json))?;
+        Ok(response)
+    }
+}
+
+impl IntoFunctionResponse for Response<serde_json::Value> {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let (parts, body) = self.into_parts();
+        let json = serde_json::to_string(&body)?;
+        let response = Response::from_parts(parts, ResponseBody::from(json));
+        Ok(response)
+    }
+}
+
+impl IntoFunctionResponse for Response<String> {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let (parts, body) = self.into_parts();
+        let response = Response::from_parts(parts, ResponseBody::from(body));
+        Ok(response)
+    }
+}
+
+impl IntoFunctionResponse for Response<&str> {
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let (parts, body) = self.into_parts();
+        let response = Response::from_parts(parts, ResponseBody::from(body));
+        Ok(response)
+    }
+}
+
+impl<T> IntoFunctionResponse for Response<http_body_util::StreamBody<T>>
+where
+    T: tokio_stream::Stream<Item = Result<hyper::body::Frame<hyper::body::Bytes>, Error>>
+        + Send
+        + Sync
+        + 'static,
+{
+    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
+        let (parts, body) = self.into_parts();
+        let response = Response::from_parts(parts, ResponseBody::from(body));
+        Ok(response)
+    }
+}
+
 static IPC_READY: AtomicBool = AtomicBool::new(false);
 static INIT_LOG_BUF_MAX_BYTES: usize = 1_000_000;
 
@@ -285,18 +395,21 @@ fn flush_init_log_buf_to_stderr() {
     }
 }
 
-/// Trait that abstracts over handler function signatures
+/// Trait that abstracts over handler function signatures that return types implementing IntoFunctionResponse
 pub trait Handler {
-    type Future: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static;
+    type Output: IntoFunctionResponse;
+    type Future: Future<Output = Self::Output> + Send + 'static;
     fn call(&self, req: Request, state: AppState) -> Self::Future;
 }
 
-/// Implementation for handlers that take both Request and AppState
-impl<F, Fut> Handler for F
+/// Implementation for handlers that return IntoFunctionResponse types
+impl<F, Fut, R> Handler for F
 where
     F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
+    type Output = R;
     type Future = Fut;
 
     fn call(&self, req: Request, state: AppState) -> Self::Future {
@@ -304,17 +417,19 @@ where
     }
 }
 
-/// Wrapper for stateless handlers that only take Request
+/// Wrapper for stateless handlers that return IntoFunctionResponse types
 #[derive(Clone)]
 pub struct StatelessHandler<F> {
     f: F,
 }
 
-impl<F, Fut> Handler for StatelessHandler<F>
+impl<F, Fut, R> Handler for StatelessHandler<F>
 where
     F: Fn(Request) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
+    type Output = R;
     type Future = Fut;
 
     fn call(&self, req: Request, _state: AppState) -> Self::Future {
@@ -328,11 +443,12 @@ pub trait IntoServiceFn<Args> {
     fn into_service_fn(self) -> ServiceFn<Self::Handler>;
 }
 
-/// Implementation for handlers that take Request and AppState (new signature)
-impl<F, Fut> IntoServiceFn<(Request, AppState)> for F
+/// Implementation for handlers that take Request and AppState
+impl<F, Fut, R> IntoServiceFn<(Request, AppState)> for F
 where
     F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
     type Handler = F;
 
@@ -342,10 +458,11 @@ where
 }
 
 /// Implementation for handlers that only take Request (stateless)
-impl<F, Fut> IntoServiceFn<(Request,)> for F
+impl<F, Fut, R> IntoServiceFn<(Request,)> for F
 where
     F: Fn(Request) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
     type Handler = StatelessHandler<F>;
 
@@ -374,6 +491,7 @@ impl<H> Service<(AppState, Request)> for ServiceFn<H>
 where
     H: Handler + Clone + Send + 'static,
     H::Future: Send + 'static,
+    H::Output: Send + 'static,
 {
     type Response = Response<ResponseBody>;
     type Error = Error;
@@ -385,7 +503,10 @@ where
 
     fn call(&mut self, (state, req): (AppState, Request)) -> Self::Future {
         let f = self.f.clone();
-        Box::pin(async move { f.call(req, state).await })
+        Box::pin(async move {
+            let result = f.call(req, state).await;
+            result.into_response()
+        })
     }
 }
 
