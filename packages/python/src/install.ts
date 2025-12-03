@@ -133,6 +133,12 @@ async function runUvCommandOrThrow(options: {
   }
 }
 
+function filterUnsafeUvPipArgs(args: string[]): string[] {
+  // `--no-warn-script-location` is not supported/safe with `uv pip install`,
+  // so strip it out when using uv while still allowing it for plain pip.
+  return args.filter(arg => arg !== '--no-warn-script-location');
+}
+
 async function runUvPipInstallArgs({
   uvPath,
   venvPath,
@@ -152,7 +158,7 @@ async function runUvPipInstallArgs({
     pythonBin,
     '--no-compile',
     '--upgrade',
-    ...pipArgs,
+    ...filterUnsafeUvPipArgs(pipArgs),
   ];
   const ranUv = await tryRunUvCommand({ uvPath, args: uvArgs, cwd, venvPath });
   if (ranUv) {
@@ -362,7 +368,7 @@ async function pipInstall(
       '--no-cache-dir',
       '--target',
       target,
-      ...args,
+      ...filterUnsafeUvPipArgs(args),
     ];
     const prettyUv = `${uvPath} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
@@ -373,7 +379,6 @@ async function pipInstall(
       return;
     } catch (err) {
       console.log(`Failed to run "${prettyUv}", falling back to pip`);
-      console.log(err instanceof Error ? err.message : String(err)); // TODO remove
       debug(`error: ${err}`);
     }
   }
