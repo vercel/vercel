@@ -5,6 +5,49 @@ import path from 'path';
 import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
 
+jest.mock('../src/utils', () => {
+  const actual =
+    jest.requireActual<typeof import('../src/utils')>('../src/utils');
+  // Use require() here so it works correctly with Jest hoisting
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs-extra') as typeof import('fs-extra');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path') as typeof import('path');
+  const isWin = process.platform === 'win32';
+
+  /**
+   * In unit tests we don’t want to invoke a real Python interpreter to
+   * create a virtual environment. Instead, create a minimal fake venv
+   * layout so the rest of the build logic (which only shells out to the
+   * venv’s python binary) can proceed without ENOENT errors.
+   */
+  const ensureVenv = jest.fn(async ({ venvPath }: { venvPath: string }) => {
+    const binDir = path.join(venvPath, isWin ? 'Scripts' : 'bin');
+    await fs.mkdirp(binDir);
+
+    const pythonBin = path.join(binDir, isWin ? 'python.exe' : 'python');
+    const script = isWin
+      ? '@echo off\r\nrem mock python venv\r\nexit /b 0\r\n'
+      : '#!/bin/sh\n# mock python venv\nexit 0\n';
+
+    await fs.writeFile(pythonBin, script, 'utf8');
+    if (!isWin) {
+      await fs.chmod(pythonBin, 0o755);
+    }
+
+    // Marker file so the real implementation would consider the venv “present”
+    const marker = path.join(venvPath, 'pyvenv.cfg');
+    if (!(await fs.pathExists(marker))) {
+      await fs.writeFile(marker, 'mock venv', 'utf8');
+    }
+  });
+
+  return {
+    ...actual,
+    ensureVenv,
+  };
+});
+
 jest.mock('../src/install', () => {
   const actual =
     jest.requireActual<typeof import('../src/install')>('../src/install');
