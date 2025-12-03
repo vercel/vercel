@@ -53,7 +53,14 @@ jest.mock('../src/install', () => {
     jest.requireActual<typeof import('../src/install')>('../src/install');
   return {
     ...actual,
+    // In unit tests we don't actually need to introspect the venv to find
+    // site-packages or verify runtime dependencies are importable. Those
+    // behaviors are covered by higher-level integration tests. Here we only
+    // care about the surrounding build behavior, so stub these out to avoid
+    // shelling out to a real Python interpreter on CI (especially Windows).
     getVenvSitePackagesDirs: jest.fn(async () => []),
+    ensureRuntimeDependencies: jest.fn(async () => {}),
+    mirrorSitePackagesIntoVendor: jest.fn(async () => ({}) as any),
   };
 });
 

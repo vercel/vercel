@@ -275,23 +275,9 @@ export const build: BuildV3 = async ({
 
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
-
-  // Compute cache vendor dir keyed by Python version and entrypoint directory
-  const vendorBaseDir = join(
-    workPath,
-    '.vercel',
-    'python',
-    `py${pythonVersion.version}`,
-    entryDirectory
-  );
-  try {
-    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
-  } catch (err) {
-    console.log('Failed to create vendor cache directory');
-    throw err;
-  }
-
-  const venvPath = join(workPath, '.venv');
+  // Create the virtual environment under ".vercel/python/.venv" so it can be
+  // cached on disk while we mirror its site-packages into the Lambda bundle.
+  const venvPath = join(workPath, '.vercel', 'python', '.venv');
   await ensureVenv({
     pythonPath: pythonVersion.pythonPath,
     venvPath,
@@ -407,6 +393,23 @@ export const build: BuildV3 = async ({
     cwd: workPath,
     dependencies: runtimeDependencies,
   });
+
+  // Compute cache vendor dir keyed by Python version and entrypoint directory.
+  // This directory is used to store a mirrored copy of the venv's site-packages
+  // that is actually bundled into the Lambda.
+  const vendorBaseDir = join(
+    workPath,
+    '.vercel',
+    'python',
+    `py${pythonVersion.version}`,
+    entryDirectory
+  );
+  try {
+    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
+  } catch (err) {
+    console.log('Failed to create vendor cache directory');
+    throw err;
+  }
 
   const vendorDirName = resolveVendorDir();
   const vendorFiles = await mirrorSitePackagesIntoVendor({
