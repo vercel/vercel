@@ -1,6 +1,13 @@
 import fs from 'fs';
 import { promisify } from 'util';
-import { join, dirname, basename, parse } from 'path';
+import {
+  join,
+  dirname,
+  basename,
+  parse,
+  relative,
+  delimiter as pathDelimiter,
+} from 'path';
 import {
   download,
   glob,
@@ -20,7 +27,6 @@ import {
 } from '@vercel/build-utils';
 import {
   installRequirementsIntoVenv,
-  resolveVendorDir,
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
   syncProjectWithUv,
@@ -276,21 +282,8 @@ export const build: BuildV3 = async ({
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
-  // Compute cache vendor dir keyed by Python version and entrypoint directory
-  const vendorBaseDir = join(
-    workPath,
-    '.vercel',
-    'python',
-    `py${pythonVersion.version}`,
-    entryDirectory
-  );
-  try {
-    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
-  } catch (err) {
-    console.log('Failed to create vendor cache directory');
-    throw err;
-  }
-  const venvPath = join(vendorBaseDir, '.venv');
+  // Create a virtualenv in the project root (or workPath for `vercel dev`)
+  const venvPath = join(workPath, '.venv');
   await ensureVenv({
     pythonPath: pythonVersion.pythonPath,
     venvPath,
@@ -407,26 +400,6 @@ export const build: BuildV3 = async ({
     dependencies: runtimeDependencies,
   });
 
-  const vendorDirName = resolveVendorDir();
-  const vendorFiles: Files = {};
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-      const dirFiles = await glob('**', dir, vendorDirName);
-      for (const [p, f] of Object.entries(dirFiles)) {
-        if (p.endsWith('.pyc') || p.includes('__pycache__')) {
-          continue;
-        }
-        vendorFiles[p] = f;
-      }
-    }
-  } catch (err) {
-    console.log('Failed to collect site-packages from virtual environment');
-    throw err;
-  }
-
-  const vendorDir = vendorDirName;
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
@@ -438,8 +411,7 @@ export const build: BuildV3 = async ({
   debug('Entrypoint with suffix is', entrypointWithSuffix);
   const handlerPyContents = originalHandlerPyContents
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
-    .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
+    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
 
   const predefinedExcludes = [
     '.git/**',
@@ -449,7 +421,7 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
-    // '**/.venv/**',
+    '**/.venv/bin/**',
     '**/venv/**',
     '**/__pycache__/**',
     '**/.mypy_cache/**',
@@ -461,7 +433,18 @@ export const build: BuildV3 = async ({
   ];
 
   const lambdaEnv = {} as Record<string, string>;
-  lambdaEnv.PYTHONPATH = vendorDir;
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    const relDirs = sitePackageDirs
+      .filter(dir => fs.existsSync(dir))
+      .map(dir => relative(workPath, dir));
+    if (relDirs.length) {
+      lambdaEnv.PYTHONPATH = relDirs.join(pathDelimiter);
+    }
+  } catch (err) {
+    console.log('Failed to resolve site-packages from virtual environment');
+    throw err;
+  }
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -472,10 +455,6 @@ export const build: BuildV3 = async ({
   };
 
   const files: Files = await glob('**', globOptions);
-
-  for (const [p, f] of Object.entries(vendorFiles)) {
-    files[p] = f;
-  }
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
