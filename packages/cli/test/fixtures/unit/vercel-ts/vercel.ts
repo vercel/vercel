@@ -1,10 +1,8 @@
-import { VercelConfig, createRouter } from '@vercel/config/v1';
-
-const router = createRouter();
+import { VercelConfig, routes } from '@vercel/config/v1';
 
 export const config: VercelConfig = {
   redirects: [
-    router.redirect('/region', `https://${process.env.REGION}-staging.example.com`),
+    routes.redirect('/region', `https://${process.env.REGION}-staging.example.com`),
   ],
 
   build: {

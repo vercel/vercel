@@ -914,8 +914,8 @@ importers:
   packages/cli/test/fixtures/unit/vercel-ts:
     dependencies:
       '@vercel/config':
-        specifier: ^0.0.20
-        version: 0.0.20
+        specifier: ^0.0.21
+        version: 0.0.21
 
   packages/client:
     dependencies:
@@ -9484,8 +9484,8 @@ packages:
       undici: 5.28.4
     dev: false
 
-  /@vercel/config@0.0.20:
-    resolution: {integrity: sha512-pweefpwSIouSJdrUenhFP9bXI+J8HTLQ7BIej/6tPLghHld15PVq+zSBuSVUwXm2s6rsuhvnEoTUlCMR6u49mw==}
+  /@vercel/config@0.0.21:
+    resolution: {integrity: sha512-2+SShSjWE5F+o1UIYQBsvrmsxFuPbVAhwFgGo6th3v80vQREnlDET+7/7u2ekA5Utd0iiR/8nZEulTKebu6HKg==}
     hasBin: true
     dependencies:
       pretty-cache-header: 1.0.0
