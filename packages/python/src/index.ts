@@ -26,6 +26,8 @@ import {
   syncProjectWithUv,
   mirrorSitePackagesIntoVendor,
   ensureRuntimeDependencies,
+  installRequirement,
+  installRequirementsFile,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
@@ -532,3 +534,6 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+// internal only - expect breaking changes if other packages depend on these exports
+export { installRequirement, installRequirementsFile };
