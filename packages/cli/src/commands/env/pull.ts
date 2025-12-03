@@ -162,11 +162,17 @@ export async function envPullCommandLogic(
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
-  output.log(
-    `Downloading \`${chalk.cyan(
-      environment
-    )}\` Environment Variables for ${projectSlugLink}`
-  );
+  const downloadMessage = gitBranch
+    ? `Downloading \`${chalk.cyan(
+        environment
+      )}\` Environment Variables for ${projectSlugLink} and any overrides for branch ${chalk.cyan(
+        gitBranch
+      )}`
+    : `Downloading \`${chalk.cyan(
+        environment
+      )}\` Environment Variables for ${projectSlugLink}`;
+
+  output.log(downloadMessage);
 
   const pullStamp = stamp();
   output.spinner('Downloading');

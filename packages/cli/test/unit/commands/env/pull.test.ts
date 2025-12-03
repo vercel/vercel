@@ -118,8 +118,10 @@ describe('env pull', () => {
       'feat/awesome-thing'
     );
     const exitCodePromise = env(client);
+    // Full output: "Downloading `preview` Environment Variables for jqkgv/vercel-env-pull and any overrides for branch feat/awesome-thing"
+    // Note: Can't match the full string due to hyperlink ANSI codes around the org/project slug
     await expect(client.stderr).toOutput(
-      'Downloading `preview` Environment Variables for'
+      'vercel-env-pull and any overrides for branch feat/awesome-thing'
     );
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
