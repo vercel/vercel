@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import { targetCommand } from './command';
-import { getCommandName } from '../../util/pkg-name';
+import { validateLsArgs } from '../../util/validate-ls-args';
 import { ensureLink } from '../../util/link/ensure-link';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
@@ -48,13 +48,15 @@ const BRANCH_TRACKING_MAP: Record<
 
 export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
-  if (argv.length !== 0) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('target ls')}`
-      )}`
-    );
-    return 2;
+
+  const validationResult = validateLsArgs({
+    commandName: 'target ls',
+    args: argv,
+    maxArgs: 0,
+    exitCode: 2,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
   }
 
   const link = await ensureLink(targetCommand.name, client, cwd);

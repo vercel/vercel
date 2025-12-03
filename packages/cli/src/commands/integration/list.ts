@@ -8,6 +8,7 @@ import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 import table from '../../util/output/table';
 import title from 'title';
 import type { Team } from '@vercel-internals/types';
@@ -37,11 +38,14 @@ export async function list(client: Client) {
   // Note: the `--integration` flag is tracked later, after validating
   // whether the value is a known integration name or not.
 
-  if (parsedArguments.args.length > 2) {
-    output.error(
-      'Cannot specify more than one project at a time. Use `--all` to show all resources.'
-    );
-    return 1;
+  const validationResult = validateLsArgs({
+    commandName: 'integration list [project]',
+    args: parsedArguments.args,
+    maxArgs: 2,
+    exitCode: 1,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
   }
 
   let project: { id?: string; name?: string } | undefined;
