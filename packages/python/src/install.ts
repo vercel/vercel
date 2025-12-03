@@ -260,7 +260,7 @@ export async function syncProjectWithUv({
   projectDir: string;
   locked: boolean;
 }) {
-  const args = ['sync', '--active', '--no-extra'];
+  const args = ['sync', '--active', '--no-dev'];
   if (locked) {
     args.push('--locked');
   }
