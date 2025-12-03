@@ -1,3 +1,2 @@
 .vercel
-.env*.local
 uv.lock
