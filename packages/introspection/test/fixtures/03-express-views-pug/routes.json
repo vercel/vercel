@@ -23,8 +23,8 @@
     }
   ],
   "framework": {
-    "slug": "express",
-    "version": "5.1.0"
+    "slug": "",
+    "version": ""
   },
   "additionalFolders": [
     "pug-views"

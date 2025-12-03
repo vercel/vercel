@@ -23,7 +23,6 @@ export const introspectApp = async (args: {
   const esmLoaderPath = new URL('loaders/esm.mjs', import.meta.url).href;
   const handlerPath = join(args.dir, args.handler);
 
-  let introspectionData: string | null = null;
   const introspectionSchema = z.object({
     frameworkSlug: z.string().optional(),
     routes: z.array(
@@ -48,6 +47,7 @@ export const introspectApp = async (args: {
       }),
     additionalDeps: z.array(z.string()).optional(),
   });
+  let introspectionData: z.infer<typeof introspectionSchema> | undefined;
 
   await new Promise(resolvePromise => {
     try {
@@ -68,7 +68,9 @@ export const introspectApp = async (args: {
 
       child.stdout?.on('data', data => {
         try {
-          introspectionData = data.toString();
+          introspectionData = introspectionSchema.parse(
+            JSON.parse(data.toString() || '{}')
+          );
         } catch (error) {
           // Ignore errors
         }
@@ -97,11 +99,8 @@ export const introspectApp = async (args: {
       resolvePromise(undefined);
     }
   });
-  const introspectionResult = introspectionSchema.safeParse(
-    JSON.parse(introspectionData || '{}')
-  );
   const framework = getFramework(args);
-  if (!introspectionResult.success) {
+  if (!introspectionData) {
     return defaultResult(args);
   }
 
@@ -110,7 +109,7 @@ export const introspectApp = async (args: {
     {
       handle: 'filesystem',
     },
-    ...introspectionResult.data.routes,
+    ...introspectionData.routes,
     {
       src: '/(.*)',
       dest: '/',
@@ -120,8 +119,8 @@ export const introspectApp = async (args: {
   return {
     routes,
     framework,
-    additionalFolders: introspectionResult.data.additionalFolders ?? [],
-    additionalDeps: introspectionResult.data.additionalDeps ?? [],
+    additionalFolders: introspectionData.additionalFolders ?? [],
+    additionalDeps: introspectionData.additionalDeps ?? [],
   };
 };
 
