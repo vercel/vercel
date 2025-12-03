@@ -668,8 +668,9 @@ async function mergeBuilderOutput(
   }
 
   const ignoreFilter = (path: string) => {
-    if (path.startsWith('static/')) {
-      return filter(path.substring('static/'.length));
+    const normalizedPath = path.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('static/')) {
+      return filter(normalizedPath.substring('static/'.length));
     }
     return true;
   };

@@ -19,7 +19,10 @@ export async function merge(
 
   if (ignoreFilter) {
     const relPath = relative(root, source);
-    if (relPath && !ignoreFilter(relPath)) return;
+    if (relPath && !ignoreFilter(relPath)) {
+      await remove(source);
+      return;
+    }
   }
 
   const destStat: Stats | NodeJS.ErrnoException = await stat(destination).catch(
