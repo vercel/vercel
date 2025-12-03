@@ -1,7 +1,7 @@
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import which from 'which';
 import { FileFsRef, Files, Meta, debug, glob } from '@vercel/build-utils';
 import {
@@ -606,22 +606,16 @@ export async function exportRequirementsFromPipfile({
 
 export async function mirrorSitePackagesIntoVendor({
   venvPath,
-  vendorBaseDir,
   vendorDirName,
 }: {
   venvPath: string;
-  vendorBaseDir: string;
   vendorDirName: string;
 }): Promise<Files> {
   const vendorFiles: Files = {};
-  const vendorDirOnDisk = join(vendorBaseDir, vendorDirName);
 
-  // Mirror the venv's site-packages into a vendored directory under
-  // `.vercel/python/.../_vendor`
-  // this is to avoid bundling the entire virtual environment into Lambda.
+  // Map the files from site-packages in the virtual environment
+  // into the Lambda bundle under `_vendor`.
   try {
-    await fs.promises.mkdir(vendorDirOnDisk, { recursive: true });
-
     const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
     for (const dir of sitePackageDirs) {
       if (!fs.existsSync(dir)) continue;
@@ -636,15 +630,12 @@ export async function mirrorSitePackagesIntoVendor({
         }
 
         const srcFsPath = join(dir, relativePath);
-        const destFsPath = join(vendorDirOnDisk, relativePath);
-        await fs.promises.mkdir(dirname(destFsPath), { recursive: true });
-        await fs.promises.copyFile(srcFsPath, destFsPath);
 
         const bundlePath = join(vendorDirName, relativePath).replace(
           /\\/g,
           '/'
         );
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: destFsPath });
+        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
       }
     }
   } catch (err) {
