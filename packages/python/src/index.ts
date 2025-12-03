@@ -449,7 +449,7 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
-    '**/.venv/**',
+    // '**/.venv/**',
     '**/venv/**',
     '**/__pycache__/**',
     '**/.mypy_cache/**',
