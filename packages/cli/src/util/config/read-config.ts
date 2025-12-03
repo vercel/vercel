@@ -18,7 +18,14 @@ export default async function readConfig(dir: string) {
       throw err;
     }
   } else {
-    pkgFilePath = getLocalConfigPath(dir);
+    try {
+      pkgFilePath = getLocalConfigPath(dir);
+    } catch (err) {
+      if (err instanceof Error) {
+        return err as any;
+      }
+      throw err;
+    }
   }
 
   const result = await readJSONFile<VercelConfig>(pkgFilePath);
