@@ -644,12 +644,6 @@ export async function mirrorSitePackagesIntoVendor({
   // `.vercel/python/.../_vendor`
   // this is to avoid bundling the entire virtual environment into Lambda.
   try {
-    try {
-      await fs.promises.rm(vendorDirOnDisk, { recursive: true, force: true });
-    } catch (err: any) {
-      debug('Failed to remove existing vendor directory', err);
-    }
-
     await fs.promises.mkdir(vendorDirOnDisk, { recursive: true });
 
     const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
