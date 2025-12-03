@@ -23,7 +23,8 @@
     }
   ],
   "framework": {
-    "slug": "hono"
+    "slug": "",
+    "version": ""
   },
   "additionalFolders": [],
   "additionalDeps": []

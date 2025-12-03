@@ -30,8 +30,8 @@
     }
   ],
   "framework": {
-    "slug": "express",
-    "version": "4.21.2"
+    "slug": "",
+    "version": ""
   },
   "additionalFolders": [
     "views"

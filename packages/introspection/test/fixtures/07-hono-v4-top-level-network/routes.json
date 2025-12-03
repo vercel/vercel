@@ -1,0 +1,15 @@
+{
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
+  "framework": {
+    "slug": "",
+    "version": ""
+  }
+}
