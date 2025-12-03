@@ -243,7 +243,7 @@ export async function syncProjectWithUv({
     args.push('--locked');
   }
   args.push('--no-editable');
-  await runUvCommandOrThrow({
+  await runUvCommand({
     uvPath,
     args,
     cwd: projectDir,
