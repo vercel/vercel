@@ -409,7 +409,6 @@ export const build: BuildV3 = async ({
   const vendorDirName = resolveVendorDir();
   const vendorFiles = await mirrorSitePackagesIntoVendor({
     venvPath,
-    vendorBaseDir,
     vendorDirName,
   });
 
