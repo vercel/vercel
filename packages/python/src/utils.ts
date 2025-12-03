@@ -127,7 +127,6 @@ export async function runPyprojectScript(
   // No command string was provided for the found script name
   return false;
 }
-
 export async function runUvCommand(options: {
   uvPath: string | null;
   args: string[];

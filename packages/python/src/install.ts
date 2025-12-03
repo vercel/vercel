@@ -126,6 +126,7 @@ async function runUvPipInstallArgs({
 
   const prettyUv = `uv ${uvArgs.join(' ')}`;
   try {
+    console.log(`Running "${prettyUv}"...`);
     await runUvCommand({ uvPath, args: uvArgs, cwd, venvPath });
     return;
   } catch (err) {
