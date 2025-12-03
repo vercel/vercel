@@ -11,7 +11,17 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['20', '22', '24'],
+      nodeVersions: ['20', '22'],
+    },
+  ],
+  [
+    'vitest-unit-node-24',
+    {
+      min: 1,
+      max: 1,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest', 'macos-14'],
+      nodeVersions: ['24'],
     },
   ],
   [
@@ -109,7 +119,18 @@ async function getChunkedTests() {
 
   // Get affected packages based on git changes
   const baseSha = process.env.TURBO_BASE_SHA || process.env.GITHUB_BASE_REF;
-  const affectedPackages = baseSha ? await getAffectedPackages(baseSha) : [];
+  const result = baseSha
+    ? await getAffectedPackages(baseSha)
+    : { result: 'test-all' };
+
+  let affectedPackages = [];
+  if (result.result === 'test-affected') {
+    affectedPackages = result.packages;
+  } else if (result.result === 'test-none') {
+    console.error('Testing strategy: no tests (no packages affected)');
+    console.log('[]');
+    return [];
+  }
 
   console.error(
     `Testing strategy: ${affectedPackages.length > 0 ? 'affected packages only' : 'all packages'}`
