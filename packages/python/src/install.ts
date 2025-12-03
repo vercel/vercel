@@ -115,6 +115,7 @@ async function tryRunUvCommand({
     return true;
   } catch (err) {
     console.log(`Failed to run "${pretty}"`);
+    console.log(err instanceof Error ? err.message : String(err));
     debug('uv command failed', err);
     return false;
   }

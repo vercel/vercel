@@ -23,6 +23,25 @@ import atexit
 
 
 _here = os.path.dirname(__file__)
+_vendor_rel = '__VC_HANDLER_VENDOR_DIR'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
 
 
 def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):

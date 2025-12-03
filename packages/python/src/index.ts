@@ -1,13 +1,6 @@
 import fs from 'fs';
 import { promisify } from 'util';
-import {
-  join,
-  dirname,
-  basename,
-  parse,
-  relative,
-  delimiter as pathDelimiter,
-} from 'path';
+import { join, dirname, basename, parse } from 'path';
 import {
   download,
   glob,
@@ -27,6 +20,7 @@ import {
 } from '@vercel/build-utils';
 import {
   installRequirementsIntoVenv,
+  resolveVendorDir,
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
   syncProjectWithUv,
@@ -69,6 +63,63 @@ function findDir({
 
   // Case 3: File not found in either location
   return null;
+}
+
+async function mirrorSitePackagesIntoVendor({
+  venvPath,
+  vendorBaseDir,
+  vendorDirName,
+}: {
+  venvPath: string;
+  vendorBaseDir: string;
+  vendorDirName: string;
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+  const vendorDirOnDisk = join(vendorBaseDir, vendorDirName);
+
+  // Mirror the venv's site-packages into a vendored directory under
+  // `.vercel/python/.../_vendor`
+  // this is to avoid bundling the entire virtual environment into Lambda.
+  try {
+    try {
+      await fs.promises.rm(vendorDirOnDisk, { recursive: true, force: true });
+    } catch (err: any) {
+      debug('Failed to remove existing vendor directory', err);
+    }
+
+    await fs.promises.mkdir(vendorDirOnDisk, { recursive: true });
+
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const dirFiles = await glob('**', dir);
+      for (const relativePath of Object.keys(dirFiles)) {
+        if (
+          relativePath.endsWith('.pyc') ||
+          relativePath.includes('__pycache__')
+        ) {
+          continue;
+        }
+
+        const srcFsPath = join(dir, relativePath);
+        const destFsPath = join(vendorDirOnDisk, relativePath);
+        await fs.promises.mkdir(dirname(destFsPath), { recursive: true });
+        await fs.promises.copyFile(srcFsPath, destFsPath);
+
+        const bundlePath = join(vendorDirName, relativePath).replace(
+          /\\/g,
+          '/'
+        );
+        vendorFiles[bundlePath] = new FileFsRef({ fsPath: destFsPath });
+      }
+    }
+  } catch (err) {
+    console.log('Failed to collect site-packages from virtual environment');
+    throw err;
+  }
+
+  return vendorFiles;
 }
 
 export async function downloadFilesInWorkPath({
@@ -282,7 +333,21 @@ export const build: BuildV3 = async ({
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
-  // Create a virtualenv in the project root (or workPath for `vercel dev`)
+  // Compute cache vendor dir keyed by Python version and entrypoint directory
+  const vendorBaseDir = join(
+    workPath,
+    '.vercel',
+    'python',
+    `py${pythonVersion.version}`,
+    entryDirectory
+  );
+  try {
+    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
+  } catch (err) {
+    console.log('Failed to create vendor cache directory');
+    throw err;
+  }
+
   const venvPath = join(workPath, '.venv');
   await ensureVenv({
     pythonPath: pythonVersion.pythonPath,
@@ -400,6 +465,14 @@ export const build: BuildV3 = async ({
     dependencies: runtimeDependencies,
   });
 
+  const vendorDirName = resolveVendorDir();
+  const vendorFiles = await mirrorSitePackagesIntoVendor({
+    venvPath,
+    vendorBaseDir,
+    vendorDirName,
+  });
+
+  const vendorDir = vendorDirName;
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
@@ -411,7 +484,8 @@ export const build: BuildV3 = async ({
   debug('Entrypoint with suffix is', entrypointWithSuffix);
   const handlerPyContents = originalHandlerPyContents
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
+    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
+    .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
 
   const predefinedExcludes = [
     '.git/**',
@@ -421,7 +495,7 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
-    '**/.venv/bin/**',
+    '**/.venv/**',
     '**/venv/**',
     '**/__pycache__/**',
     '**/.mypy_cache/**',
@@ -433,18 +507,7 @@ export const build: BuildV3 = async ({
   ];
 
   const lambdaEnv = {} as Record<string, string>;
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    const relDirs = sitePackageDirs
-      .filter(dir => fs.existsSync(dir))
-      .map(dir => relative(workPath, dir));
-    if (relDirs.length) {
-      lambdaEnv.PYTHONPATH = relDirs.join(pathDelimiter);
-    }
-  } catch (err) {
-    console.log('Failed to resolve site-packages from virtual environment');
-    throw err;
-  }
+  lambdaEnv.PYTHONPATH = vendorDir;
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -455,6 +518,10 @@ export const build: BuildV3 = async ({
   };
 
   const files: Files = await glob('**', globOptions);
+
+  for (const [p, f] of Object.entries(vendorFiles)) {
+    files[p] = f;
+  }
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
