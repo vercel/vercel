@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.3.3
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 1.3.2
 
 ### Patch Changes

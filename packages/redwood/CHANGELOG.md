@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.4.6
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 2.4.5
 
 ### Patch Changes

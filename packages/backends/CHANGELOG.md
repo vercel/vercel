@@ -1,5 +1,14 @@
 # @vercel/backends
 
+## 0.0.15
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c), [`2c0cdad76930441f92efedcc27a15eb22a2509a3`](https://github.com/vercel/vercel/commit/2c0cdad76930441f92efedcc27a15eb22a2509a3)]:
+  - @vercel/introspection@0.0.6
+
 ## 0.0.14
 
 ### Patch Changes
