@@ -1,226 +1,34 @@
+use base64::prelude::*;
+use hyper::server::conn::http1;
+use hyper::service::service_fn as hyper_service_fn;
+use hyper_util::rt::TokioIo;
 use serde::Serialize;
+use std::collections::VecDeque;
 use std::convert::Infallible;
 use std::env;
 use std::future::Future;
 use std::io::prelude::*;
 use std::net::SocketAddr;
 use std::os::unix::net::UnixStream;
-use std::sync::{Arc, Mutex};
-
-use http_body_util::BodyExt;
-use hyper::body::Bytes;
-use hyper::server::conn::http1;
-use hyper::service::service_fn as hyper_service_fn;
-use hyper_util::rt::TokioIo;
-use tokio::net::TcpListener;
-
-use base64::prelude::*;
-use std::collections::VecDeque;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
+use tokio::net::TcpListener;
 use tower::Service;
 
-mod ipc;
-use ipc::core::{EndMessage, StartMessage};
-use ipc::log::{Level, LogMessage};
+pub use hyper::Response;
+pub use types::{Error, ResponseBody};
+pub type Request = hyper::Request<hyper::body::Incoming>;
 
 #[cfg(feature = "axum")]
 pub mod axum;
 
-pub use hyper::Response;
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
-pub type Request = hyper::Request<hyper::body::Incoming>;
-
-/// A wrapper around BoxBody that allows implementing From traits
-#[derive(Debug)]
-pub struct ResponseBody(pub http_body_util::combinators::BoxBody<Bytes, Error>);
-
-impl std::ops::Deref for ResponseBody {
-    type Target = http_body_util::combinators::BoxBody<Bytes, Error>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for ResponseBody {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl http_body::Body for ResponseBody {
-    type Data = Bytes;
-    type Error = Error;
-
-    fn poll_frame(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
-        std::pin::Pin::new(&mut self.0).poll_frame(cx)
-    }
-
-    fn is_end_stream(&self) -> bool {
-        self.0.is_end_stream()
-    }
-
-    fn size_hint(&self) -> http_body::SizeHint {
-        self.0.size_hint()
-    }
-}
-
-impl From<&str> for ResponseBody {
-    fn from(value: &str) -> Self {
-        let body = http_body_util::Full::new(Bytes::from(value.to_string()))
-            .map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl From<String> for ResponseBody {
-    fn from(value: String) -> Self {
-        let bytes = Bytes::from(value);
-        let body = http_body_util::Full::new(bytes).map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl From<Bytes> for ResponseBody {
-    fn from(value: Bytes) -> Self {
-        let body = http_body_util::Full::new(value).map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl From<http_body_util::Full<Bytes>> for ResponseBody {
-    fn from(value: http_body_util::Full<Bytes>) -> Self {
-        let body = value.map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl<T> From<http_body_util::StreamBody<T>> for ResponseBody
-where
-    T: tokio_stream::Stream<Item = Result<hyper::body::Frame<Bytes>, Error>>
-        + Send
-        + Sync
-        + 'static,
-{
-    fn from(value: http_body_util::StreamBody<T>) -> Self {
-        ResponseBody(value.boxed())
-    }
-}
-
-/// An interface for producing a HTTP Response from a given output value.
-pub trait IntoFunctionResponse {
-    /// Transform the output of a handler function into a response object
-    fn into_response(self) -> Result<Response<ResponseBody>, Error>;
-}
-
-impl IntoFunctionResponse for Response<ResponseBody> {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        Ok(self)
-    }
-}
-
-impl<T> IntoFunctionResponse for Result<T, Error>
-where
-    T: IntoFunctionResponse,
-{
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        match self {
-            Ok(value) => value.into_response(),
-            Err(err) => {
-                let error_msg = format!("{{\"error\": \"{}\"}}", err);
-                let response = Response::builder()
-                    .status(500)
-                    .header("content-type", "application/json")
-                    .body(ResponseBody::from(error_msg))?;
-                Ok(response)
-            }
-        }
-    }
-}
-
-impl IntoFunctionResponse for String {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let response = Response::builder()
-            .status(200)
-            .header("content-type", "text/plain")
-            .body(ResponseBody::from(self))?;
-        Ok(response)
-    }
-}
-
-impl IntoFunctionResponse for &str {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let response = Response::builder()
-            .status(200)
-            .header("content-type", "text/plain")
-            .body(ResponseBody::from(self))?;
-        Ok(response)
-    }
-}
-
-impl IntoFunctionResponse for Bytes {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let response = Response::builder()
-            .status(200)
-            .body(ResponseBody::from(self))?;
-        Ok(response)
-    }
-}
-
-impl IntoFunctionResponse for serde_json::Value {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let json = serde_json::to_string(&self)?;
-        let response = Response::builder()
-            .status(200)
-            .header("content-type", "application/json")
-            .body(ResponseBody::from(json))?;
-        Ok(response)
-    }
-}
-
-impl IntoFunctionResponse for Response<serde_json::Value> {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let (parts, body) = self.into_parts();
-        let json = serde_json::to_string(&body)?;
-        let response = Response::from_parts(parts, ResponseBody::from(json));
-        Ok(response)
-    }
-}
-
-impl IntoFunctionResponse for Response<String> {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let (parts, body) = self.into_parts();
-        let response = Response::from_parts(parts, ResponseBody::from(body));
-        Ok(response)
-    }
-}
-
-impl IntoFunctionResponse for Response<&str> {
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let (parts, body) = self.into_parts();
-        let response = Response::from_parts(parts, ResponseBody::from(body));
-        Ok(response)
-    }
-}
-
-impl<T> IntoFunctionResponse for Response<http_body_util::StreamBody<T>>
-where
-    T: tokio_stream::Stream<Item = Result<hyper::body::Frame<hyper::body::Bytes>, Error>>
-        + Send
-        + Sync
-        + 'static,
-{
-    fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let (parts, body) = self.into_parts();
-        let response = Response::from_parts(parts, ResponseBody::from(body));
-        Ok(response)
-    }
-}
+mod ipc;
+mod types;
+use crate::ipc::core::{EndMessage, StartMessage};
+use crate::ipc::log::{Level, LogMessage};
+use crate::types::IntoFunctionResponse;
 
 static IPC_READY: AtomicBool = AtomicBool::new(false);
 static INIT_LOG_BUF_MAX_BYTES: usize = 1_000_000;
@@ -281,8 +89,8 @@ impl LogContext {
     fn log(&self, level: Level, msg: &str) {
         if let (Some(inv_id), Some(req_id)) = (&self.invocation_id, &self.request_id) {
             let log = LogMessage::with_level(inv_id.clone(), *req_id, msg, level);
-            if let Err(e) = enqueue_or_send_message(&self.ipc_stream, log) {
-                eprintln!("Failed to send/queue log message: {}", e);
+            if let Err(_e) = enqueue_or_send_message(&self.ipc_stream, log) {
+                // Failed to send or queue log message
             }
         } else {
             // Fall back to regular println when no request context
@@ -536,11 +344,8 @@ where
 
     if let Some(ref ipc_stream_ref) = ipc_stream {
         let start_message = StartMessage::new(0, port);
-        if let Err(e) = send_message(ipc_stream_ref, start_message) {
-            eprintln!(
-                "Warning: Failed to send start message to IPC: {}. Continuing without IPC support.",
-                e
-            );
+        if let Err(_e) = send_message(ipc_stream_ref, start_message) {
+            // Failed to send start message to IPC
         } else {
             IPC_READY.store(true, Ordering::Relaxed);
             flush_init_log_buffer(&ipc_stream);
@@ -557,7 +362,7 @@ where
         let service_clone = service.clone();
 
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
+            if let Err(_e) = http1::Builder::new()
                 .keep_alive(true)
                 .half_close(true)
                 .serve_connection(
@@ -638,7 +443,7 @@ where
                 )
                 .await
             {
-                eprintln!("Error serving connection: {:?}", err);
+                // Error serving connection
             }
         });
     }
