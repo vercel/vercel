@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.8
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 4.15.7
 
 ### Patch Changes

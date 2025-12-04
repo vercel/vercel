@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.1.1
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 6.1.0
 
 ### Minor Changes
