@@ -1,5 +1,62 @@
 # vercel
 
+## 49.0.0
+
+### Major Changes
+
+- Standardize ls argument errors ([#14360](https://github.com/vercel/vercel/pull/14360))
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- add config path compilation util ([#14312](https://github.com/vercel/vercel/pull/14312))
+
+- Improve messaging for vc pull ([#14351](https://github.com/vercel/vercel/pull/14351))
+
+- Don't prompt to env pull when linking to a newly created project ([#14392](https://github.com/vercel/vercel/pull/14392))
+
+- support for alternative vercel config files in build, dev, and deploy commands ([#14314](https://github.com/vercel/vercel/pull/14314))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/backends@0.0.15
+  - @vercel/build-utils@13.2.3
+  - @vercel/elysia@0.1.13
+  - @vercel/express@0.1.18
+  - @vercel/fastify@0.1.16
+  - @vercel/go@3.2.4
+  - @vercel/h3@0.1.22
+  - @vercel/hono@0.2.16
+  - @vercel/hydrogen@1.3.3
+  - @vercel/nestjs@0.2.17
+  - @vercel/next@4.15.8
+  - @vercel/node@5.5.15
+  - @vercel/python@6.1.1
+  - @vercel/redwood@2.4.6
+  - @vercel/remix-builder@5.5.6
+  - @vercel/ruby@2.2.3
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.14
+
+## 48.12.1
+
+### Patch Changes
+
+- Updated dependencies [[`f9b8fb23d1d2f873c5c3a0534b12d1e463689bb6`](https://github.com/vercel/vercel/commit/f9b8fb23d1d2f873c5c3a0534b12d1e463689bb6)]:
+  - @vercel/build-utils@13.2.2
+  - @vercel/backends@0.0.14
+  - @vercel/express@0.1.17
+  - @vercel/redwood@2.4.5
+  - @vercel/remix-builder@5.5.5
+  - @vercel/hono@0.2.15
+  - @vercel/next@4.15.7
+  - @vercel/node@5.5.14
+  - @vercel/elysia@0.1.12
+  - @vercel/fastify@0.1.15
+  - @vercel/h3@0.1.21
+  - @vercel/nestjs@0.2.16
+  - @vercel/static-build@2.8.13
+
 ## 48.12.0
 
 ### Minor Changes

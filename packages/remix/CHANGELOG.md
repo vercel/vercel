@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 5.5.6
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 5.5.5
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
 ## 5.5.4
 
 ### Patch Changes

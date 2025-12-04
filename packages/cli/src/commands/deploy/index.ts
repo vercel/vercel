@@ -18,6 +18,7 @@ import { join, resolve } from 'path';
 import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
+import { compileVercelConfig } from '../../util/compile-vercel-config';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
@@ -32,6 +33,7 @@ import {
   AliasDomainConfigured,
   BuildError,
   BuildsRateLimited,
+  ConflictingConfigFiles,
   ConflictingFilePath,
   ConflictingPathSegment,
   DeploymentNotFound,
@@ -156,6 +158,10 @@ export default async (client: Client): Promise<number> => {
   // #endregion
 
   // #region Config loading
+
+  // Compile vercel.ts to .vercel/vercel.json if it exists
+  await compileVercelConfig(paths[0]);
+
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
 
   if (localConfig) {
@@ -351,7 +357,9 @@ export default async (client: Client): Promise<number> => {
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(join(cwd, rootDirectory));
+    const rootDirectoryPath = join(cwd, rootDirectory);
+    await compileVercelConfig(rootDirectoryPath);
+    const rootDirectoryConfig = readLocalConfig(rootDirectoryPath);
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
@@ -663,7 +671,8 @@ export default async (client: Client): Promise<number> => {
       err instanceof AliasDomainConfigured ||
       err instanceof MissingBuildScript ||
       err instanceof ConflictingFilePath ||
-      err instanceof ConflictingPathSegment
+      err instanceof ConflictingPathSegment ||
+      err instanceof ConflictingConfigFiles
     ) {
       handleCreateDeployError(err, localConfig);
       return 1;
@@ -776,7 +785,8 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
     error instanceof AliasDomainConfigured ||
     error instanceof MissingBuildScript ||
     error instanceof ConflictingFilePath ||
-    error instanceof ConflictingPathSegment
+    error instanceof ConflictingPathSegment ||
+    error instanceof ConflictingConfigFiles
   ) {
     output.error(error.message);
     return 1;

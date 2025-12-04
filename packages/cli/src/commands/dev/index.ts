@@ -91,6 +91,11 @@ export default async function main(client: Client) {
 
   const vercelConfig = await readConfig(dir);
 
+  if (vercelConfig instanceof Error) {
+    output.prettyError(vercelConfig);
+    return 1;
+  }
+
   const hasBuilds =
     vercelConfig &&
     'builds' in vercelConfig &&

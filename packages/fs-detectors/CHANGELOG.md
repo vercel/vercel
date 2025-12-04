@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.7.9
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/frameworks@3.15.4
+
 ## 5.7.8
 
 ### Patch Changes

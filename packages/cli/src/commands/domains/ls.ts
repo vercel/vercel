@@ -20,6 +20,7 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetry = new DomainsLsTelemetryClient({
@@ -38,6 +39,16 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const { args, flags: opts } = parsedArgs;
 
+  const validationResult = validateLsArgs({
+    commandName: 'domains ls',
+    args: args,
+    maxArgs: 0,
+    exitCode: 2,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
+
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
 
@@ -53,15 +64,6 @@ export default async function ls(client: Client, argv: string[]) {
   const { contextName } = await getScope(client);
 
   const lsStamp = stamp();
-
-  if (args.length !== 0) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('domains ls')}`
-      )}`
-    );
-    return 1;
-  }
 
   output.spinner(`Fetching Domains under ${chalk.bold(contextName)}`);
 
