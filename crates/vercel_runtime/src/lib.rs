@@ -1,116 +1,34 @@
+use base64::prelude::*;
+use hyper::server::conn::http1;
+use hyper::service::service_fn as hyper_service_fn;
+use hyper_util::rt::TokioIo;
 use serde::Serialize;
+use std::collections::VecDeque;
 use std::convert::Infallible;
 use std::env;
 use std::future::Future;
 use std::io::prelude::*;
 use std::net::SocketAddr;
 use std::os::unix::net::UnixStream;
-use std::sync::{Arc, Mutex};
-
-use http_body_util::BodyExt;
-use hyper::body::Bytes;
-use hyper::server::conn::http1;
-use hyper::service::service_fn as hyper_service_fn;
-use hyper_util::rt::TokioIo;
-use tokio::net::TcpListener;
-
-use base64::prelude::*;
-use std::collections::VecDeque;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
+use tokio::net::TcpListener;
 use tower::Service;
 
-mod ipc;
-use ipc::core::{EndMessage, StartMessage};
-use ipc::log::{Level, LogMessage};
+pub use hyper::Response;
+pub use types::{Error, ResponseBody};
+pub type Request = hyper::Request<hyper::body::Incoming>;
 
 #[cfg(feature = "axum")]
 pub mod axum;
 
-pub use hyper::Response;
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
-pub type Request = hyper::Request<hyper::body::Incoming>;
-
-/// A wrapper around BoxBody that allows implementing From traits
-#[derive(Debug)]
-pub struct ResponseBody(pub http_body_util::combinators::BoxBody<Bytes, Error>);
-
-impl std::ops::Deref for ResponseBody {
-    type Target = http_body_util::combinators::BoxBody<Bytes, Error>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for ResponseBody {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl http_body::Body for ResponseBody {
-    type Data = Bytes;
-    type Error = Error;
-
-    fn poll_frame(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
-        std::pin::Pin::new(&mut self.0).poll_frame(cx)
-    }
-
-    fn is_end_stream(&self) -> bool {
-        self.0.is_end_stream()
-    }
-
-    fn size_hint(&self) -> http_body::SizeHint {
-        self.0.size_hint()
-    }
-}
-
-impl From<&str> for ResponseBody {
-    fn from(value: &str) -> Self {
-        let body = http_body_util::Full::new(Bytes::from(value.to_string()))
-            .map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl From<String> for ResponseBody {
-    fn from(value: String) -> Self {
-        let bytes = Bytes::from(value);
-        let body = http_body_util::Full::new(bytes).map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl From<Bytes> for ResponseBody {
-    fn from(value: Bytes) -> Self {
-        let body = http_body_util::Full::new(value).map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl From<http_body_util::Full<Bytes>> for ResponseBody {
-    fn from(value: http_body_util::Full<Bytes>) -> Self {
-        let body = value.map_err(|e| Box::new(e) as Error);
-        ResponseBody(body.boxed())
-    }
-}
-
-impl<T> From<http_body_util::StreamBody<T>> for ResponseBody
-where
-    T: tokio_stream::Stream<Item = Result<hyper::body::Frame<Bytes>, Error>>
-        + Send
-        + Sync
-        + 'static,
-{
-    fn from(value: http_body_util::StreamBody<T>) -> Self {
-        ResponseBody(value.boxed())
-    }
-}
+mod ipc;
+mod types;
+use crate::ipc::core::{EndMessage, StartMessage};
+use crate::ipc::log::{Level, LogMessage};
+use crate::types::IntoFunctionResponse;
 
 static IPC_READY: AtomicBool = AtomicBool::new(false);
 static INIT_LOG_BUF_MAX_BYTES: usize = 1_000_000;
@@ -171,8 +89,8 @@ impl LogContext {
     fn log(&self, level: Level, msg: &str) {
         if let (Some(inv_id), Some(req_id)) = (&self.invocation_id, &self.request_id) {
             let log = LogMessage::with_level(inv_id.clone(), *req_id, msg, level);
-            if let Err(e) = enqueue_or_send_message(&self.ipc_stream, log) {
-                eprintln!("Failed to send/queue log message: {}", e);
+            if let Err(_e) = enqueue_or_send_message(&self.ipc_stream, log) {
+                // Failed to send or queue log message
             }
         } else {
             // Fall back to regular println when no request context
@@ -285,18 +203,21 @@ fn flush_init_log_buf_to_stderr() {
     }
 }
 
-/// Trait that abstracts over handler function signatures
+/// Trait that abstracts over handler function signatures that return types implementing IntoFunctionResponse
 pub trait Handler {
-    type Future: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static;
+    type Output: IntoFunctionResponse;
+    type Future: Future<Output = Self::Output> + Send + 'static;
     fn call(&self, req: Request, state: AppState) -> Self::Future;
 }
 
-/// Implementation for handlers that take both Request and AppState
-impl<F, Fut> Handler for F
+/// Implementation for handlers that return IntoFunctionResponse types
+impl<F, Fut, R> Handler for F
 where
     F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
+    type Output = R;
     type Future = Fut;
 
     fn call(&self, req: Request, state: AppState) -> Self::Future {
@@ -304,17 +225,19 @@ where
     }
 }
 
-/// Wrapper for stateless handlers that only take Request
+/// Wrapper for stateless handlers that return IntoFunctionResponse types
 #[derive(Clone)]
 pub struct StatelessHandler<F> {
     f: F,
 }
 
-impl<F, Fut> Handler for StatelessHandler<F>
+impl<F, Fut, R> Handler for StatelessHandler<F>
 where
     F: Fn(Request) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
+    type Output = R;
     type Future = Fut;
 
     fn call(&self, req: Request, _state: AppState) -> Self::Future {
@@ -328,11 +251,12 @@ pub trait IntoServiceFn<Args> {
     fn into_service_fn(self) -> ServiceFn<Self::Handler>;
 }
 
-/// Implementation for handlers that take Request and AppState (new signature)
-impl<F, Fut> IntoServiceFn<(Request, AppState)> for F
+/// Implementation for handlers that take Request and AppState
+impl<F, Fut, R> IntoServiceFn<(Request, AppState)> for F
 where
     F: Fn(Request, AppState) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
     type Handler = F;
 
@@ -342,10 +266,11 @@ where
 }
 
 /// Implementation for handlers that only take Request (stateless)
-impl<F, Fut> IntoServiceFn<(Request,)> for F
+impl<F, Fut, R> IntoServiceFn<(Request,)> for F
 where
     F: Fn(Request) -> Fut + Clone + Send + 'static,
-    Fut: Future<Output = Result<Response<ResponseBody>, Error>> + Send + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoFunctionResponse,
 {
     type Handler = StatelessHandler<F>;
 
@@ -374,6 +299,7 @@ impl<H> Service<(AppState, Request)> for ServiceFn<H>
 where
     H: Handler + Clone + Send + 'static,
     H::Future: Send + 'static,
+    H::Output: Send + 'static,
 {
     type Response = Response<ResponseBody>;
     type Error = Error;
@@ -385,7 +311,10 @@ where
 
     fn call(&mut self, (state, req): (AppState, Request)) -> Self::Future {
         let f = self.f.clone();
-        Box::pin(async move { f.call(req, state).await })
+        Box::pin(async move {
+            let result = f.call(req, state).await;
+            result.into_response()
+        })
     }
 }
 
@@ -415,11 +344,8 @@ where
 
     if let Some(ref ipc_stream_ref) = ipc_stream {
         let start_message = StartMessage::new(0, port);
-        if let Err(e) = send_message(ipc_stream_ref, start_message) {
-            eprintln!(
-                "Warning: Failed to send start message to IPC: {}. Continuing without IPC support.",
-                e
-            );
+        if let Err(_e) = send_message(ipc_stream_ref, start_message) {
+            // Failed to send start message to IPC
         } else {
             IPC_READY.store(true, Ordering::Relaxed);
             flush_init_log_buffer(&ipc_stream);
@@ -436,7 +362,7 @@ where
         let service_clone = service.clone();
 
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
+            if let Err(_e) = http1::Builder::new()
                 .keep_alive(true)
                 .half_close(true)
                 .serve_connection(
@@ -517,7 +443,7 @@ where
                 )
                 .await
             {
-                eprintln!("Error serving connection: {:?}", err);
+                // Error serving connection
             }
         });
     }
