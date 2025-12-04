@@ -600,7 +600,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
       new RegExp(`${promptEnvVar}="my plaintext value"`)
     );
     expect(contents).toMatch(
-      new RegExp(`${stdinEnvVar}="{"expect":"quotes"}"`)
+      new RegExp(`${stdinEnvVar}=\\{"expect":"quotes"\\}`)
     );
     expect(contents).not.toMatch(new RegExp(`${previewEnvVar}`));
   }
