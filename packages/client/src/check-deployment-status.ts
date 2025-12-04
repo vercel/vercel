@@ -27,6 +27,34 @@ const RETRY_DELAY_MAX_MS = 60_000;
 const RETRY_DELAY_MIN_MS = 5_000;
 const RETRY_DELAY_DEFAULT_MS = 5_000;
 
+export function parseRetryAfterMs(response: any): number | null {
+  // HTTP 429 (Too Many Requests) or 503 (Service Unavailable)
+  if (response.status === 429 || response.status === 503) {
+    let header: string | null = response.headers.get('Retry-After');
+    if (header == null) {
+      return RETRY_DELAY_DEFAULT_MS;
+    }
+
+    let retryAfterMs = Number(header) * 1000;
+    if (Number.isNaN(retryAfterMs)) {
+      let retryAfterDateMs = Date.parse(header);
+      if (!Number.isNaN(retryAfterDateMs)) {
+        retryAfterMs = retryAfterDateMs - Date.now();
+      }
+    }
+
+    return Math.min(
+      RETRY_DELAY_MAX_MS,
+      Math.max(RETRY_DELAY_MIN_MS, retryAfterMs)
+    );
+  } else if (response.status >= 500 && response.status <= 599) {
+    // HTTP 5xx: Server error, assume it's safe to retry
+    return RETRY_DELAY_DEFAULT_MS;
+  } else {
+    return null;
+  }
+}
+
 /* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
@@ -70,27 +98,14 @@ export async function* checkDeploymentStatus(
         break;
       }
 
-      // HTTP 429: Too Many Requests
-      if (deploymentResponse.status === 429) {
-        let retryAfterMs =
-          parseInt(deploymentResponse.headers.get('Retry-After'), 10) * 1000;
-        if (Number.isNaN(retryAfterMs)) {
-          retryAfterMs = RETRY_DELAY_DEFAULT_MS;
-        }
-        retryAfterMs = Math.min(
-          RETRY_DELAY_MAX_MS,
-          Math.max(RETRY_DELAY_MIN_MS, retryAfterMs)
+      const retryAfterMs = parseRetryAfterMs(deploymentResponse);
+      if (retryAfterMs != null) {
+        debug(
+          'Received a transient error or rate limit ' +
+            `(HTTP ${deploymentResponse.status}) while querying deployment ` +
+            `status, retrying after ${retryAfterMs}ms`
         );
         await sleep(retryAfterMs);
-        continue;
-      }
-
-      // HTTP 5xx: Server error, assume it's safe to retry
-      if (
-        deploymentResponse.status >= 500 &&
-        deploymentResponse.status <= 599
-      ) {
-        await sleep(RETRY_DELAY_DEFAULT_MS);
         continue;
       }
 

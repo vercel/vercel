@@ -50,13 +50,19 @@ function mockResponse(
 describe('checkDeploymentStatus()', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   describe('retry logic', () => {
-    it('should retry on HTTP 429 with Retry-After header', async () => {
+    it('should retry on HTTP 429 or 503 with Retry-After header', async () => {
+      const mockDateString = 'Tue, 29 Oct 2024 16:56:32 GMT';
+      vi.setSystemTime(Date.parse(mockDateString) - 7_000);
+
       mockFetch
         .mockResolvedValueOnce(mockResponse(429, {}, { 'retry-after': '6' }))
-        .mockResolvedValueOnce(mockResponse(429, {}, { 'retry-after': '7' }))
+        .mockResolvedValueOnce(
+          mockResponse(503, {}, { 'retry-after': mockDateString })
+        )
         .mockResolvedValueOnce(
           mockResponse(200, {
             ...mockDeployment(),
@@ -92,6 +98,7 @@ describe('checkDeploymentStatus()', () => {
         type: 'error',
         payload: 'mock error',
       });
+      expect(sleep).toHaveBeenCalledWith(5_000);
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
   });
