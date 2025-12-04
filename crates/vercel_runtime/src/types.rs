@@ -1,6 +1,6 @@
+use http_body_util::BodyExt;
 use hyper::body::Bytes;
 use hyper::{Response, StatusCode};
-use http_body_util::BodyExt;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
@@ -92,6 +92,30 @@ where
     }
 }
 
+impl From<serde_json::Value> for ResponseBody {
+    fn from(value: serde_json::Value) -> Self {
+        let json = serde_json::to_string(&value).unwrap_or_else(|_| "{}".to_string());
+        let bytes = Bytes::from(json);
+        let body = http_body_util::Full::new(bytes).map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
+    }
+}
+
+impl From<()> for ResponseBody {
+    fn from(_: ()) -> Self {
+        let body = http_body_util::Full::new(Bytes::new()).map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
+    }
+}
+
+impl<T: AsRef<str>> From<Html<T>> for ResponseBody {
+    fn from(value: Html<T>) -> Self {
+        let body = http_body_util::Full::new(Bytes::from(value.0.as_ref().to_string()))
+            .map_err(|e| Box::new(e) as Error);
+        ResponseBody(body.boxed())
+    }
+}
+
 pub trait IntoFunctionResponse {
     /// Transform the output of a handler function into a response object
     fn into_response(self) -> Result<Response<ResponseBody>, Error>;
@@ -163,11 +187,10 @@ impl IntoFunctionResponse for Vec<u8> {
 
 impl IntoFunctionResponse for serde_json::Value {
     fn into_response(self) -> Result<Response<ResponseBody>, Error> {
-        let json = serde_json::to_string(&self)?;
         let response = Response::builder()
             .status(200)
             .header("content-type", "application/json")
-            .body(ResponseBody::from(json))?;
+            .body(ResponseBody::from(self))?;
         Ok(response)
     }
 }
@@ -175,8 +198,7 @@ impl IntoFunctionResponse for serde_json::Value {
 impl IntoFunctionResponse for Response<serde_json::Value> {
     fn into_response(self) -> Result<Response<ResponseBody>, Error> {
         let (parts, body) = self.into_parts();
-        let json = serde_json::to_string(&body)?;
-        let response = Response::from_parts(parts, ResponseBody::from(json));
+        let response = Response::from_parts(parts, ResponseBody::from(body));
         Ok(response)
     }
 }
@@ -240,7 +262,7 @@ impl IntoFunctionResponse for () {
     fn into_response(self) -> Result<Response<ResponseBody>, Error> {
         let response = Response::builder()
             .status(204)
-            .body(ResponseBody::from(""))?;
+            .body(ResponseBody::from(()))?;
         Ok(response)
     }
 }
@@ -269,7 +291,7 @@ impl<T: AsRef<str>> IntoFunctionResponse for Html<T> {
         let response = Response::builder()
             .status(200)
             .header("content-type", "text/html; charset=utf-8")
-            .body(ResponseBody::from(self.0.as_ref()))?;
+            .body(ResponseBody::from(self))?;
         Ok(response)
     }
 }
@@ -277,8 +299,7 @@ impl<T: AsRef<str>> IntoFunctionResponse for Html<T> {
 impl<T: AsRef<str>> IntoFunctionResponse for Response<Html<T>> {
     fn into_response(self) -> Result<Response<ResponseBody>, Error> {
         let (parts, body) = self.into_parts();
-        let response = Response::from_parts(parts, ResponseBody::from(body.0.as_ref()));
+        let response = Response::from_parts(parts, ResponseBody::from(body));
         Ok(response)
     }
 }
-
