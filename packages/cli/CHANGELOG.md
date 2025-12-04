@@ -1,5 +1,11 @@
 # vercel
 
+## 49.1.0
+
+### Minor Changes
+
+- Add new CLI commands for upcoming bulk redirects feature. ([#14393](https://github.com/vercel/vercel/pull/14393))
+
 ## 49.0.0
 
 ### Major Changes
