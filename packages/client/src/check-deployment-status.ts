@@ -38,7 +38,9 @@ export function parseRetryAfterMs(response: any): number | null {
     let retryAfterMs = Number(header) * 1000;
     if (Number.isNaN(retryAfterMs)) {
       let retryAfterDateMs = Date.parse(header);
-      if (!Number.isNaN(retryAfterDateMs)) {
+      if (Number.isNaN(retryAfterDateMs)) {
+        retryAfterMs = RETRY_DELAY_DEFAULT_MS;
+      } else {
         retryAfterMs = retryAfterDateMs - Date.now();
       }
     }
