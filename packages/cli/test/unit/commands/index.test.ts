@@ -47,6 +47,8 @@ describe('index', () => {
         ['promote', 'promote'],
         ['pull', 'pull'],
         ['redeploy', 'redeploy'],
+        ['redirect', 'redirects'],
+        ['redirects', 'redirects'],
         ['remove', 'remove'],
         ['rm', 'remove'],
         ['rollback', 'rollback'],

@@ -250,6 +250,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandRedirects(actual: string) {
+    this.trackCliCommand({
+      command: 'redirects',
+      value: actual,
+    });
+  }
+
   trackCliCommandRemove(actual: string) {
     this.trackCliCommand({
       command: 'remove',
