@@ -21,6 +21,12 @@ interface DeploymentStatus {
   payload: Deployment | DeploymentBuild[];
 }
 
+// If an error occurs, how should our retries behave?
+const RETRY_COUNT = 3;
+const RETRY_DELAY_MAX_MS = 60_000;
+const RETRY_DELAY_MIN_MS = 5_000;
+const RETRY_DELAY_DEFAULT_MS = 5_000;
+
 /* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
@@ -46,16 +52,51 @@ export async function* checkDeploymentStatus(
   const finishedEvents = new Set();
   const startTime = Date.now();
 
+  // Deployment polling
   while (true) {
-    // Deployment polling
-    const deploymentData = await fetch(
-      `${apiDeployments}/${deployment.id || deployment.deploymentId}${
-        teamId ? `?teamId=${teamId}` : ''
-      }`,
-      token,
-      { apiUrl, userAgent, agent: clientOptions.agent }
-    );
-    const deploymentUpdate = await deploymentData.json();
+    let deploymentResponse: any;
+    let retriesLeft = RETRY_COUNT;
+    while (true) {
+      deploymentResponse = await fetch(
+        `${apiDeployments}/${deployment.id || deployment.deploymentId}${
+          teamId ? `?teamId=${teamId}` : ''
+        }`,
+        token,
+        { apiUrl, userAgent, agent: clientOptions.agent }
+      );
+
+      retriesLeft--;
+      if (retriesLeft == 0) {
+        break;
+      }
+
+      // HTTP 429: Too Many Requests
+      if (deploymentResponse.status === 429) {
+        let retryAfterMs =
+          parseInt(deploymentResponse.headers.get('Retry-After'), 10) * 1000;
+        if (Number.isNaN(retryAfterMs)) {
+          retryAfterMs = RETRY_DELAY_DEFAULT_MS;
+        }
+        retryAfterMs = Math.min(
+          RETRY_DELAY_MAX_MS,
+          Math.max(RETRY_DELAY_MIN_MS, retryAfterMs)
+        );
+        await sleep(retryAfterMs);
+        continue;
+      }
+
+      // HTTP 5xx: Server error, assume it's safe to retry
+      if (
+        deploymentResponse.status >= 500 &&
+        deploymentResponse.status <= 599
+      ) {
+        await sleep(RETRY_DELAY_DEFAULT_MS);
+        continue;
+      }
+
+      break;
+    }
+    const deploymentUpdate = await deploymentResponse.json();
 
     if (deploymentUpdate.error) {
       debug('Deployment status check has errorred');
