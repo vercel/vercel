@@ -133,7 +133,7 @@ export async function runUvCommand(options: {
 }) {
   const { uvPath, args, cwd, venvPath } = options;
 
-  const pretty = `${uvPath} ${args.join(' ')}`;
+  const pretty = `uv ${args.join(' ')}`;
   debug(`Running "${pretty}"...`);
 
   if (!uvPath) {
