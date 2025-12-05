@@ -257,7 +257,7 @@ export const build: BuildV3 = async ({
 
   // If a dashboard install command is configured for FastAPI/Flask, treat it as
   // an override for the default dependency installation: run the command inside
-  // the canonical virtualenv and do not run `ensureUvProject` / `uv sync`.
+  // the build virtualenv
   const hasCustomInstallCommand =
     (framework === 'fastapi' || framework === 'flask') &&
     typeof projectInstallCommand === 'string' &&
