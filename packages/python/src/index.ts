@@ -13,6 +13,7 @@ import {
   getEnvForPackageManager,
   type BuildOptions,
   type GlobOptions,
+  type PrepareCache,
   type BuildV3,
   type Files,
   type ShouldServe,
@@ -36,6 +37,7 @@ import {
   ensureVenv,
   createVenvEnv,
   runPyprojectInstallScript,
+  hasVercelInstallScript,
 } from './utils';
 
 const readFile = promisify(fs.readFile);
@@ -464,6 +466,37 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+export const prepareCache: PrepareCache = async ({ workPath, config }) => {
+  const cacheFiles: Files = {};
+  const framework = (config as any)?.framework as string | undefined;
+
+  let hasCustomInstall = false;
+  if (framework === 'fastapi' || framework === 'flask') {
+    const installCommand = (config as any)?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string' && installCommand.trim()) {
+      hasCustomInstall = true;
+    } else if (
+      await hasVercelInstallScript(workPath, [
+        'vercel-install',
+        'now-install',
+        'install',
+      ])
+    ) {
+      hasCustomInstall = true;
+    }
+  }
+
+  // Only persist the Python virtualenv between builds when using the default
+  // uv-managed installation flow. When custom install hooks are configured,
+  // the virtualenv is expected to be managed entirely by the user, and we
+  // don't want to risk stale dependencies accumulating purely via caching.
+  if (!hasCustomInstall) {
+    Object.assign(cacheFiles, await glob('.vercel/python/**', workPath));
+  }
+
+  return cacheFiles;
+};
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };

@@ -117,6 +117,14 @@ async function resolveVercelScript(
   return scripts[scriptToRun];
 }
 
+export async function hasVercelInstallScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>
+): Promise<boolean> {
+  const scriptCommand = await resolveVercelScript(workPath, scriptNames);
+  return typeof scriptCommand === 'string' && scriptCommand.trim().length > 0;
+}
+
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
