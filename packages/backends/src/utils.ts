@@ -4,8 +4,8 @@ import {
   download,
   runNpmInstall,
   runPackageJsonScript,
-  getNodeVersion,
   getSpawnOptions,
+  getRuntimeNodeVersion,
   execCommand,
   getEnvForPackageManager,
   scanParentDirs,
@@ -18,12 +18,7 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
   await download(files, workPath, meta);
 
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const nodeVersion = await getNodeVersion(
-    entrypointFsDirname,
-    undefined,
-    config,
-    meta
-  );
+  const nodeVersion = await getRuntimeNodeVersion(entrypointFsDirname);
 
   const spawnOpts = getSpawnOptions(meta || {}, nodeVersion);
 
