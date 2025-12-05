@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.3
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 13.2.2
 
 ### Patch Changes

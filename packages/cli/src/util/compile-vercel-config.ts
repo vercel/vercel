@@ -112,12 +112,30 @@ export async function compileVercelConfig(
   }
 
   if (!vercelConfigPath) {
+    if (hasVercelJson) {
+      return {
+        configPath: vercelJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (hasNowJson) {
+      return {
+        configPath: nowJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (await fileExists(compiledConfigPath)) {
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
+      };
+    }
+
     return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
+      configPath: null,
       wasCompiled: false,
     };
   }
@@ -221,12 +239,16 @@ export async function getVercelConfigPath(workPath: string): Promise<string> {
   const nowJsonPath = join(workPath, 'now.json');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
-  if (await fileExists(compiledConfigPath)) {
-    return compiledConfigPath;
-  }
-
   if (await fileExists(vercelJsonPath)) {
     return vercelJsonPath;
+  }
+
+  if (await fileExists(nowJsonPath)) {
+    return nowJsonPath;
+  }
+
+  if (await fileExists(compiledConfigPath)) {
+    return compiledConfigPath;
   }
 
   return nowJsonPath;
