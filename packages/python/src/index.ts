@@ -113,7 +113,7 @@ export const build: BuildV3 = async ({
       packageJsonPackageManager,
       turboSupportsCorepackHome,
     } = await scanParentDirs(workPath, true);
-    const spawnEnv = getEnvForPackageManager({
+    spawnEnv = getEnvForPackageManager({
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
