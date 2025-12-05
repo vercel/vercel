@@ -298,52 +298,38 @@ export async function uvLock({
 export async function uvAddDependencies({
   projectDir,
   uvPath,
+  venvPath,
   dependencies,
 }: {
   projectDir: string;
   uvPath: string;
+  venvPath: string;
   dependencies: string[];
 }): Promise<void> {
   const toAdd = dependencies.filter(Boolean);
   if (!toAdd.length) return;
 
-  const args = ['add', ...toAdd];
+  const args = ['add', '--active', ...toAdd];
   const pretty = `${uvPath} ${args.join(' ')}`;
   debug(`Running "${pretty}" in ${projectDir}...`);
-  try {
-    await execa(uvPath, args, {
-      cwd: projectDir,
-    });
-  } catch (err) {
-    throw new Error(
-      `Failed to run "${pretty}": ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
+  await runUvCommand({ uvPath, args, cwd: projectDir, venvPath });
 }
 
 export async function uvAddFromFile({
   projectDir,
   uvPath,
+  venvPath,
   requirementsPath,
 }: {
   projectDir: string;
   uvPath: string;
+  venvPath: string;
   requirementsPath: string;
 }): Promise<void> {
-  const args = ['add', '-r', requirementsPath];
+  const args = ['add', '--active', '-r', requirementsPath];
   const pretty = `${uvPath} ${args.join(' ')}`;
   debug(`Running "${pretty}" in ${projectDir}...`);
-  try {
-    await execa(uvPath, args, { cwd: projectDir });
-  } catch (err) {
-    throw new Error(
-      `Failed to import dependencies from "${requirementsPath}" with uv: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
+  await runUvCommand({ uvPath, args, cwd: projectDir, venvPath });
 }
 
 function getDependencyName(spec: string): string {
@@ -381,6 +367,7 @@ export async function ensureUvProject({
   pythonPath,
   pipPath,
   uvPath,
+  venvPath,
   meta,
   runtimeDependencies,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
@@ -445,6 +432,7 @@ export async function ensureUvProject({
     await uvAddFromFile({
       projectDir,
       uvPath,
+      venvPath,
       requirementsPath: exportedReq,
     });
   } else if (manifestType === 'requirements.txt') {
@@ -468,6 +456,7 @@ export async function ensureUvProject({
     await uvAddFromFile({
       projectDir,
       uvPath,
+      venvPath,
       requirementsPath: manifestPath,
     });
   } else {
@@ -495,6 +484,7 @@ export async function ensureUvProject({
       await uvAddDependencies({
         projectDir,
         uvPath,
+        venvPath,
         dependencies: missingRuntimeDeps,
       });
     }
@@ -843,7 +833,6 @@ export async function mirrorSitePackagesIntoVendor({
   vendorDirName: string;
 }): Promise<Files> {
   const vendorFiles: Files = {};
-
   // Map the files from site-packages in the virtual environment
   // into the Lambda bundle under `_vendor`.
   try {

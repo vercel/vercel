@@ -261,11 +261,12 @@ export const build: BuildV3 = async ({
   }
 
   // Runtime framework dependencies are managed via the uv project so that the
-  // lockfile is the single source of truth for all installed packages.
+  // lockfile is the single source of truth for all installed packages. These
+  // are intentionally unpinned so they can resolve alongside user-declared
+  // dependencies (for example, modern Flask versions that require newer
+  // Werkzeug releases).
   const runtimeDependencies =
-    framework === 'flask'
-      ? ['werkzeug==1.0.1']
-      : ['werkzeug==1.0.1', 'uvicorn==0.38.0'];
+    framework === 'flask' ? ['werkzeug'] : ['werkzeug', 'uvicorn'];
 
   // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
   // for consistent installation logic and idempotency.
