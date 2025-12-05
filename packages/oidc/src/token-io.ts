@@ -3,12 +3,12 @@ import fs from 'fs';
 import os from 'os';
 import { VercelOidcTokenError } from './token-error';
 
-export function findRootDir(): string {
+export function findRootDir(subPath?: string): string {
   try {
     let dir = process.cwd();
     while (dir !== path.dirname(dir)) {
       const pkgPath = path.join(dir, '.vercel');
-      if (fs.existsSync(pkgPath)) {
+      if (fs.existsSync(subPath ? path.join(pkgPath, subPath) : pkgPath)) {
         return dir;
       }
       dir = path.dirname(dir);

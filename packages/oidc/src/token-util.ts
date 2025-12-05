@@ -70,6 +70,50 @@ export function assertVercelOidcTokenResponse(
 }
 
 export function findProjectInfo(): { projectId: string; teamId: string } {
+  try {
+    return findProjectInfoFromProjectJson();
+  } catch (error) {
+    try {
+      return findProjectInfoFromRepoJson();
+    } catch {
+      throw error;
+    }
+  }
+}
+
+export function findProjectInfoFromRepoJson(): {
+  projectId: string;
+  teamId: string;
+} {
+  const dir = findRootDir('repo.json');
+  if (!dir) {
+    throw new VercelOidcTokenError('Unable to find root directory');
+  }
+  try {
+    const prjPath = path.join(dir, '.vercel', 'repo.json');
+    if (!fs.existsSync(prjPath)) {
+      throw new VercelOidcTokenError('repo.json not found');
+    }
+    const repo = JSON.parse(fs.readFileSync(prjPath, 'utf8'));
+    if (!Array.isArray(repo.projects) && typeof repo.orgId !== 'string') {
+      throw new TypeError('Expected a string-valued orgId property');
+    }
+    const project = (repo.projects as { directory: string; id: string }[]).find(
+      p => process.cwd().startsWith(path.join(dir, p.directory))
+    );
+    if (!project) {
+      throw new VercelOidcTokenError('Project not found');
+    }
+    return { projectId: project.id, teamId: repo.orgId };
+  } catch (e) {
+    throw new VercelOidcTokenError(`Unable to find project ID`, e);
+  }
+}
+
+export function findProjectInfoFromProjectJson(): {
+  projectId: string;
+  teamId: string;
+} {
   const dir = findRootDir();
   if (!dir) {
     throw new VercelOidcTokenError('Unable to find root directory');
