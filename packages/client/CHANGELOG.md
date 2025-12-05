@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.15
+
+### Patch Changes
+
+- Fix example API url ([#14417](https://github.com/vercel/vercel/pull/14417))
+
 ## 17.2.14
 
 ### Patch Changes
