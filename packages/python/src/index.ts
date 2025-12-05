@@ -75,8 +75,6 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
-  // Node/package-manager environment derived from the repo (used for build commands
-  // and as a base for the Python virtualenv environment when running custom installs).
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
