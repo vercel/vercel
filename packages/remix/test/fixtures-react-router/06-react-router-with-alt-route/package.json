@@ -14,8 +14,8 @@
     "@react-router/serve": "^7.9.1",
     "@vercel/react-router": "1.2.3",
     "isbot": "^5.1.17",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
     "react-router": "^7.9.1"
   },
   "devDependencies": {
