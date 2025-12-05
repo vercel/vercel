@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { VercelOidcTokenError } from './token-error';
-import { findRootDir, getUserDataDir } from './token-io';
+import { VercelOidcTokenError } from './token-error.js';
+import { findRootDir, getUserDataDir } from './token-io.js';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
