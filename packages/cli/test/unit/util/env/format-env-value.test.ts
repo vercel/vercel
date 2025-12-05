@@ -69,20 +69,20 @@ describe('formatEnvValue', () => {
   });
 
   describe('newline handling', () => {
-    it('escapes newline in simple value', () => {
-      expect(formatEnvValue('hello\nworld')).toBe('hello\\nworld');
+    it('quotes and escapes newline', () => {
+      expect(formatEnvValue('hello\nworld')).toBe('"hello\\nworld"');
     });
 
-    it('escapes carriage return in simple value', () => {
-      expect(formatEnvValue('hello\rworld')).toBe('hello\\rworld');
+    it('quotes and escapes carriage return', () => {
+      expect(formatEnvValue('hello\rworld')).toBe('"hello\\rworld"');
     });
 
-    it('escapes CRLF in simple value', () => {
-      expect(formatEnvValue('hello\r\nworld')).toBe('hello\\r\\nworld');
+    it('quotes and escapes CRLF', () => {
+      expect(formatEnvValue('hello\r\nworld')).toBe('"hello\\r\\nworld"');
     });
 
-    it('escapes multiple newlines', () => {
-      expect(formatEnvValue('a\nb\nc')).toBe('a\\nb\\nc');
+    it('quotes and escapes multiple newlines', () => {
+      expect(formatEnvValue('a\nb\nc')).toBe('"a\\nb\\nc"');
     });
 
     it('quotes and escapes newline when value also has space', () => {
@@ -95,8 +95,16 @@ describe('formatEnvValue', () => {
       expect(formatEnvValue('say "hello"')).toBe('"say \\"hello\\""');
     });
 
-    it('does not modify quotes in unquoted value', () => {
-      expect(formatEnvValue('"quoted"')).toBe('"quoted"');
+    it('quotes and escapes value starting with double quote', () => {
+      expect(formatEnvValue('"quoted"')).toBe('"\\"quoted\\""');
+    });
+
+    it('quotes and escapes value starting with double quote (unclosed)', () => {
+      expect(formatEnvValue('"unclosed')).toBe('"\\"unclosed"');
+    });
+
+    it('does not quote value with middle quote only', () => {
+      expect(formatEnvValue('hello"world')).toBe('hello"world');
     });
 
     it('escapes quotes in value starting with #', () => {
@@ -106,7 +114,7 @@ describe('formatEnvValue', () => {
 
   describe('combined edge cases', () => {
     it('handles value with newline and quotes', () => {
-      expect(formatEnvValue('line1\n"quoted"')).toBe('line1\\n"quoted"');
+      expect(formatEnvValue('line1\n"quoted"')).toBe('"line1\\n\\"quoted\\""');
     });
 
     it('handles value with space, newline, and quotes', () => {

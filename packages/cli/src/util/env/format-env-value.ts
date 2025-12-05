@@ -1,14 +1,14 @@
 export function formatEnvValue(value: string | undefined): string {
   if (value == null) return '';
 
-  const normalized = value.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  const needsQuotes =
+    /\s/.test(value) || value.startsWith('#') || value.startsWith('"');
 
-  // Add quotes if the value contains spaces or starts with a # (ie. looks like a comment)
-  const needsQuotes = /\s/.test(normalized) || normalized.startsWith('#');
+  if (!needsQuotes) return value;
 
-  if (!needsQuotes) return normalized;
-
-  // Escape double quotes
-  const escaped = normalized.replace(/"/g, '\\"');
+  const escaped = value
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/"/g, '\\"');
   return `"${escaped}"`;
 }
