@@ -46,6 +46,7 @@ export interface Options {
   cleanUrls?: boolean;
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
+  bunVersion?: string;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -463,6 +464,10 @@ function maybeGetApiBuilder(
     }
   }
 
+  if (options.bunVersion) {
+    config.bunVersion = options.bunVersion;
+  }
+
   const builder: Builder = {
     use,
     src: fileName,
@@ -499,6 +504,7 @@ function getApiMatches(): Builder[] {
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
+    { src: 'api/**/*.rs', use: `@vercel/rust`, config },
   ];
 }
 
@@ -541,6 +547,10 @@ function detectFrontBuilder(
 
   if (projectSettings.outputDirectory) {
     config.outputDirectory = projectSettings.outputDirectory;
+  }
+
+  if (options.bunVersion) {
+    config.bunVersion = options.bunVersion;
   }
 
   if (
@@ -714,7 +724,9 @@ function checkUnusedFunctions(
         fnKey.startsWith('pages/') ||
         fnKey.startsWith('src/pages') ||
         fnKey.startsWith('app/') ||
-        fnKey.startsWith('src/app/')
+        fnKey.startsWith('src/app/') ||
+        fnKey.startsWith('middleware') ||
+        fnKey.startsWith('src/middleware')
       ) {
         unusedFunctions.delete(fnKey);
       } else {

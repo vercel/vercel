@@ -17,6 +17,10 @@
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },
+    "vitest-unit-node-24": {
+      "dependsOn": ["build"],
+      "outputLogs": "new-only"
+    },
     "vitest-run": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"
@@ -26,6 +30,10 @@
       "outputLogs": "new-only"
     },
     "vitest-e2e-node-20": {
+      "dependsOn": ["build"],
+      "outputLogs": "new-only"
+    },
+    "test-e2e-node-all-versions": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },

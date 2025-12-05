@@ -1,0 +1,22 @@
+{
+  "name": "simple-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "build": "cervel build index.ts",
+    "dev": "cervel"
+  },
+  "dependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "^22.10.0",
+    "cors": "^2.8.5",
+    "cowsay": "^1.5.0",
+    "express": "5.1.0",
+    "jiti": "^2.6.1",
+    "pug": "^3.0.3",
+    "srvx": "^0.8.13",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

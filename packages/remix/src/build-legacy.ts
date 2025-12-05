@@ -126,7 +126,6 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -148,7 +147,6 @@ export const build: BuildV2 = async ({
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -330,7 +328,6 @@ export const build: BuildV2 = async ({
         env: nonCiEnv,
       },
       undefined,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -685,6 +682,9 @@ async function createRenderNodeFunction(
       slug: 'remix',
       version: remixVersion,
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return fn;

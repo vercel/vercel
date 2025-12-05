@@ -25,6 +25,7 @@ exports[`base level help output > help 1`] = `
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      open                             Opens the current project in the Vercel Dashboard
       promote              [url|id]    Promote an existing deployment to current
       pull                 [path]      Pull your Project Settings from the cloud
       redeploy             [url|id]    Rebuild and deploy a previous deployment.
@@ -36,6 +37,7 @@ exports[`base level help output > help 1`] = `
       alias                [cmd]       Manages your domain aliases
       bisect                           Use binary search to find the deployment that introduced a bug
       certs                [cmd]       Manages your SSL certificates
+      curl                 [path]      cURL requests to your linked project's deployment [beta]
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       logs                 [url]       Displays the logs for a deployment

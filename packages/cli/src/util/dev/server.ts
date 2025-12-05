@@ -8,7 +8,7 @@ import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
 import minimatch from 'minimatch';
-import httpProxy from 'http-proxy';
+import httpProxy from 'http-proxy-node16';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, type FSWatcher } from 'chokidar';
@@ -39,6 +39,7 @@ import {
   FileFsRef,
   type PackageJson,
   spawnCommand,
+  isExperimentalBackendsEnabled,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -543,11 +544,19 @@ export default class DevServer {
           return defaults;
         }
       }
+
+      // Once we're happy with this approach, the backend framework definitions
+      // can be updated to contain a dev command. And we can remove this
+      if (isExperimentalBackendsEnabled()) {
+        return 'npx @vercel/cervel dev';
+      }
     }
     return undefined;
   }
 
   async _getVercelConfig(): Promise<VercelConfig> {
+    const { compileVercelConfig } = await import('../compile-vercel-config');
+    await compileVercelConfig(this.cwd);
     const configPath = getVercelConfigPath(this.cwd);
 
     const [

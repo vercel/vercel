@@ -1,5 +1,85 @@
 # @vercel/next
 
+## 4.15.8
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 4.15.7
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+## 4.15.6
+
+### Patch Changes
+
+- Fix Node.js proxy/middleware with basePath and matcher not being invoked on Vercel ([#14372](https://github.com/vercel/vercel/pull/14372))
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 4.15.5
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
+## 4.15.4
+
+### Patch Changes
+
+- fix trailing slash handling for next build ([#14356](https://github.com/vercel/vercel/pull/14356))
+
+## 4.15.3
+
+### Patch Changes
+
+- skip generating pages routes when only using app dir ([#14235](https://github.com/vercel/vercel/pull/14235))
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
+## 4.15.2
+
+### Patch Changes
+
+- Fix dynamic interception routes not being recognized during prerendering when cache components is enabled ([#14177](https://github.com/vercel/vercel/pull/14177))
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+## 4.15.1
+
+### Patch Changes
+
+- version gate clientSegmentCache flag ([#14200](https://github.com/vercel/vercel/pull/14200))
+
+## 4.15.0
+
+### Minor Changes
+
+- Update functions size threshold when using Bun as a runtime ([#14171](https://github.com/vercel/vercel/pull/14171))
+
+## 4.14.1
+
+### Patch Changes
+
+- Support proxy.ts in Next.js 16+ and suppress middleware warnings ([#14140](https://github.com/vercel/vercel/pull/14140))
+
+  Adds support for the new proxy.ts file format introduced in Next.js 16, while maintaining backward compatibility with middleware.ts. The builder now checks for proxy.ts first in Next.js 16+, falls back to middleware.ts, and suppresses unnecessary warnings when neither file exists. This ensures vercel.json function configurations are properly applied to proxy.ts files.
+
+## 4.14.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
+## 4.13.4
+
+### Patch Changes
+
+- Update locale in prerender-manifest dataRoute ([#14101](https://github.com/vercel/vercel/pull/14101))
+
 ## 4.13.3
 
 ### Patch Changes

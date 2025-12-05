@@ -1,6 +1,6 @@
 {
   "name": "@vercel/express",
-  "version": "0.0.25",
+  "version": "0.1.18",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -23,20 +23,21 @@
     "edge-entry.js"
   ],
   "dependencies": {
-    "@vercel/nft": "0.30.1",
-    "@vercel/static-config": "3.1.2",
+    "@vercel/nft": "1.1.1",
+    "@vercel/static-config": "workspace:*",
     "fs-extra": "11.1.0",
     "path-to-regexp": "8.3.0",
     "rolldown": "1.0.0-beta.35",
     "ts-morph": "12.0.0",
     "zod": "3.22.4",
-    "@vercel/node": "5.4.0"
+    "@vercel/cervel": "workspace:*",
+    "@vercel/node": "workspace:*"
   },
   "devDependencies": {
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "12.1.3",
+    "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "jest-junit": "16.0.0",
     "vite": "^5.1.6",

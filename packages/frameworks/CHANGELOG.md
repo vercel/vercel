@@ -1,10 +1,62 @@
 # @vercel/frameworks
 
-## 3.11.2
+## 3.15.4
 
 ### Patch Changes
 
-- Add support for additional entrypoints in NestJS ([#14073](https://github.com/vercel/vercel/pull/14073))
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 3.15.3
+
+### Patch Changes
+
+- Make Nitro supersede Vite in detection ([#14179](https://github.com/vercel/vercel/pull/14179))
+
+## 3.15.2
+
+### Patch Changes
+
+- [python] make flask framework detection case insensitive ([#14197](https://github.com/vercel/vercel/pull/14197))
+
+## 3.15.1
+
+### Patch Changes
+
+- Fix express logos ([#13783](https://github.com/vercel/vercel/pull/13783))
+
+## 3.15.0
+
+### Minor Changes
+
+- Add TanStack Start framework preset ([#14175](https://github.com/vercel/vercel/pull/14175))
+
+## 3.14.1
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
+## 3.14.0
+
+### Minor Changes
+
+- Add zero-config support for Fastify ([#14120](https://github.com/vercel/vercel/pull/14120))
+
+## 3.13.0
+
+### Minor Changes
+
+- Add root main as entrypoint for NestJS ([#14105](https://github.com/vercel/vercel/pull/14105))
+
+## 3.12.0
+
+### Minor Changes
+
+- Update nitro framework detection to detect nitro package ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+### Patch Changes
+
+- Add support for additional entrypoints in NestJS ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ## 3.11.1
 

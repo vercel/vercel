@@ -1,10 +1,100 @@
 # @vercel/build-utils
 
+## 13.2.3
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 13.2.2
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+## 13.2.1
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 13.2.0
+
+### Minor Changes
+
+- Remove env var check for node24 ([#14355](https://github.com/vercel/vercel/pull/14355))
+
+## 13.1.2
+
+### Patch Changes
+
+- Support `runtimeLanguage` in build-utils ([#14344](https://github.com/vercel/vercel/pull/14344))
+
+## 13.1.1
+
+### Patch Changes
+
+- Only run introspection when isExperimentalBackendsWithoutIntrospectionEnabled is truthy ([#14336](https://github.com/vercel/vercel/pull/14336))
+
+## 13.1.0
+
+### Minor Changes
+
+- Remove --unsafe-perm from npm install command ([#14302](https://github.com/vercel/vercel/pull/14302))
+
+## 13.0.2
+
+### Patch Changes
+
+- Improve warning messages surrounding Elysia ([#14272](https://github.com/vercel/vercel/pull/14272))
+
+## 13.0.1
+
+### Patch Changes
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
+## 13.0.0
+
+### Major Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+## 12.2.4
+
+### Patch Changes
+
+- Add helper for detecting backend builders ([#14182](https://github.com/vercel/vercel/pull/14182))
+
+## 12.2.3
+
+### Patch Changes
+
+- Add Elysia framework ([#14164](https://github.com/vercel/vercel/pull/14164))
+
+## 12.2.2
+
+### Patch Changes
+
+- Allow Node.js 24 behind env var feature flag ([#14160](https://github.com/vercel/vercel/pull/14160))
+
+## 12.2.1
+
+### Patch Changes
+
+- Add backend util helpers ([#14152](https://github.com/vercel/vercel/pull/14152))
+
+## 12.2.0
+
+### Minor Changes
+
+- Add support for Bun through a vercel.json property ([#14130](https://github.com/vercel/vercel/pull/14130))
+
 ## 12.1.3
 
 ### Patch Changes
 
-- Revert the prebuilt archive split from 20MB back to 100MB ([#14087](https://github.com/vercel/vercel/pull/14087))
+- Revert the prebuilt archive split from 20MB back to 100MB ([#14103](https://github.com/vercel/vercel/pull/14103))
 
 ## 12.1.2
 

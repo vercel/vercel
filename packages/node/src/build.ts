@@ -31,6 +31,7 @@ import {
   execCommand,
   getEnvForPackageManager,
   scanParentDirs,
+  isBunVersion,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -94,7 +95,6 @@ async function downloadInstallAndBundle({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -117,7 +117,6 @@ async function downloadInstallAndBundle({
       [],
       spawnOpts,
       meta,
-      nodeVersion,
       config.projectSettings?.createdAt
     );
   }
@@ -148,7 +147,8 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean
+  isEdgeFunction: boolean,
+  useTypescript5 = false
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -190,6 +190,7 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
+        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -201,10 +202,13 @@ async function compile(
     shouldAddSourcemapSupport = true;
     return source;
   }
+  const isBun = isBunVersion(nodeVersion);
 
   const conditions = isEdgeFunction
     ? ['edge-light', 'browser', 'module', 'import', 'require']
-    : undefined;
+    : isBun
+      ? ['bun']
+      : undefined;
 
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
@@ -417,6 +421,7 @@ export const build = async ({
   meta = {},
   considerBuildCommand = false,
   entrypointCallback,
+  checks = () => {},
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
@@ -426,6 +431,7 @@ export const build = async ({
    * from files that may have been created by the build script.
    */
   entrypointCallback?: () => Promise<string>;
+  checks?: (project: { config: Config; isBun: boolean }) => void;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -508,6 +514,13 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
+  checks({
+    config,
+    isBun: isBunVersion(nodeVersion),
+  });
+
+  // Opt backend builders to use typescript5
+  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -517,7 +530,8 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction
+    isEdgeFunction,
+    useTypescript5
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
@@ -609,6 +623,9 @@ export const build = async ({
       regions: normalizeRequestedRegions(
         staticConfig?.preferredRegion ?? staticConfig?.regions
       ),
+      shouldDisableAutomaticFetchInstrumentation:
+        process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+        '1',
     });
   }
 

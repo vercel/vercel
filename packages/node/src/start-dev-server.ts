@@ -1,15 +1,14 @@
-import once from '@tootallnate/once';
 import url from 'url';
 import { createRequire } from 'module';
 import { promises as fsp } from 'fs';
-import { join, dirname, extname, relative, resolve } from 'path';
-import { spawn } from 'child_process';
+import { join, dirname, extname } from 'path';
 import _treeKill from 'tree-kill';
 import { promisify } from 'util';
 import {
+  BunVersion,
   walkParentDirs,
+  getSupportedBunVersion,
   type StartDevServer,
-  type StartDevServerOptions,
 } from '@vercel/build-utils';
 import { isErrnoException } from '@vercel/error-utils';
 import { getConfig } from '@vercel/static-config';
@@ -23,7 +22,6 @@ import { getRegExpFromMatchers } from './utils';
 
 const require_ = createRequire(__filename);
 const treeKill = promisify(_treeKill);
-const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 type TypescriptModule = typeof import('typescript');
 
@@ -31,12 +29,33 @@ export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {}, publicDir } = opts;
   const entrypointPath = join(workPath, entrypoint);
 
-  if (config.middleware === true && typeof meta.requestUrl === 'string') {
-    // TODO: static config is also parsed in `dev-server.ts`.
-    // we should pass in this version as an env var instead.
-    const project = new Project();
-    const staticConfig = getConfig(project, entrypointPath);
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
+  const vercelConfigFile = opts.files['vercel.json'];
+  let bunVersion: BunVersion | undefined;
+  try {
+    if (vercelConfigFile?.type === 'FileFsRef') {
+      const vercelConfigContents = await fsp.readFile(
+        vercelConfigFile.fsPath,
+        'utf8'
+      );
+      if (vercelConfigContents) {
+        try {
+          const vercelConfig = JSON.parse(vercelConfigContents);
+          if (vercelConfig.bunVersion) {
+            bunVersion = getSupportedBunVersion(vercelConfig.bunVersion);
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    }
+  } catch {
+    // Ignore
+  }
+  const runtime = bunVersion ? 'bun' : 'node';
 
+  if (config.middleware === true && typeof meta.requestUrl === 'string') {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
 
@@ -140,7 +159,7 @@ export const startDevServer: StartDevServer = async opts => {
     tsConfig.compilerOptions.noEmit = true;
   }
 
-  const child = forkDevServer({
+  const child = await forkDevServer({
     workPath,
     config,
     entrypoint,
@@ -151,6 +170,7 @@ export const startDevServer: StartDevServer = async opts => {
     meta,
     tsConfig,
     publicDir,
+    runtime,
   });
 
   const { pid } = child;
@@ -161,9 +181,10 @@ export const startDevServer: StartDevServer = async opts => {
     if (isTypeScript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
-        console.error('Type check for %j failed:', entrypoint, err);
-      });
+    }
+
+    if (!pid) {
+      throw new Error(`Child process exited`);
     }
 
     // An optional callback for graceful shutdown.
@@ -171,13 +192,30 @@ export const startDevServer: StartDevServer = async opts => {
       // Send a "shutdown" message to the child process. Ideally we'd use a signal
       // (SIGTERM) here, but that doesn't work on Windows. This is a portable way
       // to tell the child process to exit gracefully.
-      child.send('shutdown', async err => {
-        if (err) {
+      if (runtime === 'bun') {
+        try {
+          process.kill(pid, 'SIGTERM');
+        } catch (err) {
           // The process might have already exited, for example, if the application
           // handler threw an error. Try terminating the process to be sure.
           await treeKill(pid);
         }
-      });
+      } else {
+        // For Node.js runtime using fork(), use IPC
+        await new Promise<void>((resolve, reject) => {
+          child.send('shutdown', err => {
+            if (err) {
+              // The process might have already exited, for example, if the application
+              // handler threw an error. Try terminating the process to be sure.
+              treeKill(pid)
+                .then(() => resolve())
+                .catch(killErr => reject(killErr));
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
     };
 
     return { port: message.value.port, pid, shutdown };
@@ -188,56 +226,3 @@ export const startDevServer: StartDevServer = async opts => {
     throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }
 };
-
-async function doTypeCheck(
-  { entrypoint, workPath, meta = {} }: StartDevServerOptions,
-  projectTsConfig: string | null
-): Promise<void> {
-  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
-  const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
-
-  // In order to type-check a single file, a standalone tsconfig
-  // file needs to be created that inherits from the base one :(
-  // See: https://stackoverflow.com/a/44748041/376773
-  //
-  // A different filename needs to be used for different `extends` tsconfig.json
-  const tsconfigName = projectTsConfig
-    ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
-        /[\\/.]/g,
-        '-'
-      )}.json`
-    : 'tsconfig.json';
-  const tsconfigPath = join(entrypointCacheDir, tsconfigName);
-  const tsconfig = {
-    extends: projectTsConfig
-      ? relative(entrypointCacheDir, projectTsConfig)
-      : undefined,
-    include: [relative(entrypointCacheDir, join(workPath, entrypoint))],
-  };
-
-  try {
-    const json = JSON.stringify(tsconfig, null, '\t');
-    await fsp.mkdir(entrypointCacheDir, { recursive: true });
-    await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (error: unknown) {
-    if (isErrnoException(error) && error.code !== 'EEXIST') throw error;
-  }
-
-  const child = spawn(
-    process.execPath,
-    [
-      tscPath,
-      '--project',
-      tsconfigPath,
-      '--noEmit',
-      '--allowJs',
-      '--esModuleInterop',
-      '--skipLibCheck',
-    ],
-    {
-      cwd: workPath,
-      stdio: 'inherit',
-    }
-  );
-  await once.spread<[number, string | null]>(child, 'close');
-}

@@ -50,12 +50,14 @@ import {
   KIB,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
   INTERNAL_PAGES,
 } from './constants';
 import {
   getContentTypeFromFile,
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
+import { isDynamicRoute } from './is-dynamic-route';
 
 type stringMap = { [key: string]: string };
 
@@ -64,24 +66,23 @@ export const require_ = createRequire(__filename);
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
-  Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
-)
-  ? Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
-  : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+/**
+ * Get the maximum uncompressed lambda size based on the runtime.
+ * Bun runtime has a lower limit than Node.js runtimes.
+ */
+export function getMaxUncompressedLambdaSize(runtime: string): number {
+  if (!isNaN(Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE))) {
+    return Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE);
+  }
+
+  return runtime.startsWith('bun')
+    ? DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN
+    : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+}
 
 const skipDefaultLocaleRewrite = Boolean(
   process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
 );
-
-// Identify /[param]/ in route string
-// eslint-disable-next-line no-useless-escape
-const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
-
-function isDynamicRoute(route: string): boolean {
-  route = route.startsWith('/') ? route : `/${route}`;
-  return TEST_DYNAMIC_ROUTE.test(route);
-}
 
 /**
  * Validate if the entrypoint is allowed to be used
@@ -335,6 +336,12 @@ type RoutesManifestOld = {
       headers: Readonly<Record<string, string>>;
     };
   };
+  /**
+   * Indicates whether the app uses Pages Router, App Router, or both.
+   * May be undefined in older versions of Next.js, in which case we treat everything
+   * as though pages router were being used.
+   */
+  appType?: 'app' | 'pages' | 'hybrid';
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -840,6 +847,7 @@ export function filterStaticPages(
   entryDirectory: string,
   htmlContentType: string,
   prerenderManifest: NextPrerenderedRoutes,
+  nextVersion: string,
   routesManifest?: RoutesManifest
 ) {
   const staticPages: FileMap = {};
@@ -869,7 +877,7 @@ export function filterStaticPages(
     staticPages[staticRoute] = staticPageFiles[page];
     staticPages[staticRoute].contentType = htmlContentType;
 
-    if (isDynamicRoute(pathname)) {
+    if (isDynamicRoute(pathname, nextVersion)) {
       dynamicPages.push(routeName);
       return;
     }
@@ -1085,6 +1093,9 @@ export async function createLambdaFromPseudoLayers({
       version: nextVersion,
     },
     experimentalAllowBundling,
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
 
@@ -1685,63 +1696,76 @@ async function getSourceFilePathFromPage({
   workPath,
   page,
   pageExtensions,
+  nextVersion,
 }: {
   workPath: string;
   page: string;
   pageExtensions?: ReadonlyArray<string>;
+  nextVersion?: string;
 }) {
   const usesSrcDir = await usesSrcDirectory(workPath);
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
 
-  for (const pageType of [
-    // middleware is not nested in pages/app
-    ...(page === 'middleware' ? [''] : ['pages', 'app']),
-  ]) {
-    let fsPath = path.join(workPath, pageType, page);
-    if (usesSrcDir) {
-      fsPath = path.join(workPath, 'src', pageType, page);
-    }
+  // In Next.js 16+, check for proxy.ts first as it's the recommended replacement for middleware.ts
+  const isNextJs16Plus = nextVersion && semver.gte(nextVersion, '16.0.0');
+  const pagesToCheck =
+    page === 'middleware' && isNextJs16Plus
+      ? ['proxy', 'middleware'] // Check proxy.ts first in Next.js 16+
+      : [page];
 
-    if (fs.existsSync(fsPath)) {
-      return path.relative(workPath, fsPath);
-    }
-    const extensionless = fsPath.replace(path.extname(fsPath), '');
-
-    for (const ext of extensionsToTry) {
-      fsPath = `${extensionless}.${ext}`;
-      // for appDir, we need to treat "index.js" as root-level "page.js"
-      if (
-        pageType === 'app' &&
-        extensionless ===
-          path.join(workPath, `${usesSrcDir ? 'src/' : ''}app/index`)
-      ) {
-        fsPath = `${extensionless.replace(/index$/, 'page')}.${ext}`;
+  for (const pageToCheck of pagesToCheck) {
+    for (const pageType of [
+      // middleware/proxy is not nested in pages/app
+      ...(pageToCheck === 'middleware' || pageToCheck === 'proxy'
+        ? ['']
+        : ['pages', 'app']),
+    ]) {
+      let fsPath = path.join(workPath, pageType, pageToCheck);
+      if (usesSrcDir) {
+        fsPath = path.join(workPath, 'src', pageType, pageToCheck);
       }
+
       if (fs.existsSync(fsPath)) {
         return path.relative(workPath, fsPath);
       }
-    }
+      const extensionless = fsPath.replace(path.extname(fsPath), '');
 
-    if (isDirectory(extensionless)) {
-      if (pageType === 'pages') {
-        for (const ext of extensionsToTry) {
-          fsPath = path.join(extensionless, `index.${ext}`);
-          if (fs.existsSync(fsPath)) {
-            return path.relative(workPath, fsPath);
-          }
+      for (const ext of extensionsToTry) {
+        fsPath = `${extensionless}.${ext}`;
+        // for appDir, we need to treat "index.js" as root-level "page.js"
+        if (
+          pageType === 'app' &&
+          extensionless ===
+            path.join(workPath, `${usesSrcDir ? 'src/' : ''}app/index`)
+        ) {
+          fsPath = `${extensionless.replace(/index$/, 'page')}.${ext}`;
         }
-        // appDir
-      } else {
-        for (const ext of extensionsToTry) {
-          // RSC
-          fsPath = path.join(extensionless, `page.${ext}`);
-          if (fs.existsSync(fsPath)) {
-            return path.relative(workPath, fsPath);
+        if (fs.existsSync(fsPath)) {
+          return path.relative(workPath, fsPath);
+        }
+      }
+
+      if (isDirectory(extensionless)) {
+        if (pageType === 'pages') {
+          for (const ext of extensionsToTry) {
+            fsPath = path.join(extensionless, `index.${ext}`);
+            if (fs.existsSync(fsPath)) {
+              return path.relative(workPath, fsPath);
+            }
           }
-          // Route Handlers
-          fsPath = path.join(extensionless, `route.${ext}`);
-          if (fs.existsSync(fsPath)) {
-            return path.relative(workPath, fsPath);
+          // appDir
+        } else {
+          for (const ext of extensionsToTry) {
+            // RSC
+            fsPath = path.join(extensionless, `page.${ext}`);
+            if (fs.existsSync(fsPath)) {
+              return path.relative(workPath, fsPath);
+            }
+            // Route Handlers
+            fsPath = path.join(extensionless, `route.${ext}`);
+            if (fs.existsSync(fsPath)) {
+              return path.relative(workPath, fsPath);
+            }
           }
         }
       }
@@ -1758,6 +1782,13 @@ async function getSourceFilePathFromPage({
   // by Next.js for App Router 500 page. There's no need to warn or return a source file in this case, as it won't have
   // any configuration applied to it.
   if (page === '/_global-error/page') {
+    return '';
+  }
+
+  // In Next.js 16+, middleware.ts is replaced by proxy.ts (though middleware.ts still works
+  // for Edge runtime). Skip the warning for middleware in Next.js 16+ since it's expected
+  // that it may not be found.
+  if (page === 'middleware' && isNextJs16Plus) {
     return '';
   }
 
@@ -1852,6 +1883,7 @@ export async function getPageLambdaGroups({
   inversedAppPathManifest,
   experimentalAllowBundling,
   isRouteHandlers,
+  nodeVersion,
 }: {
   isRouteHandlers?: boolean;
   entryPath: string;
@@ -1876,6 +1908,7 @@ export async function getPageLambdaGroups({
   inversedAppPathManifest?: Record<string, string>;
   experimentalAllowBundling?: boolean;
   experimentalTriggers?: Lambda['experimentalTriggers'];
+  nodeVersion: { runtime: string };
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1983,9 +2016,12 @@ export async function getPageLambdaGroups({
                 compressedPages[newPage].uncompressedSize;
             }
 
+            const maxLambdaSize = getMaxUncompressedLambdaSize(
+              nodeVersion.runtime
+            );
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
-              MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+              maxLambdaSize - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
 
             return underUncompressedLimit;
           }
@@ -2162,10 +2198,12 @@ export const detectLambdaLimitExceeding = async (
   lambdaGroups: LambdaGroup[],
   compressedPages: {
     [page: string]: PseudoFile;
-  }
+  },
+  runtime: string
 ) => {
+  const maxLambdaSize = getMaxUncompressedLambdaSize(runtime);
   // show debug info if within 5 MB of exceeding the limit
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
+  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = maxLambdaSize - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2174,8 +2212,7 @@ export const detectLambdaLimitExceeding = async (
   // pre-iterate to see if we are going to exceed the limit
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
-    const exceededLimit =
-      group.pseudoLayerUncompressedBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE;
+    const exceededLimit = group.pseudoLayerUncompressedBytes > maxLambdaSize;
 
     const closeToLimit =
       group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
@@ -2201,7 +2238,7 @@ export const detectLambdaLimitExceeding = async (
       if (numExceededLimit || numCloseToLimit) {
         console.log(
           `Warning: Max serverless function size of ${prettyBytes(
-            MAX_UNCOMPRESSED_LAMBDA_SIZE
+            maxLambdaSize
           )} uncompressed${numExceededLimit ? '' : ' almost'} reached`
         );
       } else {
@@ -2311,6 +2348,7 @@ type OnPrerenderRouteArgs = {
   isSharedLambdas: boolean;
   isServerMode: boolean;
   canUsePreviewMode: boolean;
+  nextVersion: string;
   lambdas: { [key: string]: Lambda };
   experimentalStreamingLambdaPaths:
     | ReadonlyMap<
@@ -2390,6 +2428,7 @@ export const onPrerenderRoute =
       isAppClientSegmentCacheEnabled,
       isAppClientParamParsingEnabled,
       appPathnameFilesMap,
+      nextVersion,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2707,12 +2746,18 @@ export const onPrerenderRoute =
       let normalized = path.posix.join(entryDirectory, route);
 
       if (nonDynamicSsg || isFallback || isOmitted) {
+        // the prerender-manifest can be inconsistent with
+        // locale being provided to dataRoute so normalize here
+        const pathToReplace = route.endsWith(routeFileNoExt + '.json')
+          ? origRouteFileNoExt
+          : routeFileNoExt;
+
         normalized = normalized.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
           // ensure we escape "$" correctly while replacing as "$" is a special
           // character, we need to do double escaping as first is for the initial
           // replace on the routeFile and then the second on the outputPath
-          `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
+          `${pathToReplace.replace(/\$/g, '$$$$')}.json`
         );
       }
 
@@ -2832,7 +2877,7 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
-      const isDynamic = isDynamicRoute(routeKey);
+      const isDynamic = isDynamicRoute(routeKey, nextVersion);
       const routeKeys = route?.routeKeys;
 
       // by default allowQuery should be undefined and only set when
@@ -2853,7 +2898,7 @@ export const onPrerenderRoute =
           allowQuery = Object.values(routeKeys);
         }
       } else {
-        const isDynamic = isDynamicRoute(pageKey);
+        const isDynamic = isDynamicRoute(pageKey, nextVersion);
 
         if (routeKeys) {
           // if we have routeKeys in the routes-manifest we use those
@@ -3699,8 +3744,12 @@ export async function getNodeMiddleware({
     return null;
   }
   const routes: RouteWithSrc[] = [];
+  // Pass page: '/' to skip basePath addition in getRouteMatchers(), since
+  // functions-config-manifest matchers already have basePath baked in by
+  // Next.js build. This matches the behavior for edge middleware where
+  // page is '/' (root middleware) and basePath is not added.
   const routeMatchers = getRouteMatchers(
-    { matchers: middlewareFunctionConfig.matchers },
+    { matchers: middlewareFunctionConfig.matchers, page: '/' },
     routesManifest
   );
 
@@ -3734,6 +3783,7 @@ export async function getNodeMiddleware({
     workPath: entryPath,
     page: normalizeSourceFilePageFromManifest('/middleware', 'middleware', {}),
     pageExtensions,
+    nextVersion,
   });
 
   const vercelConfigOpts = await getLambdaOptionsFromFunction({
@@ -3824,6 +3874,9 @@ export async function getNodeMiddleware({
       [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
         new FileBlob({ data: launcherData }),
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return {
@@ -4063,7 +4116,10 @@ export async function getMiddlewareBundle({
           route.override = true;
         }
 
-        if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
+        if (
+          routesManifest.version > 3 &&
+          isDynamicRoute(worker.page, nextVersion)
+        ) {
           source.dynamicRouteMap.set(worker.page, route);
         } else {
           source.staticRoutes.push(route);

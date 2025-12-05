@@ -1,7 +1,7 @@
 {
   "name": "@vercel/functions",
   "description": "Runtime functions to be used with your Vercel Functions",
-  "homepage": "https://vercel.com",
+  "homepage": "https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package",
   "files": [
     "**/*.js",
     "**/*.d.ts",
@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "3.1.4",
+  "version": "3.3.4",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
