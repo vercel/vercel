@@ -1330,6 +1330,20 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
+  it('should respect `.vercelignore` for Build Output API', async () => {
+    const cwd = fixture('static-with-ignore');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const staticFiles = await fs.readdir(join(output, 'static'));
+    expect(staticFiles).toEqual(['index.html']);
+    expect(fs.existsSync(join(output, 'static', 'foo.html'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'build.log'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'temp'))).toBe(false);
+  });
+
   it.skipIf(process.platform === 'win32')(
     'should apply routes from `.vercel/routes.json` for backend frameworks',
     async () => {

@@ -35,7 +35,11 @@ import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
-import { fileNameSymbol, type VercelConfig } from '@vercel/client';
+import {
+  fileNameSymbol,
+  type VercelConfig,
+  getVercelIgnore,
+} from '@vercel/client';
 import outputManager from '../../output-manager';
 
 const { normalize } = posix;
@@ -153,9 +157,10 @@ async function writeBuildResultV2(args: {
     build,
     vercelConfig,
     standalone,
+    workPath,
   } = args;
   if ('buildOutputPath' in buildResult) {
-    await mergeBuilderOutput(outputDir, buildResult);
+    await mergeBuilderOutput(outputDir, buildResult, workPath);
     return;
   }
 
@@ -645,15 +650,59 @@ async function writeLambda(
  */
 async function mergeBuilderOutput(
   outputDir: string,
-  buildResult: BuildResultBuildOutput
+  buildResult: BuildResultBuildOutput,
+  workPath: string
 ) {
   const absOutputDir = resolve(outputDir);
+  const { ig } = await getVercelIgnore(workPath);
+  const filter = ig.createFilter();
+
   if (absOutputDir === buildResult.buildOutputPath) {
-    // `.vercel/output` dir is already in the correct location,
-    // so no need to do anything
+    const staticDir = join(outputDir, 'static');
+    try {
+      await cleanIgnoredFiles(staticDir, staticDir, filter);
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') throw err;
+    }
     return;
   }
-  await merge(buildResult.buildOutputPath, outputDir);
+
+  const ignoreFilter = (path: string) => {
+    const normalizedPath = path.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('static/')) {
+      return filter(normalizedPath.substring('static/'.length));
+    }
+    return true;
+  };
+
+  await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+}
+
+async function cleanIgnoredFiles(
+  dir: string,
+  staticRoot: string,
+  filter: (path: string) => boolean
+): Promise<void> {
+  const entries = await fs.readdir(dir);
+
+  await Promise.all(
+    entries.map(async entry => {
+      const entryPath = join(dir, entry);
+      const stat = await fs.stat(entryPath);
+      const relativePath = relative(staticRoot, entryPath);
+
+      if (stat.isDirectory()) {
+        await cleanIgnoredFiles(entryPath, staticRoot, filter);
+        const remaining = await fs.readdir(entryPath);
+        if (remaining.length === 0) {
+          await fs.rmdir(entryPath);
+        }
+      } else if (!filter(relativePath)) {
+        outputManager.debug(`Removing ignored file: ${relativePath}`);
+        await fs.remove(entryPath);
+      }
+    })
+  );
 }
 
 /**
