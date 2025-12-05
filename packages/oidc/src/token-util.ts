@@ -72,8 +72,12 @@ export function assertVercelOidcTokenResponse(
 export function findProjectInfo(): { projectId: string; teamId: string } {
   try {
     return findProjectInfoFromProjectJson();
-  } catch {
-    return findProjectInfoFromRepoJson();
+  } catch (error) {
+    try {
+      return findProjectInfoFromRepoJson();
+    } catch {
+      throw error;
+    }
   }
 }
 
