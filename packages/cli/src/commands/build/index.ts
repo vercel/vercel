@@ -82,6 +82,7 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import { compileVercelConfig } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
@@ -401,11 +402,16 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  const compileResult = await compileVercelConfig(workPath);
+
+  const vercelConfigPath =
+    localConfigPath ||
+    compileResult.configPath ||
+    join(workPath, 'vercel.json');
+
   const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(
-      localConfigPath || join(workPath, 'vercel.json')
-    ),
+    readJSONFile<VercelConfig>(vercelConfigPath),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
