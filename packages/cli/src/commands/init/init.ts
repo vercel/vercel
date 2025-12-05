@@ -26,7 +26,7 @@ type Example = {
   suggestions: string[];
 };
 
-const EXAMPLE_API = 'https://now-example-files.zeit.sh';
+const EXAMPLE_API = 'https://examples.vercel.sh';
 
 export default async function init(
   client: Client,
