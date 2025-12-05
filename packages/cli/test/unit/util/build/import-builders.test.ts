@@ -138,7 +138,7 @@ describe('importBuilders()', () => {
           'function'
         );
         await expect(client.stderr).toOutput(
-          '> Installing Builders: vercel-deno@2.0.1, https://files-njlxk3l0r-curated-tests.vercel.app'
+          `> Installing Builders: vercel-deno@2.0.1, ${tarballSpec}`
         );
       } finally {
         await remove(cwd);
