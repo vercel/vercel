@@ -753,11 +753,11 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const lines = new Set(contents.split('\n'));
 
-    expect(lines).toContain('VERCEL="1"');
-    expect(lines).toContain('VERCEL_URL=""');
-    expect(lines).toContain('VERCEL_ENV="production"');
-    expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
-    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
+    expect(lines).toContain('VERCEL=1');
+    expect(lines).toContain('VERCEL_URL=');
+    expect(lines).toContain('VERCEL_ENV=production');
+    expect(lines).toContain('VERCEL_GIT_PROVIDER=');
+    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=');
   }
 
   async function vcDevAndFetchSystemVars() {
