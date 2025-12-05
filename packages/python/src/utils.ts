@@ -6,6 +6,12 @@ import execa = require('execa');
 
 const isWin = process.platform === 'win32';
 
+type PyprojectVercelConfig = {
+  tool?: {
+    vercel?: { scripts?: Record<string, string> };
+  };
+};
+
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };
@@ -76,42 +82,54 @@ export function getVenvPythonBin(venvPath: string) {
   return join(getVenvBinDir(venvPath), isWin ? 'python.exe' : 'python');
 }
 
+async function readVercelScripts(
+  workPath: string
+): Promise<Record<string, string> | null> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) return null;
+
+  let pyproject: PyprojectVercelConfig | null = null;
+  try {
+    pyproject = await readConfigFile<PyprojectVercelConfig>(pyprojectPath);
+  } catch {
+    console.error('Failed to parse pyproject.toml');
+    return null;
+  }
+
+  return pyproject?.tool?.vercel?.scripts || {};
+}
+
+async function resolveVercelScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>
+): Promise<string | undefined> {
+  const scripts = await readVercelScripts(workPath);
+  if (!scripts) return undefined;
+
+  const candidates =
+    typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
+  const scriptToRun = candidates.find(name => {
+    const command = scripts[name];
+    return typeof command === 'string' && command.trim().length > 0;
+  });
+
+  if (!scriptToRun) return undefined;
+  return scripts[scriptToRun];
+}
+
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
   env?: NodeJS.ProcessEnv
 ) {
-  const pyprojectPath = join(workPath, 'pyproject.toml');
-  if (!fs.existsSync(pyprojectPath)) return false;
-
-  type Pyproject = {
-    tool?: {
-      vercel?: { scripts?: Record<string, string> };
-    };
-  };
-
-  let pyproject: Pyproject | null = null;
-  try {
-    pyproject = await readConfigFile<Pyproject>(pyprojectPath);
-  } catch {
-    console.error('Failed to parse pyproject.toml');
-    return false;
-  }
-
-  // Read scripts from [tool.vercel.scripts]
-  const scripts: Record<string, string> =
-    pyproject?.tool?.vercel?.scripts || {};
-  const candidates =
-    typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
-  const scriptToRun = candidates.find(name => Boolean(scripts[name]));
-  if (!scriptToRun) return false;
+  const scriptCommand = await resolveVercelScript(workPath, scriptNames);
+  if (!scriptCommand) return false;
 
   // Use the Python from the virtualenv if present to resolve tooling, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
   const finalEnv = { ...process.env, ...env };
   useVirtualEnv(workPath, finalEnv, systemPython);
 
-  const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
     console.log(`Executing: ${scriptCommand}`);
     await execCommand(scriptCommand, {
@@ -123,6 +141,22 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
+}
+
+export async function runPyprojectInstallScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>,
+  env: NodeJS.ProcessEnv
+): Promise<boolean> {
+  const scriptCommand = await resolveVercelScript(workPath, scriptNames);
+  if (!scriptCommand) return false;
+
+  console.log(`Executing: ${scriptCommand}`);
+  await execCommand(scriptCommand, {
+    cwd: workPath,
+    env,
+  });
+  return true;
 }
 
 export async function runUvCommand(options: {

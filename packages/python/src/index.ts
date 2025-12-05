@@ -35,6 +35,7 @@ import {
   findDir,
   ensureVenv,
   createVenvEnv,
+  runPyprojectInstallScript,
 } from './utils';
 
 const readFile = promisify(fs.readFile);
@@ -104,8 +105,10 @@ export const build: BuildV3 = async ({
   }
 
   // For FastAPI/Flask, also honor project build commands (vercel.json/dashboard)
-  // and record any custom install command (which will be executed later, once the
-  // Python virtualenv has been created so installs go into ".vercel/python/.venv").
+  // and record any custom install command (project settings), which will be executed
+  // later once the Python virtualenv has been created so installs go into
+  // ".vercel/python/.venv". Additional install hooks from pyproject.toml are
+  // discovered and executed later as well.
   if (framework === 'fastapi' || framework === 'flask') {
     const {
       cliType,
@@ -255,26 +258,39 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
-  // If a dashboard install command is configured for FastAPI/Flask, treat it as
+  // If a custom install command is configured for FastAPI/Flask, treat it as
   // an override for the default dependency installation: run the command inside
-  // the build virtualenv
-  const hasCustomInstallCommand =
-    (framework === 'fastapi' || framework === 'flask') &&
-    typeof projectInstallCommand === 'string' &&
-    projectInstallCommand.length > 0;
+  // the build virtualenv. The dashboard install command takes precedence over
+  // any install hook in pyproject.toml.
+  let usedCustomInstall = false;
+  const canUseCustomInstall = framework === 'fastapi' || framework === 'flask';
 
-  if (hasCustomInstallCommand) {
+  if (canUseCustomInstall) {
     const baseEnv = spawnEnv || process.env;
     const pythonEnv = createVenvEnv(venvPath, baseEnv);
     pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
-    const installCommand = projectInstallCommand as string;
-    console.log(`Running "install" command: \`${installCommand}\`...`);
-    await execCommand(installCommand, {
-      env: pythonEnv,
-      cwd: workPath,
-    });
-  } else {
+    if (projectInstallCommand) {
+      const installCommand = projectInstallCommand;
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        env: pythonEnv,
+        cwd: workPath,
+      });
+      usedCustomInstall = true;
+    } else {
+      const installed = await runPyprojectInstallScript(
+        workPath,
+        ['vercel-install', 'now-install', 'install'],
+        pythonEnv
+      );
+      if (installed) {
+        usedCustomInstall = true;
+      }
+    }
+  }
+
+  if (!usedCustomInstall) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     let uvPath: string;
