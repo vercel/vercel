@@ -1,5 +1,13 @@
 # @vercel/introspection
 
+## 0.0.6
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Block network IO during introspection. ([#14365](https://github.com/vercel/vercel/pull/14365))
+
 ## 0.0.5
 
 ### Patch Changes
