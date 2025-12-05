@@ -15,6 +15,7 @@ import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 async function ls(client: Client, argv: string[]): Promise<number> {
   const { telemetryEventStore } = client;
@@ -34,6 +35,14 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   }
   const { args, flags: opts } = parsedArgs;
 
+  const validationResult = validateLsArgs({
+    commandName: 'certs ls',
+    args: args,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
+
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
 
@@ -47,15 +56,6 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   }
 
   const lsStamp = stamp();
-
-  if (args.length !== 0) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('certs ls')}`
-      )}`
-    );
-    return 1;
-  }
 
   // Get the list of certificates
   const { certs, pagination } = await getCerts(client, ...paginationOptions);
