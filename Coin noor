@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سایت استخر و ماینینگ</title>
+<style>
+body { font-family: Tahoma,sans-serif; background:#0a0a0a; color:#0cf; text-align:center; margin:0; padding:0; }
+h1,h2,h3 { color:#0ff; }
+button { padding:10px 20px; margin:10px; font-size:16px; border-radius:5px; border:none; cursor:pointer; background:#0cf; color:#000; }
+input { padding:8px; font-size:16px; width:120px; margin:10px; }
+.card { background:#111; margin:20px auto; padding:15px; border-radius:10px; width:320px; box-shadow:0 0 10px #0cf; }
+</style>
+</head>
+<body>
+
+<h1>سایت استخر شخصی</h1>
+
+<div class="card">
+<h2>کیف پول: <span id="wallet">متصل نشده</span></h2>
+<h2>موجودی شما: <span id="userBalance">0</span></h2>
+<h2>موجودی استخر: <span id="poolBalance">0</span></h2>
+<button onclick="connectWallet()">اتصال کیف پول</button>
+</div>
+
+<div class="card">
+<button onclick="mint()">ماین / افزودن واحد</button>
+</div>
+
+<div class="card">
+<input type="number" id="withdrawAmount" placeholder="مقدار برداشت">
+<button onclick="withdraw()">برداشت</button>
+</div>
+
+<div class="card">
+<h3>تاریخچه تراکنش</h3>
+<div id="log" style="text-align:left; max-height:200px; overflow-y:auto;"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.8.0/dist/ethers.min.js"></script>
+<script>
+let userBalance = 0;
+let poolBalance = 0;
+const feePercent = 20; 
+let walletAddress = null;
+
+// Log function
+function logMessage(msg){
+    const logDiv = document.getElementById("log");
+    const p = document.createElement("p");
+    p.textContent = msg;
+    logDiv.prepend(p);
+}
+
+// Connect wallet (MetaMask)
+async function connectWallet(){
+    if(window.ethereum){
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        walletAddress = accounts[0];
+        document.getElementById("wallet").innerText = walletAddress;
+        logMessage("کیف پول متصل شد: " + walletAddress);
+    } else {
+        alert("MetaMask نصب نشده است!");
+    }
+}
+
+// Mint function
+function mint(){
+    const minted = 50; // مقدار واحد ماین شده
+    userBalance += minted;
+    document.getElementById("userBalance").innerText = userBalance;
+    logMessage(`ماین شد: ${minted} واحد`);
+}
+
+// Withdraw function
+function withdraw(){
+    const amount = Number(document.getElementById("withdrawAmount").value);
+    if(amount <=0) return alert("عدد معتبر وارد کنید");
+    if(amount > userBalance) return alert("موجودی کافی نیست");
+
+    const fee = Math.floor(amount * feePercent / 100);
+    const net = amount - fee;
+
+    userBalance -= amount;
+    poolBalance += fee;
+
+    document.getElementById("userBalance").innerText = userBalance;
+    document.getElementById("poolBalance").innerText = poolBalance;
+    logMessage(`برداشت: ${amount} واحد | کارمزد: ${fee} | مبلغ خالص: ${net}`);
+    document.getElementById("withdrawAmount").value = "";
+}
+</script>
+
+</body>
+</html>
