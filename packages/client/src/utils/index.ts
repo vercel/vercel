@@ -100,7 +100,11 @@ export async function buildFileTree(
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path, prebuilt, vercelOutputDir);
+  let { ig, ignores, userIg } = await getVercelIgnore(
+    path,
+    prebuilt,
+    vercelOutputDir
+  );
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -170,7 +174,16 @@ export async function buildFileTree(
     }
 
     if (refs.size > 0) {
-      fileList = fileList.concat(Array.from(refs));
+      let refList = Array.from(refs);
+
+      if (userIg) {
+        refList = refList.filter(ref => {
+          const rel = relative(path as string, ref);
+          return !userIg.ignores(rel);
+        });
+      }
+
+      fileList = fileList.concat(refList);
     }
 
     debug(`Found ${fileList.length} files in the specified directory`);
@@ -191,8 +204,9 @@ export async function getVercelIgnore(
   cwd: string | string[],
   prebuilt?: boolean,
   vercelOutputDir?: string
-): Promise<{ ig: Ignore; ignores: string[] }> {
+): Promise<{ ig: Ignore; ignores: string[]; userIg?: Ignore }> {
   const ig = ignore();
+  const userIg = prebuilt ? ignore() : undefined;
   let ignores: string[];
 
   if (prebuilt) {
@@ -212,6 +226,23 @@ export async function getVercelIgnore(
       ignores.push(`!${level}`);
     });
     ignores.push(`!${parts.join('/')}/**`);
+
+    // In prebuilt mode, we still want to respect .vercelignore if it exists
+    // to prevent sensitive files from being uploaded if they were somehow included
+    if (typeof cwd === 'string') {
+      const vercelIgnorePath = join(cwd, '.vercelignore');
+      try {
+        const vercelIgnore = await readFile(vercelIgnorePath, 'utf8');
+        const relativeIgnore = clearRelative(vercelIgnore);
+        ignores.push(relativeIgnore);
+        userIg?.add(relativeIgnore);
+      } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+          throw err;
+        }
+      }
+    }
+
     ig.add(ignores.join('\n'));
   } else {
     ignores = [
@@ -268,7 +299,7 @@ export async function getVercelIgnore(
     ig.add(`${ignores.join('\n')}\n${clearRelative(ignoreFile)}`);
   }
 
-  return { ig, ignores };
+  return { ig, ignores, userIg };
 }
 
 /**
