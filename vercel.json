@@ -11,6 +11,10 @@
       "destination": "/api/frameworks"
     },
     {
+      "source": "/api/v1/runtimes",
+      "destination": "/api/runtimes"
+    },
+    {
       "source": "/api/examples/list",
       "destination": "/list.json"
     },
@@ -26,6 +30,15 @@
   "headers": [
     {
       "source": "/api(/v[0-9]+)?/frameworks",
+      "headers": [
+        {
+          "key": "cache-control",
+          "value": "public, max-age=60, s-maxage=500, stale-while-revalidate=500, stale-if-error=500"
+        }
+      ]
+    },
+    {
+      "source": "/api(/v[0-9]+)?/runtimes",
       "headers": [
         {
           "key": "cache-control",
