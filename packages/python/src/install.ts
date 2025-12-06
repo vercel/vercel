@@ -3,7 +3,13 @@ import fs from 'fs';
 import os from 'os';
 import { join } from 'path';
 import which from 'which';
-import { Meta, debug } from '@vercel/build-utils';
+import { FileFsRef, Files, Meta, debug, glob } from '@vercel/build-utils';
+import {
+  getVenvPythonBin,
+  getVenvPipBin,
+  createVenvEnv,
+  runUvCommand,
+} from './utils';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -70,6 +76,214 @@ export function resolveVendorDir() {
   return vendorDir;
 }
 
+async function isModuleAvailableInVenv(
+  venvPath: string,
+  moduleName: string
+): Promise<boolean> {
+  const pythonBin = getVenvPythonBin(venvPath);
+  const code = `
+from importlib import util
+spec = util.find_spec('${moduleName}'.replace('-', '_'))
+raise SystemExit(0 if spec else 1)
+`.trim();
+  try {
+    await execa(pythonBin, ['-c', code], {
+      env: createVenvEnv(venvPath),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function filterUnsafeUvPipArgs(args: string[]): string[] {
+  // `--no-warn-script-location` is not supported/safe with `uv pip install`,
+  // so strip it out when using uv while still allowing it for plain pip.
+  return args.filter(arg => arg !== '--no-warn-script-location');
+}
+
+async function runUvPipInstallArgs({
+  uvPath,
+  venvPath,
+  cwd,
+  pipArgs,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  pipArgs: string[];
+}) {
+  const pythonBin = getVenvPythonBin(venvPath);
+  const uvArgs = [
+    'pip',
+    'install',
+    '--python',
+    pythonBin,
+    '--no-compile',
+    '--upgrade',
+    ...filterUnsafeUvPipArgs(pipArgs),
+  ];
+
+  const prettyUv = `uv ${uvArgs.join(' ')}`;
+  try {
+    console.log(`Running "${prettyUv}"...`);
+    await runUvCommand({ uvPath, args: uvArgs, cwd, venvPath });
+    return;
+  } catch (err) {
+    console.log(
+      `Failed to run "${prettyUv}": ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  const pipBin = getVenvPipBin(venvPath);
+  const pipInstallArgs = [
+    'install',
+    '--disable-pip-version-check',
+    '--no-compile',
+    '--upgrade',
+    ...pipArgs,
+  ];
+  const pretty = `${pipBin} ${pipInstallArgs.join(' ')}`;
+  debug(`Running "${pretty}"...`);
+  await execa(pipBin, pipInstallArgs, {
+    cwd,
+    env: createVenvEnv(venvPath),
+  });
+}
+
+export async function installPackagesIntoVenv({
+  uvPath,
+  venvPath,
+  cwd,
+  packages,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  packages: string[];
+}) {
+  if (!packages.length) {
+    return;
+  }
+  await runUvPipInstallArgs({
+    uvPath,
+    venvPath,
+    cwd,
+    pipArgs: packages,
+  });
+}
+
+interface RuntimeDependency {
+  packageSpecifier: string;
+  moduleName: string;
+}
+
+export async function ensureRuntimeDependencies({
+  uvPath,
+  venvPath,
+  cwd,
+  dependencies,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  dependencies: RuntimeDependency[];
+}) {
+  if (!dependencies.length) return;
+  const missing: string[] = [];
+  for (const dep of dependencies) {
+    const installed = await isModuleAvailableInVenv(venvPath, dep.moduleName);
+    if (!installed) {
+      missing.push(dep.packageSpecifier);
+    }
+  }
+  if (!missing.length) {
+    return;
+  }
+  await installPackagesIntoVenv({
+    uvPath,
+    venvPath,
+    cwd,
+    packages: missing,
+  });
+}
+
+export async function installRequirementsIntoVenv({
+  uvPath,
+  venvPath,
+  cwd,
+  requirementsFile,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  cwd: string;
+  requirementsFile: string;
+}) {
+  await runUvPipInstallArgs({
+    uvPath,
+    venvPath,
+    cwd,
+    pipArgs: ['-r', requirementsFile],
+  });
+}
+
+export async function syncProjectWithUv({
+  uvPath,
+  venvPath,
+  projectDir,
+  locked,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  projectDir: string;
+  locked: boolean;
+}) {
+  const args = ['sync', '--active', '--no-dev'];
+  if (locked) {
+    args.push('--locked');
+  }
+  args.push('--no-editable');
+  await runUvCommand({
+    uvPath,
+    args,
+    cwd: projectDir,
+    venvPath,
+  });
+}
+
+async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
+  // Ask the venv’s interpreter which directories it adds to sys.path for pure
+  // Python packages and platform-specific packages so we mirror the exact same
+  // paths when mounting `_vendor` in the Lambda bundle.
+  const code = `
+import json
+import sysconfig
+paths = []
+for key in ("purelib", "platlib"):
+    candidate = sysconfig.get_path(key)
+    if candidate and candidate not in paths:
+        paths.append(candidate)
+print(json.dumps(paths))
+`.trim();
+  const { stdout } = await execa(pythonBin, ['-c', code]);
+  try {
+    const parsed = JSON.parse(stdout);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((p): p is string => typeof p === 'string');
+    }
+  } catch (err) {
+    debug('Failed to parse site-packages output', err);
+  }
+  return [];
+}
+
+export async function getVenvSitePackagesDirs(
+  venvPath: string
+): Promise<string[]> {
+  const pythonBin = getVenvPythonBin(venvPath);
+  return getSitePackagesDirs(pythonBin);
+}
+
 async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
   const code = `import sysconfig; print(sysconfig.get_path('scripts'))`;
   try {
@@ -125,7 +339,7 @@ async function pipInstall(
       '--no-cache-dir',
       '--target',
       target,
-      ...args,
+      ...filterUnsafeUvPipArgs(args),
     ];
     const prettyUv = `${uvPath} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
@@ -302,6 +516,7 @@ interface InstallRequirementsFileArg {
   args?: string[];
 }
 
+// Deprecated
 export async function installRequirementsFile({
   pythonPath,
   pipPath,
@@ -332,49 +547,6 @@ export async function installRequirementsFile({
     ['--upgrade', '-r', filePath, ...args],
     targetDir
   );
-}
-
-export async function exportRequirementsFromUv(
-  projectDir: string,
-  uvPath: string | null,
-  options: { locked?: boolean } = {}
-): Promise<string> {
-  const { locked = false } = options;
-  if (!uvPath) {
-    throw new Error('uv is not available to export requirements');
-  }
-  // Export only runtime deps:
-  // - --no-default-groups: exclude configured default groups (e.g. dev)
-  // - --no-emit-workspace: do not include the workspace/root project (avoids extras/editable)
-  // - --no-editable: ensure no editable installs are emitted
-  const args: string[] = [
-    'export',
-    '--no-default-groups',
-    '--no-emit-workspace',
-    '--no-editable',
-  ];
-  // Prefer using the lockfile strictly if present
-  if (locked) {
-    // "--frozen" ensures the lock is respected and not updated during export
-    args.push('--frozen');
-  }
-  debug(`Running "${uvPath} ${args.join(' ')}" in ${projectDir}...`);
-  let stdout: string;
-  try {
-    const { stdout: out } = await execa(uvPath, args, { cwd: projectDir });
-    stdout = out;
-  } catch (err) {
-    throw new Error(
-      `Failed to run "${uvPath} ${args.join(' ')}": ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
-  const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'vercel-uv-'));
-  const outPath = join(tmpDir, 'requirements.uv.txt');
-  await fs.promises.writeFile(outPath, stdout);
-  debug(`Exported requirements to ${outPath}`);
-  return outPath;
 }
 
 export async function exportRequirementsFromPipfile({
@@ -430,4 +602,46 @@ export async function exportRequirementsFromPipfile({
   await fs.promises.writeFile(outPath, stdout);
   debug(`Exported pipfile requirements to ${outPath}`);
   return outPath;
+}
+
+export async function mirrorSitePackagesIntoVendor({
+  venvPath,
+  vendorDirName,
+}: {
+  venvPath: string;
+  vendorDirName: string;
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+
+  // Map the files from site-packages in the virtual environment
+  // into the Lambda bundle under `_vendor`.
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const dirFiles = await glob('**', dir);
+      for (const relativePath of Object.keys(dirFiles)) {
+        if (
+          relativePath.endsWith('.pyc') ||
+          relativePath.includes('__pycache__')
+        ) {
+          continue;
+        }
+
+        const srcFsPath = join(dir, relativePath);
+
+        const bundlePath = join(vendorDirName, relativePath).replace(
+          /\\/g,
+          '/'
+        );
+        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+      }
+    }
+  } catch (err) {
+    console.log('Failed to collect site-packages from virtual environment');
+    throw err;
+  }
+
+  return vendorFiles;
 }

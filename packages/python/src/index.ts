@@ -19,19 +19,20 @@ import {
   FileFsRef,
 } from '@vercel/build-utils';
 import {
-  installRequirement,
-  installRequirementsFile,
+  installRequirementsIntoVenv,
   resolveVendorDir,
-  exportRequirementsFromUv,
   exportRequirementsFromPipfile,
   getUvBinaryOrInstall,
+  syncProjectWithUv,
+  mirrorSitePackagesIntoVendor,
+  ensureRuntimeDependencies,
+  installRequirement,
+  installRequirementsFile,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
-import { runPyprojectScript } from './utils';
-import { installUvWorkspaceDependencies } from './uv-workspace';
-
+import { runPyprojectScript, ensureVenv } from './utils';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
@@ -87,7 +88,6 @@ export async function downloadFilesInWorkPath({
 
 export const build: BuildV3 = async ({
   workPath,
-  repoRootPath,
   files: originalFiles,
   entrypoint,
   meta = {},
@@ -277,21 +277,13 @@ export const build: BuildV3 = async ({
 
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
-
-  // Compute cache vendor dir keyed by Python version and entrypoint directory
-  const vendorBaseDir = join(
-    workPath,
-    '.vercel',
-    'python',
-    `py${pythonVersion.version}`,
-    entryDirectory
-  );
-  try {
-    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
-  } catch (err) {
-    console.log('Failed to create vendor cache directory');
-    throw err;
-  }
+  // Create the virtual environment under ".vercel/python/.venv" so it can be
+  // cached on disk while we mirror its site-packages into the Lambda bundle.
+  const venvPath = join(workPath, '.vercel', 'python', '.venv');
+  await ensureVenv({
+    pythonPath: pythonVersion.pythonPath,
+    venvPath,
+  });
 
   let installationSource: string | undefined;
   if (uvLockDir && pyprojectDir) {
@@ -329,73 +321,32 @@ export const build: BuildV3 = async ({
     debug('Failed to install uv', err);
   }
 
-  await installRequirement({
-    pythonPath: pythonVersion.pythonPath,
-    pipPath: pythonVersion.pipPath,
-    uvPath,
-    dependency: 'werkzeug',
-    version: '1.0.1',
-    workPath,
-    targetDir: vendorBaseDir,
-    meta,
-  });
-
-  // Flask is a WSGI framework, so we don't need uvicorn
-  if (framework !== 'flask') {
-    await installRequirement({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
-      dependency: 'uvicorn',
-      version: '0.38.0',
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
-    });
-  }
-
   let installedFromProjectFiles = false;
 
+  const runtimeDependencies =
+    framework === 'flask'
+      ? [{ packageSpecifier: 'werkzeug==1.0.1', moduleName: 'werkzeug' }]
+      : [
+          { packageSpecifier: 'werkzeug==1.0.1', moduleName: 'werkzeug' },
+          { packageSpecifier: 'uvicorn==0.38.0', moduleName: 'uvicorn' },
+        ];
+
   // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
-  if (uvLockDir) {
-    debug('Found "uv.lock"');
-    if (pyprojectDir) {
-      const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
-        locked: true,
-      });
-      await installRequirementsFile({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        uvPath,
-        filePath: exportedReq,
-        workPath,
-        targetDir: vendorBaseDir,
-        meta,
-      });
-      installedFromProjectFiles = true;
-    } else {
-      debug('Skipping uv export because "pyproject.toml" was not found');
-    }
-  } else if (pyprojectDir) {
-    debug('Found "pyproject.toml"');
-    if (hasReqLocal || hasReqGlobal) {
-      console.log(
-        'Detected both pyproject.toml and requirements.txt but no lockfile; using pyproject.toml'
-      );
-    }
-    const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
-      locked: false,
-    });
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
+  const shouldUseUvSync = Boolean(uvLockDir || pyprojectDir);
+  if (shouldUseUvSync && uvPath) {
+    const projectDir = pyprojectDir || uvLockDir!;
+    debug(
+      `Running "uv sync" in ${projectDir} (${uvLockDir ? 'locked' : 'unlocked'})`
+    );
+    await syncProjectWithUv({
       uvPath,
-      filePath: exportedReq,
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
+      venvPath,
+      projectDir,
+      locked: Boolean(uvLockDir),
     });
     installedFromProjectFiles = true;
+  } else if (shouldUseUvSync && !uvPath) {
+    debug('Skipping uv sync because uv is unavailable');
   } else if (pipfileLockDir || pipfileDir) {
     debug(`Found ${pipfileLockDir ? '"Pipfile.lock"' : '"Pipfile"'}`);
     if (hasReqLocal || hasReqGlobal) {
@@ -408,14 +359,11 @@ export const build: BuildV3 = async ({
         projectDir: pipfileLockDir || pipfileDir!,
         meta,
       });
-      await installRequirementsFile({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
+      await installRequirementsIntoVenv({
         uvPath,
-        filePath: exportedReq,
-        workPath,
-        targetDir: vendorBaseDir,
-        meta,
+        venvPath,
+        cwd: workPath,
+        requirementsFile: exportedReq,
       });
       installedFromProjectFiles = true;
     }
@@ -424,49 +372,51 @@ export const build: BuildV3 = async ({
   if (!installedFromProjectFiles && fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
+    await installRequirementsIntoVenv({
       uvPath,
-      filePath: requirementsTxtPath,
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
+      venvPath,
+      cwd: workPath,
+      requirementsFile: requirementsTxtPath,
     });
   } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
+    await installRequirementsIntoVenv({
       uvPath,
-      filePath: requirementsTxtPath,
-      workPath,
-      targetDir: vendorBaseDir,
-      meta,
+      venvPath,
+      cwd: workPath,
+      requirementsFile: requirementsTxtPath,
     });
   }
 
-  // For uv workspaces (monorepos), also install any internal workspace
-  // projects that are referenced as dependencies of this app
-  if (pyprojectDir && repoRootPath) {
-    await installUvWorkspaceDependencies({
-      repoRootPath,
-      pyprojectDir,
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
-      workPath,
-      vendorBaseDir,
-      meta,
-    });
+  await ensureRuntimeDependencies({
+    uvPath,
+    venvPath,
+    cwd: workPath,
+    dependencies: runtimeDependencies,
+  });
+
+  // Create a _vendor folder for dependencies under ".vercel/python/_vendor"
+  // this is to avoid shipping the full virtual environment to Lambda
+  const vendorBaseDir = join(workPath, '.vercel', 'python');
+  try {
+    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
+  } catch (err) {
+    console.log('Failed to create vendor cache directory');
+    throw err;
   }
 
+  const vendorDirName = resolveVendorDir();
+  const vendorFiles = await mirrorSitePackagesIntoVendor({
+    venvPath,
+    vendorDirName,
+  });
+
+  const vendorDir = vendorDirName;
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
-  const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
@@ -509,18 +459,8 @@ export const build: BuildV3 = async ({
 
   const files: Files = await glob('**', globOptions);
 
-  // Mount cached vendor directory into the Lambda output under `_vendor`
-  try {
-    const cachedVendorAbs = join(vendorBaseDir, resolveVendorDir());
-    if (fs.existsSync(cachedVendorAbs)) {
-      const vendorFiles = await glob('**', cachedVendorAbs, resolveVendorDir());
-      for (const [p, f] of Object.entries(vendorFiles)) {
-        files[p] = f;
-      }
-    }
-  } catch (err) {
-    console.log('Failed to include cached vendor directory');
-    throw err;
+  for (const [p, f] of Object.entries(vendorFiles)) {
+    files[p] = f;
   }
 
   // in order to allow the user to have `server.py`, we

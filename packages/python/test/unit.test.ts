@@ -5,6 +5,31 @@ import path from 'path';
 import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
 
+jest.mock('../src/utils', () => {
+  const actual =
+    jest.requireActual<typeof import('../src/utils')>('../src/utils');
+
+  // In unit tests we only need `ensureVenv` to succeed without shelling out to
+  // a real Python interpreter or touching the filesystem
+  const ensureVenv = jest.fn(async () => {});
+
+  return {
+    ...actual,
+    ensureVenv,
+  };
+});
+
+jest.mock('../src/install', () => {
+  const actual =
+    jest.requireActual<typeof import('../src/install')>('../src/install');
+  return {
+    ...actual,
+    getVenvSitePackagesDirs: jest.fn(async () => []),
+    ensureRuntimeDependencies: jest.fn(async () => {}),
+    mirrorSitePackagesIntoVendor: jest.fn(async () => ({}) as any),
+  };
+});
+
 const tmpPythonDir = path.join(
   tmpdir(),
   `vc-test-python-${Math.floor(Math.random() * 1e6)}`
