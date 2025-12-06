@@ -15,6 +15,36 @@ import {
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import { validateServices } from './services';
+
+const servicesSchema = {
+  type: 'array',
+  minItems: 1,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'entry'],
+    properties: {
+      type: { enum: ['web'] },
+      entry: { type: 'string', minLength: 1, maxLength: 512 },
+      prefix: { type: 'string', minLength: 1, maxLength: 256 },
+      framework: { type: 'string', minLength: 1, maxLength: 128 },
+      builder: { type: 'string', minLength: 1, maxLength: 256 },
+      memory: {
+        type: 'integer',
+        minimum: 128,
+        maximum: 10240,
+      },
+      maxDuration: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 900,
+      },
+      installCommand: { type: 'string', minLength: 1, maxLength: 256 },
+      buildCommand: { type: 'string', minLength: 1, maxLength: 256 },
+    },
+  },
+} as const;
 
 const imagesSchema = {
   type: 'object',
@@ -162,6 +192,7 @@ const vercelConfigSchema = {
   additionalProperties: true,
   properties: {
     builds: buildsSchema,
+    services: servicesSchema,
     routes: routesSchema,
     cleanUrls: cleanUrlsSchema,
     headers: headersSchema,
@@ -197,6 +228,9 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       link: 'https://vercel.link/functions-and-builds',
     });
   }
+
+  const servicesError = validateServices(config);
+  if (servicesError) return servicesError;
 
   return null;
 }

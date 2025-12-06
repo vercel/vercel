@@ -2055,6 +2055,7 @@ export const frameworks = [
     ],
   },
   {
+    kind: 'backend',
     name: 'FastAPI',
     slug: 'fastapi',
     demo: 'https://vercel-fastapi-gamma-smoky.vercel.app/',
@@ -2112,6 +2113,7 @@ export const frameworks = [
     ],
   },
   {
+    kind: 'backend',
     name: 'Flask',
     slug: 'flask',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/flask.svg',
@@ -2394,6 +2396,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    kind: 'backend',
     name: 'Hono',
     slug: 'hono',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/hono.svg',
@@ -2619,6 +2622,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    kind: 'backend',
     name: 'Express',
     slug: 'express',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
@@ -3575,6 +3579,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    kind: 'backend',
     name: 'Fastify',
     slug: 'fastify',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fastify.svg',
