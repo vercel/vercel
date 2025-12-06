@@ -23,7 +23,7 @@
     "edge-entry.js"
   ],
   "dependencies": {
-    "@vercel/nft": "1.1.1",
+    "@vercel/nft": "catalog:",
     "@vercel/static-config": "workspace:*",
     "@vercel/node": "workspace:*",
     "fs-extra": "11.1.0",

@@ -24,7 +24,7 @@
   ],
   "dependencies": {
     "@vercel/error-utils": "workspace:*",
-    "@vercel/nft": "1.1.1",
+    "@vercel/nft": "catalog:",
     "@vercel/static-config": "workspace:*",
     "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
     "path-to-regexp": "6.1.0",
