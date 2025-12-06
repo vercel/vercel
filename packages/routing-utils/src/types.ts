@@ -80,6 +80,7 @@ export type RouteWithSrc = {
     action: MitigateAction;
   };
   transforms?: Transform[];
+  env?: string[];
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
@@ -139,6 +140,7 @@ export interface Rewrite {
   has?: HasField;
   missing?: HasField;
   statusCode?: number;
+  env?: string[];
 }
 
 export interface Redirect {
@@ -148,6 +150,7 @@ export interface Redirect {
   statusCode?: number;
   has?: HasField;
   missing?: HasField;
+  env?: string[];
 }
 
 export interface Header {
