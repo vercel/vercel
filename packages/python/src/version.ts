@@ -77,7 +77,7 @@ export function getLatestPythonVersion({
 /**
  * example: "3.10" -> [3, 10]
  */
-function parseVersionTuple(input: string): [number, number] | null {
+export function parseVersionTuple(input: string): [number, number] | null {
   const cleaned = input.trim().replace(/\s+/g, '');
   const m = cleaned.match(/^(\d+)(?:\.(\d+))?/);
   if (!m) return null;
@@ -87,7 +87,10 @@ function parseVersionTuple(input: string): [number, number] | null {
   return [major, minor];
 }
 
-function compareTuples(a: [number, number], b: [number, number]): number {
+export function compareTuples(
+  a: [number, number],
+  b: [number, number]
+): number {
   if (a[0] !== b[0]) return a[0] - b[0];
   return a[1] - b[1];
 }
