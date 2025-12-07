@@ -746,11 +746,15 @@ function checkUnusedFunctions(
       isOfficialRuntime('hono', frontendBuilder.use))
   ) {
     // Copied from builder entrypoint detection
-    const dir = options?.outputDirectory?.replace(/^\/+|\/+$/g, '');
-    const validFolders = ['', 'src/', ...(dir ? [`${dir}/`] : [])];
-    const validFilenames = validFolders.flatMap(folder =>
-      ['app', 'index', 'server'].map(name => `${folder}${name}`)
-    );
+    const dir = options?.outputDirectory?.replace(/^\/+|\/+$/g, '') || '';
+    const validFilenames = [
+      'app',
+      'index',
+      'server',
+      'src/app',
+      'src/index',
+      'src/server',
+    ].map(name => (dir ? `${dir}/${name}` : name));
     const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
     const validEntrypoints = validFilenames.flatMap(filename =>
       validExtensions.map(extension => `${filename}.${extension}`)
