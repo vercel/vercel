@@ -746,7 +746,7 @@ function checkUnusedFunctions(
       isOfficialRuntime('hono', frontendBuilder.use))
   ) {
     // Copied from builder entrypoint detection
-    const dir = options?.outputDirectory?.replace(/^\/+|\/+$/g, '') || '';
+    const dir = options?.outputDirectory?.replace(/^\/+|\/+$/g, '');
     const validFilenames = [
       'app',
       'index',
