@@ -18,7 +18,7 @@
     "@capacitor/keyboard": "6.0.3",
     "@capacitor/status-bar": "6.0.2",
     "@ionic/react": "^8.0.0",
-    "@ionic/react-router": "^8.0.0",
+    "@ionic/react-router": "^8.7.7",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",
     "ionicons": "^7.0.0",
