@@ -1,5 +1,11 @@
 # @vercel/introspection
 
+## 0.0.7
+
+### Patch Changes
+
+- Fix issue where middleware with splat arg causes all introspection to fail for Hono apps ([#14423](https://github.com/vercel/vercel/pull/14423))
+
 ## 0.0.6
 
 ### Patch Changes
