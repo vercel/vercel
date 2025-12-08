@@ -390,6 +390,7 @@ export async function exportRequirementsFromPipfile({
   projectDir: string;
   meta: Meta;
 }): Promise<string> {
+  throw new Error('Testing...');
   // Install pipfile-requirements into a temp vendor dir, then run pipfile2req
   const tempDir = await fs.promises.mkdtemp(
     join(os.tmpdir(), 'vercel-pipenv-')
