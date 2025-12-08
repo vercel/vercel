@@ -1,6 +1,6 @@
 {
   "name": "@vercel/express",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
