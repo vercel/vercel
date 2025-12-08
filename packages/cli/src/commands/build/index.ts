@@ -580,7 +580,7 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath });
+  const corepackShimDir = await initCorepack({ repoRootPath: workPath });
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
