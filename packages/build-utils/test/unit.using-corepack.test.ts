@@ -4,7 +4,7 @@ import { usingCorepack } from '../src/fs/run-user-scripts';
 describe('usingCorepack', () => {
   describe('without `ENABLE_EXPERIMENTAL_COREPACK`', () => {
     it('should return false', () => {
-      expect(usingCorepack({}, 'pnpm@8.3.1', false)).toEqual(false);
+      expect(usingCorepack({}, 'pnpm@10.24.0', false)).toEqual(false);
     });
   });
   describe('with `ENABLE_EXPERIMENTAL_COREPACK`', () => {
@@ -13,7 +13,7 @@ describe('usingCorepack', () => {
         expect(
           usingCorepack(
             { ENABLE_EXPERIMENTAL_COREPACK: '1' },
-            'pnpm@8.3.1',
+            'pnpm@10.24.0',
             true
           )
         ).toEqual(true);
@@ -23,7 +23,7 @@ describe('usingCorepack', () => {
           expect(
             usingCorepack(
               { ENABLE_EXPERIMENTAL_COREPACK: '1' },
-              'pnpm@8.3.1',
+              'pnpm@10.24.0',
               false
             )
           ).toEqual(false);
@@ -34,7 +34,7 @@ describe('usingCorepack', () => {
           expect(
             usingCorepack(
               { ENABLE_EXPERIMENTAL_COREPACK: '1' },
-              'pnpm@8.3.1',
+              'pnpm@10.24.0',
               true
             )
           ).toEqual(true);

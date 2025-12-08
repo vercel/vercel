@@ -991,7 +991,7 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
     const fixture = path.join(base, 'c');
     const result = await scanParentDirs(fixture, false, base);
     expect(result.cliType).toEqual('pnpm');
-    expect(result.packageJsonPackageManager).toEqual('pnpm@8.3.1');
+    expect(result.packageJsonPackageManager).toEqual('pnpm@10.24.0');
     expect(result.lockfileVersion).toEqual(undefined);
     expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
   } finally {

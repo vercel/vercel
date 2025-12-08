@@ -34,8 +34,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.24.0
+        run: npm i -g pnpm@10.24.0
       - run: pnpm install
       - id: affected-packages
         run: |
@@ -236,8 +236,8 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.24.0
+        run: npm i -g pnpm@10.24.0
 
       - run: pnpm install
 
