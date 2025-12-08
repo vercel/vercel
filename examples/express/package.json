@@ -2,7 +2,7 @@
   "name": "express",
   "type": "module",
   "dependencies": {
-    "express": "5.1.0"
+    "express": "5.2.0"
   },
   "devDependencies": {
     "@types/node": "20.11.17",
