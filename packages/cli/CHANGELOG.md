@@ -1,5 +1,12 @@
 # vercel
 
+## 49.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.16
+
 ## 49.1.1
 
 ### Patch Changes
