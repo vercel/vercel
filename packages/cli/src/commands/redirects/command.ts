@@ -127,6 +127,10 @@ export const addSubcommand = {
       argument: 'NAME',
       deprecated: false,
     },
+    {
+      ...yesOption,
+      description: 'Skip prompts and use default values',
+    },
   ],
   examples: [
     {
@@ -140,6 +144,10 @@ export const addSubcommand = {
     {
       name: 'Add a redirect with all options',
       value: `${packageName} redirects add /old-path /new-path --status 301 --case-sensitive --preserve-query-params --name "My redirect"`,
+    },
+    {
+      name: 'Add a redirect non-interactively',
+      value: `${packageName} redirects add /old-path /new-path --yes`,
     },
   ],
 } as const;

@@ -25,6 +25,7 @@ export default async function add(client: Client, argv: string[]) {
   const existingStagingVersion = versions.find(v => v.isStaging);
 
   const { args, flags } = parsed;
+  const skipPrompts = flags['--yes'];
 
   let source: string;
   if (args[0]) {
@@ -36,6 +37,12 @@ export default async function add(client: Client, argv: string[]) {
       return 1;
     }
   } else {
+    if (skipPrompts) {
+      output.error(
+        'Source and destination are required when using --yes. Use: vercel redirects add <source> <destination> --yes'
+      );
+      return 1;
+    }
     output.log('Add a new redirect\n');
     source = await client.input.text({
       message: 'What is the source URL?',
@@ -61,6 +68,12 @@ export default async function add(client: Client, argv: string[]) {
       return 1;
     }
   } else {
+    if (skipPrompts) {
+      output.error(
+        'Source and destination are required when using --yes. Use: vercel redirects add <source> <destination> --yes'
+      );
+      return 1;
+    }
     if (!args[0]) {
       output.log('Add a new redirect\n');
     }
@@ -85,6 +98,8 @@ export default async function add(client: Client, argv: string[]) {
       output.error('Status code must be 301, 302, 307, or 308');
       return 1;
     }
+  } else if (skipPrompts) {
+    statusCode = 307;
   } else {
     statusCode = await client.input.select({
       message: 'Select the status code:',
@@ -112,6 +127,8 @@ export default async function add(client: Client, argv: string[]) {
   let caseSensitive: boolean;
   if (flags['--case-sensitive'] !== undefined) {
     caseSensitive = flags['--case-sensitive'];
+  } else if (skipPrompts) {
+    caseSensitive = false;
   } else {
     caseSensitive = await client.input.confirm(
       'Should the redirect be case sensitive?',
@@ -122,6 +139,8 @@ export default async function add(client: Client, argv: string[]) {
   let preserveQueryParams: boolean;
   if (flags['--preserve-query-params'] !== undefined) {
     preserveQueryParams = flags['--preserve-query-params'];
+  } else if (skipPrompts) {
+    preserveQueryParams = false;
   } else {
     preserveQueryParams = await client.input.confirm(
       'Should query parameters be preserved?',
@@ -136,6 +155,8 @@ export default async function add(client: Client, argv: string[]) {
       output.error('Name must be 256 characters or less');
       return 1;
     }
+  } else if (skipPrompts) {
+    versionName = undefined;
   } else {
     const provideName = await client.input.confirm(
       'Do you want to provide a name for this version?',

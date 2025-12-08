@@ -397,11 +397,80 @@ describe('redirects add', () => {
       mockPutRedirects();
 
       const longName = 'a'.repeat(257);
-      client.setArgv('redirects', 'add', '/old', '/new', '--name', longName);
+      client.setArgv(
+        'redirects',
+        'add',
+        '/old',
+        '/new',
+        '--yes',
+        '--name',
+        longName
+      );
       const exitCodePromise = redirects(client);
 
       await expect(client.stderr).toOutput(
         'Name must be 256 characters or less'
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should add a redirect with --yes flag', async () => {
+      mockGetVersions();
+      mockPutRedirects();
+
+      client.setArgv('redirects', 'add', '/old', '/new', '--yes');
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput('Redirect added');
+      await expect(client.stderr).toOutput('/old → /new');
+      await expect(client.stderr).toOutput('Status: 307');
+      await expect(client.stderr).toOutput('Case sensitive: No');
+      await expect(client.stderr).toOutput('Preserve query params: No');
+
+      await expect(client.stderr).toOutput('promote it to production');
+      client.stdin.write('n\n');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should combine --yes with other flags', async () => {
+      mockGetVersions();
+      mockPutRedirects();
+
+      client.setArgv(
+        'redirects',
+        'add',
+        '/source',
+        '/dest',
+        '--yes',
+        '--status',
+        '301',
+        '--case-sensitive'
+      );
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput('Redirect added');
+      await expect(client.stderr).toOutput('/source → /dest');
+      await expect(client.stderr).toOutput('Status: 301');
+      await expect(client.stderr).toOutput('Case sensitive: Yes');
+      await expect(client.stderr).toOutput('Preserve query params: No');
+
+      await expect(client.stderr).toOutput('promote it to production');
+      client.stdin.write('n\n');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should error when --yes is used without source and destination', async () => {
+      mockGetVersions();
+      mockPutRedirects();
+
+      client.setArgv('redirects', 'add', '--yes');
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput(
+        'Source and destination are required when using --yes'
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);
