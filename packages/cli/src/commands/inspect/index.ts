@@ -144,6 +144,7 @@ export default async function inspect(client: Client) {
   }
 
   if (asJson) {
+    output.stopSpinner();
     await printJson({ deployment, contextName, client });
   } else if (withLogs) {
     print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
