@@ -12,16 +12,16 @@ dependencies:
     specifier: 3.59.0
     version: 3.59.0
   '@shopify/cli-hydrogen':
-    specifier: ^8.4.6
+    specifier: ^8.0.0
     version: 8.4.6(@remix-run/dev@1.19.1)(@types/react@18.0.20)(react-dom@18.2.0)(react@18.2.0)
   '@shopify/hydrogen':
     specifier: ^2023.7.2
-    version: 2023.7.2(@remix-run/react@1.19.1)(@remix-run/server-runtime@1.19.1)(@types/react@18.0.20)(react-dom@18.2.0)
+    version: 2023.7.2(@remix-run/react@1.19.1)(@types/react@18.0.20)(react-dom@18.2.0)
   '@shopify/remix-oxygen':
-    specifier: ^1.1.3
-    version: 1.1.3(@shopify/oxygen-workers-types@3.17.3)
+    specifier: ^2.0.12
+    version: 2.0.12(@shopify/oxygen-workers-types@3.17.3)
   graphql:
-    specifier: ^16.12.0
+    specifier: ^16.8.1
     version: 16.12.0
   graphql-tag:
     specifier: ^2.12.6
@@ -2857,14 +2857,13 @@ packages:
       - xstate
     dev: false
 
-  /@shopify/hydrogen@2023.7.2(@remix-run/react@1.19.1)(@remix-run/server-runtime@1.19.1)(@types/react@18.0.20)(react-dom@18.2.0):
+  /@shopify/hydrogen@2023.7.2(@remix-run/react@1.19.1)(@types/react@18.0.20)(react-dom@18.2.0):
     resolution: {integrity: sha512-18SEu+KR2jIpkUc0c7q7TUmS7KjHo9H63Et04r01bOeoYE2tphfsc2HXWXJdSsFORDovEPNLyO4KRNi1mSX8UA==}
     peerDependencies:
       '@remix-run/react': 1.19.1
       '@remix-run/server-runtime': 1.19.1
     dependencies:
       '@remix-run/react': 1.19.1(react-dom@18.2.0)(react@18.2.0)
-      '@remix-run/server-runtime': 1.19.1
       '@shopify/hydrogen-react': 2023.7.1(@types/react@18.0.20)(react-dom@18.2.0)(react@18.2.0)
       react: 18.2.0
     transitivePeerDependencies:
@@ -2913,12 +2912,12 @@ packages:
     resolution: {integrity: sha512-5ugCL9sPGzmOaZjeRGaWUWhHgAbemrS6z+R7v6gwiD+BiqSeoFhIY+imLpfdFCVpuOGalpHeCv6o3gv++EHs0A==}
     dev: true
 
-  /@shopify/remix-oxygen@1.1.3(@shopify/oxygen-workers-types@3.17.3):
-    resolution: {integrity: sha512-uKWG/JIlb2U/6j20KjR6PIA56f5AL10jhenHqvn3bKbwLfLaZncBkBG9v6lDz02dMXBHIo66idvuM67RODoxjg==}
+  /@shopify/remix-oxygen@2.0.12(@shopify/oxygen-workers-types@3.17.3):
+    resolution: {integrity: sha512-GThkuiL3FzuA5pVxCRSvsGOTYx92EjMbGBn3GUMSWspkXmjIUffB5KDsbVeTh9Lf/U5Do6lVeHrveW5hIEiqRg==}
     peerDependencies:
-      '@shopify/oxygen-workers-types': ^3.17.3
+      '@remix-run/server-runtime': ^2.16.1
+      '@shopify/oxygen-workers-types': ^3.17.3 || ^4.1.2
     dependencies:
-      '@remix-run/server-runtime': 1.19.1
       '@shopify/oxygen-workers-types': 3.17.3
     dev: false
 
