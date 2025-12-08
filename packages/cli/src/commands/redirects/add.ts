@@ -132,7 +132,7 @@ export default async function add(client: Client, argv: string[]) {
   let versionName: string | undefined;
   if (flags['--name']) {
     versionName = flags['--name'];
-    if (versionName.length > 256) {
+    if (versionName && versionName.length > 256) {
       output.error('Name must be 256 characters or less');
       return 1;
     }
