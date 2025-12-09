@@ -314,7 +314,9 @@ export const build: BuildV3 = async ({
     // dependencies (for example, modern Flask versions that require newer
     // Werkzeug releases).
     const runtimeDependencies =
-      framework === 'flask' ? ['werkzeug'] : ['werkzeug', 'uvicorn'];
+      framework === 'flask'
+        ? ['werkzeug>=1.0.1']
+        : ['werkzeug>=1.0.1', 'uvicorn>=0.24'];
 
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.

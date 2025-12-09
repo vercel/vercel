@@ -1,5 +1,20 @@
 # vercel
 
+## 49.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.16
+
+## 49.1.1
+
+### Patch Changes
+
+- Fix example API url ([#14417](https://github.com/vercel/vercel/pull/14417))
+
+- Fix vc build not respecting .vercelignore ([#14399](https://github.com/vercel/vercel/pull/14399))
+
 ## 49.1.0
 
 ### Minor Changes
