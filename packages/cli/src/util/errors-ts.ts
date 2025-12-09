@@ -57,11 +57,11 @@ export function parseRetryAfterHeaderAsMillis(
     if (Number.isNaN(retryAfterMs)) {
       return undefined;
     } else {
-      // If the date is in the past (clock skew? latency?) just retry immediately
-      retryAfterMs = Math.max(retryAfterMs - Date.now(), 0);
+      retryAfterMs = retryAfterMs - Date.now();
     }
   }
-  return retryAfterMs;
+  // If the date is in the past (clock skew? latency?) just retry immediately
+  return Math.max(retryAfterMs, 0);
 }
 
 export function isAPIError(v: unknown): v is APIError {
