@@ -56,9 +56,11 @@ export async function responseError(
   }
 
   if (res.status === 429 || res.status === 503) {
-    err.retryAfterMs = parseRetryAfterHeaderAsMillis(
+    const parsed = parseRetryAfterHeaderAsMillis(
       res.headers.get('Retry-After')
     );
+    // If the retry-after header is missing or malfomed set to 0.  This ensures users will attempt a retry even in these cases.
+    err.retryAfterMs = parsed ?? (res.status === 429 ? 0 : undefined);
   }
 
   return err;

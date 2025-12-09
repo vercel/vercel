@@ -38,9 +38,11 @@ export class APIError extends Error {
 
     // HTTP 429 (Too Many Requests) or 503 (Service Unavailable) both are spec'd to serve retry-after headers
     if (response.status === 429 || response.status === 503) {
-      this.retryAfterMs = parseRetryAfterHeaderAsMillis(
+      const parsed = parseRetryAfterHeaderAsMillis(
         response.headers.get('Retry-After')
       );
+      // If the retry-after header is missing or malfomed set to 0.  This ensures users will attempt a retry even in these cases.
+      this.retryAfterMs = parsed ?? (res.status === 429 ? 0 : undefined);
     }
   }
 }

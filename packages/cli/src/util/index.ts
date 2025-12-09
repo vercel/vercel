@@ -405,7 +405,7 @@ export default class Now {
       }
       const err = await responseError(res);
       // Always respect Retry-After headers and retry
-      if (err.retryAfterMs) {
+      if (typeof err.retryAfterMs === 'number') {
         await sleep(err.retryAfterMs);
         throw err;
       }
