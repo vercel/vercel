@@ -306,7 +306,7 @@ export default class Now {
       } else {
         const error = await responseError(res, 'Failed to remove deployment');
         // Always respect Retry-After headers and retry
-        if (error.retryAfterMs) {
+        if (typeof error.retryAfterMs === 'number') {
           await sleep(error.retryAfterMs);
           throw error;
         }
