@@ -42,7 +42,7 @@ export class APIError extends Error {
         response.headers.get('Retry-After')
       );
       // If the retry-after header is missing or malfomed set to 0.  This ensures users will attempt a retry even in these cases.
-      this.retryAfterMs = parsed ?? (res.status === 429 ? 0 : undefined);
+      this.retryAfterMs = parsed ?? (response.status === 429 ? 0 : undefined);
     }
   }
 }
