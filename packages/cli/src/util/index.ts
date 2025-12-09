@@ -406,7 +406,7 @@ export default class Now {
       const err = await responseError(res);
       // Always respect Retry-After headers and retry
       if (err.retryAfterMs) {
-        sleep(err.retryAfterMs);
+        await sleep(err.retryAfterMs);
         throw err;
       }
       if (res.status >= 400 && res.status < 500) {
