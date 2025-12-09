@@ -506,12 +506,12 @@ export class CertOrderNotFound extends NowError<
  */
 export class TooManyRequests extends NowError<
   'TOO_MANY_REQUESTS',
-  { api: string; retryAfter: number }
+  { api: string; retryAfterMs: number }
 > {
-  constructor(api: string, retryAfter: number) {
+  constructor(api: string, retryAfterMs: number) {
     super({
       code: 'TOO_MANY_REQUESTS',
-      meta: { api, retryAfter },
+      meta: { api, retryAfterMs },
       message: `Rate limited. Too many requests to the same endpoint.`,
     });
   }

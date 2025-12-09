@@ -17,7 +17,7 @@ export default function handleCertError<T>(
   if (error instanceof ERRORS.TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
-        error.meta.retryAfter * 1000,
+        error.meta.retryAfterMs,
         {
           long: true,
         }
