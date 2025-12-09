@@ -175,7 +175,7 @@ describe('responseError()', () => {
     const res = await fetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
-    expect(formatted.retryAfterMs).toEqual(20);
+    expect(formatted.retryAfterMs).toEqual(2000);
   });
 
   it('should parse 429 response error without retry header', async () => {
