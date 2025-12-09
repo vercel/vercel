@@ -235,25 +235,28 @@ export async function createPyprojectToml({
 }) {
   const requiresPython = '>=3.12';
 
-  const lines: string[] = [];
-  lines.push('[project]');
-  lines.push(`name = "${projectName}"`);
-  lines.push('version = "0.1.0"');
-  lines.push(`requires-python = "${requiresPython}"`);
+  const depsToml =
+    dependencies.length > 0
+      ? [
+          'dependencies = [',
+          ...dependencies.map(dep => `  "${dep}",`),
+          ']',
+        ].join('\n')
+      : 'dependencies = []';
 
-  if (dependencies.length > 0) {
-    lines.push('dependencies = [');
-    for (const dep of dependencies) {
-      lines.push(`  "${dep}",`);
-    }
-    lines.push(']');
-  } else {
-    lines.push('dependencies = []');
-  }
+  const content = [
+    '[project]',
+    `name = "${projectName}"`,
+    'version = "0.1.0"',
+    `requires-python = "${requiresPython}"`,
+    'classifiers = [',
+    '  "Private :: Do Not Upload",',
+    ']',
+    depsToml,
+    '',
+  ].join('\n');
 
-  lines.push('');
-
-  await fs.promises.writeFile(pyprojectPath, lines.join('\n'));
+  await fs.promises.writeFile(pyprojectPath, content);
 }
 
 export interface UvProjectInfo {
