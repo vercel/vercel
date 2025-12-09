@@ -26,5 +26,7 @@ describe('APIError Retry-After parsing', () => {
 
   it('dates', () => {
     expect(parseRetryAfterHeaderAsMillis(mockDateString)).toBe(7_000);
+    const past = new Date(Date.parse(mockDateString) - 14_000).toISOString();
+    expect(parseRetryAfterHeaderAsMillis(past)).toBe(0);
   });
 });

@@ -57,7 +57,8 @@ export function parseRetryAfterHeaderAsMillis(
     if (Number.isNaN(retryAfterMs)) {
       return undefined;
     } else {
-      retryAfterMs = retryAfterMs - Date.now();
+      // If the date is in the past (clock skew? latency?) just retry immediately
+      retryAfterMs = Math.max(retryAfterMs - Date.now(), 0);
     }
   }
   return retryAfterMs;
