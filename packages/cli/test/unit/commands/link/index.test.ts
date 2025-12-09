@@ -1,5 +1,5 @@
 import { EOL } from 'node:os';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
 import {
@@ -11,6 +11,7 @@ import {
   remove,
 } from 'fs-extra';
 import link from '../../../../src/commands/link';
+import pull from '../../../../src/commands/env/pull';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
@@ -26,7 +27,16 @@ import {
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../../../src/util/errors-ts';
 
+// Mock the env pull command
+vi.mock('../../../../src/commands/env/pull');
+const mockPull = vi.mocked(pull);
+
 describe('link', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default mock implementation for env pull command
+    mockPull.mockResolvedValue(0);
+  });
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'link';
@@ -111,7 +121,7 @@ describe('link', () => {
       });
     });
 
-    it('should create new Project with Git connection linked', async () => {
+    it('should create new Project at repo root using repo folder name', async () => {
       const user = useUser();
       const cwd = setupTmpDir();
 
@@ -183,9 +193,116 @@ describe('link', () => {
         throw project;
       }
       expect(project.name).toEqual(repoJson.projects[0].name);
+      expect(project.name).toEqual(basename(cwd));
       expect(project.framework).toEqual('nextjs');
       expect(project.link?.repo).toEqual('user/repo');
       expect(project.link?.type).toEqual('github');
+    });
+
+    it('should create projects using subdirectory names for monorepo workspaces', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      await writeJSON(join(cwd, 'package.json'), {
+        name: 'my-monorepo',
+        private: true,
+        workspaces: ['packages/frontend', 'packages/api'],
+      });
+
+      await mkdirp(join(cwd, 'packages/frontend'));
+      await writeJSON(join(cwd, 'packages/frontend/package.json'), {
+        name: 'frontend',
+        dependencies: {
+          next: 'latest',
+        },
+      });
+
+      await mkdirp(join(cwd, 'packages/api'));
+      await writeJSON(join(cwd, 'packages/api/package.json'), {
+        name: 'api',
+        dependencies: {
+          '@remix-run/dev': 'latest',
+        },
+      });
+
+      useTeams('team_dummy');
+      useUnknownProject();
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+
+      client.cwd = cwd;
+      client.setArgv('--repo');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        'The `--repo` flag is in alpha, please report issues'
+      );
+
+      await expect(client.stderr).toOutput('Link Git repository at ');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your Project(s)?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
+      await expect(client.stderr).toOutput(`No Projects are linked`);
+      await expect(client.stderr).toOutput(
+        `Detected 2 new Projects that may be created.`
+      );
+      await expect(client.stderr).toOutput(`Which Projects should be created?`);
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      expect(repoJson.orgId).toEqual(user.id);
+      expect(repoJson.remoteName).toEqual('origin');
+      expect(repoJson.projects).toHaveLength(2);
+
+      const frontendProject = repoJson.projects.find(
+        (p: any) => p.name === 'frontend'
+      );
+      const apiProject = repoJson.projects.find((p: any) => p.name === 'api');
+
+      expect(frontendProject).toBeDefined();
+      expect(apiProject).toBeDefined();
+
+      const frontendProjectDetails = await getProjectByNameOrId(
+        client,
+        frontendProject.id
+      );
+      const apiProjectDetails = await getProjectByNameOrId(
+        client,
+        apiProject.id
+      );
+
+      if (
+        frontendProjectDetails instanceof ProjectNotFound ||
+        apiProjectDetails instanceof ProjectNotFound
+      ) {
+        throw new Error('Projects not found');
+      }
+
+      expect(frontendProjectDetails.framework).toEqual('nextjs');
+      expect(apiProjectDetails.framework).toEqual('remix');
     });
 
     it('should gracefully report error when creating new Project fails', async () => {
@@ -314,6 +431,13 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
       expect(projectJson.projectName).toEqual(project.name);
+
+      // Verify env pull was called with --yes flag and correct source
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        ['--yes'],
+        'vercel-cli:link'
+      );
     });
 
     it('should track use of redacted `--project` option', async () => {
@@ -461,6 +585,11 @@ describe('link', () => {
       `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
     );
 
+    await expect(client.stderr).toOutput(
+      'Would you like to pull environment variables now?'
+    );
+    client.stdin.write('n\n');
+
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -584,5 +713,338 @@ describe('link', () => {
         value: '[REDACTED]',
       },
     ]);
+  });
+
+  describe('environment variable pull prompt', () => {
+    it('should prompt to pull environment variables after successful linking', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        [],
+        'vercel-cli:link'
+      );
+    });
+
+    it('should not call env pull when user declines the prompt', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify env pull was NOT called
+      expect(mockPull).not.toHaveBeenCalled();
+    });
+
+    it('should handle env pull failure gracefully', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      // Mock env pull to fail
+      mockPull.mockResolvedValue(1);
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0); // Link should still succeed even if env pull fails
+
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        [],
+        'vercel-cli:link'
+      );
+    });
+
+    it('should handle env pull command throwing an error', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      // Mock env pull to throw an error
+      mockPull.mockRejectedValue(new Error('Network error'));
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0); // Link should still succeed even if env pull throws
+
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        [],
+        'vercel-cli:link'
+      );
+    });
+
+    it('should pass empty args to env pull when link command does not use --yes', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify env pull was called with empty args since link didn't use --yes
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        [],
+        'vercel-cli:link'
+      );
+    });
+
+    it('should restore client.cwd after env pull completes', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const originalCwd = client.cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify client.cwd is restored to original value after env pull
+      expect(client.cwd).toEqual(originalCwd);
+    });
+
+    it('should restore client.cwd even when env pull throws exception', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      mockPull.mockImplementation(() => {
+        throw new Error('Env pull failed');
+      });
+
+      client.cwd = cwd;
+      const originalCwd = client.cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify client.cwd is restored even when env pull throws
+      expect(client.cwd).toEqual(originalCwd);
+    });
   });
 });

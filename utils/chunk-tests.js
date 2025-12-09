@@ -1,6 +1,6 @@
 // @ts-check
-const child_process = require('child_process');
-const path = require('path');
+const child_process = require('node:child_process');
+const path = require('node:path');
 const { getAffectedPackages } = require('./get-affected-packages');
 
 const runnersMap = new Map([
@@ -12,6 +12,16 @@ const runnersMap = new Map([
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['20', '22'],
+    },
+  ],
+  [
+    'vitest-unit-node-24',
+    {
+      min: 1,
+      max: 1,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest', 'macos-14'],
+      nodeVersions: ['24'],
     },
   ],
   [
@@ -44,7 +54,22 @@ const runnersMap = new Map([
   ],
   [
     'test-e2e',
-    { min: 1, max: 7, testScript: 'test', runners: ['ubuntu-latest'] },
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest'],
+    },
+  ],
+  [
+    'test-e2e-node-all-versions',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest'],
+      nodeVersions: ['20', '22', '24'],
+    },
   ],
   [
     'test-next-local',
@@ -94,7 +119,18 @@ async function getChunkedTests() {
 
   // Get affected packages based on git changes
   const baseSha = process.env.TURBO_BASE_SHA || process.env.GITHUB_BASE_REF;
-  const affectedPackages = baseSha ? await getAffectedPackages(baseSha) : [];
+  const result = baseSha
+    ? await getAffectedPackages(baseSha)
+    : { result: 'test-all' };
+
+  let affectedPackages = [];
+  if (result.result === 'test-affected') {
+    affectedPackages = result.packages;
+  } else if (result.result === 'test-none') {
+    console.error('Testing strategy: no tests (no packages affected)');
+    console.log('[]');
+    return [];
+  }
 
   console.error(
     `Testing strategy: ${affectedPackages.length > 0 ? 'affected packages only' : 'all packages'}`

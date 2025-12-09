@@ -15,6 +15,7 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
+import { formatEnvValue } from '../../util/env/format-env-value';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
@@ -58,7 +59,11 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(client: Client, argv: string[]) {
+export default async function pull(
+  client: Client,
+  argv: string[],
+  source: EnvRecordsSource = 'vercel-cli:env:pull'
+) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -122,7 +127,7 @@ export default async function pull(client: Client, argv: string[]) {
     link,
     gitBranch,
     client.cwd,
-    'vercel-cli:env:pull'
+    source
   );
 
   return 0;
@@ -158,11 +163,17 @@ export async function envPullCommandLogic(
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
-  output.log(
-    `Downloading \`${chalk.cyan(
-      environment
-    )}\` Environment Variables for ${projectSlugLink}`
-  );
+  const downloadMessage = gitBranch
+    ? `Downloading \`${chalk.cyan(
+        environment
+      )}\` Environment Variables for ${projectSlugLink} and any overrides for branch ${chalk.cyan(
+        gitBranch
+      )}`
+    : `Downloading \`${chalk.cyan(
+        environment
+      )}\` Environment Variables for ${projectSlugLink}`;
+
+  output.log(downloadMessage);
 
   const pullStamp = stamp();
   output.spinner('Downloading');
@@ -193,7 +204,7 @@ export async function envPullCommandLogic(
     Object.keys(records)
       .sort()
       .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
+      .map(key => `${key}=${formatEnvValue(records[key])}`)
       .join('\n') +
     '\n';
 
@@ -224,12 +235,4 @@ export async function envPullCommandLogic(
       emoji('success')
     )}\n`
   );
-}
-
-function escapeValue(value: string | undefined) {
-  return value
-    ? value
-        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
-    : '';
 }

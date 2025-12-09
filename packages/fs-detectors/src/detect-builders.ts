@@ -504,6 +504,7 @@ function getApiMatches(): Builder[] {
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
+    { src: 'api/**/*.rs', use: `@vercel/rust`, config },
   ];
 }
 

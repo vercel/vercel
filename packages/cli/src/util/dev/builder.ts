@@ -14,6 +14,7 @@ import {
   FileBlob,
   FileFsRef,
   normalizePath,
+  isBackendFramework,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -423,14 +424,8 @@ export async function getBuildMatches(
     // needs to `index.js` so the BOA entry is index.func. BuildResultV2 allows
     // us to return a different value from what the preset provides, but we need
     // to use BuildResultV3 so that we can run the dev server with the startDevServer
-    // function exported from Hono.
-    if (
-      buildConfig.config?.framework === 'hono' ||
-      buildConfig.config?.framework === 'express' ||
-      buildConfig.config?.framework === 'h3' ||
-      buildConfig.config?.framework === 'nestjs' ||
-      buildConfig.config?.framework === 'fastify'
-    ) {
+    // function exported from backend frameworks.
+    if (isBackendFramework(buildConfig.config?.framework)) {
       src = 'package.json';
     }
 
@@ -439,11 +434,11 @@ export async function getBuildMatches(
       buildConfig.config?.framework === 'flask'
     ) {
       // Mirror @vercel/python's entrypoint candidates
-      const candidateDirs = ['', 'src', 'app'];
+      const candidateDirs = ['', 'src', 'app', 'api'];
       const candidateNames = ['app', 'index', 'server', 'main'];
       const candidates: string[] = [];
-      for (const dir of candidateDirs) {
-        for (const name of candidateNames) {
+      for (const name of candidateNames) {
+        for (const dir of candidateDirs) {
           candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
         }
       }
@@ -451,6 +446,9 @@ export async function getBuildMatches(
         const existing = candidates.filter(p => fileList.includes(p));
         if (existing.length > 0) {
           src = existing[0];
+        } else if (fileList.includes('pyproject.toml')) {
+          // Builder will resolve entrypoint from pyproject.toml;
+          src = 'pyproject.toml';
         }
       }
     }

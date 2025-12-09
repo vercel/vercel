@@ -91,11 +91,9 @@ describe('env pull', () => {
     // check for Preview env vars
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
     expect(rawDevEnv).toContain(
-      'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
+      'REDIS_CONNECTION_STRING=redis://abc123@redis.example.com:6379'
     );
-    expect(rawDevEnv).not.toContain(
-      'BRANCH_ENV_VAR="env var for a specific branch"'
-    );
+    expect(rawDevEnv).not.toContain('BRANCH_ENV_VAR=');
   });
 
   it('should handle pulling from specific Git branch', async () => {
@@ -118,8 +116,10 @@ describe('env pull', () => {
       'feat/awesome-thing'
     );
     const exitCodePromise = env(client);
+    // Full output: "Downloading `preview` Environment Variables for jqkgv/vercel-env-pull and any overrides for branch feat/awesome-thing"
+    // Note: Can't match the full string due to hyperlink ANSI codes around the org/project slug
     await expect(client.stderr).toOutput(
-      'Downloading `preview` Environment Variables for'
+      'vercel-env-pull and any overrides for branch feat/awesome-thing'
     );
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
@@ -130,7 +130,7 @@ describe('env pull', () => {
     // check for Preview env vars
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
     expect(rawDevEnv).toContain(
-      'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
+      'REDIS_CONNECTION_STRING=redis://abc123@redis.example.com:6379'
     );
     expect(rawDevEnv).toContain(
       'BRANCH_ENV_VAR="env var for a specific branch"'
@@ -267,7 +267,7 @@ describe('env pull', () => {
 
     const productionFileHasVercelEnv = rawDevEnv
       .toString()
-      .includes('VERCEL_ENV="production"');
+      .includes('VERCEL_ENV=production');
     expect(productionFileHasVercelEnv).toBeTruthy();
   });
 
@@ -319,6 +319,8 @@ describe('env pull', () => {
       client.setArgv('env', 'add', 'NEW_VAR');
       const addPromise = env(client);
 
+      await expect(client.stderr).toOutput('Mark as sensitive?');
+      client.stdin.write('n\n');
       await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
       client.stdin.write('testvalue\n');
 
@@ -509,6 +511,27 @@ describe('env pull', () => {
       'utf8'
     );
     expect(gitignoreAfter).toBe(gitignoreBefore);
+  });
+
+  it('should work when called programmatically from link command', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+
+    // Call env pull programmatically like the link command does
+    client.setArgv('env', 'pull', '--yes');
+    const exitCode = await env(client);
+    expect(exitCode, 'exit code for programmatic env pull').toEqual(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+    const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+    expect(devFileHasDevEnv).toBeTruthy();
   });
 
   it('should not pull VERCEL_ANALYTICS_ID', async () => {

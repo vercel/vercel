@@ -126,3 +126,13 @@ export { getInstalledPackageVersion } from './get-installed-package-version';
 export { defaultCachePathGlob } from './default-cache-path-glob';
 
 export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
+
+export {
+  BACKEND_FRAMEWORKS,
+  BackendFramework,
+  isBackendFramework,
+  isBackendBuilder,
+  isExperimentalBackendsEnabled,
+  isExperimentalBackendsWithoutIntrospectionEnabled,
+  shouldUseExperimentalBackends,
+} from './framework-helpers';

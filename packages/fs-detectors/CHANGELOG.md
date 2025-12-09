@@ -1,5 +1,70 @@
 # @vercel/fs-detectors
 
+## 5.7.9
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/frameworks@3.15.4
+
+## 5.7.8
+
+### Patch Changes
+
+- Enable `@vercel/rust` cli fs detection ([#14330](https://github.com/vercel/vercel/pull/14330))
+
+## 5.7.7
+
+### Patch Changes
+
+- Updated dependencies [[`045b88c0cb376100492915caf7f11aa3adc88903`](https://github.com/vercel/vercel/commit/045b88c0cb376100492915caf7f11aa3adc88903)]:
+  - @vercel/routing-utils@5.3.0
+
+## 5.7.6
+
+### Patch Changes
+
+- Updated dependencies [[`8c7cbd059906126f335b3a55d6914c8945e1b6f9`](https://github.com/vercel/vercel/commit/8c7cbd059906126f335b3a55d6914c8945e1b6f9), [`7faa102e3ff50f54921465ec56162120cb9146ff`](https://github.com/vercel/vercel/commit/7faa102e3ff50f54921465ec56162120cb9146ff)]:
+  - @vercel/frameworks@3.15.3
+  - @vercel/routing-utils@5.2.2
+
+## 5.7.5
+
+### Patch Changes
+
+- Updated dependencies [[`fc12669551958ae81a9dd4827bef9d5b4429d851`](https://github.com/vercel/vercel/commit/fc12669551958ae81a9dd4827bef9d5b4429d851)]:
+  - @vercel/frameworks@3.15.2
+
+## 5.7.4
+
+### Patch Changes
+
+- Updated dependencies [[`05c0cc43820cb5012068c8397c1594792dd481f0`](https://github.com/vercel/vercel/commit/05c0cc43820cb5012068c8397c1594792dd481f0)]:
+  - @vercel/frameworks@3.15.1
+
+## 5.7.3
+
+### Patch Changes
+
+- Updated dependencies [[`d90cc096089a402c343aab4e47ebd1b0bb4f1148`](https://github.com/vercel/vercel/commit/d90cc096089a402c343aab4e47ebd1b0bb4f1148)]:
+  - @vercel/frameworks@3.15.0
+
+## 5.7.2
+
+### Patch Changes
+
+- Updated dependencies [[`55a1f7691ab944e133a43fc859fb8f373c5982c0`](https://github.com/vercel/vercel/commit/55a1f7691ab944e133a43fc859fb8f373c5982c0)]:
+  - @vercel/frameworks@3.14.1
+
+## 5.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`c4fca8a2ee0eeb863fbe1abeac73c6c760182303`](https://github.com/vercel/vercel/commit/c4fca8a2ee0eeb863fbe1abeac73c6c760182303)]:
+  - @vercel/routing-utils@5.2.1
+
 ## 5.7.0
 
 ### Minor Changes

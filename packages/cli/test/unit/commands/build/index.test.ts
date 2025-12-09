@@ -924,6 +924,17 @@ describe.skipIf(flakey)('build', () => {
             'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
           )
         ).toEqual(expected);
+
+        // "functions/api" directory has output Functions
+        const functions = await fs.readdir(join(output, 'functions/api'));
+        expect(functions.sort()).toEqual(['index.func']);
+
+        const vcConfig = await fs.readJSON(
+          join(output, 'functions/api/index.func/.vc-config.json')
+        );
+        expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
+          expected
+        );
       });
     }
   );
@@ -1318,6 +1329,63 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', 'index.html'))).toBe(true);
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
+
+  it('should respect `.vercelignore` for Build Output API', async () => {
+    const cwd = fixture('static-with-ignore');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const staticFiles = await fs.readdir(join(output, 'static'));
+    expect(staticFiles).toEqual(['index.html']);
+    expect(fs.existsSync(join(output, 'static', 'foo.html'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'build.log'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'temp'))).toBe(false);
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'should apply routes from `.vercel/routes.json` for backend frameworks',
+    async () => {
+      const cwd = fixture('express-with-routes-json');
+      const output = join(cwd, '.vercel/output');
+
+      try {
+        client.cwd = cwd;
+        const exitCode = await build(client);
+        expect(exitCode).toEqual(0);
+
+        // `config.json` should include routes from `.vercel/routes.json`
+        const config = await fs.readJSON(join(output, 'config.json'));
+        expect(config).toMatchObject({
+          version: 3,
+          routes: [
+            { handle: 'filesystem' },
+            {
+              src: expect.stringMatching(/^\^.*users.*\$$/),
+              dest: '/users/:id',
+              methods: ['GET'],
+            },
+            {
+              src: expect.stringMatching(/^\^.*api.*posts.*\$$/),
+              dest: '/api/posts/:postId',
+              methods: ['GET'],
+            },
+            {
+              src: '/(.*)',
+              dest: '/',
+            },
+          ],
+        });
+
+        // "functions" directory should have the express function
+        const functions = await fs.readdir(join(output, 'functions'));
+        expect(functions).toContain('index.func');
+      } finally {
+        delete process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON;
+      }
+    }
+  );
 
   it('should build with `repo.json` link', async () => {
     const cwd = fixture('../../monorepo-link');

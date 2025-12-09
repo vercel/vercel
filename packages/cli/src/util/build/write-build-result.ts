@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs, { existsSync } from 'fs-extra';
 import mimeTypes from 'mime-types';
 import {
   basename,
@@ -28,12 +28,19 @@ import {
   getLambdaOptionsFromFunction,
   normalizePath,
   type TriggerEvent,
+  isExperimentalBackendsEnabled,
+  isBackendBuilder,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
-import { fileNameSymbol, type VercelConfig } from '@vercel/client';
+import {
+  fileNameSymbol,
+  type VercelConfig,
+  getVercelIgnore,
+} from '@vercel/client';
+import outputManager from '../../output-manager';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
@@ -49,51 +56,52 @@ interface FunctionConfiguration {
   supportsCancellation?: boolean;
 }
 
-export async function writeBuildResult(
-  repoRootPath: string,
-  outputDir: string,
-  buildResult: BuildResultV2 | BuildResultV3,
-  build: Builder,
-  builder: BuilderV2 | BuilderV3,
-  builderPkg: PackageJson,
-  vercelConfig: VercelConfig | null,
-  standalone: boolean = false
-) {
+export async function writeBuildResult(args: {
+  repoRootPath: string;
+  outputDir: string;
+  buildResult: BuildResultV2 | BuildResultV3;
+  build: Builder;
+  builder: BuilderV2 | BuilderV3;
+  builderPkg: PackageJson;
+  vercelConfig: VercelConfig | null;
+  standalone: boolean;
+  workPath: string;
+}) {
+  const {
+    repoRootPath,
+    outputDir,
+    buildResult,
+    build,
+    builder,
+    builderPkg,
+    vercelConfig,
+    standalone,
+    workPath,
+  } = args;
   let version = builder.version;
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'express'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
-  }
-  if (
-    'experimentalVersion' in builder &&
-    process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
-    'name' in builder &&
-    builder.name === 'hono'
-  ) {
-    version = builder.experimentalVersion as 2 | 3;
+  if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
+    version = 2;
   }
   if (typeof version !== 'number' || version === 2) {
-    return writeBuildResultV2(
+    return writeBuildResultV2({
       repoRootPath,
       outputDir,
-      buildResult as BuildResultV2,
+      buildResult: buildResult as BuildResultV2,
       build,
       vercelConfig,
-      standalone
-    );
+      standalone,
+      workPath,
+    });
   } else if (version === 3) {
-    return writeBuildResultV3(
+    return writeBuildResultV3({
       repoRootPath,
       outputDir,
-      buildResult as BuildResultV3,
+      buildResult: buildResult as BuildResultV3,
       build,
       vercelConfig,
-      standalone
-    );
+      standalone,
+      workPath,
+    });
   }
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
@@ -133,16 +141,26 @@ function stripDuplicateSlashes(path: string): string {
  * Writes the output from the `build()` return value of a v2 Builder to
  * the filesystem.
  */
-async function writeBuildResultV2(
-  repoRootPath: string,
-  outputDir: string,
-  buildResult: BuildResultV2,
-  build: Builder,
-  vercelConfig: VercelConfig | null,
-  standalone: boolean = false
-) {
+async function writeBuildResultV2(args: {
+  repoRootPath: string;
+  outputDir: string;
+  buildResult: BuildResultV2;
+  build: Builder;
+  vercelConfig: VercelConfig | null;
+  standalone: boolean;
+  workPath: string;
+}) {
+  const {
+    repoRootPath,
+    outputDir,
+    buildResult,
+    build,
+    vercelConfig,
+    standalone,
+    workPath,
+  } = args;
   if ('buildOutputPath' in buildResult) {
-    await mergeBuilderOutput(outputDir, buildResult);
+    await mergeBuilderOutput(outputDir, buildResult, workPath);
     return;
   }
 
@@ -265,15 +283,65 @@ async function writeBuildResultV2(
  * Writes the output from the `build()` return value of a v3 Builder to
  * the filesystem.
  */
-async function writeBuildResultV3(
-  repoRootPath: string,
-  outputDir: string,
-  buildResult: BuildResultV3,
-  build: Builder,
-  vercelConfig: VercelConfig | null,
-  standalone: boolean = false
-) {
+async function writeBuildResultV3(args: {
+  repoRootPath: string;
+  outputDir: string;
+  buildResult: BuildResultV3;
+  build: Builder;
+  vercelConfig: VercelConfig | null;
+  standalone: boolean;
+  workPath: string;
+}) {
+  const {
+    repoRootPath,
+    outputDir,
+    buildResult,
+    build,
+    vercelConfig,
+    standalone,
+    workPath,
+  } = args;
   const { output } = buildResult;
+  const routesJsonPath = join(workPath, '.vercel', 'routes.json');
+
+  if (
+    (isBackendBuilder(build) || build.use === '@vercel/python') &&
+    existsSync(routesJsonPath)
+  ) {
+    try {
+      const newOutput: Record<string, Lambda | EdgeFunction> = {
+        index: output,
+      };
+      const routesJson = await fs.readJSON(routesJsonPath);
+      if (
+        routesJson &&
+        typeof routesJson === 'object' &&
+        'routes' in routesJson &&
+        Array.isArray(routesJson.routes)
+      ) {
+        for (const route of routesJson.routes) {
+          if (route.source === '/') {
+            continue;
+          }
+          if (route.source) {
+            newOutput[route.source] = output;
+          }
+        }
+      }
+
+      return writeBuildResultV2({
+        repoRootPath,
+        outputDir,
+        buildResult: { output: newOutput, routes: buildResult.routes },
+        build,
+        vercelConfig,
+        standalone,
+        workPath,
+      });
+    } catch (error) {
+      outputManager.error(`Failed to read routes.json: ${error}`);
+    }
+  }
   const src = build.src;
   if (typeof src !== 'string') {
     throw new Error(`Expected "build.src" to be a string`);
@@ -582,15 +650,59 @@ async function writeLambda(
  */
 async function mergeBuilderOutput(
   outputDir: string,
-  buildResult: BuildResultBuildOutput
+  buildResult: BuildResultBuildOutput,
+  workPath: string
 ) {
   const absOutputDir = resolve(outputDir);
+  const { ig } = await getVercelIgnore(workPath);
+  const filter = ig.createFilter();
+
   if (absOutputDir === buildResult.buildOutputPath) {
-    // `.vercel/output` dir is already in the correct location,
-    // so no need to do anything
+    const staticDir = join(outputDir, 'static');
+    try {
+      await cleanIgnoredFiles(staticDir, staticDir, filter);
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') throw err;
+    }
     return;
   }
-  await merge(buildResult.buildOutputPath, outputDir);
+
+  const ignoreFilter = (path: string) => {
+    const normalizedPath = path.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('static/')) {
+      return filter(normalizedPath.substring('static/'.length));
+    }
+    return true;
+  };
+
+  await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+}
+
+async function cleanIgnoredFiles(
+  dir: string,
+  staticRoot: string,
+  filter: (path: string) => boolean
+): Promise<void> {
+  const entries = await fs.readdir(dir);
+
+  await Promise.all(
+    entries.map(async entry => {
+      const entryPath = join(dir, entry);
+      const stat = await fs.stat(entryPath);
+      const relativePath = relative(staticRoot, entryPath);
+
+      if (stat.isDirectory()) {
+        await cleanIgnoredFiles(entryPath, staticRoot, filter);
+        const remaining = await fs.readdir(entryPath);
+        if (remaining.length === 0) {
+          await fs.rmdir(entryPath);
+        }
+      } else if (!filter(relativePath)) {
+        outputManager.debug(`Removing ignored file: ${relativePath}`);
+        await fs.remove(entryPath);
+      }
+    })
+  );
 }
 
 /**

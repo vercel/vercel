@@ -25,6 +25,7 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import { validateLsArgs } from '../../util/validate-ls-args';
 import type {
   Deployment,
   PaginationOptions,
@@ -70,9 +71,14 @@ export default async function list(client: Client) {
     return 0;
   }
 
-  if (parsedArgs.args.length > 2) {
-    error(`${getCommandName('ls [app]')} accepts at most one argument`);
-    return 1;
+  const validationResult = validateLsArgs({
+    commandName: 'ls [app]',
+    args: parsedArgs.args,
+    maxArgs: 2,
+    exitCode: 2,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
   }
 
   telemetry.trackCliFlagProd(parsedArgs.flags['--prod']);
