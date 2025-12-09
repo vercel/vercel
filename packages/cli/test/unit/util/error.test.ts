@@ -190,7 +190,7 @@ describe('responseError()', () => {
     const res = await fetch(url);
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
-    // We default to 0 in this case
+    // We default to 0 in this case so callers still know to retry
     expect(formatted.retryAfterMs).toEqual(0);
   });
 });
