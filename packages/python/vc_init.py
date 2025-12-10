@@ -238,12 +238,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
 try:
     user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
     __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
-    try:
-        __vc_module = util.module_from_spec(__vc_spec)
-    except Exception:
-        _stderr(f'Error importing __VC_HANDLER_ENTRYPOINT:')
-        _stderr(traceback.format_exc())
-        exit(1)
+    __vc_module = util.module_from_spec(__vc_spec)
     sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
