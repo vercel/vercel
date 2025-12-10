@@ -17,6 +17,7 @@ import type Client from './client';
 import { type FetchOptions, isJSONObject } from './client';
 import type { ArchiveFormat, Dictionary } from '@vercel/client';
 import output from '../output-manager';
+import sleep from './sleep';
 
 export interface NowOptions {
   client: Client;
@@ -210,10 +211,10 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err = Object.create(APIError.prototype);
+        const err: APIError = Object.create(APIError.prototype);
         err.message = error.message;
         err.status = error.status;
-        err.retryAfter = 'never';
+        err.retryAfterMs = 'never';
         err.code = error.code;
         return err;
       }
@@ -229,10 +230,10 @@ export default class Now {
         msg += 'Please slow down.';
       }
 
-      const err = Object.create(APIError.prototype);
+      const err: APIError = Object.create(APIError.prototype);
       err.message = msg;
       err.status = error.status;
-      err.retryAfter = 'never';
+      err.retryAfterMs = 'never';
 
       return err;
     }
@@ -302,12 +303,20 @@ export default class Now {
 
       if (res.status === 200) {
         // What we want
-      } else if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to remove deployment'));
       } else {
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to remove deployment');
+        const error = await responseError(res, 'Failed to remove deployment');
+        // Always respect Retry-After headers and retry
+        if (typeof error.retryAfterMs === 'number') {
+          await sleep(error.retryAfterMs);
+          throw error;
+        }
+        if (res.status > 200 && res.status < 500) {
+          // If something is wrong with our request, we don't retry
+          return bail(error);
+        } else {
+          // If something is wrong with the server, we retry
+          throw error;
+        }
       }
     });
 
@@ -395,6 +404,11 @@ export default class Now {
           : res;
       }
       const err = await responseError(res);
+      // Always respect Retry-After headers and retry
+      if (typeof err.retryAfterMs === 'number') {
+        await sleep(err.retryAfterMs);
+        throw err;
+      }
       if (res.status >= 400 && res.status < 500) {
         return bail(err);
       }

@@ -2,6 +2,7 @@ import type { Response } from 'node-fetch';
 import errorOutput from './output/error';
 import bytes from 'bytes';
 import type { APIError } from './errors-ts';
+import { parseRetryAfterHeaderAsMillis } from './errors-ts';
 import { getCommandName } from './pkg-name';
 import output from '../output-manager';
 
@@ -10,7 +11,7 @@ export const error = errorOutput;
 export interface ResponseError extends Error {
   status: number;
   serverMessage: string;
-  retryAfter?: number;
+  retryAfterMs?: number;
   [key: string]: any;
 }
 
@@ -54,12 +55,12 @@ export async function responseError(
     }
   }
 
-  if (res.status === 429) {
-    const retryAfter = res.headers.get('Retry-After');
-
-    if (retryAfter) {
-      err.retryAfter = Number.parseInt(retryAfter, 10);
-    }
+  if (res.status === 429 || res.status === 503) {
+    const parsed = parseRetryAfterHeaderAsMillis(
+      res.headers.get('Retry-After')
+    );
+    // If the retry-after header is missing or malfomed set to 0.  This ensures users will attempt a retry even in these cases.
+    err.retryAfterMs = parsed ?? (res.status === 429 ? 0 : undefined);
   }
 
   return err;

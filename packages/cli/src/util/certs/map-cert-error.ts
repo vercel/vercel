@@ -4,7 +4,7 @@ export default function mapCertError(error: ERRORS.APIError, cns?: string[]) {
   const errorCode: string = error.code;
   if (errorCode === 'too_many_requests') {
     const retryAfter =
-      typeof error.retryAfter === 'number' ? error.retryAfter : 0;
+      typeof error.retryAfterMs === 'number' ? error.retryAfterMs : 0;
     return new ERRORS.TooManyRequests('certificates', retryAfter);
   }
   if (errorCode === 'not_found') {
