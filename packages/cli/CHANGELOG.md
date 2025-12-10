@@ -1,5 +1,22 @@
 # vercel
 
+## 49.2.0
+
+### Minor Changes
+
+- Improves `env pull` with conditional quoting of environment variables ([#14402](https://github.com/vercel/vercel/pull/14402))
+
+### Patch Changes
+
+- Improve handling of 429 error codes and Retry-After headers ([#14443](https://github.com/vercel/vercel/pull/14443))
+
+- Add options to vercel redirects commands to specify status code, case sensitivity, and preserving query params when adding redirects. Rename --staged flag to --staging and show diffs when listing redirects for the staging version. ([#14437](https://github.com/vercel/vercel/pull/14437))
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d), [`059be0adac65649f861335c1a86f4e600d69155a`](https://github.com/vercel/vercel/commit/059be0adac65649f861335c1a86f4e600d69155a)]:
+  - @vercel/backends@0.0.17
+  - @vercel/python@6.1.2
+  - @vercel/express@0.1.19
+
 ## 49.1.2
 
 ### Patch Changes
