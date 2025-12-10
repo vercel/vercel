@@ -53,7 +53,10 @@ export async function getVercelOidcToken(): Promise<string> {
     if (error instanceof Error) {
       message = `${message}\n${error.message}`;
     }
-    throw new VercelOidcTokenError(message);
+    if (message) {
+      throw new VercelOidcTokenError(message);
+    }
+    throw error;
   }
   return token;
 }
