@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
-from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,10 +21,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=nns2j5&xri3pl^+w^&(z$y(kt&j8zfist4ll+r68t@)22fg3_'
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-PLEASE_CHANGE"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+if not DEBUG and SECRET_KEY.startswith("django-insecure-"):
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY environment variable must be set in production."
+    )
 
 vercel_url = os.environ.get('VERCEL_URL')
 vercel_production_url = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')
@@ -34,6 +41,9 @@ if vercel_url:
     allowed_hosts.append(vercel_url)
 if vercel_production_url:
     allowed_hosts.append(vercel_production_url)
+if DEBUG:
+    allowed_hosts.append('localhost')
+    allowed_hosts.append('127.0.0.1')
 ALLOWED_HOSTS = allowed_hosts
 
 
@@ -46,6 +56,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Local apps
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -81,12 +93,49 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# NOTE: The `/tmp` SQLite database is **ephemeral and not suitable for
+# production data**. For real applications, you should use a managed database
+# (such as Postgres) and configure `DATABASE_URL` accordingly.
+
+if os.environ.get('VERCEL'):
+    default_db_path = '/tmp/db.sqlite3'
+else:
+    default_db_path = str(BASE_DIR / 'db.sqlite3')
+
+DB_PATH = os.environ.get('DJANGO_DB_PATH', default_db_path)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
+
+# DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# parsed = urlparse(DATABASE_URL)
+
+# if parsed.scheme not in ('postgres', 'postgresql'):
+#     raise RuntimeError(
+#         f'Unsupported DATABASE_URL scheme: {parsed.scheme}'
+#     )
+
+# query = parse_qs(parsed.query)
+# options: dict[str, str] = {}
+# if 'sslmode' in query and query['sslmode']:
+#     options['sslmode'] = query['sslmode'][0]
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'HOST': parsed.hostname or '',
+#         'PORT': str(parsed.port) if parsed.port else '',
+#         'USER': parsed.username or '',
+#         'PASSWORD': parsed.password or '',
+#         'NAME': parsed.path.lstrip('/') or '',
+#         'OPTIONS': options,
+#     }
+# }
 
 
 # Password validation
