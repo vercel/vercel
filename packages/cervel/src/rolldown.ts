@@ -27,8 +27,7 @@ export const rolldown = async (args: {
   };
 
   const extensionInfo = extensionMap[extension] || extensionMap['.js'];
-  // const format = extensionInfo.format;
-  let format: 'esm' | 'cjs' | undefined;
+  let resolvedFormat: 'esm' | 'cjs' | undefined;
 
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
@@ -43,9 +42,9 @@ export const rolldown = async (args: {
     }
     if (extensionInfo.format === 'auto') {
       if (pkg.type === 'module') {
-        format = 'esm';
+        resolvedFormat = 'esm';
       } else {
-        format = 'cjs';
+        resolvedFormat = 'cjs';
       }
     }
     for (const dependency of Object.keys(pkg.dependencies || {})) {
@@ -75,7 +74,7 @@ export const rolldown = async (args: {
     output: {
       cleanDir: true,
       dir: outputDir,
-      format,
+      format: resolvedFormat,
       preserveModules: true,
       sourcemap: false,
     },
