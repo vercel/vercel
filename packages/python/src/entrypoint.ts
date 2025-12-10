@@ -66,7 +66,7 @@ export const DJANGO_ENTRYPOINT_FILENAMES = [
 ];
 export const DJANGO_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api', 'config'];
 export const DJANGO_CONTENT_REGEX =
-  /app\s*=\s*get_(?:wsgi|asgi)_application\s*\(/;
+  /\b(?:app|application)\s*=\s*get_(?:wsgi|asgi)_application\s*\(/;
 
 export const DJANGO_CANDIDATE_ENTRYPOINTS = DJANGO_ENTRYPOINT_FILENAMES.flatMap(
   (filename: string) =>
