@@ -103,9 +103,7 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For FastAPI/Flask, also honor project build commands (vercel.json/dashboard)
-  // and record any custom install command (which will be executed later, once the
-  // Python virtualenv has been created so installs go into ".vercel/python/.venv").
+  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
   if (framework === 'fastapi' || framework === 'flask') {
     const {
       cliType,
