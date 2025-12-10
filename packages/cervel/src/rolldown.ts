@@ -3,6 +3,13 @@ import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
 
+/**
+ * Escapes special regex characters in a string to treat it as a literal pattern.
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export const rolldown = async (args: {
   entrypoint: string;
   workPath: string;
@@ -27,7 +34,8 @@ export const rolldown = async (args: {
   };
 
   const extensionInfo = extensionMap[extension] || extensionMap['.js'];
-  let resolvedFormat: 'esm' | 'cjs' | undefined;
+  let resolvedFormat: 'esm' | 'cjs' | undefined =
+    extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
 
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
@@ -70,7 +78,7 @@ export const rolldown = async (args: {
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    external: external.map(pkg => new RegExp(`^${pkg}`)),
+    external: external.map(pkg => new RegExp(`^${escapeRegExp(pkg)}`)),
     output: {
       cleanDir: true,
       dir: outputDir,
