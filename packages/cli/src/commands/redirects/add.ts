@@ -24,79 +24,158 @@ export default async function add(client: Client, argv: string[]) {
   const { versions } = await getRedirectVersions(client, project.id, teamId);
   const existingStagingVersion = versions.find(v => v.isStaging);
 
-  output.log('Add a new redirect\n');
+  const { args, flags } = parsed;
+  const skipPrompts = flags['--yes'];
 
-  const source = await client.input.text({
-    message: 'What is the source URL?',
-    validate: val => {
-      if (!val) {
-        return 'Source URL cannot be empty';
-      }
-      if (!isValidUrl(val)) {
-        return 'Must be a relative path (starting with /) or an absolute URL';
-      }
-      return true;
-    },
-  });
-
-  const destination = await client.input.text({
-    message: 'What is the destination URL?',
-    validate: val => {
-      if (!val) {
-        return 'Destination URL cannot be empty';
-      }
-      if (!isValidUrl(val)) {
-        return 'Must be a relative path (starting with /) or an absolute URL';
-      }
-      return true;
-    },
-  });
-
-  const statusCode = await client.input.select({
-    message: 'Select the status code:',
-    choices: [
-      {
-        name: '301 - Moved Permanently (cached by browsers)',
-        value: 301,
-      },
-      {
-        name: '302 - Found (temporary redirect, not cached)',
-        value: 302,
-      },
-      {
-        name: '307 - Temporary Redirect (preserves request method)',
-        value: 307,
-      },
-      {
-        name: '308 - Permanent Redirect (preserves request method)',
-        value: 308,
-      },
-    ],
-  });
-
-  const caseSensitive = await client.input.confirm(
-    'Should the redirect be case sensitive?',
-    false
-  );
-
-  const provideName = await client.input.confirm(
-    'Do you want to provide a name for this version?',
-    false
-  );
-
-  let versionName: string | undefined;
-  if (provideName) {
-    versionName = await client.input.text({
-      message: 'Version name (max 256 characters):',
+  let source: string;
+  if (args[0]) {
+    source = args[0];
+    if (!isValidUrl(source)) {
+      output.error(
+        'Source must be a relative path (starting with /) or an absolute URL'
+      );
+      return 1;
+    }
+  } else {
+    if (skipPrompts) {
+      output.error(
+        'Source and destination are required when using --yes. Use: vercel redirects add <source> <destination> --yes'
+      );
+      return 1;
+    }
+    output.log('Add a new redirect\n');
+    source = await client.input.text({
+      message: 'What is the source URL?',
       validate: val => {
-        if (val && val.length > 256) {
-          return 'Name must be 256 characters or less';
+        if (!val) {
+          return 'Source URL cannot be empty';
+        }
+        if (!isValidUrl(val)) {
+          return 'Must be a relative path (starting with /) or an absolute URL';
         }
         return true;
       },
     });
-    if (!versionName) {
-      versionName = undefined;
+  }
+
+  let destination: string;
+  if (args[1]) {
+    destination = args[1];
+    if (!isValidUrl(destination)) {
+      output.error(
+        'Destination must be a relative path (starting with /) or an absolute URL'
+      );
+      return 1;
+    }
+  } else {
+    if (skipPrompts) {
+      output.error(
+        'Source and destination are required when using --yes. Use: vercel redirects add <source> <destination> --yes'
+      );
+      return 1;
+    }
+    if (!args[0]) {
+      output.log('Add a new redirect\n');
+    }
+    destination = await client.input.text({
+      message: 'What is the destination URL?',
+      validate: val => {
+        if (!val) {
+          return 'Destination URL cannot be empty';
+        }
+        if (!isValidUrl(val)) {
+          return 'Must be a relative path (starting with /) or an absolute URL';
+        }
+        return true;
+      },
+    });
+  }
+
+  let statusCode: number;
+  if (flags['--status']) {
+    statusCode = flags['--status'];
+    if (![301, 302, 307, 308].includes(statusCode)) {
+      output.error('Status code must be 301, 302, 307, or 308');
+      return 1;
+    }
+  } else if (skipPrompts) {
+    statusCode = 307;
+  } else {
+    statusCode = await client.input.select({
+      message: 'Select the status code:',
+      choices: [
+        {
+          name: '307 - Temporary Redirect (preserves request method)',
+          value: 307,
+        },
+        {
+          name: '308 - Permanent Redirect (preserves request method)',
+          value: 308,
+        },
+        {
+          name: '301 - Moved Permanently (cached by browsers)',
+          value: 301,
+        },
+        {
+          name: '302 - Found (temporary redirect, not cached)',
+          value: 302,
+        },
+      ],
+    });
+  }
+
+  let caseSensitive: boolean;
+  if (flags['--case-sensitive'] !== undefined) {
+    caseSensitive = flags['--case-sensitive'];
+  } else if (skipPrompts) {
+    caseSensitive = false;
+  } else {
+    caseSensitive = await client.input.confirm(
+      'Should the redirect be case sensitive?',
+      false
+    );
+  }
+
+  let preserveQueryParams: boolean;
+  if (flags['--preserve-query-params'] !== undefined) {
+    preserveQueryParams = flags['--preserve-query-params'];
+  } else if (skipPrompts) {
+    preserveQueryParams = false;
+  } else {
+    preserveQueryParams = await client.input.confirm(
+      'Should query parameters be preserved?',
+      false
+    );
+  }
+
+  let versionName: string | undefined;
+  if (flags['--name']) {
+    versionName = flags['--name'];
+    if (versionName && versionName.length > 256) {
+      output.error('Name must be 256 characters or less');
+      return 1;
+    }
+  } else if (skipPrompts) {
+    versionName = undefined;
+  } else {
+    const provideName = await client.input.confirm(
+      'Do you want to provide a name for this version?',
+      false
+    );
+
+    if (provideName) {
+      versionName = await client.input.text({
+        message: 'Version name (max 256 characters):',
+        validate: val => {
+          if (val && val.length > 256) {
+            return 'Name must be 256 characters or less';
+          }
+          return true;
+        },
+      });
+      if (!versionName) {
+        versionName = undefined;
+      }
     }
   }
 
@@ -112,6 +191,7 @@ export default async function add(client: Client, argv: string[]) {
         destination,
         statusCode,
         caseSensitive,
+        preserveQueryParams,
       },
     ],
     teamId,
@@ -124,6 +204,9 @@ export default async function add(client: Client, argv: string[]) {
   output.print(`    ${chalk.cyan(source)} → ${chalk.cyan(destination)}\n`);
   output.print(`    Status: ${statusCode}\n`);
   output.print(`    Case sensitive: ${caseSensitive ? 'Yes' : 'No'}\n`);
+  output.print(
+    `    Preserve query params: ${preserveQueryParams ? 'Yes' : 'No'}\n`
+  );
 
   if (alias) {
     const testUrl = source.startsWith('/')
@@ -161,7 +244,7 @@ export default async function add(client: Client, argv: string[]) {
     }
   } else {
     output.warn(
-      `There are other staged changes. Please review all changes with ${chalk.cyan('vercel redirects list --staged')} before promoting to production.`
+      `There are other staged changes. Please review all changes with ${chalk.cyan('vercel redirects list --staging')} before promoting to production.`
     );
   }
 

@@ -6,6 +6,7 @@ export interface RedirectInput {
   destination: string;
   statusCode: number;
   caseSensitive: boolean;
+  preserveQueryParams?: boolean;
 }
 
 type Response = {
