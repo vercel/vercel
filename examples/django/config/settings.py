@@ -41,6 +41,9 @@ if vercel_url:
     allowed_hosts.append(vercel_url)
 if vercel_production_url:
     allowed_hosts.append(vercel_production_url)
+if DEBUG:
+    allowed_hosts.append('localhost')
+    allowed_hosts.append('127.0.0.1')
 ALLOWED_HOSTS = allowed_hosts
 
 
@@ -53,6 +56,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Local apps
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -88,12 +93,49 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# NOTE: The `/tmp` SQLite database is **ephemeral and not suitable for
+# production data**. For real applications, you should use a managed database
+# (such as Postgres) and configure `DATABASE_URL` accordingly.
+
+if os.environ.get('VERCEL'):
+    default_db_path = '/tmp/db.sqlite3'
+else:
+    default_db_path = str(BASE_DIR / 'db.sqlite3')
+
+DB_PATH = os.environ.get('DJANGO_DB_PATH', default_db_path)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
+
+# DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# parsed = urlparse(DATABASE_URL)
+
+# if parsed.scheme not in ('postgres', 'postgresql'):
+#     raise RuntimeError(
+#         f'Unsupported DATABASE_URL scheme: {parsed.scheme}'
+#     )
+
+# query = parse_qs(parsed.query)
+# options: dict[str, str] = {}
+# if 'sslmode' in query and query['sslmode']:
+#     options['sslmode'] = query['sslmode'][0]
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'HOST': parsed.hostname or '',
+#         'PORT': str(parsed.port) if parsed.port else '',
+#         'USER': parsed.username or '',
+#         'PASSWORD': parsed.password or '',
+#         'NAME': parsed.path.lstrip('/') or '',
+#         'OPTIONS': options,
+#     }
+# }
 
 
 # Password validation
