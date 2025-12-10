@@ -238,16 +238,39 @@ if 'VERCEL_IPC_PATH' in os.environ:
 try:
     user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
     __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
-    __vc_module = util.module_from_spec(__vc_spec)
+    try:
+        __vc_module = util.module_from_spec(__vc_spec)
+    except Exception:
+        _stderr(f'Error importing __VC_HANDLER_ENTRYPOINT:')
+        _stderr(traceback.format_exc())
+        exit(1)
     sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
+    # Normalize Django-style `application` attribute to `app` when `app` is missing.
+    if 'application' in __vc_variables and 'app' not in __vc_variables:
+        with contextlib.suppress(Exception):
+            setattr(__vc_module, 'app', getattr(__vc_module, 'application'))
+            __vc_variables.append('app')
 except Exception:
     _stderr(f'Error importing __VC_HANDLER_ENTRYPOINT:')
     _stderr(traceback.format_exc())
     exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
+
+
+def _get_project_app():
+    """
+    Return the user application object, preferring `app` but falling back to
+    `application`, which is commonly used by Django for WSGI/ASGI apps.
+    """
+    if 'app' in __vc_variables:
+        return getattr(__vc_module, 'app')
+    if 'application' in __vc_variables:
+        return getattr(__vc_module, 'application')
+    return None
+
 
 def format_headers(headers, decode=False):
     keyToList = {}
@@ -476,15 +499,16 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 method = getattr(self, mname)
                 method()
                 self.wfile.flush()
-    elif 'app' in __vc_variables:
-        if (
-            not inspect.iscoroutinefunction(__vc_module.app) and
-            not inspect.iscoroutinefunction(__vc_module.app.__call__)
+    else:
+        project_app = _get_project_app()
+        if project_app is not None and (
+            not inspect.iscoroutinefunction(project_app) and
+            not inspect.iscoroutinefunction(getattr(project_app, '__call__', None))
         ):
             from io import BytesIO
 
             string_types = (str,)
-            app = __vc_module.app
+            app = project_app
 
             def wsgi_encoding_dance(s, charset="utf-8", errors="replace"):
                 if isinstance(s, str):
@@ -542,7 +566,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                     finally:
                         if hasattr(response, 'close'):
                             response.close()
-        else:
+        elif project_app is not None:
             # ASGI: Run with Uvicorn so we get proper lifespan and protocol handling
             try:
                 import uvicorn
@@ -551,9 +575,10 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 exit(1)
 
             # Prefer a callable app.asgi when available; some frameworks expose a boolean here
-            user_app_candidate = getattr(__vc_module.app, 'asgi', None)
-            user_app = user_app_candidate if callable(user_app_candidate) else __vc_module.app
-            asgi_app = ASGIMiddleware(user_app)
+            project_app_candidate = getattr(project_app, 'asgi', None)
+            asgi_app = ASGIMiddleware(
+                project_app_candidate if callable(project_app_candidate) else project_app
+            )
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -607,7 +632,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
         _init_log_buf.clear()
         server.serve_forever()
 
-    _stderr('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    _stderr('Missing variable `handler`, `app`, or `application` in file "__VC_HANDLER_ENTRYPOINT".')
     _stderr('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
 
@@ -900,6 +925,6 @@ elif 'app' in __vc_variables:
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    print('Missing variable `handler`, `app`, or `application` in file "__VC_HANDLER_ENTRYPOINT".')
     print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
