@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.1.2
+
+### Patch Changes
+
+- [python] update dependency installation to use a .venv + uv sync ([#14415](https://github.com/vercel/vercel/pull/14415))
+
 ## 6.1.1
 
 ### Patch Changes
