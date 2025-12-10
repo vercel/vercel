@@ -121,7 +121,7 @@ export default async function remove(client: Client, argv: string[]) {
     }
   } else {
     output.warn(
-      `There are other staged changes. Review them with ${chalk.cyan('vercel redirects list --staged')} before promoting to production.`
+      `There are other staged changes. Review them with ${chalk.cyan('vercel redirects list --staging')} before promoting to production.`
     );
   }
 

@@ -248,7 +248,7 @@ export const build: BuildV3 = async ({
   fsFiles = await glob('**', workPath);
 
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
-  // can be installed and then vendored into the Lambda bundle.
+  // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
   await ensureVenv({
     pythonPath: pythonVersion.pythonPath,

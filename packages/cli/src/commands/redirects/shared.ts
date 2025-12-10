@@ -76,9 +76,13 @@ export async function confirmAction(
 }
 
 export function isValidUrl(url: string): boolean {
-  try {
-    new URL(url, 'https://vercel.com');
+  if (url.startsWith('/')) {
     return true;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
   }
