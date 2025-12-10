@@ -23,13 +23,14 @@ export default async function list(client: Client, argv: string[]) {
   const search = flags['--search'];
   const page = flags['--page'];
   const perPage = flags['--per-page'];
-  const staged = flags['--staged'];
+  const staging = flags['--staging'];
   const versionIdFlag = flags['--version'];
 
   let versionId: string | undefined;
   let versionName: string | undefined;
 
-  if (staged) {
+  let useDiff = false;
+  if (staging) {
     output.spinner('Fetching staging version');
     const { versions } = await getRedirectVersions(client, project.id, teamId);
     const stagingVersion = versions.find(v => v.isStaging);
@@ -45,11 +46,15 @@ export default async function list(client: Client, argv: string[]) {
 
     versionId = stagingVersion.id;
     versionName = stagingVersion.name || stagingVersion.id;
+
+    if (!search && !page) {
+      useDiff = true;
+    }
   }
 
   if (versionIdFlag) {
-    if (staged) {
-      output.error('Cannot use both --staged and --version flags together');
+    if (staging) {
+      output.error('Cannot use both --staging and --version flags together');
       return 1;
     }
 
@@ -89,27 +94,62 @@ export default async function list(client: Client, argv: string[]) {
     page,
     perPage,
     versionId,
+    diff: useDiff,
   });
 
-  let resultMessage = `${plural('Redirect', redirects.length, true)} found for ${chalk.bold(
-    project.name
-  )}`;
-  if (versionName) {
-    resultMessage += ` ${chalk.gray(`(version: ${versionName})`)}`;
-  }
-  if (search) {
-    resultMessage += ` matching "${search}"`;
-  }
-  if (pagination) {
-    resultMessage += ` ${chalk.gray(`(page ${pagination.page} of ${pagination.numPages})`)}`;
-  }
-  resultMessage += ` ${chalk.gray(lsStamp())}`;
+  if (useDiff) {
+    const added = redirects.filter(r => r.action === '+');
+    const removed = redirects.filter(r => r.action === '-');
+    const unchanged = redirects.filter(r => !r.action);
 
-  output.log(resultMessage);
+    output.log(
+      `Changes in staging version ${chalk.bold(versionName || '')} ${chalk.gray(lsStamp())}`
+    );
 
-  if (redirects.length > 0) {
-    output.print(formatRedirectsTable(redirects));
-    output.print('\n');
+    if (added.length === 0 && removed.length === 0) {
+      output.log('\n  No changes from production version\n');
+    } else {
+      if (added.length > 0) {
+        output.print(`\n  ${chalk.bold(chalk.green(`Added (${added.length}):`))}
+`);
+        output.print(formatRedirectsTable(added, '+'));
+      }
+
+      if (removed.length > 0) {
+        output.print(`\n  ${chalk.bold(chalk.red(`Removed (${removed.length}):`))}
+`);
+        output.print(formatRedirectsTable(removed, '-'));
+      }
+
+      if (unchanged.length > 0) {
+        output.print(
+          `\n  ${chalk.gray(`${unchanged.length} redirect${unchanged.length === 1 ? '' : 's'} unchanged`)}\n`
+        );
+      }
+
+      output.print('\n');
+    }
+  } else {
+    let resultMessage = `${plural('Redirect', redirects.length, true)} found for ${chalk.bold(
+      project.name
+    )}`;
+    if (versionName) {
+      resultMessage += ` ${chalk.gray(`(version: ${versionName})`)}`;
+    }
+    if (search) {
+      resultMessage += ` matching "${search}"`;
+    }
+    if (pagination) {
+      resultMessage += ` ${chalk.gray(`(page ${pagination.page} of ${pagination.numPages})`)}`;
+    }
+    resultMessage += ` ${chalk.gray(lsStamp())}`;
+
+    output.log(resultMessage);
+
+    if (redirects.length > 0) {
+      output.print(formatRedirectsTable(redirects));
+      output.print('\n');
+    }
   }
 
   if (pagination && pagination.page < pagination.numPages) {
@@ -133,15 +173,24 @@ function formatRedirectsTable(
     destination: string;
     permanent?: boolean;
     statusCode?: number;
-  }>
+    action?: '+' | '-';
+  }>,
+  actionSymbol?: '+' | '-'
 ) {
   const rows: string[][] = redirects.map(redirect => {
     const status = redirect.statusCode || (redirect.permanent ? 308 : 307);
+    const prefix = actionSymbol || '';
+    const colorFn =
+      actionSymbol === '+'
+        ? chalk.green
+        : actionSymbol === '-'
+          ? chalk.red
+          : (s: string) => s;
 
     return [
-      redirect.source,
-      redirect.destination,
-      chalk.cyan(status.toString()),
+      colorFn(`${prefix} ${redirect.source}`),
+      colorFn(`${redirect.destination}`),
+      colorFn(status.toString()),
     ];
   });
 
