@@ -36,7 +36,7 @@ if not DEBUG and SECRET_KEY.startswith("django-insecure-"):
 
 vercel_url = os.environ.get('VERCEL_URL')
 vercel_production_url = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')
-allowed_hosts: list[str] = os.environ.get('ALLOWED_HOSTS', '').split(',')
+allowed_hosts: list[str] = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
 if vercel_url:
     allowed_hosts.append(vercel_url)
 if vercel_production_url:
