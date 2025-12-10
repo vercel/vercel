@@ -21,25 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
-
 # SECURITY WARNING: keep the secret key used in production secret!
-# For production, set DJANGO_SECRET_KEY in your environment.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-if not SECRET_KEY:
-    if DEBUG:
-        # Dev-only fallback so the starter works out of the box.
-        SECRET_KEY = "dev-secret-key-change-me"
-    else:
-        raise ImproperlyConfigured(
-            "DJANGO_SECRET_KEY environment variable is required when DEBUG is False."
-        )
+SECRET_KEY = 'django-insecure-=nns2j5&xri3pl^+w^&(z$y(kt&j8zfist4ll+r68t@)22fg3_'
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
 
 vercel_url = os.environ.get('VERCEL_URL')
-allowed_hosts: list[str] = ['localhost', '127.0.0.1']
+vercel_production_url = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')
+allowed_hosts: list[str] = os.environ.get('ALLOWED_HOSTS', '').split(',')
 if vercel_url:
     allowed_hosts.append(vercel_url)
+if vercel_production_url:
+    allowed_hosts.append(vercel_production_url)
 ALLOWED_HOSTS = allowed_hosts
 
 
