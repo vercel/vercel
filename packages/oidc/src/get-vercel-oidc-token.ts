@@ -49,10 +49,11 @@ export async function getVercelOidcToken(): Promise<string> {
       token = getVercelOidcTokenSync();
     }
   } catch (error) {
-    if (err?.message && error instanceof Error) {
-      error.message = `${err.message}\n${error.message}`;
+    let message = err instanceof Error ? err.message : '';
+    if (error instanceof Error) {
+      message = `${message}\n${error.message}`;
     }
-    throw new VercelOidcTokenError(`Failed to refresh OIDC token`, error);
+    throw new VercelOidcTokenError(message);
   }
   return token;
 }
