@@ -29,9 +29,9 @@ uv sync
 Start the development server on http://0.0.0.0:5001
 
 ```bash
-python main.py
+python manage.py runserver 0.0.0.0:5001
 # using uv:
-uv run main.py
+uv run manage.py runserver 0.0.0.0:5001
 ```
 
 When you make changes to your project, the server will automatically reload.
