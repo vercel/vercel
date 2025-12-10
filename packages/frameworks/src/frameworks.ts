@@ -2114,7 +2114,7 @@ export const frameworks = [
   {
     name: 'Django',
     slug: 'django',
-    demo: 'https://django-template.vercel.app',
+    demo: 'https://vercel-plus-django.vercel.app/',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
     tagline: 'The Web framework for perfectionists with deadlines.',
     description: 'A Django project served via the Python Runtime.',
