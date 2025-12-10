@@ -18,7 +18,7 @@ export class APIError extends Error {
   link?: string;
   slug?: string;
   action?: string;
-  retryAfter: number | null | 'never';
+  retryAfterMs?: number | 'never';
   [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
@@ -26,7 +26,6 @@ export class APIError extends Error {
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
-    this.retryAfter = null;
 
     if (body) {
       for (const field of Object.keys(body)) {
@@ -37,13 +36,34 @@ export class APIError extends Error {
       }
     }
 
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      if (retryAfter) {
-        this.retryAfter = parseInt(retryAfter, 10);
-      }
+    // HTTP 429 (Too Many Requests) or 503 (Service Unavailable) both are spec'd to serve retry-after headers
+    if (response.status === 429 || response.status === 503) {
+      const parsed = parseRetryAfterHeaderAsMillis(
+        response.headers.get('Retry-After')
+      );
+      // If the retry-after header is missing or malfomed set to 0.  This ensures users will attempt a retry even in these cases.
+      this.retryAfterMs = parsed ?? (response.status === 429 ? 0 : undefined);
     }
   }
+}
+
+export function parseRetryAfterHeaderAsMillis(
+  header: string | null
+): number | undefined {
+  if (!header) return undefined;
+  // The header might be a literal number of seconds or a formatted date
+  // The date format is spec'd and date.parse should handle it.
+  let retryAfterMs = Number(header) * 1000;
+  if (Number.isNaN(retryAfterMs)) {
+    retryAfterMs = Date.parse(header);
+    if (Number.isNaN(retryAfterMs)) {
+      return undefined;
+    } else {
+      retryAfterMs = retryAfterMs - Date.now();
+    }
+  }
+  // If the date is in the past (clock skew? latency?) just retry immediately
+  return Math.max(retryAfterMs, 0);
 }
 
 export function isAPIError(v: unknown): v is APIError {
@@ -489,12 +509,12 @@ export class CertOrderNotFound extends NowError<
  */
 export class TooManyRequests extends NowError<
   'TOO_MANY_REQUESTS',
-  { api: string; retryAfter: number }
+  { api: string; retryAfterMs: number }
 > {
-  constructor(api: string, retryAfter: number) {
+  constructor(api: string, retryAfterMs: number) {
     super({
       code: 'TOO_MANY_REQUESTS',
-      meta: { api, retryAfter },
+      meta: { api, retryAfterMs },
       message: `Rate limited. Too many requests to the same endpoint.`,
     });
   }
