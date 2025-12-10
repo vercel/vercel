@@ -5,6 +5,17 @@ import path from 'path';
 import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
 
+// For tests that exercise the build pipeline, we don't care about the actual
+// vendored dependencies, only that the build completes and the handler exists.
+// Mock out mirroring of site-packages so tests don't depend on a real venv.
+jest.mock('../src/install', () => {
+  const real = jest.requireActual('../src/install');
+  return {
+    ...real,
+    mirrorSitePackagesIntoVendor: jest.fn(async () => ({})),
+  };
+});
+
 const tmpPythonDir = path.join(
   tmpdir(),
   `vc-test-python-${Math.floor(Math.random() * 1e6)}`
@@ -186,9 +197,34 @@ function makeMockPython(version: string) {
     }
   }
 
+  // mock uv: ensure a uv.lock file exists whenever the binary is invoked.
   const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
-  fs.writeFileSync(uvBin, isWin ? winScript : posixScript, 'utf8');
-  if (!isWin) fs.chmodSync(uvBin, 0o755);
+  if (isWin) {
+    const uvWinScript = [
+      '@echo off',
+      'rem mock uv binary',
+      'if not exist "uv.lock" (',
+      '  echo [mock]>uv.lock',
+      ')',
+      'rem always succeed',
+      'exit /b 0',
+      '',
+    ].join('\r\n');
+    fs.writeFileSync(uvBin, uvWinScript, 'utf8');
+  } else {
+    const uvPosixScript = [
+      '#!/bin/sh',
+      '# mock uv binary',
+      'if [ ! -f "uv.lock" ]; then',
+      '  echo "[mock]" > uv.lock',
+      'fi',
+      '# always succeed',
+      'exit 0',
+      '',
+    ].join('\n');
+    fs.writeFileSync(uvBin, uvPosixScript, 'utf8');
+    fs.chmodSync(uvBin, 0o755);
+  }
 
   process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
 }

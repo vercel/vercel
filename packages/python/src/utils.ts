@@ -1,10 +1,18 @@
 import fs from 'fs';
-import { join, delimiter as pathDelimiter } from 'path';
-import { readConfigFile, execCommand } from '@vercel/build-utils';
+import { delimiter as pathDelimiter, join } from 'path';
+import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
+
+import execa = require('execa');
+
+const isWin = process.platform === 'win32';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };
+
+export function getVenvBinDir(venvPath: string) {
+  return join(venvPath, isWin ? 'Scripts' : 'bin');
+}
 
 export function useVirtualEnv(
   workPath: string,
@@ -32,6 +40,40 @@ export function useVirtualEnv(
     }
   }
   return { pythonCmd };
+}
+
+export function createVenvEnv(
+  venvPath: string,
+  baseEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...baseEnv, VIRTUAL_ENV: venvPath };
+  const binDir = getVenvBinDir(venvPath);
+  const existingPath = env.PATH || process.env.PATH || '';
+  env.PATH = existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir;
+  return env;
+}
+
+export async function ensureVenv({
+  pythonPath,
+  venvPath,
+}: {
+  pythonPath: string;
+  venvPath: string;
+}) {
+  const marker = join(venvPath, 'pyvenv.cfg');
+  try {
+    await fs.promises.access(marker);
+    return;
+  } catch {
+    // fall through to creation
+  }
+  await fs.promises.mkdir(venvPath, { recursive: true });
+  console.log(`Creating virtual environment at "${venvPath}"...`);
+  await execa(pythonPath, ['-m', 'venv', venvPath]);
+}
+
+export function getVenvPythonBin(venvPath: string) {
+  return join(getVenvBinDir(venvPath), isWin ? 'python.exe' : 'python');
 }
 
 export async function runPyprojectScript(
@@ -81,4 +123,52 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
+}
+
+export async function runUvCommand(options: {
+  uvPath: string | null;
+  args: string[];
+  cwd: string;
+  venvPath: string;
+}) {
+  const { uvPath, args, cwd, venvPath } = options;
+
+  const pretty = `uv ${args.join(' ')}`;
+  debug(`Running "${pretty}"...`);
+
+  if (!uvPath) {
+    throw new Error(`uv is required to run "${pretty}" but is not available`);
+  }
+
+  try {
+    await execa(uvPath, args, {
+      cwd,
+      env: createVenvEnv(venvPath),
+    });
+    return true;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+export function findDir({
+  file,
+  entryDirectory,
+  workPath,
+  fsFiles,
+}: {
+  file: string;
+  entryDirectory: string;
+  workPath: string;
+  fsFiles: Record<string, any>;
+}): string | null {
+  if (fsFiles[join(entryDirectory, file)]) {
+    return join(workPath, entryDirectory);
+  }
+  if (fsFiles[file]) {
+    return workPath;
+  }
+  return null;
 }
