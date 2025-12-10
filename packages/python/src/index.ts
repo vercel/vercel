@@ -38,6 +38,7 @@ const writeFile = promisify(fs.writeFile);
 import {
   FASTAPI_CANDIDATE_ENTRYPOINTS,
   FLASK_CANDIDATE_ENTRYPOINTS,
+  DJANGO_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
 
@@ -119,7 +120,11 @@ export const build: BuildV3 = async ({
   }
 
   // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
-  if (framework === 'fastapi' || framework === 'flask') {
+  if (
+    framework === 'fastapi' ||
+    framework === 'flask' ||
+    framework === 'django'
+  ) {
     const {
       cliType,
       lockfileVersion,
@@ -171,11 +176,13 @@ export const build: BuildV3 = async ({
 
   // Zero config entrypoint discovery
   if (
-    (framework === 'fastapi' || framework === 'flask') &&
+    (framework === 'fastapi' ||
+      framework === 'flask' ||
+      framework === 'django') &&
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
     const detected = await detectPythonEntrypoint(
-      config.framework as 'fastapi' | 'flask',
+      config.framework as 'fastapi' | 'flask' | 'django',
       workPath,
       entrypoint
     );
@@ -188,7 +195,9 @@ export const build: BuildV3 = async ({
       const searchedList =
         framework === 'fastapi'
           ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
-          : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+          : framework === 'flask'
+            ? FLASK_CANDIDATE_ENTRYPOINTS.join(', ')
+            : DJANGO_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
@@ -552,15 +561,11 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    // Don't override API routes if another builder already matched them
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
-    // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
+  if (
+    framework === 'fastapi' ||
+    framework === 'flask' ||
+    framework === 'django'
+  ) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;

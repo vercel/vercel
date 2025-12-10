@@ -2112,6 +2112,59 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Django',
+    slug: 'django',
+    demo: 'https://django-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
+    tagline: 'The Web framework for perfectionists with deadlines.',
+    description: 'A Django project served via the Python Runtime.',
+    website: 'https://www.djangoproject.com',
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Dd]jango',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Dd]jango',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Dd]jango',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Flask',
     slug: 'flask',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/flask.svg',

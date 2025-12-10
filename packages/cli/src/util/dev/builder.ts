@@ -431,24 +431,23 @@ export async function getBuildMatches(
 
     if (
       buildConfig.config?.framework === 'fastapi' ||
-      buildConfig.config?.framework === 'flask'
+      buildConfig.config?.framework === 'flask' ||
+      buildConfig.config?.framework === 'django'
     ) {
-      // Mirror @vercel/python's entrypoint candidates
-      const candidateDirs = ['', 'src', 'app', 'api'];
-      const candidateNames = ['app', 'index', 'server', 'main'];
-      const candidates: string[] = [];
-      for (const name of candidateNames) {
-        for (const dir of candidateDirs) {
-          candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
-        }
-      }
+      // For Python-backend frameworks, let the @vercel/python builder handle
+      // zero-config entrypoint discovery. Here we just ensure that `src`
+      // points at a real file so that dev routing/build matching works.
       if (!fileList.includes(src)) {
-        const existing = candidates.filter(p => fileList.includes(p));
-        if (existing.length > 0) {
-          src = existing[0];
-        } else if (fileList.includes('pyproject.toml')) {
-          // Builder will resolve entrypoint from pyproject.toml;
-          src = 'pyproject.toml';
+        const manifestCandidates = [
+          'pyproject.toml',
+          'requirements.txt',
+          'Pipfile',
+        ];
+        const existingManifest = manifestCandidates.find(p =>
+          fileList.includes(p)
+        );
+        if (existingManifest) {
+          src = existingManifest;
         }
       }
     }
