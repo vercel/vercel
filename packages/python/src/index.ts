@@ -340,7 +340,6 @@ export const build: BuildV3 = async ({
       locked: true,
     });
   }
-
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);

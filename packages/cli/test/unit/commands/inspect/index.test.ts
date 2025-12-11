@@ -94,6 +94,116 @@ describe('inspect', () => {
       });
     });
 
+    describe('--json', async () => {
+      it('tracks --json flag', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        client.setArgv('inspect', deployment.url, '--json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:deploymentIdOrHost',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:json',
+            value: 'TRUE',
+          },
+        ]);
+      });
+
+      it('outputs deployment information as JSON', async () => {
+        const user = useUser();
+        const deployment = useDeployment({
+          creator: user,
+          state: 'READY',
+        });
+        client.setArgv('inspect', deployment.url, '--json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const jsonOutput = JSON.parse(output);
+
+        expect(jsonOutput).toMatchObject({
+          id: deployment.id,
+          name: deployment.name,
+          url: deployment.url,
+          target: deployment.target,
+          readyState: deployment.readyState,
+          createdAt: deployment.createdAt,
+          contextName: user.username,
+        });
+      });
+
+      it('includes aliases in JSON output when present', async () => {
+        const user = useUser();
+        const deployment = useDeployment({
+          creator: user,
+        });
+        // Manually set aliases since the mock doesn't accept it as a parameter
+        deployment.alias = ['example.com', 'www.example.com'];
+
+        client.setArgv('inspect', deployment.url, '--json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const jsonOutput = JSON.parse(output);
+
+        expect(jsonOutput).toHaveProperty('aliases');
+        expect(jsonOutput.aliases).toEqual(['example.com', 'www.example.com']);
+      });
+
+      it('excludes aliases from JSON when not present', async () => {
+        const user = useUser();
+        const deployment = useDeployment({
+          creator: user,
+        });
+        client.setArgv('inspect', deployment.url, '--json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const jsonOutput = JSON.parse(output);
+
+        // aliases should not be in the output if empty
+        expect(jsonOutput).not.toHaveProperty('aliases');
+      });
+
+      it('works with --wait flag', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user, state: 'BUILDING' });
+        client.setArgv('inspect', deployment.url, '--json', '--wait');
+
+        let exitCode: number | null = null;
+
+        const runInspect = async () => {
+          exitCode = await inspect(client);
+        };
+
+        const slowlyDeploy = async () => {
+          await sleep(100);
+          expect(exitCode).toBeNull();
+          deployment.readyState = 'READY';
+        };
+
+        await Promise.all<void>([runInspect(), slowlyDeploy()]);
+
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const jsonOutput = JSON.parse(output);
+
+        expect(jsonOutput).toMatchObject({
+          id: deployment.id,
+          readyState: 'READY',
+        });
+      });
+    });
+
     it('tracks deplomymentUrl as telemetry', async () => {
       const user = useUser();
       const deployment = useDeployment({ creator: user });
