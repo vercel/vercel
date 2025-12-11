@@ -462,6 +462,17 @@ export const routesSchema = {
           missing: hasSchema,
           mitigate: mitigateSchema,
           transforms: transformsSchema,
+          env: {
+            description:
+              'An array of environment variable names that should be replaced at runtime in the destination or headers',
+            type: 'array',
+            minItems: 1,
+            maxItems: 64,
+            items: {
+              type: 'string',
+              maxLength: 256,
+            },
+          },
         },
       },
       {
@@ -510,6 +521,17 @@ export const rewritesSchema = {
         minimum: 100,
         maximum: 999,
       },
+      env: {
+        description:
+          'An array of environment variable names that should be replaced at runtime in the destination',
+        type: 'array',
+        minItems: 1,
+        maxItems: 64,
+        items: {
+          type: 'string',
+          maxLength: 256,
+        },
+      },
     },
   },
 } as const;
@@ -551,6 +573,17 @@ export const redirectsSchema = {
       },
       has: hasSchema,
       missing: hasSchema,
+      env: {
+        description:
+          'An array of environment variable names that should be replaced at runtime in the destination',
+        type: 'array',
+        minItems: 1,
+        maxItems: 64,
+        items: {
+          type: 'string',
+          maxLength: 256,
+        },
+      },
     },
   },
 } as const;

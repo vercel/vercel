@@ -206,6 +206,11 @@ test('convertRedirects', () => {
       destination: '/api/optional/:id?',
     },
     {
+      source: '/env-redirect/:slug',
+      destination: '/env-target/:slug',
+      env: ['edge'],
+    },
+    {
       source: '/feature-{:slug}',
       destination: '/blog-{:slug}',
     },
@@ -369,6 +374,12 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
+      src: '^\\/env-redirect(?:\\/([^\\/]+?))$',
+      headers: { Location: '/env-target/$1' },
+      status: 308,
+      env: ['edge'],
+    },
+    {
       headers: {
         Location: '/blog-$1',
       },
@@ -473,6 +484,7 @@ test('convertRedirects', () => {
     ['/hello/world', '/hello/another/world'],
     ['/external/1', '/external/2'],
     ['/optional', '/optional/1'],
+    ['/env-redirect/abc'],
     ['/feature-first', '/feature-second'],
     ['/hello/world', '/hello/again'],
     ['/hello/world'],
@@ -496,6 +508,7 @@ test('convertRedirects', () => {
     ['/not-this-one', '/helloo'],
     ['/externalnope', '/externally'],
     ['/optionalnope', '/optionally'],
+    ['/env-redirect', '/env-redirect/'],
     ['/feature/first', '/feature'],
     ['/hello', '/hello/another/one'],
     ['/hellooo'],
@@ -666,6 +679,11 @@ test('convertRewrites', () => {
         source: '/rewrite-with-status',
         destination: '/api/hello',
         statusCode: 201,
+      },
+      {
+        source: '/env-rewrite/:id',
+        destination: '/api/env/:id',
+        env: ['edge'],
       },
       {
         source: '/test/:id',
@@ -906,6 +924,12 @@ test('convertRewrites', () => {
     },
     {
       check: true,
+      dest: '/api/env/$1',
+      env: ['edge'],
+      src: '^\\/env-rewrite(?:\\/([^\\/]+?))$',
+    },
+    {
+      check: true,
       dest: '/api/$sub_domain/$1',
       has: [
         {
@@ -969,6 +993,7 @@ test('convertRewrites', () => {
     ['/array-query-string/10/email'],
     ['/en/hello'],
     ['/rewrite-with-status'],
+    ['/env-rewrite/123'],
     ['/test/123', '/test/abc'],
     ['/user/10', '/user/abc'],
     ['/item/5', '/item/xyz'],
@@ -1000,6 +1025,7 @@ test('convertRewrites', () => {
     ['/array-query-string/10'],
     ['/en/hello/world', '/en/hello/'],
     ['/rewrite-with-status-nope'],
+    ['/env-rewrite', '/env-rewrite/'],
     ['/test', '/testing/123', '/test/'],
     ['/user', '/users/10', '/user/'],
     ['/item', '/items/5', '/item/'],

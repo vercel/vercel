@@ -149,6 +149,9 @@ export function convertRedirects(
         status,
       };
 
+      if (typeof r.env !== 'undefined') {
+        route.env = r.env;
+      }
       if (r.has) {
         route.has = r.has;
       }
@@ -182,6 +185,9 @@ export function convertRewrites(
       );
       const route: Route = { src, dest, check: true };
 
+      if (typeof r.env !== 'undefined') {
+        route.env = r.env;
+      }
       if (r.has) {
         route.has = r.has;
       }
