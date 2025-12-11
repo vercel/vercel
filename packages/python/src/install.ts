@@ -1,9 +1,17 @@
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import which from 'which';
-import { Meta, debug } from '@vercel/build-utils';
+import {
+  FileFsRef,
+  Files,
+  Meta,
+  debug,
+  glob,
+  readConfigFile,
+} from '@vercel/build-utils';
+import { getVenvPythonBin, runUvCommand, findDir } from './utils';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -15,7 +23,7 @@ spec = util.find_spec(dep)
 print(spec.origin)
 `;
 
-async function isInstalled(
+export async function isInstalled(
   pythonPath: string,
   dependency: string,
   cwd: string
@@ -65,9 +73,434 @@ async function areRequirementsInstalled(
   }
 }
 
+export async function runUvSync({
+  uvPath,
+  venvPath,
+  projectDir,
+  locked,
+}: {
+  uvPath: string | null;
+  venvPath: string;
+  projectDir: string;
+  locked: boolean;
+}) {
+  const args = ['sync', '--active', '--no-dev'];
+  if (locked) {
+    args.push('--locked');
+  }
+  args.push('--no-editable');
+  await runUvCommand({
+    uvPath,
+    args,
+    cwd: projectDir,
+    venvPath,
+  });
+}
+
+async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
+  // Ask the venv’s interpreter which directories it adds to sys.path for pure
+  // Python packages and platform-specific packages so we mirror the exact same
+  // paths when mounting `_vendor` in the Lambda bundle.
+  const code = `
+import json
+import sysconfig
+paths = []
+for key in ("purelib", "platlib"):
+    candidate = sysconfig.get_path(key)
+    if candidate and candidate not in paths:
+        paths.append(candidate)
+print(json.dumps(paths))
+`.trim();
+  const { stdout } = await execa(pythonBin, ['-c', code]);
+  try {
+    const parsed = JSON.parse(stdout);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((p): p is string => typeof p === 'string');
+    }
+  } catch (err) {
+    debug('Failed to parse site-packages output', err);
+  }
+  return [];
+}
+
+export async function getVenvSitePackagesDirs(
+  venvPath: string
+): Promise<string[]> {
+  const pythonBin = getVenvPythonBin(venvPath);
+  return getSitePackagesDirs(pythonBin);
+}
+
 export function resolveVendorDir() {
   const vendorDir = process.env.VERCEL_PYTHON_VENDOR_DIR || '_vendor';
   return vendorDir;
+}
+
+export type ManifestType =
+  | 'uv.lock'
+  | 'pyproject.toml'
+  | 'Pipfile.lock'
+  | 'Pipfile'
+  | 'requirements.txt'
+  | null;
+export interface InstallSourceInfo {
+  manifestPath: string | null;
+  manifestType: ManifestType;
+  manifestContent: string | undefined;
+}
+
+interface DetectInstallSourceParams {
+  workPath: string;
+  entryDirectory: string;
+  fsFiles: Record<string, any>;
+}
+
+export async function detectInstallSource({
+  workPath,
+  entryDirectory,
+  fsFiles,
+}: DetectInstallSourceParams): Promise<InstallSourceInfo> {
+  const uvLockDir = findDir({
+    file: 'uv.lock',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+  const pyprojectDir = findDir({
+    file: 'pyproject.toml',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+  const pipfileLockDir = findDir({
+    file: 'Pipfile.lock',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+  const pipfileDir = findDir({
+    file: 'Pipfile',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+  const requirementsDir = findDir({
+    file: 'requirements.txt',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+
+  let manifestPath: string | null = null;
+  let manifestType: ManifestType = null;
+
+  // Prefer uv.lock, then pyproject.toml, then Pipfile.lock, then Pipfile,
+  // then requirements.txt (local, then global).
+  if (uvLockDir && pyprojectDir) {
+    manifestType = 'uv.lock';
+    manifestPath = join(uvLockDir, 'uv.lock');
+  } else if (pyprojectDir) {
+    manifestType = 'pyproject.toml';
+    manifestPath = join(pyprojectDir, 'pyproject.toml');
+  } else if (pipfileLockDir) {
+    manifestType = 'Pipfile.lock';
+    manifestPath = join(pipfileLockDir, 'Pipfile.lock');
+  } else if (pipfileDir) {
+    manifestType = 'Pipfile';
+    manifestPath = join(pipfileDir, 'Pipfile');
+  } else if (requirementsDir) {
+    manifestType = 'requirements.txt';
+    manifestPath = join(requirementsDir, 'requirements.txt');
+  }
+
+  let manifestContent: string | undefined;
+  if (manifestPath) {
+    try {
+      manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
+    } catch (err) {
+      debug('Failed to read install manifest contents', err);
+    }
+  }
+
+  return { manifestPath, manifestType, manifestContent };
+}
+
+export async function createPyprojectToml({
+  projectName,
+  pyprojectPath,
+  dependencies,
+}: {
+  projectName: string;
+  pyprojectPath: string;
+  dependencies: string[];
+}) {
+  const requiresPython = '>=3.12';
+
+  const depsToml =
+    dependencies.length > 0
+      ? [
+          'dependencies = [',
+          ...dependencies.map(dep => `  "${dep}",`),
+          ']',
+        ].join('\n')
+      : 'dependencies = []';
+
+  const content = [
+    '[project]',
+    `name = "${projectName}"`,
+    'version = "0.1.0"',
+    `requires-python = "${requiresPython}"`,
+    'classifiers = [',
+    '  "Private :: Do Not Upload",',
+    ']',
+    depsToml,
+    '',
+  ].join('\n');
+
+  await fs.promises.writeFile(pyprojectPath, content);
+}
+
+export interface UvProjectInfo {
+  projectDir: string;
+  pyprojectPath: string;
+  lockPath: string;
+}
+
+interface EnsureUvProjectParams {
+  workPath: string;
+  entryDirectory: string;
+  fsFiles: Record<string, any>;
+  pythonPath: string;
+  pipPath: string;
+  uvPath: string;
+  venvPath: string;
+  meta: Meta;
+  runtimeDependencies: string[];
+}
+
+export async function uvLock({
+  projectDir,
+  uvPath,
+}: {
+  projectDir: string;
+  uvPath: string;
+}): Promise<void> {
+  const args = ['lock'];
+  const pretty = `${uvPath} ${args.join(' ')}`;
+  debug(`Running "${pretty}" in ${projectDir}...`);
+  try {
+    await execa(uvPath, args, { cwd: projectDir });
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${pretty}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+}
+
+export async function uvAddDependencies({
+  projectDir,
+  uvPath,
+  venvPath,
+  dependencies,
+}: {
+  projectDir: string;
+  uvPath: string;
+  venvPath: string;
+  dependencies: string[];
+}): Promise<void> {
+  const toAdd = dependencies.filter(Boolean);
+  if (!toAdd.length) return;
+
+  const args = ['add', '--active', ...toAdd];
+  const pretty = `${uvPath} ${args.join(' ')}`;
+  debug(`Running "${pretty}" in ${projectDir}...`);
+  await runUvCommand({ uvPath, args, cwd: projectDir, venvPath });
+}
+
+export async function uvAddFromFile({
+  projectDir,
+  uvPath,
+  venvPath,
+  requirementsPath,
+}: {
+  projectDir: string;
+  uvPath: string;
+  venvPath: string;
+  requirementsPath: string;
+}): Promise<void> {
+  const args = ['add', '--active', '-r', requirementsPath];
+  const pretty = `${uvPath} ${args.join(' ')}`;
+  debug(`Running "${pretty}" in ${projectDir}...`);
+  await runUvCommand({ uvPath, args, cwd: projectDir, venvPath });
+}
+
+function getDependencyName(spec: string): string {
+  const match = spec.match(/^[A-Za-z0-9_.-]+/);
+  return match ? match[0].toLowerCase() : spec.toLowerCase();
+}
+
+async function filterMissingRuntimeDependencies({
+  pyprojectPath,
+  runtimeDependencies,
+}: {
+  pyprojectPath: string;
+  runtimeDependencies: string[];
+}): Promise<string[]> {
+  let declared: string[] = [];
+  try {
+    const config = await readConfigFile<{
+      project?: { dependencies?: string[] };
+    }>(pyprojectPath);
+    declared = config?.project?.dependencies || [];
+  } catch (err) {
+    debug('Failed to parse pyproject.toml when filtering runtime deps', err);
+  }
+  const declaredNames = new Set(declared.map(getDependencyName));
+  return runtimeDependencies.filter(spec => {
+    const name = getDependencyName(spec);
+    return !declaredNames.has(name);
+  });
+}
+
+export async function ensureUvProject({
+  workPath,
+  entryDirectory,
+  fsFiles,
+  pythonPath,
+  pipPath,
+  uvPath,
+  venvPath,
+  meta,
+  runtimeDependencies,
+}: EnsureUvProjectParams): Promise<UvProjectInfo> {
+  const installInfo = await detectInstallSource({
+    workPath,
+    entryDirectory,
+    fsFiles,
+  });
+  const { manifestType, manifestPath } = installInfo;
+
+  let projectDir: string;
+  let pyprojectPath: string;
+
+  if (manifestType === 'uv.lock') {
+    if (!manifestPath) {
+      throw new Error('Expected uv.lock path to be resolved, but it was null');
+    }
+    projectDir = dirname(manifestPath);
+    pyprojectPath = join(projectDir, 'pyproject.toml');
+    if (!fs.existsSync(pyprojectPath)) {
+      throw new Error(
+        `Expected "pyproject.toml" next to "uv.lock" in "${projectDir}"`
+      );
+    }
+    console.log('Installing required dependencies from uv.lock...');
+  } else if (manifestType === 'pyproject.toml') {
+    if (!manifestPath) {
+      throw new Error(
+        'Expected pyproject.toml path to be resolved, but it was null'
+      );
+    }
+    projectDir = dirname(manifestPath);
+    pyprojectPath = manifestPath;
+    console.log('Installing required dependencies from pyproject.toml...');
+    const lockPath = join(projectDir, 'uv.lock');
+    if (!fs.existsSync(lockPath)) {
+      await uvLock({ projectDir, uvPath });
+    }
+  } else if (manifestType === 'Pipfile.lock' || manifestType === 'Pipfile') {
+    if (!manifestPath) {
+      throw new Error(
+        'Expected Pipfile/Pipfile.lock path to be resolved, but it was null'
+      );
+    }
+    projectDir = dirname(manifestPath);
+    console.log(`Installing required dependencies from ${manifestType}...`);
+    const exportedReq = await exportRequirementsFromPipfile({
+      pythonPath,
+      pipPath,
+      uvPath,
+      projectDir,
+      meta,
+    });
+    pyprojectPath = join(projectDir, 'pyproject.toml');
+    if (!fs.existsSync(pyprojectPath)) {
+      await createPyprojectToml({
+        projectName: 'app',
+        pyprojectPath,
+        dependencies: [],
+      });
+    }
+    await uvAddFromFile({
+      projectDir,
+      uvPath,
+      venvPath,
+      requirementsPath: exportedReq,
+    });
+  } else if (manifestType === 'requirements.txt') {
+    if (!manifestPath) {
+      throw new Error(
+        'Expected requirements.txt path to be resolved, but it was null'
+      );
+    }
+    projectDir = dirname(manifestPath);
+    pyprojectPath = join(projectDir, 'pyproject.toml');
+    console.log(
+      'Installing required dependencies from requirements.txt with uv...'
+    );
+    if (!fs.existsSync(pyprojectPath)) {
+      await createPyprojectToml({
+        projectName: 'app',
+        pyprojectPath,
+        dependencies: [],
+      });
+    }
+    await uvAddFromFile({
+      projectDir,
+      uvPath,
+      venvPath,
+      requirementsPath: manifestPath,
+    });
+  } else {
+    // No manifest detected – create a minimal uv project at the workPath so
+    // that runtime dependencies are still managed and locked via uv.
+    projectDir = workPath;
+    pyprojectPath = join(projectDir, 'pyproject.toml');
+    console.log(
+      'No Python manifest found; creating an empty pyproject.toml and uv.lock...'
+    );
+    await createPyprojectToml({
+      projectName: 'app',
+      pyprojectPath,
+      dependencies: [],
+    });
+    await uvLock({ projectDir, uvPath });
+  }
+
+  if (runtimeDependencies.length) {
+    const missingRuntimeDeps = await filterMissingRuntimeDependencies({
+      pyprojectPath,
+      runtimeDependencies,
+    });
+    if (missingRuntimeDeps.length) {
+      await uvAddDependencies({
+        projectDir,
+        uvPath,
+        venvPath,
+        dependencies: missingRuntimeDeps,
+      });
+    }
+  }
+
+  const lockPath = join(projectDir, 'uv.lock');
+  if (!fs.existsSync(lockPath)) {
+    throw new Error(
+      `Expected "uv.lock" to exist in "${projectDir}" after preparing uv project`
+    );
+  }
+
+  return { projectDir, pyprojectPath, lockPath };
 }
 
 async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
@@ -125,7 +558,7 @@ async function pipInstall(
       '--no-cache-dir',
       '--target',
       target,
-      ...args,
+      ...filterUnsafeUvPipArgs(args),
     ];
     const prettyUv = `${uvPath} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
@@ -334,47 +767,10 @@ export async function installRequirementsFile({
   );
 }
 
-export async function exportRequirementsFromUv(
-  projectDir: string,
-  uvPath: string | null,
-  options: { locked?: boolean } = {}
-): Promise<string> {
-  const { locked = false } = options;
-  if (!uvPath) {
-    throw new Error('uv is not available to export requirements');
-  }
-  // Export only runtime deps:
-  // - --no-default-groups: exclude configured default groups (e.g. dev)
-  // - --no-emit-workspace: do not include the workspace/root project (avoids extras/editable)
-  // - --no-editable: ensure no editable installs are emitted
-  const args: string[] = [
-    'export',
-    '--no-default-groups',
-    '--no-emit-workspace',
-    '--no-editable',
-  ];
-  // Prefer using the lockfile strictly if present
-  if (locked) {
-    // "--frozen" ensures the lock is respected and not updated during export
-    args.push('--frozen');
-  }
-  debug(`Running "${uvPath} ${args.join(' ')}" in ${projectDir}...`);
-  let stdout: string;
-  try {
-    const { stdout: out } = await execa(uvPath, args, { cwd: projectDir });
-    stdout = out;
-  } catch (err) {
-    throw new Error(
-      `Failed to run "${uvPath} ${args.join(' ')}": ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
-  const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'vercel-uv-'));
-  const outPath = join(tmpDir, 'requirements.uv.txt');
-  await fs.promises.writeFile(outPath, stdout);
-  debug(`Exported requirements to ${outPath}`);
-  return outPath;
+function filterUnsafeUvPipArgs(args: string[]): string[] {
+  // `--no-warn-script-location` is not supported/safe with `uv pip install`,
+  // so strip it out when using uv while still allowing it for plain pip.
+  return args.filter(arg => arg !== '--no-warn-script-location');
 }
 
 export async function exportRequirementsFromPipfile({
@@ -430,4 +826,45 @@ export async function exportRequirementsFromPipfile({
   await fs.promises.writeFile(outPath, stdout);
   debug(`Exported pipfile requirements to ${outPath}`);
   return outPath;
+}
+
+export async function mirrorSitePackagesIntoVendor({
+  venvPath,
+  vendorDirName,
+}: {
+  venvPath: string;
+  vendorDirName: string;
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+  // Map the files from site-packages in the virtual environment
+  // into the Lambda bundle under `_vendor`.
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const dirFiles = await glob('**', dir);
+      for (const relativePath of Object.keys(dirFiles)) {
+        if (
+          relativePath.endsWith('.pyc') ||
+          relativePath.includes('__pycache__')
+        ) {
+          continue;
+        }
+
+        const srcFsPath = join(dir, relativePath);
+
+        const bundlePath = join(vendorDirName, relativePath).replace(
+          /\\/g,
+          '/'
+        );
+        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+      }
+    }
+  } catch (err) {
+    console.log('Failed to collect site-packages from virtual environment');
+    throw err;
+  }
+
+  return vendorFiles;
 }
