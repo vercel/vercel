@@ -200,6 +200,7 @@ const Schema = {
       cachePattern: { type: 'string' },
       defaultVersion: { type: 'string' },
       supersedes: { type: 'array', items: { type: 'string' } },
+      kind: { type: 'string' },
     },
   },
 };
