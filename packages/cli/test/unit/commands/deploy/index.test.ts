@@ -1385,6 +1385,25 @@ describe('deploy', () => {
         });
       });
 
+      client.scenario.get(`/v10/now/deployments/dpl_with_alias`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_with_alias',
+          url: 'test-deployment.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          target: 'production',
+          alias: [
+            'my-app.vercel.app',
+            'my-app-team-name.vercel.app',
+            'my-app-hash-team-name.vercel.app',
+          ],
+        });
+      });
+
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--prod', '--yes');
 
@@ -1420,6 +1439,21 @@ describe('deploy', () => {
       });
 
       client.scenario.get(`/v13/deployments/dpl_preview`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_preview',
+          url: 'test-preview.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: false,
+          target: null,
+          alias: [],
+        });
+      });
+
+      client.scenario.get(`/v10/now/deployments/dpl_preview`, (req, res) => {
         res.json({
           creator: {
             uid: user.id,
@@ -1470,6 +1504,21 @@ describe('deploy', () => {
       });
 
       client.scenario.get(`/v13/deployments/dpl_no_alias`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_no_alias',
+          url: 'test-no-alias.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: false,
+          target: 'production',
+          alias: [],
+        });
+      });
+
+      client.scenario.get(`/v10/now/deployments/dpl_no_alias`, (req, res) => {
         res.json({
           creator: {
             uid: user.id,
