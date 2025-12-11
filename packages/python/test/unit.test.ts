@@ -818,15 +818,17 @@ describe('runUvCommand error handling', () => {
       await installRequirement({
         pythonPath: '/mock/python3.11',
         pipPath: '/mock/pip3.11',
+        uvPath: '/mock/uv',
         dependency: 'some-package',
-        target: path.join(workPath, '_vendor'),
-        cwd: workPath,
+        version: '1.0.0',
+        workPath: workPath,
+        meta: { isDev: false },
       });
       fail('Expected installRequirement to throw');
     } catch (err: any) {
       expect(err).toBeInstanceOf(Error);
-      expect(err.message).toContain('Failed to run');
-      expect(err.code).toBe(1);
+      expect(err.message).toContain('uv pip install failed');
+      expect(err.exitCode).toBe(1);
     } finally {
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
     }
