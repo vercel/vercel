@@ -911,6 +911,12 @@ importers:
         specifier: 2.1.4
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
+  packages/cli/test/fixtures/unit/vercel-ts:
+    dependencies:
+      '@vercel/config':
+        specifier: ^0.0.21
+        version: 0.0.21
+
   packages/client:
     dependencies:
       '@vercel/build-utils':
@@ -9613,6 +9619,14 @@ packages:
       undici: 5.28.4
     dev: false
 
+  /@vercel/config@0.0.21:
+    resolution: {integrity: sha512-2+SShSjWE5F+o1UIYQBsvrmsxFuPbVAhwFgGo6th3v80vQREnlDET+7/7u2ekA5Utd0iiR/8nZEulTKebu6HKg==}
+    hasBin: true
+    dependencies:
+      pretty-cache-header: 1.0.0
+      zod: 3.22.4
+    dev: false
+
   /@vercel/fun@1.2.0:
     resolution: {integrity: sha512-WSmS9qe2R+5roucDEwYB3atKhs9sUbkHV3laJGEUoqz25O83jLE/jqg/B/3yTunB0av1xqiCIBFFVKnXsqSc8w==}
     engines: {node: '>= 18'}
@@ -17306,6 +17320,13 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
+  /pretty-cache-header@1.0.0:
+    resolution: {integrity: sha512-xtXazslu25CdnGnUkByU1RoOjK55TqwatJkjjJLg5ZAdz2Lngko/mmaUgeET36P2GMlNwh3fdM7FWBO717pNcw==}
+    engines: {node: '>=12.13'}
+    dependencies:
+      timestring: 6.0.0
+    dev: false
+
   /pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
@@ -18939,6 +18960,11 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       convert-hrtime: 3.0.0
+    dev: false
+
+  /timestring@6.0.0:
+    resolution: {integrity: sha512-wMctrWD2HZZLuIlchlkE2dfXJh7J2KDI9Dwl+2abPYg0mswQHfOAyQW3jJg1pY5VfttSINZuKcXoB3FGypVklA==}
+    engines: {node: '>=8'}
     dev: false
 
   /tinybench@2.9.0:

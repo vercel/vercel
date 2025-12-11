@@ -1268,6 +1268,36 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should build with vercel.ts config when feature flag is enabled', async () => {
+    const cwd = join(__dirname, '../../../fixtures/unit/vercel-ts');
+    const output = join(cwd, '.vercel/output');
+
+    try {
+      process.env.VERCEL_TS_CONFIG_ENABLED = '1';
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const compiledConfig = await fs.readJSON(
+        join(cwd, '.vercel', 'vercel.json')
+      );
+      expect(compiledConfig).toMatchObject({
+        redirects: expect.arrayContaining([
+          expect.objectContaining({
+            source: '/region',
+          }),
+        ]),
+        build: {
+          env: expect.any(Object),
+        },
+      });
+    } finally {
+      delete process.env.VERCEL_TS_CONFIG_ENABLED;
+      await fs.remove(join(cwd, '.vercel', 'vercel.json'));
+      await fs.remove(output);
+    }
+  });
+
   it('should build Storybook project and ignore middleware', async () => {
     const cwd = fixture('storybook-with-middleware');
     const output = join(cwd, '.vercel/output');
