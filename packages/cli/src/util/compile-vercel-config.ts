@@ -175,6 +175,21 @@ export async function compileVercelConfig(
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
+      let stderrOutput = '';
+      let stdoutOutput = '';
+
+      if (child.stderr) {
+        child.stderr.on('data', data => {
+          stderrOutput += data.toString();
+        });
+      }
+
+      if (child.stdout) {
+        child.stdout.on('data', data => {
+          stdoutOutput += data.toString();
+        });
+      }
+
       const timeout = setTimeout(() => {
         child.kill();
         reject(new Error('Config loader timed out after 10 seconds'));
@@ -194,7 +209,14 @@ export async function compileVercelConfig(
       child.on('exit', code => {
         clearTimeout(timeout);
         if (code !== 0) {
-          reject(new Error(`Config loader exited with code ${code}`));
+          const errorParts = [`Config loader exited with code ${code}`];
+          if (stderrOutput.trim()) {
+            errorParts.push(`\nStderr:\n${stderrOutput.trim()}`);
+          }
+          if (stdoutOutput.trim()) {
+            errorParts.push(`\nStdout:\n${stdoutOutput.trim()}`);
+          }
+          reject(new Error(errorParts.join('')));
         }
       });
     });
