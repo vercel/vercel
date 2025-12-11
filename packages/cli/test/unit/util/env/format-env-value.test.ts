@@ -44,6 +44,51 @@ describe('formatEnvValue', () => {
     });
   });
 
+  describe('JSON values', () => {
+    it('returns JSON array with spaces as-is (Prisma binary targets)', () => {
+      expect(
+        formatEnvValue('["rhel-openssl-3.0.x", "rhel-openssl-1.0.x"]')
+      ).toBe('["rhel-openssl-3.0.x", "rhel-openssl-1.0.x"]');
+    });
+
+    it('returns JSON object with spaces as-is', () => {
+      expect(formatEnvValue('{ "key": "value" }')).toBe('{ "key": "value" }');
+    });
+
+    it('returns nested JSON object as-is', () => {
+      expect(formatEnvValue('{"outer": {"inner": "value"}}')).toBe(
+        '{"outer": {"inner": "value"}}'
+      );
+    });
+
+    it('returns JSON array of objects as-is', () => {
+      expect(formatEnvValue('[{"a": 1}, {"b": 2}]')).toBe(
+        '[{"a": 1}, {"b": 2}]'
+      );
+    });
+
+    it('returns empty JSON array as-is', () => {
+      expect(formatEnvValue('[]')).toBe('[]');
+    });
+
+    it('returns empty JSON object as-is', () => {
+      expect(formatEnvValue('{}')).toBe('{}');
+    });
+
+    it('still escapes JSON with literal newlines', () => {
+      const json = '{\n  "key": "value"\n}';
+      expect(formatEnvValue(json)).toBe('"{\\n  \\"key\\": \\"value\\"\\n}"');
+    });
+
+    it('does not treat JSON primitives as objects (string)', () => {
+      expect(formatEnvValue('"hello world"')).toBe('"\\"hello world\\""');
+    });
+
+    it('does not treat invalid JSON as JSON', () => {
+      expect(formatEnvValue('{ invalid json }')).toBe('"{ invalid json }"');
+    });
+  });
+
   describe('values requiring quotes', () => {
     it('quotes value with space', () => {
       expect(formatEnvValue('hello world')).toBe('"hello world"');
@@ -61,9 +106,9 @@ describe('formatEnvValue', () => {
       expect(formatEnvValue('value #comment')).toBe('"value #comment"');
     });
 
-    it('quotes JSON with spaces', () => {
-      expect(formatEnvValue('{ "key": "value" }')).toBe(
-        '"{ \\"key\\": \\"value\\" }"'
+    it('still quotes non-JSON value with spaces and quotes', () => {
+      expect(formatEnvValue('say "hello" world')).toBe(
+        '"say \\"hello\\" world"'
       );
     });
   });
