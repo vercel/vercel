@@ -4,7 +4,7 @@ export * from './build';
 import { startDevServer as nodeStartDevServer } from '@vercel/node';
 import { entrypointCallback } from './build';
 import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
-export * from './prepare-cache';
+// export * from './prepare-cache';
 
 export const name = 'hono';
 
