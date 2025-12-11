@@ -1,5 +1,11 @@
 # @vercel/cervel
 
+## 0.0.7
+
+### Patch Changes
+
+- Upgrade rolldown ([#14446](https://github.com/vercel/vercel/pull/14446))
+
 ## 0.0.6
 
 ### Patch Changes
