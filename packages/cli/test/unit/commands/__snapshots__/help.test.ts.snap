@@ -2493,6 +2493,9 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   Options:
 
+       --json            Output the          
+                         deployment          
+                         information as JSON 
   -l,  --logs            Prints the build    
                          logs instead of the 
                          deployment summary  
@@ -2563,6 +2566,10 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
     $ vercel inspect my-deployment.vercel.app --logs
 
+  - Get deployment information as JSON
+
+    $ vercel inspect my-deployment.vercel.app --json
+
 "
 `;
 
@@ -2574,6 +2581,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   Options:
 
+       --json            Output the deployment information as JSON                   
   -l,  --logs            Prints the build logs instead of the deployment summary     
        --timeout <TIME>  Time to wait for deployment completion [3m]                 
        --wait            Blocks until deployment completes                           
@@ -2615,6 +2623,10 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
     $ vercel inspect my-deployment.vercel.app --logs
 
+  - Get deployment information as JSON
+
+    $ vercel inspect my-deployment.vercel.app --json
+
 "
 `;
 
@@ -2626,6 +2638,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   Options:
 
+       --json            Output the deployment information as JSON                                                           
   -l,  --logs            Prints the build logs instead of the deployment summary                                             
        --timeout <TIME>  Time to wait for deployment completion [3m]                                                         
        --wait            Blocks until deployment completes                                                                   
@@ -2665,6 +2678,10 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   - Get deployment build logs
 
     $ vercel inspect my-deployment.vercel.app --logs
+
+  - Get deployment information as JSON
+
+    $ vercel inspect my-deployment.vercel.app --json
 
 "
 `;

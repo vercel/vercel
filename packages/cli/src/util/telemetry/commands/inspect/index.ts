@@ -35,4 +35,10 @@ export class InspectTelemetryClient
       this.trackCliFlag('wait');
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

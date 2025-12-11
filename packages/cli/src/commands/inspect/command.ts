@@ -33,6 +33,13 @@ export const inspectCommand = {
       deprecated: false,
       description: 'Prints the build logs instead of the deployment summary',
     },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the deployment information as JSON',
+    },
   ],
   examples: [
     {
@@ -54,6 +61,10 @@ export const inspectCommand = {
     {
       name: 'Get deployment build logs',
       value: `${packageName} inspect my-deployment.vercel.app --logs`,
+    },
+    {
+      name: 'Get deployment information as JSON',
+      value: `${packageName} inspect my-deployment.vercel.app --json`,
     },
   ],
 } as const;
