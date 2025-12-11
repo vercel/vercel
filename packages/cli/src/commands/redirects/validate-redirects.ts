@@ -68,6 +68,10 @@ export function validateRedirect(redirect: {
     return { valid: false, error: 'Source URL is too long' };
   }
 
+  if (!redirect.source.startsWith('/')) {
+    return { valid: false, error: 'Source must be a relative path' };
+  }
+
   if (!redirect.destination) {
     return { valid: false, error: 'Redirect destination is required' };
   }
@@ -76,13 +80,10 @@ export function validateRedirect(redirect: {
     return { valid: false, error: 'Destination URL is too long' };
   }
 
-  const isPath = redirect.destination.startsWith('/');
-  const isURL = /^https?:\/\//i.test(redirect.destination);
-  if (!isPath && !isURL) {
-    return {
-      valid: false,
-      error: 'Destination must be a path (/) or full URL (http://)',
-    };
+  try {
+    new URL(redirect.destination, 'https://vercel.com');
+  } catch {
+    return { valid: false, error: 'Destination must be a valid URL' };
   }
 
   if (redirect.statusCode) {
@@ -97,7 +98,7 @@ export function validateRedirect(redirect: {
   return { valid: true };
 }
 
-export function validateRedirectsArray(redirects: any[]): ValidationResult {
+export function validateRedirectsArray(redirects: unknown): ValidationResult {
   if (!Array.isArray(redirects)) {
     return {
       valid: false,
