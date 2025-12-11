@@ -1,5 +1,13 @@
 # @vercel/python
 
+## 6.1.3
+
+### Patch Changes
+
+- [python] fix custom install command ([#14418](https://github.com/vercel/vercel/pull/14418))
+
+- Ensure python install errors retain the error code ([#14452](https://github.com/vercel/vercel/pull/14452))
+
 ## 6.1.2
 
 ### Patch Changes

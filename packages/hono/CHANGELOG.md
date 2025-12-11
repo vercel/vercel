@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.2.17
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
 ## 0.2.16
 
 ### Patch Changes

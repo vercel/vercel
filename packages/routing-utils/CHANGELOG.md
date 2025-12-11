@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.3.1
+
+### Patch Changes
+
+- add env field to redirects, rewrites, routes ([#14405](https://github.com/vercel/vercel/pull/14405))
+
 ## 5.3.0
 
 ### Minor Changes

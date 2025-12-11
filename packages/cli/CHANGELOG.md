@@ -1,5 +1,31 @@
 # vercel
 
+## 50.0.0
+
+### Major Changes
+
+- Fix env pull incorrectly escaping JSON environment variables ([#14456](https://github.com/vercel/vercel/pull/14456))
+
+### Minor Changes
+
+- Add json flag to inspect command ([#14435](https://github.com/vercel/vercel/pull/14435))
+
+### Patch Changes
+
+- Updated dependencies [[`3524f74fcf81fffd29f5012d4c860b2fda2ceeb9`](https://github.com/vercel/vercel/commit/3524f74fcf81fffd29f5012d4c860b2fda2ceeb9), [`c00a2756a8b63e775a451c4d8c11dd93a5e6b5c1`](https://github.com/vercel/vercel/commit/c00a2756a8b63e775a451c4d8c11dd93a5e6b5c1), [`e3b66ffaf709ccd1b851593231eb1f5b893bff27`](https://github.com/vercel/vercel/commit/e3b66ffaf709ccd1b851593231eb1f5b893bff27)]:
+  - @vercel/python@6.1.3
+  - @vercel/express@0.1.20
+  - @vercel/fastify@0.1.17
+  - @vercel/elysia@0.1.14
+  - @vercel/nestjs@0.2.18
+  - @vercel/hono@0.2.17
+  - @vercel/h3@0.1.23
+  - @vercel/build-utils@13.2.3
+  - @vercel/next@4.15.8
+  - @vercel/redwood@2.4.6
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.14
+
 ## 49.2.0
 
 ### Minor Changes
