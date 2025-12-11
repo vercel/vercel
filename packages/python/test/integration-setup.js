@@ -18,7 +18,7 @@ module.exports = function setupTests(groupIndex) {
     ],
   ]);
   const allFixtures = fs.readdirSync(fixturesPath);
-  const skipFixtures = ['44-python-error'];
+  const skipFixtures = [];
 
   let chunkedFixtures = allFixtures.filter(
     fixture => !skipFixtures.includes(fixture)

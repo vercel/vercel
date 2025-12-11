@@ -788,41 +788,44 @@ describe('uv install path', () => {
 });
 
 describe('runUvCommand error handling', () => {
-  it('should retain the error code when install fails with invalid requirements.txt', async () => {
-    // Use the 44-python-error fixture which has an invalid requirements.txt
-    const fixturesPath = path.resolve(__dirname, 'fixtures');
-    const fixturePath = path.join(fixturesPath, '44-python-error');
+  it('should retain the error code when install fails', async () => {
+    jest.resetModules();
+
+    let installRequirement: any;
+
+    jest.isolateModules(() => {
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
+
+      // Mock execa to simulate uv failing with exit code 1
+      const execaError = new Error('uv pip install failed');
+      (execaError as any).exitCode = 1;
+
+      jest.doMock('execa', () => ({
+        __esModule: true,
+        default: jest.fn().mockRejectedValue(execaError),
+      }));
+
+      installRequirement = require('../src/install').installRequirement;
+    });
 
     const workPath = path.join(tmpdir(), `python-error-test-${Date.now()}`);
-    fs.copySync(fixturePath, workPath);
-
-    // Restore original PATH so we use the real python/uv
-    process.env.PATH = origPath;
-
-    const files: Record<string, FileBlob> = {
-      'api/index.py': new FileBlob({
-        data: fs.readFileSync(path.join(workPath, 'api/index.py'), 'utf8'),
-      }),
-      'requirements.txt': new FileBlob({
-        data: fs.readFileSync(path.join(workPath, 'requirements.txt'), 'utf8'),
-      }),
-    };
+    fs.mkdirSync(workPath, { recursive: true });
 
     try {
-      await build({
-        workPath,
-        files,
-        entrypoint: 'api/index.py',
-        meta: { isDev: false },
-        config: {},
-        repoRootPath: workPath,
+      await installRequirement({
+        pythonPath: '/mock/python3.11',
+        pipPath: '/mock/pip3.11',
+        dependency: 'some-package',
+        target: path.join(workPath, '_vendor'),
+        cwd: workPath,
       });
-      fail('Expected build to throw due to invalid requirements.txt');
+      fail('Expected installRequirement to throw');
     } catch (err: any) {
       expect(err).toBeInstanceOf(Error);
       expect(err.message).toContain('Failed to run');
-      // The error should have a code property retained from the uv command failure
-      expect(err.code).toBeDefined();
       expect(err.code).toBe(1);
     } finally {
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
