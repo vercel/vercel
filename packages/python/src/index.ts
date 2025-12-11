@@ -258,8 +258,7 @@ export const build: BuildV3 = async ({
   // the build virtualenv
   const hasCustomInstallCommand =
     (framework === 'fastapi' || framework === 'flask') &&
-    typeof projectInstallCommand === 'string' &&
-    projectInstallCommand.length > 0;
+    !!projectInstallCommand;
 
   if (hasCustomInstallCommand) {
     const baseEnv = spawnEnv || process.env;
