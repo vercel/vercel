@@ -2,7 +2,7 @@ import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
 
-import execa = require('execa');
+import execa from 'execa';
 
 const isWin = process.platform === 'win32';
 
