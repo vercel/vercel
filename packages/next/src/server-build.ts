@@ -242,6 +242,59 @@ export async function serverBuild({
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
 
+  // For insights builds, collect client-side source maps to include in Lambda
+  // This allows the insights handler to resolve stack traces without fetching from CDN
+  const isInsightsBuild = requiredServerFilesManifest.config?.insights === true;
+  const insightsSourceMapFiles: { [key: string]: FileBlob } = {};
+
+  if (isInsightsBuild) {
+    const sourceMapDir = path.join(
+      entryPath,
+      outputDirectory,
+      'static',
+      'chunks'
+    );
+    console.log(`[Insights Debug] sourceMapDir: ${sourceMapDir}`);
+    console.log(`[Insights Debug] entryPath: ${entryPath}`);
+    console.log(`[Insights Debug] outputDirectory: ${outputDirectory}`);
+    console.log(`[Insights Debug] baseDir: ${baseDir}`);
+    console.log(`[Insights Debug] projectDir: ${projectDir}`);
+
+    const sourceMapGlob = await glob('**/*.map', sourceMapDir);
+    console.log(
+      `[Insights Debug] Found ${Object.keys(sourceMapGlob).length} .map files`
+    );
+
+    for (const [relativePath, fileRef] of Object.entries(sourceMapGlob)) {
+      // Store with path that matches Lambda's .next directory structure
+      const lambdaPath = path.join(
+        path.relative(baseDir, projectDir),
+        outputDirectory,
+        'static',
+        'chunks',
+        relativePath
+      );
+      // Convert FileFsRef to FileBlob so it gets written to Lambda
+      // (FileFsRef files are filtered out and only recorded in filePathMap)
+      const fileBlob = await FileBlob.fromStream({
+        stream: fileRef.toStream(),
+        mode: fileRef.mode,
+      });
+      insightsSourceMapFiles[lambdaPath] = fileBlob;
+      if (Object.keys(insightsSourceMapFiles).length <= 3) {
+        console.log(
+          `[Insights Debug] Source map: ${relativePath} -> ${lambdaPath}`
+        );
+      }
+    }
+
+    if (Object.keys(insightsSourceMapFiles).length > 0) {
+      console.log(
+        `Collected ${Object.keys(insightsSourceMapFiles).length} source map files for insights build`
+      );
+    }
+  }
+
   // allow looking up original route from normalized route
   const inversedAppPathManifest: Record<string, string> = {};
 
@@ -1362,11 +1415,35 @@ export async function serverBuild({
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
+      const filesForLambda = {
+        ...launcherFiles,
+        ...updatedManifestFiles,
+        // Include source maps for insights builds to enable stack trace resolution
+        ...(isInsightsBuild ? insightsSourceMapFiles : {}),
+      };
+
+      if (isInsightsBuild && Object.keys(insightsSourceMapFiles).length > 0) {
+        console.log(
+          `[Insights Debug] Adding ${Object.keys(insightsSourceMapFiles).length} source maps to Lambda for group with pages: ${group.pages.slice(0, 3).join(', ')}...`
+        );
+        console.log(
+          `[Insights Debug] Total files in filesForLambda: ${Object.keys(filesForLambda).length}`
+        );
+        const mapFiles = Object.keys(filesForLambda).filter(f =>
+          f.endsWith('.map')
+        );
+        console.log(
+          `[Insights Debug] Source map files in filesForLambda: ${mapFiles.length}`
+        );
+        if (mapFiles.length > 0) {
+          console.log(
+            `[Insights Debug] First few map files: ${mapFiles.slice(0, 3).join(', ')}`
+          );
+        }
+      }
+
       const options: CreateLambdaFromPseudoLayersOptions = {
-        files: {
-          ...launcherFiles,
-          ...updatedManifestFiles,
-        },
+        files: filesForLambda,
         layers: [group.pseudoLayer, groupPageFiles],
         handler: path.join(
           path.relative(baseDir, projectDir),
