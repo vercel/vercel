@@ -147,9 +147,18 @@ export async function runUvCommand(options: {
     });
     return true;
   } catch (err) {
-    throw new Error(
+    const error = new Error(
       `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
-    );
+    ) as Error & { code?: number | string };
+    // retain code/signal to ensure it's treated as a build error
+    if (err && typeof err === 'object') {
+      if ('code' in err) {
+        error.code = (err as { code: number | string }).code;
+      } else if ('signal' in err) {
+        error.code = (err as { signal: string }).signal;
+      }
+    }
+    throw error;
   }
 }
 
