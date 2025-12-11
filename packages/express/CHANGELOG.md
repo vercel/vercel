@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.1.20
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
 ## 0.1.19
 
 ### Patch Changes
