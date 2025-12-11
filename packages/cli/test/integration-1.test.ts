@@ -502,6 +502,8 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     await waitForPrompt(vc, "What's the name of the variable?");
     vc.stdin?.write(`${promptEnvVar}\n`);
+    await waitForPrompt(vc, 'Mark as sensitive?');
+    vc.stdin?.write('n\n');
     await waitForPrompt(
       vc,
       chunk =>
@@ -590,7 +592,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Created .env.local file/gm);
+    expect(stderr).toMatch(/Updated .env.local file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
@@ -598,7 +600,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
       new RegExp(`${promptEnvVar}="my plaintext value"`)
     );
     expect(contents).toMatch(
-      new RegExp(`${stdinEnvVar}="{"expect":"quotes"}"`)
+      new RegExp(`${stdinEnvVar}=\\{"expect":"quotes"\\}`)
     );
     expect(contents).not.toMatch(new RegExp(`${previewEnvVar}`));
   }
@@ -622,6 +624,9 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const vc = execCli(binaryPath, ['env', 'pull'], {
       cwd: target,
+      env: {
+        FORCE_TTY: '1',
+      },
     });
 
     await waitForPrompt(
@@ -748,11 +753,11 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const lines = new Set(contents.split('\n'));
 
-    expect(lines).toContain('VERCEL="1"');
-    expect(lines).toContain('VERCEL_URL=""');
-    expect(lines).toContain('VERCEL_ENV="production"');
-    expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
-    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
+    expect(lines).toContain('VERCEL=1');
+    expect(lines).toContain('VERCEL_URL=');
+    expect(lines).toContain('VERCEL_ENV=production');
+    expect(lines).toContain('VERCEL_GIT_PROVIDER=');
+    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=');
   }
 
   async function vcDevAndFetchSystemVars() {

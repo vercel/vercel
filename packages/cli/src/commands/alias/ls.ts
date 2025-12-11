@@ -14,6 +14,7 @@ import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 import type { Alias } from '@vercel-internals/types';
 
 export default async function ls(client: Client, argv: string[]) {
@@ -29,6 +30,14 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const { args, flags: opts } = parsedArguments;
+
+  const validationResult = validateLsArgs({
+    commandName: 'alias ls',
+    args: args,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
 
   const { contextName } = await getScope(client);
 
@@ -51,15 +60,6 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const lsStamp = stamp();
-
-  if (args.length > 0) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('alias ls')}`
-      )}`
-    );
-    return 1;
-  }
 
   output.spinner(`Fetching aliases under ${chalk.bold(contextName)}`);
 

@@ -1235,6 +1235,9 @@ export const build: BuildV2 = async buildOptions => {
             slug: 'nextjs',
             version: nextVersion,
           },
+          shouldDisableAutomaticFetchInstrumentation:
+            process.env
+              .VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION === '1',
         });
         debug(`Created serverless function for page: "${page}"`);
       })

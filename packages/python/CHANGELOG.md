@@ -1,5 +1,23 @@
 # @vercel/python
 
+## 6.1.2
+
+### Patch Changes
+
+- [python] update dependency installation to use a .venv + uv sync ([#14415](https://github.com/vercel/vercel/pull/14415))
+
+## 6.1.1
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 6.1.0
+
+### Minor Changes
+
+- Improved error message for missing entrypoint ([#14369](https://github.com/vercel/vercel/pull/14369))
+
 ## 6.0.8
 
 ### Patch Changes
