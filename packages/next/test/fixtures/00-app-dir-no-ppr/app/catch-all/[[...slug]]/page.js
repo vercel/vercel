@@ -1,7 +1,5 @@
-export default function Page(props) {
-  return (
-    <p>catch-all {JSON.stringify(props.params || {})}</p>
-  )
+export default async function Page(props) {
+  return (<p>catch-all {JSON.stringify((await props.params) || {})}</p>);
 }
 
 export function generateStaticParams() {

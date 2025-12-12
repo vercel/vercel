@@ -12,6 +12,8 @@ import {
   getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
+  runNpmInstall,
+  runCustomInstallCommand,
   type Reporter,
   Span,
   type TraceEvent,
@@ -82,7 +84,10 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
-import { compileVercelConfig } from '../../util/compile-vercel-config';
+import {
+  compileVercelConfig,
+  findSourceVercelConfigFile,
+} from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
@@ -402,6 +407,36 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  const sourceConfigFile = await findSourceVercelConfigFile(workPath);
+  let corepackShimDir: string | null | undefined;
+  if (sourceConfigFile && process.env.VERCEL_TS_CONFIG_ENABLED) {
+    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+
+    const installCommand = project.settings.installCommand;
+    if (typeof installCommand === 'string') {
+      if (installCommand.trim()) {
+        output.log(`Running install command before config compilation...`);
+        await runCustomInstallCommand({
+          destPath: workPath,
+          installCommand,
+          spawnOpts: { env: process.env },
+          projectCreatedAt: project.settings.createdAt,
+        });
+      } else {
+        output.debug('Skipping empty install command');
+      }
+    } else {
+      output.log(`Installing dependencies before config compilation...`);
+      await runNpmInstall(
+        workPath,
+        [],
+        { env: process.env },
+        undefined,
+        project.settings.createdAt
+      );
+    }
+  }
+
   const compileResult = await compileVercelConfig(workPath);
 
   const vercelConfigPath =
@@ -580,7 +615,10 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath });
+  // Only initialize corepack if not already done during early install
+  if (!corepackShimDir) {
+    corepackShimDir = await initCorepack({ repoRootPath });
+  }
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
