@@ -153,6 +153,9 @@ export async function compileVercelConfig(
 
   dotenvConfig({ path: join(workPath, '.env') });
   dotenvConfig({ path: join(workPath, '.env.local') });
+  dotenvConfig({ path: join(vercelDir, '.env.preview.local') });
+  dotenvConfig({ path: join(vercelDir, '.env.production.local') });
+  dotenvConfig({ path: join(vercelDir, '.env.development.local') });
 
   const tempOutPath = join(vercelDir, 'vercel-temp.mjs');
   const loaderPath = join(vercelDir, 'vercel-loader.mjs');
@@ -190,6 +193,10 @@ export async function compileVercelConfig(
       let stderr = '';
       const child = fork(loaderPath, [tempOutPath], {
         cwd: workPath,
+        env: {
+          ...process.env,
+          NODE_PATH: join(workPath, 'node_modules'),
+        },
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
