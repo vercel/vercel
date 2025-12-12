@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.1.4
+
+### Patch Changes
+
+- [python] uv workspaces fix don't throw on missing `uv.lock` ([#14467](https://github.com/vercel/vercel/pull/14467))
+
 ## 6.1.3
 
 ### Patch Changes
