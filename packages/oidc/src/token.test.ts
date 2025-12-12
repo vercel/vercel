@@ -4,9 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 
-vi.mock('./token-io');
-
-import { findRootDir, getUserDataDir } from './token-io';
+import * as tokenIO from './token-io';
 import * as tokenUtil from './token-util';
 import { refreshToken } from './token';
 
@@ -48,9 +46,7 @@ describe('refreshToken', () => {
     // we can optionally write the token.json file to supply the project token later
 
     vi.spyOn(process, 'cwd').mockReturnValue(rootDir);
-    vi.mocked(findRootDir).mockReturnValue(rootDir);
-    vi.mocked(getUserDataDir).mockReturnValue(userDataDir);
-
+    vi.spyOn(tokenIO, 'getUserDataDir').mockReturnValue(userDataDir);
     vi.spyOn(tokenUtil, 'getVercelCliToken').mockReturnValue('test');
     vi.spyOn(tokenUtil, 'getVercelOidcToken').mockResolvedValue({
       token: 'test-token',
@@ -77,5 +73,40 @@ describe('refreshToken', () => {
     const tokenPath = path.join(tokenDataDir, `${projectId}.json`);
     const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
     expect(token).toEqual({ token: 'test-token' });
+  });
+
+  test('should support .vercel/repo.json', async () => {
+    fs.rmSync(path.join(rootDir, '.vercel'), { recursive: true, force: true });
+    fs.mkdirSync(path.join(rootDir, '.vercel'), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(rootDir, '.vercel', 'repo.json'),
+      JSON.stringify({
+        orgId: 'test-org-id',
+        projects: [
+          {
+            directory: 'apps/my-other-project',
+            id: 'test-other-project-id',
+          },
+          {
+            directory: 'apps/my-project',
+            id: projectId,
+          },
+        ],
+      })
+    );
+
+    const projectDir = path.join(rootDir, 'apps', 'my-project');
+    fs.mkdirSync(projectDir, { recursive: true });
+    vi.spyOn(process, 'cwd').mockReturnValue(projectDir);
+
+    await refreshToken();
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('test-token');
+    expect(tokenUtil.getVercelOidcToken).toHaveBeenCalledWith(
+      'test',
+      projectId,
+      'test-org-id'
+    );
   });
 });
