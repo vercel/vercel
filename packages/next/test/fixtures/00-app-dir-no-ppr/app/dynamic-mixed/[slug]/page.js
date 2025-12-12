@@ -4,10 +4,10 @@ export function generateStaticParams() {
   return [{ slug: 'first' }, { slug: 'second' }, { slug: 'third' }];
 }
 
-export default function Page({ params: { slug } }) {
+export default async function Page({ params: { slug } }) {
   if (slug === 'third') {
     // bail to ssr
-    cookies();
+    await cookies();
   }
 
   return (
