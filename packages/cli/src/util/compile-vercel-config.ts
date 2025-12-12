@@ -239,10 +239,10 @@ export async function compileVercelConfig(
         clearTimeout(timeout);
         if (code !== 0) {
           if (stderrOutput.trim()) {
-            output.debug(stderrOutput);
+            output.log(stderrOutput);
           }
           if (stdoutOutput.trim()) {
-            output.debug(stdoutOutput);
+            output.log(stdoutOutput);
           }
 
           const parsedError = parseConfigLoaderError(stderrOutput);
