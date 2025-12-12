@@ -66,6 +66,35 @@ async function findVercelConfigFile(workPath: string): Promise<string | null> {
   return foundFiles[0] || null;
 }
 
+function parseConfigLoaderError(stderr: string): string {
+  if (!stderr.trim()) {
+    return '';
+  }
+
+  const moduleNotFoundMatch = stderr.match(
+    /Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^']+)'/
+  );
+  if (moduleNotFoundMatch) {
+    const packageName = moduleNotFoundMatch[1];
+    return `Cannot find package '${packageName}'. Make sure it's installed in your project dependencies.`;
+  }
+
+  const syntaxErrorMatch = stderr.match(/SyntaxError: (.+?)(?:\n|$)/);
+  if (syntaxErrorMatch) {
+    return `Syntax error: ${syntaxErrorMatch[1]}`;
+  }
+
+  const errorMatch = stderr.match(
+    /^(?:Error|TypeError|ReferenceError): (.+?)(?:\n|$)/m
+  );
+  if (errorMatch) {
+    return errorMatch[1];
+  }
+
+  // otherwise just return the error
+  return stderr.trim();
+}
+
 export async function compileVercelConfig(
   workPath: string
 ): Promise<CompileConfigResult> {
@@ -187,20 +216,10 @@ export async function compileVercelConfig(
       child.on('exit', code => {
         clearTimeout(timeout);
         if (code !== 0) {
-          const errMsg = stderr.trim();
-          if (errMsg.includes('Cannot find package')) {
-            const match = errMsg.match(/Cannot find package '([^']+)'/);
-            const pkg = match ? match[1] : 'unknown';
-            reject(
-              new Error(
-                `Cannot find package '${pkg}'. Make sure it's installed in your project dependencies.`
-              )
-            );
-          } else {
-            reject(
-              new Error(errMsg || `Config loader exited with code ${code}`)
-            );
-          }
+          const parsedError = parseConfigLoaderError(stderr);
+          reject(
+            new Error(parsedError || `Config loader exited with code ${code}`)
+          );
         }
       });
     });
