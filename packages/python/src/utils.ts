@@ -2,15 +2,9 @@ import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
 
-import execa = require('execa');
+import execa from 'execa';
 
 const isWin = process.platform === 'win32';
-
-type PyprojectVercelConfig = {
-  tool?: {
-    vercel?: { scripts?: Record<string, string> };
-  };
-};
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
@@ -88,6 +82,12 @@ async function readVercelScripts(
   const pyprojectPath = join(workPath, 'pyproject.toml');
   if (!fs.existsSync(pyprojectPath)) return null;
 
+  type PyprojectVercelConfig = {
+    tool?: {
+      vercel?: { scripts?: Record<string, string> };
+    };
+  };
+
   let pyproject: PyprojectVercelConfig | null = null;
   try {
     pyproject = await readConfigFile<PyprojectVercelConfig>(pyprojectPath);
@@ -128,16 +128,42 @@ export async function hasVercelInstallScript(
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
-  env?: NodeJS.ProcessEnv
+  env?: NodeJS.ProcessEnv,
+  useUserVirtualEnv = true
 ) {
-  const scriptCommand = await resolveVercelScript(workPath, scriptNames);
-  if (!scriptCommand) return false;
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) return false;
+
+  type Pyproject = {
+    tool?: {
+      vercel?: { scripts?: Record<string, string> };
+    };
+  };
+
+  let pyproject: Pyproject | null = null;
+  try {
+    pyproject = await readConfigFile<Pyproject>(pyprojectPath);
+  } catch {
+    console.error('Failed to parse pyproject.toml');
+    return false;
+  }
+
+  // Read scripts from [tool.vercel.scripts]
+  const scripts: Record<string, string> =
+    pyproject?.tool?.vercel?.scripts || {};
+  const candidates =
+    typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
+  const scriptToRun = candidates.find(name => Boolean(scripts[name]));
+  if (!scriptToRun) return false;
 
   // Use the Python from the virtualenv if present to resolve tooling, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
   const finalEnv = { ...process.env, ...env };
-  useVirtualEnv(workPath, finalEnv, systemPython);
+  if (useUserVirtualEnv) {
+    useVirtualEnv(workPath, finalEnv, systemPython);
+  }
 
+  const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
     console.log(`Executing: ${scriptCommand}`);
     await execCommand(scriptCommand, {
@@ -149,22 +175,6 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
-}
-
-export async function runPyprojectInstallScript(
-  workPath: string,
-  scriptNames: string | Iterable<string>,
-  env: NodeJS.ProcessEnv
-): Promise<boolean> {
-  const scriptCommand = await resolveVercelScript(workPath, scriptNames);
-  if (!scriptCommand) return false;
-
-  console.log(`Executing: ${scriptCommand}`);
-  await execCommand(scriptCommand, {
-    cwd: workPath,
-    env,
-  });
-  return true;
 }
 
 export async function runUvCommand(options: {
@@ -189,9 +199,18 @@ export async function runUvCommand(options: {
     });
     return true;
   } catch (err) {
-    throw new Error(
+    const error = new Error(
       `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
-    );
+    ) as Error & { code?: number | string };
+    // retain code/signal to ensure it's treated as a build error
+    if (err && typeof err === 'object') {
+      if ('code' in err) {
+        error.code = (err as { code: number | string }).code;
+      } else if ('signal' in err) {
+        error.code = (err as { signal: string }).signal;
+      }
+    }
+    throw error;
   }
 }
 

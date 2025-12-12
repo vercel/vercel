@@ -1,5 +1,11 @@
 # @vercel/h3
 
+## 0.1.23
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
 ## 0.1.22
 
 ### Patch Changes

@@ -36,7 +36,6 @@ import {
   findDir,
   ensureVenv,
   createVenvEnv,
-  runPyprojectInstallScript,
   hasVercelInstallScript,
 } from './utils';
 
@@ -106,11 +105,7 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For FastAPI/Flask, also honor project build commands (vercel.json/dashboard)
-  // and record any custom install command (project settings), which will be executed
-  // later once the Python virtualenv has been created so installs go into
-  // ".vercel/python/.venv". Additional install hooks from pyproject.toml are
-  // discovered and executed later as well.
+  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
   if (framework === 'fastapi' || framework === 'flask') {
     const {
       cliType,
@@ -253,7 +248,7 @@ export const build: BuildV3 = async ({
   fsFiles = await glob('**', workPath);
 
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
-  // can be installed and then vendored into the Lambda bundle.
+  // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
   await ensureVenv({
     pythonPath: pythonVersion.pythonPath,
@@ -262,87 +257,91 @@ export const build: BuildV3 = async ({
 
   // If a custom install command is configured for FastAPI/Flask, treat it as
   // an override for the default dependency installation: run the command inside
-  // the build virtualenv. The dashboard install command takes precedence over
-  // any install hook in pyproject.toml.
-  let usedCustomInstall = false;
-  const canUseCustomInstall = framework === 'fastapi' || framework === 'flask';
+  // the build virtualenv
+  const hasCustomInstallCommand =
+    (framework === 'fastapi' || framework === 'flask') &&
+    !!projectInstallCommand;
 
-  if (canUseCustomInstall) {
+  if (hasCustomInstallCommand) {
     const baseEnv = spawnEnv || process.env;
     const pythonEnv = createVenvEnv(venvPath, baseEnv);
     pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
-    if (projectInstallCommand) {
-      const installCommand = projectInstallCommand;
-      console.log(`Running "install" command: \`${installCommand}\`...`);
-      await execCommand(installCommand, {
-        env: pythonEnv,
-        cwd: workPath,
-      });
-      usedCustomInstall = true;
-    } else {
-      const installed = await runPyprojectInstallScript(
+    const installCommand = projectInstallCommand as string;
+    console.log(`Running "install" command: \`${installCommand}\`...`);
+    await execCommand(installCommand, {
+      env: pythonEnv,
+      cwd: workPath,
+    });
+  } else {
+    // If a pyproject install script is configured for FastAPI/Flask, treat it as
+    // an override for the default dependency installation: run the script inside
+    // the build virtualenv.
+    let ranPyprojectInstall = false;
+    if (framework === 'fastapi' || framework === 'flask') {
+      const baseEnv = spawnEnv || process.env;
+      const pythonEnv = createVenvEnv(venvPath, baseEnv);
+      pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
+
+      ranPyprojectInstall = await runPyprojectScript(
         workPath,
         ['vercel-install', 'now-install', 'install'],
-        pythonEnv
+        pythonEnv,
+        /* useUserVirtualEnv */ false
       );
-      if (installed) {
-        usedCustomInstall = true;
+    }
+
+    if (!ranPyprojectInstall) {
+      // Default installation path: use uv to normalize manifests into a uv.lock and
+      // sync dependencies into the virtualenv, including required runtime deps.
+      let uvPath: string;
+      try {
+        uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+        console.log(`Using uv at "${uvPath}"`);
+      } catch (err) {
+        console.log('Failed to install or locate uv');
+        throw new Error(
+          `uv is required for this project but failed to install: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
       }
+
+      // Runtime framework dependencies are managed via the uv project so that the
+      // lockfile is the single source of truth for all installed packages. These
+      // are intentionally unpinned so they can resolve alongside user-declared
+      // dependencies (for example, modern Flask versions that require newer
+      // Werkzeug releases).
+      const runtimeDependencies =
+        framework === 'flask'
+          ? ['werkzeug>=1.0.1']
+          : ['werkzeug>=1.0.1', 'uvicorn>=0.24'];
+
+      // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
+      // for consistent installation logic and idempotency.
+      const { projectDir } = await ensureUvProject({
+        workPath,
+        entryDirectory,
+        fsFiles,
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        uvPath,
+        venvPath,
+        meta,
+        runtimeDependencies,
+      });
+
+      // Use the generated/normalized uv.lock as the canonical source of truth and
+      // sync it into the venv. Re-running this with the same lockfile is idempotent
+      // and prunes any unused dependencies from the virtualenv.
+      await runUvSync({
+        uvPath,
+        venvPath,
+        projectDir,
+        locked: true,
+      });
     }
   }
-
-  if (!usedCustomInstall) {
-    // Default installation path: use uv to normalize manifests into a uv.lock and
-    // sync dependencies into the virtualenv, including required runtime deps.
-    let uvPath: string;
-    try {
-      uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
-      console.log(`Using uv at "${uvPath}"`);
-    } catch (err) {
-      console.log('Failed to install or locate uv');
-      throw new Error(
-        `uv is required for this project but failed to install: ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
-    }
-
-    // Runtime framework dependencies are managed via the uv project so that the
-    // lockfile is the single source of truth for all installed packages. These
-    // are intentionally unpinned so they can resolve alongside user-declared
-    // dependencies (for example, modern Flask versions that require newer
-    // Werkzeug releases).
-    const runtimeDependencies =
-      framework === 'flask'
-        ? ['werkzeug>=1.0.1']
-        : ['werkzeug>=1.0.1', 'uvicorn>=0.24'];
-
-    // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
-    // for consistent installation logic and idempotency.
-    const { projectDir } = await ensureUvProject({
-      workPath,
-      entryDirectory,
-      fsFiles,
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      uvPath,
-      venvPath,
-      meta,
-      runtimeDependencies,
-    });
-
-    // Use the generated/normalized uv.lock as the canonical source of truth and
-    // sync it into the venv. Re-running this with the same lockfile is idempotent
-    // and prunes any unused dependencies from the virtualenv.
-    await runUvSync({
-      uvPath,
-      venvPath,
-      projectDir,
-      locked: true,
-    });
-  }
-
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);

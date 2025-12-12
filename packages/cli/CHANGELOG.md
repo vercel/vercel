@@ -1,5 +1,48 @@
 # vercel
 
+## 50.0.0
+
+### Major Changes
+
+- Fix env pull incorrectly escaping JSON environment variables ([#14456](https://github.com/vercel/vercel/pull/14456))
+
+### Minor Changes
+
+- Add json flag to inspect command ([#14435](https://github.com/vercel/vercel/pull/14435))
+
+### Patch Changes
+
+- Updated dependencies [[`3524f74fcf81fffd29f5012d4c860b2fda2ceeb9`](https://github.com/vercel/vercel/commit/3524f74fcf81fffd29f5012d4c860b2fda2ceeb9), [`c00a2756a8b63e775a451c4d8c11dd93a5e6b5c1`](https://github.com/vercel/vercel/commit/c00a2756a8b63e775a451c4d8c11dd93a5e6b5c1), [`e3b66ffaf709ccd1b851593231eb1f5b893bff27`](https://github.com/vercel/vercel/commit/e3b66ffaf709ccd1b851593231eb1f5b893bff27)]:
+  - @vercel/python@6.1.3
+  - @vercel/express@0.1.20
+  - @vercel/fastify@0.1.17
+  - @vercel/elysia@0.1.14
+  - @vercel/nestjs@0.2.18
+  - @vercel/hono@0.2.17
+  - @vercel/h3@0.1.23
+  - @vercel/build-utils@13.2.3
+  - @vercel/next@4.15.8
+  - @vercel/redwood@2.4.6
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.14
+
+## 49.2.0
+
+### Minor Changes
+
+- Improves `env pull` with conditional quoting of environment variables ([#14402](https://github.com/vercel/vercel/pull/14402))
+
+### Patch Changes
+
+- Improve handling of 429 error codes and Retry-After headers ([#14443](https://github.com/vercel/vercel/pull/14443))
+
+- Add options to vercel redirects commands to specify status code, case sensitivity, and preserving query params when adding redirects. Rename --staged flag to --staging and show diffs when listing redirects for the staging version. ([#14437](https://github.com/vercel/vercel/pull/14437))
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d), [`059be0adac65649f861335c1a86f4e600d69155a`](https://github.com/vercel/vercel/commit/059be0adac65649f861335c1a86f4e600d69155a)]:
+  - @vercel/backends@0.0.17
+  - @vercel/python@6.1.2
+  - @vercel/express@0.1.19
+
 ## 49.1.2
 
 ### Patch Changes

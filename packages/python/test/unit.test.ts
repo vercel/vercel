@@ -749,10 +749,8 @@ describe('uv install path', () => {
       jest.doMock('execa', () => {
         const fn: any = jest.fn(async () => ({ stdout: '' }));
         fn.stdout = jest.fn(async () => '');
-        // Support both `import execa from 'execa'` and `import execa = require('execa')`
-        fn.default = fn;
         mockExeca = fn;
-        return fn;
+        return { __esModule: true, default: fn };
       });
 
       // Import after mocks are set
