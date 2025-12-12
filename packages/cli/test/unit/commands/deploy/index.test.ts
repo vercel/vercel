@@ -1422,8 +1422,9 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput('Production:');
-      await expect(client.stderr).toOutput('Aliased:');
-      await expect(client.stderr).toOutput('my-app.vercel.app');
+      await expect(client.stderr).toOutput(
+        'Aliased: https://my-app.vercel.app'
+      );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
