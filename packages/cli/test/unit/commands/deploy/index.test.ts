@@ -1366,7 +1366,9 @@ describe('deploy', () => {
         });
       });
 
+      let callCount = 0;
       client.scenario.get(`/v13/deployments/dpl_with_alias`, (req, res) => {
+        callCount++;
         res.json({
           creator: {
             uid: user.id,
@@ -1374,14 +1376,17 @@ describe('deploy', () => {
           },
           id: 'dpl_with_alias',
           url: 'test-deployment.vercel.app',
-          readyState: 'READY',
-          aliasAssigned: true,
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: callCount > 1,
           target: 'production',
-          alias: [
-            'my-app.vercel.app',
-            'my-app-team-name.vercel.app',
-            'my-app-hash-team-name.vercel.app',
-          ],
+          alias:
+            callCount > 1
+              ? [
+                  'my-app.vercel.app',
+                  'my-app-team-name.vercel.app',
+                  'my-app-hash-team-name.vercel.app',
+                ]
+              : [],
         });
       });
 
@@ -1438,7 +1443,9 @@ describe('deploy', () => {
         });
       });
 
+      let callCount = 0;
       client.scenario.get(`/v13/deployments/dpl_preview`, (req, res) => {
+        callCount++;
         res.json({
           creator: {
             uid: user.id,
@@ -1446,8 +1453,8 @@ describe('deploy', () => {
           },
           id: 'dpl_preview',
           url: 'test-preview.vercel.app',
-          readyState: 'READY',
-          aliasAssigned: false,
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: callCount > 1,
           target: null,
           alias: [],
         });
@@ -1503,7 +1510,9 @@ describe('deploy', () => {
         });
       });
 
+      let callCount = 0;
       client.scenario.get(`/v13/deployments/dpl_no_alias`, (req, res) => {
+        callCount++;
         res.json({
           creator: {
             uid: user.id,
@@ -1511,8 +1520,8 @@ describe('deploy', () => {
           },
           id: 'dpl_no_alias',
           url: 'test-no-alias.vercel.app',
-          readyState: 'READY',
-          aliasAssigned: false,
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: callCount > 1,
           target: 'production',
           alias: [],
         });
