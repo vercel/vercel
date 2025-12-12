@@ -66,35 +66,6 @@ async function findVercelConfigFile(workPath: string): Promise<string | null> {
   return foundFiles[0] || null;
 }
 
-function parseConfigLoaderError(stderr: string): string {
-  if (!stderr.trim()) {
-    return '';
-  }
-
-  const moduleNotFoundMatch = stderr.match(
-    /Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^']+)'/
-  );
-  if (moduleNotFoundMatch) {
-    const packageName = moduleNotFoundMatch[1];
-    return `Cannot find package '${packageName}'. Make sure it's installed in your project dependencies.`;
-  }
-
-  const syntaxErrorMatch = stderr.match(/SyntaxError: (.+?)(?:\n|$)/);
-  if (syntaxErrorMatch) {
-    return `Syntax error: ${syntaxErrorMatch[1]}`;
-  }
-
-  const errorMatch = stderr.match(
-    /^(?:Error|TypeError|ReferenceError): (.+?)(?:\n|$)/m
-  );
-  if (errorMatch) {
-    return errorMatch[1];
-  }
-
-  // otherwise just return the error
-  return stderr.trim();
-}
-
 export async function compileVercelConfig(
   workPath: string
 ): Promise<CompileConfigResult> {
@@ -141,30 +112,12 @@ export async function compileVercelConfig(
   }
 
   if (!vercelConfigPath) {
-    if (hasVercelJson) {
-      return {
-        configPath: vercelJsonPath,
-        wasCompiled: false,
-      };
-    }
-
-    if (hasNowJson) {
-      return {
-        configPath: nowJsonPath,
-        wasCompiled: false,
-      };
-    }
-
-    if (await fileExists(compiledConfigPath)) {
-      return {
-        configPath: compiledConfigPath,
-        wasCompiled: true,
-        sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
-      };
-    }
-
     return {
-      configPath: null,
+      configPath: hasVercelJson
+        ? vercelJsonPath
+        : hasNowJson
+          ? nowJsonPath
+          : null,
       wasCompiled: false,
     };
   }
@@ -193,31 +146,27 @@ export async function compileVercelConfig(
 
     const loaderScript = `
       import { pathToFileURL } from 'url';
-      const configModule = await import(pathToFileURL(process.argv[2]).href);
-      const config = ('default' in configModule) ? configModule.default : ('config' in configModule) ? configModule.config : configModule;
-      process.send(config);
+      try {
+        const configModule = await import(pathToFileURL(process.argv[2]).href);
+        const config = ('default' in configModule) ? configModule.default : ('config' in configModule) ? configModule.config : configModule;
+        process.send(config);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+      }
     `;
     await writeFile(loaderPath, loaderScript, 'utf-8');
 
     const config = await new Promise((resolve, reject) => {
+      let stderr = '';
       const child = fork(loaderPath, [tempOutPath], {
+        cwd: workPath,
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
-      let stderrOutput = '';
-      let stdoutOutput = '';
-
-      if (child.stderr) {
-        child.stderr.on('data', data => {
-          stderrOutput += data.toString();
-        });
-      }
-
-      if (child.stdout) {
-        child.stdout.on('data', data => {
-          stdoutOutput += data.toString();
-        });
-      }
+      child.stderr?.on('data', data => {
+        stderr += data.toString();
+      });
 
       const timeout = setTimeout(() => {
         child.kill();
@@ -238,20 +187,19 @@ export async function compileVercelConfig(
       child.on('exit', code => {
         clearTimeout(timeout);
         if (code !== 0) {
-          if (stderrOutput.trim()) {
-            output.log(stderrOutput);
-          }
-          if (stdoutOutput.trim()) {
-            output.log(stdoutOutput);
-          }
-
-          const parsedError = parseConfigLoaderError(stderrOutput);
-          if (parsedError) {
-            reject(new Error(parsedError));
-          } else if (stdoutOutput.trim()) {
-            reject(new Error(stdoutOutput.trim()));
+          const errMsg = stderr.trim();
+          if (errMsg.includes('Cannot find package')) {
+            const match = errMsg.match(/Cannot find package '([^']+)'/);
+            const pkg = match ? match[1] : 'unknown';
+            reject(
+              new Error(
+                `Cannot find package '${pkg}'. Make sure it's installed in your project dependencies.`
+              )
+            );
           } else {
-            reject(new Error(`Config loader exited with code ${code}`));
+            reject(
+              new Error(errMsg || `Config loader exited with code ${code}`)
+            );
           }
         }
       });
@@ -297,16 +245,12 @@ export async function getVercelConfigPath(workPath: string): Promise<string> {
   const nowJsonPath = join(workPath, 'now.json');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
-  if (await fileExists(vercelJsonPath)) {
-    return vercelJsonPath;
-  }
-
-  if (await fileExists(nowJsonPath)) {
-    return nowJsonPath;
-  }
-
   if (await fileExists(compiledConfigPath)) {
     return compiledConfigPath;
+  }
+
+  if (await fileExists(vercelJsonPath)) {
+    return vercelJsonPath;
   }
 
   return nowJsonPath;
