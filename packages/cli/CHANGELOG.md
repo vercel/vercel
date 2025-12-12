@@ -1,5 +1,13 @@
 # vercel
 
+## 50.0.1
+
+### Patch Changes
+
+- Run install command earlier if using vercel.ts ([#14462](https://github.com/vercel/vercel/pull/14462))
+
+- Better error handling for vercel config parsing ([#14453](https://github.com/vercel/vercel/pull/14453))
+
 ## 50.0.0
 
 ### Major Changes
