@@ -1,11 +1,12 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from 'next/cache';
 
-export async function DELETE(_request, { params }) {
-  const pathname = `/${params.pathname.join("/")}`;
+export async function DELETE(_request, props) {
+  const params = await props.params;
+  const pathname = `/${params.pathname.join('/')}`;
 
   let type;
-  if (pathname.includes("[") && pathname.includes("]")) {
-    type = "page";
+  if (pathname.includes('[') && pathname.includes(']')) {
+    type = 'page';
   }
 
   revalidatePath(pathname, type);
