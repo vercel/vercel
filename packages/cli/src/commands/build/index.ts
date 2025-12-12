@@ -422,6 +422,7 @@ async function doBuild(
         await runCustomInstallCommand({
           destPath: workPath,
           installCommand,
+          spawnOpts: { env: process.env },
           projectCreatedAt: project.settings.createdAt,
         });
       } else {
@@ -432,7 +433,7 @@ async function doBuild(
       await runNpmInstall(
         workPath,
         [],
-        undefined,
+        { env: process.env },
         undefined,
         project.settings.createdAt
       );
