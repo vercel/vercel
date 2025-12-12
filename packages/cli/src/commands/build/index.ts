@@ -7,13 +7,13 @@ import semver from 'semver';
 
 import {
   download,
-  execCommand,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
   runNpmInstall,
+  runCustomInstallCommand,
   type Reporter,
   Span,
   type TraceEvent,
@@ -410,18 +410,32 @@ async function doBuild(
   // When using vercel.ts, run install command before compiling so that
   // vercel.ts imports (e.g. `@vercel/config`) are available when the CLI loads it
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
+  let corepackShimDir: string | null | undefined;
   if (sourceConfigFile && process.env.VERCEL_TS_CONFIG_ENABLED) {
+    // Initialize corepack before install so the correct package manager version is used
+    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+
     const installCommand = project.settings.installCommand;
     if (typeof installCommand === 'string') {
       if (installCommand.trim()) {
         output.log(`Running install command before config compilation...`);
-        await execCommand(installCommand, { cwd: workPath });
+        await runCustomInstallCommand({
+          destPath: workPath,
+          installCommand,
+          projectCreatedAt: project.settings.createdAt,
+        });
       } else {
         output.debug('Skipping empty install command');
       }
     } else {
       output.log(`Installing dependencies before config compilation...`);
-      await runNpmInstall(workPath);
+      await runNpmInstall(
+        workPath,
+        [],
+        undefined,
+        undefined,
+        project.settings.createdAt
+      );
     }
     process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
@@ -604,7 +618,10 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath });
+  // Only initialize corepack if not already done during early install
+  if (!corepackShimDir) {
+    corepackShimDir = await initCorepack({ repoRootPath });
+  }
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
