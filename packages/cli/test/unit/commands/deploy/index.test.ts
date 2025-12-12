@@ -1409,6 +1409,13 @@ describe('deploy', () => {
         });
       });
 
+      client.scenario.get(
+        `/v3/now/deployments/dpl_with_alias/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
+
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--prod', '--yes');
 
@@ -1474,6 +1481,13 @@ describe('deploy', () => {
           alias: [],
         });
       });
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_preview/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
 
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--yes');
@@ -1541,6 +1555,13 @@ describe('deploy', () => {
           alias: [],
         });
       });
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_no_alias/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
 
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--prod', '--yes');
