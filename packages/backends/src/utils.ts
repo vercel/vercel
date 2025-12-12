@@ -3,7 +3,6 @@ import { dirname, join } from 'path';
 import {
   download,
   runNpmInstall,
-  runCustomInstallCommand,
   runPackageJsonScript,
   getNodeVersion,
   getSpawnOptions,
@@ -47,11 +46,10 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
   const installCommand = config.projectSettings?.installCommand;
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
-      await runCustomInstallCommand({
-        destPath: entrypointFsDirname,
-        installCommand,
-        spawnOpts,
-        projectCreatedAt: config.projectSettings?.createdAt,
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
       });
     } else {
       console.log(`Skipping "install" command...`);

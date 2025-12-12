@@ -141,21 +141,36 @@ export async function compileVercelConfig(
   }
 
   if (!vercelConfigPath) {
+    if (hasVercelJson) {
+      return {
+        configPath: vercelJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (hasNowJson) {
+      return {
+        configPath: nowJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (await fileExists(compiledConfigPath)) {
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
+      };
+    }
+
     return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
+      configPath: null,
       wasCompiled: false,
     };
   }
 
   dotenvConfig({ path: join(workPath, '.env') });
   dotenvConfig({ path: join(workPath, '.env.local') });
-  dotenvConfig({ path: join(vercelDir, '.env.preview.local') });
-  dotenvConfig({ path: join(vercelDir, '.env.production.local') });
-  dotenvConfig({ path: join(vercelDir, '.env.development.local') });
 
   const tempOutPath = join(vercelDir, 'vercel-temp.mjs');
   const loaderPath = join(vercelDir, 'vercel-loader.mjs');
@@ -178,31 +193,31 @@ export async function compileVercelConfig(
 
     const loaderScript = `
       import { pathToFileURL } from 'url';
-      try {
-        const configModule = await import(pathToFileURL(process.argv[2]).href);
-        const config = ('default' in configModule) ? configModule.default : ('config' in configModule) ? configModule.config : configModule;
-        process.send(config);
-      } catch (err) {
-        console.error(err.message);
-        process.exit(1);
-      }
+      const configModule = await import(pathToFileURL(process.argv[2]).href);
+      const config = ('default' in configModule) ? configModule.default : ('config' in configModule) ? configModule.config : configModule;
+      process.send(config);
     `;
     await writeFile(loaderPath, loaderScript, 'utf-8');
 
     const config = await new Promise((resolve, reject) => {
-      let stderr = '';
       const child = fork(loaderPath, [tempOutPath], {
-        cwd: workPath,
-        env: {
-          ...process.env,
-          NODE_PATH: join(workPath, 'node_modules'),
-        },
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
-      child.stderr?.on('data', data => {
-        stderr += data.toString();
-      });
+      let stderrOutput = '';
+      let stdoutOutput = '';
+
+      if (child.stderr) {
+        child.stderr.on('data', data => {
+          stderrOutput += data.toString();
+        });
+      }
+
+      if (child.stdout) {
+        child.stdout.on('data', data => {
+          stdoutOutput += data.toString();
+        });
+      }
 
       const timeout = setTimeout(() => {
         child.kill();
@@ -223,10 +238,21 @@ export async function compileVercelConfig(
       child.on('exit', code => {
         clearTimeout(timeout);
         if (code !== 0) {
-          const parsedError = parseConfigLoaderError(stderr);
-          reject(
-            new Error(parsedError || `Config loader exited with code ${code}`)
-          );
+          if (stderrOutput.trim()) {
+            output.log(stderrOutput);
+          }
+          if (stdoutOutput.trim()) {
+            output.log(stdoutOutput);
+          }
+
+          const parsedError = parseConfigLoaderError(stderrOutput);
+          if (parsedError) {
+            reject(new Error(parsedError));
+          } else if (stdoutOutput.trim()) {
+            reject(new Error(stdoutOutput.trim()));
+          } else {
+            reject(new Error(`Config loader exited with code ${code}`));
+          }
         }
       });
     });
@@ -271,12 +297,16 @@ export async function getVercelConfigPath(workPath: string): Promise<string> {
   const nowJsonPath = join(workPath, 'now.json');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
-  if (await fileExists(compiledConfigPath)) {
-    return compiledConfigPath;
-  }
-
   if (await fileExists(vercelJsonPath)) {
     return vercelJsonPath;
+  }
+
+  if (await fileExists(nowJsonPath)) {
+    return nowJsonPath;
+  }
+
+  if (await fileExists(compiledConfigPath)) {
+    return compiledConfigPath;
   }
 
   return nowJsonPath;

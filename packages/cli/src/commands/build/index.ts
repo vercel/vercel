@@ -407,12 +407,9 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
-  // When using vercel.ts, run install command before compiling so that
-  // vercel.ts imports (e.g. `@vercel/config`) are available when the CLI loads it
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile && process.env.VERCEL_TS_CONFIG_ENABLED) {
-    // Initialize corepack before install so the correct package manager version is used
     corepackShimDir = await initCorepack({ repoRootPath: cwd });
 
     const installCommand = project.settings.installCommand;
@@ -438,7 +435,6 @@ async function doBuild(
         project.settings.createdAt
       );
     }
-    process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
   const compileResult = await compileVercelConfig(workPath);
