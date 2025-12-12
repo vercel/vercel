@@ -86,7 +86,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const path = '/client/static';
       const actionId = findActionId(path);
 
-      console.log({actionId})
       const res = await fetch(`${ctx.deploymentUrl}${path}`, {
         method: 'POST',
         body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
