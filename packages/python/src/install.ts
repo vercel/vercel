@@ -86,8 +86,6 @@ export async function runUvSync({
   locked: boolean;
 }) {
   // Use copy mode so installed dependencies are real files in the venv.
-  // This avoids broken symlinks in the Lambda bundle when uv links packages from
-  // its global cache directory.
   const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
   if (locked) {
     args.push('--locked');
