@@ -173,9 +173,9 @@ function formatRedirectsTable(
     destination: string;
     permanent?: boolean;
     statusCode?: number;
-    action?: '+' | '-';
+    action?: '+' | '-' | '~';
   }>,
-  actionSymbol?: '+' | '-'
+  actionSymbol?: '+' | '-' | '~'
 ) {
   const rows: string[][] = redirects.map(redirect => {
     const status = redirect.statusCode || (redirect.permanent ? 308 : 307);

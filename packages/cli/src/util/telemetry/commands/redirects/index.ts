@@ -27,6 +27,13 @@ export class RedirectsTelemetryClient
     });
   }
 
+  trackCliSubcommandUpload(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'upload',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',

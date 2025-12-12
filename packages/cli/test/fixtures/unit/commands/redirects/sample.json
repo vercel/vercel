@@ -1,0 +1,37 @@
+[
+  {
+    "source": "/old-home",
+    "destination": "/",
+    "statusCode": 301,
+    "caseSensitive": false,
+    "preserveQueryParams": false
+  },
+  {
+    "source": "/blog/old-post",
+    "destination": "/blog/new-post",
+    "statusCode": 301,
+    "caseSensitive": false,
+    "preserveQueryParams": true
+  },
+  {
+    "source": "/api/v1/*",
+    "destination": "/api/v2/$1",
+    "statusCode": 308,
+    "caseSensitive": true,
+    "preserveQueryParams": false
+  },
+  {
+    "source": "/temp-offer",
+    "destination": "https://example.com/offer",
+    "statusCode": 302,
+    "caseSensitive": false,
+    "preserveQueryParams": false
+  },
+  {
+    "source": "/case-sensitive",
+    "destination": "/new-case",
+    "statusCode": 307,
+    "caseSensitive": true,
+    "preserveQueryParams": false
+  }
+]
