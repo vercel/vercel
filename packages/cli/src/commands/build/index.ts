@@ -7,11 +7,13 @@ import semver from 'semver';
 
 import {
   download,
+  execCommand,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
+  runNpmInstall,
   type Reporter,
   Span,
   type TraceEvent,
@@ -82,7 +84,10 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
-import { compileVercelConfig } from '../../util/compile-vercel-config';
+import {
+  compileVercelConfig,
+  findSourceVercelConfigFile,
+} from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
@@ -401,6 +406,25 @@ async function doBuild(
   const { localConfigPath } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
+
+  // When using vercel.ts, run install command before compiling so that
+  // vercel.ts imports (e.g. `@vercel/config`) are available when the CLI loads it
+  const sourceConfigFile = await findSourceVercelConfigFile(workPath);
+  if (sourceConfigFile && process.env.VERCEL_TS_CONFIG_ENABLED) {
+    const installCommand = project.settings.installCommand;
+    if (typeof installCommand === 'string') {
+      if (installCommand.trim()) {
+        output.log(`Running install command before config compilation...`);
+        await execCommand(installCommand, { cwd: workPath });
+      } else {
+        output.debug('Skipping empty install command');
+      }
+    } else {
+      output.log(`Installing dependencies before config compilation...`);
+      await runNpmInstall(workPath);
+    }
+    process.env.VERCEL_INSTALL_COMPLETED = '1';
+  }
 
   const compileResult = await compileVercelConfig(workPath);
 
