@@ -161,7 +161,7 @@ async function detectFrameworkEntrypoint(
     }
   }
 
-  // No standard candidates exist, so do a shallow scan for a clear framework entrypoint.
+  // No standard candidates matched, so do a shallow scan for a clear framework entrypoint.
   const scannedMatches = scanEntrypoints(
     fsFiles,
     PYTHON_ENTRYPOINT_MAX_SEARCH_DEPTH,
