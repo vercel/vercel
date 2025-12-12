@@ -423,6 +423,96 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
   });
 });
 
+describe('uv workspace lockfile resolution (workspace root above workPath)', () => {
+  it('succeeds when uv writes uv.lock at the workspace root instead of the member directory', async () => {
+    const repoRoot = path.join(
+      tmpdir(),
+      `python-uv-workspace-parent-${Date.now()}`
+    );
+    const workPath = path.join(repoRoot, 'apps', 'python-app2');
+
+    fs.mkdirSync(workPath, { recursive: true });
+
+    // Create a workspace root pyproject.toml so the runtime can associate the
+    // workspace-root lockfile with a project.
+    fs.writeFileSync(
+      path.join(repoRoot, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "root"',
+        'version = "0.0.0"',
+        '',
+        '[tool.uv.workspace]',
+        'members = ["apps/python-app2"]',
+        '',
+      ].join('\n')
+    );
+
+    // Setup mocked Python + uv
+    makeMockPython('3.9');
+
+    // Override the mock uv binary to emulate workspace behavior: write the lockfile
+    // at the workspace root (two levels up from apps/python-app2).
+    const isWin = process.platform === 'win32';
+    const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
+    if (isWin) {
+      const uvWinScript = [
+        '@echo off',
+        'rem mock uv binary (workspace): write uv.lock at workspace root',
+        'set LOCK=..\\..\\uv.lock',
+        'if not exist "%LOCK%" (',
+        '  echo [mock]>"%LOCK%"',
+        ')',
+        'exit /b 0',
+        '',
+      ].join('\r\n');
+      fs.writeFileSync(uvBin, uvWinScript, 'utf8');
+    } else {
+      const uvPosixScript = [
+        '#!/bin/sh',
+        '# mock uv binary (workspace): write uv.lock at workspace root',
+        'if [ ! -f "../../uv.lock" ]; then',
+        '  echo "[mock]" > ../../uv.lock',
+        'fi',
+        'exit 0',
+        '',
+      ].join('\n');
+      fs.writeFileSync(uvBin, uvPosixScript, 'utf8');
+      fs.chmodSync(uvBin, 0o755);
+    }
+
+    const files = {
+      'main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "python-app2"',
+          'version = "0.0.1"',
+          'requires-python = ">=3.9,<3.10"',
+          'dependencies = ["fastapi"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'main.py',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: repoRoot,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    expect(handler).toBeDefined();
+
+    fs.removeSync(repoRoot);
+  });
+});
+
 describe('fastapi entrypoint discovery', () => {
   it('should throw a clear error when no FastAPI entrypoint is found', async () => {
     const mockWorkPath = path.join(
