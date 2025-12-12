@@ -1,13 +1,37 @@
 import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
 import type { FileFsRef } from '@vercel/build-utils';
-import { glob, debug } from '@vercel/build-utils';
-import { readConfigFile } from '@vercel/build-utils';
+import {
+  glob,
+  debug,
+  NowBuildError,
+  readConfigFile,
+  normalizePath,
+} from '@vercel/build-utils';
 
 export const FASTAPI_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
 export const FASTAPI_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
 export const FASTAPI_CONTENT_REGEX =
   /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
+export const PYTHON_APP_VARIABLE_REGEX = /^\s*app\s*[:=]/m;
+
+// For deep scanning beyond known default locations, limit how far we search to
+// avoid accidentally selecting unrelated apps in monorepos.
+export const PYTHON_ENTRYPOINT_MAX_SEARCH_DEPTH = 2;
+
+// Directories to exclude from "deep scan" entrypoint discovery.
+// We intentionally keep this small and focused on very common non-app code.
+const PYTHON_ENTRYPOINT_EXCLUDED_DIRS = new Set([
+  'test',
+  'tests',
+  '__tests__',
+  '__pycache__',
+  '.git',
+  '.vercel',
+  '.venv',
+  'venv',
+  'node_modules',
+]);
 
 export const FASTAPI_CANDIDATE_ENTRYPOINTS =
   FASTAPI_ENTRYPOINT_FILENAMES.flatMap((filename: string) =>
@@ -23,7 +47,10 @@ export function isFastapiEntrypoint(
     const fsPath = (file as FileFsRef).fsPath;
     if (!fsPath) return false;
     const contents = fs.readFileSync(fsPath, 'utf8');
-    return FASTAPI_CONTENT_REGEX.test(contents);
+    return (
+      FASTAPI_CONTENT_REGEX.test(contents) &&
+      PYTHON_APP_VARIABLE_REGEX.test(contents)
+    );
   } catch {
     return false;
   }
@@ -49,10 +76,105 @@ export function isFlaskEntrypoint(
     const fsPath = (file as FileFsRef).fsPath;
     if (!fsPath) return false;
     const contents = fs.readFileSync(fsPath, 'utf8');
-    return FLASK_CONTENT_REGEX.test(contents);
+    return (
+      FLASK_CONTENT_REGEX.test(contents) &&
+      PYTHON_APP_VARIABLE_REGEX.test(contents)
+    );
   } catch {
     return false;
   }
+}
+
+function throwAmbiguousEntrypointError(
+  framework: 'fastapi' | 'flask',
+  candidates: string[]
+): never {
+  const sorted = [...candidates].sort();
+  const list = sorted.map(p => `- ${p}`).join('\n');
+  const code = `${framework.toUpperCase()}_ENTRYPOINT_AMBIGUOUS`;
+  const link = `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`;
+  throw new NowBuildError({
+    code,
+    message:
+      `Multiple possible ${framework} entrypoints were found.\n\n` +
+      `Please configure which one to use by setting the entrypoint explicitly (for example: "backend/my_server.py") ` +
+      `or by adding an 'app' script to pyproject.toml.\n\n` +
+      `Candidates:\n${list}`,
+    link,
+    action: 'Learn More',
+  });
+}
+
+function shouldScanPathForEntrypoint(p: string, maxDepth: number): boolean {
+  if (!p.endsWith('.py')) return false;
+  const parts = p.split('/').filter(Boolean);
+  // Depth is number of directories, so "a/b.py" => depth 1
+  const depth = Math.max(0, parts.length - 1);
+  if (depth > maxDepth) return false;
+  return !parts.some(seg => PYTHON_ENTRYPOINT_EXCLUDED_DIRS.has(seg));
+}
+
+function scanEntrypoints(
+  fsFiles: Record<string, FileFsRef>,
+  maxDepth: number,
+  isEntrypoint: (file: FileFsRef) => boolean
+): string[] {
+  const matches: string[] = [];
+  for (const [p, ref] of Object.entries(fsFiles)) {
+    if (!shouldScanPathForEntrypoint(p, maxDepth)) continue;
+    if (isEntrypoint(ref)) matches.push(p);
+  }
+  return matches;
+}
+
+async function detectFrameworkEntrypoint(
+  framework: 'fastapi' | 'flask',
+  workPath: string,
+  configuredEntrypoint: string,
+  candidateEntrypoints: string[],
+  isEntrypoint: (file: FileFsRef) => boolean
+): Promise<string | null> {
+  const entry = normalizePath(
+    configuredEntrypoint.endsWith('.py')
+      ? configuredEntrypoint
+      : `${configuredEntrypoint}.py`
+  );
+
+  let fsFiles: Record<string, FileFsRef>;
+  try {
+    fsFiles = await glob('**', workPath);
+  } catch (err) {
+    debug(`Failed to discover entrypoint for ${framework}`, err);
+    return null;
+  }
+
+  if (fsFiles[entry]) return entry;
+
+  const candidates = candidateEntrypoints.filter(c => !!fsFiles[c]);
+  if (candidates.length > 0) {
+    const matched = candidates.filter(c => isEntrypoint(fsFiles[c]));
+    if (matched.length === 1) {
+      debug(`Detected ${framework} entrypoint: ${matched[0]}`);
+      return matched[0];
+    } else if (matched.length > 1) {
+      throwAmbiguousEntrypointError(framework, matched);
+    }
+  }
+
+  // No standard candidates exist, so do a shallow scan for a clear framework entrypoint.
+  const scannedMatches = scanEntrypoints(
+    fsFiles,
+    PYTHON_ENTRYPOINT_MAX_SEARCH_DEPTH,
+    isEntrypoint
+  );
+  if (scannedMatches.length === 1) {
+    debug(`Detected ${framework} entrypoint via scan: ${scannedMatches[0]}`);
+    return scannedMatches[0];
+  } else if (scannedMatches.length > 1) {
+    throwAmbiguousEntrypointError(framework, scannedMatches);
+  }
+
+  return null;
 }
 
 /**
@@ -62,31 +184,13 @@ export async function detectFlaskEntrypoint(
   workPath: string,
   configuredEntrypoint: string
 ): Promise<string | null> {
-  const entry = configuredEntrypoint.endsWith('.py')
-    ? configuredEntrypoint
-    : `${configuredEntrypoint}.py`;
-
-  try {
-    const fsFiles = await glob('**', workPath);
-    if (fsFiles[entry]) return entry;
-
-    const candidates = FLASK_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
-    if (candidates.length > 0) {
-      const flaskEntrypoint =
-        candidates.find((c: string) =>
-          isFlaskEntrypoint(fsFiles[c] as FileFsRef)
-        ) || candidates[0];
-      debug(`Detected Flask entrypoint: ${flaskEntrypoint}`);
-      return flaskEntrypoint;
-    }
-
-    return null;
-  } catch {
-    debug('Failed to discover entrypoint for Flask');
-    return null;
-  }
+  return detectFrameworkEntrypoint(
+    'flask',
+    workPath,
+    configuredEntrypoint,
+    FLASK_CANDIDATE_ENTRYPOINTS,
+    isFlaskEntrypoint
+  );
 }
 
 /**
@@ -96,34 +200,13 @@ export async function detectFastapiEntrypoint(
   workPath: string,
   configuredEntrypoint: string
 ): Promise<string | null> {
-  const entry = configuredEntrypoint.endsWith('.py')
-    ? configuredEntrypoint
-    : `${configuredEntrypoint}.py`;
-
-  try {
-    const fsFiles = await glob('**', workPath);
-    // If the configured entrypoint exists, use it
-    if (fsFiles[entry]) return entry;
-
-    // Otherwise search for candidates
-    const candidates = FASTAPI_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
-    if (candidates.length > 0) {
-      const fastapiEntrypoint =
-        candidates.find((c: string) =>
-          isFastapiEntrypoint(fsFiles[c] as FileFsRef)
-        ) || candidates[0];
-      debug(`Detected FastAPI entrypoint: ${fastapiEntrypoint}`);
-      return fastapiEntrypoint;
-    }
-
-    // Nothing found
-    return null;
-  } catch {
-    debug('Failed to discover entrypoint for FastAPI');
-    return null;
-  }
+  return detectFrameworkEntrypoint(
+    'fastapi',
+    workPath,
+    configuredEntrypoint,
+    FASTAPI_CANDIDATE_ENTRYPOINTS,
+    isFastapiEntrypoint
+  );
 }
 
 export async function getPyprojectEntrypoint(

@@ -434,7 +434,7 @@ describe('fastapi entrypoint discovery', () => {
 
     const files = {
       'invalid_entrypoint.py': new FileBlob({
-        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+        data: 'print("not a fastapi app")\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -554,6 +554,170 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     expect(content.includes('os.path.join(_here, "index.py")')).toBe(true);
 
     fs.removeSync(workPath);
+  });
+
+  it('discovers a FastAPI entrypoint via entrypoint scan (backend/my_server.py)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-pass-deep-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    makeMockPython('3.12');
+
+    const files = {
+      'backend/my_server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'server.py',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(
+      content.includes('os.path.join(_here, "backend/my_server.py")')
+    ).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+
+  it('ignores FastAPI candidates in tests/ during scan (not found)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-scan-exclude-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'tests'), { recursive: true });
+    makeMockPython('3.12');
+
+    const files = {
+      'tests/my_server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath,
+        files,
+        entrypoint: 'server.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrow(/No fastapi entrypoint found/i);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('throws when entrypoint scan finds multiple FastAPI entrypoints (ambiguous)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-scan-ambiguous-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    fs.mkdirSync(path.join(workPath, 'api'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'backend/a.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+      'api/b.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath,
+        files,
+        entrypoint: 'server.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrow(/Multiple possible fastapi entrypoints/i);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('flask entrypoint discovery - scan', () => {
+  it('discovers a Flask entrypoint via scan (backend/my_server.py)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-flask-pass-scan-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    makeMockPython('3.12');
+
+    const files = {
+      'backend/my_server.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'server.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(
+      content.includes('os.path.join(_here, "backend/my_server.py")')
+    ).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+
+  it('throws when entrypoint scan finds multiple Flask entrypoints (ambiguous)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-flask-scan-ambiguous-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    fs.mkdirSync(path.join(workPath, 'api'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'backend/a.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+      'api/b.py': new FileBlob({
+        data: 'from flask import Flask\napp = Flask(__name__)\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath,
+        files,
+        entrypoint: 'server.py',
+        meta: { isDev: true },
+        config: { framework: 'flask' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrow(/Multiple possible flask entrypoints/i);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 });
 
