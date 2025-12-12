@@ -49,6 +49,12 @@ async function doTypeCheck(
     '--allowJs',
     '--esModuleInterop',
     '--skipLibCheck',
+    // Since we're bundling, force the most permissive
+    // module resolution mode
+    '--module',
+    'preserve',
+    '--moduleResolution',
+    'bundler',
   ];
   const tsconfig = await findNearestTsconfig(args.workPath);
   if (tsconfig) {
