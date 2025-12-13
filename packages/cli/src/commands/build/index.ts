@@ -435,6 +435,7 @@ async function doBuild(
         project.settings.createdAt
       );
     }
+    process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
   const compileResult = await compileVercelConfig(workPath);

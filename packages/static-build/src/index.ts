@@ -23,6 +23,7 @@ import {
   execCommand,
   spawnCommand,
   runNpmInstall,
+  runCustomInstallCommand,
   getEnvForPackageManager,
   getPrefixedEnvVars,
   getNodeBinPaths,
@@ -543,10 +544,11 @@ export const build: BuildV2 = async ({
         isNpmInstall = true;
       } else if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
-          console.log(`Running "install" command: \`${installCommand}\`...`);
-          await execCommand(installCommand, {
-            ...spawnOpts,
-            cwd: entrypointDir,
+          await runCustomInstallCommand({
+            destPath: entrypointDir,
+            installCommand,
+            spawnOpts,
+            projectCreatedAt: config.projectSettings?.createdAt,
           });
           // Its not clear which command was run, so assume all
           isNpmInstall = true;
