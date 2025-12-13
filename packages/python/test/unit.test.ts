@@ -1,5 +1,5 @@
 import { getSupportedPythonVersion } from '../src/version';
-import { build } from '../src/index';
+import { build, prepareCache } from '../src/index';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -44,6 +44,110 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
+});
+
+describe('prepareCache()', () => {
+  it('should cache `.vercel/python/**` by default', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-preparecache-default-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    fs.mkdirSync(path.join(workPath, '.vercel', 'python', '.venv'), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(workPath, '.vercel', 'python', 'cache-marker.txt'),
+      'cache me'
+    );
+    fs.writeFileSync(
+      path.join(workPath, '.vercel', 'python', '.venv', 'pyvenv.cfg'),
+      'home = /usr/bin/python3'
+    );
+    fs.writeFileSync(path.join(workPath, 'index.py'), '# not cached');
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'index.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(files['.vercel/python/cache-marker.txt']).toBeDefined();
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
+      expect(files['index.py']).toBeUndefined();
+    } finally {
+      fs.removeSync(workPath);
+    }
+  });
+
+  it('should not cache `.vercel/python/**` when FastAPI has a custom installCommand', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-preparecache-fastapi-installcmd-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    fs.mkdirSync(path.join(workPath, '.vercel', 'python'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, '.vercel', 'python', 'cache-marker.txt'),
+      'cache me'
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'index.py',
+        config: {
+          framework: 'fastapi',
+          projectSettings: {
+            installCommand: 'pip install -r requirements.txt',
+          },
+        } as any,
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(files['.vercel/python/cache-marker.txt']).toBeUndefined();
+    } finally {
+      fs.removeSync(workPath);
+    }
+  });
+
+  it('should not cache `.vercel/python/**` when Flask has a [tool.vercel.scripts] install hook', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-preparecache-flask-pyproject-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    fs.mkdirSync(path.join(workPath, '.vercel', 'python'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, '.vercel', 'python', 'cache-marker.txt'),
+      'cache me'
+    );
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      ['[tool.vercel.scripts]', 'install = "echo hi"'].join('\n')
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'index.py',
+        config: { framework: 'flask' } as any,
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(files['.vercel/python/cache-marker.txt']).toBeUndefined();
+    } finally {
+      fs.removeSync(workPath);
+    }
+  });
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
