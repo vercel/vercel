@@ -748,6 +748,13 @@ export async function runNpmInstall(
     return false;
   }
 
+  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+    debug(
+      'Skipping dependency installation because VERCEL_INSTALL_COMPLETED is set'
+    );
+    return false;
+  }
+
   assert(path.isAbsolute(destPath));
 
   try {
@@ -1356,7 +1363,15 @@ export async function runCustomInstallCommand({
   installCommand: string;
   spawnOpts?: SpawnOptions;
   projectCreatedAt?: number;
-}) {
+}): Promise<boolean> {
+  // Skip if install was already completed (e.g., for vercel.ts config compilation)
+  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+    debug(
+      'Skipping custom install command because VERCEL_INSTALL_COMPLETED is set'
+    );
+    return false;
+  }
+
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const {
     cliType,
@@ -1380,6 +1395,7 @@ export async function runCustomInstallCommand({
     env,
     cwd: destPath,
   });
+  return true;
 }
 
 export async function runPackageJsonScript(
