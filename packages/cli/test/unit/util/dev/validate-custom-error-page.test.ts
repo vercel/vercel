@@ -33,9 +33,8 @@ describe('validateConfig with customErrorPage', () => {
 
   it('should error with invalid type for customErrorPage', () => {
     const config = {
-      // @ts-ignore
       customErrorPage: 123,
-    };
+    } as any;
     const error = validateConfig(config);
     expect(error).not.toBeNull();
   });
@@ -43,10 +42,9 @@ describe('validateConfig with customErrorPage', () => {
   it('should error with invalid properties in object customErrorPage', () => {
     const config = {
       customErrorPage: {
-        // @ts-ignore
         foo: 'bar',
       },
-    };
+    } as any;
     const error = validateConfig(config);
     expect(error).not.toBeNull();
     // This usually matches the object schema and complains about additional properties
