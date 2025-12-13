@@ -104,8 +104,12 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
-  if (framework === 'fastapi' || framework === 'flask') {
+  // For FastAPI/Flask/Pyproject, also honor project install/build commands (vercel.json/dashboard)
+  if (
+    framework === 'fastapi' ||
+    framework === 'flask' ||
+    framework === 'pyproject'
+  ) {
     const {
       cliType,
       lockfileVersion,
@@ -154,11 +158,13 @@ export const build: BuildV3 = async ({
 
   // Zero config entrypoint discovery
   if (
-    (framework === 'fastapi' || framework === 'flask') &&
+    (framework === 'fastapi' ||
+      framework === 'flask' ||
+      framework === 'pyproject') &&
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
     const detected = await detectPythonEntrypoint(
-      config.framework as 'fastapi' | 'flask',
+      framework as 'fastapi' | 'flask' | 'pyproject',
       workPath,
       entrypoint
     );
@@ -167,11 +173,18 @@ export const build: BuildV3 = async ({
         `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
       );
       entrypoint = detected;
+    } else if (framework === 'pyproject') {
+      throw new NowBuildError({
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message:
+          "No Python entrypoint found. Define an 'app' script in pyproject.toml under [project.scripts] or ensure the configured entrypoint file exists.",
+      });
     } else {
       const searchedList =
         framework === 'fastapi'
           ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
           : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
@@ -408,15 +421,11 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    // Don't override API routes if another builder already matched them
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
-    // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
+  if (
+    framework === 'fastapi' ||
+    framework === 'flask' ||
+    framework === 'pyproject'
+  ) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;
