@@ -161,6 +161,7 @@ const customErrorPageSchema = {
     {
       type: 'object',
       additionalProperties: false,
+      minProperties: 1,
       properties: {
         default5xx: {
           type: 'string',

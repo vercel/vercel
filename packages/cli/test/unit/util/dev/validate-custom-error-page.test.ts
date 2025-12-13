@@ -52,4 +52,12 @@ describe('validateConfig with customErrorPage', () => {
     // This usually matches the object schema and complains about additional properties
     expect(error?.message).toBeTruthy();
   });
+
+  it('should error with empty object customErrorPage', () => {
+    const config = {
+      customErrorPage: {},
+    };
+    const error = validateConfig(config);
+    expect(error).not.toBeNull();
+  });
 });
