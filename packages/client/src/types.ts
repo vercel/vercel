@@ -164,6 +164,12 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
+  customErrorPage?:
+    | string
+    | {
+        default5xx?: string;
+        default4xx?: string;
+      };
 }
 
 export interface GitMetadata {
@@ -202,4 +208,10 @@ export interface DeploymentOptions {
   gitMetadata?: GitMetadata;
   autoAssignCustomDomains?: boolean;
   customEnvironmentSlugOrId?: string;
+  customErrorPage?:
+    | string
+    | {
+        default5xx?: string;
+        default4xx?: string;
+      };
 }

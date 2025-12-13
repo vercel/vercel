@@ -475,6 +475,26 @@ async function doBuild(
     throw validateError;
   }
 
+  if (localConfig.customErrorPage) {
+    const errorPages =
+      typeof localConfig.customErrorPage === 'string'
+        ? [localConfig.customErrorPage]
+        : Object.values(localConfig.customErrorPage);
+
+    for (const page of errorPages) {
+      if (page) {
+        const src = join(workPath, page);
+        if (!existsSync(src)) {
+          throw new NowBuildError({
+            code: 'CUSTOM_ERROR_PAGE_NOT_FOUND',
+            message: `The custom error page "${page}" was not found in "${workPath}".`,
+            link: 'https://vercel.com/docs/projects/project-configuration#custom-error-page',
+          });
+        }
+      }
+    }
+  }
+
   const projectSettings = {
     ...project.settings,
     ...pickOverrides(localConfig),
