@@ -12,6 +12,7 @@ export type ProjectLinkAndSettings = Partial<ProjectLink> & {
     installCommand: Project['installCommand'];
     buildCommand: Project['buildCommand'];
     devCommand: Project['devCommand'];
+    runtime: Project['runtime'];
     outputDirectory: Project['outputDirectory'];
     directoryListing: Project['directoryListing'];
     rootDirectory: Project['rootDirectory'];
@@ -47,6 +48,7 @@ export async function writeProjectSettings(
     settings: {
       createdAt: project.createdAt,
       framework: project.framework,
+      runtime: project.runtime,
       devCommand: project.devCommand,
       installCommand: project.installCommand,
       buildCommand: project.buildCommand,
