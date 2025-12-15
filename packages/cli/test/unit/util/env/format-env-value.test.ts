@@ -75,9 +75,10 @@ describe('formatEnvValue', () => {
       expect(formatEnvValue('{}')).toBe('{}');
     });
 
-    it('still escapes JSON with literal newlines', () => {
+    it('escapes newlines in multiline JSON without quoting (self-delimiting)', () => {
       const json = '{\n  "key": "value"\n}';
-      expect(formatEnvValue(json)).toBe('"{\\n  \\"key\\": \\"value\\"\\n}"');
+      // JSON is self-delimiting, so just escape newlines without outer quotes
+      expect(formatEnvValue(json)).toBe('{\\n  "key": "value"\\n}');
     });
 
     it('does not treat JSON primitives as objects (string)', () => {
@@ -168,9 +169,10 @@ describe('formatEnvValue', () => {
       );
     });
 
-    it('handles multiline JSON', () => {
+    it('handles multiline JSON (escapes newlines but not quotes)', () => {
       const json = '{\n  "key": "value"\n}';
-      expect(formatEnvValue(json)).toBe('"{\\n  \\"key\\": \\"value\\"\\n}"');
+      // Inner quotes are NOT escaped to prevent bundlers from double-escaping during build inlining
+      expect(formatEnvValue(json)).toBe('{\\n  "key": "value"\\n}');
     });
 
     it('handles private key format (has spaces, so quoted)', () => {
