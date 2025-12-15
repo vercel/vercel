@@ -9,25 +9,23 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
-    "@react-router/node": "^7.1.5",
-    "@react-router/serve": "^7.1.5",
-    "@vercel/react-router": "^1.0.2",
-    "isbot": "^5.1.17",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
-    "react-router": "^7.1.5"
+    "@react-router/node": "7.10.1",
+    "@react-router/serve": "7.10.1",
+    "@vercel/react-router": "^1.2.4",
+    "isbot": "^5.1.31",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router": "7.10.1"
   },
   "devDependencies": {
-    "@react-router/dev": "^7.1.5",
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/node": "^20",
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.1",
-    "patch-package": "^8.0.0",
-    "react-router-devtools": "^1.1.0",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.2",
-    "vite": "^5.4.11",
+    "@react-router/dev": "7.10.1",
+    "@tailwindcss/vite": "^4.1.13",
+    "@types/node": "^22",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }
