@@ -876,3 +876,248 @@ describe('uv install path', () => {
     expect(opts).toHaveProperty('cwd', workPath);
   });
 });
+
+describe('custom install hooks', () => {
+  it('uses projectSettings.installCommand instead of uv install for FastAPI', async () => {
+    jest.resetModules();
+
+    let buildWithMocks: any;
+    let mockExecCommand: jest.Mock = jest.fn();
+    let mockEnsureUvProject: jest.Mock = jest.fn();
+    let mockRunUvSync: jest.Mock = jest.fn();
+
+    jest.isolateModules(() => {
+      jest.doMock('@vercel/build-utils', () => {
+        const real = jest.requireActual('@vercel/build-utils');
+        mockExecCommand = jest.fn(async () => {});
+        return {
+          __esModule: true,
+          ...real,
+          execCommand: mockExecCommand,
+        };
+      });
+
+      jest.doMock('../src/install', () => {
+        const real = jest.requireActual('../src/install');
+        mockEnsureUvProject = jest.fn(async () => ({
+          projectDir: '/mock/project',
+          pyprojectPath: '/mock/project/pyproject.toml',
+          lockPath: '/mock/project/uv.lock',
+        }));
+        mockRunUvSync = jest.fn(async () => {});
+        return {
+          __esModule: true,
+          ...real,
+          ensureUvProject: mockEnsureUvProject,
+          runUvSync: mockRunUvSync,
+        };
+      });
+
+      // Import after mocks are configured
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../src/index');
+      buildWithMocks = mod.build;
+    });
+
+    const workPath = path.join(tmpdir(), `python-custom-install-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+          projectSettings: {
+            installCommand: 'echo custom-install',
+          },
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    // Custom install should be used, so uv-based install should be skipped
+    expect(mockEnsureUvProject).not.toHaveBeenCalled();
+    expect(mockRunUvSync).not.toHaveBeenCalled();
+    expect(mockExecCommand).toHaveBeenCalledWith(
+      'echo custom-install',
+      expect.objectContaining({
+        cwd: workPath,
+        env: expect.any(Object),
+      })
+    );
+  });
+
+  it('uses pyproject.toml install script when no projectSettings.installCommand', async () => {
+    jest.resetModules();
+
+    let buildWithMocks: any;
+    let mockExecCommand: jest.Mock = jest.fn();
+    let mockEnsureUvProject: jest.Mock = jest.fn();
+    let mockRunUvSync: jest.Mock = jest.fn();
+
+    jest.isolateModules(() => {
+      jest.doMock('@vercel/build-utils', () => {
+        const real = jest.requireActual('@vercel/build-utils');
+        mockExecCommand = jest.fn(async () => {});
+        return {
+          __esModule: true,
+          ...real,
+          execCommand: mockExecCommand,
+        };
+      });
+
+      jest.doMock('../src/install', () => {
+        const real = jest.requireActual('../src/install');
+        mockEnsureUvProject = jest.fn(async () => ({
+          projectDir: '/mock/project',
+          pyprojectPath: '/mock/project/pyproject.toml',
+          lockPath: '/mock/project/uv.lock',
+        }));
+        mockRunUvSync = jest.fn(async () => {});
+        return {
+          __esModule: true,
+          ...real,
+          ensureUvProject: mockEnsureUvProject,
+          runUvSync: mockRunUvSync,
+        };
+      });
+
+      // Import after mocks are configured
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../src/index');
+      buildWithMocks = mod.build;
+    });
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-custom-install-pyproject-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[tool.vercel.scripts]',
+          'vercel-install = "echo pyproject-install"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    // pyproject install should be used, so uv-based install should be skipped
+    expect(mockEnsureUvProject).not.toHaveBeenCalled();
+    expect(mockRunUvSync).not.toHaveBeenCalled();
+    expect(mockExecCommand).toHaveBeenCalledWith(
+      'echo pyproject-install',
+      expect.objectContaining({
+        cwd: workPath,
+        env: expect.any(Object),
+      })
+    );
+  });
+
+  it('falls back to uv install when no custom install is configured', async () => {
+    jest.resetModules();
+
+    let buildWithMocks: any;
+    let mockExecCommand: jest.Mock = jest.fn();
+    let mockEnsureUvProject: jest.Mock = jest.fn();
+    let mockRunUvSync: jest.Mock = jest.fn();
+
+    jest.isolateModules(() => {
+      jest.doMock('@vercel/build-utils', () => {
+        const real = jest.requireActual('@vercel/build-utils');
+        mockExecCommand = jest.fn(async () => {});
+        return {
+          __esModule: true,
+          ...real,
+          execCommand: mockExecCommand,
+        };
+      });
+
+      jest.doMock('../src/install', () => {
+        const real = jest.requireActual('../src/install');
+        mockEnsureUvProject = jest.fn(async () => ({
+          projectDir: '/mock/project',
+          pyprojectPath: '/mock/project/pyproject.toml',
+          lockPath: '/mock/project/uv.lock',
+        }));
+        mockRunUvSync = jest.fn(async () => {});
+        return {
+          __esModule: true,
+          ...real,
+          ensureUvProject: mockEnsureUvProject,
+          runUvSync: mockRunUvSync,
+        };
+      });
+
+      // Import after mocks are configured
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../src/index');
+      buildWithMocks = mod.build;
+    });
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-custom-install-default-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    // No custom install -> uv-based install should be used
+    expect(mockEnsureUvProject).toHaveBeenCalled();
+    expect(mockRunUvSync).toHaveBeenCalled();
+    // execCommand should not have been called for install or build
+    expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+});
