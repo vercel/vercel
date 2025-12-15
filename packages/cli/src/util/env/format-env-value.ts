@@ -1,17 +1,18 @@
 export function formatEnvValue(value: string | undefined): string {
   if (value == null) return '';
 
-  // JSON objects/arrays are self-delimiting, safe to leave unquoted
-  // Skip if value contains newlines (would span multiple lines in .env file)
-  if (!/[\r\n]/.test(value)) {
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && parsed !== null) {
-        return value;
-      }
-    } catch {
-      // Not valid JSON, continue with normal formatting
+  // Check if value is a valid JSON object/array
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === 'object' && parsed !== null) {
+      // JSON objects/arrays are self-delimiting, so we just need to
+      // escape newlines (to keep .env file line-based) without quoting
+      // or escaping inner quotes. This prevents double-escaping when
+      // bundlers inline values during build.
+      return value.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
     }
+  } catch {
+    // Not valid JSON, continue with normal formatting
   }
 
   const needsQuotes =
