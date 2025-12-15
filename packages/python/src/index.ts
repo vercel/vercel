@@ -71,6 +71,7 @@ export async function downloadFilesInWorkPath({
 
 export const build: BuildV3 = async ({
   workPath,
+  repoRootPath,
   files: originalFiles,
   entrypoint,
   meta = {},
@@ -323,6 +324,7 @@ export const build: BuildV3 = async ({
         workPath,
         entryDirectory,
         fsFiles,
+        repoRootPath,
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
         uvPath,
