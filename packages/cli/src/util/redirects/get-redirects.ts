@@ -6,7 +6,7 @@ export interface Redirect {
   permanent?: boolean;
   statusCode?: number;
   caseSensitive?: boolean;
-  action?: '+' | '-';
+  action?: '+' | '-' | '~';
 }
 
 export interface RedirectsPagination {
@@ -26,7 +26,7 @@ export interface GetRedirectsOptions {
   page?: number;
   perPage?: number;
   versionId?: string;
-  diff?: boolean;
+  diff?: boolean | 'only';
 }
 
 export default async function getRedirects(
@@ -47,7 +47,7 @@ export default async function getRedirects(
   }
 
   if (diff) {
-    params.set('diff', 'true');
+    params.set('diff', diff === true ? 'true' : diff);
   } else {
     params.set('per_page', perPage.toString());
 

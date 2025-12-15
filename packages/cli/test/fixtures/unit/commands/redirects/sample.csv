@@ -1,0 +1,6 @@
+source,destination,statusCode,permanent
+/old-home,/,301,true
+/blog/old-post,/blog/new-post,301,true
+/api/v1/*,/api/v2/$1,308,true
+/temp-offer,https://example.com/offer,302,false
+/case-sensitive,/new-case,307,false
