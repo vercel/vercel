@@ -24,7 +24,7 @@ export const prepareCache: PrepareCache = async ({ workPath, config }) => {
   // Only persist the Python virtualenv between builds when using the default
   // uv-managed installation flow. When custom install hooks are configured,
   // the virtualenv is expected to be managed entirely by the user, and we
-  // don't want to risk stale dependencies accumulating purely via caching.
+  // don't want to risk stale dependencies accumulating via caching.
   if (!hasCustomInstall) {
     Object.assign(cacheFiles, await glob('.vercel/python/**', workPath));
   }
