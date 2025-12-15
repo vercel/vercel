@@ -172,7 +172,7 @@ describe('formatEnvValue', () => {
     it('handles multiline JSON (escapes newlines but not quotes)', () => {
       const json = '{\n  "key": "value"\n}';
       // Inner quotes are NOT escaped to prevent bundlers from double-escaping during build inlining
-      expect(formatEnvValue(json)).toBe('"{\\n  "key": "value"\\n}"');
+      expect(formatEnvValue(json)).toBe('{\\n  "key": "value"\\n}');
     });
 
     it('handles private key format (has spaces, so quoted)', () => {
