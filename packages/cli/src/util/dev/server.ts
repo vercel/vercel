@@ -571,6 +571,21 @@ export default class DevServer {
 
     await this.validateVercelConfig(vercelConfig);
 
+    if (vercelConfig.customErrorPage) {
+      const errorPages =
+        typeof vercelConfig.customErrorPage === 'string'
+          ? [vercelConfig.customErrorPage]
+          : Object.values(vercelConfig.customErrorPage);
+
+      for (const page of errorPages) {
+        if (page && !fs.existsSync(join(this.cwd, page))) {
+          output.warn(
+            `The custom error page "${page}" was not found in "${this.cwd}". This will cause deployment to fail on Vercel.`
+          );
+        }
+      }
+    }
+
     this.projectSettings = {
       ...this.originalProjectSettings,
       ...pickOverrides(vercelConfig),

@@ -155,6 +155,27 @@ const cronsSchema = {
   },
 };
 
+const customErrorPageSchema = {
+  oneOf: [
+    { type: 'string', minLength: 1 },
+    {
+      type: 'object',
+      additionalProperties: false,
+      minProperties: 1,
+      properties: {
+        default5xx: {
+          type: 'string',
+          minLength: 1,
+        },
+        default4xx: {
+          type: 'string',
+          minLength: 1,
+        },
+      },
+    },
+  ],
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -171,6 +192,7 @@ const vercelConfigSchema = {
     functions: functionsSchema,
     images: imagesSchema,
     crons: cronsSchema,
+    customErrorPage: customErrorPageSchema,
     bunVersion: { type: 'string' },
   },
 };
