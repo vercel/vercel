@@ -200,12 +200,13 @@ export async function detectPythonEntrypoint(
 
   const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(c => !!fsFiles[c]);
   if (candidates.length > 0) {
-    const matched = await Promise.all(
-      candidates.map(async c => {
-        if (await hasAppExport(fsFiles[c])) return c;
-        return null;
-      })
-    ).then(results => results.filter(c => c !== null));
+    const matched: string[] = [];
+    for (const c of candidates) {
+      if (await hasAppExport(fsFiles[c])) {
+        matched.push(c);
+      }
+    }
+
     if (matched.length === 1) {
       debug(`Detected ${framework} entrypoint: ${matched[0]}`);
       return matched[0];
