@@ -5,8 +5,7 @@ import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import {
-  FASTAPI_CANDIDATE_ENTRYPOINTS,
-  FLASK_CANDIDATE_ENTRYPOINTS,
+  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
 import { getLatestPythonVersion } from './version';
@@ -177,10 +176,7 @@ export const startDevServer: StartDevServer = async opts => {
     rawEntrypoint
   );
   if (!entry) {
-    const searched =
-      framework === 'fastapi'
-        ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
-        : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+    const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
       message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,

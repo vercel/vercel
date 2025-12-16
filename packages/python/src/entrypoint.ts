@@ -14,6 +14,10 @@ import { getUvBinaryOrInstall } from './install';
 export const PYTHON_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
 export const PYTHON_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
 export const PYTHON_APP_CANDIDATE_REGEX = /\bapp\b/;
+export const PYTHON_CANDIDATE_ENTRYPOINTS = PYTHON_ENTRYPOINT_FILENAMES.flatMap(
+  filename =>
+    PYTHON_ENTRYPOINT_DIRS.map(dir => pathPosix.join(dir, `${filename}.py`))
+);
 
 let cachedPythonAstCheckScriptPath: string | null = null;
 
@@ -194,14 +198,7 @@ export async function detectPythonEntrypoint(
   // Otherwise treat it like a missing entrypoint and fall back to discovery.
   if (fsFiles[entry] && (await hasAppExport(fsFiles[entry]))) return entry;
 
-  const candidateEntrypoints = PYTHON_ENTRYPOINT_FILENAMES.flatMap(
-    (filename: string) =>
-      PYTHON_ENTRYPOINT_DIRS.map((dir: string) =>
-        pathPosix.join(dir, `${filename}.py`)
-      )
-  );
-
-  const candidates = candidateEntrypoints.filter(c => !!fsFiles[c]);
+  const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(c => !!fsFiles[c]);
   if (candidates.length > 0) {
     const matched = await Promise.all(
       candidates.map(async c => {
