@@ -132,5 +132,8 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
-  main();
+  main().catch(err => {
+    console.error('Error:', err);
+    process.exit(1);
+  });
 }
