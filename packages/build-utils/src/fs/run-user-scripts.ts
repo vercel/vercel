@@ -736,6 +736,9 @@ function checkIfAlreadyInstalled(
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
+// Track paths where custom install commands have already run
+const customInstallCommandPaths = new Set<string>();
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
@@ -745,13 +748,6 @@ export async function runNpmInstall(
 ): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
-    return false;
-  }
-
-  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
-    debug(
-      'Skipping dependency installation because VERCEL_INSTALL_COMPLETED is set'
-    );
     return false;
   }
 
@@ -777,6 +773,9 @@ export async function runNpmInstall(
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
+    // VERCEL_INSTALL_COMPLETED indicates install already ran for the root,
+    // so we add that path to the set to prevent duplicate installs while
+    // still allowing subdirectory installs to proceed
     const defaultInstall = args.length === 0;
     if (meta && packageJsonPath && defaultInstall) {
       const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
@@ -784,6 +783,14 @@ export async function runNpmInstall(
         packageJsonPath
       );
       if (alreadyInstalled) {
+        return false;
+      }
+      if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+        debug(
+          `Skipping dependency installation for ${packageJsonPath} because VERCEL_INSTALL_COMPLETED is set`
+        );
+        runNpmInstallSet.add(packageJsonPath);
+        meta.runNpmInstallSet = runNpmInstallSet;
         return false;
       }
       meta.runNpmInstallSet = runNpmInstallSet;
@@ -1364,14 +1371,26 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
   projectCreatedAt?: number;
 }): Promise<boolean> {
-  // Skip if install was already completed (e.g., for vercel.ts config compilation)
-  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+  const normalizedPath = path.normalize(destPath);
+
+  if (customInstallCommandPaths.has(normalizedPath)) {
     debug(
-      'Skipping custom install command because VERCEL_INSTALL_COMPLETED is set'
+      `Skipping custom install command for ${normalizedPath} because it was already run`
     );
     return false;
   }
 
+  // Mark as completed early if VERCEL_INSTALL_COMPLETED is set (e.g., for vercel.ts config compilation)
+  // This prevents re-running install for the same path while allowing subdirectory installs
+  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+    debug(
+      `Skipping custom install command for ${normalizedPath} because VERCEL_INSTALL_COMPLETED is set`
+    );
+    customInstallCommandPaths.add(normalizedPath);
+    return false;
+  }
+
+  customInstallCommandPaths.add(normalizedPath);
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const {
     cliType,

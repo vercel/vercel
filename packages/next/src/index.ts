@@ -16,7 +16,6 @@ import {
   getScriptName,
   glob,
   runNpmInstall,
-  runCustomInstallCommand,
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
@@ -379,11 +378,13 @@ export const build: BuildV2 = async buildOptions => {
       })
       .trace(async () => {
         if (typeof trimmedInstallCommand === 'string') {
-          await runCustomInstallCommand({
-            destPath: entryPath,
-            installCommand: trimmedInstallCommand,
-            spawnOpts,
-            projectCreatedAt: config.projectSettings?.createdAt,
+          console.log(
+            `Running "install" command: \`${trimmedInstallCommand}\`...`
+          );
+
+          await execCommand(trimmedInstallCommand, {
+            ...spawnOpts,
+            cwd: entryPath,
           });
         } else {
           await runNpmInstall(
