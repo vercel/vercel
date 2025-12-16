@@ -761,6 +761,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
+        case 'tunnel':
+          telemetry.trackCliCommandTunnel(userSuppliedSubCommand);
+          func = require('./commands/tunnel').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
