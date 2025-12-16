@@ -9,7 +9,6 @@ from entrypoint import has_app_export
 
 
 class TestHasAppExport(unittest.TestCase):
-    """Tests for the has_app_export function."""
 
     # === POSITIVE CASES: Should detect app export ===
 
