@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.24
+
+### Patch Changes
+
+- update to public ([#14480](https://github.com/vercel/vercel/pull/14480))
+
 ## 0.0.23
 
 ### Patch Changes

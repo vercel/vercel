@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.17
+
+### Patch Changes
+
+- Add support for `customErrorPage` configuration in `vercel.json` to customize pages for platform errors. ([#14466](https://github.com/vercel/vercel/pull/14466))
+
 ## 17.2.16
 
 ### Patch Changes
