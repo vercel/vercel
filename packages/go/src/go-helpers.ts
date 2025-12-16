@@ -18,6 +18,7 @@ import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
+import { getWriteableDirectory } from '@vercel/build-utils';
 
 const streamPipeline = promisify(pipeline);
 
@@ -283,7 +284,15 @@ export async function createGo({
       await remove(goCacheDir);
       await mkdirp(dirname(goCacheDir));
       await symlink(goDir, goCacheDir);
+      env.GOMODCACHE = join(goDir, 'pkg', 'mod');
       goDir = goCacheDir;
+    } else if (goDir === goCacheDir) {
+      const tmpGoModCacheBase = await getWriteableDirectory();
+      const tmpGoModCache = join(tmpGoModCacheBase, 'pkg');
+      await mkdirp(join(goDir, 'pkg', 'mod'));
+      await symlink(join(goCacheDir, 'pkg', 'mod'), tmpGoModCache);
+      env.GOMODCACHE = tmpGoModCache;
+      debug(`Set GOMODCACHE to ${env.GOMODCACHE}`);
     }
     env.GOROOT = goDir || undefined;
     env.PATH = goDir ? `${join(goDir, 'bin')}${delimiter}${PATH}` : PATH;
