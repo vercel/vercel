@@ -286,7 +286,7 @@ export async function createGo({
       await symlink(goDir, goCacheDir);
       env.GOMODCACHE = join(goDir, 'pkg', 'mod');
       goDir = goCacheDir;
-    } else if (goDir === goCacheDir) {
+    } else if (platform !== 'win32' && goDir === goCacheDir) {
       const tmpGoModCacheBase = await getWriteableDirectory();
       const tmpGoModCache = join(tmpGoModCacheBase, 'pkg');
       await mkdirp(join(goDir, 'pkg', 'mod'));
