@@ -8,7 +8,8 @@
     "dist",
     "vc_init.py",
     "vc_init_dev_asgi.py",
-    "vc_init_dev_wsgi.py"
+    "vc_init_dev_wsgi.py",
+    "entrypoint.py"
   ],
   "repository": {
     "type": "git",
@@ -18,7 +19,8 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test test/unit.test.ts",
+    "test-unit": "pnpm test test/unit.test.ts && pnpm test-python",
+    "test-python": "node ./scripts/test-python.js",
     "test-e2e": "pnpm test test/integration-*",
     "type-check": "tsc --noEmit"
   },
