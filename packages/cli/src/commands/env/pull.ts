@@ -15,7 +15,6 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
-import { formatEnvValue } from '../../util/env/format-env-value';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
@@ -204,7 +203,7 @@ export async function envPullCommandLogic(
     Object.keys(records)
       .sort()
       .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}=${formatEnvValue(records[key])}`)
+      .map(key => `${key}="${escapeValue(records[key])}"`)
       .join('\n') +
     '\n';
 
@@ -235,4 +234,12 @@ export async function envPullCommandLogic(
       emoji('success')
     )}\n`
   );
+}
+
+function escapeValue(value: string | undefined) {
+  return value
+    ? value
+        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
+        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
+    : '';
 }
