@@ -1,7 +1,7 @@
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import which from 'which';
 import {
   FileFsRef,
@@ -10,6 +10,7 @@ import {
   debug,
   glob,
   readConfigFile,
+  traverseUpDirectories,
 } from '@vercel/build-utils';
 import { getVenvPythonBin, runUvCommand, findDir } from './utils';
 
@@ -84,7 +85,8 @@ export async function runUvSync({
   projectDir: string;
   locked: boolean;
 }) {
-  const args = ['sync', '--active', '--no-dev'];
+  // Use copy mode so installed dependencies are real files in the venv.
+  const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
   if (locked) {
     args.push('--locked');
   }
@@ -269,6 +271,7 @@ interface EnsureUvProjectParams {
   workPath: string;
   entryDirectory: string;
   fsFiles: Record<string, any>;
+  repoRootPath?: string;
   pythonPath: string;
   pipPath: string;
   uvPath: string;
@@ -363,10 +366,31 @@ async function filterMissingRuntimeDependencies({
   });
 }
 
+function findUvLockUpwards(
+  startDir: string,
+  repoRootPath?: string
+): string | null {
+  // In uv workspaces, `uv.lock` is typically written at the workspace root, not
+  // necessarily next to the member project being synced. When Vercel builds from
+  // a subdirectory (rootDirectory), we still want to honor that workspace lock.
+  const start = resolve(startDir);
+  const base = repoRootPath ? resolve(repoRootPath) : undefined;
+
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const lockPath = join(dir, 'uv.lock');
+    const pyprojectPath = join(dir, 'pyproject.toml');
+    if (fs.existsSync(lockPath) && fs.existsSync(pyprojectPath)) {
+      return lockPath;
+    }
+  }
+  return null;
+}
+
 export async function ensureUvProject({
   workPath,
   entryDirectory,
   fsFiles,
+  repoRootPath,
   pythonPath,
   pipPath,
   uvPath,
@@ -383,6 +407,7 @@ export async function ensureUvProject({
 
   let projectDir: string;
   let pyprojectPath: string;
+  let lockPath: string | null = null;
 
   if (manifestType === 'uv.lock') {
     if (!manifestPath) {
@@ -395,6 +420,7 @@ export async function ensureUvProject({
         `Expected "pyproject.toml" next to "uv.lock" in "${projectDir}"`
       );
     }
+    lockPath = manifestPath;
     console.log('Installing required dependencies from uv.lock...');
   } else if (manifestType === 'pyproject.toml') {
     if (!manifestPath) {
@@ -405,8 +431,14 @@ export async function ensureUvProject({
     projectDir = dirname(manifestPath);
     pyprojectPath = manifestPath;
     console.log('Installing required dependencies from pyproject.toml...');
-    const lockPath = join(projectDir, 'uv.lock');
-    if (!fs.existsSync(lockPath)) {
+
+    // If a workspace-root uv.lock exists (common in monorepos), use it as-is.
+    const workspaceLock = findUvLockUpwards(projectDir, repoRootPath);
+    if (workspaceLock) {
+      lockPath = workspaceLock;
+    } else {
+      // Otherwise, generate a lock. In uv workspaces, this may still write
+      // the lockfile at the workspace root, not necessarily in projectDir.
       await uvLock({ projectDir, uvPath });
     }
   } else if (manifestType === 'Pipfile.lock' || manifestType === 'Pipfile') {
@@ -493,14 +525,15 @@ export async function ensureUvProject({
     }
   }
 
-  const lockPath = join(projectDir, 'uv.lock');
-  if (!fs.existsSync(lockPath)) {
-    throw new Error(
-      `Expected "uv.lock" to exist in "${projectDir}" after preparing uv project`
-    );
-  }
+  // Re-resolve lockfile in case earlier operations (uv add/lock) wrote it at a
+  // workspace root directory rather than `projectDir`.
+  const resolvedLockPath =
+    lockPath && fs.existsSync(lockPath)
+      ? lockPath
+      : findUvLockUpwards(projectDir, repoRootPath) ||
+        join(projectDir, 'uv.lock');
 
-  return { projectDir, pyprojectPath, lockPath };
+  return { projectDir, pyprojectPath, lockPath: resolvedLockPath };
 }
 
 async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
