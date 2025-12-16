@@ -11,7 +11,10 @@ import readJSONFile from './read-json-file';
 import type { VercelConfig } from './dev/types';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../output-manager';
-import { compileVercelConfig } from './compile-vercel-config';
+import {
+  compileVercelConfig,
+  DEFAULT_VERCEL_CONFIG_FILENAME,
+} from './compile-vercel-config';
 
 let config: VercelConfig;
 
@@ -80,7 +83,7 @@ export default async function getConfig(
         output.debug(`Found config in file "${compileResult.configPath}"`);
         config = localConfig;
         config[fileNameSymbol] = compileResult.wasCompiled
-          ? compileResult.sourceFile || 'vercel.ts'
+          ? compileResult.sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME
           : fileName;
         return config;
       }
