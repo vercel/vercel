@@ -1003,17 +1003,20 @@ importers:
         version: 3.22.4
     devDependencies:
       '@types/node':
-        specifier: 18.0.0
-        version: 18.0.0
+        specifier: 14.18.33
+        version: 14.18.33
       tsx:
         specifier: 4.7.0
         version: 4.7.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
+      vite:
+        specifier: ^5.1.6
+        version: 5.1.8(@types/node@14.18.33)
       vitest:
-        specifier: 2.0.3
-        version: 2.0.3(@types/node@18.0.0)
+        specifier: ^2.0.1
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/detect-agent:
     devDependencies:
@@ -19931,27 +19934,6 @@ packages:
       - terser
     dev: true
 
-  /vite-node@2.0.3(@types/node@18.0.0):
-    resolution: {integrity: sha512-14jzwMx7XTcMB+9BhGQyoEAmSl0eOr3nrnn+Z12WNERtOvLN+d2scbRUvyni05rT3997Bg+rZb47NyP4IQPKXg==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    hasBin: true
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.3
-      pathe: 1.1.2
-      tinyrainbow: 1.2.0
-      vite: 5.1.8(@types/node@18.0.0)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-    dev: true
-
   /vite-node@2.1.4(@types/node@16.18.11):
     resolution: {integrity: sha512-kqa9v+oi4HwkG6g8ufRnb5AeplcRw8jUF6/7/Qz1qRQOXHImG8YnLbB+LLszENwFnoBl9xIf9nVdCFzNd7GQEg==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -20465,61 +20447,6 @@ packages:
       tinyrainbow: 1.2.0
       vite: 5.1.8(@types/node@14.18.33)
       vite-node: 2.0.3(@types/node@14.18.33)
-      why-is-node-running: 2.3.0
-    transitivePeerDependencies:
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-    dev: true
-
-  /vitest@2.0.3(@types/node@18.0.0):
-    resolution: {integrity: sha512-o3HRvU93q6qZK4rI2JrhKyZMMuxg/JRt30E6qeQs6ueaiz5hr1cPj+Sk2kATgQzMMqsa2DiNI0TIK++1ULx8Jw==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    hasBin: true
-    peerDependencies:
-      '@edge-runtime/vm': '*'
-      '@types/node': ^18.0.0 || >=20.0.0
-      '@vitest/browser': 2.0.3
-      '@vitest/ui': 2.0.3
-      happy-dom: '*'
-      jsdom: '*'
-    peerDependenciesMeta:
-      '@edge-runtime/vm':
-        optional: true
-      '@types/node':
-        optional: true
-      '@vitest/browser':
-        optional: true
-      '@vitest/ui':
-        optional: true
-      happy-dom:
-        optional: true
-      jsdom:
-        optional: true
-    dependencies:
-      '@ampproject/remapping': 2.3.0
-      '@types/node': 18.0.0
-      '@vitest/expect': 2.0.3
-      '@vitest/pretty-format': 2.1.9
-      '@vitest/runner': 2.0.3
-      '@vitest/snapshot': 2.0.3
-      '@vitest/spy': 2.0.3
-      '@vitest/utils': 2.0.3
-      chai: 5.2.0
-      debug: 4.4.3
-      execa: 8.0.1
-      magic-string: 0.30.21
-      pathe: 1.1.2
-      std-env: 3.9.0
-      tinybench: 2.9.0
-      tinypool: 1.0.2
-      tinyrainbow: 1.2.0
-      vite: 5.1.8(@types/node@18.0.0)
-      vite-node: 2.0.3(@types/node@18.0.0)
       why-is-node-running: 2.3.0
     transitivePeerDependencies:
       - less
