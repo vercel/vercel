@@ -3,11 +3,11 @@ import { packageName } from '../../util/pkg-name';
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Create a new secret in Vercel Vault',
+  description: 'Add key-value pairs to Vercel Vault',
   arguments: [
     {
-      name: 'name',
-      required: true,
+      name: 'key value',
+      required: false,
     },
   ],
   options: [
@@ -29,7 +29,7 @@ export const addSubcommand = {
     },
     {
       name: 'global',
-      description: 'Create as a team-level (global) secret',
+      description: 'Store at team level (global)',
       shorthand: 'g',
       type: Boolean,
       deprecated: false,
@@ -37,16 +37,18 @@ export const addSubcommand = {
   ],
   examples: [
     {
-      name: 'Create a project-specific secret',
-      value: [`${packageName} vault add database-url`],
+      name: 'Add secrets interactively (prompts for key-value pairs)',
+      value: [`${packageName} vault add --global`],
     },
     {
-      name: 'Create a global (team-level) secret',
-      value: [`${packageName} vault add shared-api-key --global`],
+      name: 'Add a single secret',
+      value: [`${packageName} vault add DATABASE_HOST localhost --global`],
     },
     {
-      name: 'Create a secret for a specific environment',
-      value: [`${packageName} vault add api-key --environment preview`],
+      name: 'Add multiple secrets at once',
+      value: [
+        `${packageName} vault add DATABASE_HOST localhost DATABASE_PORT 5432 --global`,
+      ],
     },
   ],
 } as const;
@@ -54,11 +56,12 @@ export const addSubcommand = {
 export const updateSubcommand = {
   name: 'update',
   aliases: [],
-  description: 'Update (patch) an existing secret in Vercel Vault',
+  description:
+    'Update key-value pairs in Vercel Vault (merges with existing keys)',
   arguments: [
     {
-      name: 'name',
-      required: true,
+      name: 'key value',
+      required: false,
     },
   ],
   options: [
@@ -80,7 +83,7 @@ export const updateSubcommand = {
     },
     {
       name: 'global',
-      description: 'Update a team-level (global) secret',
+      description: 'Update at team level (global)',
       shorthand: 'g',
       type: Boolean,
       deprecated: false,
@@ -88,16 +91,16 @@ export const updateSubcommand = {
   ],
   examples: [
     {
-      name: 'Update a project-specific secret',
-      value: [`${packageName} vault update database-url`],
+      name: 'Update secrets interactively',
+      value: [`${packageName} vault update --global`],
     },
     {
-      name: 'Update a global (team-level) secret',
-      value: [`${packageName} vault update shared-api-key --global`],
+      name: 'Update a single secret',
+      value: [`${packageName} vault update DATABASE_HOST newhost.com --global`],
     },
     {
-      name: 'Rotate keys in a secret for preview environment',
-      value: [`${packageName} vault update api-config --environment preview`],
+      name: 'Update multiple secrets at once',
+      value: [`${packageName} vault update API_KEY xyz API_TOKEN abc --global`],
     },
   ],
 } as const;
