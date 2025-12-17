@@ -2,3 +2,6 @@
 dist
 test/symlinks-out
 test/symlinks.zip
+
+scripts/**/__pycache__
+scripts/**/*.pyc
