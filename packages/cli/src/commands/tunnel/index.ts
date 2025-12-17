@@ -8,6 +8,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { TunnelTelemetryClient } from '../../util/telemetry/commands/tunnel';
 import { connect } from './connect';
+import { getLinkedProject } from '../../util/projects/link';
 
 export default async function main(client: Client) {
   const { telemetryEventStore } = client;
@@ -56,10 +57,28 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  const link = await getLinkedProject(client);
+
+  if (link.status === 'not_linked') {
+    output.error(
+      'No project linked. Run `vercel link` to link a project to this directory.'
+    );
+    return 1;
+  }
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  const { project, org } = link;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
   try {
     // TODO: make a deployment then tunnel to it
     const deploymentId = 'foobar';
-    output.print(`Starting tunnel with port ${port} on prod: ${prod}\n`);
+    output.print(
+      `Starting tunnel for project ${project.name} with port ${port} on prod: ${prod ?? false}\n`
+    );
     connect(deploymentId, '127.0.0.1', port);
     process.on('SIGINT', () => {
       output.log('\n[tunnel] Shutting down...');
