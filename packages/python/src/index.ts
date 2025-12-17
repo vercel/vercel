@@ -36,7 +36,6 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
-import { isPythonEntrypoint } from './entrypoint';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -471,5 +470,3 @@ function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
-
-export { isPythonEntrypoint };
