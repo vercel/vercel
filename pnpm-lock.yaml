@@ -2422,6 +2422,19 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
 
+  packages/vault:
+    dependencies:
+      '@vercel/oidc':
+        specifier: workspace:*
+        version: link:../oidc
+    devDependencies:
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@types/node@14.18.33)
+
 packages:
 
   /@alex_neo/jest-expect-message@1.0.5:
@@ -9976,7 +9989,7 @@ packages:
       '@vitest/spy': 2.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.21
-      vite: 5.1.8(@types/node@18.0.0)
+      vite: 5.1.8(@types/node@22.5.0)
     dev: true
 
   /@vitest/pretty-format@2.0.3:
@@ -13915,7 +13928,6 @@ packages:
     resolution: {integrity: sha512-sNsqf7XKQ38IawiVGPOoAlqZo1DMrO7TU+ZcZwi7yLl7/7S0JwmoBMKz/IkUPhSoXM0Ng3vT0yB1iCe5XavDeQ==}
     dependencies:
       resolve-pkg-maps: 1.0.0
-    dev: false
 
   /get-tsconfig@4.13.0:
     resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
@@ -20271,9 +20283,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
@@ -20325,9 +20337,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
@@ -20379,9 +20391,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
