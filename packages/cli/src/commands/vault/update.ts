@@ -130,23 +130,24 @@ export default async function update(client: Client, argv: string[]) {
     `Updating ${keyCount} secret${keyCount === 1 ? '' : 's'} in Vault...`
   );
 
-  // Make API request - use "secrets" as the path for all KV pairs
-  const vaultPath = 'secrets';
   const envParam = environment ? environment.toUpperCase() : 'PRODUCTION';
   const queryParams = new URLSearchParams();
   queryParams.set('projectId', projectId);
   queryParams.set('environment', envParam);
 
+  // Make separate API request for each key (path = key name)
   try {
-    const url = `/v1/vault/${teamId}/data/${vaultPath}?${queryParams.toString()}`;
+    for (const [key, value] of Object.entries(patchData)) {
+      const url = `/v1/vault/${teamId}/data/${key}?${queryParams.toString()}`;
 
-    output.debug(`PATCH ${url}`);
-    output.debug(`Body: ${JSON.stringify({ data: patchData })}`);
+      output.debug(`PATCH ${url}`);
+      output.debug(`Body: ${JSON.stringify({ data: { value } })}`);
 
-    await client.fetch(url, {
-      method: 'PATCH',
-      body: { data: patchData },
-    });
+      await client.fetch(url, {
+        method: 'PATCH',
+        body: { data: { value } },
+      });
+    }
 
     output.log('');
     output.success(
