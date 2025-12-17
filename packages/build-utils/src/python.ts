@@ -58,6 +58,16 @@ export async function isPythonEntrypoint(
     const fsPath = (file as FileFsRef).fsPath;
     if (!fsPath) return false;
 
+    // skip AST parsing if file doesn't contain app or handler
+    const content = await fs.promises.readFile(fsPath, 'utf-8');
+    if (
+      !content.includes('app') &&
+      !content.includes('handler') &&
+      !content.includes('Handler')
+    ) {
+      return false;
+    }
+
     const result = await runStdlibPyScript({
       scriptName: 'ast_parser',
       args: [fsPath],
