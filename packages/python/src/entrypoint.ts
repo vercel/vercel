@@ -180,5 +180,3 @@ export async function detectPythonEntrypoint(
   if (entrypoint) return entrypoint;
   return await getPyprojectEntrypoint(workPath);
 }
-
-export { isPythonEntrypoint } from '@vercel/build-utils';
