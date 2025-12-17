@@ -7,6 +7,7 @@ import { tunnelCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { TunnelTelemetryClient } from '../../util/telemetry/commands/tunnel';
+import { connect } from './connect';
 
 export default async function main(client: Client) {
   const { telemetryEventStore } = client;
@@ -56,7 +57,19 @@ export default async function main(client: Client) {
   }
 
   try {
+    // TODO: make a deployment then tunnel to it
+    const deploymentId = 'foobar';
     output.print(`Starting tunnel with port ${port} on prod: ${prod}\n`);
+    connect(deploymentId, '127.0.0.1', port);
+    process.on('SIGINT', () => {
+      output.log('\n[tunnel] Shutting down...');
+      process.exit(0);
+    });
+    process.on('SIGTERM', () => {
+      output.log('[tunnel] Received SIGTERM, shutting down...');
+      process.exit(0);
+    });
+    output.log('[tunnel] Press Ctrl+C to stop');
   } catch (err) {
     output.prettyError(err);
     return 1;
