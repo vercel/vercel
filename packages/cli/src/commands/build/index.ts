@@ -547,6 +547,7 @@ async function doBuild(
       projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
+      workPath,
     });
 
     if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
