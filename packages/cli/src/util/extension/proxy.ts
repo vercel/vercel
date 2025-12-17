@@ -32,6 +32,7 @@ export function createProxy(client: Client): Server {
       // the response body but retains the header, which would cause the downstream
       // client to attempt decompression on an already-decompressed stream
       delete outgoingHeaders['content-encoding'];
+      delete outgoingHeaders['content-length'];
 
       mergeIntoServerResponse(outgoingHeaders, res);
       fetchRes.body.pipe(res);
