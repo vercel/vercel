@@ -460,12 +460,12 @@ exports.build = ({ files, workPath }) => {
 };
 ```
 
-### `getWriteableDirectory()`
+### `getWritableDirectory()`
 
-Signature: `getWriteableDirectory(): String`
+Signature: `getWritableDirectory(): String`
 
 ```typescript
-import { getWriteableDirectory } from '@vercel/build-utils';
+import { getWritableDirectory } from '@vercel/build-utils';
 ```
 
 In some occasions, you might want to write to a temporary directory.
