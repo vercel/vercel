@@ -1,5 +1,11 @@
 # vercel
 
+## 50.1.1
+
+### Patch Changes
+
+- Revert env pull conditional quoting changes ([#14485](https://github.com/vercel/vercel/pull/14485))
+
 ## 50.1.0
 
 ### Minor Changes
