@@ -1,5 +1,18 @@
 # @vercel/express
 
+## 0.1.20
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d)]:
+  - @vercel/cervel@0.0.7
+
 ## 0.1.18
 
 ### Patch Changes

@@ -1,9 +1,9 @@
-export default function DeploymentsPage(props) {
+export default async function DeploymentsPage(props) {
   return (
     <>
       <p>
         hello from app/dashboard/deployments/[id]/settings. ID is:{' '}
-        {props.params.id}
+        {(await props.params).id}
       </p>
     </>
   );

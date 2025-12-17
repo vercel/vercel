@@ -1,5 +1,22 @@
 # @vercel/backends
 
+## 0.0.17
+
+### Patch Changes
+
+- Upgrade rolldown ([#14446](https://github.com/vercel/vercel/pull/14446))
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d)]:
+  - @vercel/cervel@0.0.7
+  - @vercel/introspection@0.0.7
+
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`d6d8776c54836244dc8e1c0fc3b1f884fced98a8`](https://github.com/vercel/vercel/commit/d6d8776c54836244dc8e1c0fc3b1f884fced98a8)]:
+  - @vercel/introspection@0.0.7
+
 ## 0.0.15
 
 ### Patch Changes
