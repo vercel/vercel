@@ -736,8 +736,8 @@ function checkIfAlreadyInstalled(
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
-// Track paths where custom install commands have already run
-const customInstallCommandPaths = new Set<string>();
+// Track paths where custom install commands have already run (module-level since no meta object)
+let customInstallCommandSet: Set<string> | undefined;
 
 export async function runNpmInstall(
   destPath: string,
@@ -1373,24 +1373,28 @@ export async function runCustomInstallCommand({
 }): Promise<boolean> {
   const normalizedPath = path.normalize(destPath);
 
-  if (customInstallCommandPaths.has(normalizedPath)) {
+  const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
+    customInstallCommandSet,
+    normalizedPath
+  );
+  customInstallCommandSet = runNpmInstallSet;
+
+  if (alreadyInstalled) {
     debug(
       `Skipping custom install command for ${normalizedPath} because it was already run`
     );
     return false;
   }
 
-  // Mark as completed early if VERCEL_INSTALL_COMPLETED is set (e.g., for vercel.ts config compilation)
-  // This prevents re-running install for the same path while allowing subdirectory installs
+  // Skip if VERCEL_INSTALL_COMPLETED is set (e.g., for vercel.ts config compilation)
+  // Path is already marked as installed above, allowing subdirectory installs to proceed
   if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
     debug(
       `Skipping custom install command for ${normalizedPath} because VERCEL_INSTALL_COMPLETED is set`
     );
-    customInstallCommandPaths.add(normalizedPath);
     return false;
   }
 
-  customInstallCommandPaths.add(normalizedPath);
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const {
     cliType,
