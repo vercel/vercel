@@ -1,5 +1,11 @@
 # vercel
 
+## 50.1.2
+
+### Patch Changes
+
+- Remove `content-encoding` response header for CLI extensions proxy ([#14489](https://github.com/vercel/vercel/pull/14489))
+
 ## 50.1.1
 
 ### Patch Changes
