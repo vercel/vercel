@@ -764,17 +764,6 @@ function checkUnusedFunctions(
     }
   }
 
-  if (unusedFunctions.size) {
-    const [fnKey] = Array.from(unusedFunctions);
-
-    return {
-      code: 'unused_function',
-      message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
-      action: 'Learn More',
-      link: 'https://vercel.link/unmatched-function-pattern',
-    };
-  }
-
   return null;
 }
 
