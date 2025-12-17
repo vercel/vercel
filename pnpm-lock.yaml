@@ -583,8 +583,8 @@ importers:
         specifier: 0.7.30
         version: 0.7.30
       '@types/node':
-        specifier: 18.0.0
-        version: 18.0.0
+        specifier: 22.5.0
+        version: 22.5.0
       '@types/node-fetch':
         specifier: 2.5.10
         version: 2.5.10
@@ -857,7 +857,7 @@ importers:
         version: 1.2.2
       ts-node:
         specifier: 10.9.1
-        version: 10.9.1(@swc/core@1.2.218)(@types/node@18.0.0)(typescript@4.9.5)
+        version: 10.9.1(@swc/core@1.2.218)(@types/node@22.5.0)(typescript@4.9.5)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -866,7 +866,7 @@ importers:
         version: 2.1.0
       vite:
         specifier: ^5.1.6
-        version: 5.1.8(@types/node@18.0.0)
+        version: 5.1.8(@types/node@22.5.0)
       vitest:
         specifier: ^2.1.3
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
@@ -1884,7 +1884,7 @@ importers:
         version: 12.0.0
       ts-node:
         specifier: 10.9.1
-        version: 10.9.1(@swc/core@1.2.218)(@types/node@18.0.0)(typescript@4.9.5)
+        version: 10.9.1(@swc/core@1.2.218)(@types/node@22.5.0)(typescript@4.9.5)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -8730,7 +8730,7 @@ packages:
   /@types/node-fetch@2.5.4:
     resolution: {integrity: sha512-Oz6id++2qAOFuOlE1j0ouk1dzl3mmI1+qINPNBhi9nt/gVOz0G+13Ao6qjhdF0Ys+eOkhu6JnFmt38bR3H0POQ==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/node-fetch@2.5.8:
@@ -8757,9 +8757,6 @@ packages:
     resolution: {integrity: sha512-ia7V9a2FnhUFfetng4/sRPBMTwHZUkPFY736rb1cg9AgG7MZdR97q7/nLR9om+sq5f1la9C857E0l/nrI0RiFQ==}
     dev: true
 
-  /@types/node@18.0.0:
-    resolution: {integrity: sha512-cHlGmko4gWLVI27cGJntjs/Sj8th9aYwplmZFwmmgYQQvL5NUsgVJG7OddLvNfLqYS31KFN0s3qlaD9qCaxACA==}
-
   /@types/node@18.19.125:
     resolution: {integrity: sha512-4TWNu0IxTQcszliYdW2mxrVvhHeERUeDCUwVuvQFn9JCU02kxrUDs8v52yOazPo7wLHKgqEd2FKxlSN6m8Deqg==}
     dependencies:
@@ -8770,12 +8767,6 @@ packages:
     resolution: {integrity: sha512-/jrvh5h6NXhEauFFexRin69nA0uHJ5gwk4iDivp/DeoEua3uwCUto6PC86IpRITBOs4+6i2I56K5x5b6WYGXHA==}
     dependencies:
       undici-types: 6.19.8
-    dev: true
-
-  /@types/node@22.15.8:
-    resolution: {integrity: sha512-VINDWfc4C3DGAa1J+riYRHjzt+IFj5eRaEl768ze7ZqXcjyN/4WHxPLAWMLTwmODpPvFyzuMTAT6A4RMOHlg5g==}
-    dependencies:
-      undici-types: 6.21.0
     dev: true
 
   /@types/node@22.5.0:
@@ -9976,7 +9967,7 @@ packages:
       '@vitest/spy': 2.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.21
-      vite: 5.1.8(@types/node@18.0.0)
+      vite: 5.1.8(@types/node@22.5.0)
     dev: true
 
   /@vitest/pretty-format@2.0.3:
@@ -13915,7 +13906,6 @@ packages:
     resolution: {integrity: sha512-sNsqf7XKQ38IawiVGPOoAlqZo1DMrO7TU+ZcZwi7yLl7/7S0JwmoBMKz/IkUPhSoXM0Ng3vT0yB1iCe5XavDeQ==}
     dependencies:
       resolve-pkg-maps: 1.0.0
-    dev: false
 
   /get-tsconfig@4.13.0:
     resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
@@ -19215,7 +19205,7 @@ packages:
       code-block-writer: 10.1.1
     dev: false
 
-  /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@18.0.0)(typescript@4.9.5):
+  /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@22.5.0)(typescript@4.9.5):
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
     peerDependencies:
@@ -19235,7 +19225,7 @@ packages:
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 18.0.0
+      '@types/node': 22.5.0
       acorn: 8.14.1
       acorn-walk: 8.3.4
       arg: 4.1.3
@@ -19688,10 +19678,6 @@ packages:
   /undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
 
-  /undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
-    dev: true
-
   /undici-types@7.14.0:
     resolution: {integrity: sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA==}
     dev: true
@@ -20072,42 +20058,6 @@ packages:
         optional: true
     dependencies:
       '@types/node': 16.18.119
-      esbuild: 0.19.12
-      postcss: 8.5.6
-      rollup: 4.52.5
-    optionalDependencies:
-      fsevents: 2.3.3
-    dev: true
-
-  /vite@5.1.8(@types/node@18.0.0):
-    resolution: {integrity: sha512-mB8ToUuSmzODSpENgvpFk2fTiU/YQ1tmcVJJ4WZbq4fPdGJkFNVcmVL5k7iDug6xzWjjuGDKAuSievIsD6H7Xw==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^18.0.0 || >=20.0.0
-      less: '*'
-      lightningcss: ^1.21.0
-      sass: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.4.0
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-    dependencies:
-      '@types/node': 18.0.0
       esbuild: 0.19.12
       postcss: 8.5.6
       rollup: 4.52.5
