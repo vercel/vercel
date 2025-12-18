@@ -56,7 +56,6 @@ export default async function getConfig(
   const nowFilePath = path.resolve(localPath, 'now.json');
 
   // Try with `vercel.json` or `now.json` in the same directory
-  // Note: vercel.ts compilation is handled by the build command
   const [vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<VercelConfig>(vercelFilePath),
     readJSONFile<VercelConfig>(nowFilePath),
