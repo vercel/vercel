@@ -1,3 +1,5 @@
+import { basename, join } from 'node:path';
+import { ensureDir } from 'fs-extra';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
@@ -8,15 +10,20 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { TunnelTelemetryClient } from '../../util/telemetry/commands/tunnel';
 import { connect } from './connect';
-import { getLinkedProject } from '../../util/projects/link';
+import { ensureLink } from '../../util/link/ensure-link';
 import stamp from '../../util/output/stamp';
-import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
-import { determineAgent } from '@vercel/detect-agent';
 import createDeploy from '../../util/deploy/create-deploy';
 import Now, { type CreateOptions } from '../../util';
 import parseTarget from '../../util/parse-target';
 
 export default async function main(client: Client) {
+  const defaultProjectName = basename(client.cwd);
+  const newCwd = join(client.cwd, '.vercel', 'tunnel');
+  await ensureDir(newCwd);
+  client.cwd = newCwd;
+  client.localConfig = {
+    routes: [{ src: '/(.*)', dest: '/_tunnel/$1' }],
+  };
   const { telemetryEventStore } = client;
   const telemetry = new TunnelTelemetryClient({
     opts: {
@@ -63,34 +70,28 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const link = await getLinkedProject(client);
+  const autoConfirm = false; //parsedArguments.flags['--yes'];
 
-  if (link.status === 'not_linked') {
-    output.error(
-      'No project linked. Run `vercel link` to link a project to this directory.'
-    );
-    return 1;
-  }
-
-  if (link.status === 'error') {
-    return link.exitCode;
+  const link = await ensureLink('deploy', client, client.cwd, {
+    autoConfirm,
+    setupMsg: 'Set up and deploy',
+    projectName: defaultProjectName,
+  });
+  if (typeof link === 'number') {
+    return link;
   }
 
   const { project, org } = link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const contextName = org.slug;
 
-  console.log('client.localConfig is', client.localConfig);
-
   try {
     // TODO: make a deployment then tunnel to it
-    const vercelJson = {
-      routes: [{ src: '/(.*)', dest: '/_tunnel/$1' }],
-    };
+
     output.print(
       `Starting tunnel for project ${project.name} with port ${port} on prod: ${prod ?? false}\n`
     );
-    const { isAgent } = await determineAgent();
+
     const noWait = true;
     const deployStamp = stamp();
     const now = new Now({
@@ -103,7 +104,7 @@ export default async function main(client: Client) {
       build: { env: {} },
       quiet: false, // TODO: should this be true?
       wantsPublic: false,
-      nowConfig: client.localConfig || {}, // TODO: vercel json here?
+      nowConfig: client.localConfig,
       //regions: client.localConfig.regions,
       meta: {},
       //gitMetadata,
@@ -112,7 +113,7 @@ export default async function main(client: Client) {
         flagName: 'target',
         flags: parsedArgs.flags,
       }),
-      skipAutoDetectionConfirmation: false, // TODO: `--yes` flag?
+      skipAutoDetectionConfirmation: autoConfirm,
       noWait,
       //autoAssignCustomDomains,
     };
@@ -125,7 +126,7 @@ export default async function main(client: Client) {
       org,
       !project
     );
-    printDeploymentStatus(deployment, deployStamp, noWait, isAgent);
+    //console.log('[debug] deployment is', deployment.url);
     connect(deployment.id, '127.0.0.1', port);
     process.on('SIGINT', () => {
       output.log('\n[tunnel] Shutting down...');
