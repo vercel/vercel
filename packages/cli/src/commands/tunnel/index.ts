@@ -100,7 +100,7 @@ export default async function main(client: Client) {
       name: project.name,
       env: {},
       build: { env: {} },
-      quiet: true, // Does this actually do anything?
+      quiet: false,
       wantsPublic: false,
       nowConfig: localConfig,
       //regions: localConfig.regions,
@@ -124,16 +124,23 @@ export default async function main(client: Client) {
       org,
       !project
     );
-    connect(deployment.id, '127.0.0.1', port); // TODO: should we also ask for local ip?
+
+    // Use the client's auth token as the OIDC token for tunnel authentication
+    const oidcToken = client.authConfig.token;
+    if (!oidcToken) {
+      output.error('Please login to your account to use the tunnel command');
+      return 1;
+    }
+
+    const tunnelUrl = `https://${deployment.url}`;
+    connect(deployment.id, oidcToken, tunnelUrl, '127.0.0.1', port);
+
     process.on('SIGINT', () => {
-      output.log('\n[tunnel] Shutting down...');
       process.exit(0);
     });
     process.on('SIGTERM', () => {
-      output.log('\n[tunnel] Received SIGTERM, shutting down...');
       process.exit(0);
     });
-    output.log('\n[tunnel] Press Ctrl+C to stop');
   } catch (err) {
     output.prettyError(err);
     return 1;
