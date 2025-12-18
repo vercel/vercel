@@ -6,7 +6,13 @@ import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
 import update from './update';
-import { vaultCommand, addSubcommand, updateSubcommand } from './command';
+import remove from './remove';
+import {
+  vaultCommand,
+  addSubcommand,
+  updateSubcommand,
+  removeSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
@@ -14,6 +20,7 @@ import { getCommandAliases } from '..';
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   update: getCommandAliases(updateSubcommand),
+  remove: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -57,6 +64,14 @@ export default async function main(client: Client) {
         return 2;
       }
       return update(client, args);
+    case 'remove':
+    case 'rm':
+    case 'delete':
+      if (needHelp) {
+        printHelp(removeSubcommand);
+        return 2;
+      }
+      return remove(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(vaultCommand, { columns: client.stderr.columns }));
