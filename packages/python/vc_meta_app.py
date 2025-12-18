@@ -231,14 +231,18 @@ def create_route_handler(entrypoint_module) -> Callable[[Scope, Receive, Send], 
         handler = getattr(entrypoint_module, "handler") or getattr(entrypoint_module, "Handler")
         return handler_to_asgi(handler)
     elif getattr(entrypoint_module, "app", None):
+        app = entrypoint_module.app
+        # Check if app is callable before trying to access __call__
+        if not callable(app):
+            raise ValueError(f"app must be callable, got {type(app).__name__}")
         is_wsgi = (
-            not inspect.iscoroutinefunction(entrypoint_module.app) and
-            not inspect.iscoroutinefunction(entrypoint_module.app.__call__)
+            not inspect.iscoroutinefunction(app) and
+            not inspect.iscoroutinefunction(app.__call__)
         )
         if is_wsgi:
-            return WsgiToAsgi(entrypoint_module.app)
+            return WsgiToAsgi(app)
         else:
-            return entrypoint_module.app
+            return app
     else:
         raise ValueError(f"No handler or app found in {entrypoint_module}")
 
