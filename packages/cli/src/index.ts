@@ -711,6 +711,10 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = require('./commands/microfrontends').default;
           break;
+        case 'open':
+          telemetry.trackCliCommandOpen(userSuppliedSubCommand);
+          func = require('./commands/open').default;
+          break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);
           func = require('./commands/project').default;
@@ -726,6 +730,10 @@ const main = async () => {
         case 'redeploy':
           telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
           func = require('./commands/redeploy').default;
+          break;
+        case 'redirects':
+          telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
+          func = require('./commands/redirects').default;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);

@@ -18,10 +18,13 @@ module.exports = function setupTests(groupIndex) {
     ],
   ]);
   const allFixtures = fs.readdirSync(fixturesPath);
+  const skipFixtures = [];
 
-  let chunkedFixtures = allFixtures;
+  let chunkedFixtures = allFixtures.filter(
+    fixture => !skipFixtures.includes(fixture)
+  );
   if (typeof groupIndex !== 'undefined') {
-    chunkedFixtures = intoChunks(1, 2, allFixtures)[groupIndex - 1];
+    chunkedFixtures = intoChunks(1, 2, chunkedFixtures)[groupIndex - 1];
 
     console.log('testing group', groupIndex, chunkedFixtures);
   }

@@ -1,5 +1,83 @@
 # @vercel/static-build
 
+## 2.8.14
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.113
+
+## 2.8.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.112
+
+## 2.8.12
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.111
+
+## 2.8.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.110
+
+## 2.8.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.109
+
+## 2.8.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.108
+
+## 2.8.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.107
+
+## 2.8.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.106
+
+## 2.8.6
+
+### Patch Changes
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.105
+
+## 2.8.5
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.104
+
 ## 2.8.4
 
 ### Patch Changes

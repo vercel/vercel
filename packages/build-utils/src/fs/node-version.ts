@@ -10,6 +10,11 @@ export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 // with the newest supported version first
 export const NODE_VERSIONS: NodeVersion[] = [
   new NodeVersion({
+    major: 24,
+    range: '24.x',
+    runtime: 'nodejs24.x',
+  }),
+  new NodeVersion({
     major: 22,
     range: '22.x',
     runtime: 'nodejs22.x',
@@ -70,16 +75,6 @@ export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
 }
 
 function getOptions(): NodeVersion[] {
-  if (process.env.VERCEL_ALLOW_NODEJS_24 === '1') {
-    return [
-      new NodeVersion({
-        major: 24,
-        range: '24.x',
-        runtime: 'nodejs24.x',
-      }),
-      ...NODE_VERSIONS,
-    ];
-  }
   return NODE_VERSIONS;
 }
 

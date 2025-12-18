@@ -1,5 +1,59 @@
 # @vercel/next
 
+## 4.15.9
+
+### Patch Changes
+
+- fix route info from being overwritten in dynamic routes ([#14468](https://github.com/vercel/vercel/pull/14468))
+
+## 4.15.8
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 4.15.7
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+## 4.15.6
+
+### Patch Changes
+
+- Fix Node.js proxy/middleware with basePath and matcher not being invoked on Vercel ([#14372](https://github.com/vercel/vercel/pull/14372))
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 4.15.5
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
+## 4.15.4
+
+### Patch Changes
+
+- fix trailing slash handling for next build ([#14356](https://github.com/vercel/vercel/pull/14356))
+
+## 4.15.3
+
+### Patch Changes
+
+- skip generating pages routes when only using app dir ([#14235](https://github.com/vercel/vercel/pull/14235))
+
+- Revert "Remove getSpawnOptions" ([#14261](https://github.com/vercel/vercel/pull/14261))
+
+## 4.15.2
+
+### Patch Changes
+
+- Fix dynamic interception routes not being recognized during prerendering when cache components is enabled ([#14177](https://github.com/vercel/vercel/pull/14177))
+
+- Remove getSpawnOptions ([#14176](https://github.com/vercel/vercel/pull/14176))
+
 ## 4.15.1
 
 ### Patch Changes

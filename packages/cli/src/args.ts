@@ -27,6 +27,7 @@ export const help = () => `
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      open                             Opens the current project in the Vercel Dashboard
       promote              [url|id]    Promote an existing deployment to current
       pull                 [path]      Pull your Project Settings from the cloud
       redeploy             [url|id]    Rebuild and deploy a previous deployment.

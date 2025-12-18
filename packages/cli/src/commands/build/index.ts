@@ -12,6 +12,8 @@ import {
   getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
+  runNpmInstall,
+  runCustomInstallCommand,
   type Reporter,
   Span,
   type TraceEvent,
@@ -29,6 +31,7 @@ import {
   type PackageJson,
   shouldUseExperimentalBackends,
   isBackendBuilder,
+  type Lambda,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -81,6 +84,10 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import {
+  compileVercelConfig,
+  findSourceVercelConfigFile,
+} from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
@@ -400,11 +407,46 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  const sourceConfigFile = await findSourceVercelConfigFile(workPath);
+  let corepackShimDir: string | null | undefined;
+  if (sourceConfigFile && process.env.VERCEL_TS_CONFIG_ENABLED) {
+    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+
+    const installCommand = project.settings.installCommand;
+    if (typeof installCommand === 'string') {
+      if (installCommand.trim()) {
+        output.log(`Running install command before config compilation...`);
+        await runCustomInstallCommand({
+          destPath: workPath,
+          installCommand,
+          spawnOpts: { env: process.env },
+          projectCreatedAt: project.settings.createdAt,
+        });
+      } else {
+        output.debug('Skipping empty install command');
+      }
+    } else {
+      output.log(`Installing dependencies before config compilation...`);
+      await runNpmInstall(
+        workPath,
+        [],
+        { env: process.env },
+        undefined,
+        project.settings.createdAt
+      );
+    }
+  }
+
+  const compileResult = await compileVercelConfig(workPath);
+
+  const vercelConfigPath =
+    localConfigPath ||
+    compileResult.configPath ||
+    join(workPath, 'vercel.json');
+
   const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(
-      localConfigPath || join(workPath, 'vercel.json')
-    ),
+    readJSONFile<VercelConfig>(vercelConfigPath),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
@@ -431,6 +473,26 @@ async function doBuild(
 
   if (validateError) {
     throw validateError;
+  }
+
+  if (localConfig.customErrorPage) {
+    const errorPages =
+      typeof localConfig.customErrorPage === 'string'
+        ? [localConfig.customErrorPage]
+        : Object.values(localConfig.customErrorPage);
+
+    for (const page of errorPages) {
+      if (page) {
+        const src = join(workPath, page);
+        if (!existsSync(src)) {
+          throw new NowBuildError({
+            code: 'CUSTOM_ERROR_PAGE_NOT_FOUND',
+            message: `The custom error page "${page}" was not found in "${workPath}".`,
+            link: 'https://vercel.com/docs/projects/project-configuration#custom-error-page',
+          });
+        }
+      }
+    }
   }
 
   const projectSettings = {
@@ -573,7 +635,10 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath });
+  // Only initialize corepack if not already done during early install
+  if (!corepackShimDir) {
+    corepackShimDir = await initCorepack({ repoRootPath });
+  }
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
@@ -709,9 +774,9 @@ async function doBuild(
       if (
         'output' in buildResult &&
         buildResult.output &&
-        isBackendBuilder(build)
+        (isBackendBuilder(build) || build.use === '@vercel/python')
       ) {
-        const routesJsonPath = join(outputDir, '..', 'routes.json');
+        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
@@ -721,8 +786,17 @@ async function doBuild(
               'routes' in routesJson &&
               Array.isArray(routesJson.routes)
             ) {
+              // This is a v2 build output, so only remap the outputs
+              // if we have an index lambda
+              const indexLambda =
+                'index' in buildResult.output
+                  ? (buildResult.output['index'] as Lambda)
+                  : undefined;
               // Convert routes from introspection format to Vercel routing format
               const convertedRoutes = [];
+              const convertedOutputs: Record<string, Lambda> = indexLambda
+                ? { index: indexLambda }
+                : {};
               for (const route of routesJson.routes) {
                 if (typeof route.source !== 'string') {
                   continue;
@@ -738,6 +812,9 @@ async function doBuild(
                 if (route.source === '/') {
                   continue;
                 }
+                if (indexLambda) {
+                  convertedOutputs[route.source] = indexLambda;
+                }
                 convertedRoutes.push(newRoute);
               }
               // Wrap routes with filesystem handler and catch-all
@@ -746,6 +823,9 @@ async function doBuild(
                 ...convertedRoutes,
                 { src: '/(.*)', dest: '/' },
               ];
+              if (indexLambda) {
+                (buildResult as BuildResultV2Typical).output = convertedOutputs;
+              }
             }
           } catch (error) {
             output.error(`Failed to read routes.json: ${error}`);
@@ -771,16 +851,17 @@ async function doBuild(
             buildOutputLength: String(buildOutputLength),
           })
           .trace<Record<string, PathOverride> | undefined | void>(() =>
-            writeBuildResult(
+            writeBuildResult({
               repoRootPath,
               outputDir,
               buildResult,
               build,
               builder,
               builderPkg,
-              localConfig,
-              standalone
-            )
+              vercelConfig: localConfig,
+              standalone,
+              workPath,
+            })
           )
           .then(
             (override: Record<string, PathOverride> | undefined | void) => {

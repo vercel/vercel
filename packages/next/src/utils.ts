@@ -336,6 +336,12 @@ type RoutesManifestOld = {
       headers: Readonly<Record<string, string>>;
     };
   };
+  /**
+   * Indicates whether the app uses Pages Router, App Router, or both.
+   * May be undefined in older versions of Next.js, in which case we treat everything
+   * as though pages router were being used.
+   */
+  appType?: 'app' | 'pages' | 'hybrid';
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -591,6 +597,7 @@ export async function getDynamicRoutes({
                 !prefetchDataRoute);
 
             routes.push({
+              ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 // Now than the upstream issues has been resolved, we can safely
@@ -1087,6 +1094,9 @@ export async function createLambdaFromPseudoLayers({
       version: nextVersion,
     },
     experimentalAllowBundling,
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
 
@@ -3735,8 +3745,12 @@ export async function getNodeMiddleware({
     return null;
   }
   const routes: RouteWithSrc[] = [];
+  // Pass page: '/' to skip basePath addition in getRouteMatchers(), since
+  // functions-config-manifest matchers already have basePath baked in by
+  // Next.js build. This matches the behavior for edge middleware where
+  // page is '/' (root middleware) and basePath is not added.
   const routeMatchers = getRouteMatchers(
-    { matchers: middlewareFunctionConfig.matchers },
+    { matchers: middlewareFunctionConfig.matchers, page: '/' },
     routesManifest
   );
 
@@ -3861,6 +3875,9 @@ export async function getNodeMiddleware({
       [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
         new FileBlob({ data: launcherData }),
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return {

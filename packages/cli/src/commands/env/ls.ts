@@ -24,6 +24,7 @@ import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
@@ -42,13 +43,17 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const { args, flags } = parsedArgs;
 
-  if (args.length > 2) {
-    output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(
-        `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
-      )}`
-    );
-    return 1;
+  const validationResult = validateLsArgs({
+    commandName: 'env ls',
+    args: args,
+    maxArgs: 2,
+    exitCode: 1,
+    usageString: getCommandName(
+      `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
+    ),
+  });
+  if (validationResult !== 0) {
+    return validationResult;
   }
 
   const [envTarget, envGitBranch] = args;

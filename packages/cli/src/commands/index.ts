@@ -24,10 +24,12 @@ import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { microfrontendsCommand } from './microfrontends/command';
+import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
 import { redeployCommand } from './redeploy/command';
+import { redirectsCommand } from './redirects/command';
 import { removeCommand } from './remove/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
@@ -66,10 +68,12 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
+  openCommand,
   projectCommand,
   promoteCommand,
   pullCommand,
   redeployCommand,
+  redirectsCommand,
   removeCommand,
   rollbackCommand,
   rollingReleaseCommand,
