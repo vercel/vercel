@@ -9,6 +9,9 @@ import output from '../../output-manager';
 import { TunnelTelemetryClient } from '../../util/telemetry/commands/tunnel';
 import { connect } from './connect';
 import { getLinkedProject } from '../../util/projects/link';
+import stamp from '../../util/output/stamp';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { determineAgent } from '@vercel/detect-agent';
 
 export default async function main(client: Client) {
   const { telemetryEventStore } = client;
@@ -75,10 +78,19 @@ export default async function main(client: Client) {
 
   try {
     // TODO: make a deployment then tunnel to it
+    const vercelJson = {
+      routes: [{ src: '/(.*)', dest: '/_tunnel/$1' }],
+    };
+    // TODO: I think need a simple directory
     const deploymentId = 'foobar';
     output.print(
       `Starting tunnel for project ${project.name} with port ${port} on prod: ${prod ?? false}\n`
     );
+    const { isAgent } = await determineAgent();
+    const noWait = true;
+    const deployStamp = stamp();
+    const deployment = await createDeploy();
+    printDeploymentStatus(deployment, deployStamp, noWait, isAgent);
     connect(deploymentId, '127.0.0.1', port);
     process.on('SIGINT', () => {
       output.log('\n[tunnel] Shutting down...');
