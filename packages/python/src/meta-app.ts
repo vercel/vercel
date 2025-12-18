@@ -24,6 +24,16 @@ interface MetaAppConfig {
 export const CONSOLIDATED_ENTRYPOINT = '__vc_python_api.py';
 
 /**
+ * Result of generating a meta-app.
+ */
+export interface MetaAppResult {
+  /** The filename of the meta-app entry point */
+  filename: string;
+  /** The generated Python code content */
+  content: string;
+}
+
+/**
  * Generate a consolidated meta-app that combines all Python API handlers
  * into a single Starlette application.
  *
@@ -32,26 +42,29 @@ export const CONSOLIDATED_ENTRYPOINT = '__vc_python_api.py';
  * 2. Generates a Starlette app that mounts all handlers at their filesystem routes
  * 3. Wraps WSGI apps and HTTP handlers as ASGI-compatible endpoints
  *
+ * The generated code is returned as a string (not written to disk) so it can
+ * be added directly to the Lambda's files without polluting the user's workspace.
+ *
  * @param options.pythonApiFiles - List of Python API files to consolidate
  * @param options.workPath - Working directory for the build
  * @param options.pythonPath - Path to the Python interpreter
- * @returns The filename of the generated meta-app (e.g., '__vc_python_api.py')
+ * @returns Object containing the filename and generated Python code
  */
 export async function generateMetaApp(options: {
   pythonApiFiles: PythonApiFile[];
   workPath: string;
   pythonPath: string;
-}): Promise<string> {
+}): Promise<MetaAppResult> {
   const { pythonApiFiles, workPath, pythonPath } = options;
-  const metaAppPath = join(workPath, CONSOLIDATED_ENTRYPOINT);
   const generatorPath = join(__dirname, '..', 'lib', 'meta_app_generator.py');
 
+  // Use "-" as output to signal the generator to write to stdout
   const config: MetaAppConfig = {
     files: pythonApiFiles.map(f => ({
       path: f.path,
       route: f.route,
     })),
-    output: metaAppPath,
+    output: '-',
   };
 
   debug(`Generating meta-app with ${pythonApiFiles.length} handlers...`);
@@ -59,11 +72,18 @@ export async function generateMetaApp(options: {
   debug(`Config: ${JSON.stringify(config, null, 2)}`);
 
   try {
-    await execa(pythonPath, [generatorPath, JSON.stringify(config)], {
-      cwd: workPath,
-    });
-    debug(`Meta-app generated at ${metaAppPath}`);
-    return CONSOLIDATED_ENTRYPOINT;
+    const result = await execa(
+      pythonPath,
+      [generatorPath, JSON.stringify(config)],
+      {
+        cwd: workPath,
+      }
+    );
+    debug(`Meta-app generated (${result.stdout.length} bytes)`);
+    return {
+      filename: CONSOLIDATED_ENTRYPOINT,
+      content: result.stdout,
+    };
   } catch (err) {
     const error = err as { stderr?: string; message?: string };
     throw new NowBuildError({

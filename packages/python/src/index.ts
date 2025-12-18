@@ -49,6 +49,7 @@ import {
   generateMetaApp,
   getConsolidatedApiDependencies,
   type PythonApiFile,
+  type MetaAppResult,
 } from './meta-app';
 
 export const version = 3;
@@ -363,15 +364,17 @@ export const build: BuildV3 = async ({
   const pythonApiFiles = config.pythonApiFiles as PythonApiFile[] | undefined;
 
   // If consolidated API mode, generate the meta-app
+  let metaAppResult: MetaAppResult | undefined;
   if (isConsolidatedApi && pythonApiFiles && pythonApiFiles.length > 0) {
     debug(
       `Consolidated API mode: generating meta-app for ${pythonApiFiles.length} handlers`
     );
-    entrypoint = await generateMetaApp({
+    metaAppResult = await generateMetaApp({
       pythonApiFiles,
       workPath,
       pythonPath: pythonVersion.pythonPath,
     });
+    entrypoint = metaAppResult.filename;
   }
 
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
@@ -434,6 +437,13 @@ export const build: BuildV3 = async ({
   const handlerPyFilename = 'vc__handler__python';
 
   files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
+
+  // Add the consolidated meta-app if generated
+  if (metaAppResult) {
+    files[metaAppResult.filename] = new FileBlob({
+      data: metaAppResult.content,
+    });
+  }
 
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails
