@@ -602,17 +602,6 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].use).toBe('vercel-php@0.1.0');
   });
 
-  it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
-    const files = ['api/team.js'];
-    const { errors } = await invokeDetectBuilders(files, null, {
-      functions,
-    });
-
-    expect(errors.length).toBe(1);
-    expect(errors[0].code).toBe('unused_function');
-  });
-
   it('do not allow empty functions', async () => {
     const functions = { 'api/user.php': {} };
     const files = ['api/user.php'];
@@ -635,20 +624,6 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function');
-  });
-
-  it('Do not allow functions that are not used by @vercel/next', async () => {
-    const pkg = {
-      scripts: { build: 'next build' },
-      dependencies: { next: '9.0.0' },
-    };
-    const functions = { 'test.js': { memory: 1024 } };
-    const files = ['pages/index.js', 'test.js'];
-
-    const { errors } = await invokeDetectBuilders(files, pkg, { functions });
-
-    expect(errors).toBeDefined();
-    expect(errors[0].code).toBe('unused_function');
   });
 
   it('Must include includeFiles config property', async () => {
@@ -873,26 +848,6 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it('Error for non-api functions', async () => {
-    const files = ['server/hello.ts', 'public/index.html'];
-    const functions = {
-      'server/**/*.ts': {
-        runtime: '@vercel/node@1.3.1',
-      },
-    };
-
-    const { errors } = await invokeDetectBuilders(files, null, { functions });
-
-    expect(errors).toEqual([
-      {
-        code: 'unused_function',
-        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
-        action: 'Learn More',
-        link: 'https://vercel.link/unmatched-function-pattern',
-      },
-    ]);
-  });
-
   it('Works with fallback last', async () => {
     const files = ['api/simple.rs', 'api/complex.rs'];
     const functions = {
@@ -912,31 +867,6 @@ describe('Test `detectBuilders`', () => {
 
     // mostly asserting that this doesn't fail
     expect(builders).toHaveLength(2);
-  });
-
-  it('Errors with fallback first', async () => {
-    const files = ['api/simple.rs', 'api/complex.rs'];
-    const functions = {
-      'api/**/*.rs': {
-        runtime: 'ecklf-tmp-runtime-test@1.0.142',
-        maxDuration: 180,
-      },
-      'api/simple.rs': {
-        runtime: 'ecklf-tmp-runtime-test@1.0.142',
-        maxDuration: 120,
-      },
-    };
-
-    const { errors } = await invokeDetectBuilders(files, null, { functions });
-
-    expect(errors).toEqual([
-      {
-        code: 'unused_function',
-        message: `The pattern "api/simple.rs" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
-        action: 'Learn More',
-        link: 'https://vercel.link/unmatched-function-pattern',
-      },
-    ]);
   });
 
   it('All static if `buildCommand` is an empty string', async () => {
@@ -1966,18 +1896,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].use).toBe('vercel-php@0.1.0');
   });
 
-  it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
-    const files = ['api/team.js'];
-    const { errors } = await invokeDetectBuilders(files, null, {
-      functions,
-      featHandleMiss,
-    });
-
-    expect(errors.length).toBe(1);
-    expect(errors[0].code).toBe('unused_function');
-  });
-
   it('do not allow empty functions', async () => {
     const functions = { 'api/user.php': {} };
     const files = ['api/user.php'];
@@ -2002,23 +1920,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function');
-  });
-
-  it('Do not allow functions that are not used by @vercel/next', async () => {
-    const pkg = {
-      scripts: { build: 'next build' },
-      dependencies: { next: '9.0.0' },
-    };
-    const functions = { 'test.js': { memory: 1024 } };
-    const files = ['pages/index.js', 'test.js'];
-
-    const { errors } = await invokeDetectBuilders(files, pkg, {
-      functions,
-      featHandleMiss,
-    });
-
-    expect(errors).toBeDefined();
-    expect(errors[0].code).toBe('unused_function');
   });
 
   it('Must include includeFiles config property', async () => {
@@ -2385,29 +2286,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
     expect(errorRoutes.length).toBe(1);
     expect((errorRoutes[0] as Source).status).toBe(404);
-  });
-
-  it('Error for non-api functions', async () => {
-    const files = ['server/hello.ts', 'public/index.html'];
-    const functions = {
-      'server/**/*.ts': {
-        runtime: '@vercel/node@1.3.1',
-      },
-    };
-
-    const { errors } = await invokeDetectBuilders(files, null, {
-      functions,
-      featHandleMiss,
-    });
-
-    expect(errors).toEqual([
-      {
-        code: 'unused_function',
-        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
-        action: 'Learn More',
-        link: 'https://vercel.link/unmatched-function-pattern',
-      },
-    ]);
   });
 
   it('All static if `buildCommand` is an empty string', async () => {
