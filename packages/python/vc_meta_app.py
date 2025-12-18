@@ -1,6 +1,7 @@
 import io
 import re
 import ast
+import sys
 import inspect
 import importlib.util
 from types import ModuleType
@@ -11,6 +12,19 @@ from starlette.applications import Starlette
 from starlette.routing import BaseRoute, Match, compile_path
 from starlette.types import Scope, Receive, Send, ASGIApp
 from asgiref.wsgi import WsgiToAsgi
+
+
+def _setup_vendor_path() -> None:
+    """Add the vendor directory to sys.path so user dependencies can be imported.
+
+    This must be called before importing any user modules that have dependencies
+    installed via pip/uv into the _vendor directory.
+    """
+    vendor_dir = Path(__file__).parent / "_vendor"
+    if vendor_dir.exists():
+        vendor_path = str(vendor_dir)
+        if vendor_path not in sys.path:
+            sys.path.insert(0, vendor_path)
 
 
 class ASGIRoute(BaseRoute):
@@ -227,8 +241,9 @@ def handler_to_asgi(HandlerCls: type[BaseHTTPRequestHandler]) -> Callable[[Scope
 
 
 def create_route_handler(entrypoint_module) -> Callable[[Scope, Receive, Send], Coroutine[Any, Any, Any]]:
-    if getattr(entrypoint_module, "handler", None) or getattr(entrypoint_module, "Handler", None):
-        handler = getattr(entrypoint_module, "handler") or getattr(entrypoint_module, "Handler")
+    # Check for handler class (supports both 'handler' and 'Handler' naming)
+    handler = getattr(entrypoint_module, "handler", None) or getattr(entrypoint_module, "Handler", None)
+    if handler is not None:
         return handler_to_asgi(handler)
     elif getattr(entrypoint_module, "app", None):
         app = entrypoint_module.app
@@ -310,6 +325,10 @@ def load_api_dir_entrypoints(api_dir: Path) -> list[tuple[str, str, ModuleType]]
     Returns:
         List of (route_path, py_extension_path, module) tuples.
     """
+    # Set up vendor path before importing any user modules
+    # This ensures dependencies installed via pip/uv are available
+    _setup_vendor_path()
+
     entrypoints: list[tuple[str, str, ModuleType]] = []
 
     for path in api_dir.glob("**/*.py"):
