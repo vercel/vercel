@@ -12,6 +12,9 @@ import { getLinkedProject } from '../../util/projects/link';
 import stamp from '../../util/output/stamp';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { determineAgent } from '@vercel/detect-agent';
+import createDeploy from '../../util/deploy/create-deploy';
+import Now, { type CreateOptions } from '../../util';
+import parseTarget from '../../util/parse-target';
 
 export default async function main(client: Client) {
   const { telemetryEventStore } = client;
@@ -75,23 +78,55 @@ export default async function main(client: Client) {
 
   const { project, org } = link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  const contextName = org.slug;
+
+  console.log('client.localConfig is', client.localConfig);
 
   try {
     // TODO: make a deployment then tunnel to it
     const vercelJson = {
       routes: [{ src: '/(.*)', dest: '/_tunnel/$1' }],
     };
-    // TODO: I think need a simple directory
-    const deploymentId = 'foobar';
     output.print(
       `Starting tunnel for project ${project.name} with port ${port} on prod: ${prod ?? false}\n`
     );
     const { isAgent } = await determineAgent();
     const noWait = true;
     const deployStamp = stamp();
-    const deployment = await createDeploy();
+    const now = new Now({
+      client,
+      currentTeam: client.config.currentTeam,
+    });
+    const createArgs: CreateOptions = {
+      name: project.name,
+      env: {},
+      build: { env: {} },
+      quiet: false, // TODO: should this be true?
+      wantsPublic: false,
+      nowConfig: client.localConfig || {}, // TODO: vercel json here?
+      //regions: client.localConfig.regions,
+      meta: {},
+      //gitMetadata,
+      deployStamp,
+      target: parseTarget({
+        flagName: 'target',
+        flags: parsedArgs.flags,
+      }),
+      skipAutoDetectionConfirmation: false, // TODO: `--yes` flag?
+      noWait,
+      //autoAssignCustomDomains,
+    };
+    const deployment = await createDeploy(
+      client,
+      now,
+      contextName,
+      client.cwd, // TODO: verify this is correct
+      createArgs,
+      org,
+      !project
+    );
     printDeploymentStatus(deployment, deployStamp, noWait, isAgent);
-    connect(deploymentId, '127.0.0.1', port);
+    connect(deployment.id, '127.0.0.1', port);
     process.on('SIGINT', () => {
       output.log('\n[tunnel] Shutting down...');
       process.exit(0);
