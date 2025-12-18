@@ -241,13 +241,11 @@ def handler_to_asgi(HandlerCls: type[BaseHTTPRequestHandler]) -> Callable[[Scope
 
 
 def create_route_handler(entrypoint_module) -> Callable[[Scope, Receive, Send], Coroutine[Any, Any, Any]]:
-    # Check for handler class (supports both 'handler' and 'Handler' naming)
     handler = getattr(entrypoint_module, "handler", None) or getattr(entrypoint_module, "Handler", None)
     if handler is not None:
         return handler_to_asgi(handler)
     elif getattr(entrypoint_module, "app", None):
         app = entrypoint_module.app
-        # Check if app is callable before trying to access __call__
         if not callable(app):
             raise ValueError(f"app must be callable, got {type(app).__name__}")
         is_wsgi = (
