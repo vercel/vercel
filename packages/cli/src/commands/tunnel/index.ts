@@ -21,7 +21,7 @@ const localConfig = {
 };
 
 export default async function main(client: Client) {
-  const defaultProjectName = basename(client.cwd);
+  const defaultProjectName = `tunnel-${basename(client.cwd)}`;
   const cwd = join(client.cwd, '.vercel', 'tunnel');
   await ensureDir(cwd);
   await writeFile(join(cwd, 'vercel.json'), JSON.stringify(localConfig));
@@ -124,7 +124,6 @@ export default async function main(client: Client) {
       org,
       !project
     );
-    //output.log('\n[tunnel] deployment url is ' + deployment.url);
     connect(deployment.id, '127.0.0.1', port); // TODO: should we also ask for local ip?
     process.on('SIGINT', () => {
       output.log('\n[tunnel] Shutting down...');
