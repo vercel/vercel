@@ -10,7 +10,7 @@ import output from '../../output-manager';
 function forwardToLocalServer(
   localIp: string,
   localPort: number,
-  stream: http2.Http2Stream,
+  stream: http2.ServerHttp2Stream,
   headers: http2.IncomingHttpHeaders
 ) {
   const path = headers[':path'] || '/';
@@ -104,7 +104,7 @@ function handleRequest(
   dplId: string,
   localIp: string,
   localPort: number,
-  stream: http2.Http2Stream,
+  stream: http2.ServerHttp2Stream,
   headers: http2.IncomingHttpHeaders
 ) {
   const path = headers[':path'];
