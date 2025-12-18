@@ -12,7 +12,6 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
-import { collectPythonApiFiles } from './detect-python-api';
 
 /**
  * Pattern for finding all supported middleware files.
