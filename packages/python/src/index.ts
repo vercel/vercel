@@ -356,11 +356,7 @@ export const build: BuildV3 = async ({
     }
   }
 
-  // Check if this is a consolidated API build (Python files in /api)
   const isConsolidatedApi = config.consolidatedApi === true;
-
-  // For consolidated API mode, use vc_meta_app.py directly as the entrypoint.
-  // It auto-discovers handlers in the api/ directory at module load time.
   if (isConsolidatedApi) {
     debug('Consolidated API mode: using vc_meta_app.py as entrypoint');
     entrypoint = 'vc_meta_app.py';
