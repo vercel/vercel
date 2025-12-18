@@ -144,7 +144,6 @@ export function readLocalConfig(
 
   // If reading from .vercel/vercel.json (compiled config), detect the source file
   const isCompiledConfig =
-    process.env.VERCEL_TS_CONFIG_ENABLED &&
     basename(target) === 'vercel.json' &&
     basename(dirname(target)) === PROJECT_VERCEL_DIR;
 
