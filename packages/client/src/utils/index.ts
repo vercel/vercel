@@ -509,7 +509,20 @@ export function getDefaultDeploymentName(
     debug(
       'Provided path is not a directory. Using last segment of the first file as default name'
     );
-    const filePath = Array.from(files.values())[0].names[0];
+
+    const fileValues = Array.from(files.values());
+
+    if (fileValues.length === 0) {
+      debug('No files provided. Using path as default name');
+      if (Array.isArray(path) && path.length > 0) {
+        return path[0].split('/').pop() || path[0];
+      } else if (typeof path === 'string') {
+        return path.split('/').pop() || path;
+      }
+      return 'deployment';
+    }
+
+    const filePath = fileValues[0].names[0];
     return filePath.split('/').pop() || filePath;
   }
 }
