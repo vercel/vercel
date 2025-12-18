@@ -180,9 +180,7 @@ export async function detectBuilders(
   const apiRoutes: RouteWithSrc[] = [];
   const dynamicRoutes: RouteWithSrc[] = [];
 
-  // Consolidate Python files in /api into a single builder.
-  // This does NOT affect zero-config Python frameworks (FastAPI, Flask)
-  // which are handled as frontend builders, not API builders.
+  // Consolidate Python files in /api into a single API builder.
   const pythonResult = await getConsolidatedPythonApiBuilder({
     files: sortedFiles,
     apiSortedFiles,
@@ -512,7 +510,6 @@ async function getConsolidatedPythonApiBuilder(params: {
     return result;
   }
 
-  // The src determines the function name (api/py.func/).
   // The actual entrypoint (vc_meta_app.py) is set by the Python builder.
   result.builder = {
     use: `@vercel/python${withTag}`,
