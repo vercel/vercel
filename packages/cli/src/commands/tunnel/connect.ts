@@ -75,7 +75,7 @@ function forwardToLocalServer(
 
     req.on('error', err => {
       output.error(
-        '[tunnel] Error connecting to local dev server:',
+        '\n[tunnel] Error connecting to local dev server:',
         err.message
       );
       stream.respond({
@@ -114,7 +114,7 @@ function handleRequest(
 
   // Handle tunnel registration request
   if (path === '/_tunnel/register') {
-    output.log('[tunnel] Responding to registration request');
+    output.log('\n[tunnel] Responding to registration request');
     stream.respond({
       ':status': 200,
       'content-type': 'application/json',
@@ -127,7 +127,7 @@ function handleRequest(
 
   // Handle ping/heartbeat requests
   if (path === '/_tunnel/ping') {
-    output.log('[tunnel] Responding to ping');
+    output.log('\n[tunnel] Responding to ping');
     stream.respond({
       ':status': 200,
       'content-type': 'text/plain',
@@ -156,7 +156,7 @@ function handleRequest(
  * Establish tunnel connection
  */
 export function connect(dplId: string, localIp: string, localPort: number) {
-  output.log('[tunnel] Establishing TLS connection...');
+  output.log('\n[tunnel] Establishing TLS connection...');
 
   const socket = tls.connect({
     host: '127.0.0.1', // TODO: use vercel.com
@@ -167,10 +167,10 @@ export function connect(dplId: string, localIp: string, localPort: number) {
   });
 
   socket.once('secureConnect', () => {
-    output.log('[tunnel] TLS connection established');
-    output.log(`[tunnel] ALPN protocol: ${socket.alpnProtocol}`);
+    output.log('\n[tunnel] TLS connection established');
+    output.log(`\n[tunnel] ALPN protocol: ${socket.alpnProtocol}`);
     output.log(
-      `[tunnel] Connected to: ${socket.remoteAddress}:${socket.remotePort}`
+      `\n[tunnel] Connected to: ${socket.remoteAddress}:${socket.remotePort}`
     );
 
     // Upgrade the TLS socket into an HTTP/2 Server session
@@ -185,15 +185,15 @@ export function connect(dplId: string, localIp: string, localPort: number) {
       }
     );
 
-    output.log('[tunnel] HTTP/2 server session established');
-    output.log('[tunnel] Waiting for registration request from tunneld...');
+    output.log('\n[tunnel] HTTP/2 server session established');
+    output.log('\n[tunnel] Waiting for registration request from tunneld...');
 
     session.on('stream', (stream, headers) =>
       handleRequest(dplId, localIp, localPort, stream, headers)
     );
 
     session.on('close', () => {
-      output.log('[tunnel] HTTP/2 session closed');
+      output.log('\n[tunnel] HTTP/2 session closed');
       reconnect(dplId, localIp, localPort);
     });
 
@@ -203,7 +203,7 @@ export function connect(dplId: string, localIp: string, localPort: number) {
 
     session.on('goaway', (errorCode, lastStreamID) => {
       output.log(
-        `[tunnel] Received GOAWAY: errorCode=${errorCode}, lastStreamID=${lastStreamID}`
+        `\n[tunnel] Received GOAWAY: errorCode=${errorCode}, lastStreamID=${lastStreamID}`
       );
     });
 
@@ -212,7 +212,7 @@ export function connect(dplId: string, localIp: string, localPort: number) {
     });
 
     socket.on('close', () => {
-      output.log('[tunnel] Socket closed');
+      output.log('\n[tunnel] Socket closed');
     });
   });
 

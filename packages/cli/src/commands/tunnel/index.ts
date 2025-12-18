@@ -1,5 +1,5 @@
 import { basename, join } from 'node:path';
-import { ensureDir } from 'fs-extra';
+import { ensureDir, writeFile } from 'fs-extra';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
@@ -16,14 +16,18 @@ import createDeploy from '../../util/deploy/create-deploy';
 import Now, { type CreateOptions } from '../../util';
 import parseTarget from '../../util/parse-target';
 
+const localConfig = {
+  routes: [{ src: '/(.*)', dest: '/_tunnel/$1' }],
+};
+
 export default async function main(client: Client) {
   const defaultProjectName = basename(client.cwd);
-  const newCwd = join(client.cwd, '.vercel', 'tunnel');
-  await ensureDir(newCwd);
-  client.cwd = newCwd;
-  client.localConfig = {
-    routes: [{ src: '/(.*)', dest: '/_tunnel/$1' }],
-  };
+  const cwd = join(client.cwd, '.vercel', 'tunnel');
+  await ensureDir(cwd);
+  await writeFile(join(cwd, 'vercel.json'), JSON.stringify(localConfig));
+  client.localConfig = localConfig;
+  client.cwd = cwd;
+
   const { telemetryEventStore } = client;
   const telemetry = new TunnelTelemetryClient({
     opts: {
@@ -72,7 +76,7 @@ export default async function main(client: Client) {
 
   const autoConfirm = false; //parsedArguments.flags['--yes'];
 
-  const link = await ensureLink('deploy', client, client.cwd, {
+  const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
     projectName: defaultProjectName,
@@ -84,16 +88,10 @@ export default async function main(client: Client) {
   const { project, org } = link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const contextName = org.slug;
+  const noWait = true;
+  const deployStamp = stamp();
 
   try {
-    // TODO: make a deployment then tunnel to it
-
-    output.print(
-      `Starting tunnel for project ${project.name} with port ${port} on prod: ${prod ?? false}\n`
-    );
-
-    const noWait = true;
-    const deployStamp = stamp();
     const now = new Now({
       client,
       currentTeam: client.config.currentTeam,
@@ -102,10 +100,10 @@ export default async function main(client: Client) {
       name: project.name,
       env: {},
       build: { env: {} },
-      quiet: false, // TODO: should this be true?
+      quiet: true, // Does this actually do anything?
       wantsPublic: false,
-      nowConfig: client.localConfig,
-      //regions: client.localConfig.regions,
+      nowConfig: localConfig,
+      //regions: localConfig.regions,
       meta: {},
       //gitMetadata,
       deployStamp,
@@ -121,22 +119,22 @@ export default async function main(client: Client) {
       client,
       now,
       contextName,
-      client.cwd, // TODO: verify this is correct
+      cwd,
       createArgs,
       org,
       !project
     );
-    //console.log('[debug] deployment is', deployment.url);
-    connect(deployment.id, '127.0.0.1', port);
+    //output.log('\n[tunnel] deployment url is ' + deployment.url);
+    connect(deployment.id, '127.0.0.1', port); // TODO: should we also ask for local ip?
     process.on('SIGINT', () => {
       output.log('\n[tunnel] Shutting down...');
       process.exit(0);
     });
     process.on('SIGTERM', () => {
-      output.log('[tunnel] Received SIGTERM, shutting down...');
+      output.log('\n[tunnel] Received SIGTERM, shutting down...');
       process.exit(0);
     });
-    output.log('[tunnel] Press Ctrl+C to stop');
+    output.log('\n[tunnel] Press Ctrl+C to stop');
   } catch (err) {
     output.prettyError(err);
     return 1;
