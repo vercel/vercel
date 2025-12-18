@@ -2312,7 +2312,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)(?:\\.(?:go|py))$',
+        // py comes first because consolidated Python builder is added first
+        src: '^/api/(.+)(?:\\.(?:py|go))$',
         dest: '/api/$1',
         check: true,
       },
@@ -2320,7 +2321,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     // Python routes are rewritten to the consolidated function
     expect(rewriteRoutes).toStrictEqual([
       {
-        src: '^/api/(python\\/|python|python\\.py)$',
+        src: '^/api/(python/|python|python\\.py)$',
         dest: 'api/py',
         check: true,
       },
