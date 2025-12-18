@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "4.15.8",
+  "version": "4.15.9",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
@@ -11,7 +11,7 @@
     "test-next-local": "pnpm test test/integration/*.test.js test/integration/*.test.ts",
     "test-next-local-legacy": "pnpm test test/integration/legacy/*.test.js",
     "test-next-local:middleware": "pnpm test test/integration/middleware.test.ts",
-    "test-e2e": "rm -f test/builder-info.json; echo 'skipping next e2e tests'",
+    "test-e2e": "rm -f test/builder-info.json; pnpm test test/fixtures/**/*.test.js",
     "type-check": "tsc --noEmit"
   },
   "repository": {
