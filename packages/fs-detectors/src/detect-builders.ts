@@ -182,16 +182,7 @@ export async function detectBuilders(
 
   // API
   for (const fileName of sortedFiles) {
-    let apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
-
-    // For Python files, verify they are valid entrypoints before creating a builder
-    if (apiBuilder && fileName.endsWith('.py') && options.workPath) {
-      const fsPath = join(options.workPath, fileName);
-      const isEntrypoint = await isPythonEntrypoint({ fsPath });
-      if (!isEntrypoint) {
-        apiBuilder = null;
-      }
-    }
+    const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(
@@ -411,11 +402,11 @@ export async function detectBuilders(
   };
 }
 
-function maybeGetApiBuilder(
+async function maybeGetApiBuilder(
   fileName: string,
   apiMatches: Builder[],
   options: Options
-) {
+): Promise<Builder | null> {
   const middleware =
     fileName === 'middleware.js' || fileName === 'middleware.ts';
 
@@ -443,6 +434,15 @@ function maybeGetApiBuilder(
 
   if (fileName.endsWith('.d.ts')) {
     return null;
+  }
+
+  // For Python files, verify they are valid entrypoints before creating a builder
+  if (fileName.endsWith('.py') && options.workPath) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
   }
 
   const match = apiMatches.find(({ src = '**' }) => {
