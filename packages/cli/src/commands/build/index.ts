@@ -115,6 +115,7 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  deploymentId?: string;
 }
 
 /**
@@ -930,6 +931,20 @@ async function doBuild(
     throw existingConfig;
   }
   if (existingConfig) {
+    // Validate deploymentId if present (user-configured for skew protection)
+    if (
+      'deploymentId' in existingConfig &&
+      typeof existingConfig.deploymentId === 'string' &&
+      existingConfig.deploymentId.startsWith('dpl_')
+    ) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message:
+          'The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your next.config.js.',
+        link: 'https://vercel.com/docs/skew-protection#skew-protection-with-next.js',
+      });
+    }
+
     if (existingConfig.overrides) {
       overrides.push(existingConfig.overrides);
     }
