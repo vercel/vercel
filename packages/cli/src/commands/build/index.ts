@@ -115,6 +115,7 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  deploymentId?: string;
 }
 
 /**
