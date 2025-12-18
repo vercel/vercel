@@ -405,14 +405,22 @@ async function doBuild(
 ): Promise<void> {
   const { localConfigPath } = client;
 
+  output.log(`local config path: ${localConfigPath}`);
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  output.log(`work path: ${workPath}`);
+
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
+  output.log(`source config file: ${sourceConfigFile}`);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile && process.env.VERCEL_TS_CONFIG_ENABLED) {
+    output.log('sourceConfigFile and vercel ts config enabled');
     corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    output.log(`init corepack success: ${corepackShimDir}`);
 
     const installCommand = project.settings.installCommand;
+    output.log(`install command: ${installCommand}`);
     if (typeof installCommand === 'string') {
       if (installCommand.trim()) {
         output.log(`Running install command before config compilation...`);
