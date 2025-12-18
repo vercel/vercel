@@ -11,7 +11,12 @@ import readJSONFile from './read-json-file';
 import type { VercelConfig } from './dev/types';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../output-manager';
-import { compileVercelConfig } from './compile-vercel-config';
+import {
+  compileVercelConfig,
+  findSourceVercelConfigFile,
+} from './compile-vercel-config';
+import { runNpmInstall } from '@vercel/build-utils';
+import { initCorepack } from './build/corepack';
 
 let config: VercelConfig;
 
@@ -58,6 +63,13 @@ export default async function getConfig(
 
   // Then try with `vercel.ts`, `vercel.json` or `now.json` in the same directory
   if (process.env.VERCEL_TS_CONFIG_ENABLED) {
+    const sourceConfigFile = await findSourceVercelConfigFile(localPath);
+    if (sourceConfigFile) {
+      await initCorepack({ repoRootPath: localPath });
+      output.log(`Installing dependencies before config compilation...`);
+      await runNpmInstall(localPath, [], { env: process.env });
+    }
+
     let compileResult;
     try {
       compileResult = await compileVercelConfig(localPath);
