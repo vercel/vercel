@@ -4,6 +4,13 @@ export {
   detectApiDirectory,
   detectApiExtensions,
 } from './detect-builders';
+export {
+  collectPythonApiFiles,
+  pathToRoutePattern,
+  sortPythonApiFiles,
+  shouldConsolidatePythonApi,
+  type PythonApiFile,
+} from './detect-python-api';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
   detectFramework,

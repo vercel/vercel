@@ -12,6 +12,7 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
+import { collectPythonApiFiles, type PythonApiFile } from './detect-python-api';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -180,18 +181,41 @@ export async function detectBuilders(
   const apiRoutes: RouteWithSrc[] = [];
   const dynamicRoutes: RouteWithSrc[] = [];
 
-  // API
-  for (const fileName of sortedFiles) {
-    let apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
+  // Consolidate all Python API files into a single builder
+  const pythonConsolidationResult = await consolidatePythonApiFiles({
+    sortedFiles,
+    apiSortedFiles,
+    options,
+    withTag,
+    absolutePathCache,
+  });
 
-    // For Python files, verify they are valid entrypoints before creating a builder
-    if (apiBuilder && fileName.endsWith('.py') && options.workPath) {
-      const fsPath = join(options.workPath, fileName);
-      const isEntrypoint = await isPythonEntrypoint({ fsPath });
-      if (!isEntrypoint) {
-        apiBuilder = null;
-      }
+  if (pythonConsolidationResult.error) {
+    return {
+      builders: null,
+      errors: [pythonConsolidationResult.error],
+      warnings,
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
+
+  if (pythonConsolidationResult.builder) {
+    apiBuilders.push(pythonConsolidationResult.builder);
+  }
+  apiRoutes.push(...pythonConsolidationResult.apiRoutes);
+  dynamicRoutes.push(...pythonConsolidationResult.dynamicRoutes);
+
+  // API - process non-Python files (Python files are handled by the consolidated builder)
+  for (const fileName of sortedFiles) {
+    // Skip Python files - they're handled by consolidatePythonApiFiles above
+    if (pythonConsolidationResult.handledFiles.has(fileName)) {
+      continue;
     }
+
+    const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(
@@ -409,6 +433,117 @@ export async function detectBuilders(
     rewriteRoutes: routesResult.rewriteRoutes,
     errorRoutes: routesResult.errorRoutes,
   };
+}
+
+interface PythonConsolidationResult {
+  builder: Builder | null;
+  apiRoutes: RouteWithSrc[];
+  dynamicRoutes: RouteWithSrc[];
+  handledFiles: Set<string>;
+  error: ErrorResponse | null;
+}
+
+/**
+ * Consolidates all Python API files into a single builder.
+ *
+ * Instead of creating separate Lambda functions for each Python file in /api,
+ * this function creates ONE builder that will generate a meta-app combining
+ * all Python handlers (ASGI, WSGI, HTTP handlers) into a single Starlette app.
+ *
+ * Benefits:
+ * - Single cold start instead of N cold starts
+ * - Shared dependencies loaded once
+ * - Reduced memory footprint
+ * - Simplified debugging
+ */
+async function consolidatePythonApiFiles(options: {
+  sortedFiles: string[];
+  apiSortedFiles: string[];
+  options: Options;
+  withTag: string;
+  absolutePathCache: Map<string, string>;
+}): Promise<PythonConsolidationResult> {
+  const { sortedFiles, options: buildOptions, withTag } = options;
+
+  const result: PythonConsolidationResult = {
+    builder: null,
+    apiRoutes: [],
+    dynamicRoutes: [],
+    handledFiles: new Set<string>(),
+    error: null,
+  };
+
+  // Collect Python API files for consolidation
+  const pythonApiFiles = collectPythonApiFiles(sortedFiles);
+
+  if (pythonApiFiles.length === 0) {
+    return result;
+  }
+
+  // Track all Python API file paths for skipping in the main loop
+  result.handledFiles = new Set(pythonApiFiles.map(f => f.path));
+
+  // Validate Python files and filter to only valid entrypoints
+  const validPythonFiles: PythonApiFile[] = [];
+
+  for (const file of pythonApiFiles) {
+    if (buildOptions.workPath) {
+      const fsPath = join(buildOptions.workPath, file.path);
+      const isEntrypoint = await isPythonEntrypoint({ fsPath });
+      if (isEntrypoint) {
+        validPythonFiles.push(file);
+      }
+    } else {
+      // If no workPath, include all files (will be validated at build time)
+      validPythonFiles.push(file);
+    }
+  }
+
+  if (validPythonFiles.length === 0) {
+    return result;
+  }
+
+  // Use a concrete entry point path for the consolidated function.
+  // The meta-app generator will create this file.
+  const consolidatedEntrypoint = '__vc_python_api.py';
+
+  // Create a single consolidated Python builder
+  result.builder = {
+    use: `@vercel/python${withTag}`,
+    src: consolidatedEntrypoint,
+    config: {
+      zeroConfig: true,
+      // Pass all Python files to the builder for consolidated handling
+      pythonApiFiles: validPythonFiles,
+      consolidatedApi: true,
+    },
+  };
+
+  // For consolidated API, we create a catch-all route that rewrites
+  // all /api/* requests to the consolidated function. The Starlette
+  // meta-app handles the internal routing based on file paths.
+  //
+  // The function receives the original request path, so it can do
+  // internal routing based on the URL path.
+  const dest = `/${consolidatedEntrypoint.replace(/\.py$/, '')}`;
+  if (buildOptions.featHandleMiss) {
+    // Dynamic catch-all route for API directory
+    const catchAllRoute: RouteWithSrc = {
+      src: '^/api(/.*)?$',
+      dest,
+      check: true,
+    };
+    result.apiRoutes.push(catchAllRoute);
+    result.dynamicRoutes.push(catchAllRoute);
+  } else {
+    // Legacy mode without handleMiss
+    result.apiRoutes.push({
+      src: '^/api(/.*)?$',
+      dest,
+    });
+  }
+
+  return result;
 }
 
 function maybeGetApiBuilder(

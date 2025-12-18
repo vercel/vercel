@@ -45,6 +45,11 @@ import {
   FLASK_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
+import {
+  generateMetaApp,
+  getConsolidatedApiDependencies,
+  type PythonApiFile,
+} from './meta-app';
 
 export const version = 3;
 
@@ -311,10 +316,20 @@ export const build: BuildV3 = async ({
       // are intentionally unpinned so they can resolve alongside user-declared
       // dependencies (for example, modern Flask versions that require newer
       // Werkzeug releases).
-      const runtimeDependencies =
+      let runtimeDependencies =
         framework === 'flask'
           ? ['werkzeug>=1.0.1']
           : ['werkzeug>=1.0.1', 'uvicorn>=0.24'];
+
+      // For consolidated API mode, we need starlette for the meta-app routing
+      if (config.consolidatedApi === true) {
+        runtimeDependencies = [
+          ...new Set([
+            ...runtimeDependencies,
+            ...getConsolidatedApiDependencies(),
+          ]),
+        ];
+      }
 
       // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
       // for consistent installation logic and idempotency.
@@ -342,6 +357,23 @@ export const build: BuildV3 = async ({
       });
     }
   }
+
+  // Check if this is a consolidated API build
+  const isConsolidatedApi = config.consolidatedApi === true;
+  const pythonApiFiles = config.pythonApiFiles as PythonApiFile[] | undefined;
+
+  // If consolidated API mode, generate the meta-app
+  if (isConsolidatedApi && pythonApiFiles && pythonApiFiles.length > 0) {
+    debug(
+      `Consolidated API mode: generating meta-app for ${pythonApiFiles.length} handlers`
+    );
+    entrypoint = await generateMetaApp({
+      pythonApiFiles,
+      workPath,
+      pythonPath: pythonVersion.pythonPath,
+    });
+  }
+
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);

@@ -2,6 +2,8 @@
   "probes": [
     {"path": "/api", "status": 200},
     { "path": "/api/helper", "status": 404 },
-    { "path": "/api/app", "status": 200 }
+    { "path": "/api/app", "status": 200 },
+    { "path": "/api/flask", "status": 200 },
+    { "path": "/api/fastapi", "status": 200 }
   ]
 }
