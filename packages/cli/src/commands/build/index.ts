@@ -387,6 +387,9 @@ export default async function main(client: Client): Promise<number> {
     for (const key of envToUnset) {
       delete process.env[key];
     }
+
+    // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
+    delete process.env.VERCEL_INSTALL_COMPLETED;
   }
 }
 
