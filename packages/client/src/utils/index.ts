@@ -19,7 +19,7 @@ type Ignore = ReturnType<typeof ignore>;
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/files';
-export const API_FILES_UPLOADED = '/files-uploaded';
+export const API_FILES_UPLOADED = '/v2/files-uploaded';
 
 const EVENTS_ARRAY = [
   // File events

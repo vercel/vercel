@@ -25,7 +25,7 @@ import { createGzip } from 'zlib';
 
 // Maximum size of all the files combined that we can upload inline, when creating
 // a deployment.
-const MAX_INLINE_SIZE = 50 * 1024; // 50KB
+const MAX_INLINE_SIZE = 250 * 1024; // 250KB
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -169,7 +169,7 @@ export default function buildCreateDeployment() {
       `Total file size: ${totalSize} bytes (${preparedFiles.length} files to upload)`
     );
 
-    // Strategy 1: If total size of all the files combined is less than 50KB,
+    // Strategy 1: If total size of all the files combined is less than 250KB,
     // upload all files as inline (in the same POST deployment query).
     if (totalSize < MAX_INLINE_SIZE) {
       debug('All files are small enough for inline upload');
@@ -215,7 +215,7 @@ export default function buildCreateDeployment() {
       `Missing files size: ${missingFilesTotalSize} bytes (${missingFiles.length} files)`
     );
 
-    // Strategy 2: If total size of all the missing files combined is less than 50KB,
+    // Strategy 2: If total size of all the missing files combined is less than 250KB,
     // upload all the missing files as inline (in the same POST deployment query).
     if (missingFilesTotalSize < MAX_INLINE_SIZE) {
       debug('Missing files are small enough for inline upload');
@@ -234,8 +234,8 @@ export default function buildCreateDeployment() {
     }
 
     // Strategy 3: Not implemented yet, TODO.
-    // If total size of all the missing files combined is more than 50KB,
-    // use a hybrid approach: upload smaller files inline (up to 50KB of total combined
+    // If total size of all the missing files combined is more than 250KB,
+    // use a hybrid approach: upload smaller files inline (up to 250KB of total combined
     // size), and larger files separately.
     //
     // Now, we are just defaulting to the previous method: try to create the deployment,
