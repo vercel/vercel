@@ -19,8 +19,8 @@ function forwardToLocalServer(
   output.log(`[tunnel] Forwarding ${method} ${path} to local dev server`);
 
   // Collect request body
-  const bodyChunks: Buffer[] = [];
-  stream.on('data', (chunk: Buffer) => bodyChunks.push(chunk));
+  const bodyChunks: Uint8Array[] = [];
+  stream.on('data', (chunk: Uint8Array) => bodyChunks.push(chunk));
 
   stream.on('end', () => {
     const body = Buffer.concat(bodyChunks);
