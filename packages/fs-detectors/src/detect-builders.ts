@@ -12,6 +12,7 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
+import { collectPythonApiFiles } from './detect-python-api';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -180,8 +181,41 @@ export async function detectBuilders(
   const apiRoutes: RouteWithSrc[] = [];
   const dynamicRoutes: RouteWithSrc[] = [];
 
-  // API
+  // Consolidate Python files in /api into a single builder.
+  // This does NOT affect zero-config Python frameworks (FastAPI, Flask)
+  // which are handled as frontend builders, not API builders.
+  const pythonResult = await getConsolidatedPythonApiBuilder({
+    files: sortedFiles,
+    apiSortedFiles,
+    options,
+    withTag,
+    absolutePathCache,
+  });
+
+  if (pythonResult.error) {
+    return {
+      builders: null,
+      errors: [pythonResult.error],
+      warnings,
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
+
+  if (pythonResult.builder) {
+    apiBuilders.push(pythonResult.builder);
+  }
+  apiRoutes.push(...pythonResult.apiRoutes);
+  dynamicRoutes.push(...pythonResult.dynamicRoutes);
+
   for (const fileName of sortedFiles) {
+    // Skip Python files - they're handled by the consolidated builder above
+    if (pythonResult.handledFiles.has(fileName)) {
+      continue;
+    }
+
     const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
@@ -402,11 +436,129 @@ export async function detectBuilders(
   };
 }
 
-async function maybeGetApiBuilder(
+export function collectPythonApiFiles(files: string[]): string[] {
+  const pythonFiles: string[] = [];
+
+  for (const file of files) {
+    // Only process .py files in api/
+    if (!file.startsWith('api/') || !file.endsWith('.py')) {
+      continue;
+    }
+    if (file.includes('/.') || file.includes('/_')) {
+      continue;
+    }
+    if (file.includes('__init__.py') || file.includes('__pycache__')) {
+      continue;
+    }
+
+    pythonFiles.push(file);
+  }
+
+  return pythonFiles;
+}
+
+interface ConsolidatedPythonResult {
+  builder: Builder | null;
+  apiRoutes: RouteWithSrc[];
+  dynamicRoutes: RouteWithSrc[];
+  handledFiles: Set<string>;
+  error: ErrorResponse | null;
+}
+
+/**
+ * Consolidates .py files in the /api directory into a single api builder.
+ *
+ * This is to avoid creating separate Lambda functions for each Python file in /api,
+ * which is unnecessary since dependencies are shared by every Python entrypoint.
+ *
+ */
+async function getConsolidatedPythonApiBuilder(params: {
+  files: string[];
+  apiSortedFiles: string[];
+  options: Options;
+  withTag: string;
+  absolutePathCache: Map<string, string>;
+}): Promise<ConsolidatedPythonResult> {
+  const { files, apiSortedFiles, options, withTag, absolutePathCache } = params;
+
+  const result: ConsolidatedPythonResult = {
+    builder: null,
+    apiRoutes: [],
+    dynamicRoutes: [],
+    handledFiles: new Set<string>(),
+    error: null,
+  };
+
+  const allPythonFiles = collectPythonApiFiles(files);
+  if (allPythonFiles.length === 0) {
+    return result;
+  }
+
+  result.handledFiles = new Set(allPythonFiles);
+
+  const validPythonFiles: string[] = [];
+  for (const filePath of allPythonFiles) {
+    if (options.workPath) {
+      const fsPath = join(options.workPath, filePath);
+      const isEntrypoint = await isPythonEntrypoint({ fsPath });
+      if (isEntrypoint) {
+        validPythonFiles.push(filePath);
+      }
+    } else {
+      validPythonFiles.push(filePath);
+    }
+  }
+
+  if (validPythonFiles.length === 0) {
+    return result;
+  }
+
+  // The src determines the function name (api/py.func/).
+  // The actual entrypoint (vc_meta_app.py) is set by the Python builder.
+  result.builder = {
+    use: `@vercel/python${withTag}`,
+    src: 'api/py.py',
+    config: {
+      zeroConfig: true,
+      consolidatedApi: true,
+    },
+  };
+
+  for (const filePath of validPythonFiles) {
+    const { routeError, apiRoute } = getApiRoute(
+      filePath,
+      apiSortedFiles,
+      options,
+      absolutePathCache
+    );
+
+    if (routeError) {
+      result.error = routeError;
+      return result;
+    }
+
+    if (apiRoute) {
+      // Override dest to point to consolidated Lambda
+      // Original path is preserved in request URL for internal routing
+      const consolidatedRoute: RouteWithSrc = {
+        ...apiRoute,
+        dest: 'api/py',
+      };
+      result.apiRoutes.push(consolidatedRoute);
+      // All consolidated routes need explicit rewrites since the function
+      // is at api/py, not at the individual file paths
+      result.dynamicRoutes.push(consolidatedRoute);
+    }
+  }
+
+  return result;
+}
+
+function maybeGetApiBuilder(
   fileName: string,
   apiMatches: Builder[],
   options: Options
-): Promise<Builder | null> {
+): Builder | null {
   const middleware =
     fileName === 'middleware.js' || fileName === 'middleware.ts';
 
@@ -436,13 +588,10 @@ async function maybeGetApiBuilder(
     return null;
   }
 
-  // For Python files, verify they are valid entrypoints before creating a builder
-  if (fileName.endsWith('.py') && options.workPath) {
-    const fsPath = join(options.workPath, fileName);
-    const isEntrypoint = await isPythonEntrypoint({ fsPath });
-    if (!isEntrypoint) {
-      return null;
-    }
+  // Python files are handled by the consolidated Python builder
+  // They should not create individual builders here
+  if (fileName.endsWith('.py')) {
+    return null;
   }
 
   const match = apiMatches.find(({ src = '**' }) => {
