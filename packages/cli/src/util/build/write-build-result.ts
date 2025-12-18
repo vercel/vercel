@@ -411,6 +411,7 @@ async function writeBuildResultV3(args: {
  * If the filename does not have a file extension then one attempts to be inferred
  * from the extension of the `fsPath`.
  *
+ * @param outputDir The path of the `.vercel/output` directory
  * @param file The `File` instance to write
  * @param path The URL path where the `File` can be accessed from
  * @param overrides Record of override configuration when a File is renamed or has other metadata
@@ -473,7 +474,7 @@ async function writeStaticFile(
  * the filesystem at a different location with an identical configuration,
  * then create a symlink to the previous location instead of copying the files again.
  *
- * @param outputPath The path of the `.vercel/output` directory
+ * @param outputDir The path of the `.vercel/output` directory
  * @param dest The path of destination function's `.func` directory
  * @param fn The Lambda or EdgeFunction instance to create the symlink for
  * @param functionConfiguration The function configuration for this instance
@@ -510,7 +511,7 @@ async function writeFunctionSymlink(
 /**
  * Serializes the `EdgeFunction` instance to the file system.
  *
- * @param outputPath The path of the `.vercel/output` directory
+ * @param outputDir The path of the `.vercel/output` directory
  * @param edgeFunction The `EdgeFunction` instance
  * @param path The URL path where the `EdgeFunction` can be accessed from
  * @param functionConfiguration (optional) Extra configuration to apply to the function
@@ -578,7 +579,7 @@ async function writeEdgeFunction(
 /**
  * Writes the file references from the `Lambda` instance to the file system.
  *
- * @param outputPath The path of the `.vercel/output` directory
+ * @param outputDir The path of the `.vercel/output` directory
  * @param lambda The `Lambda` instance
  * @param path The URL path where the `Lambda` can be accessed from
  * @param functionConfiguration (optional) Extra configuration to apply to the function's `.vc-config.json` file
