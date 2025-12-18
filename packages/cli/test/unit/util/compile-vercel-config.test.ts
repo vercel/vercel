@@ -10,11 +10,9 @@ describe('compileVercelConfig', () => {
 
   beforeEach(() => {
     tmpDir = getNewTmpDir();
-    process.env.VERCEL_TS_CONFIG_ENABLED = '1';
   });
 
   afterEach(async () => {
-    delete process.env.VERCEL_TS_CONFIG_ENABLED;
     await remove(tmpDir);
   });
 
@@ -57,16 +55,6 @@ describe('compileVercelConfig', () => {
         },
       ],
     });
-  });
-
-  it('should ignore vercel.ts if feature flag is disabled', async () => {
-    delete process.env.VERCEL_TS_CONFIG_ENABLED;
-    const vercelTsPath = join(tmpDir, 'vercel.ts');
-    await writeFile(vercelTsPath, 'export default {}');
-
-    const result = await compileVercelConfig(tmpDir);
-    expect(result.wasCompiled).toBe(false);
-    expect(result.configPath).toBe(null);
   });
 
   it('should throw error if both vercel.ts and vercel.json exist', async () => {

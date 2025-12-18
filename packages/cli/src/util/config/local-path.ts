@@ -29,14 +29,12 @@ export default function getLocalPathConfig(prefix: string) {
     throw new ConflictingConfigFiles([vercelConfigPath, nowConfigPath]);
   }
 
-  // If feature flag is enabled, check for compiled vercel.ts first
-  if (process.env.VERCEL_TS_CONFIG_ENABLED) {
-    const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
-    const compiledConfigExists = existsSync(compiledConfigPath);
+  // Check for compiled vercel.ts first
+  const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
+  const compiledConfigExists = existsSync(compiledConfigPath);
 
-    if (compiledConfigExists) {
-      return compiledConfigPath;
-    }
+  if (compiledConfigExists) {
+    return compiledConfigPath;
   }
 
   if (nowConfigExists) {

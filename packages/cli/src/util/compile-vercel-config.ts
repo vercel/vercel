@@ -108,18 +108,6 @@ export async function compileVercelConfig(
     throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
   }
 
-  // Only check for vercel.{ext} if feature flag is enabled
-  if (!process.env.VERCEL_TS_CONFIG_ENABLED) {
-    return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
-      wasCompiled: false,
-    };
-  }
-
   const vercelConfigPath = await findVercelConfigFile(workPath);
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
