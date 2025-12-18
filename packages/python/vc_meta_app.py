@@ -226,22 +226,50 @@ def handler_to_asgi(HandlerCls: type[BaseHTTPRequestHandler]) -> Callable[[Scope
     return app
 
 
+def is_sanic_app(app: Any) -> bool:
+    try:
+        from sanic import Sanic
+        return isinstance(app, Sanic)
+    except ImportError:
+        return False
+
+
+def sanic_to_asgi(sanic_app: Any) -> Callable[[Scope, Receive, Send], Coroutine[Any, Any, Any]]:
+    """Wrap a Sanic app for use as a sub-mounted ASGI app.
+
+    Sanic requires special initialization when embedded under another ASGI app:
+    - asgi=True to allow event loop access
+    - finalize() to compile routes
+    - signal_router.finalize() on first request (needs running event loop)
+    - allow_fail_builtin=False to ignore missing lifecycle signals
+    """
+    sanic_app.asgi = True
+    sanic_app.finalize()
+    sanic_app.signal_router.allow_fail_builtin = False
+
+    async def asgi(scope: Scope, receive: Receive, send: Send) -> None:
+        if not sanic_app.signal_router.finalized:
+            sanic_app.signal_router.finalize()
+        await sanic_app(scope, receive, send)
+
+    return asgi
+
+
 def create_route_handler(entrypoint_module) -> Callable[[Scope, Receive, Send], Coroutine[Any, Any, Any]]:
     handler = getattr(entrypoint_module, "handler", None) or getattr(entrypoint_module, "Handler", None)
     if handler is not None:
         return handler_to_asgi(handler)
     elif getattr(entrypoint_module, "app", None):
         app = entrypoint_module.app
-        if not callable(app):
-            raise ValueError(f"app must be callable, got {type(app).__name__}")
+        if is_sanic_app(app):
+            return sanic_to_asgi(app)
         is_wsgi = (
             not inspect.iscoroutinefunction(app) and
             not inspect.iscoroutinefunction(app.__call__)
         )
         if is_wsgi:
             return WsgiToAsgi(app)
-        else:
-            return app
+        return app
     else:
         raise ValueError(f"No handler or app found in {entrypoint_module}")
 
