@@ -1,5 +1,12 @@
 # @vercel/client
 
+## 17.2.18
+
+### Patch Changes
+
+- Updated dependencies [[`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/build-utils@13.2.4
+
 ## 17.2.17
 
 ### Patch Changes
