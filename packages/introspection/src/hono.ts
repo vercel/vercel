@@ -1,6 +1,7 @@
 import type { Hono } from 'hono';
 import { pathToRegexp } from 'path-to-regexp';
 import { setupCloseHandlers } from './util.js';
+import { debug } from '@vercel/build-utils';
 
 const apps: Hono[] = [];
 
@@ -34,17 +35,23 @@ function extractRoutes() {
   for (const route of app.routes) {
     const routePath = route.path;
     const method = route.method.toUpperCase();
-    const { regexp } = pathToRegexp(routePath);
+    try {
+      const { regexp } = pathToRegexp(routePath);
 
-    if (routePath === '/') {
-      continue;
+      if (routePath === '/') {
+        continue;
+      }
+
+      routes.push({
+        src: regexp.source,
+        dest: routePath,
+        methods: [method],
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      debug(`Error extracting routes for ${routePath}: ${message}`);
+      //
     }
-
-    routes.push({
-      src: regexp.source,
-      dest: routePath,
-      methods: [method],
-    });
   }
   return routes;
 }

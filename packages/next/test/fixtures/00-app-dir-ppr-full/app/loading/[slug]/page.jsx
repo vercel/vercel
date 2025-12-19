@@ -1,14 +1,18 @@
-import React, { Suspense } from 'react'
-import { Dynamic } from '../../../components/dynamic'
+import React, { Suspense } from 'react';
+import { Dynamic } from '../../../components/dynamic';
 
-export default ({ params: { slug } }) => {
+export default async props => {
+  const params = await props.params;
+
+  const { slug } = params;
+
   return (
     <Suspense fallback={<Dynamic pathname={`/loading/${slug}`} fallback />}>
       <Dynamic pathname={`/loading/${slug}`} />
     </Suspense>
-  )
-}
+  );
+};
 
 export const generateStaticParams = async () => {
-  return [{ slug: 'a' }]
-}
+  return [{ slug: 'a' }];
+};

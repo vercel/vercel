@@ -7,6 +7,7 @@ import { type Command, help } from '../help';
 import list from './list';
 import listVersions from './list-versions';
 import add from './add';
+import upload from './upload';
 import remove from './remove';
 import promote from './promote';
 import restore from './restore';
@@ -15,6 +16,7 @@ import {
   listSubcommand,
   listVersionsSubcommand,
   addSubcommand,
+  uploadSubcommand,
   removeSubcommand,
   promoteSubcommand,
   restoreSubcommand,
@@ -28,6 +30,7 @@ const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   'list-versions': getCommandAliases(listVersionsSubcommand),
   add: getCommandAliases(addSubcommand),
+  upload: getCommandAliases(uploadSubcommand),
   remove: getCommandAliases(removeSubcommand),
   promote: getCommandAliases(promoteSubcommand),
   restore: getCommandAliases(restoreSubcommand),
@@ -99,6 +102,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'upload':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
+        printHelp(uploadSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpload(subcommandOriginal);
+      return upload(client, args);
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
