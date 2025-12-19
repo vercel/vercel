@@ -38,6 +38,41 @@ describe('Router', () => {
       });
     });
 
+    it('should add a rewrite rule with respectOriginCacheControl: false', () => {
+      const rewrite = router.rewrite(
+        '/external/(.*)',
+        'https://external-api.example.com/$1',
+        {
+          respectOriginCacheControl: false,
+        }
+      );
+      expect(rewrite).toEqual({
+        source: '/external/(.*)',
+        destination: 'https://external-api.example.com/$1',
+        respectOriginCacheControl: false,
+      });
+    });
+
+    it('should add a rewrite rule with respectOriginCacheControl: true', () => {
+      const rewrite = router.rewrite(
+        '/external/(.*)',
+        'https://external-api.example.com/$1',
+        {
+          respectOriginCacheControl: true,
+        }
+      );
+      expect(rewrite).toEqual({
+        source: '/external/(.*)',
+        destination: 'https://external-api.example.com/$1',
+        respectOriginCacheControl: true,
+      });
+    });
+
+    it('should not include respectOriginCacheControl when not specified', () => {
+      const rewrite = router.rewrite('/api/(.*)', '/legacy-api/$1');
+      expect(rewrite).not.toHaveProperty('respectOriginCacheControl');
+    });
+
     it('should return Rewrite type for simple rewrites', () => {
       const rewrite = router.rewrite('/api/(.*)', '/legacy-api/$1');
       expect(rewrite).toHaveProperty('source');
@@ -202,6 +237,25 @@ describe('Router', () => {
 
       expect(route.transforms[0].env).toEqual(['API_KEY']);
       expect(route.transforms[1].env).toEqual(['REGION']);
+    });
+
+    it('should include respectOriginCacheControl in route with transforms', () => {
+      const route = router.rewrite(
+        '/api/(.*)',
+        'https://backend.example.com/$1',
+        {
+          requestHeaders: {
+            authorization: deploymentEnv('API_KEY'),
+          },
+          respectOriginCacheControl: false,
+        }
+      );
+
+      expect(route).toMatchObject({
+        src: '/api/(.*)',
+        dest: 'https://backend.example.com/$1',
+        respectOriginCacheControl: false,
+      });
     });
 
     it('should not extract path params as env vars', () => {
