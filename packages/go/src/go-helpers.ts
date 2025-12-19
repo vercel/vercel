@@ -18,6 +18,7 @@ import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
+import { getWriteableDirectory } from '@vercel/build-utils';
 
 const streamPipeline = promisify(pipeline);
 
@@ -278,15 +279,51 @@ export async function createGo({
   }
 
   const setGoEnv = async (goDir: string | null) => {
-    if (platform !== 'win32' && goDir === goGlobalCacheDir) {
+    if (!goDir) {
+      env.GOROOT = undefined;
+      env.PATH = PATH;
+      return;
+    }
+
+    const isUnix = platform !== 'win32';
+
+    const setEnvPaths = (modCache: string, buildCache: string) => {
+      env.GOMODCACHE = modCache;
+      env.GOCACHE = buildCache;
+      debug(`Set GOMODCACHE to ${env.GOMODCACHE}`);
+      debug(`Set GOCACHE to ${env.GOCACHE}`);
+    };
+
+    if (isUnix && goDir === goGlobalCacheDir) {
+      // Using global cache → link it to goCacheDir
       debug(`Symlinking ${goDir} -> ${goCacheDir}`);
       await remove(goCacheDir);
       await mkdirp(dirname(goCacheDir));
       await symlink(goDir, goCacheDir);
+
+      const modCache = join(goDir, 'pkg', 'mod');
+      const buildCache = join(goDir, 'go-build');
+      setEnvPaths(modCache, buildCache);
+
       goDir = goCacheDir;
+    } else if (isUnix && goDir === goCacheDir) {
+      // Using local cache → link temp writable directories
+      const tmpBase = await getWriteableDirectory();
+      const tmpModCache = join(tmpBase, 'pkg');
+      const tmpBuildCache = join(tmpBase, '.cache');
+
+      await Promise.all([
+        mkdirp(join(goDir, 'pkg', 'mod')),
+        mkdirp(join(goDir, '.cache', 'go-build')),
+        symlink(join(goCacheDir, 'pkg', 'mod'), tmpModCache),
+        symlink(join(goCacheDir, '.cache', 'go-build'), tmpBuildCache),
+      ]);
+
+      setEnvPaths(tmpModCache, tmpBuildCache);
     }
-    env.GOROOT = goDir || undefined;
-    env.PATH = goDir ? `${join(goDir, 'bin')}${delimiter}${PATH}` : PATH;
+
+    env.GOROOT = goDir;
+    env.PATH = `${join(goDir, 'bin')}${delimiter}${PATH}`;
   };
 
   // try each of these Go directories looking for the version we need
