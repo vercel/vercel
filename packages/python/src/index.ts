@@ -49,7 +49,10 @@ import {
 export const version = 3;
 
 // Additional dependencies required for consolidated Python API mode
-const CONSOLIDATED_API_DEPENDENCIES = ['starlette>=0.27.0', 'asgiref>=3.0.0'];
+const CONSOLIDATED_API_DEPENDENCIES = [
+  'starlette>=0.31.0,<1.0.0',
+  'asgiref>=3.0.0,<4.0.0',
+];
 
 export async function downloadFilesInWorkPath({
   entrypoint,
