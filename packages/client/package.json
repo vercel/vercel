@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "17.2.17",
+  "version": "17.2.18",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
