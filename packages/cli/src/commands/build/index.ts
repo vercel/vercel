@@ -87,6 +87,7 @@ import { validateConfig } from '../../util/validate-config';
 import {
   compileVercelConfig,
   findSourceVercelConfigFile,
+  DEFAULT_VERCEL_CONFIG_FILENAME,
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
@@ -463,7 +464,9 @@ async function doBuild(
   }
 
   if (vercelConfig) {
-    vercelConfig[fileNameSymbol] = 'vercel.json';
+    vercelConfig[fileNameSymbol] = compileResult.wasCompiled
+      ? compileResult.sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME
+      : 'vercel.json';
   } else if (nowConfig) {
     nowConfig[fileNameSymbol] = 'now.json';
   }
