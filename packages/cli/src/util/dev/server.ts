@@ -629,6 +629,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        workPath: this.cwd,
       });
 
       if (errors) {
