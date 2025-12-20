@@ -1,5 +1,27 @@
 # @vercel/python
 
+## 6.1.5
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 6.1.4
+
+### Patch Changes
+
+- [python] add install script to pyproject.toml ([#14420](https://github.com/vercel/vercel/pull/14420))
+
+- [python] uv workspaces fix don't throw on missing `uv.lock` ([#14467](https://github.com/vercel/vercel/pull/14467))
+
+## 6.1.3
+
+### Patch Changes
+
+- [python] fix custom install command ([#14418](https://github.com/vercel/vercel/pull/14418))
+
+- Ensure python install errors retain the error code ([#14452](https://github.com/vercel/vercel/pull/14452))
+
 ## 6.1.2
 
 ### Patch Changes

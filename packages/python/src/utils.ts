@@ -2,7 +2,7 @@ import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
 
-import execa = require('execa');
+import execa from 'execa';
 
 const isWin = process.platform === 'win32';
 
@@ -79,7 +79,8 @@ export function getVenvPythonBin(venvPath: string) {
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
-  env?: NodeJS.ProcessEnv
+  env?: NodeJS.ProcessEnv,
+  useUserVirtualEnv = true
 ) {
   const pyprojectPath = join(workPath, 'pyproject.toml');
   if (!fs.existsSync(pyprojectPath)) return false;
@@ -109,7 +110,9 @@ export async function runPyprojectScript(
   // Use the Python from the virtualenv if present to resolve tooling, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
   const finalEnv = { ...process.env, ...env };
-  useVirtualEnv(workPath, finalEnv, systemPython);
+  if (useUserVirtualEnv) {
+    useVirtualEnv(workPath, finalEnv, systemPython);
+  }
 
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
@@ -147,9 +150,18 @@ export async function runUvCommand(options: {
     });
     return true;
   } catch (err) {
-    throw new Error(
+    const error = new Error(
       `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
-    );
+    ) as Error & { code?: number | string };
+    // retain code/signal to ensure it's treated as a build error
+    if (err && typeof err === 'object') {
+      if ('code' in err) {
+        error.code = (err as { code: number | string }).code;
+      } else if ('signal' in err) {
+        error.code = (err as { signal: string }).signal;
+      }
+    }
+    throw error;
   }
 }
 

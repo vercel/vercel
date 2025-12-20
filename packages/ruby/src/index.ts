@@ -138,20 +138,15 @@ async function bundleInstall(
     BUNDLE_SILENCE_ROOT_WARNING: '1',
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
+    BUNDLE_DEPLOYMENT: 'true',
+    BUNDLE_PATH: bundleDir,
+    BUNDLE_FROZEN: 'true',
   });
 
-  debug('running "bundle install --deployment --frozen"');
+  debug('running "bundle install"');
   const installRes = await execa(
     bundlePath,
-    [
-      'install',
-      '--deployment',
-      '--frozen',
-      '--gemfile',
-      gemfilePath,
-      '--path',
-      bundleDir,
-    ],
+    ['install', '--gemfile', gemfilePath],
     {
       stdio: 'pipe',
       env: bundlerEnv,

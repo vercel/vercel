@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.4
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
 ## 13.2.3
 
 ### Patch Changes
