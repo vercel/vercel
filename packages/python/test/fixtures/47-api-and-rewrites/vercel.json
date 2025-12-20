@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/starlette(.*)",
+      "destination": "/api/starlette"
+    },
+    {
       "source": "/(.*)",
       "destination": "/api/sanic"
     }

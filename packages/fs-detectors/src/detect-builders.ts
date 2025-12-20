@@ -1,7 +1,7 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname, join } from 'path';
-import type { Route, RouteWithSrc } from '@vercel/routing-utils';
+import type { Route, RouteWithSrc, Rewrite } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
   PackageJson,
@@ -49,6 +49,7 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
+  rewrites?: Rewrite[];
 }
 
 // We need to sort the file paths by alphabet to make
@@ -208,7 +209,7 @@ export async function detectBuilders(
   dynamicRoutes.push(...pythonResult.dynamicRoutes);
 
   for (const fileName of sortedFiles) {
-    // Skip Python files - they're handled by the consolidated builder above
+    // Skip Python files that have been already handled by the consolidated builder above
     if (pythonResult.handledFiles.has(fileName)) {
       continue;
     }
@@ -463,6 +464,28 @@ interface ConsolidatedPythonResult {
 }
 
 /**
+ * Extract Python file paths that are rewrite destinations.
+ * These files should NOT be consolidated because rewrites invoke them directly.
+ */
+function getRewriteTargetPythonFiles(rewrites: Rewrite[] = []): Set<string> {
+  const targets = new Set<string>();
+
+  for (const rewrite of rewrites) {
+    // Get the destination path, strip query params
+    const dest = rewrite.destination.split('?')[0];
+    // Normalize: remove leading slash, handle both /api/foo and /api/foo.py
+    const normalized = dest.replace(/^\//, '').replace(/\.py$/, '');
+
+    if (normalized.startsWith('api/')) {
+      // Add both with and without .py extension for matching
+      targets.add(normalized + '.py');
+    }
+  }
+
+  return targets;
+}
+
+/**
  * Consolidates .py files in the /api directory into a single api builder.
  *
  * This is to avoid creating separate Lambda functions for each Python file in /api,
@@ -491,10 +514,24 @@ async function getConsolidatedPythonApiBuilder(params: {
     return result;
   }
 
-  result.handledFiles = new Set(allPythonFiles);
+  // Files that are rewrite destinations should NOT be consolidated.
+  // They need individual Lambdas so rewrites work correctly.
+  const rewriteTargets = getRewriteTargetPythonFiles(options.rewrites);
+  const consolidatableFiles = allPythonFiles.filter(
+    f => !rewriteTargets.has(f)
+  );
+
+  // Only mark consolidatable files as handled - rewrite targets will be
+  // handled by maybeGetApiBuilder as individual Lambdas
+  result.handledFiles = new Set(consolidatableFiles);
+
+  // If all files are rewrite targets, nothing to consolidate
+  if (consolidatableFiles.length === 0) {
+    return result;
+  }
 
   const validPythonFiles: string[] = [];
-  for (const filePath of allPythonFiles) {
+  for (const filePath of consolidatableFiles) {
     if (options.workPath) {
       const fsPath = join(options.workPath, filePath);
       const isEntrypoint = await isPythonEntrypoint({ fsPath });
@@ -584,11 +621,9 @@ function maybeGetApiBuilder(
     return null;
   }
 
-  // Python files are handled by the consolidated Python builder
-  // They should not create individual builders here
-  if (fileName.endsWith('.py')) {
-    return null;
-  }
+  // Note: Python files that are rewrite destinations need individual Lambdas.
+  // Those files are NOT in pythonResult.handledFiles, so they reach here.
+  // Other Python files are consolidated and skipped before this function.
 
   const match = apiMatches.find(({ src = '**' }) => {
     return src === fileName || minimatch(fileName, src);

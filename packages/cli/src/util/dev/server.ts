@@ -630,6 +630,7 @@ export default class DevServer {
         cleanUrls,
         trailingSlash,
         workPath: this.cwd,
+        rewrites: vercelConfig.rewrites,
       });
 
       if (errors) {

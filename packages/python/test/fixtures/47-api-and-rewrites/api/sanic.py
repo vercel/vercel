@@ -6,7 +6,7 @@ app = Sanic("my_app")
 
 @app.get("/")
 async def home(request):
-    return text("ok")
+    return text("sanic:ok")
 
 
 @app.get("/greet/<name>")
