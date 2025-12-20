@@ -3201,6 +3201,9 @@ export const onPrerenderRoute =
               'cache-control':
                 'private, no-store, no-cache, max-age=0, must-revalidate',
               vary: rscVaryHeader,
+              ...(didPostpone && rscDidPostponeHeader && !isFallback
+                ? { [rscDidPostponeHeader]: '1' }
+                : {}),
             },
           });
         }
