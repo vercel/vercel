@@ -181,7 +181,7 @@ export async function detectBuilders(
   const apiRoutes: RouteWithSrc[] = [];
   const dynamicRoutes: RouteWithSrc[] = [];
 
-  // Consolidate Python files in /api into a single API builder.
+  // Consolidate Python files in /api into a single API builder
   const pythonResult = await getConsolidatedPythonApiBuilder({
     files: sortedFiles,
     apiSortedFiles,
