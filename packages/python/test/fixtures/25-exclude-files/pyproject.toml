@@ -1,0 +1,12 @@
+[project]
+name = "app"
+version = "0.1.0"
+requires-python = ">=3.12"
+classifiers = [
+  "Private :: Do Not Upload",
+]
+dependencies = [
+    "cowpy==1.0.3",
+    "uvicorn>=0.24",
+    "werkzeug>=1.0.1",
+]
