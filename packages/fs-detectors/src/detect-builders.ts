@@ -214,7 +214,7 @@ export async function detectBuilders(
       continue;
     }
 
-    const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
+    const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(
