@@ -621,10 +621,6 @@ function maybeGetApiBuilder(
     return null;
   }
 
-  // Note: Python files that are rewrite destinations need individual Lambdas.
-  // Those files are NOT in pythonResult.handledFiles, so they reach here.
-  // Other Python files are consolidated and skipped before this function.
-
   const match = apiMatches.find(({ src = '**' }) => {
     return src === fileName || minimatch(fileName, src);
   });
