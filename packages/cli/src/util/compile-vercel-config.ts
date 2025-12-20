@@ -13,7 +13,14 @@ export interface CompileConfigResult {
   sourceFile?: string;
 }
 
-const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
+export const VERCEL_CONFIG_EXTENSIONS = [
+  'ts',
+  'mts',
+  'js',
+  'mjs',
+  'cjs',
+] as const;
+export const DEFAULT_VERCEL_CONFIG_FILENAME = 'Vercel config';
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -106,18 +113,6 @@ export async function compileVercelConfig(
   // Check for conflicting vercel.json and now.json
   if (hasVercelJson && hasNowJson) {
     throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
-  }
-
-  // Only check for vercel.{ext} if feature flag is enabled
-  if (!process.env.VERCEL_TS_CONFIG_ENABLED) {
-    return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
-      wasCompiled: false,
-    };
   }
 
   const vercelConfigPath = await findVercelConfigFile(workPath);
