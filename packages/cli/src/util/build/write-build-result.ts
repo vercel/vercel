@@ -29,7 +29,7 @@ import {
   normalizePath,
   type TriggerEvent,
   isBackendBuilder,
-  shouldUseExperimentalBackends,
+  isExperimentalBackendsEnabled,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
@@ -78,10 +78,7 @@ export async function writeBuildResult(args: {
     standalone,
     workPath,
   } = args;
-  let version = builder.version;
-  if (shouldUseExperimentalBackends(build.use) && 'output' in buildResult) {
-    version = 2;
-  }
+  const version = builder.version;
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2({
       repoRootPath,
@@ -304,42 +301,54 @@ async function writeBuildResultV3(args: {
   const { output } = buildResult;
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
 
-  if (
-    (isBackendBuilder(build) || build.use === '@vercel/python') &&
-    existsSync(routesJsonPath)
-  ) {
-    try {
-      const newOutput: Record<string, Lambda | EdgeFunction> = {
-        index: output,
-      };
-      const routesJson = await fs.readJSON(routesJsonPath);
-      if (
-        routesJson &&
-        typeof routesJson === 'object' &&
-        'routes' in routesJson &&
-        Array.isArray(routesJson.routes)
-      ) {
-        for (const route of routesJson.routes) {
-          if (route.source === '/') {
-            continue;
-          }
-          if (route.source) {
-            newOutput[route.source] = output;
+  if (isBackendBuilder(build) || build.use === '@vercel/python') {
+    if (existsSync(routesJsonPath)) {
+      try {
+        const newOutput: Record<string, Lambda | EdgeFunction> = {
+          index: output,
+        };
+        const routesJson = await fs.readJSON(routesJsonPath);
+        if (
+          routesJson &&
+          typeof routesJson === 'object' &&
+          'routes' in routesJson &&
+          Array.isArray(routesJson.routes)
+        ) {
+          for (const route of routesJson.routes) {
+            if (route.source === '/') {
+              continue;
+            }
+            if (route.source) {
+              newOutput[route.source] = output;
+            }
           }
         }
-      }
 
+        return writeBuildResultV2({
+          repoRootPath,
+          outputDir,
+          buildResult: { output: newOutput, routes: buildResult.routes },
+          build,
+          vercelConfig,
+          standalone,
+          workPath,
+        });
+      } catch (error) {
+        outputManager.error(`Failed to read routes.json: ${error}`);
+      }
+    }
+    // This flag is being used to write a v2 build result,
+    // earlier in the process, the `routes` check is just to double-check
+    if (isExperimentalBackendsEnabled() && 'routes' in buildResult) {
       return writeBuildResultV2({
         repoRootPath,
         outputDir,
-        buildResult: { output: newOutput, routes: buildResult.routes },
+        buildResult: buildResult as unknown as BuildResultV2,
         build,
         vercelConfig,
         standalone,
         workPath,
       });
-    } catch (error) {
-      outputManager.error(`Failed to read routes.json: ${error}`);
     }
   }
   const src = build.src;
