@@ -597,6 +597,7 @@ export async function getDynamicRoutes({
                 !prefetchDataRoute);
 
             routes.push({
+              ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 // Now than the upstream issues has been resolved, we can safely
