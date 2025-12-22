@@ -150,6 +150,9 @@ const extractAndExecuteCode = async (
     });
 
     fakeLambdaProcess.on('exit', (code, signal) => {
+      if (signal === 'SIGTERM') {
+        resolve();
+      }
       if (code !== 0) {
         reject(
           new Error(`Process exited with code ${code} and signal ${signal}`)
