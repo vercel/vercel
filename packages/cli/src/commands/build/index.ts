@@ -533,6 +533,18 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
+  // 1. cd packages/cli
+  // 2. pnpm build
+  // 3. pnpm pack
+  // 4. open .
+  // 5. upload vercel-50.1.3.tgz to blob store https://vercel.com/vercel-labs/~/stores/blob/store_PDmwsooLejOIaEWs/browser
+  // 6. set VERCEL_CLI_VERSION env var on project https://vercel.com/vercel-labs/flags-sdk-vercel if not present or version changed
+  // 7. redeploy
+  if (process.env.VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG === '1') {
+    output.debug('Embedding Edge Config');
+    emitEdgeConfigFiles();
+  }
+
   // Get a list of source files
   const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
