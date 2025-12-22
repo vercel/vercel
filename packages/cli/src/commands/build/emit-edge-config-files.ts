@@ -236,8 +236,8 @@ function parseConnectionFromFlags(text: string): Connection | null {
  * Emits Edge Config snapshot files into node_modules/@vercel/edge-config-storage
  *
  * Reads all connected Edge Configs from environment variables and emits them into
- * node_modules/@vercel/edge-config-storage/data.json along with a package.json
- * that exports the data.json file.
+ * node_modules/@vercel/edge-config-storage/stores.json along with a package.json
+ * that exports the stores.json file.
  *
  * Attaches the updatedAt timestamp from the header to the emitted file.
  */
@@ -310,22 +310,22 @@ export async function emitEdgeConfigFiles(
     '@vercel',
     'edge-config-storage'
   );
-  const dataPath = join(storageDir, 'data.json');
+  const dataPath = join(storageDir, 'stores.json');
   const pkgPath = join(storageDir, 'package.json');
 
   // Ensure the storage directory exists
   await mkdir(storageDir, { recursive: true });
 
-  // Write the data.json file
+  // Write the stores.json file
   await writeFile(dataPath, JSON.stringify(stores));
 
-  // Create a package.json that exports data.json
+  // Create a package.json that exports stores.json
   const packageJson = {
     name: '@vercel/edge-config-storage',
     version: '1.0.0',
     type: 'module',
     exports: {
-      './data.json': './data.json',
+      './stores.json': './stores.json',
     },
   };
   await writeFile(pkgPath, JSON.stringify(packageJson, null, 2));
