@@ -146,6 +146,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     'redirects-v2': {
       'now.json': JSON.stringify({
         name: 'redirects-v2',
+        uploadNowJson: true,
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
@@ -186,11 +187,13 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       [`test-${session}.html`]: '<h1>hello test</h1>',
       'vercel.json': JSON.stringify({
         name: 'original',
+        uploadNowJson: true,
         builds: [{ src: `main-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
       'vercel-test.json': JSON.stringify({
         name: 'secondary',
+        uploadNowJson: true,
         builds: [{ src: `test-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
