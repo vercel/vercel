@@ -95,6 +95,7 @@ import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
 import { mkdir, writeFile } from 'fs/promises';
+import { emitEdgeConfigFiles } from './emit-edge-config-files';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -541,8 +542,11 @@ async function doBuild(
   // 6. set VERCEL_CLI_VERSION env var on project https://vercel.com/vercel-labs/flags-sdk-vercel if not present or version changed
   // 7. redeploy
   if (process.env.VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG === '1') {
-    output.debug('Embedding Edge Config');
-    emitEdgeConfigFiles();
+    await emitEdgeConfigFiles(outputDir, process.env);
+  } else {
+    output.debug(
+      'Skipped embedding Edge Config due to VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG'
+    );
   }
 
   // Get a list of source files
