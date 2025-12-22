@@ -339,7 +339,11 @@ async function writeBuildResultV3(args: {
     }
     // This flag is being used to write a v2 build result,
     // earlier in the process, the `routes` check is just to double-check
-    if (isExperimentalBackendsEnabled() && 'routes' in buildResult) {
+    if (
+      isBackendBuilder(build) &&
+      isExperimentalBackendsEnabled() &&
+      'routes' in buildResult
+    ) {
       return writeBuildResultV2({
         repoRootPath,
         outputDir,
