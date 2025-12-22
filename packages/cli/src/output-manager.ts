@@ -1,7 +1,7 @@
 import { Output } from './util/output';
 
 const output = new Output(process.stderr, {
-  debug: false,
+  debug: process.env.VERCEL_CLI_DEBUG === '1',
 });
 
 /**
