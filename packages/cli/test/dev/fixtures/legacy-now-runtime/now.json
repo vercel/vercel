@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "uploadNowJson": true,
   "builds": [
     { "src": "www/**/*", "use": "@now/static" },
     { "src": "api/**/*.js", "use": "@now/node" }
