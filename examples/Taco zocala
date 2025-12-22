@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taco Zócalo | Authentic Mexican Tacos in Arlington, VA</title>
+  <meta name="description" content="Taco Zócalo offers authentic Mexican tacos with a premium dining experience in Arlington & Falls Church, Virginia." />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #0f0f0f;
+      --gold: #c9a24d;
+      --green: #2f5d50;
+      --cream: #f6f3ee;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--cream);
+      color: var(--black);
+      line-height: 1.6;
+    }
+
+    header {
+      height: 100vh;
+      background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)), url('https://images.unsplash.com/photo-1601924582975-7e67024f31a6');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      letter-spacing: 1px;
+    }
+
+    .btn {
+      padding: 14px 36px;
+      border-radius: 40px;
+      text-decoration: none;
+      font-weight: 500;
+      margin: 0 10px;
+      transition: all .3s ease;
+    }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--black);
+    }
+
+    .btn-primary:hover { background: #b08c3e; }
+
+    .btn-outline {
+      border: 1px solid white;
+      color: white;
+    }
+
+    section {
+      padding: 6rem 10%;
+    }
+
+    .about {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .about h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .menu {
+      background: #fff;
+      text-align: center;
+    }
+
+    .menu h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      margin-bottom: 3rem;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2.5rem;
+    }
+
+    .menu-item {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 1rem;
+    }
+
+    .menu-item h4 {
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .experience {
+      background: var(--green);
+      color: white;
+      text-align: center;
+    }
+
+    .experience h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.8rem;
+      margin-bottom: 2rem;
+    }
+
+    .experience p {
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .reviews {
+      text-align: center;
+    }
+
+    .reviews h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.6rem;
+      margin-bottom: 2rem;
+    }
+
+    .stars {
+      color: var(--gold);
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .location {
+      background: #fff;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+    }
+
+    footer {
+      background: var(--black);
+      color: white;
+      padding: 3rem 10%;
+      text-align: center;
+    }
+
+    footer p { font-size: .9rem; color: #aaa; }
+
+    @media(max-width: 900px) {
+      .about, .location { grid-template-columns: 1fr; }
+      header h1 { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>Taco Zócalo</h1>
+      <p>Authentic Mexican Flavors · Elevated Experience</p>
+      <a href="#menu" class="btn btn-primary">View Menu</a>
+      <a href="tel:+1" class="btn btn-outline">Call Now</a>
+    </div>
+  </header>
+
+  <section class="about">
+    <div>
+      <h2>Our Story</h2>
+      <p>
+        At Taco Zócalo, we celebrate the soul of Mexican cuisine through
+        authentic recipes, fresh ingredients, and refined presentation.
+        Every taco is crafted with respect for tradition and passion for flavor.
+      </p>
+    </div>
+    <div>
+      <img src="https://images.unsplash.com/photo-1617196034183-421b4917c92d" alt="Tacos" style="width:100%; border-radius:16px;">
+    </div>
+  </section>
+
+  <section class="menu" id="menu">
+    <h2>Menu Highlights</h2>
+    <div class="menu-grid">
+      <div class="menu-item">
+        <h4>Carne Asada Taco <span>$4.50</span></h4>
+        <p>Grilled steak, onions, cilantro</p>
+      </div>
+      <div class="menu-item">
+        <h4>Al Pastor Taco <span>$4.25</span></h4>
+        <p>Marinated pork, pineapple</p>
+      </div>
+      <div class="menu-item">
+        <h4>Birria Taco <span>$4.75</span></h4>
+        <p>Slow-cooked beef, rich consommé</p>
+      </div>
+      <div class="menu-item">
+        <h4>Horchata <span>$3.00</span></h4>
+        <p>Traditional rice drink</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="experience">
+    <h2>The Zócalo Experience</h2>
+    <p>
+      Fresh ingredients. Authentic flavors. A premium environment that brings
+      the heart of Mexico to Arlington, Virginia.
+    </p>
+  </section>
+
+  <section class="reviews">
+    <h2>Guest Reviews</h2>
+    <div class="stars">★★★★★</div>
+    <p>Rated 4.6 out of 5 based on 170+ reviews</p>
+  </section>
+
+  <section class="location">
+    <div>
+      <h2>Visit Us</h2>
+      <p><strong>Address:</strong><br>6343-D Columbia Pike, Falls Church, VA 22041<br>Barcroft Plaza</p>
+      <p><strong>Hours:</strong><br>
+        Mon–Sat: 11:00 AM – 9:00 PM<br>
+        Sunday: 12:00 PM – 8:00 PM
+      </p>
+      <a href="https://maps.google.com" class="btn btn-primary">Get Directions</a>
+    </div>
+    <div>
+      <iframe src="https://maps.google.com/maps?q=6343-D%20Columbia%20Pike%20Falls%20Church%20VA&t=&z=15&ie=UTF8&iwloc=&output=embed" width="100%" height="300" style="border-radius:16px; border:0;"></iframe>
+    </div>
+  </section>
+
+  <footer>
+    <h3>Taco Zócalo</h3>
+    <p>Authentic Mexican Tacos · Arlington, VA</p>
+    <p>© 2025 Taco Zócalo. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
