@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "uploadNowJson": true,
   "builds": [
     {
       "src": "index.py",
