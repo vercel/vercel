@@ -542,7 +542,7 @@ async function doBuild(
   // 6. set VERCEL_CLI_VERSION env var on project https://vercel.com/vercel-labs/flags-sdk-vercel if not present or version changed
   // 7. redeploy
   if (process.env.VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG === '1') {
-    await emitEdgeConfigFiles(outputDir, process.env);
+    await emitEdgeConfigFiles(cwd, process.env);
   } else {
     output.debug(
       'Skipped embedding Edge Config due to VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG'

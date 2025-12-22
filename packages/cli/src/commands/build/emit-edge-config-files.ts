@@ -242,7 +242,7 @@ function parseConnectionFromFlags(text: string): Connection | null {
  * Attaches the updatedAt timestamp from the header to the emitted file.
  */
 export async function emitEdgeConfigFiles(
-  outputDir: string,
+  cwd: string,
   env: NodeJS.ProcessEnv
 ): Promise<void> {
   // Skip if disabled
@@ -305,19 +305,19 @@ export async function emitEdgeConfigFiles(
 
   // Determine the output directory in node_modules
   const storageDir = join(
-    outputDir,
+    cwd,
     'node_modules',
     '@vercel',
     'edge-config-storage'
   );
-  const dataPath = join(storageDir, 'stores.json');
-  const pkgPath = join(storageDir, 'package.json');
+  const storesJsonPath = join(storageDir, 'stores.json');
+  const packageJsonPath = join(storageDir, 'package.json');
 
   // Ensure the storage directory exists
   await mkdir(storageDir, { recursive: true });
 
   // Write the stores.json file
-  await writeFile(dataPath, JSON.stringify(stores));
+  await writeFile(storesJsonPath, JSON.stringify(stores));
 
   // Create a package.json that exports stores.json
   const packageJson = {
@@ -328,10 +328,10 @@ export async function emitEdgeConfigFiles(
       './stores.json': './stores.json',
     },
   };
-  await writeFile(pkgPath, JSON.stringify(packageJson, null, 2));
+  await writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
   output.debug('Edge Config snapshot created:');
-  output.debug(`  → ${dataPath}`);
-  output.debug(`  → ${pkgPath}`);
+  output.debug(`  → ${storesJsonPath}`);
+  output.debug(`  → ${packageJsonPath}`);
   output.debug(`  → included ${Object.keys(stores).join(', ')}`);
 }
