@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler
 from cowpy import cow
 from os import path
 
+
 class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
