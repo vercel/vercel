@@ -95,6 +95,13 @@ export const config: VercelConfig = {
     // Basic rewrite without transforms
     routes.rewrite('/app', 'https://backend.example.com/app'),
 
+    // External rewrite with caching disabled
+    // By default, external rewrites respect the origin's Cache-Control header
+    // Set respectOriginCacheControl: false to disable caching
+    routes.rewrite('/external/(.*)', 'https://external-api.example.com/$1', {
+      respectOriginCacheControl: false,
+    }),
+
     // Multiple transforms: headers and query parameters
     routes.rewrite(
       '/api/:version/(.*)',

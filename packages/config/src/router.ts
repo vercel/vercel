@@ -346,6 +346,11 @@ export interface Route {
   headers?: Record<string, string>;
   /** Environment variables referenced in dest or transforms */
   env?: string[];
+  /**
+   * When true (default), external rewrites will respect the Cache-Control header from the origin.
+   * When false, caching is disabled for this rewrite.
+   */
+  respectOriginCacheControl?: boolean;
 }
 
 /**
@@ -526,6 +531,11 @@ export interface RewriteRule {
   missing?: Condition[];
   /** Internal field: transforms generated from requestHeaders/responseHeaders/requestQuery */
   transforms?: Transform[];
+  /**
+   * When true (default), external rewrites will respect the Cache-Control header from the origin.
+   * When false, caching is disabled for this rewrite.
+   */
+  respectOriginCacheControl?: boolean;
 }
 
 /**
@@ -665,6 +675,7 @@ export class Router {
       requestHeaders?: Record<string, string | string[]>;
       responseHeaders?: Record<string, string | string[]>;
       requestQuery?: Record<string, string | string[]>;
+      respectOriginCacheControl?: boolean;
     }
   ): Rewrite | Route;
   rewrite<T extends string>(
@@ -676,6 +687,7 @@ export class Router {
       requestHeaders?: Record<string, string | string[]>;
       responseHeaders?: Record<string, string | string[]>;
       requestQuery?: Record<string, string | string[]>;
+      respectOriginCacheControl?: boolean;
     } & Record<never, never> // Make this structurally distinct from functions
   ): Rewrite | Route;
   public rewrite<T extends string>(
@@ -688,6 +700,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          respectOriginCacheControl?: boolean;
         }
       | ((params: PathParams<T>) => {
           has?: Condition[];
@@ -695,6 +708,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          respectOriginCacheControl?: boolean;
         })
   ): Rewrite | Route {
     this.validateSourcePattern(source);
@@ -706,6 +720,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          respectOriginCacheControl?: boolean;
         }
       | undefined;
 
@@ -720,8 +735,14 @@ export class Router {
       options = optionsOrCallback;
     }
 
-    const { has, missing, requestHeaders, responseHeaders, requestQuery } =
-      options || {};
+    const {
+      has,
+      missing,
+      requestHeaders,
+      responseHeaders,
+      requestQuery,
+      respectOriginCacheControl,
+    } = options || {};
 
     // Check if any transforms were provided
     const hasTransforms = requestHeaders || responseHeaders || requestQuery;
@@ -786,6 +807,8 @@ export class Router {
       };
       if (has) route.has = has;
       if (missing) route.missing = missing;
+      if (respectOriginCacheControl !== undefined)
+        route.respectOriginCacheControl = respectOriginCacheControl;
 
       // Extract env vars from destination
       const destEnvVars = extractEnvVars(destination, pathParams);
@@ -809,6 +832,8 @@ export class Router {
       };
       if (has) route.has = has;
       if (missing) route.missing = missing;
+      if (respectOriginCacheControl !== undefined)
+        route.respectOriginCacheControl = respectOriginCacheControl;
       return route;
     }
 
@@ -820,6 +845,8 @@ export class Router {
 
     if (has) rewrite.has = has;
     if (missing) rewrite.missing = missing;
+    if (respectOriginCacheControl !== undefined)
+      rewrite.respectOriginCacheControl = respectOriginCacheControl;
 
     return rewrite;
   }

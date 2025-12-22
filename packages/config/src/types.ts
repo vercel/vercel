@@ -237,6 +237,7 @@ export interface Rewrite {
   destination: string;
   has?: Condition[];
   missing?: Condition[];
+  respectOriginCacheControl?: boolean;
 }
 
 /**
