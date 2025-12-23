@@ -4,7 +4,7 @@ Deploy your [Django](https://www.djangoproject.com/) project to Vercel with zero
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/django&template=django)
 
-_Live Example: https://django-template.vercel.app/_
+_Live Example: https://vercel-plus-django.vercel.app/_
 
 Visit the [Django documentation](https://www.djangoproject.com/) to learn more.
 
