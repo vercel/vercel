@@ -1,0 +1,148 @@
+name: Nightly Tests
+
+on:
+  schedule:
+    # Run at 10pm PST (6am UTC) every day
+    # PST is UTC-8, so 10pm PST = 6am UTC next day
+    - cron: "0 6 * * *"
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  VERCEL_TELEMETRY_DISABLED: "1"
+  TURBO_REMOTE_ONLY: "true"
+  TURBO_TEAM: "vercel"
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    name: Setup Full Test Suite
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      - id: set-tests
+        run: |
+          # Don't set TURBO_BASE_SHA to run ALL tests (no affected package filtering)
+          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          echo "Files to test:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
+        id: waitForTarball
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
+
+  test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
+    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['tests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - run: pnpm install
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: "1"
+      - name: Test ${{matrix.packageName}}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        shell: bash
+        env:
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          FORCE_COLOR: "1"
+      - name: "Determine Turbo HIT or MISS"
+        if: ${{ !cancelled() }}
+        id: turbo-summary
+        shell: bash
+        run: |
+          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
+          echo "MISS COUNT: $TURBO_MISS_COUNT"
+          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
+      - name: "Upload Test Report to Datadog"
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
+        run: "pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports"
+        env:
+          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          DD_ENV: ci
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - test
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    if: failure()
+    needs:
+      - summary
+    steps:
+      - name: Create GitHub Issue on Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const date = new Date().toISOString().split('T')[0];
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Nightly Test Failure - ${date}`,
+              body: `## Nightly Test Suite Failed\n\n**Date**: ${date}\n**Run URL**: ${runUrl}\n\nPlease investigate the failing tests.`,
+              labels: ['nightly-test-failure', 'bug']
+            });
