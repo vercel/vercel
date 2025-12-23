@@ -1,6 +1,6 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
-import { parse as parsePath, extname } from 'path';
+import { parse as parsePath, extname, join } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
@@ -11,6 +11,7 @@ import type {
   ProjectSettings,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
+import { isPythonEntrypoint } from '@vercel/build-utils';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -48,6 +49,7 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   outputDirectory?: string | null;
+  workPath?: string;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -181,7 +183,7 @@ export async function detectBuilders(
 
   // API
   for (const fileName of sortedFiles) {
-    const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
+    const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(
@@ -401,11 +403,11 @@ export async function detectBuilders(
   };
 }
 
-function maybeGetApiBuilder(
+async function maybeGetApiBuilder(
   fileName: string,
   apiMatches: Builder[],
   options: Options
-) {
+): Promise<Builder | null> {
   const middleware =
     fileName === 'middleware.js' || fileName === 'middleware.ts';
 
@@ -433,6 +435,15 @@ function maybeGetApiBuilder(
 
   if (fileName.endsWith('.d.ts')) {
     return null;
+  }
+
+  // For Python files, verify they are valid entrypoints before creating a builder
+  if (fileName.endsWith('.py') && options.workPath) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
   }
 
   const match = apiMatches.find(({ src = '**' }) => {

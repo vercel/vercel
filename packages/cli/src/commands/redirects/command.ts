@@ -33,7 +33,7 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
-      name: 'staged',
+      name: 'staging',
       description: 'List redirects from the staging version',
       shorthand: null,
       type: Boolean,
@@ -89,18 +89,108 @@ export const addSubcommand = {
   arguments: [
     {
       name: 'source',
-      required: true,
+      required: false,
     },
     {
       name: 'destination',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'status',
+      description: 'HTTP status code (301, 302, 307, or 308)',
+      shorthand: null,
+      type: Number,
+      argument: 'CODE',
+      deprecated: false,
+    },
+    {
+      name: 'case-sensitive',
+      description: 'Make the redirect case sensitive',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'preserve-query-params',
+      description: 'Preserve query parameters when redirecting',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'name',
+      description: 'Version name for this redirect (max 256 characters)',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description: 'Skip prompts and use default values',
+    },
+  ],
+  examples: [
+    {
+      name: 'Add a new redirect interactively',
+      value: `${packageName} redirects add`,
+    },
+    {
+      name: 'Add a new redirect with arguments',
+      value: `${packageName} redirects add /old-path /new-path`,
+    },
+    {
+      name: 'Add a redirect with all options',
+      value: `${packageName} redirects add /old-path /new-path --status 301 --case-sensitive --preserve-query-params --name "My redirect"`,
+    },
+    {
+      name: 'Add a redirect non-interactively',
+      value: `${packageName} redirects add /old-path /new-path --yes`,
+    },
+  ],
+} as const;
+
+export const uploadSubcommand = {
+  name: 'upload',
+  aliases: ['import'],
+  description: 'Upload redirects from a CSV or JSON file',
+  arguments: [
+    {
+      name: 'file',
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip confirmation prompt',
+    },
+    {
+      name: 'overwrite',
+      description: 'Replace all existing redirects',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
   examples: [
     {
-      name: 'Add a new redirect',
-      value: `${packageName} redirects add /old-path /new-path`,
+      name: 'Upload redirects from CSV file',
+      value: `${packageName} redirects upload redirects.csv`,
+    },
+    {
+      name: 'Upload redirects from JSON file',
+      value: `${packageName} redirects upload redirects.json`,
+    },
+    {
+      name: 'Upload and overwrite existing redirects',
+      value: `${packageName} redirects upload redirects.csv --overwrite`,
+    },
+    {
+      name: 'Upload without confirmation',
+      value: `${packageName} redirects upload redirects.csv --yes`,
     },
   ],
 } as const;
@@ -187,6 +277,7 @@ export const redirectsCommand = {
     listSubcommand,
     listVersionsSubcommand,
     addSubcommand,
+    uploadSubcommand,
     removeSubcommand,
     promoteSubcommand,
     restoreSubcommand,
