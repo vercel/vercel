@@ -3,6 +3,8 @@
  * https://openapi.vercel.sh/vercel.json
  */
 
+import type { Route } from './router';
+
 export type Framework =
   | 'blitzjs'
   | 'nextjs'
@@ -254,9 +256,8 @@ export interface HeaderRule {
 /**
  * Union type for all router helper outputs
  * Can be simple schema objects (Redirect, Rewrite, HeaderRule) or Routes with transforms
- * Note: Route type is defined in router.ts (uses src/dest instead of source/destination)
  */
-export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is internal to router
+export type RouteType = Redirect | Rewrite | HeaderRule | Route;
 
 export interface WildcardDomain {
   domain: string;
