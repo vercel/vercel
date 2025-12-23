@@ -139,7 +139,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Create branch and add notice file
-          git checkout -b "$BRANCH_NAME"
+          git checkout -B "$BRANCH_NAME"
 
           cat > NIGHTLY_TEST_FAILURE.md << EOF
           # 🚨 Nightly Test Failure Notice
