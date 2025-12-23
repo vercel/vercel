@@ -428,9 +428,6 @@ importers:
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
-      '@vercel/config':
-        specifier: workspace:*
-        version: link:../config
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent
