@@ -9,9 +9,8 @@ on:
 
 env:
   VERCEL_TELEMETRY_DISABLED: "1"
-  TURBO_REMOTE_ONLY: "true"
-  TURBO_TEAM: "vercel"
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  # Disable turbo remote cache for nightly - we want fresh runs
+  TURBO_REMOTE_ONLY: "false"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
