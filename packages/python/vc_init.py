@@ -825,7 +825,18 @@ elif 'app' in __vc_variables:
                         )
 
                     status_code = message['status']
-                    headers = Headers(message.get('headers', []))
+                    raw_headers = message.get('headers', [])
+
+                    # Headers from werkzeug transform bytes header value
+                    # from b'value' to "b'value'" so we need to process
+                    # ASGI headers manually
+                    decoded_headers = []
+                    for key, value in raw_headers:
+                        decoded_key = key.decode() if isinstance(key, bytes) else key
+                        decoded_value = value.decode() if isinstance(value, bytes) else value
+                        decoded_headers.append((decoded_key, decoded_value))
+
+                    headers = Headers(decoded_headers)
 
                     self.on_request(headers, status_code)
                     self.state = ASGICycleState.RESPONSE
