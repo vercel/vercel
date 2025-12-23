@@ -37,6 +37,7 @@ export const rolldown = async (args: {
   let resolvedFormat: 'esm' | 'cjs' | undefined =
     extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
 
+  const resolvedExtension = extensionInfo.extension;
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
   const external: string[] = [];
@@ -83,6 +84,7 @@ export const rolldown = async (args: {
       cleanDir: true,
       dir: outputDir,
       format: resolvedFormat,
+      entryFileNames: `[name].${resolvedExtension}`,
       preserveModules: true,
       sourcemap: false,
     },

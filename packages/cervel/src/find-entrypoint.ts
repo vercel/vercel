@@ -11,7 +11,7 @@ const frameworks = [
   'h3',
 ];
 
-const entrypointFilenames = ['app', 'index', 'server'];
+const entrypointFilenames = ['app', 'index', 'server', 'main'];
 
 const entrypointExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 

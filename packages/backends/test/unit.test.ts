@@ -141,7 +141,16 @@ const extractAndExecuteCode = async (
   await new Promise<void>((resolve, reject) => {
     const fakeLambdaProcess = execa('node', [handlerPath], {
       cwd: tempDir,
-      stdio: 'ignore', // use inherit to debug
+      stdio: ['ignore', 'pipe', 'pipe'], // capture stdout/stderr
+    });
+
+    let stderr = '';
+    let stdout = '';
+    fakeLambdaProcess.stderr?.on('data', data => {
+      stderr += data.toString();
+    });
+    fakeLambdaProcess.stdout?.on('data', data => {
+      stdout += data.toString();
     });
 
     fakeLambdaProcess.on('error', error => {
@@ -150,9 +159,15 @@ const extractAndExecuteCode = async (
     });
 
     fakeLambdaProcess.on('exit', (code, signal) => {
+      if (signal === 'SIGTERM') {
+        resolve();
+      }
       if (code !== 0) {
+        const output = stderr || stdout || '(no output)';
         reject(
-          new Error(`Process exited with code ${code} and signal ${signal}`)
+          new Error(
+            `Process exited with code ${code} and signal ${signal}\n${output}`
+          )
         );
       } else {
         resolve();
