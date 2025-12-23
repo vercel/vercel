@@ -140,11 +140,11 @@ async function configureRouter() {
     }
   }
 
+  // Merge: export const declarations take precedence over default export
   const config = {
     ...routerConfig,
     ...exportedConstants,
   };
-
   return normalizeConfig(config);
 }
 
