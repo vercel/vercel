@@ -132,17 +132,57 @@ jobs:
     needs:
       - summary
     steps:
-      - name: Create GitHub Issue on Failure
-        uses: actions/github-script@v7
+      - uses: actions/checkout@v4
         with:
-          script: |
-            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const date = new Date().toISOString().split('T')[0];
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+      - name: Create Failure Notice PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          BRANCH_NAME="nightly-test-failure-${DATE}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🚨 Nightly Test Failure - ${date}`,
-              body: `## Nightly Test Suite Failed\n\n**Date**: ${date}\n**Run URL**: ${runUrl}\n\nPlease investigate the failing tests.`,
-              labels: ['nightly-test-failure', 'bug']
-            });
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create branch and add notice file
+          git checkout -b "$BRANCH_NAME"
+
+          cat > NIGHTLY_TEST_FAILURE.md << EOF
+          # 🚨 Nightly Test Failure Notice
+
+          **Date**: ${DATE}
+          **Failed Run**: ${RUN_URL}
+
+          ## Action Required
+
+          The nightly test suite has detected failing tests. Please investigate and fix the issues.
+
+          Once the issues are resolved, close this PR without merging.
+
+          ---
+          *This PR was automatically created by the nightly test workflow.*
+          EOF
+
+          git add NIGHTLY_TEST_FAILURE.md
+          git commit -m "🚨 Nightly test failure notice - ${DATE}"
+          git push origin "$BRANCH_NAME"
+
+          # Create PR
+          gh pr create \
+            --title "🚨 Nightly Test Failure Notice - ${DATE}" \
+            --body "## Nightly Test Suite Failed
+
+          **Date**: ${DATE}
+          **Failed Run**: ${RUN_URL}
+
+          Please investigate the failing tests and fix any regressions.
+
+          **Close this PR without merging once the issues are resolved.**
+
+          ---
+          *This PR was automatically created by the nightly test workflow.*" \
+            --label "nightly-test-failure" \
+            --base main
