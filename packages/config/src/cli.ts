@@ -20,6 +20,103 @@ const ROUTE_BASED_EXPORTS = new Set([
 ]);
 
 /**
+ * Check if an item is a Route (uses src/dest) vs a Rewrite/Redirect (uses source/destination)
+ * This feels kinda brittle but at this point we don't have the actual schemas available as types
+ * so I think it's the best we can do. We should definitely remove all these anys though
+ */
+function isRouteFormat(item: any): boolean {
+  return item && typeof item === 'object' && 'src' in item;
+}
+
+/**
+ * Convert a Rewrite or Redirect to Route format
+ */
+function toRouteFormat(item: any, isRedirect: boolean): any {
+  const route: any = {
+    src: item.source,
+    dest: item.destination,
+  };
+  if (item.has) route.has = item.has;
+  if (item.missing) route.missing = item.missing;
+
+  if (isRedirect) {
+    route.redirect = true;
+    route.status = item.statusCode || (item.permanent ? 308 : 307);
+  } else {
+    if (item.respectOriginCacheControl !== undefined) {
+      route.respectOriginCacheControl = item.respectOriginCacheControl;
+    }
+  }
+
+  return route;
+}
+
+/**
+ * Normalize an array field (rewrites or redirects) if it contains mixed formats.
+ * Returns the converted routes if normalization occurred, or null if no changes needed.
+ */
+function normalizeArrayField(
+  items: any[] | undefined,
+  isRedirect: boolean
+): any[] | null {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  const hasRouteFormat = items.some(isRouteFormat);
+  if (!hasRouteFormat) {
+    return null;
+  }
+
+  return items.map(item =>
+    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
+  );
+}
+
+/**
+ * Normalize config to ensure valid vercel.json output.
+ *
+ * Handles mixed Route/Rewrite types in the same array (from routes.rewrite() API).
+ * When Route format items (src/dest) are detected in rewrites/redirects arrays,
+ * the entire array is normalized to routes format.
+ *
+ * If routes and rewrites/redirects are BOTH explicitly defined,
+ * returns unchanged to let schema validation fail.
+ */
+export function normalizeConfig(config: any): any {
+  const normalized = { ...config };
+  let allRoutes: any[] = normalized.routes || [];
+
+  const hasRoutes = allRoutes.length > 0;
+  const hasRewrites = normalized.rewrites?.length > 0;
+  const hasRedirects = normalized.redirects?.length > 0;
+
+  // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects)) {
+    return normalized;
+  }
+
+  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
+  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
+
+  if (convertedRewrites) {
+    allRoutes = [...allRoutes, ...convertedRewrites];
+    delete normalized.rewrites;
+  }
+
+  if (convertedRedirects) {
+    allRoutes = [...allRoutes, ...convertedRedirects];
+    delete normalized.redirects;
+  }
+
+  if (allRoutes.length > 0) {
+    normalized.routes = allRoutes;
+  }
+
+  return normalized;
+}
+
+/**
  * Read the user's vercel.ts file and collect both default export and export const declarations
  */
 async function configureRouter() {
@@ -43,11 +140,12 @@ async function configureRouter() {
     }
   }
 
-  // Merge: export const declarations take precedence over default export
-  return {
+  const config = {
     ...routerConfig,
     ...exportedConstants,
   };
+
+  return normalizeConfig(config);
 }
 
 /**
