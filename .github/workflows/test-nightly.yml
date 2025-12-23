@@ -78,11 +78,11 @@ jobs:
       - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        run: node utils/gen.js && node_modules/.bin/turbo run build --force --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: "1"
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
@@ -90,16 +90,8 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           FORCE_COLOR: "1"
-      - name: "Determine Turbo HIT or MISS"
-        if: ${{ !cancelled() }}
-        id: turbo-summary
-        shell: bash
-        run: |
-          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
-          echo "MISS COUNT: $TURBO_MISS_COUNT"
-          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: "Upload Test Report to Datadog"
-        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
+        if: ${{ !cancelled() }}
         run: "pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports"
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
