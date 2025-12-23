@@ -18,7 +18,7 @@
 /packages/related-projects               @vercel/ci-cd @Kikobeats @mknichel
 /packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management @vercel/ai-sdk
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
-/packages/config                         @vercel/edge-ingress @vercel/edge-content @vercel/edge-security @pranavkarthik10
+/packages/config                         @vercel/ci-cd @vercel/edge-ingress @pranavkarthik10 @MatthewStanciu
 
 # Unrestricted Paths
 # These paths are updated by the changeset CLI for "Version Packages" pull requests
