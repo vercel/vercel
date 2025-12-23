@@ -345,7 +345,6 @@ export interface VercelConfig {
   rewrites?: RouteType[];
   /**
    * A list of routes objects used to rewrite paths to point towards other internal or external paths
-   * @deprecated
    */
   routes?: RouteType[];
   /**
