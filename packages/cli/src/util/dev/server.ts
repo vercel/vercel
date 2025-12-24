@@ -174,12 +174,14 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+  private rawFlags: Record<string, any>;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.repoRoot = options.repoRoot ?? cwd;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.envValues = options.envValues || {};
+    this.rawFlags = options.rawFlags || {};
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
@@ -2292,9 +2294,24 @@ export default class DevServer {
 
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
-    const command = devCommand
+    let command = devCommand
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
+
+    // Append unknown flags that should be passed through to the dev command
+    if (this.rawFlags) {
+      const knownFlags = new Set(['--listen', '--yes', '--port', '--confirm']);
+      const unknownFlags = Object.keys(this.rawFlags)
+        .filter(flag => flag.startsWith('--') && !knownFlags.has(flag))
+        .map(flag => {
+          const value = this.rawFlags[flag];
+          return value === true ? flag : `${flag}=${value}`;
+        });
+      
+      if (unknownFlags.length > 0) {
+        command += ` ${unknownFlags.join(' ')}`;
+      }
+    }
 
     output.debug(
       `Starting dev command with parameters: ${JSON.stringify({
