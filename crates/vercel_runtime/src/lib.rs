@@ -1,55 +1,44 @@
-use base64::prelude::*;
 use hyper::server::conn::http1;
 use hyper::service::service_fn as hyper_service_fn;
 use hyper_util::rt::TokioIo;
-use serde::Serialize;
-use std::collections::VecDeque;
 use std::convert::Infallible;
-use std::env;
 use std::future::Future;
-use std::io::prelude::*;
 use std::net::SocketAddr;
-use std::os::unix::net::UnixStream;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use tokio::net::TcpListener;
 use tower::Service;
+
+#[cfg(unix)]
+use {
+    std::env,
+    std::os::unix::net::UnixStream,
+    std::sync::atomic::Ordering,
+    std::sync::{Arc, Mutex},
+};
 
 pub use hyper::Response;
 pub use types::{Error, ResponseBody};
 pub type Request = hyper::Request<hyper::body::Incoming>;
 
+#[cfg(unix)]
+use {
+  crate::ipc::core::{EndMessage, StartMessage},
+  crate::ipc::log::{Level, LogMessage},
+  crate::ipc_utils::{
+      enqueue_or_send_message, flush_init_log_buffer, send_message, IPC_READY,
+  },
+};
+
 #[cfg(feature = "axum")]
 pub mod axum;
 
-mod ipc;
 mod types;
-use crate::ipc::core::{EndMessage, StartMessage};
-use crate::ipc::log::{Level, LogMessage};
+
 use crate::types::IntoFunctionResponse;
 
-static IPC_READY: AtomicBool = AtomicBool::new(false);
-static INIT_LOG_BUF_MAX_BYTES: usize = 1_000_000;
 
-lazy_static::lazy_static! {
-    static ref INIT_LOG_BUFFER: Arc<Mutex<(VecDeque<String>, usize)>> = {
-        register_exit_handler();
-        Arc::new(Mutex::new((VecDeque::new(), 0)))
-    };
-}
-
-// Register exit handler to flush buffered messages
-fn register_exit_handler() {
-    extern "C" fn exit_handler() {
-        flush_init_log_buf_to_stderr();
-    }
-    unsafe {
-        libc::atexit(exit_handler);
-    }
-}
-
+#[cfg(unix)]
 #[derive(Clone)]
 pub struct LogContext {
     ipc_stream: Option<Arc<Mutex<UnixStream>>>,
@@ -57,6 +46,7 @@ pub struct LogContext {
     request_id: Option<u64>,
 }
 
+#[cfg(unix)]
 impl LogContext {
     pub fn new(
         ipc_stream: Option<Arc<Mutex<UnixStream>>>,
@@ -99,6 +89,43 @@ impl LogContext {
     }
 }
 
+// Non-Unix version without IPC support (simple logging to stdout)
+#[cfg(not(unix))]
+#[derive(Clone)]
+pub struct LogContext {
+    _placeholder: (),
+}
+
+#[cfg(not(unix))]
+impl LogContext {
+    pub fn new() -> Self {
+        Self { _placeholder: () }
+    }
+
+    pub fn info(&self, msg: &str) {
+        println!("INFO: {}", msg);
+    }
+
+    pub fn error(&self, msg: &str) {
+        eprintln!("ERROR: {}", msg);
+    }
+
+    pub fn warn(&self, msg: &str) {
+        println!("WARN: {}", msg);
+    }
+
+    pub fn debug(&self, msg: &str) {
+        println!("DEBUG: {}", msg);
+    }
+}
+
+#[cfg(not(unix))]
+impl Default for LogContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub log_context: LogContext,
@@ -107,99 +134,6 @@ pub struct AppState {
 impl AppState {
     pub fn new(log_context: LogContext) -> Self {
         Self { log_context }
-    }
-}
-
-fn send_message<T: Serialize>(stream: &Arc<Mutex<UnixStream>>, message: T) -> Result<(), Error> {
-    let json_str = serde_json::to_string(&message)?;
-    let msg = format!("{json_str}\0");
-
-    let mut stream = stream.lock().map_err(|e| {
-        Box::new(std::io::Error::other(format!(
-            "Failed to acquire stream lock: {}",
-            e
-        ))) as Error
-    })?;
-
-    stream.write_all(msg.as_bytes())?;
-    stream.flush()?;
-    Ok(())
-}
-
-fn enqueue_or_send_message<T: Serialize>(
-    stream: &Option<Arc<Mutex<UnixStream>>>,
-    message: T,
-) -> Result<(), Error> {
-    if IPC_READY.load(Ordering::Relaxed)
-        && let Some(stream) = stream
-    {
-        return send_message(stream, message);
-    }
-
-    // Buffer the message if IPC is not ready
-    let json_str = serde_json::to_string(&message)?;
-    let msg_len = json_str.len();
-
-    if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
-        if buffer.1 + msg_len <= INIT_LOG_BUF_MAX_BYTES {
-            buffer.0.push_back(json_str);
-            buffer.1 += msg_len;
-        } else {
-            // Fallback to stderr if buffer is full - decode base64
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
-                && let Some(payload) = parsed.get("payload")
-                && let Some(msg) = payload.get("message")
-                && let Some(msg_str) = msg.as_str()
-                && let Ok(decoded) = BASE64_STANDARD.decode(msg_str)
-                && let Ok(text) = String::from_utf8(decoded)
-            {
-                eprint!("{}", text);
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn flush_init_log_buffer(stream: &Option<Arc<Mutex<UnixStream>>>) {
-    if let Some(stream) = stream {
-        if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
-            while let Some(json_str) = buffer.0.pop_front() {
-                if let Ok(message) = serde_json::from_str::<serde_json::Value>(&json_str)
-                    && let Err(_e) = send_message(stream, message)
-                {
-                    // Failed to send buffered message
-                    break;
-                }
-            }
-            buffer.1 = 0; // Reset byte count
-        }
-    } else {
-        flush_init_log_buf_to_stderr();
-    }
-}
-
-fn flush_init_log_buf_to_stderr() {
-    if let Ok(mut buffer) = INIT_LOG_BUFFER.lock() {
-        let mut combined: Vec<String> = Vec::new();
-
-        while let Some(json_str) = buffer.0.pop_front() {
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
-                && let Some(payload) = parsed.get("payload")
-                && let Some(msg) = payload.get("message")
-                && let Some(msg_str) = msg.as_str()
-                && let Ok(decoded) = BASE64_STANDARD.decode(msg_str)
-                && let Ok(text) = String::from_utf8(decoded)
-            {
-                combined.push(text);
-            }
-        }
-
-        if !combined.is_empty() {
-            eprint!("{}", combined.join(""));
-        }
-
-        buffer.1 = 0;
     }
 }
 
@@ -330,6 +264,8 @@ where
         + 'static,
     S::Future: Send + 'static,
 {
+    // IPC stream setup
+    #[cfg(unix)]
     let ipc_stream = match env::var("VERCEL_IPC_PATH") {
         Ok(ipc_path) => match UnixStream::connect(ipc_path) {
             Ok(stream) => Some(Arc::new(Mutex::new(stream))),
@@ -342,22 +278,32 @@ where
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
 
-    if let Some(ref ipc_stream_ref) = ipc_stream {
-        let start_message = StartMessage::new(0, port);
-        if let Err(_e) = send_message(ipc_stream_ref, start_message) {
-            // Failed to send start message to IPC
+    // Send start message via IPC
+    #[cfg(unix)]
+    {
+        if let Some(ref ipc_stream_ref) = ipc_stream {
+            let start_message = StartMessage::new(0, port);
+            if let Err(_e) = send_message(ipc_stream_ref, start_message) {
+                // Failed to send start message to IPC
+            } else {
+                IPC_READY.store(true, Ordering::Relaxed);
+                flush_init_log_buffer(&ipc_stream);
+            }
         } else {
-            IPC_READY.store(true, Ordering::Relaxed);
+            println!("Dev server listening: {}", port);
             flush_init_log_buffer(&ipc_stream);
         }
-    } else {
+    }
+
+    #[cfg(not(unix))]
+    {
         println!("Dev server listening: {}", port);
-        flush_init_log_buffer(&ipc_stream);
-    };
+    }
 
     loop {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
+        #[cfg(unix)]
         let ipc_stream_clone = ipc_stream.clone();
         let service_clone = service.clone();
 
@@ -368,29 +314,35 @@ where
                 .serve_connection(
                     io,
                     hyper_service_fn(move |req| {
-                        let ipc_stream_clone = ipc_stream_clone.clone();
                         let mut service_clone = service_clone.clone();
 
-                        // Extract information for IPC before calling handler
-                        let invocation_id = req
-                            .headers()
-                            .get("x-vercel-internal-invocation-id")
-                            .and_then(|v| v.to_str().ok())
-                            .map(|s| s.to_owned());
+                        // Extract information for IPC before calling handler (Unix only)
+                        #[cfg(unix)]
+                        let (app_state, invocation_id, request_id) = {
+                            let ipc_stream_clone = ipc_stream_clone.clone();
+                            let invocation_id = req
+                                .headers()
+                                .get("x-vercel-internal-invocation-id")
+                                .and_then(|v| v.to_str().ok())
+                                .map(|s| s.to_owned());
+                            let request_id = req
+                                .headers()
+                                .get("x-vercel-internal-request-id")
+                                .and_then(|v| v.to_str().ok())
+                                .and_then(|s| s.parse::<u64>().ok());
+                            let app_state = AppState::new(LogContext::new(
+                                ipc_stream_clone,
+                                invocation_id.clone(),
+                                request_id,
+                            ));
+                            (app_state, invocation_id, request_id)
+                        };
 
-                        let request_id = req
-                            .headers()
-                            .get("x-vercel-internal-request-id")
-                            .and_then(|v| v.to_str().ok())
-                            .and_then(|s| s.parse::<u64>().ok());
-
-                        let app_state = AppState::new(LogContext::new(
-                            ipc_stream_clone,
-                            invocation_id.clone(),
-                            request_id,
-                        ));
+                        #[cfg(not(unix))]
+                        let app_state = AppState::new(LogContext::new());
 
                         async move {
+                            #[cfg(unix)]
                             let ipc_stream_for_end = app_state.log_context.ipc_stream.clone();
 
                             if req.uri().path() == "/_vercel/ping" {
@@ -428,6 +380,8 @@ where
                                 }
                             };
 
+                            // Send end message via IPC
+                            #[cfg(unix)]
                             if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
                                 (&ipc_stream_for_end, &invocation_id, &request_id)
                             {
