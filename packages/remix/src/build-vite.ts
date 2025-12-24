@@ -7,7 +7,6 @@ import {
   debug,
   execCommand,
   getEnvForPackageManager,
-  getNodeVersion,
   getSpawnOptions,
   glob,
   runNpmInstall,
@@ -16,6 +15,7 @@ import {
   FileFsRef,
   EdgeFunction,
   NodejsLambda,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 import {
   getPathFromRoute,
@@ -295,12 +295,7 @@ export const build: BuildV2 = async ({
       : REMIX_FRAMEWORK_SETTINGS;
 
   // Run "Install Command"
-  const nodeVersion = await getNodeVersion(
-    entrypointFsDirname,
-    undefined,
-    config,
-    meta
-  );
+  const nodeVersion = await getRuntimeNodeVersion(entrypointFsDirname);
 
   const {
     cliType,
