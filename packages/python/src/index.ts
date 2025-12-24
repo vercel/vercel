@@ -45,6 +45,7 @@ import {
   FLASK_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
+import { prepareCache } from './prepare-cache';
 
 export const version = 3;
 
@@ -467,6 +468,8 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+export { prepareCache };
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
