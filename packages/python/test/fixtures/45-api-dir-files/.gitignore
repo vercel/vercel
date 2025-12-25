@@ -6,3 +6,5 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.env*
+uv.lock
