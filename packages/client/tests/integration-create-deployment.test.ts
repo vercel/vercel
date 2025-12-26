@@ -299,3 +299,248 @@ function assertDirectoriesAreEqual(dir1: string, dir2: string) {
     }
   }
 }
+
+describe('inline upload strategies', () => {
+  let token = '';
+
+  beforeEach(async () => {
+    token = await generateNewToken();
+  });
+
+  describe('strategy 1: all files inline upload (< 250KB)', () => {
+    it('should upload small files inline during deployment creation', async () => {
+      const tmpDir = setupTmpDir();
+
+      // Create small files that total less than 250KB
+      fs.writeFileSync(
+        path.join(tmpDir, 'index.html'),
+        '<html><body>Hello World!</body></html>'
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, 'style.css'),
+        'body { margin: 0; padding: 20px; }'
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, 'script.js'),
+        'console.log("Hello from inline upload!");'
+      );
+
+      let deployment: Deployment;
+      let hashedCalculatedEventReceived = false;
+      let fileUploadEventsReceived = false;
+
+      for await (const event of createDeployment(
+        {
+          token,
+          teamId: process.env.VERCEL_TEAM_ID,
+          path: tmpDir,
+        },
+        {
+          name: 'inline-upload-small-test',
+        }
+      )) {
+        if (event.type === 'hashes-calculated') {
+          hashedCalculatedEventReceived = true;
+          // Verify we have the expected number of files
+          expect(Object.keys(event.payload).length).toBeGreaterThan(0);
+        }
+
+        // Strategy 1 should NOT emit any file upload events
+        if (
+          event.type === 'file-uploaded' ||
+          event.type === 'all-files-uploaded'
+        ) {
+          fileUploadEventsReceived = true;
+        }
+
+        if (event.type === 'ready') {
+          deployment = event.payload;
+          expect(deployment.readyState).toEqual('READY');
+          break;
+        }
+      }
+
+      expect(hashedCalculatedEventReceived).toBe(true);
+      expect(fileUploadEventsReceived).toBe(false);
+      expect(deployment!.readyState).toEqual('READY');
+
+      // Verify deployment works
+      const response = await fetch_(`https://${deployment!.url}`);
+      expect(response.status).toBe(200);
+      const content = await response.text();
+      expect(content).toContain('Hello World!');
+    });
+
+    it('should handle binary files in inline upload', async () => {
+      const tmpDir = setupTmpDir();
+
+      // Create a small binary file and text file
+      fs.writeFileSync(
+        path.join(tmpDir, 'index.html'),
+        '<html>Binary Test</html>'
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, 'favicon.ico'),
+        Buffer.from([
+          0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x28, 0x01,
+        ])
+      );
+
+      let deployment: Deployment;
+      let fileUploadEventsReceived = false;
+
+      for await (const event of createDeployment(
+        {
+          token,
+          teamId: process.env.VERCEL_TEAM_ID,
+          path: tmpDir,
+        },
+        {
+          name: 'inline-upload-binary-test',
+        }
+      )) {
+        // Strategy 1 should NOT emit any file upload events
+        if (
+          event.type === 'file-uploaded' ||
+          event.type === 'all-files-uploaded'
+        ) {
+          fileUploadEventsReceived = true;
+        }
+
+        if (event.type === 'ready') {
+          deployment = event.payload;
+          break;
+        }
+      }
+
+      expect(fileUploadEventsReceived).toBe(false);
+      expect(deployment!.readyState).toEqual('READY');
+
+      // Verify both text and binary files are accessible
+      const htmlResponse = await fetch_(`https://${deployment!.url}`);
+      expect(htmlResponse.status).toBe(200);
+      const icoResponse = await fetch_(
+        `https://${deployment!.url}/favicon.ico`
+      );
+      expect(icoResponse.status).toBe(200);
+    });
+  });
+
+  describe('strategy 2: hybrid upload (mixed pre-uploaded + inline)', () => {
+    it('should use hybrid approach when appropriate', async () => {
+      const tmpDir = setupTmpDir();
+
+      // Create some small files for inline upload
+      fs.writeFileSync(
+        path.join(tmpDir, 'index.html'),
+        '<html><body>Hybrid test</body></html>'
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, 'small.txt'),
+        'This is a small file for inline upload'
+      );
+
+      // Create a larger file that might be pre-uploaded (but still under 250KB total)
+      const largeContent = 'A'.repeat(50 * 1024); // 50KB individual file (total stays under 250KB)
+      fs.writeFileSync(path.join(tmpDir, 'large.txt'), largeContent);
+
+      let deployment: Deployment;
+      let fileCountEventReceived = false;
+      let fileUploadEventsReceived = false;
+
+      for await (const event of createDeployment(
+        {
+          token,
+          teamId: process.env.VERCEL_TEAM_ID,
+          path: tmpDir,
+        },
+        {
+          name: 'hybrid-upload-test',
+        }
+      )) {
+        if (event.type === 'file-count') {
+          fileCountEventReceived = true;
+          expect(event.payload.total).toBeGreaterThan(0);
+        }
+
+        // Strategy 2 should also NOT emit file upload events (uses inline for missing files)
+        if (
+          event.type === 'file-uploaded' ||
+          event.type === 'all-files-uploaded'
+        ) {
+          fileUploadEventsReceived = true;
+        }
+
+        if (event.type === 'ready') {
+          deployment = event.payload;
+          break;
+        }
+      }
+
+      expect(fileCountEventReceived).toBe(true);
+      expect(fileUploadEventsReceived).toBe(false);
+      expect(deployment!.readyState).toEqual('READY');
+
+      // Verify all files are accessible
+      const htmlResponse = await fetch_(`https://${deployment!.url}`);
+      expect(htmlResponse.status).toBe(200);
+      const largeResponse = await fetch_(
+        `https://${deployment!.url}/large.txt`
+      );
+      expect(largeResponse.status).toBe(200);
+      const largeText = await largeResponse.text();
+      expect(largeText).toBe(largeContent);
+    });
+  });
+
+  describe('strategy 3: fallback to traditional upload (> 250KB)', () => {
+    it('should fallback to traditional upload for large files', async () => {
+      const tmpDir = setupTmpDir();
+
+      // Create files that exceed the 250KB threshold
+      fs.writeFileSync(
+        path.join(tmpDir, 'index.html'),
+        '<html><body>Large upload test</body></html>'
+      );
+      const largeContent = 'B'.repeat(300 * 1024); // 300KB file, exceeds threshold
+      fs.writeFileSync(path.join(tmpDir, 'large.js'), largeContent);
+
+      let deployment: Deployment;
+      let uploadEventReceived = false;
+
+      for await (const event of createDeployment(
+        {
+          token,
+          teamId: process.env.VERCEL_TEAM_ID,
+          path: tmpDir,
+        },
+        {
+          name: 'traditional-upload-test',
+        }
+      )) {
+        if (
+          event.type === 'file-uploaded' ||
+          event.type === 'all-files-uploaded'
+        ) {
+          uploadEventReceived = true;
+        }
+
+        if (event.type === 'ready') {
+          deployment = event.payload;
+          break;
+        }
+      }
+
+      // For large files, we should see upload events (traditional flow)
+      expect(uploadEventReceived).toBe(true);
+      expect(deployment!.readyState).toEqual('READY');
+
+      // Verify the large file is accessible
+      const response = await fetch_(`https://${deployment!.url}/large.js`);
+      expect(response.status).toBe(200);
+      const content = await response.text();
+      expect(content.length).toBe(300 * 1024);
+    });
+  });
+});
