@@ -135,6 +135,9 @@ export {
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
+  PYTHON_FRAMEWORKS,
+  PythonFramework,
+  isPythonFramework,
 } from './framework-helpers';
 
 export * from './python';
