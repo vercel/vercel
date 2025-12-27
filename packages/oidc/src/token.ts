@@ -17,12 +17,12 @@ export async function refreshToken(): Promise<void> {
     const authToken = getVercelCliToken();
     if (!authToken) {
       throw new VercelOidcTokenError(
-        'Failed to refresh OIDC token: login to vercel cli'
+        'Failed to refresh OIDC token: Log in to Vercel CLI and link your project with `vc link`'
       );
     }
     if (!projectId) {
       throw new VercelOidcTokenError(
-        'Failed to refresh OIDC token: project id not found'
+        'Failed to refresh OIDC token: Try re-linking your project with `vc link`'
       );
     }
     maybeToken = await getVercelOidcToken(authToken, projectId, teamId);
