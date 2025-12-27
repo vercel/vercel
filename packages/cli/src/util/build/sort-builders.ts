@@ -8,6 +8,9 @@ export function sortBuilders<B extends { use: string }>(builds: B[]): B[] {
   // Delete it from the frontend set, and then special case it below
   // so that it is treated as "middle" priority in the sort.
   frontendRuntimeSet.delete('@vercel/python');
+  // `@vercel/ruby` is used by Rails zero-config but should not be treated as a
+  // frontend runtime for sort priority; keep it in the backend bucket.
+  frontendRuntimeSet.delete('@vercel/ruby');
   const toNumber = (build: B) =>
     build.use === '@vercel/python'
       ? 1

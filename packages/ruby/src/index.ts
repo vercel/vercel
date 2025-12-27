@@ -22,8 +22,10 @@ import {
   type Files,
   type BuildV3,
   type ShouldServe,
+  NowBuildError,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
+import { randomBytes } from 'crypto';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -171,6 +173,33 @@ export const build: BuildV3 = async ({
   meta = {},
 }) => {
   await download(files, workPath, meta);
+
+  const fsFiles = await glob('**', workPath);
+  debug(`ruby: downloaded files to workPath=${workPath}`);
+
+  // Zero-config entrypoint discovery for Rails
+  if (!fsFiles[entrypoint] && config?.framework === 'rails') {
+    const candidateDirs = ['', 'src', 'app'];
+    const candidates = candidateDirs.map(d =>
+      d ? `${d}/config.ru` : 'config.ru'
+    );
+    const existing = candidates.filter(p => !!fsFiles[p]);
+    debug(
+      `ruby: rails entrypoint candidates=${JSON.stringify(candidates)} existing=${JSON.stringify(existing)}`
+    );
+    if (existing.length > 0) {
+      debug(
+        `ruby: resolved rails entrypoint from=${entrypoint} to=${existing[0]}`
+      );
+      entrypoint = existing[0];
+    } else {
+      throw new NowBuildError({
+        code: 'RAILS_ENTRYPOINT_NOT_FOUND',
+        message: `No Rails entrypoint found. Searched for: ${candidates.join(', ')}`,
+      });
+    }
+  }
+
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
@@ -311,11 +340,29 @@ export const build: BuildV3 = async ({
     }
   }
 
+  const lambdaEnv: Record<string, string> = {};
+  if (config?.framework) {
+    lambdaEnv.VC_FRAMEWORK = String(config.framework);
+  }
+
+  // For Rails zero-config: if user did not provide SECRET_KEY_BASE,
+  // generate a per-deployment fallback and expose it via a namespaced env var.
+  // vc_init.rb will only consume it when SECRET_KEY_BASE is absent.
+  try {
+    if (config?.framework === 'rails' && !process.env.SECRET_KEY_BASE) {
+      const fallbackSecret = randomBytes(64).toString('hex');
+      lambdaEnv.VC_GENERATED_SECRET_KEY_BASE = fallbackSecret;
+      debug('ruby: generated fallback SECRET_KEY_BASE for Rails (namespaced)');
+    }
+  } catch (err) {
+    debug('ruby: failed to generate fallback SECRET_KEY_BASE (non-fatal)', err);
+  }
+
   const output = new Lambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
-    environment: {},
+    environment: lambdaEnv,
   });
 
   return { output };
