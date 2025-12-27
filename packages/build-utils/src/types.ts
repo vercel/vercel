@@ -402,6 +402,7 @@ export interface BuilderFunctions {
 
 export interface ProjectSettings {
   framework?: string | null;
+  runtime?: string | null;
   devCommand?: string | null;
   installCommand?: string | null;
   buildCommand?: string | null;
