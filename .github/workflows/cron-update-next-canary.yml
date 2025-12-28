@@ -1,6 +1,17 @@
-- name: Run GitHub Script
-  uses: actions/github-script@v7
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    script: |
-      console.log('This is my script running successfully with a GitHub token.');
+name: Cron Update Next Canary
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-next-canary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run GitHub Script
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('This is my script running successfully with a GitHub token.');
