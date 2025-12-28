@@ -8,7 +8,8 @@
   ],
   "build": {
     "env": {
-      "NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE": "1"
+      "NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE": "1",
+      "NEXT_BUILDER_INTEGRATION": "1"
     }
   },
   "probes": [
