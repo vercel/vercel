@@ -573,16 +573,15 @@ export const build: BuildV2 = async buildOptions => {
   // clearer error when `outputDirectory` is misconfigured or when caches
   // restore the wrong path.
 
-  const exists = await pathExists(outputDirectory);
+  const fullOutputDirectory = path.join(entryPath, outputDirectory);
+  const exists = await pathExists(fullOutputDirectory);
   if (!exists) {
     throw new NowBuildError({
       code: 'NEXT_OUTPUT_DIR_MISSING',
-      message:
-        `The Next.js output directory "${outputDirectory}" (resolved from "${config.outputDirectory}") was not found. ` +
-        `Ensure your build produces the correct output directory (e.g. ".next" or your custom distDir) and that your Project Settings/outputDirectory is correct. If using Turborepo, verify your cache keys and restore path.`,
+      message: `The Next.js output directory "${fullOutputDirectory}" was not found. Ensure your build produces the correct output directory (e.g. ".next" or your custom distDir) and that your Project Settings/outputDirectory is correct. If using Turborepo, verify your cache keys and restore path.`,
     });
   }
-  const outputDirFiles = await glob('*', outputDirectory);
+  const outputDirFiles = await glob('*', fullOutputDirectory);
   if (Object.keys(outputDirFiles).length === 0) {
     throw new NowBuildError({
       code: 'NEXT_OUTPUT_DIR_EMPTY',
@@ -592,9 +591,9 @@ export const build: BuildV2 = async buildOptions => {
     });
   }
 
-  const outputDir = path.join(outputDirectory, 'output');
+  const fullOutputDir = path.join(entryPath, outputDirectory, 'output');
 
-  const outputExists = await pathExists(outputDir);
+  const outputExists = await pathExists(fullOutputDir);
   if (!outputExists) {
     throw new NowBuildError({
       code: 'NEXT_OUTPUT_DIR_MISSING',
@@ -603,7 +602,7 @@ export const build: BuildV2 = async buildOptions => {
         `Ensure your build produces the correct output directory (e.g. ".next" or your custom distDir) and that your Project Settings/outputDirectory is correct. If using Turborepo, verify your cache keys and restore path.`,
     });
   }
-  const outputFiles = await glob('*', outputDir);
+  const outputFiles = await glob('*', fullOutputDir);
   if (Object.keys(outputFiles).length === 0) {
     throw new NowBuildError({
       code: 'NEXT_OUTPUT_DIR_EMPTY',
