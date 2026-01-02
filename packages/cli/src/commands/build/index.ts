@@ -940,8 +940,8 @@ async function doBuild(
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
         message:
-          'The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your next.config.js.',
-        link: 'https://vercel.com/docs/skew-protection#skew-protection-with-next.js',
+          'The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config',
+        link: 'https://vercel.com/docs/skew-protection',
       });
     }
 
