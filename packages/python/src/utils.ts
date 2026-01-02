@@ -76,6 +76,55 @@ export function getVenvPythonBin(venvPath: string) {
   return join(getVenvBinDir(venvPath), isWin ? 'python.exe' : 'python');
 }
 
+async function readVercelScripts(
+  workPath: string
+): Promise<Record<string, string> | null> {
+  const pyprojectPath = join(workPath, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) return null;
+
+  type PyprojectVercelConfig = {
+    tool?: {
+      vercel?: { scripts?: Record<string, string> };
+    };
+  };
+
+  let pyproject: PyprojectVercelConfig | null = null;
+  try {
+    pyproject = await readConfigFile<PyprojectVercelConfig>(pyprojectPath);
+  } catch {
+    console.error('Failed to parse pyproject.toml');
+    return null;
+  }
+
+  return pyproject?.tool?.vercel?.scripts || {};
+}
+
+async function resolveVercelScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>
+): Promise<string | undefined> {
+  const scripts = await readVercelScripts(workPath);
+  if (!scripts) return undefined;
+
+  const candidates =
+    typeof scriptNames === 'string' ? [scriptNames] : Array.from(scriptNames);
+  const scriptToRun = candidates.find(name => {
+    const command = scripts[name];
+    return typeof command === 'string' && command.trim().length > 0;
+  });
+
+  if (!scriptToRun) return undefined;
+  return scripts[scriptToRun];
+}
+
+export async function hasVercelInstallScript(
+  workPath: string,
+  scriptNames: string | Iterable<string>
+): Promise<boolean> {
+  const scriptCommand = await resolveVercelScript(workPath, scriptNames);
+  return typeof scriptCommand === 'string' && scriptCommand.trim().length > 0;
+}
+
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
