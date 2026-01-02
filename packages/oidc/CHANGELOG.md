@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.0.6
+
+### Patch Changes
+
+- improve error messages for package consumers ([#14449](https://github.com/vercel/vercel/pull/14449))
+
 ## 3.0.5
 
 ### Patch Changes
