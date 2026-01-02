@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Don't allow prefix of 'dpl\_' for prebuilt ids
+Don't allow prefix of `dpl_` for prebuilt IDs
