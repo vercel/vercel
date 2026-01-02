@@ -39,7 +39,7 @@ import {
   FileFsRef,
   type PackageJson,
   spawnCommand,
-  isExperimentalBackendsEnabled,
+  shouldUseExperimentalBackends,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -547,7 +547,7 @@ export default class DevServer {
 
       // Once we're happy with this approach, the backend framework definitions
       // can be updated to contain a dev command. And we can remove this
-      if (isExperimentalBackendsEnabled()) {
+      if (shouldUseExperimentalBackends(frameworkSlug)) {
         return 'npx @vercel/cervel dev';
       }
     }
@@ -629,6 +629,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        workPath: this.cwd,
       });
 
       if (errors) {
