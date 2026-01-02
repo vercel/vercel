@@ -3,7 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import { VercelOidcTokenError } from './token-error';
 
-export function findRootDir(): string {
+export function findRootDir(): string | null {
   try {
     let dir = process.cwd();
     while (dir !== path.dirname(dir)) {
@@ -18,7 +18,7 @@ export function findRootDir(): string {
       'Token refresh only supported in node server environments'
     );
   }
-  throw new VercelOidcTokenError('Unable to find root directory');
+  return null;
 }
 
 export function getUserDataDir(): string | null {
