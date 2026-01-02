@@ -970,6 +970,10 @@ async function doBuild(
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
+  const mergedDeploymentId = mergeDeploymentId(
+    existingConfig?.deploymentId,
+    buildResults.values()
+  );
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
@@ -985,6 +989,7 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    deploymentId: mergedDeploymentId,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -1120,6 +1125,23 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+function mergeDeploymentId(
+  existingDeploymentId: string | undefined,
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): string | undefined {
+  // Prefer existing deploymentId from config.json if present
+  if (existingDeploymentId) {
+    return existingDeploymentId;
+  }
+  // Otherwise, take the first deploymentId from build results
+  for (const result of buildResults) {
+    if ('deploymentId' in result && result.deploymentId) {
+      return result.deploymentId;
+    }
+  }
+  return undefined;
 }
 
 /**
