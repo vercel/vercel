@@ -283,15 +283,23 @@ interface EnsureUvProjectParams {
 export async function uvLock({
   projectDir,
   uvPath,
+  venvPath,
 }: {
   projectDir: string;
   uvPath: string;
+  venvPath: string;
 }): Promise<void> {
   const args = ['lock'];
   const pretty = `${uvPath} ${args.join(' ')}`;
   debug(`Running "${pretty}" in ${projectDir}...`);
+
+  // Force uv to use the venv's Python interpreter, ignoring any .python-version
+  // file that might specify a different version.
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  env.UV_PYTHON = getVenvPythonBin(venvPath);
+
   try {
-    await execa(uvPath, args, { cwd: projectDir });
+    await execa(uvPath, args, { cwd: projectDir, env });
   } catch (err) {
     throw new Error(
       `Failed to run "${pretty}": ${
@@ -439,7 +447,7 @@ export async function ensureUvProject({
     } else {
       // Otherwise, generate a lock. In uv workspaces, this may still write
       // the lockfile at the workspace root, not necessarily in projectDir.
-      await uvLock({ projectDir, uvPath });
+      await uvLock({ projectDir, uvPath, venvPath });
     }
   } else if (manifestType === 'Pipfile.lock' || manifestType === 'Pipfile') {
     if (!manifestPath) {
@@ -507,7 +515,7 @@ export async function ensureUvProject({
       pyprojectPath,
       dependencies: [],
     });
-    await uvLock({ projectDir, uvPath });
+    await uvLock({ projectDir, uvPath, venvPath });
   }
 
   if (runtimeDependencies.length) {
@@ -566,6 +574,7 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
 
 async function pipInstall(
   pipPath: string,
+  pythonPath: string,
   uvPath: string | null,
   workPath: string,
   args: string[],
@@ -595,9 +604,12 @@ async function pipInstall(
     ];
     const prettyUv = `${uvPath} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
+    // Force uv to use our Python interpreter, ignoring any .python-version file
+    const uvEnv: NodeJS.ProcessEnv = { ...process.env, UV_PYTHON: pythonPath };
     try {
       await execa(uvPath!, uvArgs, {
         cwd: workPath,
+        env: uvEnv,
       });
       return;
     } catch (err) {
@@ -754,7 +766,14 @@ export async function installRequirement({
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(pipPath, uvPath, workPath, [exact, ...args], targetDir);
+  await pipInstall(
+    pipPath,
+    pythonPath,
+    uvPath,
+    workPath,
+    [exact, ...args],
+    targetDir
+  );
 }
 
 interface InstallRequirementsFileArg {
@@ -793,6 +812,7 @@ export async function installRequirementsFile({
   }
   await pipInstall(
     pipPath,
+    pythonPath,
     uvPath,
     workPath,
     ['--upgrade', '-r', filePath, ...args],

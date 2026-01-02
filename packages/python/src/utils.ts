@@ -143,10 +143,17 @@ export async function runUvCommand(options: {
     throw new Error(`uv is required to run "${pretty}" but is not available`);
   }
 
+  // Force uv to use the venv's Python interpreter, ignoring any .python-version
+  // file that might specify a different version. This ensures packages are
+  // installed for the Python version we actually support (3.12).
+  const pythonBin = getVenvPythonBin(venvPath);
+  const env = createVenvEnv(venvPath);
+  env.UV_PYTHON = pythonBin;
+
   try {
     await execa(uvPath, args, {
       cwd,
-      env: createVenvEnv(venvPath),
+      env,
     });
     return true;
   } catch (err) {
