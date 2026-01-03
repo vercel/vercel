@@ -1,6 +1,12 @@
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
+const bump = false;
+
+if (bump) {
+  // do nothing
+}
+
 export const buildCommand = {
   name: 'build',
   aliases: [],
