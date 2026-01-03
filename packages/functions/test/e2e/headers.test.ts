@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 import {
   CITY_HEADER_NAME,
   COUNTRY_HEADER_NAME,
+  CONTINENT_HEADER_NAME,
   geolocation,
   ipAddress,
   IP_HEADER_NAME,
@@ -30,6 +31,7 @@ test.each(['lambda', 'edge'])(
     expect(headers[LATITUDE_HEADER_NAME]).toBeDefined();
     expect(headers[LONGITUDE_HEADER_NAME]).toBeDefined();
     expect(headers[POSTAL_CODE_HEADER_NAME]).toBeDefined();
+    expect(headers[CONTINENT_HEADER_NAME]).toBeDefined();
   }
 );
 
@@ -57,6 +59,7 @@ test.each(['lambda', 'edge'])(
 
     expect(payload.city).toBeDefined();
     expect(payload.country).toBeDefined();
+    expect(payload.continent).toBeDefined();
     expect(payload.flag).toBeDefined();
     expect(payload.countryRegion).toBeDefined();
     expect(payload.region).toBeDefined();
