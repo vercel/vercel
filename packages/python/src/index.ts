@@ -41,8 +41,7 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 import {
-  FASTAPI_CANDIDATE_ENTRYPOINTS,
-  FLASK_CANDIDATE_ENTRYPOINTS,
+  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
 
@@ -168,10 +167,7 @@ export const build: BuildV3 = async ({
       );
       entrypoint = detected;
     } else {
-      const searchedList =
-        framework === 'fastapi'
-          ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
-          : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+      const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,

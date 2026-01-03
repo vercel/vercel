@@ -21,7 +21,10 @@ export const BACKEND_BUILDERS = [
   '@vercel/elysia',
 ] as const;
 
+export const PYTHON_FRAMEWORKS = ['fastapi', 'flask', 'fasthtml'] as const;
+
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
+export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
 
 /**
  * Checks if the given framework is a backend framework
@@ -31,6 +34,13 @@ export function isBackendFramework(
 ): framework is BackendFramework {
   if (!framework) return false;
   return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
+}
+
+export function isPythonFramework(
+  framework: string | null | undefined
+): framework is PythonFramework {
+  if (!framework) return false;
+  return PYTHON_FRAMEWORKS.includes(framework as PythonFramework);
 }
 
 // Opt builds into experimental builder, but don't introspect the app
