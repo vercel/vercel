@@ -37,7 +37,8 @@ import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
-import { frameworkList } from '@vercel/frameworks';
+import { frameworkList, runtimeList } from '@vercel/frameworks';
+import { detectRuntime, LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
   vercelAuth,
   type VercelAuthSetting,
@@ -199,13 +200,22 @@ export default async function setupAndLink(
       const detectedProjects = detectedProjectsForWorkspace.get('') || [];
       const framework =
         detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+      let runtime = null;
+
+      // When no specific framework has been detected (i.e. using the "Other"
+      // preset), attempt to detect a more general runtime such as Python.
+      if (!framework?.slug) {
+        const fs = new LocalFileSystemDetector(pathWithRootDirectory);
+        runtime = await detectRuntime({ fs, runtimeList });
+      }
 
       settings = await editProjectSettings(
         client,
         {},
         framework,
         autoConfirm,
-        localConfigurationOverrides
+        localConfigurationOverrides,
+        runtime
       );
     }
 
