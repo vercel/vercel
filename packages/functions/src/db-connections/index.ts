@@ -178,7 +178,7 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
   // Don't wait longer than the maximum duration
   const waitTime = Math.min(
     getIdleTimeout(dbPool) + 100,
-    maximumDuration - (Date.now() - bootTime)
+    Math.max(100, maximumDuration - (Date.now() - bootTime))
   );
   idleTimeout = setTimeout(() => {
     idleTimeoutResolve?.();
