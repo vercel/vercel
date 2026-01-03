@@ -473,18 +473,6 @@ export async function getDynamicRoutes({
       case 4: {
         const routes: RouteWithSrc[] = [];
 
-        // for static routes check if there is a .prefetch or .rsc
-        // for the corresponding segment request that matches
-        // exactly before continuing to process dynamic routes
-        if (isAppClientSegmentCacheEnabled && !isAppPPREnabled) {
-          routes.push({
-            src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
-            dest: `/$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
-            check: true,
-            override: true,
-          });
-        }
-
         for (const dynamicRoute of routesManifest.dynamicRoutes) {
           if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
             continue;
