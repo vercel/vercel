@@ -1,0 +1,50 @@
+{
+  "name": "@vercel/vault",
+  "description": "Runtime Vault client for accessing secrets from Vercel Functions",
+  "homepage": "https://vercel.com",
+  "files": [
+    "**/*.js",
+    "**/*.d.ts",
+    "**/*.md"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": "./dist/index-browser.js",
+      "react-native": "./dist/index-browser.js",
+      "workflow": "./dist/index-browser.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "version": "0.1.0",
+  "repository": {
+    "directory": "packages/vault",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vercel/vercel/issues"
+  },
+  "dependencies": {
+    "@vercel/oidc": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "4.9.5",
+    "vitest": "2.0.1"
+  },
+  "peerDependenciesMeta": {},
+  "engines": {
+    "node": ">= 20"
+  },
+  "scripts": {
+    "pretest": "pnpm run build:code",
+    "test": "vitest",
+    "build": "pnpm run build:code",
+    "build:code": "node ../../utils/build.mjs"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
