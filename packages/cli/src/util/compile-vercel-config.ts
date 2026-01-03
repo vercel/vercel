@@ -7,6 +7,91 @@ import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 
+function isRouteFormat(item: any): boolean {
+  return item && typeof item === 'object' && 'src' in item;
+}
+
+function toRouteFormat(item: any, isRedirect: boolean): any {
+  const route: any = {
+    src: item.source,
+    dest: item.destination,
+  };
+  if (item.has) route.has = item.has;
+  if (item.missing) route.missing = item.missing;
+
+  if (isRedirect) {
+    route.redirect = true;
+    route.status = item.statusCode || (item.permanent ? 308 : 307);
+  } else {
+    if (item.respectOriginCacheControl !== undefined) {
+      route.respectOriginCacheControl = item.respectOriginCacheControl;
+    }
+  }
+
+  return route;
+}
+
+function normalizeArrayField(
+  items: any[] | undefined,
+  isRedirect: boolean
+): any[] | null {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  const hasRouteFormat = items.some(isRouteFormat);
+  if (!hasRouteFormat) {
+    return null;
+  }
+
+  return items.map(item =>
+    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
+  );
+}
+
+/**
+ * Normalize config to ensure valid vercel.json output.
+ *
+ * Handles mixed Route/Rewrite types in the same array (from routes.rewrite() API).
+ * When Route format items (src/dest) are detected in rewrites/redirects arrays,
+ * the entire array is normalized to routes format.
+ *
+ * If routes and rewrites/redirects are BOTH explicitly defined,
+ * returns unchanged to let schema validation fail.
+ */
+export function normalizeConfig(config: any): any {
+  const normalized = { ...config };
+  let allRoutes: any[] = normalized.routes || [];
+
+  const hasRoutes = allRoutes.length > 0;
+  const hasRewrites = normalized.rewrites?.length > 0;
+  const hasRedirects = normalized.redirects?.length > 0;
+
+  // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects)) {
+    return normalized;
+  }
+
+  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
+  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
+
+  if (convertedRewrites) {
+    allRoutes = [...allRoutes, ...convertedRewrites];
+    delete normalized.rewrites;
+  }
+
+  if (convertedRedirects) {
+    allRoutes = [...allRoutes, ...convertedRedirects];
+    delete normalized.redirects;
+  }
+
+  if (allRoutes.length > 0) {
+    normalized.routes = allRoutes;
+  }
+
+  return normalized;
+}
+
 export interface CompileConfigResult {
   configPath: string | null;
   wasCompiled: boolean;
@@ -252,9 +337,10 @@ export async function compileVercelConfig(
       });
     });
 
+    const normalizedConfig = normalizeConfig(config);
     await writeFile(
       compiledConfigPath,
-      JSON.stringify(config, null, 2),
+      JSON.stringify(normalizedConfig, null, 2),
       'utf-8'
     );
 
