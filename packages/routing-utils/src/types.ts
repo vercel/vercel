@@ -141,6 +141,7 @@ export interface Rewrite {
   missing?: HasField;
   statusCode?: number;
   env?: string[];
+  respectOriginCacheControl?: boolean;
 }
 
 export interface Redirect {
