@@ -1,5 +1,286 @@
 # vercel
 
+## 50.1.3
+
+### Patch Changes
+
+- Run install command earlier for vercel.ts ([#14504](https://github.com/vercel/vercel/pull/14504))
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+- Remove vercel.ts feature flag ([#14501](https://github.com/vercel/vercel/pull/14501))
+
+- Updated dependencies [[`f8e79cd385e3635a5d8227cb357af381b883d053`](https://github.com/vercel/vercel/commit/f8e79cd385e3635a5d8227cb357af381b883d053), [`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/ruby@2.2.4
+  - @vercel/build-utils@13.2.4
+  - @vercel/python@6.1.5
+  - @vercel/backends@0.0.17
+  - @vercel/elysia@0.1.15
+  - @vercel/express@0.1.21
+  - @vercel/fastify@0.1.18
+  - @vercel/go@3.2.4
+  - @vercel/h3@0.1.24
+  - @vercel/hono@0.2.18
+  - @vercel/hydrogen@1.3.3
+  - @vercel/nestjs@0.2.19
+  - @vercel/next@4.15.9
+  - @vercel/node@5.5.16
+  - @vercel/redwood@2.4.6
+  - @vercel/remix-builder@5.5.6
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.15
+
+## 50.1.2
+
+### Patch Changes
+
+- Remove `content-encoding` response header for CLI extensions proxy ([#14489](https://github.com/vercel/vercel/pull/14489))
+
+## 50.1.1
+
+### Patch Changes
+
+- Revert env pull conditional quoting changes ([#14485](https://github.com/vercel/vercel/pull/14485))
+
+## 50.1.0
+
+### Minor Changes
+
+- Bugfix: handle json values with newlines when pulling environment variables ([#14479](https://github.com/vercel/vercel/pull/14479))
+
+- Add out to deploy command for aliasing production domains ([#14458](https://github.com/vercel/vercel/pull/14458))
+
+### Patch Changes
+
+- Add support for `customErrorPage` configuration in `vercel.json` to customize pages for platform errors. ([#14466](https://github.com/vercel/vercel/pull/14466))
+
+- Add a vercel redirects upload command to bulk upload redirects from CSV or JSON files. ([#14459](https://github.com/vercel/vercel/pull/14459))
+
+- Updated dependencies [[`2fdee16711f0c87c7eb23f722d0b289a0d6ca5fc`](https://github.com/vercel/vercel/commit/2fdee16711f0c87c7eb23f722d0b289a0d6ca5fc), [`e8641664b82dbc5f924ee571f9d7b3842a8a6b2b`](https://github.com/vercel/vercel/commit/e8641664b82dbc5f924ee571f9d7b3842a8a6b2b), [`1f85d5a78d3cf1bae22d801596c6c10d83e1bafe`](https://github.com/vercel/vercel/commit/1f85d5a78d3cf1bae22d801596c6c10d83e1bafe)]:
+  - @vercel/python@6.1.4
+  - @vercel/next@4.15.9
+
+## 50.0.1
+
+### Patch Changes
+
+- Run install command earlier if using vercel.ts ([#14462](https://github.com/vercel/vercel/pull/14462))
+
+- Better error handling for vercel config parsing ([#14453](https://github.com/vercel/vercel/pull/14453))
+
+## 50.0.0
+
+### Major Changes
+
+- Fix env pull incorrectly escaping JSON environment variables ([#14456](https://github.com/vercel/vercel/pull/14456))
+
+### Minor Changes
+
+- Add json flag to inspect command ([#14435](https://github.com/vercel/vercel/pull/14435))
+
+### Patch Changes
+
+- Updated dependencies [[`3524f74fcf81fffd29f5012d4c860b2fda2ceeb9`](https://github.com/vercel/vercel/commit/3524f74fcf81fffd29f5012d4c860b2fda2ceeb9), [`c00a2756a8b63e775a451c4d8c11dd93a5e6b5c1`](https://github.com/vercel/vercel/commit/c00a2756a8b63e775a451c4d8c11dd93a5e6b5c1), [`e3b66ffaf709ccd1b851593231eb1f5b893bff27`](https://github.com/vercel/vercel/commit/e3b66ffaf709ccd1b851593231eb1f5b893bff27)]:
+  - @vercel/python@6.1.3
+  - @vercel/express@0.1.20
+  - @vercel/fastify@0.1.17
+  - @vercel/elysia@0.1.14
+  - @vercel/nestjs@0.2.18
+  - @vercel/hono@0.2.17
+  - @vercel/h3@0.1.23
+  - @vercel/build-utils@13.2.3
+  - @vercel/next@4.15.8
+  - @vercel/redwood@2.4.6
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.14
+
+## 49.2.0
+
+### Minor Changes
+
+- Improves `env pull` with conditional quoting of environment variables ([#14402](https://github.com/vercel/vercel/pull/14402))
+
+### Patch Changes
+
+- Improve handling of 429 error codes and Retry-After headers ([#14443](https://github.com/vercel/vercel/pull/14443))
+
+- Add options to vercel redirects commands to specify status code, case sensitivity, and preserving query params when adding redirects. Rename --staged flag to --staging and show diffs when listing redirects for the staging version. ([#14437](https://github.com/vercel/vercel/pull/14437))
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d), [`059be0adac65649f861335c1a86f4e600d69155a`](https://github.com/vercel/vercel/commit/059be0adac65649f861335c1a86f4e600d69155a)]:
+  - @vercel/backends@0.0.17
+  - @vercel/python@6.1.2
+  - @vercel/express@0.1.19
+
+## 49.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.16
+
+## 49.1.1
+
+### Patch Changes
+
+- Fix example API url ([#14417](https://github.com/vercel/vercel/pull/14417))
+
+- Fix vc build not respecting .vercelignore ([#14399](https://github.com/vercel/vercel/pull/14399))
+
+## 49.1.0
+
+### Minor Changes
+
+- Add new CLI commands for upcoming bulk redirects feature. ([#14393](https://github.com/vercel/vercel/pull/14393))
+
+## 49.0.0
+
+### Major Changes
+
+- Standardize ls argument errors ([#14360](https://github.com/vercel/vercel/pull/14360))
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- add config path compilation util ([#14312](https://github.com/vercel/vercel/pull/14312))
+
+- Improve messaging for vc pull ([#14351](https://github.com/vercel/vercel/pull/14351))
+
+- Don't prompt to env pull when linking to a newly created project ([#14392](https://github.com/vercel/vercel/pull/14392))
+
+- support for alternative vercel config files in build, dev, and deploy commands ([#14314](https://github.com/vercel/vercel/pull/14314))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/backends@0.0.15
+  - @vercel/build-utils@13.2.3
+  - @vercel/elysia@0.1.13
+  - @vercel/express@0.1.18
+  - @vercel/fastify@0.1.16
+  - @vercel/go@3.2.4
+  - @vercel/h3@0.1.22
+  - @vercel/hono@0.2.16
+  - @vercel/hydrogen@1.3.3
+  - @vercel/nestjs@0.2.17
+  - @vercel/next@4.15.8
+  - @vercel/node@5.5.15
+  - @vercel/python@6.1.1
+  - @vercel/redwood@2.4.6
+  - @vercel/remix-builder@5.5.6
+  - @vercel/ruby@2.2.3
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.14
+
+## 48.12.1
+
+### Patch Changes
+
+- Updated dependencies [[`f9b8fb23d1d2f873c5c3a0534b12d1e463689bb6`](https://github.com/vercel/vercel/commit/f9b8fb23d1d2f873c5c3a0534b12d1e463689bb6)]:
+  - @vercel/build-utils@13.2.2
+  - @vercel/backends@0.0.14
+  - @vercel/express@0.1.17
+  - @vercel/redwood@2.4.5
+  - @vercel/remix-builder@5.5.5
+  - @vercel/hono@0.2.15
+  - @vercel/next@4.15.7
+  - @vercel/node@5.5.14
+  - @vercel/elysia@0.1.12
+  - @vercel/fastify@0.1.15
+  - @vercel/h3@0.1.21
+  - @vercel/nestjs@0.2.16
+  - @vercel/static-build@2.8.13
+
+## 48.12.0
+
+### Minor Changes
+
+- Install nestjs builder in cli ([#14377](https://github.com/vercel/vercel/pull/14377))
+
+## 48.11.1
+
+### Patch Changes
+
+- Prompts if environment vairables should be sensitive. Masks value when inputting new environment variable. ([#14326](https://github.com/vercel/vercel/pull/14326))
+
+- Updated dependencies [[`d5586f84dc67740626011cebd18625e993d9e2b2`](https://github.com/vercel/vercel/commit/d5586f84dc67740626011cebd18625e993d9e2b2), [`99ead3d90328874b0f42d338e1e397b9f9d2c2bf`](https://github.com/vercel/vercel/commit/99ead3d90328874b0f42d338e1e397b9f9d2c2bf), [`2ac2f0ea5597a9cd242707fba3ed28a521a75da3`](https://github.com/vercel/vercel/commit/2ac2f0ea5597a9cd242707fba3ed28a521a75da3)]:
+  - @vercel/python@6.1.0
+  - @vercel/next@4.15.6
+  - @vercel/static-build@2.8.12
+  - @vercel/build-utils@13.2.1
+  - @vercel/backends@0.0.13
+  - @vercel/redwood@2.4.4
+  - @vercel/remix-builder@5.5.4
+  - @vercel/node@5.5.13
+  - @vercel/elysia@0.1.11
+  - @vercel/express@0.1.16
+  - @vercel/fastify@0.1.14
+  - @vercel/h3@0.1.20
+  - @vercel/hono@0.2.14
+
+## 48.11.0
+
+### Minor Changes
+
+- Prompt to pull environment variables after successful project linking ([#13697](https://github.com/vercel/vercel/pull/13697))
+
+### Patch Changes
+
+- Enable `@vercel/rust` cli fs detection ([#14330](https://github.com/vercel/vercel/pull/14330))
+
+## 48.10.14
+
+### Patch Changes
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/backends@0.0.12
+  - @vercel/express@0.1.15
+  - @vercel/redwood@2.4.3
+  - @vercel/remix-builder@5.5.3
+  - @vercel/hono@0.2.13
+  - @vercel/next@4.15.5
+  - @vercel/node@5.5.12
+  - @vercel/elysia@0.1.10
+  - @vercel/fastify@0.1.13
+  - @vercel/h3@0.1.19
+
+## 48.10.13
+
+### Patch Changes
+
+- Updated dependencies [[`611b2432b600381d5bebb4245765d411e62895b3`](https://github.com/vercel/vercel/commit/611b2432b600381d5bebb4245765d411e62895b3)]:
+  - @vercel/next@4.15.4
+
+## 48.10.12
+
+### Patch Changes
+
+- Fix project naming with vc link --repo ([#14335](https://github.com/vercel/vercel/pull/14335))
+
+- Updated dependencies [[`2beb1222fbdde06e8a153521871c0a3b33228045`](https://github.com/vercel/vercel/commit/2beb1222fbdde06e8a153521871c0a3b33228045)]:
+  - @vercel/build-utils@13.2.0
+  - @vercel/node@5.5.11
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.9
+  - @vercel/express@0.1.14
+  - @vercel/fastify@0.1.12
+  - @vercel/h3@0.1.18
+  - @vercel/hono@0.2.12
+  - @vercel/static-build@2.8.11
+
+## 48.10.11
+
+### Patch Changes
+
+- Updated dependencies [[`fb70f3eef445879bcb28962a86c5691bff618f73`](https://github.com/vercel/vercel/commit/fb70f3eef445879bcb28962a86c5691bff618f73)]:
+  - @vercel/build-utils@13.1.2
+  - @vercel/backends@0.0.11
+  - @vercel/elysia@0.1.8
+  - @vercel/express@0.1.13
+  - @vercel/fastify@0.1.11
+  - @vercel/h3@0.1.17
+  - @vercel/hono@0.2.11
+  - @vercel/node@5.5.10
+  - @vercel/static-build@2.8.10
+
 ## 48.10.10
 
 ### Patch Changes

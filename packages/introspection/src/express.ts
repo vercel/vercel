@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { pathToRegexp } from 'path-to-regexp';
 import { setupCloseHandlers } from './util.js';
+import { debug } from '@vercel/build-utils';
 
 let app: Express | null = null;
 
@@ -71,17 +72,23 @@ const extractRoutes = () => {
           m.push(method.toUpperCase());
         }
       }
-      const { regexp } = pathToRegexp(route.route.path);
+      try {
+        const { regexp } = pathToRegexp(route.route.path);
 
-      if (route.route.path === '/') {
-        continue;
+        if (route.route.path === '/') {
+          continue;
+        }
+
+        routes.push({
+          src: regexp.source,
+          dest: route.route.path,
+          methods: m,
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Unknown error';
+        debug(`Error extracting routes for ${route.route.path}: ${message}`);
+        //
       }
-
-      routes.push({
-        src: regexp.source,
-        dest: route.route.path,
-        methods: m,
-      });
     }
   }
   return { routes, additionalFolders, additionalDeps };

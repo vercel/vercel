@@ -1,5 +1,41 @@
 # @vercel/build-utils
 
+## 13.2.4
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 13.2.3
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 13.2.2
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+## 13.2.1
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 13.2.0
+
+### Minor Changes
+
+- Remove env var check for node24 ([#14355](https://github.com/vercel/vercel/pull/14355))
+
+## 13.1.2
+
+### Patch Changes
+
+- Support `runtimeLanguage` in build-utils ([#14344](https://github.com/vercel/vercel/pull/14344))
+
 ## 13.1.1
 
 ### Patch Changes

@@ -4,7 +4,10 @@ import { dirname, isAbsolute, join, relative } from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
-import { isExperimentalBackendsWithoutIntrospectionEnabled } from '@vercel/build-utils';
+import {
+  debug,
+  isExperimentalBackendsWithoutIntrospectionEnabled,
+} from '@vercel/build-utils';
 
 const require = createRequire(import.meta.url);
 
@@ -23,7 +26,6 @@ export const introspectApp = async (args: {
   const esmLoaderPath = new URL('loaders/esm.mjs', import.meta.url).href;
   const handlerPath = join(args.dir, args.handler);
 
-  let introspectionData: string | null = null;
   const introspectionSchema = z.object({
     frameworkSlug: z.string().optional(),
     routes: z.array(
@@ -48,6 +50,7 @@ export const introspectApp = async (args: {
       }),
     additionalDeps: z.array(z.string()).optional(),
   });
+  let introspectionData: z.infer<typeof introspectionSchema> | undefined;
 
   await new Promise(resolvePromise => {
     try {
@@ -68,7 +71,9 @@ export const introspectApp = async (args: {
 
       child.stdout?.on('data', data => {
         try {
-          introspectionData = data.toString();
+          introspectionData = introspectionSchema.parse(
+            JSON.parse(data.toString() || '{}')
+          );
         } catch (error) {
           // Ignore errors
         }
@@ -97,11 +102,8 @@ export const introspectApp = async (args: {
       resolvePromise(undefined);
     }
   });
-  const introspectionResult = introspectionSchema.safeParse(
-    JSON.parse(introspectionData || '{}')
-  );
   const framework = getFramework(args);
-  if (!introspectionResult.success) {
+  if (!introspectionData) {
     return defaultResult(args);
   }
 
@@ -110,7 +112,7 @@ export const introspectApp = async (args: {
     {
       handle: 'filesystem',
     },
-    ...introspectionResult.data.routes,
+    ...introspectionData.routes,
     {
       src: '/(.*)',
       dest: '/',
@@ -120,8 +122,8 @@ export const introspectApp = async (args: {
   return {
     routes,
     framework,
-    additionalFolders: introspectionResult.data.additionalFolders ?? [],
-    additionalDeps: introspectionResult.data.additionalDeps ?? [],
+    additionalFolders: introspectionData.additionalFolders ?? [],
+    additionalDeps: introspectionData.additionalDeps ?? [],
   };
 };
 
@@ -147,31 +149,43 @@ const getFramework = (args: {
   dir: string;
   framework: string | null | undefined;
 }) => {
-  let version: string | undefined;
-  if (args.framework) {
-    // Resolve to package.json specifically
-    const frameworkLibPath = require.resolve(`${args.framework}`, {
-      paths: [args.dir],
-    });
-    const findNearestPackageJson = (dir: string): string | undefined => {
-      const packageJsonPath = join(dir, 'package.json');
-      if (existsSync(packageJsonPath)) {
-        return packageJsonPath;
+  try {
+    let version: string | undefined;
+    if (args.framework) {
+      // Resolve to package.json specifically
+      const frameworkLibPath = require.resolve(`${args.framework}`, {
+        paths: [args.dir],
+      });
+      const findNearestPackageJson = (dir: string): string | undefined => {
+        const packageJsonPath = join(dir, 'package.json');
+        if (existsSync(packageJsonPath)) {
+          return packageJsonPath;
+        }
+        const parentDir = dirname(dir);
+        if (parentDir === dir) {
+          return undefined;
+        }
+        return findNearestPackageJson(parentDir);
+      };
+      const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
+      if (nearestPackageJsonPath) {
+        const frameworkPackageJson = require(nearestPackageJsonPath);
+        version = frameworkPackageJson.version;
       }
-      const parentDir = dirname(dir);
-      if (parentDir === dir) {
-        return undefined;
-      }
-      return findNearestPackageJson(parentDir);
-    };
-    const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
-    if (nearestPackageJsonPath) {
-      const frameworkPackageJson = require(nearestPackageJsonPath);
-      version = frameworkPackageJson.version;
     }
+    return {
+      slug: args.framework ?? '',
+      version: version ?? '',
+    };
+  } catch (error) {
+    // NestJS actually uses `@nestjs/core` as the package name, but the framework slug is `nestjs`
+    debug(
+      `Error getting framework for ${args.framework}. Setting framework version to empty string.`,
+      error
+    );
+    return {
+      slug: args.framework ?? '',
+      version: '',
+    };
   }
-  return {
-    slug: args.framework ?? '',
-    version: version ?? '',
-  };
 };

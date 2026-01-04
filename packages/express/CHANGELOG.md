@@ -1,5 +1,73 @@
 # @vercel/express
 
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.16
+
+## 0.1.20
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d)]:
+  - @vercel/cervel@0.0.7
+
+## 0.1.18
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/node@5.5.15
+
+## 0.1.17
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+- Updated dependencies [[`f9b8fb23d1d2f873c5c3a0534b12d1e463689bb6`](https://github.com/vercel/vercel/commit/f9b8fb23d1d2f873c5c3a0534b12d1e463689bb6)]:
+  - @vercel/node@5.5.14
+
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies [[`2ac2f0ea5597a9cd242707fba3ed28a521a75da3`](https://github.com/vercel/vercel/commit/2ac2f0ea5597a9cd242707fba3ed28a521a75da3)]:
+  - @vercel/node@5.5.13
+
+## 0.1.15
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
+- Updated dependencies [[`e2b3a0b0a939f09d8fdefc8d493733defac4997a`](https://github.com/vercel/vercel/commit/e2b3a0b0a939f09d8fdefc8d493733defac4997a)]:
+  - @vercel/node@5.5.12
+
+## 0.1.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.11
+
+## 0.1.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.10
+
 ## 0.1.12
 
 ### Patch Changes

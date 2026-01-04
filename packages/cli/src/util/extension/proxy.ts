@@ -25,7 +25,16 @@ export function createProxy(client: Client): Server {
         json: false,
       });
       res.statusCode = fetchRes.status;
-      mergeIntoServerResponse(toOutgoingHeaders(fetchRes.headers), res);
+
+      const outgoingHeaders = toOutgoingHeaders(fetchRes.headers);
+
+      // Remove content-encoding header because fetch() automatically decompresses
+      // the response body but retains the header, which would cause the downstream
+      // client to attempt decompression on an already-decompressed stream
+      delete outgoingHeaders['content-encoding'];
+      delete outgoingHeaders['content-length'];
+
+      mergeIntoServerResponse(outgoingHeaders, res);
       fetchRes.body.pipe(res);
     } catch (err: unknown) {
       output.prettyError(err);

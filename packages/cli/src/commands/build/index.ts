@@ -12,6 +12,8 @@ import {
   getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
+  runNpmInstall,
+  runCustomInstallCommand,
   type Reporter,
   Span,
   type TraceEvent,
@@ -82,6 +84,11 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import {
+  compileVercelConfig,
+  findSourceVercelConfigFile,
+  DEFAULT_VERCEL_CONFIG_FILENAME,
+} from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
@@ -401,11 +408,46 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  const sourceConfigFile = await findSourceVercelConfigFile(workPath);
+  let corepackShimDir: string | null | undefined;
+  if (sourceConfigFile) {
+    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+
+    const installCommand = project.settings.installCommand;
+    if (typeof installCommand === 'string') {
+      if (installCommand.trim()) {
+        output.log(`Running install command before config compilation...`);
+        await runCustomInstallCommand({
+          destPath: workPath,
+          installCommand,
+          spawnOpts: { env: process.env },
+          projectCreatedAt: project.settings.createdAt,
+        });
+      } else {
+        output.debug('Skipping empty install command');
+      }
+    } else {
+      output.log(`Installing dependencies before config compilation...`);
+      await runNpmInstall(
+        workPath,
+        [],
+        { env: process.env },
+        undefined,
+        project.settings.createdAt
+      );
+    }
+  }
+
+  const compileResult = await compileVercelConfig(workPath);
+
+  const vercelConfigPath =
+    localConfigPath ||
+    compileResult.configPath ||
+    join(workPath, 'vercel.json');
+
   const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(
-      localConfigPath || join(workPath, 'vercel.json')
-    ),
+    readJSONFile<VercelConfig>(vercelConfigPath),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
@@ -422,7 +464,9 @@ async function doBuild(
   }
 
   if (vercelConfig) {
-    vercelConfig[fileNameSymbol] = 'vercel.json';
+    vercelConfig[fileNameSymbol] = compileResult.wasCompiled
+      ? compileResult.sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME
+      : 'vercel.json';
   } else if (nowConfig) {
     nowConfig[fileNameSymbol] = 'now.json';
   }
@@ -432,6 +476,26 @@ async function doBuild(
 
   if (validateError) {
     throw validateError;
+  }
+
+  if (localConfig.customErrorPage) {
+    const errorPages =
+      typeof localConfig.customErrorPage === 'string'
+        ? [localConfig.customErrorPage]
+        : Object.values(localConfig.customErrorPage);
+
+    for (const page of errorPages) {
+      if (page) {
+        const src = join(workPath, page);
+        if (!existsSync(src)) {
+          throw new NowBuildError({
+            code: 'CUSTOM_ERROR_PAGE_NOT_FOUND',
+            message: `The custom error page "${page}" was not found in "${workPath}".`,
+            link: 'https://vercel.com/docs/projects/project-configuration#custom-error-page',
+          });
+        }
+      }
+    }
   }
 
   const projectSettings = {
@@ -486,6 +550,7 @@ async function doBuild(
       projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
+      workPath,
     });
 
     if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
@@ -574,7 +639,10 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath });
+  // Only initialize corepack if not already done during early install
+  if (!corepackShimDir) {
+    corepackShimDir = await initCorepack({ repoRootPath });
+  }
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {

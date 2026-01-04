@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.3.4
+
+### Patch Changes
+
+- [functions] update link to docs ([#14350](https://github.com/vercel/vercel/pull/14350))
+
 ## 3.3.3
 
 ### Patch Changes

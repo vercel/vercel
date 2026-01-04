@@ -11,6 +11,7 @@ import { listSubcommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { BlobListTelemetryClient } from '../../util/telemetry/commands/blob/list';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 function isMode(mode: string): mode is 'folded' | 'expanded' {
   return mode === 'folded' || mode === 'expanded';
@@ -36,7 +37,16 @@ export default async function list(
     return 1;
   }
 
-  const { flags } = parsedArgs;
+  const { args, flags } = parsedArgs;
+
+  const validationResult = validateLsArgs({
+    commandName: 'blob list',
+    args: args,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
+
   const {
     '--limit': limit,
     '--cursor': cursor,

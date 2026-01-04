@@ -1,6 +1,6 @@
 {
   "name": "@vercel/cervel",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
   "publishConfig": {
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "execa": "3.2.0",
-    "rolldown": "1.0.0-beta.35",
+    "rolldown": "1.0.0-beta.52",
     "srvx": "0.8.9",
     "tsx": "4.19.2"
   },

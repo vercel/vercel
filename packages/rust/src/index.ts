@@ -77,7 +77,6 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   const buildVariant = meta?.isDev ? 'debug' : 'release';
   const buildTarget = cargoBuildConfiguration?.build.target ?? '';
 
-  debug(`Running \`cargo build\` for \`${binaryName}\``);
   try {
     // If we are not building on Vercel (it means we are building for a prebuilt deployment),
     // We cross-compile it for linux x86_64 using `zigbuild`
@@ -96,6 +95,9 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
           meta?.isDev ? [] : ['--release']
         );
 
+    debug(
+      `Running \`cargo build\` for \`${binaryName}\` (\`${architecture}\`)`
+    );
     await execa('cargo', args, {
       cwd: workPath,
       env: rustEnv,
@@ -105,7 +107,9 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
     throw err;
   }
 
-  debug(`Building \`${binaryName}\` for \`${process.platform}\` completed`);
+  debug(
+    `Building \`${binaryName}\` for \`${process.platform}\` (\`${architecture}\`) completed`
+  );
 
   let { target_directory: targetDirectory } = await getCargoMetadata({
     cwd: workPath,
@@ -132,15 +136,16 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   const handler = getExecutableName('executable');
   const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
   const lambda = new Lambda({
+    ...lambdaOptions,
     files: {
       ...extraFiles,
       [handler]: executableFile,
     },
     handler,
+    supportsResponseStreaming: true,
     architecture,
     runtime: 'executable',
-    supportsResponseStreaming: true,
-    ...lambdaOptions,
+    runtimeLanguage: 'rust',
   });
   lambda.zipBuffer = await lambda.createZip();
 

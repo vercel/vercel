@@ -510,7 +510,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '22.x',
+        nodeVersion: '24.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -558,7 +558,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '22.x',
+        nodeVersion: '24.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -608,7 +608,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '22.x',
+        nodeVersion: '24.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -652,7 +652,7 @@ describe('deploy', () => {
     client.setArgv('deploy');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.'
+      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(0);
@@ -1341,6 +1341,241 @@ describe('deploy', () => {
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
       });
+    });
+  });
+
+  describe('production domain aliases', () => {
+    it('should display the primary production domain when aliased', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_with_alias',
+          url: 'test-deployment.vercel.app',
+          target: 'production',
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_with_alias`, (req, res) => {
+        callCount++;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_with_alias',
+          url: 'test-deployment.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: callCount > 1,
+          target: 'production',
+          alias:
+            callCount > 1
+              ? [
+                  'my-app.vercel.app',
+                  'my-app-team-name.vercel.app',
+                  'my-app-hash-team-name.vercel.app',
+                ]
+              : [],
+        });
+      });
+
+      client.scenario.get(`/v10/now/deployments/dpl_with_alias`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_with_alias',
+          url: 'test-deployment.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          target: 'production',
+          alias: [
+            'my-app.vercel.app',
+            'my-app-team-name.vercel.app',
+            'my-app-hash-team-name.vercel.app',
+          ],
+        });
+      });
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_with_alias/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Production:');
+      await expect(client.stderr).toOutput(
+        'Aliased: https://my-app.vercel.app'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should not display aliased domain for preview deployments', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_preview',
+          url: 'test-preview.vercel.app',
+          target: null,
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_preview`, (req, res) => {
+        callCount++;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_preview',
+          url: 'test-preview.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: callCount > 1,
+          target: null,
+          alias: [],
+        });
+      });
+
+      client.scenario.get(`/v10/now/deployments/dpl_preview`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_preview',
+          url: 'test-preview.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: false,
+          target: null,
+          alias: [],
+        });
+      });
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_preview/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Preview:');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.read().toString();
+      expect(stderrOutput).not.toContain('Aliased:');
+    });
+
+    it('should not display aliased domain when no aliases are assigned', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_no_alias',
+          url: 'test-no-alias.vercel.app',
+          target: 'production',
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_no_alias`, (req, res) => {
+        callCount++;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_no_alias',
+          url: 'test-no-alias.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: callCount > 1,
+          target: 'production',
+          alias: [],
+        });
+      });
+
+      client.scenario.get(`/v10/now/deployments/dpl_no_alias`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_no_alias',
+          url: 'test-no-alias.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: false,
+          target: 'production',
+          alias: [],
+        });
+      });
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_no_alias/events`,
+        (req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Production:');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.read().toString();
+      expect(stderrOutput).not.toContain('Aliased:');
     });
   });
 });

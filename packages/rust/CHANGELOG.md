@@ -1,5 +1,17 @@
 # @vercel/rust
 
+## 1.0.4
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 1.0.3
+
+### Patch Changes
+
+- Tweak logs, support `runtimeLanguage` in build outputs ([#14347](https://github.com/vercel/vercel/pull/14347))
+
 ## 1.0.2
 
 ### Patch Changes
