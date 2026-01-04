@@ -443,7 +443,7 @@ where
                 )
                 .await
             {
-                // Error serving connection
+                eprintln!("Error serving connection: {:?}", _e);
             }
         });
     }
