@@ -53,7 +53,7 @@ export default async function token(
   const projectFlag = opts['--project'];
 
   telemetryClient.trackCliFlagJson(jsonOutput);
-  telemetryClient.trackCliFlagProject(projectFlag);
+  telemetryClient.trackCliOptionProject(projectFlag);
 
   let projectId: string;
   let teamId: string | undefined;

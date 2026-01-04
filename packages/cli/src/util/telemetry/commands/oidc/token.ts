@@ -12,9 +12,12 @@ export class OidcTokenTelemetryClient
     }
   }
 
-  trackCliFlagProject(project: string | undefined) {
+  trackCliOptionProject(project: string | undefined) {
     if (project) {
-      this.trackCliFlag('project');
+      this.trackCliOption({
+        option: 'project',
+        value: this.redactedValue,
+      });
     }
   }
 }
