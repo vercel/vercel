@@ -89,8 +89,8 @@ impl LogContext {
     fn log(&self, level: Level, msg: &str) {
         if let (Some(inv_id), Some(req_id)) = (&self.invocation_id, &self.request_id) {
             let log = LogMessage::with_level(inv_id.clone(), *req_id, msg, level);
-            if let Err(_e) = enqueue_or_send_message(&self.ipc_stream, log) {
-                // Failed to send or queue log message
+            if let Err(e) = enqueue_or_send_message(&self.ipc_stream, log) {
+                eprintln!("Failed to send or queue log message: {}", e);
             }
         } else {
             // Fall back to regular println when no request context
@@ -443,7 +443,7 @@ where
                 )
                 .await
             {
-                // Error serving connection
+                eprintln!("Error serving connection: {:?}", _e);
             }
         });
     }

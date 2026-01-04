@@ -41,7 +41,7 @@
     "@types/node": "22",
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
-    "hono": "4.10.1",
+    "hono": "4.10.3",
     "jest-junit": "16.0.0",
     "tsdown": "0.16.3",
     "vite": "^5.1.6",

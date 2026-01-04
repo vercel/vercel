@@ -14,7 +14,7 @@
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/react-router-ssr-query": "^1.131.7",
-    "@tanstack/react-start": "^1.132.0",
+    "@tanstack/react-start": "^1.139.0",
     "@tanstack/router-plugin": "^1.132.0",
     "lucide-react": "^0.544.0",
     "nitro": "3.0.1-alpha.0",

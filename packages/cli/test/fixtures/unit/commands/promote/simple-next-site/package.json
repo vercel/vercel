@@ -5,7 +5,7 @@
     "now-build": "next build"
   },
   "dependencies": {
-    "next": "13.4.3",
+    "next": "14.2.35",
     "react": "latest",
     "react-dom": "latest"
   }
