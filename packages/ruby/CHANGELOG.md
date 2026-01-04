@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.2.4
+
+### Patch Changes
+
+- Replace bundle install flags with environment variables. ([#14499](https://github.com/vercel/vercel/pull/14499))
+
 ## 2.2.3
 
 ### Patch Changes
