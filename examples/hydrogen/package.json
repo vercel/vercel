@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@shopify/cli": "3.0.27",
-    "@shopify/cli-hydrogen": "3.0.27",
+    "@shopify/cli-hydrogen": "8.0.0",
     "@shopify/prettier-config": "^1.1.2",
     "@tailwindcss/forms": "^0.5.2",
     "@tailwindcss/typography": "^0.5.2",
