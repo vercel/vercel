@@ -18,15 +18,11 @@ interface OidcTokenResponse {
 async function getOidcToken(
   client: Client,
   projectId: string,
-  teamId?: string
+  accountId?: string
 ): Promise<OidcTokenResponse> {
-  const params = new URLSearchParams({ source: 'vercel-cli:oidc:token' });
-  if (teamId) {
-    params.set('teamId', teamId);
-  }
-
-  const url = `/v1/projects/${encodeURIComponent(projectId)}/token?${params}`;
-  return client.fetch<OidcTokenResponse>(url, { method: 'POST' });
+  const url = `/v1/projects/${encodeURIComponent(projectId)}/token?source=vercel-cli:oidc:token`;
+  // Pass accountId to client.fetch - it handles team_ prefix check internally
+  return client.fetch<OidcTokenResponse>(url, { method: 'POST', accountId });
 }
 
 export default async function token(
@@ -56,7 +52,7 @@ export default async function token(
   telemetryClient.trackCliOptionProject(projectFlag);
 
   let projectId: string;
-  let teamId: string | undefined;
+  let accountId: string | undefined;
 
   // Resolve project from --project flag or linked project
   if (projectFlag) {
@@ -67,7 +63,8 @@ export default async function token(
       return 1;
     }
     projectId = project.id;
-    teamId = project.accountId;
+    // Pass accountId to fetch - client.fetch handles team_ prefix check
+    accountId = project.accountId;
   } else {
     // Fall back to linked project
     const link = await getLinkedProject(client);
@@ -81,13 +78,15 @@ export default async function token(
       return 1;
     }
     projectId = link.project.id;
-    teamId = link.org.type === 'team' ? link.org.id : undefined;
+    // Set currentTeam like other commands - client.fetch uses this automatically
+    client.config.currentTeam =
+      link.org.type === 'team' ? link.org.id : undefined;
   }
 
   // Fetch the OIDC token
   let response: OidcTokenResponse;
   try {
-    response = await getOidcToken(client, projectId, teamId);
+    response = await getOidcToken(client, projectId, accountId);
   } catch (err) {
     if (isAPIError(err)) {
       if (err.status === 403) {
