@@ -1666,4 +1666,48 @@ describe.skipIf(flakey)('build', () => {
       expect(files.sort()).toEqual(['index.html']);
     });
   });
+
+  it('should reject deploymentId with dpl_ prefix in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    // Create a config.json with deploymentId starting with dpl_
+    await fs.mkdirp(output);
+    await fs.writeJSON(join(output, 'config.json'), {
+      version: 3,
+      deploymentId: 'dpl_invalid123',
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    await expect(client.stderr).toOutput(
+      'The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
+    );
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining(
+        'deploymentId cannot start with the "dpl_" prefix'
+      ),
+    });
+  });
+
+  it('should allow deploymentId without dpl_ prefix in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    // Create a config.json with valid deploymentId
+    await fs.mkdirp(output);
+    await fs.writeJSON(join(output, 'config.json'), {
+      version: 3,
+      deploymentId: 'my-deployment-123',
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+  });
 });
