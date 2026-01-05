@@ -14,7 +14,7 @@ export async function refreshToken(): Promise<void> {
   let maybeToken = loadToken(projectId);
 
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
-    const authToken = getVercelCliToken();
+    const authToken = await getVercelCliToken();
     if (!authToken) {
       throw new VercelOidcTokenError(
         'Failed to refresh OIDC token: Log in to Vercel CLI and link your project with `vc link`'
