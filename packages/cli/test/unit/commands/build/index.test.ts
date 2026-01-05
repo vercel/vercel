@@ -1671,11 +1671,41 @@ describe.skipIf(flakey)('build', () => {
     const cwd = fixture('static');
     const output = join(cwd, '.vercel/output');
 
-    // Create a config.json with deploymentId starting with dpl_
-    await fs.mkdirp(output);
-    await fs.writeJSON(join(output, 'config.json'), {
-      version: 3,
-      deploymentId: 'dpl_invalid123',
+    // Create a build script that creates config.json with invalid deploymentId
+    // This simulates a builder using Build Output API that creates an invalid config.json
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'dpl_invalid123',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
     });
 
     client.cwd = cwd;

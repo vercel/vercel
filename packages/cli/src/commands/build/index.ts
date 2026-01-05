@@ -943,7 +943,7 @@ async function doBuild(
     ) {
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
-        message: `The configured deploymentId "${existingConfig.deploymentId}" cannot start with "dpl_". Please remove the prefix.`,
+        message: `The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
         link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
       });
     }
