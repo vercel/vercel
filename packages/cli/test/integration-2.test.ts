@@ -18,6 +18,7 @@ import {
 import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
 import type { CLIProcess } from './helpers/types';
+import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -327,6 +328,8 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   );
   now.stdin?.write('\n');
 
+  await waitForPrompt(now, /Linked to/);
+
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -593,6 +596,8 @@ test('override an existing env var', async () => {
     options
   );
 
+  await waitForPrompt(addEnvCommand, /Mark as sensitive\?/);
+  addEnvCommand.stdin?.write('n\n');
   await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
   addEnvCommand.stdin?.write('test\n');
 
@@ -610,6 +615,8 @@ test('override an existing env var', async () => {
     options
   );
 
+  await waitForPrompt(overrideEnvCommand, /Mark as sensitive\?/);
+  overrideEnvCommand.stdin?.write('n\n');
   await waitForPrompt(overrideEnvCommand, /What's the value of [^?]+\?/);
   overrideEnvCommand.stdin?.write('test\n');
 
@@ -821,7 +828,10 @@ test('deploys with only vercel.json and README.md', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // assert timing order of showing URLs vs status updates
-  expect(stderr).toMatch(/Inspect.*\nPreview.*\nQueued.*\n.*\nCompleting/);
+  // Preview URL appears twice: once with loading emoji, then again with success emoji
+  expect(stripAnsi(stderr)).toMatch(
+    /Inspect.*\nPreview.*\n(Queued|Building).*[\s\S]*Completing/
+  );
 
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
@@ -1030,9 +1040,9 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   // Ensure the message is correct pattern
   expect(stderr).toMatch(/Linked to /m);
 
-  // Ensure .gitignore is created
+  // Ensure .gitignore contains .vercel and .env*.local (from env pull)
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+  expect(gitignore).toBe('.vercel\n.env*.local\n');
 });
 
 test('[vc dev] should show prompts to set up project', async () => {

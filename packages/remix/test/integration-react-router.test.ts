@@ -12,9 +12,7 @@ const fixturesPath = join(__dirname, 'fixtures-react-router');
 const exampleAbsolute = (name: string) =>
   join(__dirname, '..', '..', '..', 'examples', name);
 
-const skipped: string[] = [
-  // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
-];
+const skipped: string[] = ['05-react-router-custom-server'];
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {

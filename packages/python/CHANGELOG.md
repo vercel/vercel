@@ -1,5 +1,95 @@
 # @vercel/python
 
+## 6.1.6
+
+### Patch Changes
+
+- [python] fix handling of ASGI headers in local runtime ([#14513](https://github.com/vercel/vercel/pull/14513))
+
+## 6.1.5
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 6.1.4
+
+### Patch Changes
+
+- [python] add install script to pyproject.toml ([#14420](https://github.com/vercel/vercel/pull/14420))
+
+- [python] uv workspaces fix don't throw on missing `uv.lock` ([#14467](https://github.com/vercel/vercel/pull/14467))
+
+## 6.1.3
+
+### Patch Changes
+
+- [python] fix custom install command ([#14418](https://github.com/vercel/vercel/pull/14418))
+
+- Ensure python install errors retain the error code ([#14452](https://github.com/vercel/vercel/pull/14452))
+
+## 6.1.2
+
+### Patch Changes
+
+- [python] update dependency installation to use a .venv + uv sync ([#14415](https://github.com/vercel/vercel/pull/14415))
+
+## 6.1.1
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 6.1.0
+
+### Minor Changes
+
+- Improved error message for missing entrypoint ([#14369](https://github.com/vercel/vercel/pull/14369))
+
+## 6.0.8
+
+### Patch Changes
+
+- [python] uv workspaces support ([#14327](https://github.com/vercel/vercel/pull/14327))
+
+## 6.0.7
+
+### Patch Changes
+
+- [python] flush startup logs atexit ([#14334](https://github.com/vercel/vercel/pull/14334))
+
+## 6.0.6
+
+### Patch Changes
+
+- [python] patch: build commands uv bugfix ([#14303](https://github.com/vercel/vercel/pull/14303))
+
+## 6.0.5
+
+### Patch Changes
+
+- make python version range detection in requires-python in pyproject.toml more robust ([#14258](https://github.com/vercel/vercel/pull/14258))
+
+## 6.0.4
+
+### Patch Changes
+
+- [python] build command support ([#14244](https://github.com/vercel/vercel/pull/14244))
+
+- Adding tests for fast api middleware ([#14236](https://github.com/vercel/vercel/pull/14236))
+
+## 6.0.3
+
+### Patch Changes
+
+- [python] avoid installing dev dependencies ([#14232](https://github.com/vercel/vercel/pull/14232))
+
+- [python] swaps custom http server handler for asgi apps with uvicorn ([#14192](https://github.com/vercel/vercel/pull/14192))
+
+- Exclude JS package manager lock files ([#14233](https://github.com/vercel/vercel/pull/14233))
+
+- [python] surface tracebacks on user code import error ([#14250](https://github.com/vercel/vercel/pull/14250))
+
 ## 6.0.2
 
 ### Patch Changes

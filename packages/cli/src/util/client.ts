@@ -3,6 +3,7 @@ import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
 import input from '@inquirer/input';
+import password from '@inquirer/password';
 import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -122,6 +123,11 @@ export default class Client extends EventEmitter implements Stdio {
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
         input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      password: (opts: Parameters<typeof password>[0]) =>
+        password(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
         checkbox<T>(
           { theme, ...opts },
@@ -293,6 +299,10 @@ export default class Client extends EventEmitter implements Stdio {
             // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
+        } else if (typeof error.retryAfterMs === 'number') {
+          // Respect the Retry-After header and then try again below.
+          // This covers 429 responses which would otherwise bail out
+          await sleep(error.retryAfterMs);
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);

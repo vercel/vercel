@@ -135,9 +135,10 @@ export async function getDeploymentUrlAndToken(
   const { deploymentFlag, protectionBypassFlag } = options;
 
   let link;
+  let scope;
 
   try {
-    await getScope(client);
+    scope = await getScope(client);
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&
@@ -180,12 +181,26 @@ export async function getDeploymentUrlAndToken(
     return 1;
   }
 
-  const target = linkedProject.project.latestDeployments?.[0]?.url;
+  /** this is a url like `test-express-5.vercel.app` */
+  const preferredAlias = linkedProject.project.targets?.production?.alias?.[0];
+  /**
+   * this is a url like `test-express-5-yw3u1f2bj-uncurated-tests.vercel.app`
+   *
+   * we're using it as a fallback because as a deployment rolls out there can be a race on getting the `preferredAlias`
+   */
+  const backupAlias = linkedProject.project.latestDeployments?.[0]?.url;
+  const target = preferredAlias || backupAlias;
 
   let baseUrl: string;
 
   if (deploymentFlag) {
-    const deploymentUrl = await getDeploymentUrlById(client, deploymentFlag);
+    // Get the accountId from the scope (team or user)
+    const accountId = scope.team?.id || scope.user.id;
+    const deploymentUrl = await getDeploymentUrlById(
+      client,
+      deploymentFlag,
+      accountId
+    );
     if (!deploymentUrl) {
       output.error(`No deployment found for ID "${deploymentFlag}"`);
       return 1;

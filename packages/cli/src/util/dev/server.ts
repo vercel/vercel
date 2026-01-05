@@ -8,7 +8,7 @@ import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
 import minimatch from 'minimatch';
-import httpProxy from 'http-proxy';
+import httpProxy from 'http-proxy-node16';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, type FSWatcher } from 'chokidar';
@@ -39,7 +39,7 @@ import {
   FileFsRef,
   type PackageJson,
   spawnCommand,
-  isExperimentalBackendsEnabled,
+  shouldUseExperimentalBackends,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -547,7 +547,7 @@ export default class DevServer {
 
       // Once we're happy with this approach, the backend framework definitions
       // can be updated to contain a dev command. And we can remove this
-      if (isExperimentalBackendsEnabled()) {
+      if (shouldUseExperimentalBackends(frameworkSlug)) {
         return 'npx @vercel/cervel dev';
       }
     }
@@ -555,6 +555,8 @@ export default class DevServer {
   }
 
   async _getVercelConfig(): Promise<VercelConfig> {
+    const { compileVercelConfig } = await import('../compile-vercel-config');
+    await compileVercelConfig(this.cwd);
     const configPath = getVercelConfigPath(this.cwd);
 
     const [
@@ -568,6 +570,21 @@ export default class DevServer {
     ]);
 
     await this.validateVercelConfig(vercelConfig);
+
+    if (vercelConfig.customErrorPage) {
+      const errorPages =
+        typeof vercelConfig.customErrorPage === 'string'
+          ? [vercelConfig.customErrorPage]
+          : Object.values(vercelConfig.customErrorPage);
+
+      for (const page of errorPages) {
+        if (page && !fs.existsSync(join(this.cwd, page))) {
+          output.warn(
+            `The custom error page "${page}" was not found in "${this.cwd}". This will cause deployment to fail on Vercel.`
+          );
+        }
+      }
+    }
 
     this.projectSettings = {
       ...this.originalProjectSettings,
@@ -612,6 +629,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        workPath: this.cwd,
       });
 
       if (errors) {

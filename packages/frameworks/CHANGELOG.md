@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.15.4
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 3.15.3
+
+### Patch Changes
+
+- Make Nitro supersede Vite in detection ([#14179](https://github.com/vercel/vercel/pull/14179))
+
 ## 3.15.2
 
 ### Patch Changes

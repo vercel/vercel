@@ -201,6 +201,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandOpen(actual: string) {
+    this.trackCliCommand({
+      command: 'open',
+      value: actual,
+    });
+  }
+
   trackCliCommandProject(actual: string) {
     this.trackCliCommand({
       command: 'project',
@@ -239,6 +246,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandRedeploy(actual: string) {
     this.trackCliCommand({
       command: 'redeploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRedirects(actual: string) {
+    this.trackCliCommand({
+      command: 'redirects',
       value: actual,
     });
   }

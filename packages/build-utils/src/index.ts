@@ -30,6 +30,7 @@ import {
   getNodeVersion,
   getPathForPackageManager,
   detectPackageManager,
+  getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
@@ -89,6 +90,7 @@ export {
   getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
   streamToBuffer,
@@ -131,5 +133,8 @@ export {
   isBackendFramework,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
+  isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
 } from './framework-helpers';
+
+export * from './python';

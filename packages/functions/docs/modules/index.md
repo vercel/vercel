@@ -4,12 +4,15 @@
 
 ### Interfaces
 
-- [AddCacheTagApi](../interfaces/index.AddCacheTagApi.md)
 - [DangerouslyDeleteOptions](../interfaces/index.DangerouslyDeleteOptions.md)
 - [Geo](../interfaces/index.Geo.md)
 - [PurgeApi](../interfaces/index.PurgeApi.md)
 - [Request](../interfaces/index.Request.md)
 - [RuntimeCache](../interfaces/index.RuntimeCache.md)
+
+### Type Aliases
+
+- [AddCacheTagApi](index.md#addcachetagapi)
 
 ### Functions
 
@@ -27,6 +30,35 @@
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
 - [waitUntil](index.md#waituntil)
+
+## Type Aliases
+
+### AddCacheTagApi
+
+Ƭ **AddCacheTagApi**: (`tag`: `string` \| `string`[]) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Type declaration
+
+▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+Vercel AddCacheTag API.
+A function that adds one or more tags to the cache content.
+
+##### Parameters
+
+| Name  | Type                   | Description                                   |
+| :---- | :--------------------- | :-------------------------------------------- |
+| `tag` | `string` \| `string`[] | One or more tags to add to the cache content. |
+
+##### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+A promise that resolves when the tag is added.
+
+#### Defined in
+
+[packages/functions/src/addcachetag/types.ts:8](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/types.ts#L8)
 
 ## Functions
 

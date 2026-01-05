@@ -924,6 +924,17 @@ describe.skipIf(flakey)('build', () => {
             'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
           )
         ).toEqual(expected);
+
+        // "functions/api" directory has output Functions
+        const functions = await fs.readdir(join(output, 'functions/api'));
+        expect(functions.sort()).toEqual(['index.func']);
+
+        const vcConfig = await fs.readJSON(
+          join(output, 'functions/api/index.func/.vc-config.json')
+        );
+        expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
+          expected
+        );
       });
     }
   );
@@ -1317,6 +1328,20 @@ describe.skipIf(flakey)('build', () => {
 
     expect(fs.existsSync(join(output, 'static', 'index.html'))).toBe(true);
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
+  });
+
+  it('should respect `.vercelignore` for Build Output API', async () => {
+    const cwd = fixture('static-with-ignore');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const staticFiles = await fs.readdir(join(output, 'static'));
+    expect(staticFiles).toEqual(['index.html']);
+    expect(fs.existsSync(join(output, 'static', 'foo.html'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'build.log'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'temp'))).toBe(false);
   });
 
   it.skipIf(process.platform === 'win32')(

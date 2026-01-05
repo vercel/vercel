@@ -9,6 +9,7 @@ import {
   FileFsRef,
   getEnvForPackageManager,
   getNodeVersion,
+  getSpawnOptions,
   glob,
   EdgeFunction,
   NodejsLambda,
@@ -116,11 +117,16 @@ export const build: BuildV2 = async ({
   ]);
   const pkg = JSON.parse(pkgRaw);
 
-  const spawnEnv = getEnvForPackageManager({
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+  if (!spawnOpts.env) {
+    spawnOpts.env = {};
+  }
+
+  spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: process.env,
+    env: spawnOpts.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -129,7 +135,7 @@ export const build: BuildV2 = async ({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -139,7 +145,7 @@ export const build: BuildV2 = async ({
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      { env: spawnEnv },
+      spawnOpts,
       meta,
       config.projectSettings?.createdAt
     );
@@ -306,7 +312,7 @@ export const build: BuildV2 = async ({
 
     // Bypass `--frozen-lockfile` enforcement by removing
     // env vars that are considered to be CI
-    const nonCiEnv = { ...process.env };
+    const nonCiEnv = { ...spawnOpts.env };
     delete nonCiEnv.CI;
     delete nonCiEnv.VERCEL;
     delete nonCiEnv.NOW_BUILDER;
@@ -318,6 +324,7 @@ export const build: BuildV2 = async ({
       entrypointFsDirname,
       [],
       {
+        ...spawnOpts,
         env: nonCiEnv,
       },
       undefined,
@@ -404,13 +411,13 @@ module.exports = config;`;
     }
 
     // Make `remix build` output production mode
-    spawnEnv.NODE_ENV = 'production';
+    spawnOpts.env.NODE_ENV = 'production';
 
     // Run "Build Command"
     if (buildCommand) {
       debug(`Executing build command "${buildCommand}"`);
       await execCommand(buildCommand, {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -419,7 +426,7 @@ module.exports = config;`;
         await runPackageJsonScript(
           entrypointFsDirname,
           'vercel-build',
-          { env: spawnEnv },
+          spawnOpts,
           config.projectSettings?.createdAt
         );
       } else if (hasScript('build', pkg)) {
@@ -427,12 +434,12 @@ module.exports = config;`;
         await runPackageJsonScript(
           entrypointFsDirname,
           'build',
-          { env: spawnEnv },
+          spawnOpts,
           config.projectSettings?.createdAt
         );
       } else {
         await execCommand('remix build', {
-          env: spawnEnv,
+          ...spawnOpts,
           cwd: entrypointFsDirname,
         });
       }
@@ -675,6 +682,9 @@ async function createRenderNodeFunction(
       slug: 'remix',
       version: remixVersion,
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return fn;

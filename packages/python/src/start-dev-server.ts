@@ -183,7 +183,7 @@ export const startDevServer: StartDevServer = async opts => {
         : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message: `No ${framework} entrypoint found. Define a valid application entrypoint in one of the following locations: ${searched} or add an 'app' script in pyproject.toml.`,
+      message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
       link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
       action: 'Learn More',
     });

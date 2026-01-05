@@ -5,6 +5,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
+  getSpawnOptions,
   execCommand,
   getEnvForPackageManager,
   scanParentDirs,
@@ -24,6 +25,8 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     meta
   );
 
+  const spawnOpts = getSpawnOptions(meta || {}, nodeVersion);
+
   const {
     cliType,
     lockfileVersion,
@@ -31,11 +34,11 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true, repoRootPath);
 
-  const spawnEnv = getEnvForPackageManager({
+  spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: process.env,
+    env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -45,7 +48,7 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        env: spawnEnv,
+        ...spawnOpts,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -55,14 +58,12 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      {
-        env: spawnEnv,
-      },
+      spawnOpts,
       meta,
       config.projectSettings?.createdAt
     );
   }
-  return { entrypointFsDirname, nodeVersion, spawnEnv };
+  return { entrypointFsDirname, nodeVersion, spawnOpts };
 }
 
 export async function maybeExecBuildCommand(
@@ -79,11 +80,12 @@ export async function maybeExecBuildCommand(
     });
     const nodeBinPath = nodeBinPaths.join(delimiter);
     const env = {
-      ...options.spawnEnv,
-      PATH: `${nodeBinPath}${delimiter}${options.spawnEnv?.PATH || process.env.PATH}`,
+      ...options.spawnOpts.env,
+      PATH: `${nodeBinPath}${delimiter}${options.spawnOpts.env?.PATH || process.env.PATH}`,
     };
 
     return execCommand(projectBuildCommand, {
+      ...options.spawnOpts,
       env,
       cwd: args.workPath,
     });
@@ -95,7 +97,7 @@ export async function maybeExecBuildCommand(
   return runPackageJsonScript(
     options.entrypointFsDirname,
     possibleScripts,
-    options.spawnEnv,
+    options.spawnOpts,
     args.config.projectSettings?.createdAt
   );
 }

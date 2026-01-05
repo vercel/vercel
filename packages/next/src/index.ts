@@ -12,6 +12,7 @@ import {
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getPrefixedEnvVars,
+  getSpawnOptions,
   getScriptName,
   glob,
   runNpmInstall,
@@ -269,6 +270,7 @@ export const build: BuildV2 = async buildOptions => {
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,
     lockfileVersion,
@@ -276,11 +278,11 @@ export const build: BuildV2 = async buildOptions => {
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
-  const spawnEnv = getEnvForPackageManager({
+  spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: process.env,
+    env: spawnOpts.env || {},
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -381,14 +383,14 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           await execCommand(trimmedInstallCommand, {
-            env: spawnEnv,
+            ...spawnOpts,
             cwd: entryPath,
           });
         } else {
           await runNpmInstall(
             entryPath,
             [],
-            { env: spawnEnv },
+            spawnOpts,
             meta,
             config.projectSettings?.createdAt
           );
@@ -398,7 +400,7 @@ export const build: BuildV2 = async buildOptions => {
     console.log(`Skipping "install" command...`);
   }
 
-  if (spawnEnv.VERCEL_ANALYTICS_ID) {
+  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
     debug('Found VERCEL_ANALYTICS_ID in environment');
 
     const version = await getInstalledPackageVersion(
@@ -410,7 +412,7 @@ export const build: BuildV2 = async buildOptions => {
       // Next.js has a built-in integration with Vercel Speed Insights
       // with the new @vercel/speed-insights package this is no longer needed
       // and can be removed to avoid duplicate events
-      delete spawnEnv.VERCEL_ANALYTICS_ID;
+      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
       delete process.env.VERCEL_ANALYTICS_ID;
 
       debug(
@@ -486,7 +488,7 @@ export const build: BuildV2 = async buildOptions => {
     target = await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  const env: typeof process.env = { ...spawnEnv };
+  const env: typeof process.env = { ...spawnOpts.env };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -541,6 +543,7 @@ export const build: BuildV2 = async buildOptions => {
 
           console.log(`Running "${buildCommand}"`);
           await execCommand(buildCommand, {
+            ...spawnOpts,
             cwd: entryPath,
             env,
           });
@@ -549,6 +552,7 @@ export const build: BuildV2 = async buildOptions => {
             entryPath,
             buildScriptName,
             {
+              ...spawnOpts,
               env,
             },
             config.projectSettings?.createdAt
@@ -1081,9 +1085,7 @@ export const build: BuildV2 = async buildOptions => {
     await runNpmInstall(
       entryPath,
       ['--production'],
-      {
-        env: spawnEnv,
-      },
+      spawnOpts,
       meta,
       config.projectSettings?.createdAt
     );
@@ -1233,6 +1235,9 @@ export const build: BuildV2 = async buildOptions => {
             slug: 'nextjs',
             version: nextVersion,
           },
+          shouldDisableAutomaticFetchInstrumentation:
+            process.env
+              .VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION === '1',
         });
         debug(`Created serverless function for page: "${page}"`);
       })
