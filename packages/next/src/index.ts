@@ -573,7 +573,7 @@ export const build: BuildV2 = async buildOptions => {
 
   try {
     const data = await readJSON(
-      path.join(outputDirectory, 'output/config.json')
+      path.join(entryPath, outputDirectory, 'output/config.json')
     );
     buildOutputVersion = data.version;
   } catch (_) {
