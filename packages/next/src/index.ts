@@ -47,6 +47,7 @@ import findUp from 'find-up';
 import {
   lstat,
   pathExists,
+  readdir,
   readFile,
   readJSON,
   remove,
@@ -584,6 +585,40 @@ export const build: BuildV2 = async buildOptions => {
       buildOutputPath: path.join(outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
+  }
+
+  // Validate that the output directory exists and has content before reading manifests
+  const absoluteOutputDirectory = path.join(entryPath, outputDirectory);
+  const outputDirExists = await pathExists(absoluteOutputDirectory);
+
+  if (!outputDirExists) {
+    throw new NowBuildError({
+      code: 'NEXT_OUTPUT_DIR_MISSING',
+      message:
+        `The Next.js output directory "${outputDirectory}" was not found at "${absoluteOutputDirectory}". ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. The "Output Directory" setting in your project is misconfigured. ` +
+        `Check your project settings and ensure the output directory matches your Next.js configuration.\n\n` +
+        `2. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add "${outputDirectory}/**" to the "outputs" array in your turbo.json for the build task.\n\n` +
+        `3. The build command did not complete successfully. Check the build logs above for errors.`,
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
+    });
+  }
+
+  const outputDirContents = await readdir(absoluteOutputDirectory);
+  if (outputDirContents.length === 0) {
+    throw new NowBuildError({
+      code: 'NEXT_OUTPUT_DIR_EMPTY',
+      message:
+        `The Next.js output directory "${outputDirectory}" exists but is empty. ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add "${outputDirectory}/**" to the "outputs" array in your turbo.json for the build task.\n\n` +
+        `2. The build command did not generate any output. Check the build logs above for errors.\n\n` +
+        `3. A previous build step may have cleared the output directory.`,
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
+    });
   }
 
   let appMountPrefixNoTrailingSlash = path.posix
