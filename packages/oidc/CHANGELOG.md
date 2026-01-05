@@ -1,5 +1,15 @@
 # @vercel/oidc
 
+## 3.1.0
+
+### Minor Changes
+
+- Allow vercel/oidc to refresh the vercel CLI auth token when running locally ([#14543](https://github.com/vercel/vercel/pull/14543))
+
+### Patch Changes
+
+- improve error messages for package consumers ([#14449](https://github.com/vercel/vercel/pull/14449))
+
 ## 3.0.5
 
 ### Patch Changes

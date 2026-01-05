@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.25
+
+### Patch Changes
+
+- update to support respectOriginCacheControl ([#14507](https://github.com/vercel/vercel/pull/14507))
+
 ## 0.0.24
 
 ### Patch Changes
