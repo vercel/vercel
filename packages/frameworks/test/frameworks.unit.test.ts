@@ -12,6 +12,7 @@ jest.setTimeout(15 * 1000);
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
 const rootPath = join(__dirname, '..', '..', '..');
 const examplePath = join(rootPath, 'examples');
+const logoPath = join(__dirname, '..', 'logos');
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -231,7 +232,8 @@ describe('frameworks', () => {
     it.concurrent('ensure an example', () => {
       if (typeof framework.slug !== 'string') return;
       if (skipExamples.includes(framework.slug)) return;
-      expect(existsSync(join(examplePath, framework.slug))).toBe(true);
+      const filepath = join(examplePath, framework.slug);
+      expect(existsSync(filepath)).toBe(true);
     });
 
     it.concurrent('ensure logo starts with logo prefix', () => {
@@ -247,7 +249,7 @@ describe('frameworks', () => {
       'ensure logo file exists in ./packages/frameworks/logos/',
       () => {
         const filename = framework.logo.slice(logoPrefix.length);
-        const filepath = join(__dirname, '..', 'logos', filename);
+        const filepath = join(logoPath, filename);
         expect(existsSync(filepath)).toBe(true);
       }
     );
