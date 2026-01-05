@@ -948,7 +948,6 @@ async function doBuild(
       });
     }
 
-    // Preserve deploymentId from existingConfig
     if (existingConfig.deploymentId) {
       deploymentId = existingConfig.deploymentId;
     }
