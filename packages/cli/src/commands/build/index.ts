@@ -934,6 +934,7 @@ async function doBuild(
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
+  let deploymentId: string | undefined;
   if (existingConfig) {
     // Validate deploymentId if present (user-configured for skew protection)
     if (
@@ -943,10 +944,14 @@ async function doBuild(
     ) {
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
-        message:
-          `The configured deploymentId "${existingConfig.deploymentId}" cannot start with "dpl_". Please remove the prefix.`,
-        link: 'https://vercel.com/docs/skew-protection',
+        message: `The configured deploymentId "${existingConfig.deploymentId}" cannot start with "dpl_". Please remove the prefix.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
       });
+    }
+
+    // Preserve deploymentId from existingConfig
+    if (existingConfig.deploymentId) {
+      deploymentId = existingConfig.deploymentId;
     }
 
     if (existingConfig.overrides) {
@@ -1003,6 +1008,7 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    ...(deploymentId && { deploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
