@@ -10,6 +10,9 @@ import frameworkList from '../src/frameworks';
 jest.setTimeout(15 * 1000);
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
+const rootPath = join(__dirname, '..', '..', '..');
+const examplePath = join(rootPath, 'examples');
+const logoPath = join(__dirname, '..', 'logos');
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -225,15 +228,44 @@ describe('frameworks', () => {
     'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
   ];
 
-  it('ensure there is an example for every framework', async () => {
-    const root = join(__dirname, '..', '..', '..');
-    const getExample = (name: string) => join(root, 'examples', name);
+  describe.each(frameworkList)('Framework: $name', framework => {
+    it.concurrent('ensure an example', () => {
+      if (typeof framework.slug !== 'string') return;
+      if (skipExamples.includes(framework.slug)) return;
+      const filepath = join(examplePath, framework.slug);
+      expect(existsSync(filepath)).toBe(true);
+    });
 
-    for (const { slug } of frameworkList) {
-      if (typeof slug !== 'string') continue;
-      if (skipExamples.includes(slug)) continue;
-      assert(existsSync(getExample(slug)), `Slug "${slug}" is missing example`);
-    }
+    it.concurrent('ensure logo starts with logo prefix', () => {
+      expect(framework.logo.startsWith(logoPrefix)).toBe(true);
+    });
+
+    it.concurrent('ensure darkModeLogo starts with logo prefix', () => {
+      if (framework.darkModeLogo === undefined) return;
+      expect(framework.darkModeLogo.startsWith(logoPrefix)).toBe(true);
+    });
+
+    it.concurrent(
+      'ensure logo file exists in ./packages/frameworks/logos/',
+      () => {
+        const filename = framework.logo.slice(logoPrefix.length);
+        const filepath = join(logoPath, filename);
+        expect(existsSync(filepath)).toBe(true);
+      }
+    );
+
+    it.concurrent('ensure all demo URLs are "public"', async () => {
+      const { demo } = framework;
+      if (typeof demo !== 'string') return;
+      const url = new URL(demo);
+      const deployment = await getDeployment(url.hostname);
+
+      assert.strictEqual(
+        deployment.public,
+        true,
+        `Demo URL ${demo} is not "public". Disable "build logs and source protection" in project settings.`
+      );
+    });
   });
 
   it('ensure schema', async () => {
@@ -246,38 +278,6 @@ describe('frameworks', () => {
     }
 
     expect(result).toBe(true);
-  });
-
-  it('ensure logo starts with url prefix', async () => {
-    const invalid = frameworkList
-      .map(f => f.logo)
-      .filter(logo => {
-        return logo && !logo.startsWith(logoPrefix);
-      });
-
-    expect(invalid).toEqual([]);
-  });
-
-  it('ensure darkModeLogo starts with url prefix', async () => {
-    const invalid = frameworkList
-      .map(f => f.darkModeLogo)
-      .filter(darkModeLogo => {
-        return darkModeLogo && !darkModeLogo.startsWith(logoPrefix);
-      });
-
-    expect(invalid).toEqual([]);
-  });
-
-  it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
-    const missing = frameworkList
-      .map(f => f.logo)
-      .filter(logo => {
-        const filename = logo.slice(logoPrefix.length);
-        const filepath = join(__dirname, '..', 'logos', filename);
-        return existsSync(filepath) === false;
-      });
-
-    expect(missing).toEqual([]);
   });
 
   it('ensure unique sort number', async () => {
@@ -299,22 +299,6 @@ describe('frameworks', () => {
         slugs.add(slug);
       }
     }
-  });
-
-  it('ensure all demo URLs are "public"', async () => {
-    await Promise.all(
-      frameworkList
-        .filter(f => typeof f.demo === 'string')
-        .map(async f => {
-          const url = new URL(f.demo!);
-          const deployment = await getDeployment(url.hostname);
-          assert.equal(
-            deployment.public,
-            true,
-            `Demo URL ${f.demo} is not "public". Disable "build logs and source protection" in project settings.`
-          );
-        })
-    );
   });
 });
 
