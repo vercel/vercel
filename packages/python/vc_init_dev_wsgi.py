@@ -15,6 +15,7 @@ _NO_COLOR = 'NO_COLOR' in os.environ
 _RESET = "\x1b[0m"
 _YELLOW = "\x1b[33m"
 _GREEN = "\x1b[32m"
+_RED = "\x1b[31m"
 
 def _color(text: str, code: str) -> str:
     if _NO_COLOR:
@@ -31,6 +32,15 @@ if _app is None:
         f"Missing 'app' in module '{USER_MODULE}'. Define `app = ...` (WSGI app)."
     )
 
+class HealthWrapper:
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        if environ.get("PATH_INFO") == os.environ.get("VERCEL_DEV_HEALTHCHECK_PATH", "/_vc_dev_health"):
+            start_response("200 OK", [("Content-Type", "application/json; charset=utf-8")])
+            return [b'{"status":"ok"}']
+        return self.app(environ, start_response)
 
 def _is_safe_file(base_dir: str, target: str) -> bool:
     try:
@@ -102,14 +112,17 @@ def _combined_app(environ, start_response):
 
 
 # Public WSGI application consumed by the dev runner
-app = _combined_app
-
+app = HealthWrapper(_combined_app)
 
 if __name__ == "__main__":
     # Development runner: prefer Werkzeug, fall back to stdlib wsgiref.
     # Bind to localhost on an ephemeral port and emit a recognizable log line
     # so the caller can detect the bound port.
     host = "127.0.0.1"
+    port = int(os.environ.get('VERCEL_DEV_PORT', '0'))
+    if port == 0:
+        print(_color('Error: VERCEL_DEV_PORT not set', _RED), file=sys.stderr)
+        sys.exit(1)
     try:
         from werkzeug.serving import run_simple
         run_simple(host, 0, app, use_reloader=False)

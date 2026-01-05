@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { createServer } from 'net';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
@@ -11,6 +12,9 @@ import {
 } from './entrypoint';
 import { getLatestPythonVersion } from './version';
 import { isInVirtualEnv, useVirtualEnv } from './utils';
+import http from 'http';
+
+const VercelDevHealthCheckPath = '/_vc_dev_health';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -47,10 +51,87 @@ function silenceNodeWarnings() {
 
 // Regex to strip ANSI escape sequences for matching while preserving colored output
 // Use RegExp constructor to avoid linter complaining about control chars in regex literals
-const ANSI_PATTERN =
-  '[\\u001B\\u009B][[\\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nq-uy=><]';
-const ANSI_ESCAPE_RE = new RegExp(ANSI_PATTERN, 'g');
-const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
+// const ANSI_PATTERN =
+//   '[\\u001B\\u009B][[\\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nq-uy=><]';
+// const ANSI_ESCAPE_RE = new RegExp(ANSI_PATTERN, 'g');
+// const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
+
+/**
+ * Allocate an ephemeral port by binding to port 0.
+ * Returns the OS-assigned port number.
+ */
+async function getEphemeralPort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (address && typeof address === 'object') {
+        const { port } = address;
+        server.close(err => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(port);
+          }
+        });
+      } else {
+        reject(new Error('Failed to get port from server'));
+      }
+    });
+    server.on('error', reject);
+  });
+}
+
+/**
+ * Read readiness info from the vercel dev health check endpoint.
+ * The Python endpoint writes JSON like: {"status": "ok"}.
+ */
+async function waitForHealth(
+  url: string,
+  timeoutMs = 15000,
+  intervalMs = 500
+): Promise<void> {
+  const start = Date.now();
+
+  async function checkOnce(): Promise<boolean> {
+    return new Promise(resolve => {
+      const req = http.get(url, { timeout: 2000 }, res => {
+        let data = '';
+        res.on('data', chunk => (data += chunk));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (res.statusCode === 200 && json.status === 'ok') {
+              return resolve(true);
+            }
+          } catch {
+            debug(`Health check received invalid JSON: ${data}`);
+          }
+          resolve(false);
+        });
+      });
+
+      req.on('error', () => resolve(false)); // server might not be up yet
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+    });
+  }
+
+  for (;;) {
+    const healthy = await checkOnce();
+    if (healthy) {
+      return;
+    }
+
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`Health check timed out after ${timeoutMs}ms: ${url}`);
+    }
+
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+}
 
 const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
 const WSGI_SHIM_MODULE = 'vc_init_dev_wsgi';
@@ -238,6 +319,9 @@ export const startDevServer: StartDevServer = async opts => {
   // Mark start as pending immediately to dedupe concurrent requests
   PENDING_STARTS.set(serverKey, childReady);
 
+  const port = await getEphemeralPort();
+  debug(`Allocated ephemeral port ${port} for Python dev server`);
+
   try {
     // Now spawn the actual server process
     await new Promise<void>((resolve, reject) => {
@@ -276,11 +360,14 @@ export const startDevServer: StartDevServer = async opts => {
         }
       }
 
+      // Pass port and healthcheck path to Python process
+      env.VERCEL_DEV_PORT = String(port);
+      env.VERCEL_DEV_HEALTHCHECK_PATH = VercelDevHealthCheckPath;
+
       if (framework === 'fastapi') {
         // Create a tiny ASGI shim that serves static files first (when present)
         // and falls back to the user's app. Always applied for consistent behavior.
         const devShimModule = createDevAsgiShim(workPath, modulePath);
-
         // Add .vercel/python to PYTHONPATH so the shim can be imported
         if (devShimModule) {
           const vercelPythonDir = join(workPath, '.vercel', 'python');
@@ -297,7 +384,7 @@ export const startDevServer: StartDevServer = async opts => {
         const child = spawn(pythonCmd, argv, {
           cwd: workPath,
           env,
-          stdio: ['inherit', 'pipe', 'pipe'],
+          stdio: ['inherit', 'pipe', 'pipe', 'pipe'], // Add FD 3 for signaling
         });
         childProcess = child;
 
@@ -320,38 +407,24 @@ export const startDevServer: StartDevServer = async opts => {
         child.stdout?.on('data', stdoutLogListener);
         child.stderr?.on('data', stderrLogListener);
 
-        const readinessRegexes = [
-          /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-          /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-          /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
-        ];
-
-        const onDetect = (chunk: Buffer) => {
-          const text = chunk.toString();
-          const clean = stripAnsi(text);
-          let portMatch: RegExpMatchArray | null = null;
-          for (const rx of readinessRegexes) {
-            const m = clean.match(rx);
-            if (m) {
-              portMatch = m;
-              break;
-            }
+        try {
+          waitForHealth(`http://127.0.0.1:${port}${VercelDevHealthCheckPath}`);
+          if (!resolved && child.pid) {
+            resolved = true;
+            debug(
+              `Python dev server ready on port ${port} (confirmed via health check)`
+            );
+            // Use the port we allocated, not the one from Python (should match)
+            resolveChildReady({ port, pid: child.pid });
+            resolve();
           }
-          if (portMatch && child.pid) {
-            if (!resolved) {
-              resolved = true;
-              // Use removeListener for broad Node compatibility (and mocked emitters)
-              child.stdout?.removeListener('data', onDetect);
-              child.stderr?.removeListener('data', onDetect);
-              const port = Number(portMatch[1]);
-              resolveChildReady({ port, pid: child.pid });
-              resolve();
-            }
+        } catch (err) {
+          if (!resolved) {
+            rejectChildReady(err);
+            reject(err);
           }
-        };
-
-        child.stdout?.on('data', onDetect);
-        child.stderr?.on('data', onDetect);
+          return;
+        }
 
         child.once('error', err => {
           if (!resolved) {
@@ -411,36 +484,25 @@ export const startDevServer: StartDevServer = async opts => {
         child.stdout?.on('data', stdoutLogListener);
         child.stderr?.on('data', stderrLogListener);
 
-        const readinessRegexes = [
-          /Werkzeug running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-          /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
-        ];
-
-        const onDetect = (chunk: Buffer) => {
-          const text = chunk.toString();
-          const clean = stripAnsi(text);
-          let portMatch: RegExpMatchArray | null = null;
-          for (const rx of readinessRegexes) {
-            const m = clean.match(rx);
-            if (m) {
-              portMatch = m;
-              break;
-            }
-          }
-          if (portMatch && child.pid) {
-            if (!resolved) {
+        // Wait for readiness signal from Python process
+        waitForReady(child)
+          .then(result => {
+            if (result && !resolved && child.pid) {
               resolved = true;
-              child.stdout?.removeListener('data', onDetect);
-              child.stderr?.removeListener('data', onDetect);
-              const port = Number(portMatch[1]);
+              debug(
+                `Python dev server ready on port ${port} (confirmed: ${result.port})`
+              );
+              // Use the port we allocated, not the one from Python (should match)
               resolveChildReady({ port, pid: child.pid });
               resolve();
             }
-          }
-        };
-
-        child.stdout?.on('data', onDetect);
-        child.stderr?.on('data', onDetect);
+          })
+          .catch(err => {
+            if (!resolved) {
+              rejectChildReady(err);
+              reject(err);
+            }
+          });
 
         child.once('error', err => {
           if (!resolved) {

@@ -4,6 +4,7 @@ import sys
 import os
 from os import path as _p
 from importlib import import_module
+from starlette.responses import JSONResponse
 
 
 # Simple ANSI coloring. Respect NO_COLOR environment variable.
@@ -73,12 +74,53 @@ async def app(scope, receive, send):
             pass
     await USER_ASGI_APP(scope, receive, send)
 
+class HealthWrapper:
+    """Wrap an ASGI app to inject /health endpoint and optionally serve static files."""
+    def __init__(self, app, static_app=None, public_dir=None):
+        self.app = app
+        self.static_app = static_app
+        self.public_dir = public_dir
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "/") or "/"
+
+        # Inject /health route
+        if path == os.environ.get("VERCEL_DEV_HEALTHCHECK_PATH", "/_vc_dev_health"):
+            response = JSONResponse({"status": "ok"})
+            await response(scope, receive, send)
+            return
+
+        # Serve static files if configured
+        if self.static_app is not None and self.public_dir is not None:
+            safe = _p.normpath(path.lstrip('/'))
+            full = _p.join(self.public_dir, safe)
+            try:
+                base = _p.realpath(self.public_dir)
+                target = _p.realpath(full)
+                if (target == base or target.startswith(base + _p.sep)) and _p.isfile(target):
+                    await self.static_app(scope, receive, send)
+                    return
+            except Exception:
+                pass
+
+        # Delegate everything else to the original user app
+        await self.app(scope, receive, send)
+
+app = HealthWrapper(USER_ASGI_APP, static_app=static_app, public_dir=PUBLIC_DIR)
 
 if __name__ == '__main__':
     # Development runner for ASGI: prefer uvicorn, then hypercorn.
     # Bind to localhost on an ephemeral port and emit a recognizable log line
     # so the caller can detect the bound port.
     host = '127.0.0.1'
+    port = int(os.environ.get('VERCEL_DEV_PORT', '0'))
+    if port == 0:
+        print(_color('Error: VERCEL_DEV_PORT not set', _RED), file=sys.stderr)
+        sys.exit(1)
     try:
         import uvicorn
         uvicorn.run('vc_init_dev_asgi:app', host=host, port=0, use_colors=True)
