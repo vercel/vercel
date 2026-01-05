@@ -936,7 +936,6 @@ async function doBuild(
   }
   let deploymentId: string | undefined;
   if (existingConfig) {
-    // Validate deploymentId if present (user-configured for skew protection)
     if (
       'deploymentId' in existingConfig &&
       typeof existingConfig.deploymentId === 'string' &&
