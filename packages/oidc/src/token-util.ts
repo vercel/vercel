@@ -2,6 +2,13 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { VercelOidcTokenError } from './token-error';
 import { findRootDir, getUserDataDir } from './token-io';
+import {
+  readAuthConfig,
+  writeAuthConfig,
+  isValidAccessToken,
+  type AuthConfig,
+} from './auth-config';
+import { refreshTokenRequest, processTokenResponse } from './oauth';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -12,22 +19,52 @@ export function getVercelDataDir(): string | null {
   return path.join(dataDir, vercelFolder);
 }
 
-export function getVercelCliToken(): string | null {
-  const dataDir = getVercelDataDir();
-  if (!dataDir) {
-    throw new VercelOidcTokenError(
-      'Unable to find Vercel CLI data directory. Please reach out to Vercel support.'
-    );
-  }
-  const tokenPath = path.join(dataDir, 'auth.json');
-  if (!fs.existsSync(tokenPath)) {
+export async function getVercelCliToken(): Promise<string | null> {
+  const authConfig = readAuthConfig();
+  if (!authConfig) {
     return null;
   }
-  const token = fs.readFileSync(tokenPath, 'utf8');
-  if (!token) {
+
+  if (isValidAccessToken(authConfig)) {
+    return authConfig.token || null;
+  }
+
+  if (!authConfig.refreshToken) {
+    // No refresh token available, clear auth and return null
+    writeAuthConfig({});
     return null;
   }
-  return JSON.parse(token).token;
+
+  try {
+    const tokenResponse = await refreshTokenRequest({
+      refresh_token: authConfig.refreshToken,
+    });
+
+    const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+
+    if (tokensError || !tokens) {
+      // Refresh failed - clear auth
+      writeAuthConfig({});
+      return null;
+    }
+
+    // Update auth config with new tokens
+    const updatedConfig: AuthConfig = {
+      token: tokens.access_token,
+      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+    };
+
+    if (tokens.refresh_token) {
+      updatedConfig.refreshToken = tokens.refresh_token;
+    }
+
+    writeAuthConfig(updatedConfig);
+    return updatedConfig.token ?? null;
+  } catch (error) {
+    // Network error or other failure - clear auth
+    writeAuthConfig({});
+    return null;
+  }
 }
 
 interface VercelTokenResponse {
