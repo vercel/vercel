@@ -97,6 +97,7 @@ Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
   environment: 'stable',
+  autoSessionTracking: false,
 });
 
 let client: Client;
@@ -166,7 +167,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['curl'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
@@ -621,6 +622,10 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = require('./commands/certs').default;
           break;
+        case 'curl':
+          telemetry.trackCliCommandCurl(userSuppliedSubCommand);
+          func = require('./commands/curl').default;
+          break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           telemetry.trackCliDefaultDeploy(defaultDeploy);
@@ -655,6 +660,10 @@ const main = async () => {
             func = null;
             break;
           }
+        case 'httpstat':
+          telemetry.trackCliCommandHttpstat(userSuppliedSubCommand);
+          func = require('./commands/httpstat').default;
+          break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
@@ -703,6 +712,10 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = require('./commands/microfrontends').default;
           break;
+        case 'open':
+          telemetry.trackCliCommandOpen(userSuppliedSubCommand);
+          func = require('./commands/open').default;
+          break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);
           func = require('./commands/project').default;
@@ -718,6 +731,10 @@ const main = async () => {
         case 'redeploy':
           telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
           func = require('./commands/redeploy').default;
+          break;
+        case 'redirects':
+          telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
+          func = require('./commands/redirects').default;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);

@@ -89,7 +89,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(6);
+    expect(lambdas.size).toBe(7);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();
@@ -154,6 +154,31 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     // expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
     //   /server\/app\/dashboard\/index\.rsc$/
     // );
+  });
+
+  it('should not generate /_next/data routes for pure App Router apps', async () => {
+    // Test pure App Router (no Pages Router)
+    const { buildResult: appOnlyResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-edge')
+    );
+
+    const appOnlyDataRoutes = appOnlyResult.routes.filter(
+      route => route.src && route.src.includes('_next/data')
+    );
+
+    expect(appOnlyDataRoutes.length).toBe(0);
+  });
+
+  it('should generate /_next/data routes when pages routes are present', async () => {
+    // Test mixed App Router + Pages Router
+    const { buildResult: mixedResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
+    );
+
+    const mixedDataRoutes = mixedResult.routes.filter(
+      route => route.src && route.src.includes('_next/data')
+    );
+    expect(mixedDataRoutes.length).toBeGreaterThan(0);
   });
 
   it('should build with app-dir with segment options correctly', async () => {

@@ -924,6 +924,17 @@ describe.skipIf(flakey)('build', () => {
             'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
           )
         ).toEqual(expected);
+
+        // "functions/api" directory has output Functions
+        const functions = await fs.readdir(join(output, 'functions/api'));
+        expect(functions.sort()).toEqual(['index.func']);
+
+        const vcConfig = await fs.readJSON(
+          join(output, 'functions/api/index.func/.vc-config.json')
+        );
+        expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
+          expected
+        );
       });
     }
   );
@@ -1319,15 +1330,27 @@ describe.skipIf(flakey)('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
-  // Skip on Windows because route parameters with colons (e.g., `:id`) are used as filesystem paths
+  it('should respect `.vercelignore` for Build Output API', async () => {
+    const cwd = fixture('static-with-ignore');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const staticFiles = await fs.readdir(join(output, 'static'));
+    expect(staticFiles).toEqual(['index.html']);
+    expect(fs.existsSync(join(output, 'static', 'foo.html'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'build.log'))).toBe(false);
+    expect(fs.existsSync(join(output, 'static', 'temp'))).toBe(false);
+  });
+
   it.skipIf(process.platform === 'win32')(
-    'should apply routes from `.vercel/routes.json` when VERCEL_EXPERIMENTAL_ROUTES_JSON is enabled',
+    'should apply routes from `.vercel/routes.json` for backend frameworks',
     async () => {
       const cwd = fixture('express-with-routes-json');
       const output = join(cwd, '.vercel/output');
 
       try {
-        process.env.VERCEL_EXPERIMENTAL_ROUTES_JSON = '1';
         client.cwd = cwd;
         const exitCode = await build(client);
         expect(exitCode).toEqual(0);
@@ -1642,5 +1665,108 @@ describe.skipIf(flakey)('build', () => {
       const files = await fs.readdir(join(output, 'static'));
       expect(files.sort()).toEqual(['index.html']);
     });
+  });
+
+  it('should reject deploymentId with dpl_ prefix in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    // Create a build script that creates config.json with invalid deploymentId
+    // This simulates a builder using Build Output API that creates an invalid config.json
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'dpl_invalid123',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    await expect(client.stderr).toOutput(
+      'The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
+    );
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining(
+        'deploymentId cannot start with the "dpl_" prefix'
+      ),
+    });
+  });
+
+  it('should allow deploymentId without dpl_ prefix in config.json', async () => {
+    const cwd = fixture('static');
+
+    // Create a build script that creates config.json with valid deploymentId
+    // This simulates a builder using Build Output API that creates a valid config.json
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my-deployment-123',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
   });
 });

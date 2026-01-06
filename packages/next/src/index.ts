@@ -109,6 +109,8 @@ const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 // related PR: https://github.com/vercel/next.js/pull/27143
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
+// related PR: https://github.com/vercel/next.js/pull/84643
+const IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION = 'v16.0.0';
 
 export const MAX_AGE_ONE_YEAR = 31536000;
 
@@ -1250,6 +1252,9 @@ export const build: BuildV2 = async buildOptions => {
             slug: 'nextjs',
             version: nextVersion,
           },
+          shouldDisableAutomaticFetchInstrumentation:
+            process.env
+              .VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION === '1',
         });
         debug(`Created serverless function for page: "${page}"`);
       })
@@ -1293,6 +1298,7 @@ export const build: BuildV2 = async buildOptions => {
       entryDirectory,
       htmlContentType,
       prerenderManifest,
+      nextVersion,
       routesManifest
     );
     hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
@@ -1488,10 +1494,12 @@ export const build: BuildV2 = async buildOptions => {
           true
       : false;
 
-    const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
-      ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
-        true
-      : false;
+    const isAppClientSegmentCacheEnabled =
+      semver.gte(nextVersion, IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION) ||
+      (requiredServerFilesManifest
+        ? requiredServerFilesManifest.config.experimental
+            ?.clientSegmentCache === true
+        : false);
 
     // We read this from the routes manifest instead of the config because we
     // expect that the flag will be deprecated in the future and the manifest
@@ -1798,6 +1806,7 @@ export const build: BuildV2 = async buildOptions => {
         // like builds
         internalPages: [],
         experimentalPPRRoutes: undefined,
+        nodeVersion,
       });
 
       const initialApiLambdaGroups = await getPageLambdaGroups({
@@ -1813,6 +1822,7 @@ export const build: BuildV2 = async buildOptions => {
         initialPseudoLayerUncompressed: 0,
         internalPages: [],
         experimentalPPRRoutes: undefined,
+        nodeVersion,
       });
 
       for (const group of initialApiLambdaGroups) {
@@ -1844,7 +1854,8 @@ export const build: BuildV2 = async buildOptions => {
       ];
       await detectLambdaLimitExceeding(
         combinedInitialLambdaGroups,
-        compressedPages
+        compressedPages,
+        nodeVersion.runtime
       );
 
       let apiLambdaGroupIndex = 0;
@@ -1873,7 +1884,7 @@ export const build: BuildV2 = async buildOptions => {
             path.relative(workPath, pages[page].fsPath)
           );
           const pathname = page.replace(/\.js$/, '');
-          const routeIsDynamic = isDynamicRoute(pathname);
+          const routeIsDynamic = isDynamicRoute(pathname, nextVersion);
           routeIsApi = isApiPage(pageFileName);
 
           if (routeIsDynamic) {
@@ -1986,7 +1997,7 @@ export const build: BuildV2 = async buildOptions => {
 
           const pathname = page.replace(/\.js$/, '');
 
-          if (isDynamicRoute(pathname)) {
+          if (isDynamicRoute(pathname, nextVersion)) {
             dynamicPages.push(normalizePage(pathname));
           }
 
@@ -2328,6 +2339,7 @@ export const build: BuildV2 = async buildOptions => {
       isAppClientSegmentCacheEnabled: false,
       isAppClientParamParsingEnabled: false,
       appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
+      nextVersion,
     });
 
     await Promise.all(

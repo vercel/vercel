@@ -14,15 +14,15 @@ export async function refreshToken(): Promise<void> {
   let maybeToken = loadToken(projectId);
 
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
-    const authToken = getVercelCliToken();
+    const authToken = await getVercelCliToken();
     if (!authToken) {
       throw new VercelOidcTokenError(
-        'Failed to refresh OIDC token: login to vercel cli'
+        'Failed to refresh OIDC token: Log in to Vercel CLI and link your project with `vc link`'
       );
     }
     if (!projectId) {
       throw new VercelOidcTokenError(
-        'Failed to refresh OIDC token: project id not found'
+        'Failed to refresh OIDC token: Try re-linking your project with `vc link`'
       );
     }
     maybeToken = await getVercelOidcToken(authToken, projectId, teamId);

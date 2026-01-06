@@ -1,6 +1,6 @@
 {
   "name": "@vercel/cervel",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
   "publishConfig": {
@@ -14,10 +14,12 @@
   "sideEffects": false,
   "type": "module",
   "exports": {
-    "./cli": "./dist/cli.js",
-    ".": "./dist/index.js"
+    "./cli": "./dist/cli.mjs",
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
+    }
   },
-  "types": "./dist/index.d.ts",
   "bin": {
     "cervel": "./bin/cervel.mjs"
   },
@@ -31,7 +33,7 @@
   },
   "dependencies": {
     "execa": "3.2.0",
-    "rolldown": "1.0.0-beta.35",
+    "rolldown": "1.0.0-beta.52",
     "srvx": "0.8.9",
     "tsx": "4.19.2"
   },
@@ -41,7 +43,7 @@
   "devDependencies": {
     "@types/node": "24.7.0",
     "typescript": "4.9.5",
-    "tsdown": "0.15.6",
+    "tsdown": "0.16.3",
     "vitest": "^2.0.1"
   }
 }

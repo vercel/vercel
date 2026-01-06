@@ -682,6 +682,9 @@ async function createRenderNodeFunction(
       slug: 'remix',
       version: remixVersion,
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return fn;

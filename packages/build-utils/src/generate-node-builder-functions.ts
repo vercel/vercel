@@ -1,5 +1,5 @@
 import glob from './fs/glob';
-import { BuildV3 } from './types';
+import { BuildV3, Config } from './types';
 import type FileFsRef from './file-fs-ref';
 import type { Files } from './types';
 import { join } from 'node:path';
@@ -11,7 +11,10 @@ export function generateNodeBuilderFunctions(
   regex: RegExp,
   validFilenames: string[],
   validExtensions: string[],
-  nodeBuild: any // necessary to avoid circular dependency
+  nodeBuild: any, // necessary to avoid circular dependency
+  opts?: {
+    checks?: (info: { config: Config; isBun: boolean }) => void;
+  }
 ) {
   const entrypointsForMessage = validFilenames
     .map(filename => `- ${filename}.{${validExtensions.join(',')}}`)
@@ -44,6 +47,7 @@ export function generateNodeBuilderFunctions(
       entrypointCallback: async () => {
         return entrypointCallback(args);
       },
+      checks: opts?.checks ?? (() => {}),
     });
     let version = undefined;
     try {
