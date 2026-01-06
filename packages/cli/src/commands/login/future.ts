@@ -9,7 +9,7 @@ import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
-import { notifyDaemonForceRefresh } from '../../util/daemon/notify';
+import { ensureDaemonRunning } from '../../util/daemon/ensure-daemon';
 import {
   deviceAuthorizationRequest,
   processDeviceAuthorizationResponse,
@@ -157,9 +157,9 @@ export async function login(
 
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
-      // Notify daemon to refresh tokens with new credentials
-      notifyDaemonForceRefresh().catch(() => {
-        // Daemon might not be running - this is okay
+      // Ensure daemon is installed and running
+      ensureDaemonRunning().catch(() => {
+        // Silently fail - daemon is optional
       });
 
       o.print(`
