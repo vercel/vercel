@@ -128,7 +128,6 @@ async function getChunkedTests() {
     affectedPackages = result.packages;
   } else if (result.result === 'test-none') {
     console.error('Testing strategy: no tests (no packages affected)');
-    console.log('[]');
     return [];
   }
 
