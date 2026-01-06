@@ -37,9 +37,8 @@ export class TokenManager {
     logger.info(`Discovered ${discovered.size} OIDC tokens`);
 
     // Add all discovered projects to OIDC refresher
-    for (const [projectId, token] of discovered.entries()) {
-      // Pass teamId if available from token file
-      this.oidcRefresher.addProject(projectId, token.teamId);
+    for (const [projectId] of discovered.entries()) {
+      this.oidcRefresher.addProject(projectId);
     }
 
     logger.info('Token manager initialized');
@@ -48,9 +47,9 @@ export class TokenManager {
   /**
    * Add a project to OIDC token management
    */
-  handleAddProject(projectId: string, teamId?: string): void {
-    logger.info('Adding project to token management', { projectId, teamId });
-    this.oidcRefresher.addProject(projectId, teamId);
+  handleAddProject(projectId: string): void {
+    logger.info('Adding project to token management', { projectId });
+    this.oidcRefresher.addProject(projectId);
   }
 
   /**

@@ -355,7 +355,7 @@ describe('Daemon Integration Tests', () => {
       await tokenManager.initialize();
 
       tokenManager.handleAddProject('project-1');
-      tokenManager.handleAddProject('project-2', 'team-A');
+      tokenManager.handleAddProject('project-2');
 
       // Projects are now being tracked (even though refresh may not have happened yet)
       // The test verifies the command was accepted without error

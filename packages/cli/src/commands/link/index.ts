@@ -91,7 +91,7 @@ export default async function link(client: Client) {
       });
 
       // Then notify daemon about the new project
-      notifyDaemonProjectLinked(link.projectId, teamId).catch(() => {
+      notifyDaemonProjectLinked(link.projectId).catch(() => {
         // Silently ignore - daemon may not be running
       });
     }

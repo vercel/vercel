@@ -89,7 +89,7 @@ export default async function dev(
     bootstrapOidcToken(project.id, teamId).catch(() => {
       // Silently ignore - token might already exist or daemon not running
     });
-    notifyDaemonProjectLinked(project.id, teamId).catch(() => {
+    notifyDaemonProjectLinked(project.id).catch(() => {
       // Silently ignore - daemon might not be running
     });
   }

@@ -15,7 +15,6 @@ export interface IPCMessage {
     | 'force-refresh';
   payload?: {
     projectId?: string;
-    teamId?: string;
   };
 }
 
@@ -146,7 +145,7 @@ export class IPCServer {
   private processMessage(message: IPCMessage): IPCResponse {
     switch (message.type) {
       case 'add-project': {
-        const { projectId, teamId } = message.payload || {};
+        const { projectId } = message.payload || {};
         if (!projectId) {
           return {
             success: false,
@@ -154,7 +153,7 @@ export class IPCServer {
           };
         }
 
-        this.tokenManager.handleAddProject(projectId, teamId);
+        this.tokenManager.handleAddProject(projectId);
         return { success: true };
       }
 

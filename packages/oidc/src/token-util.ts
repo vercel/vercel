@@ -75,10 +75,9 @@ interface OidcTokenApiResponse {
   token: string;
 }
 
-// What we store in token files (API response + metadata)
+// What we store in token files (just the API response)
 interface StoredToken {
   token: string;
-  teamId?: string;
 }
 
 export async function getVercelOidcToken(
@@ -142,8 +141,7 @@ export function findProjectInfo(): { projectId: string; teamId: string } {
 
 export function saveToken(
   token: OidcTokenApiResponse,
-  projectId: string,
-  teamId?: string
+  projectId: string
 ): void {
   const dir = getUserDataDir();
   if (!dir) {
@@ -153,9 +151,6 @@ export function saveToken(
   }
   const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
   const tokenToSave: StoredToken = { token: token.token };
-  if (teamId !== undefined) {
-    tokenToSave.teamId = teamId;
-  }
   const tokenJson = JSON.stringify(tokenToSave);
   fs.mkdirSync(path.dirname(tokenPath), { mode: 0o770, recursive: true }); // read/write/exec perms for owner/group only, x required for dir ops
   fs.writeFileSync(tokenPath, tokenJson);
@@ -183,6 +178,8 @@ interface TokenPayload {
   sub: string;
   name: string;
   exp: number;
+  owner_id?: string; // Stable team ID (e.g., "team_xxx") - preferred
+  owner?: string; // Team slug (e.g., "my-team") - less stable, use as fallback
 }
 
 export function getTokenPayload(token: string): TokenPayload {

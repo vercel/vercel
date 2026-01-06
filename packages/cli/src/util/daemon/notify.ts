@@ -6,13 +6,12 @@ import output from '../../output-manager';
  * This is a fire-and-forget operation - errors are logged but not thrown
  */
 export async function notifyDaemonProjectLinked(
-  projectId: string,
-  teamId?: string
+  projectId: string
 ): Promise<void> {
   try {
     const response = await sendDaemonMessage({
       type: 'add-project',
-      payload: { projectId, teamId },
+      payload: { projectId },
     });
 
     if (response.success) {

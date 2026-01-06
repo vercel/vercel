@@ -29,8 +29,8 @@ export async function bootstrapOidcToken(
       return;
     }
 
-    // Save token to disk with teamId
-    saveToken(tokenResponse, projectId, teamId);
+    // Save token to disk
+    saveToken(tokenResponse, projectId);
   } catch (err) {
     // Ignore errors - daemon will handle token refresh if bootstrap fails
     // This is fire-and-forget to avoid blocking the link command

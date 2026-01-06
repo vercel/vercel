@@ -1,11 +1,10 @@
-import { saveToken, getTokenPayload } from '@vercel/oidc/token-util';
+import { saveToken, getTokenPayload, loadToken } from '@vercel/oidc/token-util';
 import { readAuthConfig, isValidAccessToken } from '@vercel/oidc/auth-config';
 import { logger } from './logger';
 import { RetryStrategy } from './retry';
 
 interface ProjectState {
   timer?: NodeJS.Timeout;
-  teamId?: string;
   retryStrategy: RetryStrategy;
 }
 
@@ -19,15 +18,14 @@ export class OidcRefresher {
   /**
    * Add a project to be managed by the refresher
    */
-  addProject(projectId: string, teamId?: string): void {
-    logger.info(`Adding OIDC project to refresh cycle`, { projectId, teamId });
+  addProject(projectId: string): void {
+    logger.info(`Adding OIDC project to refresh cycle`, { projectId });
 
     // Clear existing timer if present
     this.removeProject(projectId);
 
     // Create new project state with infinite retries
     const state: ProjectState = {
-      teamId,
       retryStrategy: new RetryStrategy(Infinity),
     };
 
@@ -94,8 +92,33 @@ export class OidcRefresher {
         return;
       }
 
+      // Load existing token to extract teamId from JWT
+      const existingToken = loadToken(projectId);
+      let teamId: string | undefined;
+
+      if (existingToken) {
+        try {
+          const payload = getTokenPayload(existingToken.token);
+          // Prefer stable owner_id over owner slug
+          teamId = payload.owner_id || payload.owner;
+          if (teamId) {
+            logger.debug(
+              `Extracted teamId from existing token for ${projectId}`,
+              {
+                teamId,
+              }
+            );
+          }
+        } catch (err) {
+          logger.warn(
+            `Failed to extract teamId from existing token for ${projectId}`,
+            { error: err }
+          );
+        }
+      }
+
       // Build API URL
-      const teamParam = state.teamId ? `&teamId=${state.teamId}` : '';
+      const teamParam = teamId ? `&teamId=${teamId}` : '';
       const url = `https://api.vercel.com/v1/projects/${projectId}/token?source=vercel-daemon-refresh${teamParam}`;
 
       logger.debug(`Fetching OIDC token for ${projectId}`, { url });
@@ -129,8 +152,8 @@ export class OidcRefresher {
         return;
       }
 
-      // Save token to disk with teamId
-      saveToken(tokenResponse, projectId, state.teamId);
+      // Save token to disk
+      saveToken(tokenResponse, projectId);
       logger.info(`OIDC token refreshed successfully for ${projectId}`);
 
       // Reset retry strategy and schedule next refresh

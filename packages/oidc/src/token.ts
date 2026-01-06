@@ -29,7 +29,7 @@ export async function refreshToken(): Promise<void> {
     if (!maybeToken) {
       throw new VercelOidcTokenError('Failed to refresh OIDC token');
     }
-    saveToken(maybeToken, projectId, teamId);
+    saveToken(maybeToken, projectId);
   }
   process.env.VERCEL_OIDC_TOKEN = maybeToken.token;
   return;

@@ -10,7 +10,6 @@ import { logger } from './logger';
 export interface DiscoveredToken {
   projectId: string;
   expiresAt: number;
-  teamId?: string;
 }
 
 /**
@@ -66,11 +65,6 @@ export function discoverTokens(): Map<string, DiscoveredToken> {
           projectId,
           expiresAt: payload.exp * 1000, // Convert to milliseconds
         };
-
-        // Include teamId if present in token file
-        if (tokenResponse.teamId) {
-          discoveredToken.teamId = tokenResponse.teamId;
-        }
 
         discovered.set(projectId, discoveredToken);
 
