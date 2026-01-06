@@ -97,6 +97,7 @@ Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
   environment: 'stable',
+  autoSessionTracking: false,
 });
 
 let client: Client;
