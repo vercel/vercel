@@ -17,7 +17,14 @@ import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
-import { Meta, PackageJson, NodeVersion, Config, BunVersion } from '../types';
+import {
+  Meta,
+  PackageJson,
+  NodeVersion,
+  Config,
+  BunVersion,
+  PythonVersion,
+} from '../types';
 import {
   getSupportedNodeVersion,
   getLatestNodeVersion,
@@ -25,6 +32,13 @@ import {
   getSupportedBunVersion,
   isBunVersion,
 } from './node-version';
+import {
+  getSupportedPythonVersion,
+  getLatestPythonVersion,
+  getAvailablePythonVersions,
+  detectPythonVersion,
+  type PythonVersionMajorMinor,
+} from './python-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
@@ -346,6 +360,29 @@ export async function getNodeVersion(
     }
   }
   return supportedNodeVersion;
+}
+
+export async function getPythonVersion(
+  destPath: string,
+  rootDirectoryPath: string,
+  meta: Meta = {},
+  availableVersions: PythonVersionMajorMinor[] = getAvailablePythonVersions()
+): Promise<PythonVersion> {
+  const latestVersion = getLatestPythonVersion(availableVersions);
+
+  if (meta.isDev) {
+    // Use the system-installed version of `python3` in PATH for `vercel dev`
+    latestVersion.runtime = 'python3';
+    return latestVersion;
+  }
+
+  // Detect Python version from .python-version or pyproject.toml
+  const declaredVersion = await detectPythonVersion(
+    destPath,
+    rootDirectoryPath
+  );
+
+  return getSupportedPythonVersion(declaredVersion, availableVersions);
 }
 
 export async function scanParentDirs(

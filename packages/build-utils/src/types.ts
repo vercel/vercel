@@ -381,6 +381,24 @@ export class NodeVersion extends Version {}
 
 export class BunVersion extends Version {}
 
+export interface ConstructorPythonVersion extends ConstructorVersion {
+  /** minor version required for Python */
+  minor: number;
+  /** python binary name: "python3.12" */
+  pythonPath: string;
+}
+
+export class PythonVersion extends Version {
+  declare minor: number;
+  pythonPath: string;
+
+  constructor(version: ConstructorPythonVersion) {
+    super(version);
+    this.minor = version.minor;
+    this.pythonPath = version.pythonPath;
+  }
+}
+
 export interface Builder {
   use: string;
   src?: string;

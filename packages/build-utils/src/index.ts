@@ -28,6 +28,7 @@ import {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPythonVersion,
   getPathForPackageManager,
   detectPackageManager,
   getSpawnOptions,
@@ -43,6 +44,11 @@ import {
   isBunVersion,
   getSupportedBunVersion,
 } from './fs/node-version';
+import {
+  getLatestPythonVersion,
+  getSupportedPythonVersion,
+  getAvailablePythonVersions,
+} from './fs/python-version';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
@@ -87,9 +93,13 @@ export {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPythonVersion,
   getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getLatestPythonVersion,
+  getSupportedPythonVersion,
+  getAvailablePythonVersions,
   getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
@@ -120,6 +130,11 @@ export * from './errors';
 export * from './trace';
 
 export { NODE_VERSIONS } from './fs/node-version';
+export {
+  PYTHON_VERSIONS,
+  type PythonVersionMajorMinor,
+  type DeclaredPythonVersion,
+} from './fs/python-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
 
