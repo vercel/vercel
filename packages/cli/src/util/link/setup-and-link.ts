@@ -43,6 +43,7 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import { notifyDaemonProjectUnlinked } from '../daemon/notify';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -84,6 +85,13 @@ export default async function setupAndLink(
   }
 
   if (forceDelete) {
+    // Notify daemon before unlinking (fire-and-forget)
+    if (link.status === 'linked') {
+      notifyDaemonProjectUnlinked(link.projectId).catch(() => {
+        // Silently ignore - daemon may not be running
+      });
+    }
+
     const vercelDir = getVercelDirectory(path);
     remove(join(vercelDir, VERCEL_DIR_README));
     remove(join(vercelDir, VERCEL_DIR_PROJECT));

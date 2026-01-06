@@ -16,6 +16,8 @@ import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import { bootstrapOidcToken } from '../../util/daemon/bootstrap-token';
+import { notifyDaemonProjectLinked } from '../../util/daemon/notify';
 
 type Options = {
   '--listen': string;
@@ -81,6 +83,15 @@ export default async function dev(
 
     envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
       .env;
+
+    // Bootstrap OIDC token to disk and notify daemon (fire-and-forget)
+    const teamId = org.type === 'team' ? org.id : undefined;
+    bootstrapOidcToken(project.id, teamId).catch(() => {
+      // Silently ignore - token might already exist or daemon not running
+    });
+    notifyDaemonProjectLinked(project.id, teamId).catch(() => {
+      // Silently ignore - daemon might not be running
+    });
   }
 
   const devServer = new DevServer(cwd, {

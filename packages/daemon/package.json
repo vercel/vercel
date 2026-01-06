@@ -1,0 +1,19 @@
+{
+  "name": "@vercel/daemon",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">= 18"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@vercel/oidc": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "2.0.1"
+  }
+}

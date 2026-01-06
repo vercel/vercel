@@ -8,6 +8,19 @@
     "**/*.md"
   ],
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "token-util": [
+        "./dist/token-util.d.ts"
+      ],
+      "auth-config": [
+        "./dist/auth-config.d.ts"
+      ],
+      "oauth": [
+        "./dist/oauth.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "browser": "./dist/index-browser.js",
@@ -15,6 +28,21 @@
       "workflow": "./dist/index-browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
+    },
+    "./token-util": {
+      "import": "./dist/token-util.js",
+      "require": "./dist/token-util.js",
+      "types": "./dist/token-util.d.ts"
+    },
+    "./auth-config": {
+      "import": "./dist/auth-config.js",
+      "require": "./dist/auth-config.js",
+      "types": "./dist/auth-config.d.ts"
+    },
+    "./oauth": {
+      "import": "./dist/oauth.js",
+      "require": "./dist/oauth.js",
+      "types": "./dist/oauth.d.ts"
     }
   },
   "version": "3.1.0",

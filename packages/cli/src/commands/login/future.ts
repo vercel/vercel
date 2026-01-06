@@ -9,6 +9,7 @@ import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
+import { notifyDaemonForceRefresh } from '../../util/daemon/notify';
 import {
   deviceAuthorizationRequest,
   processDeviceAuthorizationResponse,
@@ -155,6 +156,11 @@ export async function login(
       client.writeToConfigFile();
 
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+
+      // Notify daemon to refresh tokens with new credentials
+      notifyDaemonForceRefresh().catch(() => {
+        // Daemon might not be running - this is okay
+      });
 
       o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.

@@ -72,4 +72,8 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.js', repoRoot),
   new URL('get-latest-worker.js', distRoot)
 );
+copyFileSync(
+  new URL('../daemon/dist/index.js', repoRoot),
+  new URL('vercel-daemon.js', distRoot)
+);
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));

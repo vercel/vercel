@@ -10,6 +10,9 @@ import {
 } from './auth-config';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
 
+// Re-export getUserDataDir for external use
+export { getUserDataDir } from './token-io';
+
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
   const dataDir = getUserDataDir();
@@ -67,15 +70,22 @@ export async function getVercelCliToken(): Promise<string | null> {
   }
 }
 
-interface VercelTokenResponse {
+// What the Vercel API returns when requesting an OIDC token
+interface OidcTokenApiResponse {
   token: string;
+}
+
+// What we store in token files (API response + metadata)
+interface StoredToken {
+  token: string;
+  teamId?: string;
 }
 
 export async function getVercelOidcToken(
   authToken: string,
   projectId: string,
   teamId?: string
-): Promise<VercelTokenResponse | null> {
+): Promise<OidcTokenApiResponse | null> {
   const url = `https://api.vercel.com/v1/projects/${projectId}/token?source=vercel-oidc-refresh${teamId ? `&teamId=${teamId}` : ''}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -95,7 +105,7 @@ export async function getVercelOidcToken(
 
 export function assertVercelOidcTokenResponse(
   res: unknown
-): asserts res is VercelTokenResponse {
+): asserts res is OidcTokenApiResponse {
   if (!res || typeof res !== 'object') {
     throw new TypeError(
       'Vercel OIDC token is malformed. Expected an object. Please run `vc env pull` and try again'
@@ -130,7 +140,11 @@ export function findProjectInfo(): { projectId: string; teamId: string } {
   return { projectId: prj.projectId, teamId: prj.orgId };
 }
 
-export function saveToken(token: VercelTokenResponse, projectId: string): void {
+export function saveToken(
+  token: OidcTokenApiResponse,
+  projectId: string,
+  teamId?: string
+): void {
   const dir = getUserDataDir();
   if (!dir) {
     throw new VercelOidcTokenError(
@@ -138,14 +152,18 @@ export function saveToken(token: VercelTokenResponse, projectId: string): void {
     );
   }
   const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
-  const tokenJson = JSON.stringify(token);
+  const tokenToSave: StoredToken = { token: token.token };
+  if (teamId !== undefined) {
+    tokenToSave.teamId = teamId;
+  }
+  const tokenJson = JSON.stringify(tokenToSave);
   fs.mkdirSync(path.dirname(tokenPath), { mode: 0o770, recursive: true }); // read/write/exec perms for owner/group only, x required for dir ops
   fs.writeFileSync(tokenPath, tokenJson);
   fs.chmodSync(tokenPath, 0o660); // read/write perms for owner only
   return;
 }
 
-export function loadToken(projectId: string): VercelTokenResponse | null {
+export function loadToken(projectId: string): StoredToken | null {
   const dir = getUserDataDir();
   if (!dir) {
     throw new VercelOidcTokenError(
