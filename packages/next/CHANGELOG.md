@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.15.10
+
+### Patch Changes
+
+- Fix experimentalTriggers not applying to Pages Router workflow routes ([#14505](https://github.com/vercel/vercel/pull/14505))
+
+## 4.15.9
+
+### Patch Changes
+
+- fix route info from being overwritten in dynamic routes ([#14468](https://github.com/vercel/vercel/pull/14468))
+
 ## 4.15.8
 
 ### Patch Changes

@@ -1,5 +1,93 @@
 # vercel
 
+## 50.1.5
+
+### Patch Changes
+
+- Disable Sentry session tracking ([#14539](https://github.com/vercel/vercel/pull/14539))
+
+## 50.1.4
+
+### Patch Changes
+
+- Use more accurate config file name in errors ([#14482](https://github.com/vercel/vercel/pull/14482))
+
+- Fix issue when VERCEL_BACKENDS_BUILDS was enabled where non-backend projects wrote v2 outputs ([#14469](https://github.com/vercel/vercel/pull/14469))
+
+- Updated dependencies [[`ccfb9debe22cc8a75685df7d6e99ba180b2438f3`](https://github.com/vercel/vercel/commit/ccfb9debe22cc8a75685df7d6e99ba180b2438f3), [`d4490e7ffbf47a6efb87fe3b66b6368fb0ac9d3b`](https://github.com/vercel/vercel/commit/d4490e7ffbf47a6efb87fe3b66b6368fb0ac9d3b), [`dcd9ee12bc21e68b4fcf1b89455bc4c3dc34b5cd`](https://github.com/vercel/vercel/commit/dcd9ee12bc21e68b4fcf1b89455bc4c3dc34b5cd)]:
+  - @vercel/next@4.15.10
+  - @vercel/go@3.3.0
+  - @vercel/python@6.1.6
+  - @vercel/node@5.5.16
+
+## 50.1.3
+
+### Patch Changes
+
+- Run install command earlier for vercel.ts ([#14504](https://github.com/vercel/vercel/pull/14504))
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+- Remove vercel.ts feature flag ([#14501](https://github.com/vercel/vercel/pull/14501))
+
+- Updated dependencies [[`f8e79cd385e3635a5d8227cb357af381b883d053`](https://github.com/vercel/vercel/commit/f8e79cd385e3635a5d8227cb357af381b883d053), [`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/ruby@2.2.4
+  - @vercel/build-utils@13.2.4
+  - @vercel/python@6.1.5
+  - @vercel/backends@0.0.17
+  - @vercel/elysia@0.1.15
+  - @vercel/express@0.1.21
+  - @vercel/fastify@0.1.18
+  - @vercel/go@3.2.4
+  - @vercel/h3@0.1.24
+  - @vercel/hono@0.2.18
+  - @vercel/hydrogen@1.3.3
+  - @vercel/nestjs@0.2.19
+  - @vercel/next@4.15.9
+  - @vercel/node@5.5.16
+  - @vercel/redwood@2.4.6
+  - @vercel/remix-builder@5.5.6
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.15
+
+## 50.1.2
+
+### Patch Changes
+
+- Remove `content-encoding` response header for CLI extensions proxy ([#14489](https://github.com/vercel/vercel/pull/14489))
+
+## 50.1.1
+
+### Patch Changes
+
+- Revert env pull conditional quoting changes ([#14485](https://github.com/vercel/vercel/pull/14485))
+
+## 50.1.0
+
+### Minor Changes
+
+- Bugfix: handle json values with newlines when pulling environment variables ([#14479](https://github.com/vercel/vercel/pull/14479))
+
+- Add out to deploy command for aliasing production domains ([#14458](https://github.com/vercel/vercel/pull/14458))
+
+### Patch Changes
+
+- Add support for `customErrorPage` configuration in `vercel.json` to customize pages for platform errors. ([#14466](https://github.com/vercel/vercel/pull/14466))
+
+- Add a vercel redirects upload command to bulk upload redirects from CSV or JSON files. ([#14459](https://github.com/vercel/vercel/pull/14459))
+
+- Updated dependencies [[`2fdee16711f0c87c7eb23f722d0b289a0d6ca5fc`](https://github.com/vercel/vercel/commit/2fdee16711f0c87c7eb23f722d0b289a0d6ca5fc), [`e8641664b82dbc5f924ee571f9d7b3842a8a6b2b`](https://github.com/vercel/vercel/commit/e8641664b82dbc5f924ee571f9d7b3842a8a6b2b), [`1f85d5a78d3cf1bae22d801596c6c10d83e1bafe`](https://github.com/vercel/vercel/commit/1f85d5a78d3cf1bae22d801596c6c10d83e1bafe)]:
+  - @vercel/python@6.1.4
+  - @vercel/next@4.15.9
+
+## 50.0.1
+
+### Patch Changes
+
+- Run install command earlier if using vercel.ts ([#14462](https://github.com/vercel/vercel/pull/14462))
+
+- Better error handling for vercel config parsing ([#14453](https://github.com/vercel/vercel/pull/14453))
+
 ## 50.0.0
 
 ### Major Changes

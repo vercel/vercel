@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "15.6.0-canary.32",
+    "next": "15.6.0-canary.60",
     "react": "latest",
     "react-dom": "latest"
   }
