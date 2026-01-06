@@ -1,0 +1,37 @@
+{
+  "name": "@vercel/python-analysis",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "license": "Apache-2.0",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/python-analysis"
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/*.test.ts'",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@renovatebot/pep440": "4.2.1",
+    "fs-extra": "11.1.1",
+    "js-yaml": "4.1.1",
+    "minimatch": "10.1.1",
+    "pip-requirements-js": "1.0.2",
+    "smol-toml": "1.5.2"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "11.0.4",
+    "@types/jest": "27.4.1",
+    "@types/js-yaml": "4.0.9",
+    "@types/node": "14.18.33",
+    "jest-junit": "16.0.0"
+  }
+}

@@ -2019,6 +2019,9 @@ importers:
 
   packages/python:
     devDependencies:
+      '@renovatebot/pep440':
+        specifier: 4.2.1
+        version: 4.2.1
       '@types/execa':
         specifier: ^0.9.0
         version: 0.9.0
@@ -2037,6 +2040,9 @@ importers:
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
+      '@vercel/error-utils':
+        specifier: workspace:*
+        version: link:../error-utils
       cross-env:
         specifier: 7.0.3
         version: 7.0.3
@@ -2049,9 +2055,55 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
+      minimatch:
+        specifier: 10.1.1
+        version: 10.1.1
+      pip-requirements-js:
+        specifier: 1.0.2
+        version: 1.0.2
+      smol-toml:
+        specifier: 1.5.2
+        version: 1.5.2
       which:
         specifier: 3.0.0
         version: 3.0.0
+
+  packages/python-analysis:
+    dependencies:
+      '@renovatebot/pep440':
+        specifier: 4.2.1
+        version: 4.2.1
+      fs-extra:
+        specifier: 11.1.1
+        version: 11.1.1
+      js-yaml:
+        specifier: 4.1.1
+        version: 4.1.1
+      minimatch:
+        specifier: 10.1.1
+        version: 10.1.1
+      pip-requirements-js:
+        specifier: 1.0.2
+        version: 1.0.2
+      smol-toml:
+        specifier: 1.5.2
+        version: 1.5.2
+    devDependencies:
+      '@types/fs-extra':
+        specifier: 11.0.4
+        version: 11.0.4
+      '@types/jest':
+        specifier: 27.4.1
+        version: 27.4.1
+      '@types/js-yaml':
+        specifier: 4.0.9
+        version: 4.0.9
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/react-router:
     dependencies:
@@ -5568,7 +5620,7 @@ packages:
       globals: 13.24.0
       ignore: 5.3.2
       import-fresh: 3.3.1
-      js-yaml: 4.1.0
+      js-yaml: 4.1.1
       minimatch: 3.1.2
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -5585,7 +5637,7 @@ packages:
       globals: 13.24.0
       ignore: 5.3.2
       import-fresh: 3.3.1
-      js-yaml: 4.1.0
+      js-yaml: 4.1.1
       minimatch: 3.1.2
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -6369,6 +6421,10 @@ packages:
       typescript: 5.7.3
       undici: 6.21.2
     dev: true
+
+  /@renovatebot/pep440@4.2.1:
+    resolution: {integrity: sha512-2FK1hF93Fuf1laSdfiEmJvSJPVIDHEUTz68D3Fi9s0IZrrpaEcj6pTFBTbYvsgC5du4ogrtf5re7yMMvrKNgkw==}
+    engines: {node: ^20.9.0 || ^22.11.0 || ^24, pnpm: ^10.0.0}
 
   /@rolldown/binding-android-arm64@1.0.0-beta.35:
     resolution: {integrity: sha512-zVTg0544Ib1ldJSWwjy8URWYHlLFJ98rLnj+2FIj5fRs4KqGKP4VgH/pVUbXNGxeLFjItie6NSK1Un7nJixneQ==}
@@ -8503,6 +8559,13 @@ packages:
       '@types/node': 22.5.0
     dev: true
 
+  /@types/fs-extra@11.0.4:
+    resolution: {integrity: sha512-yTbItCNreRooED33qjunPthRcSjERP1r4MqCZc7wv0u2sUkzTFp45tgUfS5+r7FrZPdmCCNflLhVSP/o+SemsQ==}
+    dependencies:
+      '@types/jsonfile': 6.1.4
+      '@types/node': 22.5.0
+    dev: true
+
   /@types/fs-extra@5.0.5:
     resolution: {integrity: sha512-w7iqhDH9mN8eLClQOYTkhdYUOSpp25eXxfc6VbFOGtzxW34JcvctH2bKjj4jD4++z4R5iO5D+pg48W2e03I65A==}
     dependencies:
@@ -8635,6 +8698,10 @@ packages:
     resolution: {integrity: sha512-FhpRzf927MNQdRZP0J5DLIdTXhjLYzeUTmLAu69mnVksLH9CJY3IuSeEgbKUki7GQZm0WqDkGzyxju2EZGD2wA==}
     dev: true
 
+  /@types/js-yaml@4.0.9:
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
+    dev: true
+
   /@types/json-parse-better-errors@1.0.0:
     resolution: {integrity: sha512-JAsGXEMsiw2ttNrlady/Z8ztrSEl1y8IoG9ge7hpBQ4I+ilKxelOPGKnVmt9TX69lkXdJioDWCkzkktWcdAshA==}
     dev: true
@@ -8730,7 +8797,7 @@ packages:
   /@types/node-fetch@2.5.4:
     resolution: {integrity: sha512-Oz6id++2qAOFuOlE1j0ouk1dzl3mmI1+qINPNBhi9nt/gVOz0G+13Ao6qjhdF0Ys+eOkhu6JnFmt38bR3H0POQ==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/node-fetch@2.5.8:
@@ -8770,12 +8837,6 @@ packages:
     resolution: {integrity: sha512-/jrvh5h6NXhEauFFexRin69nA0uHJ5gwk4iDivp/DeoEua3uwCUto6PC86IpRITBOs4+6i2I56K5x5b6WYGXHA==}
     dependencies:
       undici-types: 6.19.8
-    dev: true
-
-  /@types/node@22.15.8:
-    resolution: {integrity: sha512-VINDWfc4C3DGAa1J+riYRHjzt+IFj5eRaEl768ze7ZqXcjyN/4WHxPLAWMLTwmODpPvFyzuMTAT6A4RMOHlg5g==}
-    dependencies:
-      undici-types: 6.21.0
     dev: true
 
   /@types/node@22.5.0:
@@ -13175,7 +13236,7 @@ packages:
       imurmurhash: 0.1.4
       is-glob: 4.0.3
       js-sdsl: 4.4.2
-      js-yaml: 4.1.0
+      js-yaml: 4.1.1
       json-stable-stringify-without-jsonify: 1.0.1
       levn: 0.4.1
       lodash.merge: 4.6.2
@@ -13225,7 +13286,7 @@ packages:
       is-glob: 4.0.3
       is-path-inside: 3.0.3
       js-sdsl: 4.4.2
-      js-yaml: 4.1.0
+      js-yaml: 4.1.1
       json-stable-stringify-without-jsonify: 1.0.1
       levn: 0.4.1
       lodash.merge: 4.6.2
@@ -13730,7 +13791,6 @@ packages:
       graceful-fs: 4.2.11
       jsonfile: 6.1.0
       universalify: 2.0.1
-    dev: true
 
   /fs-extra@11.2.0:
     resolution: {integrity: sha512-PmDi3uwK5nFuXh7XDTlVnS17xJS7vW36is2+w3xcv8SVxiB4NyATf4ctkVY5bkSjX0Y4nbvZCq1/EjtEyr9ktw==}
@@ -15696,6 +15756,13 @@ packages:
     hasBin: true
     dependencies:
       argparse: 2.0.1
+    dev: false
+
+  /js-yaml@4.1.1:
+    resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
+    hasBin: true
+    dependencies:
+      argparse: 2.0.1
 
   /jsbn@1.1.0:
     resolution: {integrity: sha512-4bYVV3aAMtDTTu4+xsDYa6sy9GyJ69/amsu9sYF2zqjiEoZA5xJi3BrfX3uY+/IekIu7MwdObdbDWpoZdBv3/A==}
@@ -16756,6 +16823,10 @@ packages:
         optional: true
     dev: true
 
+  /ohm-js@17.2.1:
+    resolution: {integrity: sha512-4cXF0G09fAYU9z61kTfkNbKK1Kz/sGEZ5NbVWHoe9Qi7VB7y+Spwk051CpUTfUENdlIr+vt8tMV4/LosTE2cDQ==}
+    engines: {node: '>=0.12.1'}
+
   /on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
     engines: {node: '>= 0.8'}
@@ -17199,6 +17270,11 @@ packages:
     resolution: {integrity: sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==}
     engines: {node: '>=6'}
     dev: true
+
+  /pip-requirements-js@1.0.2:
+    resolution: {integrity: sha512-awqoNOSOl4Blu4E4Hzp7jL0g8WKEhCwO+s7C2ibtIW3CAJMwspgoTXd4vnHd21UmhdrsI44Pn8FFSuA8QKrzvg==}
+    dependencies:
+      ohm-js: 17.2.1
 
   /pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
@@ -18316,6 +18392,10 @@ packages:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
     dev: true
+
+  /smol-toml@1.5.2:
+    resolution: {integrity: sha512-QlaZEqcAH3/RtNyet1IPIYPsEWAaYyXXv1Krsi+1L/QHppjX4Ifm8MQsBISz9vE8cHicIq3clogsheili5vhaQ==}
+    engines: {node: '>= 18'}
 
   /socks-proxy-agent@8.0.5:
     resolution: {integrity: sha512-HehCEsotFqbPW9sJ8WVYB6UbmIMv7kUUORIF2Nncq4VQvBfNBLibW9YZR5dlYCSUhwcD628pRllm7n+E+YTzJw==}
@@ -19686,10 +19766,6 @@ packages:
 
   /undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
-
-  /undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
-    dev: true
 
   /undici-types@7.14.0:
     resolution: {integrity: sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA==}
