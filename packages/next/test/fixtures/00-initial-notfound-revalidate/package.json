@@ -7,7 +7,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "http://0.tcp.us-cal-1.ngrok.io:17324/next-16.1.1-canary.12.tgz",
+    "next": "https://files-1tsattz40-vtest314-ijjk-testing.vercel.app/next-16.1.1-canary.12.tgz",
     "react": "latest",
     "react-dom": "latest"
   }
