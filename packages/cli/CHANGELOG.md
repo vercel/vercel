@@ -1,5 +1,11 @@
 # vercel
 
+## 50.1.5
+
+### Patch Changes
+
+- Disable Sentry session tracking ([#14539](https://github.com/vercel/vercel/pull/14539))
+
 ## 50.1.4
 
 ### Patch Changes
