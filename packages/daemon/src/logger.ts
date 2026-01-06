@@ -38,10 +38,43 @@ export class Logger {
     this.logPath = join(logDir, 'daemon.log');
   }
 
+  private formatTimestamp(): string {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${month}/${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  private formatMeta(meta: any): string {
+    if (!meta) return '';
+
+    // Handle simple types
+    if (typeof meta === 'string' || typeof meta === 'number') {
+      return ` ${meta}`;
+    }
+
+    // Format objects as key=value pairs
+    if (typeof meta === 'object') {
+      const pairs = Object.entries(meta).map(([key, value]) => {
+        if (typeof value === 'string') {
+          return `${key}="${value}"`;
+        }
+        return `${key}=${value}`;
+      });
+      return ` (${pairs.join(', ')})`;
+    }
+
+    return ` ${JSON.stringify(meta)}`;
+  }
+
   private write(level: string, message: string, meta?: any) {
-    const timestamp = new Date().toISOString();
-    const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
-    const line = `[${timestamp}] [${level}] ${message}${metaStr}\n`;
+    const timestamp = this.formatTimestamp();
+    const levelPadded = level.padEnd(5); // Align log levels
+    const metaStr = this.formatMeta(meta);
+    const line = `${timestamp} [${levelPadded}] ${message}${metaStr}\n`;
 
     try {
       appendFileSync(this.logPath, line);

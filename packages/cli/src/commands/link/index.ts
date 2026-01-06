@@ -83,15 +83,16 @@ export default async function link(client: Client) {
 
     // Bootstrap OIDC token and notify daemon (fire-and-forget)
     if (link.status === 'linked') {
+      const projectId = link.project.id;
       const teamId = link.org.type === 'team' ? link.org.id : undefined;
 
       // First, bootstrap the OIDC token file
-      bootstrapOidcToken(link.projectId, teamId).catch(() => {
+      bootstrapOidcToken(projectId, teamId).catch(() => {
         // Silently ignore - daemon will handle token refresh if bootstrap fails
       });
 
       // Then notify daemon about the new project
-      notifyDaemonProjectLinked(link.projectId).catch(() => {
+      notifyDaemonProjectLinked(projectId).catch(() => {
         // Silently ignore - daemon may not be running
       });
     }
