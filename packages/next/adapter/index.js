@@ -25,95 +25,6 @@ var __toESM2 = (mod, isNodeMode, target) => (target = mod != null ? __create2(__
   mod
 ));
 
-// ../../node_modules/.pnpm/bytes@3.1.2/node_modules/bytes/index.js
-var require_bytes = __commonJS2({
-  "../../node_modules/.pnpm/bytes@3.1.2/node_modules/bytes/index.js"(exports2, module2) {
-    "use strict";
-    module2.exports = bytes2;
-    module2.exports.format = format;
-    module2.exports.parse = parse;
-    var formatThousandsRegExp = /\B(?=(\d{3})+(?!\d))/g;
-    var formatDecimalsRegExp = /(?:\.0*|(\.[^0]+)0+)$/;
-    var map = {
-      b: 1,
-      kb: 1 << 10,
-      mb: 1 << 20,
-      gb: 1 << 30,
-      tb: Math.pow(1024, 4),
-      pb: Math.pow(1024, 5)
-    };
-    var parseRegExp = /^((-|\+)?(\d+(?:\.\d+)?)) *(kb|mb|gb|tb|pb)$/i;
-    function bytes2(value, options) {
-      if (typeof value === "string") {
-        return parse(value);
-      }
-      if (typeof value === "number") {
-        return format(value, options);
-      }
-      return null;
-    }
-    function format(value, options) {
-      if (!Number.isFinite(value)) {
-        return null;
-      }
-      var mag = Math.abs(value);
-      var thousandsSeparator = options && options.thousandsSeparator || "";
-      var unitSeparator = options && options.unitSeparator || "";
-      var decimalPlaces = options && options.decimalPlaces !== void 0 ? options.decimalPlaces : 2;
-      var fixedDecimals = Boolean(options && options.fixedDecimals);
-      var unit = options && options.unit || "";
-      if (!unit || !map[unit.toLowerCase()]) {
-        if (mag >= map.pb) {
-          unit = "PB";
-        } else if (mag >= map.tb) {
-          unit = "TB";
-        } else if (mag >= map.gb) {
-          unit = "GB";
-        } else if (mag >= map.mb) {
-          unit = "MB";
-        } else if (mag >= map.kb) {
-          unit = "KB";
-        } else {
-          unit = "B";
-        }
-      }
-      var val = value / map[unit.toLowerCase()];
-      var str = val.toFixed(decimalPlaces);
-      if (!fixedDecimals) {
-        str = str.replace(formatDecimalsRegExp, "$1");
-      }
-      if (thousandsSeparator) {
-        str = str.split(".").map(function(s, i) {
-          return i === 0 ? s.replace(formatThousandsRegExp, thousandsSeparator) : s;
-        }).join(".");
-      }
-      return str + unitSeparator + unit;
-    }
-    function parse(val) {
-      if (typeof val === "number" && !isNaN(val)) {
-        return val;
-      }
-      if (typeof val !== "string") {
-        return null;
-      }
-      var results = parseRegExp.exec(val);
-      var floatValue;
-      var unit = "b";
-      if (!results) {
-        floatValue = parseInt(val, 10);
-        unit = "b";
-      } else {
-        floatValue = parseFloat(results[1]);
-        unit = results[4].toLowerCase();
-      }
-      if (isNaN(floatValue)) {
-        return null;
-      }
-      return Math.floor(map[unit] * floatValue);
-    }
-  }
-});
-
 // ../../node_modules/.pnpm/picomatch@4.0.1/node_modules/picomatch/lib/constants.js
 var require_constants = __commonJS2({
   "../../node_modules/.pnpm/picomatch@4.0.1/node_modules/picomatch/lib/constants.js"(exports2, module2) {
@@ -28325,9 +28236,9 @@ var require_interop_require_default = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@16.0.1_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
+// ../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
 var require_modern_browserslist_target = __commonJS2({
-  "../../node_modules/.pnpm/next@16.0.1_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
     "use strict";
     var MODERN_BROWSERSLIST_TARGET = [
       "chrome 111",
@@ -28339,9 +28250,9 @@ var require_modern_browserslist_target = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@16.0.1_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
+// ../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
 var require_entry_constants = __commonJS2({
-  "../../node_modules/.pnpm/next@16.0.1_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
+  "../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -28373,9 +28284,9 @@ var require_entry_constants = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@16.0.1_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
+// ../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
 var require_constants2 = __commonJS2({
-  "../../node_modules/.pnpm/next@16.0.1_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -28507,6 +28418,9 @@ var require_constants2 = __commonJS2({
       PAGES_MANIFEST: function() {
         return PAGES_MANIFEST;
       },
+      PHASE_ANALYZE: function() {
+        return PHASE_ANALYZE;
+      },
       PHASE_DEVELOPMENT_SERVER: function() {
         return PHASE_DEVELOPMENT_SERVER;
       },
@@ -28616,6 +28530,7 @@ var require_constants2 = __commonJS2({
       return AdapterOutputType3;
     })({});
     var PHASE_EXPORT = "phase-export";
+    var PHASE_ANALYZE = "phase-analyze";
     var PHASE_PRODUCTION_BUILD = "phase-production-build";
     var PHASE_PRODUCTION_SERVER = "phase-production-server";
     var PHASE_DEVELOPMENT_SERVER = "phase-development-server";
@@ -28634,7 +28549,7 @@ var require_constants2 = __commonJS2({
     var PRERENDER_MANIFEST = "prerender-manifest.json";
     var ROUTES_MANIFEST = "routes-manifest.json";
     var IMAGES_MANIFEST = "images-manifest.json";
-    var SERVER_FILES_MANIFEST = "required-server-files.json";
+    var SERVER_FILES_MANIFEST = "required-server-files";
     var DEV_CLIENT_PAGES_MANIFEST = "_devPagesManifest.json";
     var MIDDLEWARE_MANIFEST = "middleware-manifest.json";
     var TURBOPACK_CLIENT_MIDDLEWARE_MANIFEST = "_clientMiddlewareManifest.json";
@@ -33908,18 +33823,98 @@ var require_convert_source_map = __commonJS2({
   }
 });
 
+// ../../node_modules/.pnpm/bytes@3.1.2/node_modules/bytes/index.js
+var require_bytes = __commonJS2({
+  "../../node_modules/.pnpm/bytes@3.1.2/node_modules/bytes/index.js"(exports2, module2) {
+    "use strict";
+    module2.exports = bytes2;
+    module2.exports.format = format;
+    module2.exports.parse = parse;
+    var formatThousandsRegExp = /\B(?=(\d{3})+(?!\d))/g;
+    var formatDecimalsRegExp = /(?:\.0*|(\.[^0]+)0+)$/;
+    var map = {
+      b: 1,
+      kb: 1 << 10,
+      mb: 1 << 20,
+      gb: 1 << 30,
+      tb: Math.pow(1024, 4),
+      pb: Math.pow(1024, 5)
+    };
+    var parseRegExp = /^((-|\+)?(\d+(?:\.\d+)?)) *(kb|mb|gb|tb|pb)$/i;
+    function bytes2(value, options) {
+      if (typeof value === "string") {
+        return parse(value);
+      }
+      if (typeof value === "number") {
+        return format(value, options);
+      }
+      return null;
+    }
+    function format(value, options) {
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+      var mag = Math.abs(value);
+      var thousandsSeparator = options && options.thousandsSeparator || "";
+      var unitSeparator = options && options.unitSeparator || "";
+      var decimalPlaces = options && options.decimalPlaces !== void 0 ? options.decimalPlaces : 2;
+      var fixedDecimals = Boolean(options && options.fixedDecimals);
+      var unit = options && options.unit || "";
+      if (!unit || !map[unit.toLowerCase()]) {
+        if (mag >= map.pb) {
+          unit = "PB";
+        } else if (mag >= map.tb) {
+          unit = "TB";
+        } else if (mag >= map.gb) {
+          unit = "GB";
+        } else if (mag >= map.mb) {
+          unit = "MB";
+        } else if (mag >= map.kb) {
+          unit = "KB";
+        } else {
+          unit = "B";
+        }
+      }
+      var val = value / map[unit.toLowerCase()];
+      var str = val.toFixed(decimalPlaces);
+      if (!fixedDecimals) {
+        str = str.replace(formatDecimalsRegExp, "$1");
+      }
+      if (thousandsSeparator) {
+        str = str.split(".").map(function(s, i) {
+          return i === 0 ? s.replace(formatThousandsRegExp, thousandsSeparator) : s;
+        }).join(".");
+      }
+      return str + unitSeparator + unit;
+    }
+    function parse(val) {
+      if (typeof val === "number" && !isNaN(val)) {
+        return val;
+      }
+      if (typeof val !== "string") {
+        return null;
+      }
+      var results = parseRegExp.exec(val);
+      var floatValue;
+      var unit = "b";
+      if (!results) {
+        floatValue = parseInt(val, 10);
+        unit = "b";
+      } else {
+        floatValue = parseFloat(results[1]);
+        unit = results[4].toLowerCase();
+      }
+      if (isNaN(floatValue)) {
+        return null;
+      }
+      return Math.floor(map[unit] * floatValue);
+    }
+  }
+});
+
 // src/index.ts
-var import_promises3 = __toESM2(require("node:fs/promises"));
 var import_node_path3 = __toESM2(require("node:path"));
-
-// src/pretty-bytes.ts
-var import_bytes = __toESM2(require_bytes());
-var prettyBytes = (n) => (0, import_bytes.default)(n, { unitSeparator: " " });
-
-// src/constants.ts
-var MAX_AGE_ONE_YEAR = 31536e3;
-var EDGE_FUNCTION_SIZE_LIMIT = 1024 * 1024;
-var INTERNAL_PAGES = ["_app", "_error", "_document"];
+var import_promises3 = __toESM2(require("node:fs/promises"));
 
 // src/utils.ts
 var import_picomatch = __toESM2(require_picomatch2());
@@ -33957,7 +33952,6 @@ function escapeStringRegexp(str) {
 // src/routing.ts
 function modifyWithRewriteHeaders(rewrites, {
   isAfterFilesRewrite = false,
-  shouldHandlePrefetchRsc,
   shouldHandleSegmentPrefetches
 }) {
   for (let i = 0; i < rewrites.length; i++) {
@@ -33990,9 +33984,6 @@ function modifyWithRewriteHeaders(rewrites, {
     }
     if (isAfterFilesRewrite) {
       const parts = ["\\.rsc"];
-      if (shouldHandlePrefetchRsc) {
-        parts.push("\\.prefetch\\.rsc");
-      }
       if (shouldHandleSegmentPrefetches) {
         parts.push("\\.segments/.+\\.segment\\.rsc");
       }
@@ -34023,7 +34014,13 @@ function modifyWithRewriteHeaders(rewrites, {
     };
   }
 }
-function normalizeRewrites(rewrites) {
+function isRewriteRoute(route) {
+  return Boolean(route.destination) && !isRedirectStatus(route.status);
+}
+function isRedirectStatus(status) {
+  return status !== void 0 && [301, 302, 303, 307, 308].includes(status);
+}
+function normalizeRewrites(routing) {
   const normalize = (item) => ({
     src: item.sourceRegex,
     dest: item.destination,
@@ -34032,16 +34029,63 @@ function normalizeRewrites(rewrites) {
     check: true
   });
   return {
-    beforeFiles: rewrites.beforeFiles.map((item) => {
+    beforeFiles: routing.beforeFiles.filter(isRewriteRoute).map((item) => {
       const route = normalize(item);
       delete route.check;
       route.continue = true;
       route.override = true;
       return route;
     }),
-    afterFiles: rewrites.afterFiles.map(normalize),
-    fallback: rewrites.fallback.map(normalize)
+    afterFiles: routing.afterFiles.filter(isRewriteRoute).map(normalize),
+    fallback: routing.fallback.filter(isRewriteRoute).map(normalize)
   };
+}
+function extractRedirects(routing) {
+  const priorityRedirects = [];
+  const normalRedirects = [];
+  const processRedirects = (routes) => {
+    for (const route of routes) {
+      if (!isRedirectStatus(route.status)) continue;
+      const vercelRoute = {
+        src: route.sourceRegex,
+        headers: {
+          Location: route.destination || ""
+        },
+        status: route.status,
+        has: route.has,
+        missing: route.missing
+      };
+      if (route.priority) {
+        vercelRoute.continue = true;
+        priorityRedirects.push(vercelRoute);
+      } else {
+        normalRedirects.push(vercelRoute);
+      }
+    }
+  };
+  processRedirects(routing.beforeMiddleware);
+  processRedirects(routing.beforeFiles);
+  return { priority: priorityRedirects, normal: normalRedirects };
+}
+function extractHeaders(routing) {
+  const headers = [];
+  const processHeaders = (routes) => {
+    for (const route of routes) {
+      if (!route.headers || isRedirectStatus(route.status)) continue;
+      if (route.destination) continue;
+      headers.push({
+        src: route.sourceRegex,
+        headers: route.headers,
+        continue: true,
+        has: route.has,
+        missing: route.missing,
+        ...route.priority ? { important: true } : {}
+      });
+    }
+  };
+  processHeaders(routing.beforeMiddleware);
+  processHeaders(routing.beforeFiles);
+  return headers;
 }
 function normalizeNextDataRoutes(config, buildId, shouldHandleMiddlewareDataResolving, isOverride = false) {
   if (!shouldHandleMiddlewareDataResolving) return [];
@@ -34108,6 +34152,17 @@ function normalizeNextDataRoutes(config, buildId, shouldHandleMiddlewareDataReso
       continue: true
     }
   ];
+}
+function extractOnMatchRoutes(routing) {
+  return routing.onMatch.map((route) => ({
+    src: route.sourceRegex,
+    ...route.destination ? { dest: route.destination } : {},
+    ...route.headers ? { headers: route.headers } : {},
+    ...route.has ? { has: route.has } : {},
+    ...route.missing ? { missing: route.missing } : {},
+    continue: true,
+    important: true
+  }));
 }
 function denormalizeNextDataRoutes(config, buildId, shouldHandleMiddlewareDataResolving, isOverride = false) {
   if (!shouldHandleMiddlewareDataResolving) return [];
@@ -34233,6 +34288,16 @@ function removeInlinedSourceMap(source) {
 
 // src/get-edge-function-source.ts
 var import_path10 = require("path");
+
+// src/pretty-bytes.ts
+var import_bytes = __toESM2(require_bytes());
+var prettyBytes = (n) => (0, import_bytes.default)(n, { unitSeparator: " " });
+
+// src/constants.ts
+var EDGE_FUNCTION_SIZE_LIMIT = 1024 * 1024;
+var INTERNAL_PAGES = ["_app", "_error", "_document"];
+
+// src/get-edge-function-source.ts
 var import_zlib = __toESM2(require("zlib"));
 var import_util3 = require("util");
 
@@ -34290,6 +34355,9 @@ async function validateSize(script, wasmFiles) {
 }
 
 // src/outputs.ts
+function fallbackHasFilePath(fallback) {
+  return fallback !== void 0 && "filePath" in fallback;
+}
 var copy = async (src, dest) => {
   await import_fs_extra12.default.remove(dest);
   await import_fs_extra12.default.copy(src, dest);
@@ -34483,7 +34551,7 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           functionsDir,
           `${output.pathname === "/" ? "/index" : output.pathname}.prerender-config.json`
         );
-        const prerenderFallbackPath = output.fallback?.filePath ? import_node_path2.default.join(
+        const prerenderFallbackPath = fallbackHasFilePath(output.fallback) ? import_node_path2.default.join(
           functionsDir,
           `${output.pathname === "/" ? "/index" : output.pathname}.prerender-fallback${import_node_path2.default.extname(output.fallback.filePath)}`
         ) : void 0;
@@ -34525,7 +34593,7 @@ async function handlePrerenderOutputs(prerenderOutputs, {
           {},
           output.fallback?.initialHeaders
         );
-        if (output.fallback?.postponedState && output.fallback.filePath && prerenderFallbackPath) {
+        if (output.fallback?.postponedState && fallbackHasFilePath(output.fallback) && prerenderFallbackPath) {
           const fallbackHtml = await import_promises2.default.readFile(
             output.fallback.filePath,
             "utf8"
@@ -34566,7 +34634,7 @@ async function handlePrerenderOutputs(prerenderOutputs, {
             }
           )
         );
-        if (output.fallback?.filePath && prerenderFallbackPath && // if postponed state is present we write the fallback file above
+        if (fallbackHasFilePath(output.fallback) && prerenderFallbackPath && // if postponed state is present we write the fallback file above
         !output.fallback.postponedState) {
           await copy(output.fallback.filePath, prerenderFallbackPath);
         }
@@ -34791,7 +34859,7 @@ async function getSourceFilePathFromPage({
 var myAdapter = {
   name: "Vercel",
   async onBuildComplete({
-    routes,
+    routing,
     config,
     buildId,
     outputs,
@@ -34806,7 +34874,7 @@ var myAdapter = {
     const hasMiddleware = Boolean(outputs.middleware);
     const hasAppDir = outputs.appPages.length > 0 || outputs.appRoutes.length > 0;
     const hasPagesDir = outputs.pages.length > 0 || outputs.pagesApi.length > 0;
-    const shouldHandleMiddlewareDataResolving = hasPagesDir && hasMiddleware;
+    const shouldHandleMiddlewareDataResolving = routing.shouldNormalizeNextData;
     const i18nConfig = config.i18n;
     const vercelConfig2 = {
       version: 3,
@@ -34921,63 +34989,26 @@ var myAdapter = {
       vercelOutputDir,
       nodeOutputsParentMap
     });
-    const shouldHandlePrefetchRsc = Boolean(
-      config.experimental.cacheComponents
-    );
-    const shouldHandleSegmentPrefetches = Boolean(
-      config.experimental.clientSegmentCache || config.experimental.cacheComponents
-    );
-    const convertedRewrites = normalizeRewrites(routes.rewrites);
-    if (shouldHandlePrefetchRsc || shouldHandleSegmentPrefetches) {
+    const shouldHandleSegmentPrefetches = outputs.appPages.length > 0;
+    const convertedRewrites = normalizeRewrites(routing);
+    if (shouldHandleSegmentPrefetches) {
       modifyWithRewriteHeaders(convertedRewrites.beforeFiles, {
-        shouldHandlePrefetchRsc,
         shouldHandleSegmentPrefetches
       });
       modifyWithRewriteHeaders(convertedRewrites.afterFiles, {
         isAfterFilesRewrite: true,
-        shouldHandlePrefetchRsc,
         shouldHandleSegmentPrefetches
       });
       modifyWithRewriteHeaders(convertedRewrites.fallback, {
-        shouldHandlePrefetchRsc,
         shouldHandleSegmentPrefetches
       });
     }
-    const priorityRedirects = [];
-    const redirects = [];
-    for (const redirect of routes.redirects) {
-      const route = {
-        src: redirect.sourceRegex,
-        headers: {
-          Location: redirect.destination
-        },
-        status: redirect.statusCode,
-        has: redirect.has,
-        missing: redirect.missing
-      };
-      if (redirect.priority) {
-        route.continue = true;
-        priorityRedirects.push(route);
-      } else {
-        redirects.push(route);
-      }
-    }
-    const headers = [];
-    for (const route of routes.headers) {
-      headers.push({
-        src: route.sourceRegex,
-        headers: route.headers,
-        continue: true,
-        has: route.has,
-        missing: route.missing,
-        ...route.priority ? {
-          important: true
-        } : {}
-      });
-    }
+    const { priority: priorityRedirects, normal: redirects } = extractRedirects(routing);
+    const headers = extractHeaders(routing);
+    const onMatchRoutes = extractOnMatchRoutes(routing);
     const dynamicRoutes = [];
     let addedNextData404Route = false;
-    for (const route of routes.dynamicRoutes) {
+    for (const route of routing.dynamicRoutes) {
       if (hasPagesDir && !hasMiddleware) {
         if (!route.sourceRegex.includes("_next/data") && !addedNextData404Route) {
           addedNextData404Route = true;
@@ -35347,7 +35378,7 @@ var myAdapter = {
       ...shouldHandleSegmentPrefetches ? [
         {
           src: "^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$",
-          dest: `/$path${shouldHandlePrefetchRsc ? ".prefetch.rsc" : ".rsc"}`,
+          dest: `/$path.rsc`,
           check: true
         }
       ] : [],
@@ -35394,23 +35425,8 @@ var myAdapter = {
         }
       ] : [],
       { handle: "hit" },
-      // Before we handle static files we need to set proper caching headers
-      {
-        // This ensures we only match known emitted-by-Next.js files and not
-        // user-emitted files which may be missing a hash in their filename.
-        src: import_node_path3.default.posix.join(
-          "/",
-          config.basePath || "",
-          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
-        ),
-        // Next.js assets contain a hash or entropy in their filenames, so they
-        // are guaranteed to be unique and cacheable indefinitely.
-        headers: {
-          "cache-control": `public,max-age=${MAX_AGE_ONE_YEAR},immutable`
-        },
-        continue: true,
-        important: true
-      },
+      ...onMatchRoutes,
+      // add internal matched path header for function bundle mapping
       {
         src: config.basePath && config.basePath !== "/" ? import_node_path3.default.posix.join("/", config.basePath, "/?(?:index)?(?:/)?$") : `/(?:index)?(?:/)?$`,
         headers: {
