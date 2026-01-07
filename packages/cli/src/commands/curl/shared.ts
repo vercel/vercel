@@ -136,6 +136,13 @@ export async function getDeploymentUrlAndToken(
 
   // If a full URL is provided, skip all project linking and API calls for speed
   if (isFullUrl) {
+    // Warn if deployment flag is provided with a full URL, as it will be ignored
+    if (deploymentFlag) {
+      output.warn(
+        `The --deployment flag is ignored when a full URL is provided. Using the URL as-is: ${path}`
+      );
+    }
+
     const fullUrl = path;
     output.debug(`${chalk.cyan('Target URL:')} ${chalk.bold(fullUrl)}`);
 
