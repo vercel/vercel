@@ -703,6 +703,7 @@ export const build: BuildV2 = async buildOptions => {
   let hasPages404 = false;
   let buildId = '';
   let escapedBuildId = '';
+  let deploymentId: string | undefined;
 
   if (isLegacy || isSharedLambdas || isServerMode) {
     try {
@@ -718,6 +719,22 @@ export const build: BuildV2 = async buildOptions => {
           'The BUILD_ID file was not found in the Output Directory. Did you forget to run "next build" in your Build Command?',
       });
     }
+  }
+
+  // Read user-configured deploymentId from .next/deployment-id.txt if present
+  try {
+    const deploymentIdPath = path.join(
+      entryPath,
+      outputDirectory,
+      'deployment-id.txt'
+    );
+    deploymentId = (await readFile(deploymentIdPath, 'utf8')).trim();
+    if (deploymentId === '') {
+      deploymentId = undefined;
+    }
+  } catch (err) {
+    // deployment-id.txt is optional, so we ignore errors if it doesn't exist
+    deploymentId = undefined;
   }
 
   if (routesManifest) {
@@ -2928,6 +2945,7 @@ export const build: BuildV2 = async buildOptions => {
           ]),
     ],
     framework: { version: nextVersion },
+    ...(deploymentId && { deploymentId }),
   };
 };
 
