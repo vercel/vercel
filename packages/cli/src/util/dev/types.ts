@@ -135,6 +135,8 @@ export interface RouteResult {
   status?: number;
   // "headers": <object of the added response header values>
   headers: HttpHeadersConfig;
+  // "requestHeaders": <object of headers to add to the proxied request>
+  requestHeaders?: HttpHeadersConfig;
   // "query": <object (key=values) of new uri args to be passed along to dest>
   query?: Record<string, string[]>;
   // "matched_route": <object of the route spec that matched>

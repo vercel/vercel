@@ -1631,7 +1631,9 @@ export default class DevServer {
         vercelConfig,
         prevHeaders,
         missRoutes,
-        phase
+        phase,
+        req,
+        this.envValues
       );
 
       if (routeResult.continue) {
@@ -1654,7 +1656,7 @@ export default class DevServer {
 
         debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, requestId);
-        return proxyPass(req, res, destUrl, this, requestId);
+        return proxyPass(req, res, destUrl, this, requestId, true, routeResult.requestHeaders);
       }
 
       match = await findBuildMatch(
@@ -1688,7 +1690,9 @@ export default class DevServer {
           vercelConfig,
           routeResult.headers,
           [],
-          'miss'
+          'miss',
+          req,
+          this.envValues
         );
 
         match = await findBuildMatch(
@@ -1722,7 +1726,9 @@ export default class DevServer {
           vercelConfig,
           routeResult.headers,
           [],
-          'hit'
+          'hit',
+          req,
+          this.envValues
         );
         routeResult.status = prevStatus;
       }
@@ -1750,7 +1756,9 @@ export default class DevServer {
         vercelConfig,
         routeResult.headers,
         [],
-        'error'
+        'error',
+        req,
+        this.envValues
       );
       const { matched_route } = routeResultForError;
 
@@ -1866,7 +1874,12 @@ export default class DevServer {
         req.method,
         buildResult.routes,
         this,
-        vercelConfig
+        vercelConfig,
+        undefined,
+        undefined,
+        undefined,
+        req,
+        this.envValues
       );
       if (matchedRoute.found && callLevel === 0) {
         debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
@@ -2351,12 +2364,24 @@ function proxyPass(
   dest: string,
   devServer: DevServer,
   requestId: string,
-  ignorePath: boolean = true
+  ignorePath: boolean = true,
+  requestHeaders?: Record<string, string>
 ): void {
+  // Apply request headers from transforms
+  if (requestHeaders) {
+    for (const [key, value] of Object.entries(requestHeaders)) {
+      req.headers[key.toLowerCase()] = value;
+    }
+  }
+
   return devServer.proxy.web(
     req,
     res,
-    { target: dest, ignorePath },
+    {
+      target: dest,
+      ignorePath,
+      headers: requestHeaders,
+    },
     (error: NodeJS.ErrnoException) => {
       // only debug output this error because it's always something generic like
       // "Error: socket hang up"
