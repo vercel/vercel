@@ -2,7 +2,7 @@
   "name": "26-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "https://files-1tsattz40-vtest314-ijjk-testing.vercel.app/next-16.1.1-canary.12.tgz",
+    "next": "https://files-ejetd3kzs-vtest314-ijjk-testing.vercel.app",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },

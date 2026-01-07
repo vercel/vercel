@@ -36,69 +36,6 @@ const getHandlerSource = (ctx) => `
   module.exports = (${ctx.isMiddleware ? () => {
   const path = require("path");
   const relativeDistDir = process.env.__PRIVATE_RELATIVE_DIST_DIR;
-  function toPlainHeaders(headers) {
-    const result = {};
-    if (!headers) return result;
-    headers.forEach((value, key) => {
-      result[key] = value;
-      if (key.toLowerCase() === "set-cookie") {
-        result[key] = splitCookiesString(value);
-      }
-    });
-    return result;
-  }
-  function splitCookiesString(cookiesString) {
-    const cookiesStrings = [];
-    let pos = 0;
-    let start;
-    let ch;
-    let lastComma;
-    let nextStart;
-    let cookiesSeparatorFound;
-    function skipWhitespace() {
-      while (pos < cookiesString.length && /\s/.test(cookiesString.charAt(pos)))
-        pos += 1;
-      return pos < cookiesString.length;
-    }
-    function notSpecialChar() {
-      ch = cookiesString.charAt(pos);
-      return ch !== "=" && ch !== ";" && ch !== ",";
-    }
-    while (pos < cookiesString.length) {
-      start = pos;
-      cookiesSeparatorFound = false;
-      while (skipWhitespace()) {
-        ch = cookiesString.charAt(pos);
-        if (ch === ",") {
-          lastComma = pos;
-          pos += 1;
-          skipWhitespace();
-          nextStart = pos;
-          while (pos < cookiesString.length && notSpecialChar()) {
-            pos += 1;
-          }
-          if (pos < cookiesString.length && cookiesString.charAt(pos) === "=") {
-            cookiesSeparatorFound = true;
-            pos = nextStart;
-            cookiesStrings.push(
-              cookiesString.substring(start, lastComma)
-            );
-            start = pos;
-          } else {
-            pos = lastComma + 1;
-          }
-        } else {
-          pos += 1;
-        }
-      }
-      if (!cookiesSeparatorFound || pos >= cookiesString.length) {
-        cookiesStrings.push(
-          cookiesString.substring(start, cookiesString.length)
-        );
-      }
-    }
-    return cookiesStrings;
-  }
   const SYMBOL_FOR_REQ_CONTEXT = Symbol.for("@vercel/request-context");
   function getRequestContext() {
     const fromSymbol = globalThis;
@@ -106,32 +43,19 @@ const getHandlerSource = (ctx) => `
   }
   return async function handler(request) {
     console.log("middleware handler", request);
-    function addRequestMeta(req, key, value) {
-      const NEXT_REQUEST_META = Symbol.for("NextInternalRequestMeta");
-      const meta = req[NEXT_REQUEST_META] || {};
-      meta[key] = value;
-      req[NEXT_REQUEST_META] = meta;
-      return meta;
-    }
-    addRequestMeta(request, "relativeProjectDir", ".");
     let middlewareHandler = await require("./" + path.posix.join(relativeDistDir, "server", "middleware.js"));
-    middlewareHandler = middlewareHandler.default || middlewareHandler;
+    middlewareHandler = middlewareHandler.handler || middlewareHandler;
     const context = getRequestContext();
-    const result = await middlewareHandler({
-      request: {
-        url: request.url,
-        method: request.method,
-        headers: toPlainHeaders(request.headers),
-        nextConfig: process.env.__PRIVATE_NEXT_CONFIG,
-        page: "/middleware",
-        body: request.method !== "GET" && request.method !== "HEAD" ? request.body : void 0,
-        waitUntil: context.waitUntil
+    const response = await middlewareHandler(request, {
+      waitUntil: context.waitUntil,
+      requestMeta: {
+        // we use '.' for relative project dir since we process.chdir
+        // to the same directory as the handler file so everything is
+        // relative to that/project dir
+        relativeProjectDir: "."
       }
     });
-    if (result.waitUntil && context.waitUntil) {
-      context.waitUntil(result.waitUntil);
-    }
-    return result.response;
+    return response;
   };
 } : (() => {
   const path = require("path");
@@ -167,29 +91,21 @@ const getHandlerSource = (ctx) => `
     },
     {}
   );
-  function addRequestMeta(req, key, value) {
-    const NEXT_REQUEST_META = Symbol.for("NextInternalRequestMeta");
-    const meta = req[NEXT_REQUEST_META] || {};
-    meta[key] = value;
-    req[NEXT_REQUEST_META] = meta;
-    return meta;
-  }
-  function normalizeLocalePath(req, pathname, locales) {
-    if (!locales) return pathname;
+  function normalizeLocalePath(pathname, locales) {
+    if (!locales) return { pathname };
     const lowercasedLocales = locales.map(
       (locale) => locale.toLowerCase()
     );
     const segments = pathname.split("/", 2);
-    if (!segments[1]) return pathname;
+    if (!segments[1]) return { pathname };
     const segment = segments[1].toLowerCase();
     const index = lowercasedLocales.indexOf(segment);
-    if (index < 0) return pathname;
+    if (index < 0) return { pathname };
     const detectedLocale = locales[index];
     pathname = pathname.slice(detectedLocale.length + 1) || "/";
-    addRequestMeta(req, "locale", detectedLocale);
-    return pathname;
+    return { pathname, locale: detectedLocale };
   }
-  function normalizeDataPath(req, pathname) {
+  function normalizeDataPath(pathname) {
     if (!(pathname || "/").startsWith("/_next/data")) {
       return pathname;
     }
@@ -200,18 +116,21 @@ const getHandlerSource = (ctx) => `
     return pathname;
   }
   function matchUrlToPage(req, urlPathname) {
-    urlPathname = normalizeDataPath(req, urlPathname);
+    urlPathname = normalizeDataPath(urlPathname);
     console.log("before normalize", urlPathname);
     for (const suffixRegex of [
       /\.segments(\/.*)\.segment\.rsc$/,
-      /\.prefetch\.rsc$/,
       /\.rsc$/
     ]) {
       urlPathname = urlPathname.replace(suffixRegex, "");
     }
     const urlPathnameWithLocale = urlPathname;
-    urlPathname = normalizeLocalePath(req, urlPathname, i18n?.locales);
-    console.log("after normalize", urlPathname);
+    const normalizeResult = normalizeLocalePath(
+      urlPathname,
+      i18n?.locales
+    );
+    urlPathname = normalizeResult.pathname;
+    console.log("after normalize", normalizeResult);
     urlPathname = urlPathname.replace(/\/$/, "") || "/";
     for (const route of [...staticRoutes, ...dynamicRoutes]) {
       if (route.regex.test(urlPathname)) {
@@ -226,10 +145,16 @@ const getHandlerSource = (ctx) => `
           continue;
         }
         console.log("matched route", route, urlPathname);
-        return inversedAppRoutesManifest[route.page] || route.page;
+        return {
+          matchedPathname: inversedAppRoutesManifest[route.page] || route.page,
+          locale: normalizeResult.locale
+        };
       }
     }
-    return inversedAppRoutesManifest[urlPathname] || urlPathname;
+    return {
+      matchedPathname: inversedAppRoutesManifest[urlPathname] || urlPathname,
+      locale: normalizeResult.locale
+    };
   }
   const SYMBOL_FOR_REQ_CONTEXT = Symbol.for("@vercel/request-context");
   function getRequestContext() {
@@ -269,20 +194,28 @@ const getHandlerSource = (ctx) => `
           waitUntil: getRequestContext().waitUntil
         });
       } else {
+        console.log(
+          "failed to find 404 module",
+          await require("fs").promises.readdir(
+            path.posix.join(relativeDistDir, "server", "pages")
+          ).catch((err) => err)
+        );
         res.end("This page could not be found");
       }
     }
   };
   return async function handler(req, res) {
     try {
-      addRequestMeta(req, "relativeProjectDir", ".");
+      const parsedUrl = new URL(req.url || "/", "http://n");
       let urlPathname = req.headers["x-matched-path"];
       if (typeof urlPathname !== "string") {
         console.log("no x-matched-path", { url: req.url });
-        const parsedUrl = new URL(req.url || "/", "http://n");
         urlPathname = parsedUrl.pathname || "/";
       }
-      const page = matchUrlToPage(req, urlPathname);
+      const { matchedPathname: page, locale } = matchUrlToPage(
+        req,
+        urlPathname
+      );
       const isAppDir = page.match(/\/(page|route)$/);
       console.log("invoking handler", {
         page,
@@ -296,7 +229,15 @@ const getHandlerSource = (ctx) => `
         `${page === "/" ? "index" : page}.js`
       ));
       await mod.handler(req, res, {
-        waitUntil: getRequestContext().waitUntil
+        waitUntil: getRequestContext().waitUntil,
+        requestMeta: {
+          minimalMode: true,
+          // we use '.' for relative project dir since we process.chdir
+          // to the same directory as the handler file so everything is
+          // relative to that/project dir
+          relativeProjectDir: ".",
+          locale
+        }
       });
     } catch (error) {
       console.error(`Failed to handle ${req.url}`, error);

@@ -2,7 +2,7 @@
   "name": "website-preview",
   "private": true,
   "dependencies": {
-    "next": "https://files-1tsattz40-vtest314-ijjk-testing.vercel.app/next-16.1.1-canary.12.tgz",
+    "next": "https://files-ejetd3kzs-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   }
