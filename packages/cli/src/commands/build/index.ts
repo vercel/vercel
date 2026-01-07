@@ -14,6 +14,7 @@ import {
   NowBuildError,
   runNpmInstall,
   runCustomInstallCommand,
+  resetCustomInstallCommandSet,
   type Reporter,
   Span,
   type TraceEvent,
@@ -392,6 +393,9 @@ export default async function main(client: Client): Promise<number> {
 
     // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
     delete process.env.VERCEL_INSTALL_COMPLETED;
+
+    // Reset customInstallCommandSet to allow subsequent builds in the same process
+    resetCustomInstallCommandSet();
   }
 }
 

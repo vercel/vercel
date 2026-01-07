@@ -739,6 +739,15 @@ const runNpmInstallSema = new Sema(1);
 // Track paths where custom install commands have already run (module-level since no meta object)
 let customInstallCommandSet: Set<string> | undefined;
 
+/**
+ * Reset the customInstallCommandSet. This should be called at the start of each build
+ * to prevent custom install commands from being skipped due to the set persisting
+ * across multiple builds in the same Node process (e.g., in unit tests).
+ */
+export function resetCustomInstallCommandSet(): void {
+  customInstallCommandSet = undefined;
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
