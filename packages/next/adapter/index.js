@@ -3830,9 +3830,9 @@ var require_interop_require_default = __commonJS({
   }
 });
 
-// ../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
+// ../../node_modules/.pnpm/next@https+++files-hse7k1au1-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
 var require_modern_browserslist_target = __commonJS({
-  "../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-hse7k1au1-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
     "use strict";
     var MODERN_BROWSERSLIST_TARGET = [
       "chrome 111",
@@ -3844,9 +3844,9 @@ var require_modern_browserslist_target = __commonJS({
   }
 });
 
-// ../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
+// ../../node_modules/.pnpm/next@https+++files-hse7k1au1-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
 var require_entry_constants = __commonJS({
-  "../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
+  "../../node_modules/.pnpm/next@https+++files-hse7k1au1-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -3878,9 +3878,9 @@ var require_entry_constants = __commonJS({
   }
 });
 
-// ../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
+// ../../node_modules/.pnpm/next@https+++files-hse7k1au1-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
 var require_constants2 = __commonJS({
-  "../../node_modules/.pnpm/next@16.1.1-canary.14_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-hse7k1au1-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -10151,11 +10151,17 @@ async function handlePrerenderOutputs(prerenderOutputs, {
       try {
         const prerenderConfigPath = import_node_path.default.join(
           functionsDir,
-          `${normalizeIndexPathname(output.pathname, config)}.prerender-config.json`
+          `${normalizeIndexPathname(
+            output.pathname,
+            config
+          )}.prerender-config.json`
         );
         const prerenderFallbackPath = fallbackHasFilePath(output.fallback) ? import_node_path.default.join(
           functionsDir,
-          `${normalizeIndexPathname(output.pathname, config)}.prerender-fallback${import_node_path.default.extname(output.fallback.filePath)}`
+          `${normalizeIndexPathname(
+            output.pathname,
+            config
+          )}.prerender-fallback${import_node_path.default.extname(output.fallback.filePath)}`
         ) : void 0;
         const { parentOutputId } = output;
         prerenderParentIds.add(parentOutputId);
@@ -10472,23 +10478,6 @@ var myAdapter = {
   }) {
     const vercelOutputDir = import_node_path2.default.join(distDir, "output");
     await import_promises2.default.mkdir(vercelOutputDir, { recursive: true });
-    await import_promises2.default.writeFile(
-      import_node_path2.default.join(vercelOutputDir, "output.json"),
-      JSON.stringify(
-        {
-          routing,
-          config,
-          buildId,
-          outputs,
-          distDir,
-          repoRoot,
-          projectDir,
-          nextVersion
-        },
-        null,
-        2
-      )
-    );
     const escapedBuildId = escapeStringRegexp(buildId);
     const hasMiddleware = Boolean(outputs.middleware);
     const hasAppDir = outputs.appPages.length > 0 || outputs.appRoutes.length > 0;
@@ -10833,19 +10822,76 @@ var myAdapter = {
       ),
       // RSC and prefetch request handling for App Router
       ...hasAppDir ? [
-        // Full RSC request rewriting
+        {
+          src: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            "/(?<path>.+?)(?:/)?$"
+          ),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            `/$path${routing.rsc.prefetchSegmentDirSuffix}/$segmentPath${routing.rsc.prefetchSegmentSuffix}`
+          ),
+          has: [
+            {
+              type: "header",
+              key: routing.rsc.header,
+              value: "1"
+            },
+            {
+              type: "header",
+              key: routing.rsc.prefetchHeader,
+              value: "1"
+            },
+            {
+              type: "header",
+              key: routing.rsc.prefetchSegmentHeader,
+              value: "/(?<segmentPath>.+)"
+            }
+          ],
+          continue: true,
+          override: true
+        },
+        {
+          src: import_node_path2.default.posix.join("^/", config.basePath, "/?$"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            `/index${routing.rsc.prefetchSegmentDirSuffix}/$segmentPath${routing.rsc.prefetchSegmentSuffix}`
+          ),
+          has: [
+            {
+              type: "header",
+              key: routing.rsc.header,
+              value: "1"
+            },
+            {
+              type: "header",
+              key: routing.rsc.prefetchHeader,
+              value: "1"
+            },
+            {
+              type: "header",
+              key: routing.rsc.prefetchSegmentHeader,
+              value: "/(?<segmentPath>.+)"
+            }
+          ],
+          continue: true,
+          override: true
+        },
         {
           src: `^${import_node_path2.default.posix.join("/", config.basePath, "/?")}`,
           has: [
             {
               type: "header",
-              key: "rsc",
+              key: routing.rsc.header,
               value: "1"
             }
           ],
           dest: import_node_path2.default.posix.join("/", config.basePath, "/index.rsc"),
           headers: {
-            vary: "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+            vary: routing.rsc.varyHeader
           },
           continue: true,
           override: true
@@ -10859,13 +10905,13 @@ var myAdapter = {
           has: [
             {
               type: "header",
-              key: "rsc",
+              key: routing.rsc.header,
               value: "1"
             }
           ],
           dest: import_node_path2.default.posix.join("/", config.basePath, "/$1.rsc"),
           headers: {
-            vary: "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+            vary: routing.rsc.varyHeader
           },
           continue: true,
           override: true
@@ -11062,7 +11108,7 @@ var myAdapter = {
         src: import_node_path2.default.posix.join(
           "/",
           config.basePath || "",
-          `/((?!index$|_error$|500$).*?)(?:/)?$`
+          `/((?!index$).*?)(?:/)?$`
         ),
         headers: {
           "x-matched-path": "/$1"

@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-hse7k1au1-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest",
     "is-odd": "3.0.1"
