@@ -1,5 +1,5 @@
 function hasScheme(url: string): Boolean {
-  return url.startsWith('http://') || url.startsWith('https://');
+  return url.toLowerCase().startsWith('http://') || url.toLowerCase().startsWith('https://');
 }
 
 export function normalizeURL(url: string): string {

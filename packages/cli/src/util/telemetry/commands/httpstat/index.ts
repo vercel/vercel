@@ -10,7 +10,7 @@ export class HttpstatTelemetryClient
     if (path) {
       // Track whether path is a full URL or relative path
       const isFullUrl =
-        path.startsWith('http://') || path.startsWith('https://');
+        path.toLowerCase().startsWith('http://') || path.toLowerCase().startsWith('https://');
       const value = isFullUrl
         ? 'full-url'
         : path.startsWith('/')
@@ -27,8 +27,8 @@ export class HttpstatTelemetryClient
     if (deploymentId) {
       // Track whether value is a URL, or if dpl_ prefix was provided
       const value =
-        deploymentId.startsWith('http://') ||
-        deploymentId.startsWith('https://')
+        deploymentId.toLowerCase().startsWith('http://') ||
+        deploymentId.toLowerCase().startsWith('https://')
           ? 'url'
           : deploymentId.startsWith('dpl_')
             ? 'dpl_'

@@ -92,7 +92,7 @@ export function setupCurlLikeCommand(
 
   // Check if path is a full URL
   const isFullUrl = Boolean(
-    path && (path.startsWith('http://') || path.startsWith('https://'))
+    path && (path.toLowerCase().startsWith('http://') || path.toLowerCase().startsWith('https://'))
   );
 
   // If not a full URL, require a path argument

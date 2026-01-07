@@ -10,8 +10,8 @@ export async function getDeploymentUrlById(
   try {
     // Accept a full deployment URL directly
     if (
-      deploymentIdOrUrl.startsWith('http://') ||
-      deploymentIdOrUrl.startsWith('https://')
+      deploymentIdOrUrl.toLowerCase().startsWith('http://') ||
+      deploymentIdOrUrl.toLowerCase().startsWith('https://')
     ) {
       try {
         const url = new URL(deploymentIdOrUrl);
