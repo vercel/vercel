@@ -8,8 +8,14 @@ export class HttpstatTelemetryClient
 {
   trackCliArgumentPath(path: string | undefined) {
     if (path) {
-      // Track whether path starts with / or not
-      const value = path.startsWith('/') ? 'slash' : 'no-slash';
+      // Track whether path is a full URL or relative path
+      const isFullUrl =
+        path.toLowerCase().startsWith('http://') || path.toLowerCase().startsWith('https://');
+      const value = isFullUrl
+        ? 'full-url'
+        : path.startsWith('/')
+          ? 'slash'
+          : 'no-slash';
       this.trackCliArgument({
         arg: 'path',
         value,
@@ -21,8 +27,8 @@ export class HttpstatTelemetryClient
     if (deploymentId) {
       // Track whether value is a URL, or if dpl_ prefix was provided
       const value =
-        deploymentId.startsWith('http://') ||
-        deploymentId.startsWith('https://')
+        deploymentId.toLowerCase().startsWith('http://') ||
+        deploymentId.toLowerCase().startsWith('https://')
           ? 'url'
           : deploymentId.startsWith('dpl_')
             ? 'dpl_'
