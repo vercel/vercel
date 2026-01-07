@@ -511,9 +511,7 @@ export const build: BuildV2 = async buildOptions => {
 
   if (
     !process.env.NEXT_BUILDER_INTEGRATION &&
-    semver.gte(nextVersion, '16.1.1-canary.12', { includePrerelease: true }) &&
-    // TODO: remove after stable
-    nextVersion.includes('-canary')
+    semver.gte(nextVersion, '16.1.1-canary.12', { includePrerelease: true })
   ) {
     console.log('setting adapter env variable');
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
