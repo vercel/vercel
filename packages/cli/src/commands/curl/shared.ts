@@ -29,6 +29,7 @@ export interface DeploymentUrlResult {
 
 export interface CommandSetupResult {
   path: string;
+  isFullUrl: boolean;
   deploymentFlag?: string;
   protectionBypassFlag?: string;
   toolFlags: string[];
@@ -89,25 +90,22 @@ export function setupCurlLikeCommand(
     telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
   }
 
-  if (!path || path === '--' || path.startsWith('-')) {
+  // Check if path is a full URL
+  const isFullUrl = Boolean(
+    path && (path.startsWith('http://') || path.startsWith('https://'))
+  );
+
+  // If not a full URL, require a path argument
+  if (!isFullUrl && (!path || path === '--' || path.startsWith('-'))) {
     output.error(
-      `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
+      `${getCommandName(`${command.name} <path|url>`)} requires an API path (e.g., '/' or '/api/hello') or a full URL (e.g., 'https://example.com/api/hello')`
     );
     print(help(command, { columns: client.stderr.columns }));
     return 1;
   }
 
-  // Disallow passing a full URL as the path arg to avoid duplicating the base URL
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    output.error(
-      `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
-    );
-    output.print(
-      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
-    );
-    print(help(command, { columns: client.stderr.columns }));
-    return 1;
-  }
+  // If a full URL is provided, we don't need a path - use the URL as-is
+  const normalizedPath = isFullUrl ? path : path || '/';
 
   const toolFlags =
     separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
@@ -116,7 +114,8 @@ export function setupCurlLikeCommand(
   );
 
   return {
-    path,
+    path: normalizedPath,
+    isFullUrl,
     deploymentFlag,
     protectionBypassFlag,
     toolFlags,
