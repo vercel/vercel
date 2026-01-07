@@ -32,12 +32,12 @@ import {
   getSupportedBunVersion,
   isBunVersion,
 } from './node-version';
+import type { PythonVersionMajorMinor } from './python-version';
 import {
   getSupportedPythonVersion,
   getLatestPythonVersion,
   getAvailablePythonVersions,
   detectPythonVersion,
-  type PythonVersionMajorMinor,
 } from './python-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';

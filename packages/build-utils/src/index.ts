@@ -130,10 +130,10 @@ export * from './errors';
 export * from './trace';
 
 export { NODE_VERSIONS } from './fs/node-version';
-export {
-  PYTHON_VERSIONS,
-  type PythonVersionMajorMinor,
-  type DeclaredPythonVersion,
+export { PYTHON_VERSIONS } from './fs/python-version';
+export type {
+  PythonVersionMajorMinor,
+  DeclaredPythonVersion,
 } from './fs/python-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
