@@ -1,5 +1,28 @@
 # @vercel/fs-detectors
 
+## 5.7.11
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 5.7.10
+
+### Patch Changes
+
+- Updated dependencies [[`288b97aa5ffda33c892dd4fb6ee85d7fef126fdc`](https://github.com/vercel/vercel/commit/288b97aa5ffda33c892dd4fb6ee85d7fef126fdc)]:
+  - @vercel/routing-utils@5.3.1
+  - @vercel/frameworks@3.15.4
+
+## 5.7.9
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/frameworks@3.15.4
+
 ## 5.7.8
 
 ### Patch Changes

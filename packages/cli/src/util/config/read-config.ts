@@ -7,18 +7,14 @@ import { compileVercelConfig } from '../compile-vercel-config';
 export default async function readConfig(dir: string) {
   let pkgFilePath: string;
 
-  if (process.env.VERCEL_TS_CONFIG_ENABLED) {
-    try {
-      const compileResult = await compileVercelConfig(dir);
-      pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
-    } catch (err) {
-      if (err instanceof Error) {
-        return err as any;
-      }
-      throw err;
+  try {
+    const compileResult = await compileVercelConfig(dir);
+    pkgFilePath = compileResult.configPath || getLocalConfigPath(dir);
+  } catch (err) {
+    if (err instanceof Error) {
+      return err as any;
     }
-  } else {
-    pkgFilePath = getLocalConfigPath(dir);
+    throw err;
   }
 
   const result = await readJSONFile<VercelConfig>(pkgFilePath);

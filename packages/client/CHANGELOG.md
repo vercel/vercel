@@ -1,5 +1,43 @@
 # @vercel/client
 
+## 17.2.18
+
+### Patch Changes
+
+- Updated dependencies [[`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/build-utils@13.2.4
+
+## 17.2.17
+
+### Patch Changes
+
+- Add support for `customErrorPage` configuration in `vercel.json` to customize pages for platform errors. ([#14466](https://github.com/vercel/vercel/pull/14466))
+
+## 17.2.16
+
+### Patch Changes
+
+- Updated dependencies [[`288b97aa5ffda33c892dd4fb6ee85d7fef126fdc`](https://github.com/vercel/vercel/commit/288b97aa5ffda33c892dd4fb6ee85d7fef126fdc)]:
+  - @vercel/routing-utils@5.3.1
+  - @vercel/build-utils@13.2.3
+
+## 17.2.15
+
+### Patch Changes
+
+- Fix example API url ([#14417](https://github.com/vercel/vercel/pull/14417))
+
+## 17.2.14
+
+### Patch Changes
+
+- checkDeploymentStatus now retries up to 3 times on HTTP 429 or 5xx ([#14407](https://github.com/vercel/vercel/pull/14407))
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/build-utils@13.2.3
+
 ## 17.2.13
 
 ### Patch Changes

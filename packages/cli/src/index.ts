@@ -97,6 +97,7 @@ Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
   environment: 'stable',
+  autoSessionTracking: false,
 });
 
 let client: Client;
@@ -730,6 +731,10 @@ const main = async () => {
         case 'redeploy':
           telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
           func = require('./commands/redeploy').default;
+          break;
+        case 'redirects':
+          telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
+          func = require('./commands/redirects').default;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);

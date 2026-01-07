@@ -1,5 +1,41 @@
 # @vercel/express
 
+## 0.1.22
+
+### Patch Changes
+
+- Updated dependencies [[`65d137b939883f468712f61570f6e6182fd39b27`](https://github.com/vercel/vercel/commit/65d137b939883f468712f61570f6e6182fd39b27)]:
+  - @vercel/cervel@0.0.8
+
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.16
+
+## 0.1.20
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d)]:
+  - @vercel/cervel@0.0.7
+
+## 0.1.18
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/node@5.5.15
+
 ## 0.1.17
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @vercel/go
 
+## 3.3.0
+
+### Minor Changes
+
+- Use GOMODCACHE and GOCACHE to speed up rebuilding Go projects ([#14484](https://github.com/vercel/vercel/pull/14484))
+
+## 3.2.4
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 3.2.3
 
 ### Patch Changes

@@ -1,0 +1,39 @@
+{
+  "config": {
+    "installCommand": "pnpm install",
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "$CDCK_STAGING_ORIGIN",
+        "transforms": [
+          {
+            "type": "request.headers",
+            "op": "set",
+            "target": {
+              "key": "cdck-trust-proxy"
+            },
+            "args": "$CDCK_TRUST_PROXY",
+            "env": ["CDCK_TRUST_PROXY"]
+          }
+        ],
+        "env": ["CDCK_STAGING_ORIGIN"]
+      }
+    ],
+    "rewrites": [
+      {
+        "src": "/api/(.*)",
+        "dest": "$API_BACKEND_URL",
+        "env": ["API_BACKEND_URL"]
+      }
+    ],
+    "redirects": [
+      {
+        "src": "/old/(.*)",
+        "dest": "$NEW_SITE_URL",
+        "redirect": true,
+        "status": 307,
+        "env": ["NEW_SITE_URL"]
+      }
+    ]
+  }
+}

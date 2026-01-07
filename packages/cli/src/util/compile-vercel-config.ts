@@ -13,7 +13,14 @@ export interface CompileConfigResult {
   sourceFile?: string;
 }
 
-const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
+export const VERCEL_CONFIG_EXTENSIONS = [
+  'ts',
+  'mts',
+  'js',
+  'mjs',
+  'cjs',
+] as const;
+export const DEFAULT_VERCEL_CONFIG_FILENAME = 'Vercel config';
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -66,6 +73,35 @@ async function findVercelConfigFile(workPath: string): Promise<string | null> {
   return foundFiles[0] || null;
 }
 
+function parseConfigLoaderError(stderr: string): string {
+  if (!stderr.trim()) {
+    return '';
+  }
+
+  const moduleNotFoundMatch = stderr.match(
+    /Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^']+)'/
+  );
+  if (moduleNotFoundMatch) {
+    const packageName = moduleNotFoundMatch[1];
+    return `Cannot find package '${packageName}'. Make sure it's installed in your project dependencies.`;
+  }
+
+  const syntaxErrorMatch = stderr.match(/SyntaxError: (.+?)(?:\n|$)/);
+  if (syntaxErrorMatch) {
+    return `Syntax error: ${syntaxErrorMatch[1]}`;
+  }
+
+  const errorMatch = stderr.match(
+    /^(?:Error|TypeError|ReferenceError): (.+?)(?:\n|$)/m
+  );
+  if (errorMatch) {
+    return errorMatch[1];
+  }
+
+  // otherwise just return the error
+  return stderr.trim();
+}
+
 export async function compileVercelConfig(
   workPath: string
 ): Promise<CompileConfigResult> {
@@ -77,18 +113,6 @@ export async function compileVercelConfig(
   // Check for conflicting vercel.json and now.json
   if (hasVercelJson && hasNowJson) {
     throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
-  }
-
-  // Only check for vercel.{ext} if feature flag is enabled
-  if (!process.env.VERCEL_TS_CONFIG_ENABLED) {
-    return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
-      wasCompiled: false,
-    };
   }
 
   const vercelConfigPath = await findVercelConfigFile(workPath);
@@ -112,12 +136,30 @@ export async function compileVercelConfig(
   }
 
   if (!vercelConfigPath) {
+    if (hasVercelJson) {
+      return {
+        configPath: vercelJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (hasNowJson) {
+      return {
+        configPath: nowJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (await fileExists(compiledConfigPath)) {
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
+      };
+    }
+
     return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
+      configPath: null,
       wasCompiled: false,
     };
   }
@@ -157,6 +199,21 @@ export async function compileVercelConfig(
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
+      let stderrOutput = '';
+      let stdoutOutput = '';
+
+      if (child.stderr) {
+        child.stderr.on('data', data => {
+          stderrOutput += data.toString();
+        });
+      }
+
+      if (child.stdout) {
+        child.stdout.on('data', data => {
+          stdoutOutput += data.toString();
+        });
+      }
+
       const timeout = setTimeout(() => {
         child.kill();
         reject(new Error('Config loader timed out after 10 seconds'));
@@ -176,7 +233,21 @@ export async function compileVercelConfig(
       child.on('exit', code => {
         clearTimeout(timeout);
         if (code !== 0) {
-          reject(new Error(`Config loader exited with code ${code}`));
+          if (stderrOutput.trim()) {
+            output.log(stderrOutput);
+          }
+          if (stdoutOutput.trim()) {
+            output.log(stdoutOutput);
+          }
+
+          const parsedError = parseConfigLoaderError(stderrOutput);
+          if (parsedError) {
+            reject(new Error(parsedError));
+          } else if (stdoutOutput.trim()) {
+            reject(new Error(stdoutOutput.trim()));
+          } else {
+            reject(new Error(`Config loader exited with code ${code}`));
+          }
         }
       });
     });
@@ -221,12 +292,16 @@ export async function getVercelConfigPath(workPath: string): Promise<string> {
   const nowJsonPath = join(workPath, 'now.json');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
-  if (await fileExists(compiledConfigPath)) {
-    return compiledConfigPath;
-  }
-
   if (await fileExists(vercelJsonPath)) {
     return vercelJsonPath;
+  }
+
+  if (await fileExists(nowJsonPath)) {
+    return nowJsonPath;
+  }
+
+  if (await fileExists(compiledConfigPath)) {
+    return compiledConfigPath;
   }
 
   return nowJsonPath;

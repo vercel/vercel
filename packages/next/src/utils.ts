@@ -597,6 +597,7 @@ export async function getDynamicRoutes({
                 !prefetchDataRoute);
 
             routes.push({
+              ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 // Now than the upstream issues has been resolved, we can safely
@@ -1969,10 +1970,17 @@ export async function getPageLambdaGroups({
         ),
         pageExtensions,
       });
+      // For App Router, source file is like `step/route.js` so config is at `../config.json`
+      // For Pages Router, source file is like `step.js` so config is at `./config.json`
+      const isAppRouterRoute =
+        sourceFile.endsWith('/route.js') || sourceFile.endsWith('/route.ts');
+      const configRelativePath = isAppRouterRoute
+        ? '../config.json'
+        : './config.json';
       const config = JSON.parse(
         await fs
           .readFile(
-            path.join(entryPath, path.dirname(sourceFile), '../config.json'),
+            path.join(entryPath, path.dirname(sourceFile), configRelativePath),
             'utf8'
           )
           .catch(() => '{}')

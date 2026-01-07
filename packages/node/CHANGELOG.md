@@ -1,5 +1,21 @@
 # @vercel/node
 
+## 5.5.16
+
+### Patch Changes
+
+- Updated dependencies [[`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/build-utils@13.2.4
+
+## 5.5.15
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/build-utils@13.2.3
+
 ## 5.5.14
 
 ### Patch Changes

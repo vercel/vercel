@@ -1,5 +1,21 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.114
+
+### Patch Changes
+
+- Updated dependencies [[`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/build-utils@13.2.4
+
+## 2.0.113
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c)]:
+  - @vercel/build-utils@13.2.3
+
 ## 2.0.112
 
 ### Patch Changes

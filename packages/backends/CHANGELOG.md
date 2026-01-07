@@ -1,5 +1,39 @@
 # @vercel/backends
 
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`65d137b939883f468712f61570f6e6182fd39b27`](https://github.com/vercel/vercel/commit/65d137b939883f468712f61570f6e6182fd39b27)]:
+  - @vercel/introspection@0.0.8
+  - @vercel/cervel@0.0.8
+
+## 0.0.17
+
+### Patch Changes
+
+- Upgrade rolldown ([#14446](https://github.com/vercel/vercel/pull/14446))
+
+- Updated dependencies [[`bc36a99aac6d9400ad158890e54a4e9f7a49d91d`](https://github.com/vercel/vercel/commit/bc36a99aac6d9400ad158890e54a4e9f7a49d91d)]:
+  - @vercel/cervel@0.0.7
+  - @vercel/introspection@0.0.7
+
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`d6d8776c54836244dc8e1c0fc3b1f884fced98a8`](https://github.com/vercel/vercel/commit/d6d8776c54836244dc8e1c0fc3b1f884fced98a8)]:
+  - @vercel/introspection@0.0.7
+
+## 0.0.15
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Updated dependencies [[`6bdbf9e170507a973a53bd881c8c7ecbaa3a930c`](https://github.com/vercel/vercel/commit/6bdbf9e170507a973a53bd881c8c7ecbaa3a930c), [`2c0cdad76930441f92efedcc27a15eb22a2509a3`](https://github.com/vercel/vercel/commit/2c0cdad76930441f92efedcc27a15eb22a2509a3)]:
+  - @vercel/introspection@0.0.6
+
 ## 0.0.14
 
 ### Patch Changes

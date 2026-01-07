@@ -1,5 +1,25 @@
 # @vercel/introspection
 
+## 0.0.8
+
+### Patch Changes
+
+- Add support for 'main' entrypoint and search in `dist` for app entrypoint if a build script is provided ([#14550](https://github.com/vercel/vercel/pull/14550))
+
+## 0.0.7
+
+### Patch Changes
+
+- Fix issue where middleware with splat arg causes all introspection to fail for Hono apps ([#14423](https://github.com/vercel/vercel/pull/14423))
+
+## 0.0.6
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+- Block network IO during introspection. ([#14365](https://github.com/vercel/vercel/pull/14365))
+
 ## 0.0.5
 
 ### Patch Changes
