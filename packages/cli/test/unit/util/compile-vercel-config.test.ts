@@ -85,6 +85,42 @@ describe('normalizeConfig', () => {
     ]);
   });
 
+  it('should preserve statusCode when converting rewrites', () => {
+    const config = {
+      rewrites: [
+        {
+          source: '/api/old',
+          destination: '/api/new',
+          statusCode: 301,
+        },
+        {
+          source: '/public',
+          destination: '/backend',
+          statusCode: 200,
+          respectOriginCacheControl: false,
+        },
+        { src: '/other', dest: '/dest' },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      {
+        src: '/api/old',
+        dest: '/api/new',
+        status: 301,
+      },
+      {
+        src: '/public',
+        dest: '/backend',
+        status: 200,
+        respectOriginCacheControl: false,
+      },
+      { src: '/other', dest: '/dest' },
+    ]);
+  });
+
   it('should normalize redirects array when it contains mixed Redirect and Route formats', () => {
     const config = {
       redirects: [

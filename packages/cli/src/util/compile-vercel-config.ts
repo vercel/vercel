@@ -12,19 +12,30 @@ function isRouteFormat(item: any): boolean {
 }
 
 function toRouteFormat(item: any, isRedirect: boolean): any {
+  const {
+    source,
+    destination,
+    statusCode,
+    permanent,
+    respectOriginCacheControl,
+    ...rest
+  } = item;
+
   const route: any = {
-    src: item.source,
-    dest: item.destination,
+    src: source,
+    dest: destination,
+    ...rest,
   };
-  if (item.has) route.has = item.has;
-  if (item.missing) route.missing = item.missing;
 
   if (isRedirect) {
     route.redirect = true;
-    route.status = item.statusCode || (item.permanent ? 308 : 307);
+    route.status = statusCode || (permanent ? 308 : 307);
   } else {
-    if (item.respectOriginCacheControl !== undefined) {
-      route.respectOriginCacheControl = item.respectOriginCacheControl;
+    if (respectOriginCacheControl !== undefined) {
+      route.respectOriginCacheControl = respectOriginCacheControl;
+    }
+    if (statusCode !== undefined) {
+      route.status = statusCode;
     }
   }
 
