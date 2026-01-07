@@ -303,11 +303,6 @@ export async function getRuntimeNodeVersion(
   const { stdout } = await execAsync('node --version', { cwd: destPath });
   const version = stdout.trim();
   const coercedVersion = coerce(version);
-  console.log({
-    stdout,
-    version,
-    coercedVersion,
-  });
   if (coercedVersion) {
     return getSupportedNodeVersion(
       coercedVersion.raw,
