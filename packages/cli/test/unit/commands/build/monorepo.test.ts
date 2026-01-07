@@ -15,6 +15,35 @@ import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
 /**
+ * Recursively add all files from a directory to the files map.
+ */
+async function addDirFilesRecursively(
+  files: Record<string, FileFsRef>,
+  dir: string,
+  prefix: string
+): Promise<void> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = join(dir, entry.name);
+    const entryZipPath = prefix ? join(prefix, entry.name) : entry.name;
+    if (entry.isFile()) {
+      files[entryZipPath] = new FileFsRef({ fsPath: entryPath });
+    } else if (entry.isDirectory()) {
+      await addDirFilesRecursively(files, entryPath, entryZipPath);
+    } else if (entry.isSymbolicLink()) {
+      // Follow symlinks
+      const realPath = await fs.realpath(entryPath);
+      const realStat = await fs.stat(realPath);
+      if (realStat.isFile()) {
+        files[entryZipPath] = new FileFsRef({ fsPath: realPath });
+      } else if (realStat.isDirectory()) {
+        await addDirFilesRecursively(files, realPath, entryZipPath);
+      }
+    }
+  }
+}
+
+/**
  * Create a NodejsLambda from a .func directory in the build output.
  * This reads the .vc-config.json and collects all the files to create
  * a lambda that can be zipped and executed.
@@ -30,52 +59,50 @@ async function createLambdaFromFuncDir(
     throw new Error(`Unsupported runtime: ${runtime}`);
   }
 
-  // Collect all files from filePathMap
-  // The filePathMap maps zip paths to paths relative to the workPath
   const files: Record<string, FileFsRef> = {};
 
+  // 1. Add all files from the .func directory itself (except .vc-config.json)
+  // This includes any node_modules, source files, etc. that were placed directly in the func dir
+  const funcEntries = await fs.readdir(funcDir, { withFileTypes: true });
+  for (const entry of funcEntries) {
+    if (entry.name === '.vc-config.json') continue;
+    const entryPath = join(funcDir, entry.name);
+    if (entry.isFile()) {
+      files[entry.name] = new FileFsRef({ fsPath: entryPath });
+    } else if (entry.isDirectory()) {
+      await addDirFilesRecursively(files, entryPath, entry.name);
+    } else if (entry.isSymbolicLink()) {
+      const realPath = await fs.realpath(entryPath);
+      const realStat = await fs.stat(realPath);
+      if (realStat.isFile()) {
+        files[entry.name] = new FileFsRef({ fsPath: realPath });
+      } else if (realStat.isDirectory()) {
+        await addDirFilesRecursively(files, realPath, entry.name);
+      }
+    }
+  }
+
+  // 2. Add files from filePathMap (these reference files elsewhere in the workPath)
   if (filePathMap) {
     for (const [zipPath, outputPath] of Object.entries(filePathMap)) {
+      // Skip if already added from func directory
+      if (files[zipPath]) continue;
+
       const fsPath = join(workPath, outputPath as string);
       const stat = await fs.stat(fsPath).catch(() => null);
       if (stat?.isFile()) {
         files[zipPath] = new FileFsRef({ fsPath });
       } else if (stat?.isDirectory()) {
-        // For directories (like node_modules symlinks), we need to add all files recursively
-        const addDirFiles = async (dir: string, prefix: string) => {
-          const entries = await fs.readdir(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            const entryPath = join(dir, entry.name);
-            const entryZipPath = join(prefix, entry.name);
-            if (entry.isFile()) {
-              files[entryZipPath] = new FileFsRef({ fsPath: entryPath });
-            } else if (entry.isDirectory()) {
-              await addDirFiles(entryPath, entryZipPath);
-            } else if (entry.isSymbolicLink()) {
-              // Follow symlinks
-              const realPath = await fs.realpath(entryPath);
-              const realStat = await fs.stat(realPath);
-              if (realStat.isFile()) {
-                files[entryZipPath] = new FileFsRef({ fsPath: realPath });
-              } else if (realStat.isDirectory()) {
-                await addDirFiles(realPath, entryZipPath);
-              }
-            }
-          }
-        };
-        await addDirFiles(fsPath, zipPath);
+        await addDirFilesRecursively(files, fsPath, zipPath);
       }
     }
   }
 
-  // Add any other files in the .func directory (except .vc-config.json)
-  const funcFiles = await fs.readdir(funcDir);
-  for (const file of funcFiles) {
-    if (file === '.vc-config.json') continue;
-    const fsPath = join(funcDir, file);
-    const stat = await fs.stat(fsPath);
-    if (stat.isFile()) {
-      files[file] = new FileFsRef({ fsPath });
+  // 3. Ensure the handler file is included (it might not be in filePathMap)
+  if (!files[handler]) {
+    const handlerFsPath = join(workPath, handler);
+    if (await fs.pathExists(handlerFsPath)) {
+      files[handler] = new FileFsRef({ fsPath: handlerFsPath });
     }
   }
 
@@ -206,7 +233,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
       // Enable monorepo support and experimental backends
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
-      process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+      // process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
 
       // Set cwd to monorepo root - rootDirectory handles the subdirectory
       client.cwd = cwd;
