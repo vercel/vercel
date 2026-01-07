@@ -934,6 +934,7 @@ async function doBuild(
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
+  let deploymentId: string | undefined;
   if (existingConfig) {
     if (
       'deploymentId' in existingConfig &&
