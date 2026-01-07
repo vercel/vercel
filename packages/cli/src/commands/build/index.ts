@@ -938,14 +938,23 @@ async function doBuild(
     // Validate deploymentId if present (user-configured for skew protection)
     if (
       'deploymentId' in existingConfig &&
-      typeof existingConfig.deploymentId === 'string' &&
-      existingConfig.deploymentId.startsWith('dpl_')
+      typeof existingConfig.deploymentId === 'string'
     ) {
-      throw new NowBuildError({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: `The deploymentId "${existingConfig.deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-      });
+      const deploymentId = existingConfig.deploymentId;
+      if (deploymentId.startsWith('dpl_')) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
+      if (deploymentId.length > 32) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
     }
 
     if (existingConfig.overrides) {
