@@ -24,7 +24,7 @@ export interface DeploymentUrlOptions {
 export interface DeploymentUrlResult {
   fullUrl: string;
   deploymentProtectionToken: string | null;
-  link: ProjectLinked;
+  link: ProjectLinked | null;
 }
 
 export interface CommandSetupResult {
@@ -129,10 +129,27 @@ export async function getDeploymentUrlAndToken(
   client: Client,
   commandName: string,
   path: string,
-  options: DeploymentUrlOptions
+  options: DeploymentUrlOptions,
+  isFullUrl: boolean = false
 ): Promise<DeploymentUrlResult | number> {
   const { deploymentFlag, protectionBypassFlag } = options;
 
+  // If a full URL is provided, skip all project linking and API calls for speed
+  if (isFullUrl) {
+    const fullUrl = path;
+    output.debug(`${chalk.cyan('Target URL:')} ${chalk.bold(fullUrl)}`);
+
+    // Only use protection bypass if explicitly provided via flag
+    const deploymentProtectionToken = protectionBypassFlag || null;
+
+    return {
+      fullUrl,
+      deploymentProtectionToken,
+      link: null,
+    };
+  }
+
+  // For relative paths, continue with existing project-based logic
   let link;
   let scope;
 
@@ -172,6 +189,11 @@ export async function getDeploymentUrlAndToken(
   if (linkedProject.status !== 'linked') {
     output.error('This command requires a linked project. Please run:');
     output.print('  vercel link');
+    output.print('');
+    output.print('Or use a full URL instead:');
+    output.print(
+      `  ${getCommandName(commandName)} https://example.com/api/hello`
+    );
     return 1;
   }
 

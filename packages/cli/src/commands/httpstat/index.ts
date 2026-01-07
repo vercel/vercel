@@ -22,13 +22,17 @@ export default async function httpstat(client: Client): Promise<number> {
 
   const { path, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
     setup;
-  // isFullUrl will be used in a follow-up PR
-  void isFullUrl;
 
-  const result = await getDeploymentUrlAndToken(client, 'httpstat', path, {
-    deploymentFlag,
-    protectionBypassFlag,
-  });
+  const result = await getDeploymentUrlAndToken(
+    client,
+    'httpstat',
+    path,
+    {
+      deploymentFlag,
+      protectionBypassFlag,
+    },
+    isFullUrl
+  );
 
   if (typeof result === 'number') {
     return result;
