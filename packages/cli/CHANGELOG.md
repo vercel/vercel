@@ -1,5 +1,35 @@
 # vercel
 
+## 50.1.6
+
+### Patch Changes
+
+- Don't allow prefix of `dpl_` for prebuilt IDs ([#14496](https://github.com/vercel/vercel/pull/14496))
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.18
+  - @vercel/express@0.1.22
+
+## 50.1.5
+
+### Patch Changes
+
+- Disable Sentry session tracking ([#14539](https://github.com/vercel/vercel/pull/14539))
+
+## 50.1.4
+
+### Patch Changes
+
+- Use more accurate config file name in errors ([#14482](https://github.com/vercel/vercel/pull/14482))
+
+- Fix issue when VERCEL_BACKENDS_BUILDS was enabled where non-backend projects wrote v2 outputs ([#14469](https://github.com/vercel/vercel/pull/14469))
+
+- Updated dependencies [[`ccfb9debe22cc8a75685df7d6e99ba180b2438f3`](https://github.com/vercel/vercel/commit/ccfb9debe22cc8a75685df7d6e99ba180b2438f3), [`d4490e7ffbf47a6efb87fe3b66b6368fb0ac9d3b`](https://github.com/vercel/vercel/commit/d4490e7ffbf47a6efb87fe3b66b6368fb0ac9d3b), [`dcd9ee12bc21e68b4fcf1b89455bc4c3dc34b5cd`](https://github.com/vercel/vercel/commit/dcd9ee12bc21e68b4fcf1b89455bc4c3dc34b5cd)]:
+  - @vercel/next@4.15.10
+  - @vercel/go@3.3.0
+  - @vercel/python@6.1.6
+  - @vercel/node@5.5.16
+
 ## 50.1.3
 
 ### Patch Changes
