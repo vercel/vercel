@@ -375,7 +375,14 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new NowBuildError({
-      message: `The file "${pathRoutesManifest}" couldn't be found. This is often caused by a misconfiguration in your project.`,
+      message:
+        `The file "${pathRoutesManifest}" couldn't be found. ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. The "Output Directory" setting in your project is misconfigured. ` +
+        `Ensure it matches your Next.js "distDir" configuration (defaults to ".next").\n\n` +
+        `2. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add ".next/**" (or your custom distDir) to the "outputs" array in turbo.json for the build task.\n\n` +
+        `3. The build command did not complete successfully. Check the build logs above for errors.`,
       link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
