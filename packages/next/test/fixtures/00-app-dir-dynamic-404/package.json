@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "https://files-fw3wmuau3-vtest314-ijjk-testing.vercel.app",
+    "next": "https://github.com/vercel/next.js/actions/runs/20800165539/artifacts/5056546416",
     "react": "latest",
     "react-dom": "latest"
   },
