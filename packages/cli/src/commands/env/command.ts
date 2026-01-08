@@ -47,8 +47,6 @@ export const addSubcommand = {
   options: [
     {
       name: 'target',
-      description:
-        'Specify environment target: development | preview | production | <custom-id>',
       shorthand: null,
       type: [String],
       argument: 'TARGET',
@@ -56,8 +54,6 @@ export const addSubcommand = {
     },
     {
       name: 'git-branch',
-      description:
-        'Specify the Git branch for preview-scoped variables (optional)',
       shorthand: null,
       type: String,
       argument: 'NAME',
@@ -65,7 +61,6 @@ export const addSubcommand = {
     },
     {
       name: 'value',
-      description: 'Provide the value directly (use with care)',
       shorthand: null,
       type: String,
       argument: 'VALUE',
@@ -73,8 +68,6 @@ export const addSubcommand = {
     },
     {
       name: 'value-file',
-      description:
-        'Read the value from a file (raw bytes, no trimming performed)',
       shorthand: null,
       type: String,
       argument: 'FILE',
@@ -82,8 +75,6 @@ export const addSubcommand = {
     },
     {
       name: 'value-stdin',
-      description:
-        'Read the value from stdin (raw bytes, no trimming performed)',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -102,8 +93,6 @@ export const addSubcommand = {
     },
     {
       name: 'replace',
-      description:
-        'Alias for --force. Replace value when a variable already exists.',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -130,18 +119,6 @@ export const addSubcommand = {
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
       ],
-    },
-    {
-      name: 'Add using flags in non-interactive contexts',
-      value: `${packageName} env add API_TOKEN --target=development --value="secret" --non-interactive`,
-    },
-    {
-      name: 'Add a value from stdin safely (no newline trimming)',
-      value: `printf "dev:chess:" | ${packageName} env add REDIS_PREFIX --target=development --value-stdin`,
-    },
-    {
-      name: 'Add a value from a file',
-      value: `${packageName} env add API_URL --target=production --value-file ./url.txt`,
     },
     {
       name: 'Override an existing Environment Variable of same target (production, preview, deployment)',
