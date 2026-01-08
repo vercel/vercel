@@ -342,6 +342,13 @@ type RoutesManifestOld = {
    * as though pages router were being used.
    */
   appType?: 'app' | 'pages' | 'hybrid';
+  /**
+   * User-configured deployment ID for skew protection.
+   * This allows users to specify a custom deployment identifier
+   * in their next.config.js that will be used for version skew protection
+   * with pre-built deployments.
+   */
+  deploymentId?: string;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
