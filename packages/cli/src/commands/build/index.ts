@@ -1008,6 +1008,25 @@ async function doBuild(
     existingConfig?.deploymentId,
     buildResults.values()
   );
+
+  // Validate merged deploymentId if present (from build results)
+  if (mergedDeploymentId) {
+    if (mergedDeploymentId.startsWith('dpl_')) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+    if (mergedDeploymentId.length > 32) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+  }
+
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
