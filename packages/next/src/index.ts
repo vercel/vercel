@@ -703,6 +703,7 @@ export const build: BuildV2 = async buildOptions => {
   let hasPages404 = false;
   let buildId = '';
   let escapedBuildId = '';
+  let deploymentId: string | undefined;
 
   if (isLegacy || isSharedLambdas || isServerMode) {
     try {
@@ -718,6 +719,12 @@ export const build: BuildV2 = async buildOptions => {
           'The BUILD_ID file was not found in the Output Directory. Did you forget to run "next build" in your Build Command?',
       });
     }
+  }
+
+  // Read user-configured deploymentId from routes-manifest.json
+  // This is the standard location for build metadata in Next.js
+  if (routesManifest?.deploymentId) {
+    deploymentId = routesManifest.deploymentId;
   }
 
   if (routesManifest) {
@@ -1112,6 +1119,7 @@ export const build: BuildV2 = async buildOptions => {
           : []),
       ],
       framework: { version: nextVersion },
+      ...(deploymentId && { deploymentId }),
     };
   }
 
@@ -2928,6 +2936,7 @@ export const build: BuildV2 = async buildOptions => {
           ]),
     ],
     framework: { version: nextVersion },
+    ...(deploymentId && { deploymentId }),
   };
 };
 
