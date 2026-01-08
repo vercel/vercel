@@ -1719,9 +1719,7 @@ fs.writeFileSync(
     const builds = await fs.readJSON(join(output, 'builds.json'));
     expect(builds.error).toMatchObject({
       code: 'INVALID_DEPLOYMENT_ID',
-      message: expect.stringContaining(
-        'deploymentId cannot start with the "dpl_" prefix'
-      ),
+      message: expect.stringContaining('cannot start with the "dpl_" prefix'),
     });
   });
 
@@ -1821,9 +1819,7 @@ fs.writeFileSync(
     const builds = await fs.readJSON(join(output, 'builds.json'));
     expect(builds.error).toMatchObject({
       code: 'INVALID_DEPLOYMENT_ID',
-      message: expect.stringContaining(
-        'deploymentId must be 32 characters or less'
-      ),
+      message: expect.stringContaining('must be 32 characters or less'),
     });
   });
 
