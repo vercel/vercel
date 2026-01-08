@@ -8,6 +8,8 @@ const PRIMARY_INDEX_NAME = 'primary';
 const EXTRA_INDEX_PREFIX = 'extra-';
 
 import { normalize } from 'node:path';
+import { EOL } from 'node:os';
+
 import type {
   EnvironmentMarker,
   EnvironmentMarkerLeaf,
@@ -147,7 +149,7 @@ function extractPipArguments(fileContent: string): {
     extraIndexUrls: [],
   };
 
-  const lines = fileContent.split('\n');
+  const lines = fileContent.split(/\r?\n/);
   const cleanedLines: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -193,7 +195,7 @@ function extractPipArguments(fileContent: string): {
   }
 
   return {
-    cleanedContent: cleanedLines.join('\n'),
+    cleanedContent: cleanedLines.join(EOL),
     options,
   };
 }
@@ -520,7 +522,7 @@ function parseRequirementsFileInternal(
  */
 function buildHashMap(fileContent: string): Map<string, HashDigest[]> {
   const hashMap = new Map<string, HashDigest[]>();
-  const lines = fileContent.split('\n');
+  const lines = fileContent.split(/\r?\n/);
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();

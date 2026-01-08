@@ -401,7 +401,7 @@ async function loadPythonManifest(
           'requirements-frozen.txt',
           'requirements.txt',
           'requirements.in',
-          'requirements/prod.txt',
+          path.join('requirements', 'prod.txt'),
         ]) {
           const requirementsTxtManifest = await maybeLoadRequirementsTxt(
             root,
@@ -436,7 +436,7 @@ async function maybeLoadPyProjectToml(
       throw error;
     }
     throw new PythonAnalysisError({
-      message: `Failed to parse pyproject.toml: ${error instanceof Error ? error.message : String(error)}`,
+      message: `could not parse pyproject.toml: ${error instanceof Error ? error.message : String(error)}`,
       code: 'PYTHON_PYPROJECT_PARSE_ERROR',
       path: pyprojectTomlRelPath,
     });
@@ -459,7 +459,7 @@ async function maybeLoadPyProjectToml(
       throw error;
     }
     throw new PythonAnalysisError({
-      message: `Failed to parse uv.toml: ${error instanceof Error ? error.message : String(error)}`,
+      message: `could not parse uv.toml: ${error instanceof Error ? error.message : String(error)}`,
       code: 'PYTHON_UV_CONFIG_PARSE_ERROR',
       path: uvTomlRelPath,
     });
@@ -494,7 +494,7 @@ async function maybeLoadPipfile(
       throw error;
     }
     throw new PythonAnalysisError({
-      message: `Failed to parse Pipfile: ${error instanceof Error ? error.message : String(error)}`,
+      message: `could not parse Pipfile: ${error instanceof Error ? error.message : String(error)}`,
       code: 'PYTHON_PIPFILE_PARSE_ERROR',
       path: pipfileRelPath,
     });
@@ -531,7 +531,7 @@ async function maybeLoadPipfileLock(
       throw error;
     }
     throw new PythonAnalysisError({
-      message: `Failed to parse Pipfile.lock: ${error instanceof Error ? error.message : String(error)}`,
+      message: `could not parse Pipfile.lock: ${error instanceof Error ? error.message : String(error)}`,
       code: 'PYTHON_PIPFILE_LOCK_PARSE_ERROR',
       path: pipfileLockRelPath,
     });
@@ -584,7 +584,7 @@ async function maybeLoadRequirementsTxt(
       throw error;
     }
     throw new PythonAnalysisError({
-      message: `Failed to parse ${fileName}: ${error instanceof Error ? error.message : String(error)}`,
+      message: `could not parse ${fileName}: ${error instanceof Error ? error.message : String(error)}`,
       code: 'PYTHON_REQUIREMENTS_PARSE_ERROR',
       path: requirementsTxtRelPath,
     });
@@ -625,7 +625,7 @@ async function maybeLoadPythonRequest(
   const pyreq = parsePythonVersionFile(data);
   if (pyreq === null) {
     throw new PythonAnalysisError({
-      message: `Failed to parse .python-version file: no valid Python version requests found`,
+      message: `could not parse .python-version file: no valid Python version requests found`,
       code: 'PYTHON_VERSION_FILE_PARSE_ERROR',
       path: dotPythonVersionRelPath,
     });

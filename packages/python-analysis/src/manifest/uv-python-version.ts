@@ -186,7 +186,7 @@ function tryParsePlatformRequest(raw: string): PythonRequest | null {
   let os;
   let arch;
   let libc;
-  // Track if we failed to parse implementation or version - these are critical
+  // Track if we could not parse implementation or version - these are critical
   let implOrVersionFailed = false;
 
   for (;;) {
@@ -268,7 +268,7 @@ function tryParsePlatformRequest(raw: string): PythonRequest | null {
     }
   }
 
-  // If we failed to parse both implementation and version, this is not a valid platform request
+  // If we could not parse both implementation and version, this is not a valid platform request
   if (
     implOrVersionFailed &&
     implementation === undefined &&
