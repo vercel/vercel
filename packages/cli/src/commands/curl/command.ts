@@ -4,7 +4,7 @@ export const curlCommand = {
   name: 'curl',
   aliases: [],
   description:
-    'Execute curl with automatic deployment URL and protection bypass.',
+    'Execute curl with automatic deployment URL and protection bypass. Works with full URLs or relative paths.',
   arguments: [
     {
       name: 'path',
@@ -32,12 +32,20 @@ export const curlCommand = {
   ],
   examples: [
     {
-      name: 'Make a GET request to an API endpoint',
+      name: 'Use a full URL directly (fast, no project linking required)',
+      value: `${packageName} curl https://example.com/api/hello`,
+    },
+    {
+      name: 'Make a GET request to an API endpoint (relative path)',
       value: `${packageName} curl /api/hello`,
     },
     {
       name: 'Make a POST request with data',
       value: `${packageName} curl /api/users -- --request POST --data '{"name": "John"}'`,
+    },
+    {
+      name: 'Use full URL with curl flags',
+      value: `${packageName} curl https://api.example.com/data -- --header "Content-Type: application/json" --request POST`,
     },
     {
       name: 'Target a specific deployment by ID',

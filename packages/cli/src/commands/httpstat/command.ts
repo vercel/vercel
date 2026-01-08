@@ -4,7 +4,7 @@ export const httpstatCommand = {
   name: 'httpstat',
   aliases: [],
   description:
-    'Execute httpstat with automatic deployment URL and protection bypass to visualize HTTP timing statistics.',
+    'Execute httpstat with automatic deployment URL and protection bypass to visualize HTTP timing statistics. Works with full URLs or relative paths.',
   arguments: [
     {
       name: 'path',
@@ -32,12 +32,20 @@ export const httpstatCommand = {
   ],
   examples: [
     {
+      name: 'Use a full URL directly (fast, no project linking required)',
+      value: `${packageName} httpstat https://example.com/api/hello`,
+    },
+    {
       name: 'Visualize timing for a GET request to an API endpoint',
       value: `${packageName} httpstat /api/hello`,
     },
     {
       name: 'Make a POST request with data and see timing details',
       value: `${packageName} httpstat /api/users -- -X POST -d '{"name": "John"}'`,
+    },
+    {
+      name: 'Use full URL with httpstat flags',
+      value: `${packageName} httpstat https://api.example.com/data -- -X POST -H "Content-Type: application/json"`,
     },
     {
       name: 'Target a specific deployment by ID',
