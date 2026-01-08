@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@jimmy/common": "^1.0.64",
-    "next": "https://vercel-packages.vercel.app/next/commits/5dee0aa554a3a5ede3239015e41438428c909179/next",
+    "next": "canary",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   },
