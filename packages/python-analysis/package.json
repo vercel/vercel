@@ -15,8 +15,7 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/*.test.ts'",
+    "test-unit": "pnpm test test/unit.test.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
