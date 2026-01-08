@@ -1633,7 +1633,7 @@ export default class DevServer {
         missRoutes,
         phase,
         req,
-        this.envConfigs.allEnv
+        this.envValues
       );
 
       if (routeResult.continue) {
@@ -1692,7 +1692,7 @@ export default class DevServer {
           [],
           'miss',
           req,
-          this.envConfigs.allEnv
+          this.envValues
         );
 
         match = await findBuildMatch(
@@ -1728,7 +1728,7 @@ export default class DevServer {
           [],
           'hit',
           req,
-          this.envConfigs.allEnv
+          this.envValues
         );
         routeResult.status = prevStatus;
       }
@@ -1758,7 +1758,7 @@ export default class DevServer {
         [],
         'error',
         req,
-        this.envConfigs.allEnv
+        this.envValues
       );
       const { matched_route } = routeResultForError;
 
@@ -1879,7 +1879,7 @@ export default class DevServer {
         undefined,
         undefined,
         req,
-        this.envConfigs.allEnv
+        this.envValues
       );
       if (matchedRoute.found && callLevel === 0) {
         debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
