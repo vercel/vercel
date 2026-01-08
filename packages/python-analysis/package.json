@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
-    "test-unit": "pnpm test test/unit.test.ts",
+    "test-unit": "pnpm test test/*.test.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
