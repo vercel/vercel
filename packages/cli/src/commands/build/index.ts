@@ -14,6 +14,7 @@ import {
   NowBuildError,
   runNpmInstall,
   runCustomInstallCommand,
+  resetCustomInstallCommandSet,
   type Reporter,
   Span,
   type TraceEvent,
@@ -389,6 +390,12 @@ export default async function main(client: Client): Promise<number> {
     for (const key of envToUnset) {
       delete process.env[key];
     }
+
+    // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
+    delete process.env.VERCEL_INSTALL_COMPLETED;
+
+    // Reset customInstallCommandSet to allow subsequent builds in the same process
+    resetCustomInstallCommandSet();
   }
 }
 
@@ -437,6 +444,7 @@ async function doBuild(
         project.settings.createdAt
       );
     }
+    process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
   const compileResult = await compileVercelConfig(workPath);
