@@ -8,7 +8,6 @@ const PRIMARY_INDEX_NAME = 'primary';
 const EXTRA_INDEX_PREFIX = 'extra-';
 
 import { normalize } from 'node:path';
-import { EOL } from 'node:os';
 
 import type {
   EnvironmentMarker,
@@ -195,7 +194,7 @@ function extractPipArguments(fileContent: string): {
   }
 
   return {
-    cleanedContent: cleanedLines.join(EOL),
+    cleanedContent: cleanedLines.join('\n'),
     options,
   };
 }
