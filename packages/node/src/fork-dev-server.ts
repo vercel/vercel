@@ -85,14 +85,18 @@ export async function forkDevServer(options: {
 
     if (options.maybeTranspile) {
       if (options.isTypeScript) {
-        nodeOptions = `--require "${cjsLoader}" --loader "${esmLoader}" ${
+        // Normalize paths to use forward slashes for cross-platform compatibility
+        const normalizedCjsLoader = cjsLoader.replace(/\\/g, '/');
+        nodeOptions = `--require "${normalizedCjsLoader}" --loader "${esmLoader}" ${
           nodeOptions || ''
         }`;
       } else {
         if (options.isEsm) {
           // no transform needed because Node.js supports ESM natively
         } else {
-          nodeOptions = `--require "${cjsLoader}" ${nodeOptions || ''}`;
+          // Normalize paths to use forward slashes for cross-platform compatibility
+          const normalizedCjsLoader = cjsLoader.replace(/\\/g, '/');
+          nodeOptions = `--require "${normalizedCjsLoader}" ${nodeOptions || ''}`;
         }
       }
     }
