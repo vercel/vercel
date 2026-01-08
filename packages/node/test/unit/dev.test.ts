@@ -617,12 +617,6 @@ test('forkDevServer should quote paths with spaces in NODE_OPTIONS', async () =>
   });
 
   try {
-    // Check that NODE_OPTIONS has properly quoted paths
-    const env = (child as any).spawnargs || [];
-    const nodeOptions = child.spawnfile?.includes('node')
-      ? process.env.NODE_OPTIONS
-      : (child as any)?.env?.NODE_OPTIONS;
-
     // The child process should start successfully even with spaces in the path
     // If the paths weren't quoted, Node would fail to start
     expect(child.pid).toBeDefined();
