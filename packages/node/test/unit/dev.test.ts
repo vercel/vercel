@@ -617,9 +617,11 @@ test('forkDevServer should quote paths with spaces in NODE_OPTIONS', async () =>
   });
 
   try {
-    // The child process should start successfully even with spaces in the path
-    // If the paths weren't quoted, Node would fail to start
-    expect(child.pid).toBeDefined();
+    // The server should start successfully even with spaces in the path
+    // If the paths weren't quoted, Node would fail with "Cannot find module"
+    const result = await readMessage(child);
+    expect(result.state).toBe('message');
+    expect(result.value.port).toBeGreaterThan(0);
   } finally {
     child.kill(9);
   }
