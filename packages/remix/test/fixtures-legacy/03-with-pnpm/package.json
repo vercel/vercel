@@ -10,7 +10,7 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/react": "1.10.0",
+    "@remix-run/react": "2.17.3",
     "@remix-run/serve": "1.10.0",
     "react": "18.2.0",
     "react-dom": "18.2.0"

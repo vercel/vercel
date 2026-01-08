@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@remix-run/css-bundle": "2.6.0",
-    "@remix-run/node": "2.6.0",
-    "@remix-run/react": "2.6.0",
+    "@remix-run/node": "2.17.3",
+    "@remix-run/react": "2.17.3",
     "@remix-run/serve": "2.6.0",
     "@vercel/remix": "2.5.1",
     "isbot": "^4",

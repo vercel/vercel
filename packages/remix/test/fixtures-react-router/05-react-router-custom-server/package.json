@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@react-router/express": "^7.1.5",
-    "@react-router/node": "^7.1.5",
+    "@react-router/node": "^7.9.4",
     "@react-router/serve": "^7.1.5",
     "@vercel/react-router": "^1.0.2",
     "express": "^4.21.2",

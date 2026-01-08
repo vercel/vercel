@@ -24,8 +24,8 @@
     "@vercel/error-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
-    "glob": "8.0.3",
-    "js-yaml": "4.1.0",
+    "glob": "9.0.0",
+    "js-yaml": "3.14.2",
     "json5": "2.2.2",
     "minimatch": "3.1.2",
     "semver": "6.3.1"

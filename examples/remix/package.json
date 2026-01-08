@@ -9,9 +9,9 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@remix-run/node": "2.10.0",
-    "@remix-run/react": "2.10.0",
-    "@remix-run/server-runtime": "2.10.0",
+    "@remix-run/node": "2.17.3",
+    "@remix-run/react": "2.17.3",
+    "@remix-run/server-runtime": "2.17.3",
     "@vercel/analytics": "^1.2.2",
     "@vercel/remix": "2.10.0",
     "isbot": "^4",

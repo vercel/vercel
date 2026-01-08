@@ -21,7 +21,7 @@
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
     "@vercel/build-utils": "workspace:*",
-    "esbuild": "0.14.47",
+    "esbuild": "0.25.0",
     "etag": "1.8.1",
     "fs-extra": "11.1.0"
   },

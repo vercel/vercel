@@ -7,8 +7,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@remix-run/node": "^1.14.0",
-    "@remix-run/react": "^1.14.0",
+    "@remix-run/node": "^2.17.3",
+    "@remix-run/react": "^2.17.3",
     "@remix-run/vercel": "^1.14.0",
     "@vercel/node": "^2.6.2",
     "react": "^18.2.0",
