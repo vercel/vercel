@@ -7,6 +7,6 @@ fs.writeFileSync(
   join(outputDir, 'config.json'),
   JSON.stringify({
     version: 3,
-    deploymentId: 'my-deployment-123',
+    deploymentId: '12345678901234567890123456789012',
   }, null, 2)
 );
