@@ -1713,7 +1713,7 @@ fs.writeFileSync(
     expect(exitCode).toEqual(1);
 
     await expect(client.stderr).toOutput(
-      'The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
+      'cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
     );
 
     const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -1815,7 +1815,7 @@ fs.writeFileSync(
     expect(exitCode).toEqual(1);
 
     await expect(client.stderr).toOutput(
-      'The deploymentId must be 32 characters or less. Please choose a shorter deploymentId in your config'
+      'must be 32 characters or less. Please choose a shorter deploymentId in your config'
     );
 
     const builds = await fs.readJSON(join(output, 'builds.json'));
