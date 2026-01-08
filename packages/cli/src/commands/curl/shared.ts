@@ -135,8 +135,8 @@ export async function getDeploymentUrlAndToken(
 ): Promise<DeploymentUrlResult | number> {
   const { deploymentFlag, protectionBypassFlag } = options;
 
-  // If a full URL is provided, try fast path first (no project linking)
-  // For Vercel deployments, try to get protection bypass if we're in a linked project
+  // If a full URL is provided, use fast path (no project linking)
+  // Protection bypass will be handled by retry logic in the command handlers
   if (isFullUrl) {
     // Warn if deployment flag is provided with a full URL, as it will be ignored
     if (deploymentFlag) {
@@ -148,31 +148,9 @@ export async function getDeploymentUrlAndToken(
     const fullUrl = path;
     output.debug(`${chalk.cyan('Target URL:')} ${chalk.bold(fullUrl)}`);
 
-    // Use protection bypass if explicitly provided via flag
-    let deploymentProtectionToken = protectionBypassFlag || null;
-
-    // For Vercel deployments, try to get protection bypass token if we're in a linked project
-    // This is still relatively fast since we're already linked
-    if (!deploymentProtectionToken && fullUrl.includes('.vercel.app')) {
-      try {
-        const linkedProject = await getLinkedProject(client, client.cwd);
-        if (linkedProject.status === 'linked' && linkedProject.project?.id) {
-          try {
-            const link = await ensureLink(commandName, client, client.cwd);
-            if (typeof link !== 'number' && link.project.id) {
-              deploymentProtectionToken =
-                await getOrCreateDeploymentProtectionToken(client, link);
-            }
-          } catch {
-            // If linking fails, continue without protection bypass
-            // User can still provide it via --protection-bypass flag
-          }
-        }
-      } catch {
-        // If we can't get linked project, continue without protection bypass
-        // This keeps the fast path fast when not in a linked project
-      }
-    }
+    // Only use protection bypass if explicitly provided via flag
+    // Otherwise, command handlers will try fast path first and retry with slow path if needed
+    const deploymentProtectionToken = protectionBypassFlag || null;
 
     return {
       fullUrl,
