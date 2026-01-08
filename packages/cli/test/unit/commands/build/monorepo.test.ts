@@ -4,7 +4,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { mkdtemp, writeFile, rm } from 'fs/promises';
 import execa from 'execa';
-import { FileFsRef, NodejsLambda } from '@vercel/build-utils';
+import { FileFsRef, NodejsLambda, glob } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -15,103 +15,55 @@ import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
 /**
- * Recursively add all files from a directory to the files map.
+ * Hydrate files map by adding FileFsRef entries for each filePathMap entry.
+ * Based on the API's hydrateFilesMap function.
  */
-async function addDirFilesRecursively(
+async function hydrateFilesMap(
   files: Record<string, FileFsRef>,
-  dir: string,
-  prefix: string
+  filePathMap: Record<string, string>,
+  repoRootPath: string
 ): Promise<void> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const entryPath = join(dir, entry.name);
-    const entryZipPath = prefix ? join(prefix, entry.name) : entry.name;
-    if (entry.isFile()) {
-      files[entryZipPath] = new FileFsRef({ fsPath: entryPath });
-    } else if (entry.isDirectory()) {
-      await addDirFilesRecursively(files, entryPath, entryZipPath);
-    } else if (entry.isSymbolicLink()) {
-      // Follow symlinks
-      const realPath = await fs.realpath(entryPath);
-      const realStat = await fs.stat(realPath);
-      if (realStat.isFile()) {
-        files[entryZipPath] = new FileFsRef({ fsPath: realPath });
-      } else if (realStat.isDirectory()) {
-        await addDirFilesRecursively(files, realPath, entryZipPath);
-      }
-    }
+  for (const [funcPath, projectPath] of Object.entries(filePathMap)) {
+    const fsPath = join(repoRootPath, projectPath);
+    files[funcPath] = await FileFsRef.fromFsPath({ fsPath });
   }
 }
 
 /**
  * Create a NodejsLambda from a .func directory in the build output.
- * This reads the .vc-config.json and collects all the files to create
- * a lambda that can be zipped and executed.
+ * Based on the API's deserializeLambda function.
  */
 async function createLambdaFromFuncDir(
   funcDir: string,
   workPath: string // The monorepo root where the build was run
 ): Promise<NodejsLambda> {
   const vcConfig = await fs.readJSON(join(funcDir, '.vc-config.json'));
-  const { handler, runtime, filePathMap } = vcConfig;
+  const { handler, runtime, filePathMap, ...restConfig } = vcConfig;
 
   if (!runtime?.startsWith('nodejs')) {
     throw new Error(`Unsupported runtime: ${runtime}`);
   }
 
-  const files: Record<string, FileFsRef> = {};
+  // Use glob to get all files from the .func directory (like the API does)
+  const files = await glob('**', { cwd: funcDir, includeDirectories: true });
+  delete files['.vc-config.json'];
 
-  // 1. Add all files from the .func directory itself (except .vc-config.json)
-  // This includes any node_modules, source files, etc. that were placed directly in the func dir
-  const funcEntries = await fs.readdir(funcDir, { withFileTypes: true });
-  for (const entry of funcEntries) {
-    if (entry.name === '.vc-config.json') continue;
-    const entryPath = join(funcDir, entry.name);
-    if (entry.isFile()) {
-      files[entry.name] = new FileFsRef({ fsPath: entryPath });
-    } else if (entry.isDirectory()) {
-      await addDirFilesRecursively(files, entryPath, entry.name);
-    } else if (entry.isSymbolicLink()) {
-      const realPath = await fs.realpath(entryPath);
-      const realStat = await fs.stat(realPath);
-      if (realStat.isFile()) {
-        files[entry.name] = new FileFsRef({ fsPath: realPath });
-      } else if (realStat.isDirectory()) {
-        await addDirFilesRecursively(files, realPath, entry.name);
-      }
-    }
-  }
-
-  // 2. Add files from filePathMap (these reference files elsewhere in the workPath)
+  // Hydrate files from filePathMap
   if (filePathMap) {
-    for (const [zipPath, outputPath] of Object.entries(filePathMap)) {
-      // Skip if already added from func directory
-      if (files[zipPath]) continue;
-
-      const fsPath = join(workPath, outputPath as string);
-      const stat = await fs.stat(fsPath).catch(() => null);
-      if (stat?.isFile()) {
-        files[zipPath] = new FileFsRef({ fsPath });
-      } else if (stat?.isDirectory()) {
-        await addDirFilesRecursively(files, fsPath, zipPath);
-      }
-    }
-  }
-
-  // 3. Ensure the handler file is included (it might not be in filePathMap)
-  if (!files[handler]) {
-    const handlerFsPath = join(workPath, handler);
-    if (await fs.pathExists(handlerFsPath)) {
-      files[handler] = new FileFsRef({ fsPath: handlerFsPath });
-    }
+    await hydrateFilesMap(
+      files as Record<string, FileFsRef>,
+      filePathMap,
+      workPath
+    );
   }
 
   return new NodejsLambda({
+    ...restConfig,
     files,
     handler,
     runtime,
-    shouldAddHelpers: false,
-    shouldAddSourcemapSupport: false,
+    shouldAddHelpers: restConfig.shouldAddHelpers ?? false,
+    shouldAddSourcemapSupport: restConfig.shouldAddSourcemapSupport ?? false,
   });
 }
 
@@ -209,9 +161,12 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
     delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
   });
 
-  it.skipIf(process.platform === 'win32')(
-    'should build turborepo with hono and workspace dependencies',
-    async () => {
+  it.skipIf(process.platform === 'win32').each([
+    { experimentalBackends: true, expectedBuilder: '@vercel/hono' },
+    // { experimentalBackends: false, expectedBuilder: '@vercel/hono' },
+  ])(
+    'should build turborepo with hono (experimentalBackends=$experimentalBackends)',
+    async ({ experimentalBackends, expectedBuilder }) => {
       // Copy fixture to temp directory to avoid parent package.json/node_modules interference
       const cwd = setupUnitFixture('commands/build/turborepo-hono-monorepo');
       // Output is in the monorepo root .vercel/output since we run from root with rootDirectory
@@ -231,9 +186,11 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
         rootDirectory: 'apps/api',
       });
 
-      // Enable monorepo support and experimental backends
+      // Enable monorepo support
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
-      // process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+      if (experimentalBackends) {
+        process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+      }
 
       // Set cwd to monorepo root - rootDirectory handles the subdirectory
       client.cwd = cwd;
@@ -256,12 +213,9 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       expect(builds.builds).toBeDefined();
       expect(builds.builds.length).toBeGreaterThan(0);
 
-      // Check if @vercel/hono was used (which means experimental backends should have been used)
-      const honoBuilder = builds.builds.find(
-        (b: any) => b.use === '@vercel/hono'
-      );
-      // For now, just verify the build succeeded with hono
-      expect(honoBuilder).toBeDefined();
+      // Check if the expected builder was used
+      const builder = builds.builds.find((b: any) => b.use === expectedBuilder);
+      expect(builder).toBeDefined();
 
       // Verify that turbo built the echo package (its dist should now exist)
       const echoDistAfter = await fs.pathExists(echoDistPath);
@@ -276,7 +230,6 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       // Pass the monorepo root (cwd) since filePathMap paths are relative to workPath
       const lambda = await createLambdaFromFuncDir(indexFuncDir, cwd);
 
-      // Execute the lambda and verify it outputs the expected marker
       await expect(
         extractAndExecuteCode(
           lambda,

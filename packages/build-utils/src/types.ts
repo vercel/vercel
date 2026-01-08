@@ -408,6 +408,7 @@ export interface ProjectSettings {
   outputDirectory?: string | null;
   rootDirectory?: string | null;
   nodeVersion?: string;
+  monorepoManager?: string | null;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;

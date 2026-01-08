@@ -1,7 +1,12 @@
 import { existsSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { BuildOptions } from '@vercel/build-utils';
+import {
+  debug,
+  getScriptName,
+  PackageJson,
+  type BuildOptions,
+} from '@vercel/build-utils';
 import {
   build as cervelBuild,
   findEntrypoint,
@@ -107,9 +112,17 @@ export const doBuild = async (
     };
   }
 
-  // If there's an output directory configured but no build command result, build ourselves
   const outputDir = join(args.workPath, outputSetting);
-  if (!buildCommandResult) {
+
+  const packageJson = await getPackageJson(args.workPath);
+
+  // Monorepo support injects a build command like 'turbo run build', but if
+  // this workspace doesn't have a build script, we need to build ourselves
+  const monorepoWithoutBuildScript =
+    args.config.projectSettings?.monorepoManager &&
+    !getScriptName(packageJson, ['build']);
+
+  if (!buildCommandResult || monorepoWithoutBuildScript) {
     const buildResult = await cervelBuild({
       cwd: args.workPath,
       out: outputDir,
@@ -156,3 +169,14 @@ export const doBuild = async (
     tsPromise,
   };
 };
+
+async function getPackageJson(entryPath: string): Promise<PackageJson> {
+  const packagePath = join(entryPath, 'package.json');
+
+  try {
+    return JSON.parse(await readFile(packagePath, 'utf8'));
+  } catch (err) {
+    debug('package.json not found in entry');
+    return {};
+  }
+}
