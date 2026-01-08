@@ -1,5 +1,5 @@
 {
-  "name": "with-hono",
+  "name": "turborepo-hono-monorepo",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "workspaces": [

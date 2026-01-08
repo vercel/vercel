@@ -1,10 +1,9 @@
 import { existsSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
-  debug,
+  getPackageJson,
   getScriptName,
-  PackageJson,
   type BuildOptions,
 } from '@vercel/build-utils';
 import {
@@ -163,14 +162,3 @@ export const doBuild = async (
     tsPromise,
   };
 };
-
-async function getPackageJson(entryPath: string): Promise<PackageJson> {
-  const packagePath = join(entryPath, 'package.json');
-
-  try {
-    return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
-    debug('package.json not found in entry');
-    return {};
-  }
-}
