@@ -6,7 +6,6 @@
   },
   "dependencies": {
     "@repo/echo": "workspace:*",
-    "@repo/echo-2": "workspace:*",
     "hono": "^4.8.10"
   },
   "devDependencies": {

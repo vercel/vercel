@@ -163,14 +163,54 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
   it.skipIf(process.platform === 'win32').each([
     { experimentalBackends: true, expectedBuilder: '@vercel/hono' },
-    // { experimentalBackends: false, expectedBuilder: '@vercel/hono' },
+    {
+      experimentalBackends: true,
+      expectedBuilder: '@vercel/hono',
+      vercelBuildOverride: true,
+    },
+    {
+      experimentalBackends: true,
+      expectedBuilder: '@vercel/hono',
+      vercelOutputDirectoryOverride: true,
+    },
   ])(
-    'should build turborepo with hono (experimentalBackends=$experimentalBackends)',
-    async ({ experimentalBackends, expectedBuilder }) => {
+    'should build turborepo with hono (experimentalBackends=$experimentalBackends, vercelBuildOverride=$vercelBuildOverride, vercelOutputDirectoryOverride=$vercelOutputDirectoryOverride)',
+    async ({
+      experimentalBackends,
+      expectedBuilder,
+      vercelBuildOverride,
+      vercelOutputDirectoryOverride,
+    }) => {
+      const rootDirectory = 'apps/api';
       // Copy fixture to temp directory to avoid parent package.json/node_modules interference
+
       const cwd = setupUnitFixture('commands/build/turborepo-hono-monorepo');
       // Output is in the monorepo root .vercel/output since we run from root with rootDirectory
       const output = join(cwd, '.vercel/output');
+
+      if (vercelBuildOverride) {
+        await fs.writeFile(
+          join(cwd, rootDirectory, 'vercel.json'),
+          JSON.stringify(
+            {
+              buildCommand: 'turbo build',
+            },
+            null
+          )
+        );
+      }
+      if (vercelOutputDirectoryOverride) {
+        await fs.writeFile(
+          join(cwd, rootDirectory, 'vercel.json'),
+          JSON.stringify(
+            {
+              outputDirectory: 'dist',
+            },
+            null,
+            2
+          )
+        );
+      }
 
       // Remove echo dist if it exists from fixture - we want turbo to build it
       const echoDistPath = join(cwd, 'packages/echo/dist');
@@ -183,7 +223,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
         id: 'prj_turborepo_hono',
         name: 'turborepo-hono-api',
         framework: 'hono',
-        rootDirectory: 'apps/api',
+        rootDirectory,
       });
 
       // Enable monorepo support

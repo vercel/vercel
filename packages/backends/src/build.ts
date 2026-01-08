@@ -33,12 +33,6 @@ export const doBuild = async (
   // If a build command ran but no output directory was configured, that's an error
   // Exception: if the build command is a cervel command, it handles output internally
   const isCervelCommand = buildCommand?.trim().startsWith('cervel');
-  // if (buildCommandResult && !outputSetting && !isCervelCommand) {
-  //   throw new Error(
-  //     'Build command ran successfully, but no "outputDirectory" was configured. ' +
-  //       'Please specify where your build outputs files by setting "outputDirectory" in your vercel.json.'
-  //   );
-  // }
 
   // If there's no output directory configured
   if (!outputSetting) {
