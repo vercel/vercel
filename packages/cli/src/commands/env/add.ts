@@ -66,9 +66,29 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
-  // Track new flags (best-effort; these are non-sensitive unless value is used)
-  if (typeof opts['--target'] === 'string') {
-    telemetryClient.trackCliArgumentEnvironment('[REDACTED]');
+  // Track new flags (best-effort; values redacted where appropriate)
+  {
+    const tf = opts['--target'] as string | string[] | undefined;
+    if (Array.isArray(tf) && tf.length > 0) {
+      telemetryClient.trackCliOptionTarget([tf[0]]);
+    } else if (typeof tf === 'string') {
+      telemetryClient.trackCliOptionTarget([tf]);
+    }
+    if (typeof opts['--git-branch'] === 'string') {
+      telemetryClient.trackCliOptionGitBranch(opts['--git-branch']);
+    }
+    if (typeof opts['--value'] === 'string') {
+      telemetryClient.trackCliOptionValue(opts['--value']);
+    }
+    if (typeof opts['--value-file'] === 'string') {
+      telemetryClient.trackCliOptionValueFile(opts['--value-file']);
+    }
+    if (opts['--value-stdin']) {
+      telemetryClient.trackCliFlagValueStdin(true);
+    }
+    if (opts['--replace']) {
+      telemetryClient.trackCliFlagReplace(true);
+    }
   }
 
   // Validate mutual exclusivity of value flags
@@ -208,12 +228,10 @@ export default async function add(client: Client, argv: string[]) {
       return 1;
     }
   } else if (opts['--value-stdin']) {
+    // Accept empty values for parity with --value and --value-file
     envValue = stdInput;
-    if (!envValue) {
-      output.error(`No data detected on stdin for ${param('--value-stdin')}.`);
-      return 1;
-    }
   } else if (stdInput) {
+    // Back-compat: if a value is piped without --value-stdin, treat it as the value
     envValue = stdInput;
   } else {
     if (type === 'encrypted' && !nonInteractive) {
