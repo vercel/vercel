@@ -42,7 +42,6 @@ export default async function add(client: Client, argv: string[]) {
   const nonInteractive =
     client.argv.includes('--non-interactive') ||
     process.env.VERCEL_NON_INTERACTIVE === '1' ||
-    process.env.CI === '1' ||
     !client.stdin.isTTY ||
     !client.stdout.isTTY;
 
