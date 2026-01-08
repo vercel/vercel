@@ -71,6 +71,14 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
+  {
+    name: 'non-interactive',
+    shorthand: null,
+    type: Boolean,
+    description:
+      'Disable all interactive prompts. Combine with flags to provide required values.',
+    deprecated: false,
+  },
 ] as const;
 
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);
@@ -83,6 +91,15 @@ export const yesOption = {
   type: Boolean,
   deprecated: false,
   description: 'Accept default value for all prompts',
+} as const;
+
+export const nonInteractiveOption = {
+  name: 'non-interactive',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Disable all interactive prompts. Combine with flags to provide required values.',
 } as const;
 
 export const nextOption = {
