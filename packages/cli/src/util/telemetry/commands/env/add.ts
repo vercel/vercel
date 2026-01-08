@@ -8,6 +8,7 @@ export class EnvAddTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addSubcommand>
 {
+  // Arguments
   trackCliArgumentName(name: string | undefined) {
     if (name) {
       this.trackCliArgument({
@@ -39,6 +40,45 @@ export class EnvAddTelemetryClient
     }
   }
 
+  // Options
+  trackCliOptionTarget(targets: [string] | undefined) {
+    if (targets && targets.length > 0) {
+      // Track presence and redact custom envs
+      this.trackCliOption({
+        option: 'target',
+        value: this.redactedTargetName(targets[0]),
+      });
+    }
+  }
+
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionValue(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'value',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionValueFile(file: string | undefined) {
+    if (file) {
+      this.trackCliOption({
+        option: 'value-file',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // Flags
   trackCliFlagSensitive(sensitive: boolean | undefined) {
     if (sensitive) {
       this.trackCliFlag('sensitive');
@@ -48,6 +88,18 @@ export class EnvAddTelemetryClient
   trackCliFlagForce(force: boolean | undefined) {
     if (force) {
       this.trackCliFlag('force');
+    }
+  }
+
+  trackCliFlagReplace(replace: boolean | undefined) {
+    if (replace) {
+      this.trackCliFlag('replace');
+    }
+  }
+
+  trackCliFlagValueStdin(valueStdin: boolean | undefined) {
+    if (valueStdin) {
+      this.trackCliFlag('value-stdin');
     }
   }
 

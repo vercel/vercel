@@ -75,8 +75,6 @@ export const globalCommandOptions = [
     name: 'non-interactive',
     shorthand: null,
     type: Boolean,
-    description:
-      'Disable all interactive prompts. Combine with flags to provide required values.',
     deprecated: false,
   },
 ] as const;
