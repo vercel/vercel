@@ -721,20 +721,10 @@ export const build: BuildV2 = async buildOptions => {
     }
   }
 
-  // Read user-configured deploymentId from .next/deployment-id.txt if present
-  try {
-    const deploymentIdPath = path.join(
-      entryPath,
-      outputDirectory,
-      'deployment-id.txt'
-    );
-    deploymentId = (await readFile(deploymentIdPath, 'utf8')).trim();
-    if (deploymentId === '') {
-      deploymentId = undefined;
-    }
-  } catch (err) {
-    // deployment-id.txt is optional, so we ignore errors if it doesn't exist
-    deploymentId = undefined;
+  // Read user-configured deploymentId from routes-manifest.json
+  // This is the standard location for build metadata in Next.js
+  if (routesManifest?.deploymentId) {
+    deploymentId = routesManifest.deploymentId;
   }
 
   if (routesManifest) {
@@ -1129,6 +1119,7 @@ export const build: BuildV2 = async buildOptions => {
           : []),
       ],
       framework: { version: nextVersion },
+      ...(deploymentId && { deploymentId }),
     };
   }
 
