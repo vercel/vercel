@@ -1,6 +1,9 @@
-import { readFile, writeFile, readdir, unlink } from 'node:fs/promises';
+import { readFile, writeFile, readdir, unlink, rename } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import doT from 'dot';
 import { fileURLToPath } from 'node:url';
+
+const require = createRequire(import.meta.url);
 
 export async function compileDevTemplates() {
   const dirRoot = new URL('../', import.meta.url);
@@ -14,6 +17,7 @@ export async function compileDevTemplates() {
 
   for (const file of compiledFiles) {
     const fnPath = new URL(file, templatesDirURL);
+    const cjsPath = new URL(file.replace(/\.js$/, '.cjs'), templatesDirURL);
     const tsPath = fnPath.href.replace(/\.js$/, '.ts');
     const def = await readFile(
       new URL(fnPath.href.replace(/\.js$/, '.tsdef')),
@@ -21,7 +25,10 @@ export async function compileDevTemplates() {
     );
     const interfaceName = def.match(/interface (\w+)/)[1];
 
-    const { default: fn } = await import(fnPath);
+    // Rename to .cjs so require() treats it as CommonJS in ESM package
+    await rename(fnPath, cjsPath);
+    const fn = require(fileURLToPath(cjsPath));
+    await unlink(cjsPath);
 
     const contents = `import encodeHTML from 'escape-html';
 
@@ -32,6 +39,6 @@ export default ${fn
       .replace(/\bvar\b/g, 'let')
       .replace(/\(it\s*\)/s, `(it: ${interfaceName}): string`)}`;
 
-    await Promise.all([writeFile(new URL(tsPath), contents), unlink(fnPath)]);
+    await writeFile(new URL(tsPath), contents);
   }
 }

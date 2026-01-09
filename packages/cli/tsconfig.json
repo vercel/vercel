@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "module": "esnext",
+    "moduleResolution": "node16",
     "noImplicitReturns": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
