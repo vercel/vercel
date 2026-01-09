@@ -455,6 +455,9 @@ importers:
       '@vercel/hydrogen':
         specifier: workspace:*
         version: link:../hydrogen
+      '@vercel/koa':
+        specifier: workspace:*
+        version: link:../koa
       '@vercel/nestjs':
         specifier: workspace:*
         version: link:../nestjs
