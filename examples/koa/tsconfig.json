@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "NodeNext",
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
   "exclude": ["node_modules"]
 }

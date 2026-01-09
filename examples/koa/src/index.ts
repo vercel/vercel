@@ -14,4 +14,4 @@ app.use(async ctx => {
   }
 })
 
-export default app
+app.listen(3000)
