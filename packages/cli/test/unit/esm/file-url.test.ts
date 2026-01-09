@@ -17,33 +17,42 @@ import { isAbsolute } from 'node:path';
  * ```
  */
 describe('file:// URL Handling', () => {
-  describe('fileURLToPath conversion', () => {
-    it('should convert file:// URLs to regular paths', () => {
-      const fileUrl = 'file:///Users/test/project/index.js';
-      const filePath = fileURLToPath(fileUrl);
+  const isWindows = process.platform === 'win32';
 
-      expect(filePath).toBe('/Users/test/project/index.js');
+  describe('fileURLToPath conversion', () => {
+    it('should convert file:// URLs to regular paths (platform-specific)', () => {
+      // Use the current file as a known-good test case
+      const currentFileUrl = import.meta.url;
+      const filePath = fileURLToPath(currentFileUrl);
+
       expect(filePath).not.toContain('file://');
+      expect(isAbsolute(filePath)).toBe(true);
     });
 
     it('should handle paths with spaces (encoded as %20)', () => {
-      const fileUrl = 'file:///Users/test/my%20project/index.js';
+      // Create a file URL from a path with spaces, then convert back
+      const testPath = isWindows
+        ? 'C:\\Users\\test\\my project\\index.js'
+        : '/Users/test/my project/index.js';
+      const fileUrl = pathToFileURL(testPath);
       const filePath = fileURLToPath(fileUrl);
 
-      expect(filePath).toBe('/Users/test/my project/index.js');
+      expect(filePath).toContain('my project');
+      expect(filePath).not.toContain('%20');
     });
 
     it('should handle paths with special characters', () => {
-      const fileUrl = 'file:///Users/test/project%40v2/index.js';
+      const testPath = isWindows
+        ? 'C:\\Users\\test\\project@v2\\index.js'
+        : '/Users/test/project@v2/index.js';
+      const fileUrl = pathToFileURL(testPath);
       const filePath = fileURLToPath(fileUrl);
 
-      expect(filePath).toBe('/Users/test/project@v2/index.js');
+      expect(filePath).toContain('project@v2');
     });
 
     it('should produce absolute paths', () => {
-      const fileUrl = 'file:///some/absolute/path/file.js';
-      const filePath = fileURLToPath(fileUrl);
-
+      const filePath = fileURLToPath(import.meta.url);
       expect(isAbsolute(filePath)).toBe(true);
     });
   });
@@ -67,26 +76,32 @@ describe('file:// URL Handling', () => {
 
   describe('pathToFileURL conversion', () => {
     it('should convert regular paths to file:// URLs', () => {
-      const filePath = '/Users/test/project/index.js';
-      const fileUrl = pathToFileURL(filePath);
+      const testPath = isWindows
+        ? 'C:\\Users\\test\\project\\index.js'
+        : '/Users/test/project/index.js';
+      const fileUrl = pathToFileURL(testPath);
 
-      expect(fileUrl.href).toBe('file:///Users/test/project/index.js');
+      expect(fileUrl.href).toMatch(/^file:\/\/\//);
       expect(fileUrl.protocol).toBe('file:');
     });
 
     it('should encode spaces in paths', () => {
-      const filePath = '/Users/test/my project/index.js';
-      const fileUrl = pathToFileURL(filePath);
+      const testPath = isWindows
+        ? 'C:\\Users\\test\\my project\\index.js'
+        : '/Users/test/my project/index.js';
+      const fileUrl = pathToFileURL(testPath);
 
-      expect(fileUrl.href).toBe('file:///Users/test/my%20project/index.js');
+      expect(fileUrl.href).toContain('%20');
     });
 
     it('should be reversible with fileURLToPath', () => {
-      const originalPath = '/Users/test/project/index.js';
-      const fileUrl = pathToFileURL(originalPath);
+      const testPath = isWindows
+        ? 'C:\\Users\\test\\project\\index.js'
+        : '/Users/test/project/index.js';
+      const fileUrl = pathToFileURL(testPath);
       const convertedBack = fileURLToPath(fileUrl);
 
-      expect(convertedBack).toBe(originalPath);
+      expect(convertedBack).toBe(testPath);
     });
   });
 
@@ -115,13 +130,32 @@ describe('file:// URL Handling', () => {
         return filePath;
       };
 
-      // ESM-style file:// URL
-      const esmPath = handlePath('file:///Users/test/index.js');
-      expect(esmPath).toBe('/Users/test/index.js');
+      // Test with actual current file
+      const currentUrl = import.meta.url;
+      const currentPath = fileURLToPath(currentUrl);
 
-      // CJS-style regular path
-      const cjsPath = handlePath('/Users/test/index.js');
-      expect(cjsPath).toBe('/Users/test/index.js');
+      // ESM-style file:// URL
+      const esmResult = handlePath(currentUrl);
+      expect(esmResult).toBe(currentPath);
+
+      // CJS-style regular path (already a path, unchanged)
+      const cjsResult = handlePath(currentPath);
+      expect(cjsResult).toBe(currentPath);
+    });
+
+    it('should not modify paths that do not start with file://', () => {
+      const handlePath = (input: string): string => {
+        let filePath = input;
+        if (filePath.startsWith('file://')) {
+          filePath = fileURLToPath(filePath);
+        }
+        return filePath;
+      };
+
+      const regularPath = isWindows
+        ? 'C:\\some\\path\\file.js'
+        : '/some/path/file.js';
+      expect(handlePath(regularPath)).toBe(regularPath);
     });
   });
 });
