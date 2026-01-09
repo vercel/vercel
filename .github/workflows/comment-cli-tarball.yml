@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  VERCEL_TELEMETRY_DISABLED: '1'
+  VERCEL_TELEMETRY_DISABLED: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -34,39 +34,12 @@ jobs:
 
             const message = `## 📦 CLI Tarball Ready
 
-            The Vercel CLI tarball for this PR is now available!
-
-            ### Installation & Usage
-
-            You can test this PR's CLI directly using:
+            The Vercel CLI tarball for this PR is now available! You can test this PR's CLI directly by running:
 
             \`\`\`bash
-            npx ${deploymentUrl}/tarballs/vercel.tgz deploy
+            npx ${deploymentUrl}/tarballs/vercel.tgz --help
             \`\`\`
-
-            ### Other Commands
-
-            You can use any Vercel CLI command:
-
-            \`\`\`bash
-            # Deploy
-            npx ${deploymentUrl}/tarballs/vercel.tgz deploy
-
-            # List deployments
-            npx ${deploymentUrl}/tarballs/vercel.tgz list
-
-            # Check version
-            npx ${deploymentUrl}/tarballs/vercel.tgz --version
-            \`\`\`
-
-            ### Details
-
-            - **Deployment URL**: ${deploymentUrl}
-            - **PR Commit**: [\`${prSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${prSha})
-            - **Tarball Path**: \`/tarballs/vercel.tgz\`
-
-            ---
-            *This comment is automatically generated when the Vercel deployment completes*`;
+            `;
 
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({
