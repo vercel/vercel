@@ -32,14 +32,17 @@ jobs:
             const prNumber = context.issue.number;
             const prSha = '${{ github.event.pull_request.head.sha }}';
 
-            const message = `## 📦 CLI Tarball Ready
+            // Validate deployment URL before posting
+            if (!deploymentUrl || deploymentUrl === '') {
+              console.log('No deployment URL available, skipping comment');
+              return;
+            }
 
-            The Vercel CLI tarball for this PR is now available! You can test this PR's CLI directly by running:
-
-            \`\`\`bash
-            npx ${deploymentUrl}/tarballs/vercel.tgz --help
-            \`\`\`
-            `;
+            let message = '## 📦 CLI Tarball Ready\n\n';
+            message += 'The Vercel CLI tarball for this PR is now available! You can test this PR\'s CLI directly by running:\n\n';
+            message += '```bash\n';
+            message += `npx ${deploymentUrl}/tarballs/vercel.tgz --help\n`;
+            message += '```\n';
 
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({
