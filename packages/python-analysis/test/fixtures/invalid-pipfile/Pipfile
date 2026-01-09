@@ -1,0 +1,3 @@
+blarg
+this is not valid toml syntax {{{
+[unclosed section

@@ -1,0 +1,4 @@
+# This is a pip-compile input file
+flask>=2.0
+requests
+uvicorn
