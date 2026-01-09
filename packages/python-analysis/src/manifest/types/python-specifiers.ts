@@ -65,7 +65,7 @@ export const PythonImplementation = {
       case 'pypy':
         return 'PyPy';
       case 'pyodide':
-        return 'PyIodide';
+        return 'PyOdide';
       case 'graalpy':
         return 'GraalPy';
       default:

@@ -72,6 +72,39 @@ describe('parseUvPythonRequest', () => {
         },
       });
     });
+
+    it('parses wheel tag format 38 as 3.8', () => {
+      const result = parseUvPythonRequest('38');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.8', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
+
+    it('parses wheel tag format 312 as 3.12', () => {
+      const result = parseUvPythonRequest('312');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
+
+    it('parses wheel tag format 3100 as 3.100', () => {
+      const result = parseUvPythonRequest('3100');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.100', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
   });
 
   describe('version specifier requests', () => {
@@ -106,23 +139,68 @@ describe('parseUvPythonRequest', () => {
   describe('prerelease versions', () => {
     it('parses alpha prerelease version 3.13.0a1', () => {
       const result = parseUvPythonRequest('3.13.0a1');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('cpython');
-      expect(result?.version?.constraint[0].version).toBe('3.13.0a1');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13.0a1', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses beta prerelease version 3.13.0b5', () => {
       const result = parseUvPythonRequest('3.13.0b5');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('cpython');
-      expect(result?.version?.constraint[0].version).toBe('3.13.0b5');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13.0b5', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses release candidate version 3.13.0rc1', () => {
       const result = parseUvPythonRequest('3.13.0rc1');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('cpython');
-      expect(result?.version?.constraint[0].version).toBe('3.13.0rc1');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13.0rc1', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
+
+    it('parses minor prerelease version 3.13a1', () => {
+      const result = parseUvPythonRequest('3.13a1');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13a1', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
+
+    it('parses beta prerelease version 3.13.0b2', () => {
+      const result = parseUvPythonRequest('3.13.0b2');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13.0b2', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
+
+    it('parses release candidate version 3.13.0rc3', () => {
+      const result = parseUvPythonRequest('3.13.0rc3');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13.0rc3', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
   });
 
@@ -173,10 +251,56 @@ describe('parseUvPythonRequest', () => {
 
     it('parses +debug long variant', () => {
       const result = parseUvPythonRequest('3.12.0+debug');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12.0', prefix: '' }],
+          variant: 'debug',
+        },
+      });
+    });
+
+    it('parses wheel tag format with freethreaded variant 313t', () => {
+      const result = parseUvPythonRequest('313t');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13', prefix: '' }],
+          variant: 'freethreaded',
+        },
+      });
+    });
+
+    it('parses major version with freethreaded variant 3t', () => {
+      const result = parseUvPythonRequest('3t');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3', prefix: '' }],
+          variant: 'freethreaded',
+        },
+      });
+    });
+
+    it('parses version specifier with variant >=3.13t', () => {
+      const result = parseUvPythonRequest('>=3.13t');
       expect(result).not.toBeNull();
       expect(result?.implementation).toBe('cpython');
-      expect(result?.version?.constraint[0].version).toBe('3.12.0');
-      expect(result?.version?.variant).toBe('debug');
+      expect(result?.version?.constraint[0].operator).toBe('>=');
+      expect(result?.version?.constraint[0].version).toBe('3.13');
+      expect(result?.version?.variant).toBe('freethreaded');
+    });
+
+    it('parses compound version specifier with variant >=3.12,<3.14t', () => {
+      const result = parseUvPythonRequest('>=3.12,<3.14t');
+      expect(result).not.toBeNull();
+      expect(result?.implementation).toBe('cpython');
+      expect(result?.version?.constraint).toHaveLength(2);
+      expect(result?.version?.constraint[0].operator).toBe('>=');
+      expect(result?.version?.constraint[0].version).toBe('3.12');
+      expect(result?.version?.constraint[1].operator).toBe('<');
+      expect(result?.version?.constraint[1].version).toBe('3.14');
+      expect(result?.version?.variant).toBe('freethreaded');
     });
 
     it('parses +gil long variant', () => {
@@ -288,14 +412,24 @@ describe('parseUvPythonRequest', () => {
 
     it('parses pypy310 (compact form)', () => {
       const result = parseUvPythonRequest('pypy310');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('pypy');
+      expect(result).toEqual({
+        implementation: 'pypy',
+        version: {
+          constraint: [{ operator: '==', version: '3.10', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses pp310 (short form with compact version)', () => {
       const result = parseUvPythonRequest('pp310');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('pypy');
+      expect(result).toEqual({
+        implementation: 'pypy',
+        version: {
+          constraint: [{ operator: '==', version: '3.10', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses graalpy@3.10', () => {
@@ -322,26 +456,46 @@ describe('parseUvPythonRequest', () => {
 
     it('parses graalpy310 (compact form)', () => {
       const result = parseUvPythonRequest('graalpy310');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('graalpy');
+      expect(result).toEqual({
+        implementation: 'graalpy',
+        version: {
+          constraint: [{ operator: '==', version: '3.10', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses gp310 (short form with compact version)', () => {
       const result = parseUvPythonRequest('gp310');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('graalpy');
+      expect(result).toEqual({
+        implementation: 'graalpy',
+        version: {
+          constraint: [{ operator: '==', version: '3.10', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses cp38 (short form with compact version)', () => {
       const result = parseUvPythonRequest('cp38');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('cpython');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.8', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses cp312 (short form with version)', () => {
       const result = parseUvPythonRequest('cp312');
-      expect(result).not.toBeNull();
-      expect(result?.implementation).toBe('cpython');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default',
+        },
+      });
     });
 
     it('parses implementation with version specifier', () => {
@@ -349,6 +503,22 @@ describe('parseUvPythonRequest', () => {
       expect(result).not.toBeNull();
       expect(result?.implementation).toBe('cpython');
       expect(result?.version?.constraint).toHaveLength(2);
+      expect(result?.version?.constraint[0].operator).toBe('>=');
+      expect(result?.version?.constraint[0].version).toBe('3.12');
+      expect(result?.version?.constraint[1].operator).toBe('<');
+      expect(result?.version?.constraint[1].version).toBe('3.13');
+      expect(result?.version?.variant).toBe('default');
+    });
+
+    it('parses implementation with compact version and variant cp313t', () => {
+      const result = parseUvPythonRequest('cp313t');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13', prefix: '' }],
+          variant: 'freethreaded',
+        },
+      });
     });
   });
 
@@ -379,6 +549,7 @@ describe('parseUvPythonRequest', () => {
       expect(result?.platform?.os).toBe('linux');
       expect(result?.platform?.arch).toBe('x86_64');
       expect(result?.platform?.libc).toBe('gnu');
+      expect(result?.version?.constraint[0].version).toBe('3.11');
     });
 
     it('parses any-3.13.2 (any implementation with version)', () => {
@@ -421,6 +592,7 @@ describe('parseUvPythonRequest', () => {
       expect(result?.implementation).toBe('cpython');
       expect(result?.platform?.os).toBe('linux');
       expect(result?.platform?.arch).toBeUndefined();
+      expect(result?.version?.constraint[0].version).toBe('3.12');
     });
 
     it('parses any-any-any-any-any as empty request', () => {
@@ -464,8 +636,43 @@ describe('parseUvPythonRequest', () => {
 
     it('trims whitespace from input', () => {
       const result = parseUvPythonRequest('  3.12  ');
+      expect(result).toEqual({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default',
+        },
+      });
+    });
+
+    it('returns null for invalid version format 1.foo.1', () => {
+      // Invalid version format that the parser rejects
+      expect(parseUvPythonRequest('1.foo.1')).toBeNull();
+    });
+
+    it('treats double variant suffix 3.13tt as unknown variant', () => {
+      // Double variant suffix is treated as unknown variant
+      // uv returns an error, but we parse it with an unknown variant object
+      const result = parseUvPythonRequest('3.13tt');
       expect(result).not.toBeNull();
-      expect(result?.version?.constraint[0].version).toBe('3.12');
+      expect(result?.implementation).toBe('cpython');
+      expect(result?.version?.constraint[0].version).toBe('3.13');
+      expect(result?.version?.variant).toEqual({
+        type: 'unknown',
+        variant: 'tt',
+      });
+    });
+
+    it('handles overflow protection for wheel tag versions', () => {
+      // Very large minor version (1000) that exceeds u8 range (>255)
+      // uv returns an error for this case
+      const result = parseUvPythonRequest('31000');
+      // The pep440 parser parses this as version 31000, but our splitWheelTagVersion
+      // returns null for minor > 255, so it stays as the original parsed version
+      expect(result).not.toBeNull();
+      // It gets parsed as a single-component version 31000, which becomes 3.1000
+      // but since 1000 > 255, we don't convert and it stays as 31000
+      expect(result?.version?.constraint[0].version).toBe('31000');
     });
   });
 });

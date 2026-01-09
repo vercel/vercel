@@ -1316,7 +1316,7 @@ describe('PythonImplementation', () => {
     it('converts known implementations to pretty string', () => {
       expect(PythonImplementation.toStringPretty('cpython')).toBe('CPython');
       expect(PythonImplementation.toStringPretty('pypy')).toBe('PyPy');
-      expect(PythonImplementation.toStringPretty('pyodide')).toBe('PyIodide');
+      expect(PythonImplementation.toStringPretty('pyodide')).toBe('PyOdide');
       expect(PythonImplementation.toStringPretty('graalpy')).toBe('GraalPy');
     });
 

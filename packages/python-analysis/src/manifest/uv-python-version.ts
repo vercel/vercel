@@ -123,8 +123,20 @@ export function parseUvPythonRequest(input: string): PythonRequest | null {
 function parseVersionRequest(input: string): PythonVersionRequest | null {
   const [version, variant] = parseVariantSuffix(input);
 
-  const parsedVer = parsePep440Version(version);
+  // Try parsing as a standard version first
+  let parsedVer = parsePep440Version(version);
   if (parsedVer !== null) {
+    // Check if this looks like a wheel tag format (single release component
+    // like "312") and convert it to standard format (e.g., "312" -> "3.12")
+    if (parsedVer.release.length === 1) {
+      const converted = splitWheelTagVersion(version);
+      if (converted !== null) {
+        const convertedVer = parsePep440Version(converted);
+        if (convertedVer !== null) {
+          parsedVer = convertedVer;
+        }
+      }
+    }
     return {
       constraint: pep440ConstraintFromVersion(parsedVer),
       variant,
@@ -140,6 +152,39 @@ function parseVersionRequest(input: string): PythonVersionRequest | null {
   }
 
   return null;
+}
+
+/**
+ * Convert a wheel tag formatted version string (e.g., "38") to standard format
+ * (e.g., "3.8").
+ *
+ * The major version is always assumed to be a single digit 0-9. The minor
+ * version is all the following content.
+ *
+ * Returns null if not a valid wheel tag format.
+ */
+function splitWheelTagVersion(version: string): string | null {
+  // Must be all digits
+  if (!/^\d+$/.test(version)) {
+    return null;
+  }
+
+  // Must have at least 2 digits (major + at least one minor digit)
+  if (version.length < 2) {
+    return null;
+  }
+
+  const major = version[0];
+  const minorStr = version.substring(1);
+
+  // Validate minor can be parsed as a number
+  const minor = parseInt(minorStr, 10);
+  if (isNaN(minor) || minor > 255) {
+    // Overflow protection similar to Rust implementation
+    return null;
+  }
+
+  return `${major}.${minor}`;
 }
 
 function rfindNumericChar(s: string): number {
