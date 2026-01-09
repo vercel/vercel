@@ -1,0 +1,13 @@
+*.py[cod]
+*.so
+*.egg
+__pycache__/
+*.egg-info/
+*.dist-info/
+.mypy_cache/
+.ropeproject/
+.pytest_cache/
+.eggs/
+.venv*/
+.tox/
+dist/
