@@ -535,9 +535,9 @@ test('create a production deployment', async () => {
 });
 
 test('try to deploy non-existing path', async () => {
-  const goal = `Error: Could not find “${humanizePath(
+  const goal = `Error: The specified path "${humanizePath(
     path.join(process.cwd(), session)
-  )}”`;
+  )}" does not exist and "${session}" is not a known command.`;
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     session,
@@ -545,7 +545,7 @@ test('try to deploy non-existing path', async () => {
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr.trim().endsWith(goal), `should end with "${goal}"`).toBe(true);
+  expect(stderr.includes(goal), `should include "${goal}"`).toBe(true);
 });
 
 test('try to deploy with non-existing team', async () => {
@@ -740,10 +740,10 @@ test('vercel hasOwnProperty not a valid subcommand', async () => {
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(
-    output.stderr.endsWith(
-      `Error: Could not find “${humanizePath(
+    output.stderr.includes(
+      `Error: The specified path "${humanizePath(
         path.join(process.cwd(), 'hasOwnProperty')
-      )}”`
+      )}" does not exist and "hasOwnProperty" is not a known command.`
     )
   ).toEqual(true);
 });
