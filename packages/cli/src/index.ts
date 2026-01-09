@@ -46,6 +46,10 @@ import cmd from './util/output/cmd';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
+import {
+  setTelemetryContext,
+  clearTelemetryContext,
+} from './util/telemetry-context';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
@@ -772,6 +776,8 @@ const main = async () => {
       }
 
       if (!func || !targetCommand) {
+        telemetry.trackInvalidCommand(subcommand);
+        await telemetryEventStore.save();
         const sub = param(subcommand);
         output.error(`The ${sub} subcommand does not exist`);
         return 1;
@@ -781,7 +787,12 @@ const main = async () => {
         func = func.default;
       }
 
-      exitCode = await func(client);
+      setTelemetryContext(subcommand, telemetryEventStore);
+      try {
+        exitCode = await func(client);
+      } finally {
+        clearTelemetryContext();
+      }
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
