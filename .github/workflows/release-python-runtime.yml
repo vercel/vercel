@@ -77,13 +77,17 @@ jobs:
           version: '0.9.22'
 
       - name: Build
-        run: uv build
+        run: uv build --package vercel-runtime --out-dir python/vercel-runtime/dist/
 
       - name: Smoke test (wheel)
-        run: uv run --isolated --no-project --with dist/*.whl tests/release_smoke_test.py
+        run: |
+          uv run --isolated --no-project --with python/vercel-runtime/dist/*.whl \
+            python/vercel-runtime/tests/release_smoke_test.py
 
       - name: Smoke test (source distribution)
-        run: uv run --isolated --no-project --with dist/*.tar.gz tests/release_smoke_test.py
+        run: |
+          uv run --isolated --no-project --with python/vercel-runtime/dist/*.tar.gz \
+            python/vercel-runtime/tests/release_smoke_test.py
 
       - name: Publish
         run: uv publish

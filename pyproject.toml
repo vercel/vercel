@@ -7,4 +7,4 @@ classifiers = [
 ]
 
 [tool.uv.workspace]
-members = ["python/vercel_runtime"]
+members = ["python/vercel-runtime"]
