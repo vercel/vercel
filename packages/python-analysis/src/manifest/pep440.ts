@@ -25,6 +25,6 @@ export function pep440ConstraintFromVersion(
 export function unparsePep440Version(v: Pep440Version): string {
   const verstr = stringifyVersion(v);
   // pep440 stringify only returns null if input is null which it isn't here.
-  assert(verstr !== null, 'pep440/lib/version:stringify returned null');
+  assert(verstr != null, 'pep440/lib/version:stringify returned null');
   return verstr;
 }

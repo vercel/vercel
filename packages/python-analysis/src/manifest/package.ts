@@ -223,7 +223,7 @@ export async function discoverPythonPackage({
     }
 
     const prefixManifest = await loadPythonManifest(rootPath, prefix);
-    if (prefixManifest !== null) {
+    if (prefixManifest != null) {
       manifests.push(prefixManifest);
       if (prefixManifest.isRoot) {
         break;
@@ -302,7 +302,7 @@ function computeRequiresPython(
   const manifestRequiresPython = manifest?.data.project?.['requires-python'];
   if (manifestRequiresPython) {
     const parsed = parsePep440Constraint(manifestRequiresPython);
-    if (parsed !== null && parsed.length > 0) {
+    if (parsed?.length) {
       const request = pythonRequestFromConstraint(parsed);
       constraints.push({
         request: [request],
@@ -315,7 +315,7 @@ function computeRequiresPython(
       workspaceManifest?.data.project?.['requires-python'];
     if (workspaceRequiresPython) {
       const parsed = parsePep440Constraint(workspaceRequiresPython);
-      if (parsed !== null && parsed.length > 0) {
+      if (parsed?.length) {
         const request = pythonRequestFromConstraint(parsed);
         constraints.push({
           request: [request],
@@ -379,19 +379,19 @@ async function loadPythonManifest(
 ): Promise<PythonManifest | null> {
   let manifest: PythonManifest | null = null;
   const pyproject = await maybeLoadPyProjectToml(root, prefix);
-  if (pyproject !== null) {
+  if (pyproject != null) {
     manifest = pyproject;
     manifest.isRoot = pyproject.data.tool?.uv?.workspace !== undefined;
   } else {
     // Prefer Pipfile.lock over Pipfile if both exist, because the lockfile
     // contains exact pinned versions and is more reliable for reproducibility.
     const pipfileLockPyProject = await maybeLoadPipfileLock(root, prefix);
-    if (pipfileLockPyProject !== null) {
+    if (pipfileLockPyProject != null) {
       manifest = pipfileLockPyProject;
       manifest.isRoot = true;
     } else {
       const pipfilePyProject = await maybeLoadPipfile(root, prefix);
-      if (pipfilePyProject !== null) {
+      if (pipfilePyProject != null) {
         manifest = pipfilePyProject;
         manifest.isRoot = true;
       } else {
@@ -408,7 +408,7 @@ async function loadPythonManifest(
             prefix,
             fileName
           );
-          if (requirementsTxtManifest !== null) {
+          if (requirementsTxtManifest != null) {
             manifest = requirementsTxtManifest;
             manifest.isRoot = true;
             break;
@@ -442,7 +442,7 @@ async function maybeLoadPyProjectToml(
     });
   }
 
-  if (pyproject === null) {
+  if (pyproject == null) {
     return null;
   }
 
@@ -465,8 +465,8 @@ async function maybeLoadPyProjectToml(
     });
   }
 
-  if (uvToml !== null) {
-    if (pyproject.tool === undefined || pyproject.tool === null) {
+  if (uvToml != null) {
+    if (pyproject.tool == null) {
       pyproject.tool = { uv: uvToml };
     } else {
       pyproject.tool.uv = uvToml;
@@ -500,7 +500,7 @@ async function maybeLoadPipfile(
     });
   }
 
-  if (pipfile === null) {
+  if (pipfile == null) {
     return null;
   }
 
@@ -537,7 +537,7 @@ async function maybeLoadPipfileLock(
     });
   }
 
-  if (pipfileLock === null) {
+  if (pipfileLock == null) {
     return null;
   }
 
@@ -563,7 +563,7 @@ async function maybeLoadRequirementsTxt(
   const requirementsContent: string | null =
     await readFileTextIfExists(requirementsTxtPath);
 
-  if (requirementsContent === null) {
+  if (requirementsContent == null) {
     return null;
   }
 
@@ -597,7 +597,7 @@ async function loadPythonConfigs(
 ): Promise<PythonConfigs> {
   const configs: PythonConfigs = {};
   const pythonRequest = await maybeLoadPythonRequest(root, prefix);
-  if (pythonRequest !== null) {
+  if (pythonRequest != null) {
     configs[PythonConfigKind.PythonVersion] = pythonRequest;
   }
 
@@ -618,12 +618,12 @@ async function maybeLoadPythonRequest(
   );
   const data: string | null = await readFileTextIfExists(dotPythonVersionPath);
 
-  if (data === null) {
+  if (data == null) {
     return null;
   }
 
   const pyreq = parsePythonVersionFile(data);
-  if (pyreq === null) {
+  if (pyreq == null) {
     throw new PythonAnalysisError({
       message: `could not parse .python-version file: no valid Python version requests found`,
       code: 'PYTHON_VERSION_FILE_PARSE_ERROR',

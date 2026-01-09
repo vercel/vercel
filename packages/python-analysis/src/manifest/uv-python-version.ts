@@ -57,7 +57,7 @@ export function parsePythonVersionFile(
     if (!trimmed) continue;
     if (trimmed.startsWith('#')) continue;
     const parsed = parseUvPythonRequest(trimmed);
-    if (parsed !== null) {
+    if (parsed != null) {
       requests.push(parsed);
     }
   }
@@ -100,7 +100,7 @@ export function parseUvPythonRequest(input: string): PythonRequest | null {
       }
       // Implementation and version, e.g cpython@3.12
       const version = parseVersionRequest(rest);
-      if (version !== null) {
+      if (version != null) {
         return {
           implementation,
           version,
@@ -110,7 +110,7 @@ export function parseUvPythonRequest(input: string): PythonRequest | null {
   }
 
   const version = parseVersionRequest(lowercase);
-  if (version !== null) {
+  if (version != null) {
     return {
       implementation: 'cpython',
       version,
@@ -125,14 +125,14 @@ function parseVersionRequest(input: string): PythonVersionRequest | null {
 
   // Try parsing as a standard version first
   let parsedVer = parsePep440Version(version);
-  if (parsedVer !== null) {
+  if (parsedVer != null) {
     // Check if this looks like a wheel tag format (single release component
     // like "312") and convert it to standard format (e.g., "312" -> "3.12")
     if (parsedVer.release.length === 1) {
       const converted = splitWheelTagVersion(version);
-      if (converted !== null) {
+      if (converted != null) {
         const convertedVer = parsePep440Version(converted);
-        if (convertedVer !== null) {
+        if (convertedVer != null) {
           parsedVer = convertedVer;
         }
       }
@@ -144,7 +144,7 @@ function parseVersionRequest(input: string): PythonVersionRequest | null {
   }
 
   const parsedConstr = parsePep440Constraint(version);
-  if (parsedConstr !== null && parsedConstr.length > 0) {
+  if (parsedConstr?.length) {
     return {
       constraint: parsedConstr,
       variant,
@@ -268,7 +268,7 @@ function tryParsePlatformRequest(raw: string): PythonRequest | null {
           continue;
         }
         version = parseVersionRequest(part);
-        if (version === null) {
+        if (version == null) {
           version = undefined;
           stateIdx += 1;
           implOrVersionFailed = true;

@@ -47,7 +47,7 @@ export async function readConfigIfExists<T>(
   filetype: string | undefined = undefined
 ): Promise<T | null> {
   const content = await readFileTextIfExists(filename);
-  if (content === null) {
+  if (content == null) {
     return null;
   } else {
     return parseConfig<T>(content, filename, filetype);

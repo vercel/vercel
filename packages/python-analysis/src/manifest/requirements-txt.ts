@@ -270,7 +270,7 @@ function extractInlineHashes(line: string): HashDigest[] {
   const hashes: HashDigest[] = [];
   const hashRegex = /--hash=(\S+)/g;
   let match;
-  while ((match = hashRegex.exec(line)) !== null) {
+  while ((match = hashRegex.exec(line)) != null) {
     hashes.push(match[1]);
   }
   return hashes;
@@ -443,7 +443,7 @@ function parseRequirementsFileInternal(
     }
 
     const norm = normalizeRequirement(req);
-    if (norm !== null) {
+    if (norm != null) {
       // Attach hashes if present
       const hashes = hashMap.get(norm.name.toLowerCase());
       if (hashes && hashes.length > 0) {
@@ -467,7 +467,7 @@ function parseRequirementsFileInternal(
       visited.add(refPathKey);
 
       const refContent = readFile(refPath);
-      if (refContent !== null) {
+      if (refContent != null) {
         const refParsed = parseRequirementsFileInternal(
           refContent,
           readFile,
@@ -666,7 +666,7 @@ function isEnvironmentMarkerNode(
   marker: EnvironmentMarker
 ): marker is EnvironmentMarkerNode {
   // Check if it's an object with the operator property
-  if (typeof marker !== 'object' || marker === null) {
+  if (typeof marker !== 'object' || marker == null) {
     return false;
   }
 

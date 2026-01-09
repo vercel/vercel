@@ -29,7 +29,7 @@ export async function readFileTextIfExists(
   encoding: BufferEncoding = 'utf8'
 ): Promise<string | null> {
   const data = await readFileIfExists(file);
-  if (data === null) {
+  if (data == null) {
     return null;
   } else {
     return data.toString(encoding);
