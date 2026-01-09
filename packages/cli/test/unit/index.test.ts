@@ -11,6 +11,11 @@ import {
 } from 'vitest';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
+import {
+  setTelemetryContext,
+  clearTelemetryContext,
+  trackArgumentError,
+} from '../../src/util/telemetry-context';
 import output from '../../src/output-manager';
 
 import './test/mocks/matchers/index';
@@ -210,6 +215,94 @@ describe('main', () => {
             );
           });
         });
+      });
+    });
+
+    describe('error tracking', () => {
+      it('tracks invalid command', () => {
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          config: {},
+        });
+
+        const telemetry = new RootTelemetryClient({
+          opts: {
+            store: telemetryEventStore,
+          },
+        });
+
+        telemetry.trackInvalidCommand('delpoy');
+        expect(telemetryEventStore).toHaveTelemetryEvents([
+          { key: 'error:invalid_command', value: 'delpoy' },
+        ]);
+      });
+
+      it('tracks argument error', () => {
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          config: {},
+        });
+
+        const telemetry = new RootTelemetryClient({
+          opts: {
+            store: telemetryEventStore,
+          },
+        });
+
+        telemetry.trackArgumentError('deploy', 'Unknown option: --invalid');
+        expect(telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'error:argument_error:deploy',
+            value: 'Unknown option: --invalid',
+          },
+        ]);
+      });
+    });
+
+    describe('telemetry context', () => {
+      afterEach(() => {
+        clearTelemetryContext();
+      });
+
+      it('tracks argument error when context is set', () => {
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          config: {},
+        });
+
+        setTelemetryContext('deploy', telemetryEventStore);
+        trackArgumentError('Unknown option: --force');
+
+        expect(telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'error:argument_error:deploy',
+            value: 'Unknown option: --force',
+          },
+        ]);
+      });
+
+      it('does not track when context is not set', () => {
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          config: {},
+        });
+
+        trackArgumentError('Unknown option: --force');
+
+        expect(telemetryEventStore).toHaveTelemetryEvents([]);
+      });
+
+      it('does not track after context is cleared', () => {
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          config: {},
+        });
+
+        setTelemetryContext('deploy', telemetryEventStore);
+        clearTelemetryContext();
+        trackArgumentError('Unknown option: --force');
+
+        expect(telemetryEventStore).toHaveTelemetryEvents([]);
       });
     });
   });
