@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  VERCEL_TELEMETRY_DISABLED: "1"
+  VERCEL_TELEMETRY_DISABLED: '1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
