@@ -1,10 +1,16 @@
 /**
- * Shared types for Python dependency parsers (requirements.txt, Pipfile, etc.)
+ * Pure TypeScript interface definitions for Python dependency requirement types.
+ *
+ * These interfaces serve as the source of truth for types.
+ * Zod schemas are generated from these using ts-to-zod.
+ *
+ * @module requirement/types
  */
 
 /**
- * Source information for a dependency (git, path, or index).
+ * Dependency source information (git, path, or index).
  * Used in [tool.uv.sources] in pyproject.toml.
+ * @passthrough
  */
 export interface DependencySource {
   /** Index name for the dependency (e.g., "private-pypi") */

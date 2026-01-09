@@ -12,7 +12,7 @@
  *   - requests>=2.0 ; python_version >= "3.8"
  */
 
-import type { NormalizedRequirement } from './types/requirement';
+import type { NormalizedRequirement } from './requirement/types';
 
 /**
  * Regular expression to extract extras from a package name.

@@ -7,22 +7,21 @@ import { PythonAnalysisError } from '../util/error';
 import type { AbsPath, RelPath } from '../util/fs';
 import { isSubpath, normalizePath, readFileTextIfExists } from '../util/fs';
 import { parsePep440Constraint } from './pep440';
-import type { PipfileLike, PipfileLockLike } from './pipfile';
+import type { PipfileLike, PipfileLockLike } from './pipfile/types';
+import { PipfileLikeSchema, PipfileLockLikeSchema } from './pipfile/schema';
 import {
   convertPipfileLockToPyprojectToml,
   convertPipfileToPyprojectToml,
-} from './pipfile';
-import { convertRequirementsToPyprojectToml } from './requirements-txt';
-import type { PyProjectToml } from './types/pyproject';
-import type {
-  PythonConstraint,
-  PythonRequest,
-} from './types/python-specifiers';
-import type { UvConfig } from './types/uv-config';
+} from './pipfile-parser';
+import type { PyProjectToml } from './pyproject/types';
+import { PyProjectTomlSchema } from './pyproject/schema';
+import type { PythonConstraint, PythonRequest } from './python-specifiers';
+import { convertRequirementsToPyprojectToml } from './requirements-txt-parser';
+import { UvConfigSchema } from './uv-config/schema';
 import {
   parsePythonVersionFile,
   pythonRequestFromConstraint,
-} from './uv-python-version';
+} from './uv-python-version-parser';
 
 /**
  * Kinds of Python configuration files that can be discovered.
@@ -429,7 +428,10 @@ async function maybeLoadPyProjectToml(
   const pyprojectTomlPath = path.join(root, pyprojectTomlRelPath);
   let pyproject: PyProjectToml | null;
   try {
-    pyproject = await readConfigIfExists(pyprojectTomlPath);
+    pyproject = await readConfigIfExists(
+      pyprojectTomlPath,
+      PyProjectTomlSchema
+    );
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       error.path = pyprojectTomlRelPath;
@@ -450,9 +452,9 @@ async function maybeLoadPyProjectToml(
   // [tool.uv].
   const uvTomlRelPath = path.join(subdir, 'uv.toml');
   const uvTomlPath = path.join(root, uvTomlRelPath);
-  let uvToml: UvConfig | null;
+  let uvToml: import('./uv-config/types').UvConfig | null;
   try {
-    uvToml = await readConfigIfExists(uvTomlPath);
+    uvToml = await readConfigIfExists(uvTomlPath, UvConfigSchema);
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       error.path = uvTomlRelPath;
@@ -487,7 +489,7 @@ async function maybeLoadPipfile(
   const pipfilePath = path.join(root, pipfileRelPath);
   let pipfile: PipfileLike | null;
   try {
-    pipfile = await readConfigIfExists(pipfilePath, '.toml');
+    pipfile = await readConfigIfExists(pipfilePath, PipfileLikeSchema, '.toml');
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       error.path = pipfileRelPath;
@@ -524,7 +526,11 @@ async function maybeLoadPipfileLock(
   const pipfileLockPath = path.join(root, pipfileLockRelPath);
   let pipfileLock: PipfileLockLike | null;
   try {
-    pipfileLock = await readConfigIfExists(pipfileLockPath, '.json');
+    pipfileLock = await readConfigIfExists(
+      pipfileLockPath,
+      PipfileLockLikeSchema,
+      '.json'
+    );
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       error.path = pipfileLockRelPath;

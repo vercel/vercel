@@ -1,9 +1,11 @@
 import {
   convertPipfileToPyprojectToml,
   convertPipfileLockToPyprojectToml,
+} from '../src/manifest/pipfile-parser';
+import type {
   PipfileLike,
   PipfileLockLike,
-} from '../src/manifest/pipfile';
+} from '../src/manifest/pipfile/types';
 
 describe('convertPipfileToPyprojectToml', () => {
   it('converts simple packages to dependencies', () => {

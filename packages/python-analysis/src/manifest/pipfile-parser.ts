@@ -5,65 +5,20 @@
 /** The default PyPI index name used by Pipenv */
 const PYPI_INDEX_NAME = 'pypi';
 
-import type { PyProjectToml } from './types/pyproject';
+import type { PyProjectToml } from './pyproject/types';
 import type {
   DependencySource,
   NormalizedRequirement,
-} from './types/requirement';
+} from './requirement/types';
+import type {
+  PipfileDependency,
+  PipfileDependencyDetail,
+  PipfileLike,
+  PipfileLockLike,
+  PipfileSource,
+} from './pipfile/types';
 import { formatPep508, mergeExtras, splitExtras } from './pep508';
 import { isPlainObject } from '../util/type';
-
-export type PipfileDependency = string | PipfileDependencyDetail;
-
-export interface PipfileDependencyDetail {
-  version?: string;
-  hashes?: string[];
-  extras?: string[] | string;
-  markers?: string;
-  index?: string;
-  git?: string;
-  ref?: string;
-  editable?: boolean;
-  path?: string;
-  [key: string]: unknown;
-}
-
-export interface PipfileSource {
-  name: string;
-  url: string;
-  verify_ssl?: boolean;
-  [key: string]: unknown;
-}
-
-export interface PipfileLike {
-  packages?: Record<string, PipfileDependency>;
-  'dev-packages'?: Record<string, PipfileDependency>;
-  source?: PipfileSource[];
-  scripts?: Record<string, string>;
-  [key: string]: unknown | Record<string, PipfileDependency>;
-}
-
-export interface PipfileLockMeta {
-  hash?: {
-    sha256?: string;
-  };
-  'pipfile-spec'?: number;
-  requires?: {
-    python_version?: string;
-    python_full_version?: string;
-  };
-  sources?: PipfileSource[];
-}
-
-export interface PipfileLockLike {
-  _meta?: PipfileLockMeta;
-  default?: Record<string, PipfileDependencyDetail>;
-  develop?: Record<string, PipfileDependencyDetail>;
-  [category: string]:
-    | PipfileLockMeta
-    | Record<string, PipfileDependencyDetail>
-    | undefined;
-}
 
 interface ToolUvIndexEntry {
   name: string;

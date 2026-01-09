@@ -1,12 +1,26 @@
-import type { DependencySource } from './requirement';
+/**
+ * Pure TypeScript interface definitions for uv configuration types.
+ *
+ * These interfaces serve as the source of truth for types.
+ * Zod schemas are generated from these using ts-to-zod.
+ *
+ * @module uv-config/types
+ */
 
+import type { DependencySource } from '../requirement/types';
+
+/**
+ * uv workspace configuration.
+ * @passthrough
+ */
 export interface UvConfigWorkspace {
   members?: string[];
   exclude?: string[];
 }
 
 /**
- * Index entry for tool.uv.index configuration.
+ * uv index entry configuration.
+ * @passthrough
  */
 export interface UvIndexEntry {
   name: string;
@@ -18,7 +32,8 @@ export interface UvIndexEntry {
 }
 
 /**
- * Configuration for [tool.uv] section in pyproject.toml.
+ * [tool.uv] section in pyproject.toml or uv.toml.
+ * @passthrough
  */
 export interface UvConfig {
   /**
@@ -34,5 +49,4 @@ export interface UvConfig {
    * Workspace configuration.
    */
   workspace?: UvConfigWorkspace;
-  [key: string]: unknown;
 }

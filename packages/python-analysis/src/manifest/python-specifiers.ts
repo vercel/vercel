@@ -1,3 +1,12 @@
+/**
+ * Python specifier types for version, implementation, variant, and build information.
+ *
+ * These types are used internally for Python version selection and are not
+ * parsed from config files (no Zod schemas needed).
+ *
+ * @module python-specifiers
+ */
+
 import type { Pep440Constraint } from '@renovatebot/pep440';
 
 export type UnknownPythonImplementation = {

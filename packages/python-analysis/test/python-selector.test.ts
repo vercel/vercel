@@ -14,7 +14,7 @@ import {
   PythonRequest,
   PythonVariant,
   PythonVersion,
-} from '../src/manifest/types/python-specifiers';
+} from '../src/manifest/python-specifiers';
 import { Pep440Constraint } from '../src/manifest/pep440';
 
 // Helper to create a PythonBuild for testing

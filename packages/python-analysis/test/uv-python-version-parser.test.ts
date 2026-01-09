@@ -2,7 +2,7 @@ import {
   parseUvPythonRequest,
   parsePythonVersionFile,
   pythonRequestFromConstraint,
-} from '../src/manifest/uv-python-version';
+} from '../src/manifest/uv-python-version-parser';
 
 describe('parseUvPythonRequest', () => {
   describe('empty and special inputs', () => {

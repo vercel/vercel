@@ -18,17 +18,14 @@ import type {
   Requirement,
 } from 'pip-requirements-js';
 import { parsePipRequirementsFile } from 'pip-requirements-js';
-import type { PyProjectToml } from './types/pyproject';
+import type { PyProjectToml } from './pyproject/types';
 import type {
   DependencySource,
   HashDigest,
   NormalizedRequirement,
-} from './types/requirement';
-import type { UvIndexEntry } from './types/uv-config';
+} from './requirement/types';
+import type { UvIndexEntry } from './uv-config/types';
 import { formatPep508 } from './pep508';
-
-// Re-export types for backward compatibility
-export type { HashDigest } from './types/requirement';
 
 /**
  * Parsed pip arguments from requirements file.

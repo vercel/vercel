@@ -1,7 +1,7 @@
 import {
   parseRequirementsFile,
   convertRequirementsToPyprojectToml,
-} from '../src/manifest/requirements-txt';
+} from '../src/manifest/requirements-txt-parser';
 
 describe('parseRequirementsFile', () => {
   it('parses simple package names', () => {

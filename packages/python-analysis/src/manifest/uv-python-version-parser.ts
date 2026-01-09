@@ -6,11 +6,8 @@ import {
   parsePep440Constraint,
   parsePep440Version,
 } from './pep440';
-import type {
-  PythonRequest,
-  PythonVersionRequest,
-} from './types/python-specifiers';
-import { PythonImplementation, PythonVariant } from './types/python-specifiers';
+import type { PythonRequest, PythonVersionRequest } from './python-specifiers';
+import { PythonImplementation, PythonVariant } from './python-specifiers';
 
 /**
  * uv supports these request formats in --python and .python-version:

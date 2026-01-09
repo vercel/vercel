@@ -6,8 +6,8 @@ import type {
   PythonRequest,
   PythonVariant,
   PythonVersion,
-} from './types/python-specifiers';
-import { PythonImplementation } from './types/python-specifiers';
+} from './python-specifiers';
+import { PythonImplementation } from './python-specifiers';
 
 /**
  * Result of selecting a Python build.
