@@ -101,19 +101,6 @@
         "x-matched-path": "/nested/blog-fallback-false/first.rsc"
       },
       "headers": {
-        "rsc": 1,
-        "next-router-prefetch": 1
-      }
-    },
-    {
-      "path": "/nested/blog-fallback-false/first",
-      "status": 200,
-      "mustContain": "{}",
-      "mustNotContain": ":",
-      "responseHeaders": {
-        "x-matched-path": "/nested/blog-fallback-false/first.rsc"
-      },
-      "headers": {
         "rsc": 1
       }
     },

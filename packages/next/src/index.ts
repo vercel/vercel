@@ -509,6 +509,18 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
+  if (
+    // integration tests expect outputs object
+    !process.env.NEXT_BUILDER_INTEGRATION &&
+    // TODO: uncomment before landing/validating
+    // process.env.NEXT_ENABLE_ADAPTER &&
+    semver.gte(nextVersion, '16.1.1-canary.18', { includePrerelease: true })
+  ) {
+    console.log('Using @next-community/adapter-vercel');
+    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
+    env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
+  }
+
   const shouldRunCompileStep =
     Boolean(buildCommand) || Boolean(buildScriptName);
 
@@ -572,7 +584,7 @@ export const build: BuildV2 = async buildOptions => {
 
   try {
     const data = await readJSON(
-      path.join(outputDirectory, 'output/config.json')
+      path.join(entryPath, outputDirectory, 'output/config.json')
     );
     buildOutputVersion = data.version;
   } catch (_) {
@@ -580,8 +592,12 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (buildOutputVersion) {
+    console.log(
+      'Using build output API output at',
+      path.join(entryPath, outputDirectory, 'output')
+    );
     return {
-      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }
