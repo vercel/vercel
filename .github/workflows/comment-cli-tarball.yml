@@ -39,9 +39,22 @@ jobs:
             }
 
             let message = '## 📦 CLI Tarball Ready\n\n';
-            message += 'The Vercel CLI tarball for this PR is now available! You can test this PR\'s CLI directly by running:\n\n';
+            message += 'The Vercel CLI tarball for this PR is now available!\n\n';
+            message += '### Quick Test\n\n';
+            message += 'You can test this PR\'s CLI directly by running:\n\n';
             message += '```bash\n';
             message += `npx ${deploymentUrl}/tarballs/vercel.tgz --help\n`;
+            message += '```\n\n';
+            message += '### Use in vercel.json\n\n';
+            message += 'To use this CLI version in your project builds, add to your `vercel.json`:\n\n';
+            message += '```json\n';
+            message += '{\n';
+            message += '  "build": {\n';
+            message += '    "env": {\n';
+            message += `      "VERCEL_CLI_VERSION": "vercel@${deploymentUrl}/tarballs/vercel.tgz"\n`;
+            message += '    }\n';
+            message += '  }\n';
+            message += '}\n';
             message += '```\n';
 
             // Find existing comment to update
