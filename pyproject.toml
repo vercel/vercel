@@ -1,0 +1,10 @@
+[project]
+name = "vercel-monorepo"
+version = "0.0.0"
+requires-python = ">= 3.12"
+classifiers = [
+  "Private :: Do Not Upload"
+]
+
+[tool.uv.workspace]
+members = ["python/vercel_runtime"]
