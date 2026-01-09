@@ -112,7 +112,8 @@ describe('enableCompileCache pattern', () => {
     it('should have node:module available', async () => {
       const mod = await import('node:module');
       expect(mod).toBeDefined();
-      expect(mod.createRequire).toBeDefined();
+      // createRequire exists but TypeScript's es2022 types may not include it
+      expect((mod as Record<string, unknown>).createRequire).toBeDefined();
     });
 
     it('should detect enableCompileCache availability correctly', async () => {
