@@ -25,6 +25,7 @@ test/lib/deployment/failed-page.txt
 .DS_Store
 .next
 /.env
+/.venv*/
 /public
 __pycache__
 .vercel
