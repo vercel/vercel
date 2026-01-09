@@ -1,6 +1,5 @@
 ---
 "vercel": patch
-"@vercel-internals/get-package-json": patch
 ---
 
 Migrate CLI build output from CommonJS to ESM
