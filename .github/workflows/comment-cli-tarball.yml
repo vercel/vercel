@@ -1,0 +1,97 @@
+name: Comment CLI Tarball Instructions
+
+on:
+  pull_request:
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  comment-cli-tarball:
+    name: Comment CLI Tarball Instructions
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    steps:
+      - name: Wait for Vercel deployment
+        uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
+        id: waitForDeployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
+
+      - name: Comment PR with CLI tarball instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentUrl = '${{ steps.waitForDeployment.outputs.url }}';
+            const prNumber = context.issue.number;
+            const prSha = '${{ github.event.pull_request.head.sha }}';
+
+            const message = `## 📦 CLI Tarball Ready
+
+            The Vercel CLI tarball for this PR is now available!
+
+            ### Installation & Usage
+
+            You can test this PR's CLI directly using:
+
+            \`\`\`bash
+            npx ${deploymentUrl}/tarballs/vercel.tgz deploy
+            \`\`\`
+
+            ### Other Commands
+
+            You can use any Vercel CLI command:
+
+            \`\`\`bash
+            # Deploy
+            npx ${deploymentUrl}/tarballs/vercel.tgz deploy
+
+            # List deployments
+            npx ${deploymentUrl}/tarballs/vercel.tgz list
+
+            # Check version
+            npx ${deploymentUrl}/tarballs/vercel.tgz --version
+            \`\`\`
+
+            ### Details
+
+            - **Deployment URL**: ${deploymentUrl}
+            - **PR Commit**: [\`${prSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${prSha})
+            - **Tarball Path**: \`/tarballs/vercel.tgz\`
+
+            ---
+            *This comment is automatically generated when the Vercel deployment completes*`;
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              comment.body.includes('## 📦 CLI Tarball Ready')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: message
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: message
+              });
+            }
