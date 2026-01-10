@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { frameworkList, type Framework } from '@vercel/frameworks';
+import type { Runtime } from '@vercel/frameworks';
 import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
@@ -12,6 +13,7 @@ const settingMap = {
   installCommand: 'Install Command',
   outputDirectory: 'Output Directory',
   framework: 'Framework',
+  runtime: 'Runtime',
 } as const;
 type ConfigKeys = keyof typeof settingMap;
 const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
@@ -25,7 +27,8 @@ export async function editProjectSettings(
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
-  localConfigurationOverrides: PartialProjectSettings | null
+  localConfigurationOverrides: PartialProjectSettings | null,
+  runtime: Runtime | null = null
 ): Promise<ProjectSettings> {
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
@@ -81,6 +84,12 @@ export async function editProjectSettings(
     }
   }
 
+  // If a runtime was auto-detected and not already configured (for example via
+  // existing project settings or local overrides), assign it now.
+  if (runtime?.slug && !settings.runtime) {
+    settings.runtime = runtime.slug;
+  }
+
   // skip editing project settings if no framework is detected
   if (!framework) {
     settings.framework = null;
@@ -110,13 +119,31 @@ export async function editProjectSettings(
 
   settings.framework = framework.slug;
 
-  // Now print defaults for the provided framework whether it was auto-detected or overwritten
+  // When using the "Other" framework, surface the detected runtime (if any)
+  // so the user understands how their project will be executed.
+  if (!framework.slug && settings.runtime) {
+    const runtimeLabel = runtime?.name ?? settings.runtime;
+    output.print(
+      `${chalk.dim(`- ${chalk.bold('Runtime:')} ${runtimeLabel}`)}\n`
+    );
+  }
+
+  // Now print defaults for the provided framework whether it was auto-detected or overwritten.
+  // When using the "Other" framework with a detected runtime, prefer the runtime
+  // defaults over the generic "Other" framework defaults.
+  const defaults =
+    !framework.slug && runtime ? runtime.settings : framework.settings;
+
   for (const setting of settingKeys) {
-    if (setting === 'framework' || setting === 'commandForIgnoringBuildStep') {
+    if (
+      setting === 'framework' ||
+      setting === 'commandForIgnoringBuildStep' ||
+      setting === 'runtime'
+    ) {
       continue;
     }
 
-    const defaultSetting = framework.settings[setting];
+    const defaultSetting = defaults[setting];
     const override = localConfigurationOverrides?.[setting];
 
     if (!override && defaultSetting) {
