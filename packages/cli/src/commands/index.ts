@@ -38,6 +38,7 @@ import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
+import { vaultCommand } from './vault/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
@@ -80,6 +81,7 @@ const commandsStructs = [
   targetCommand,
   teamsCommand,
   telemetryCommand,
+  vaultCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

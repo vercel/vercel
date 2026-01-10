@@ -2480,6 +2480,19 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
 
+  packages/vault:
+    dependencies:
+      '@vercel/oidc':
+        specifier: workspace:*
+        version: link:../oidc
+    devDependencies:
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@types/node@14.18.33)
+
 packages:
 
   /@alex_neo/jest-expect-message@1.0.5:
@@ -20624,9 +20637,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
@@ -20678,9 +20691,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
@@ -20732,9 +20745,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
