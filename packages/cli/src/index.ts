@@ -383,6 +383,7 @@ const main = async () => {
     'help',
     'init',
     'build',
+    'daemon',
     'telemetry',
   ];
 
@@ -625,6 +626,10 @@ const main = async () => {
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
           func = require('./commands/curl').default;
+          break;
+        case 'daemon':
+          telemetry.trackCliCommandDaemon(userSuppliedSubCommand);
+          func = require('./commands/daemon').default;
           break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);

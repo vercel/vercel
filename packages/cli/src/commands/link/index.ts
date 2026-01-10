@@ -9,6 +9,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
+import { notifyDaemonProjectLinked } from '../../util/daemon/notify';
+import { bootstrapOidcToken } from '../../util/daemon/bootstrap-token';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -77,6 +79,22 @@ export default async function link(client: Client) {
 
     if (typeof link === 'number') {
       return link;
+    }
+
+    // Bootstrap OIDC token and notify daemon (fire-and-forget)
+    if (link.status === 'linked') {
+      const projectId = link.project.id;
+      const teamId = link.org.type === 'team' ? link.org.id : undefined;
+
+      // First, bootstrap the OIDC token file
+      bootstrapOidcToken(projectId, teamId).catch(() => {
+        // Silently ignore - daemon will handle token refresh if bootstrap fails
+      });
+
+      // Then notify daemon about the new project
+      notifyDaemonProjectLinked(projectId).catch(() => {
+        // Silently ignore - daemon may not be running
+      });
     }
   }
 

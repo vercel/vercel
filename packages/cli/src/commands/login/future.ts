@@ -9,6 +9,7 @@ import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
+import { ensureDaemonRunning } from '../../util/daemon/ensure-daemon';
 import {
   deviceAuthorizationRequest,
   processDeviceAuthorizationResponse,
@@ -155,6 +156,11 @@ export async function login(
       client.writeToConfigFile();
 
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+
+      // Ensure daemon is installed and running
+      ensureDaemonRunning().catch(() => {
+        // Silently fail - daemon is optional
+      });
 
       o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.

@@ -4,6 +4,7 @@ import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
 import { curlCommand } from './curl/command';
+import { daemonCommand } from './daemon/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
@@ -49,6 +50,7 @@ const commandsStructs = [
   cacheCommand,
   certsCommand,
   curlCommand,
+  daemonCommand,
   deployCommand,
   devCommand,
   dnsCommand,
