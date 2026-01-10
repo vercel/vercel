@@ -387,4 +387,12 @@ export class RootTelemetryClient extends TelemetryClient {
       this.trackCliFlag('no-color');
     }
   }
+
+  trackInvalidCommand(command: string) {
+    this.trackCliInvalidCommand(command);
+  }
+
+  trackArgumentError(command: string, error: string) {
+    this.trackCliArgumentError({ command, error });
+  }
 }

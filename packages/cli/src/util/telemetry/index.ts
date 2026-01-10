@@ -201,6 +201,23 @@ export class TelemetryClient {
       value: subcommand ? `${command}:${subcommand}` : command,
     });
   }
+
+  protected trackCliInvalidCommand(command: string) {
+    this.track({
+      key: 'error:invalid_command',
+      value: command,
+    });
+  }
+
+  protected trackCliArgumentError(eventData: {
+    command: string;
+    error: string;
+  }) {
+    this.track({
+      key: `error:argument_error:${eventData.command}`,
+      value: eventData.error,
+    });
+  }
 }
 
 export class TelemetryEventStore {

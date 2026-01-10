@@ -1,6 +1,7 @@
 import arg from 'arg';
 import getCommonArgs from './arg-common';
 import type { Prettify } from './types';
+import { trackArgumentError } from './telemetry-context';
 
 type ArgOptions = {
   permissive?: boolean;
@@ -46,12 +47,19 @@ export function parseArguments<T extends arg.Spec>(
 ) {
   // currently parseArgument (and arg as a whole) will hang
   // if there are cycles in the flagsSpecification
-  const { _: positional, ...rest } = arg(
-    Object.assign({}, getCommonArgs(), flagsSpecification),
-    {
-      ...parserOptions,
-      argv: args,
+  try {
+    const { _: positional, ...rest } = arg(
+      Object.assign({}, getCommonArgs(), flagsSpecification),
+      {
+        ...parserOptions,
+        argv: args,
+      }
+    );
+    return { args: positional, flags: rest as Prettify<typeof rest> };
+  } catch (error) {
+    if (error instanceof Error) {
+      trackArgumentError(error.message);
     }
-  );
-  return { args: positional, flags: rest as Prettify<typeof rest> };
+    throw error;
+  }
 }
