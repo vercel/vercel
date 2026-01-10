@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  VERCEL_TELEMETRY_DISABLED: '1'
+  VERCEL_TELEMETRY_DISABLED: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -44,6 +44,11 @@ jobs:
             message += 'You can test this PR\'s CLI directly by running:\n\n';
             message += '```bash\n';
             message += `npx ${deploymentUrl}/tarballs/vercel.tgz --help\n`;
+            message += '```\n\n';
+            message += '### Install Globally\n\n';
+            message += 'To install this CLI version globally:\n\n';
+            message += '```bash\n';
+            message += `npm i -g vercel@${deploymentUrl}/tarballs/vercel.tgz\n`;
             message += '```\n\n';
             message += '### Use in vercel.json\n\n';
             message += 'To use this CLI version in your project builds, add to your `vercel.json`:\n\n';
