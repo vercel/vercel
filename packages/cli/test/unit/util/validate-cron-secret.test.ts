@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { validateCronSecret } from '../../../src/util/validate-cron-secret';
 
 describe('validateCronSecret', () => {
@@ -189,9 +190,7 @@ describe('validateCronSecret', () => {
     it('should include the documentation link', () => {
       const error = validateCronSecret('my\x00Secret');
       expect(error).not.toBeNull();
-      expect(error!.link).toBe(
-        'https://vercel.link/securing-cron-jobs'
-      );
+      expect(error!.link).toBe('https://vercel.link/securing-cron-jobs');
     });
 
     it('should include the Learn More action', () => {
