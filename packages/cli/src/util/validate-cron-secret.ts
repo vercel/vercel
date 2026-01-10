@@ -27,7 +27,7 @@ export function validateCronSecret(
       code: 'INVALID_CRON_SECRET',
       message:
         'The `CRON_SECRET` environment variable contains leading or trailing whitespace, which is not allowed in HTTP header values.',
-      link: 'https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs',
+      link: 'https://vercel.link/securing-cron-jobs',
       action: 'Learn More',
     });
   }
@@ -71,7 +71,7 @@ export function validateCronSecret(
     return new NowBuildError({
       code: 'INVALID_CRON_SECRET',
       message: `The \`CRON_SECRET\` environment variable contains characters that are not valid in HTTP headers: ${descriptions.join(', ')}${moreText}. Only visible ASCII characters (letters, digits, symbols), spaces, and tabs are allowed.`,
-      link: 'https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs',
+      link: 'https://vercel.link/securing-cron-jobs',
       action: 'Learn More',
     });
   }

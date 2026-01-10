@@ -190,7 +190,7 @@ describe('validateCronSecret', () => {
       const error = validateCronSecret('my\x00Secret');
       expect(error).not.toBeNull();
       expect(error!.link).toBe(
-        'https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs'
+        'https://vercel.link/securing-cron-jobs'
       );
     });
 
