@@ -2,7 +2,6 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
 import fetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
@@ -230,13 +229,11 @@ describe('frameworks', () => {
     const root = join(__dirname, '..', '..', '..');
     const getExample = (name: string) => join(root, 'examples', name);
 
-    const result = frameworkList
-      .map(f => f.slug)
-      .filter(isString)
-      .filter(slug => !skipExamples.includes(slug))
-      .filter(f => existsSync(getExample(f)) === false);
-
-    expect(result).toEqual([]);
+    for (const { slug } of frameworkList) {
+      if (typeof slug !== 'string') continue;
+      if (skipExamples.includes(slug)) continue;
+      assert(existsSync(getExample(slug)), `Slug "${slug}" is missing example`);
+    }
   });
 
   it('ensure schema', async () => {
