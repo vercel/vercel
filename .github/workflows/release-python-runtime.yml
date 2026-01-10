@@ -35,8 +35,8 @@ jobs:
 
           # Get the version from the previous commit
           PREVIOUS_VERSION=$(
-            git show HEAD^:python/vercel-runtime/pyproject.toml 2>/dev/null
-            | grep -Po '(?<=^version = ")[^"]+' || echo ""
+            git show HEAD^:python/vercel-runtime/pyproject.toml 2>/dev/null \
+              | grep -Po '(?<=^version = ")[^"]+' || echo ""
           )
 
           if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
