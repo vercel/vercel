@@ -5,9 +5,19 @@ require 'base64'
 require 'json'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
+$framework = ENV['VC_FRAMEWORK']
 
 ENV['RAILS_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
+
+# Zero-config fallback: if SECRET_KEY_BASE is not provided by the user,
+# and this is a Rails app, use the per-deployment generated value.
+if $framework == 'rails' && (ENV['SECRET_KEY_BASE'].nil? || ENV['SECRET_KEY_BASE'].empty?)
+  generated = ENV['VC_GENERATED_SECRET_KEY_BASE']
+  if generated && !generated.empty?
+    ENV['SECRET_KEY_BASE'] = generated
+  end
+end
 
 def rack_handler(httpMethod, path, body, headers)
   require 'rack'
