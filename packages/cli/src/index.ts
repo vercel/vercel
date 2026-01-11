@@ -688,6 +688,9 @@ const main = async () => {
           telemetry.trackCliCommandLink(userSuppliedSubCommand);
           func = require('./commands/link').default;
           break;
+        case 'unlink':
+          func = require('./commands/unlink').default;
+          break;
         case 'list':
           telemetry.trackCliCommandList(userSuppliedSubCommand);
           func = require('./commands/list').default;
