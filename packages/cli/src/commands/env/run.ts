@@ -123,6 +123,12 @@ export default async function run(client: Client): Promise<number> {
       },
     });
 
+    if (result instanceof Error && typeof result.exitCode !== 'number') {
+      // Command does not exist or is not executable
+      output.prettyError(result);
+      return 1;
+    }
+
     return result.exitCode;
   } catch (err: unknown) {
     output.prettyError(err);
