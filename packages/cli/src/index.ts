@@ -926,27 +926,11 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
         );
         output.print('\n');
 
-        // Prompt user to upgrade now (only if stdin is also interactive)
-        if (process.stdin.isTTY) {
-          output.print(`Upgrade now? ${chalk.gray('[Y/n] ')}`);
-
-          const answer = await new Promise<string>(resolve => {
-            process.stdin
-              .once('data', data => {
-                process.stdin.pause();
-                resolve(data.toString().trim().toLowerCase());
-              })
-              .resume();
-          });
-
-          if (answer === '' || answer === 'y' || answer === 'yes') {
-            output.print('\n');
-            const upgradeExitCode = await executeUpgrade();
-            process.exitCode = upgradeExitCode;
-            return;
-          }
-
-          output.print('\n');
+        // Prompt user to upgrade now
+        if (await client.input.confirm('Upgrade now?', true)) {
+          const upgradeExitCode = await executeUpgrade();
+          process.exitCode = upgradeExitCode;
+          return;
         }
       }
     }
