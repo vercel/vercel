@@ -2799,6 +2799,9 @@ export async function serverBuild({
               dest: path.posix.join('/', entryDirectory, '/$nextLocale/404'),
               status: 404,
               caseSensitive: true,
+              headers: {
+                'x-next-error-status': '404',
+              },
             },
             {
               src: path.posix.join('/', entryDirectory, '.*'),
@@ -2808,6 +2811,9 @@ export async function serverBuild({
                 `/${i18n.defaultLocale}/404`
               ),
               status: 404,
+              headers: {
+                'x-next-error-status': '404',
+              },
             },
           ]
         : [
@@ -2834,6 +2840,9 @@ export async function serverBuild({
                     : '/_error'
               ),
               status: 404,
+              headers: {
+                'x-next-error-status': '404',
+              },
             },
           ]),
 
@@ -2851,6 +2860,9 @@ export async function serverBuild({
               dest: path.posix.join('/', entryDirectory, '/$nextLocale/500'),
               status: 500,
               caseSensitive: true,
+              headers: {
+                'x-next-error-status': '500',
+              },
             },
             {
               src: path.posix.join('/', entryDirectory, '.*'),
@@ -2860,6 +2872,9 @@ export async function serverBuild({
                 `/${i18n.defaultLocale}/500`
               ),
               status: 500,
+              headers: {
+                'x-next-error-status': '500',
+              },
             },
           ]
         : [
@@ -2882,6 +2897,9 @@ export async function serverBuild({
                   : '/_error'
               ),
               status: 500,
+              headers: {
+                'x-next-error-status': '500',
+              },
             },
           ]),
     ],
