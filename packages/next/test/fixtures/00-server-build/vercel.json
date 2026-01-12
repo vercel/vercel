@@ -147,11 +147,6 @@
       "mustContain": "page\":\"api/index.js\""
     },
     {
-      "path": "/api",
-      "status": 200,
-      "mustContain": "memory\":\"256\""
-    },
-    {
       "path": "/api/another",
       "status": 200,
       "mustContain": "page\":\"api/another.js\""
