@@ -431,57 +431,9 @@ importers:
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent
-      '@vercel/elysia':
-        specifier: workspace:*
-        version: link:../elysia
-      '@vercel/express':
-        specifier: workspace:*
-        version: link:../express
-      '@vercel/fastify':
-        specifier: workspace:*
-        version: link:../fastify
       '@vercel/fun':
         specifier: 1.2.0
         version: 1.2.0
-      '@vercel/go':
-        specifier: workspace:*
-        version: link:../go
-      '@vercel/h3':
-        specifier: workspace:*
-        version: link:../h3
-      '@vercel/hono':
-        specifier: workspace:*
-        version: link:../hono
-      '@vercel/hydrogen':
-        specifier: workspace:*
-        version: link:../hydrogen
-      '@vercel/nestjs':
-        specifier: workspace:*
-        version: link:../nestjs
-      '@vercel/next':
-        specifier: workspace:*
-        version: link:../next
-      '@vercel/node':
-        specifier: workspace:*
-        version: link:../node
-      '@vercel/python':
-        specifier: workspace:*
-        version: link:../python
-      '@vercel/redwood':
-        specifier: workspace:*
-        version: link:../redwood
-      '@vercel/remix-builder':
-        specifier: workspace:*
-        version: link:../remix
-      '@vercel/ruby':
-        specifier: workspace:*
-        version: link:../ruby
-      '@vercel/rust':
-        specifier: workspace:*
-        version: link:../rust
-      '@vercel/static-build':
-        specifier: workspace:*
-        version: link:../static-build
       chokidar:
         specifier: 4.0.0
         version: 4.0.0
