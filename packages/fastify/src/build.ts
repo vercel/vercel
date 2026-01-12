@@ -16,6 +16,7 @@ const {
 );
 
 const shim = `
+import { channel } from "node:diagnostics_channel";
 const originalConsoleLog = console.log.bind(console);
 let currentRoute = "";
 console.log = (...args) => {
