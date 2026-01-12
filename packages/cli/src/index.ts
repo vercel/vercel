@@ -41,7 +41,7 @@ import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
-import didYouMean from './util/did-you-mean';
+import { handleCommandTypo } from './util/handle-command-typo';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -587,11 +587,12 @@ const main = async () => {
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Check if the user made a typo before falling back to deploy
-          const suggestion = didYouMean(targetCommand, commandNames, 0.7);
-          if (suggestion) {
-            output.error(
-              `The ${param(targetCommand)} subcommand does not exist. Did you mean ${param(suggestion)}?`
-            );
+          if (
+            handleCommandTypo({
+              command: targetCommand,
+              availableCommands: commandNames,
+            })
+          ) {
             return 1;
           }
           // Fall back to `vc deploy <dir>`
@@ -781,14 +782,13 @@ const main = async () => {
       }
 
       if (!func || !targetCommand) {
-        const sub = param(subcommand);
-        const suggestion = didYouMean(subcommand, commandNames, 0.7);
-        if (suggestion) {
-          output.error(
-            `The ${sub} subcommand does not exist. Did you mean ${param(suggestion)}?`
-          );
-        } else {
-          output.error(`The ${sub} subcommand does not exist`);
+        if (
+          !handleCommandTypo({
+            command: subcommand,
+            availableCommands: commandNames,
+          })
+        ) {
+          output.error(`The ${param(subcommand)} subcommand does not exist`);
         }
         return 1;
       }
