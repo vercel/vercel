@@ -18,7 +18,7 @@ const {
 const shim = `
 const originalConsoleLog = console.log.bind(console);
 let currentRoute = "";
-console.log = (...args: any[]) => {
+console.log = (...args) => {
   originalConsoleLog(...args);
   originalConsoleLog(\`\${currentRoute} \${args.join(" ")}\`);
 };
