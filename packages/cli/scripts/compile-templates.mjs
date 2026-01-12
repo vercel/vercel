@@ -1,9 +1,6 @@
 import { readFile, writeFile, readdir, unlink, rename } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import doT from 'dot';
 import { fileURLToPath } from 'node:url';
-
-const require = createRequire(import.meta.url);
 
 export async function compileDevTemplates() {
   const dirRoot = new URL('../', import.meta.url);
@@ -26,11 +23,12 @@ export async function compileDevTemplates() {
     const interfaceName = def.match(/interface (\w+)/)[1];
 
     // doT generates CommonJS code, but since this is an ESM package (.js files
-    // are treated as ESM), we rename to .cjs so require() can load it properly.
+    // are treated as ESM), we rename to .cjs so Node.js treats it as CommonJS.
     // After extracting the function, we delete the temp .cjs file since we're
     // generating a TypeScript version instead.
     await rename(fnPath, cjsPath);
-    const fn = require(fileURLToPath(cjsPath));
+    const mod = await import(cjsPath.href);
+    const fn = mod.default;
     await unlink(cjsPath);
 
     const contents = `import encodeHTML from 'escape-html';
