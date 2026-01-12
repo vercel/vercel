@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.15.11
+
+### Patch Changes
+
+- Add early validation for Next.js output directory and improve error messages to guide users when the output directory is missing, empty, or misconfigured. Introduces new error codes `NEXT_OUTPUT_DIR_MISSING` and `NEXT_OUTPUT_DIR_EMPTY` with actionable guidance for common issues like Turborepo cache misconfiguration. ([#14542](https://github.com/vercel/vercel/pull/14542))
+
+## 4.15.10
+
+### Patch Changes
+
+- Fix experimentalTriggers not applying to Pages Router workflow routes ([#14505](https://github.com/vercel/vercel/pull/14505))
+
 ## 4.15.9
 
 ### Patch Changes

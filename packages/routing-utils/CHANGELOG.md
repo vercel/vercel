@@ -1,5 +1,13 @@
 # @vercel/routing-utils
 
+## 5.3.2
+
+### Patch Changes
+
+- Add respectOriginCacheControl to rewritesSchema ([#14506](https://github.com/vercel/vercel/pull/14506))
+
+- Add respectOriginCacheControl to routes schema ([#14565](https://github.com/vercel/vercel/pull/14565))
+
 ## 5.3.1
 
 ### Patch Changes

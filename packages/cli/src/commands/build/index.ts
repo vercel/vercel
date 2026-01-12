@@ -14,6 +14,7 @@ import {
   NowBuildError,
   runNpmInstall,
   runCustomInstallCommand,
+  resetCustomInstallCommandSet,
   type Reporter,
   Span,
   type TraceEvent,
@@ -116,6 +117,7 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  deploymentId?: string;
 }
 
 /**
@@ -388,6 +390,12 @@ export default async function main(client: Client): Promise<number> {
     for (const key of envToUnset) {
       delete process.env[key];
     }
+
+    // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
+    delete process.env.VERCEL_INSTALL_COMPLETED;
+
+    // Reset customInstallCommandSet to allow subsequent builds in the same process
+    resetCustomInstallCommandSet();
   }
 }
 
@@ -436,6 +444,7 @@ async function doBuild(
         project.settings.createdAt
       );
     }
+    process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
   const compileResult = await compileVercelConfig(workPath);
@@ -934,6 +943,28 @@ async function doBuild(
     throw existingConfig;
   }
   if (existingConfig) {
+    // Validate deploymentId if present (user-configured for skew protection)
+    if (
+      'deploymentId' in existingConfig &&
+      typeof existingConfig.deploymentId === 'string'
+    ) {
+      const deploymentId = existingConfig.deploymentId;
+      if (deploymentId.startsWith('dpl_')) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
+      if (deploymentId.length > 32) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
+    }
+
     if (existingConfig.overrides) {
       overrides.push(existingConfig.overrides);
     }
@@ -973,6 +1004,29 @@ async function doBuild(
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
+  const mergedDeploymentId = mergeDeploymentId(
+    existingConfig?.deploymentId,
+    buildResults.values()
+  );
+
+  // Validate merged deploymentId if present (from build results)
+  if (mergedDeploymentId) {
+    if (mergedDeploymentId.startsWith('dpl_')) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+    if (mergedDeploymentId.length > 32) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+  }
+
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
@@ -988,6 +1042,7 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -1123,6 +1178,23 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+function mergeDeploymentId(
+  existingDeploymentId: string | undefined,
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): string | undefined {
+  // Prefer existing deploymentId from config.json if present
+  if (existingDeploymentId) {
+    return existingDeploymentId;
+  }
+  // Otherwise, take the first deploymentId from build results
+  for (const result of buildResults) {
+    if ('deploymentId' in result && result.deploymentId) {
+      return result.deploymentId;
+    }
+  }
+  return undefined;
 }
 
 /**

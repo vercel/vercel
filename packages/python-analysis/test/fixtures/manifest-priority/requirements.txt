@@ -1,0 +1,2 @@
+# This file should be ignored because pyproject.toml takes precedence
+flask==1.0.0
