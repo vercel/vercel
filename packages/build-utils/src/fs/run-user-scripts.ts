@@ -457,6 +457,9 @@ export async function scanParentDirs(
     );
   }
 
+  console.log('Scan parent dirs');
+  console.log({ cliType, lockfilePath, lockfileVersion });
+
   const packageJsonPath = pkgJsonPath || undefined;
   return {
     cliType,
