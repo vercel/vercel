@@ -1,5 +1,0 @@
----
-
----
-
-Add tarball instructions

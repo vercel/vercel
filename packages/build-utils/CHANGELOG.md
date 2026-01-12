@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 13.2.5
+
+### Patch Changes
+
+- Adding in user configured deploymentId to build output type ([#14497](https://github.com/vercel/vercel/pull/14497))
+
+- skip secondary installation for vercel.ts ([#14471](https://github.com/vercel/vercel/pull/14471))
+
 ## 13.2.4
 
 ### Patch Changes
