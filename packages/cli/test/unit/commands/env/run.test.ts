@@ -82,7 +82,9 @@ describe('env run', () => {
       client.setArgv('env', 'run');
       const exitCodePromise = env(client);
 
-      await expect(client.stderr).toOutput('No command provided');
+      await expect(client.stderr).toOutput(
+        'No command provided. Use `--` to separate vercel flags from your command.'
+      );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
     });
@@ -101,7 +103,9 @@ describe('env run', () => {
       client.setArgv('env', 'run', '--');
       const exitCodePromise = env(client);
 
-      await expect(client.stderr).toOutput('No command provided');
+      await expect(client.stderr).toOutput(
+        'No command provided. Use `--` to separate vercel flags from your command.'
+      );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
     });

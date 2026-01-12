@@ -58,7 +58,7 @@ export default async function run(client: Client): Promise<number> {
 
   if (userCommand.length === 0) {
     output.error(
-      `No command provided. Use ${getCommandName('--')} to separate flags from your command, e.g. ${getCommandName('env run -- npm start')}`
+      `No command provided. Use \`--\` to separate vercel flags from your command.`
     );
     return 1;
   }
