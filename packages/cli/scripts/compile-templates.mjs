@@ -25,7 +25,10 @@ export async function compileDevTemplates() {
     );
     const interfaceName = def.match(/interface (\w+)/)[1];
 
-    // Rename to .cjs so require() treats it as CommonJS in ESM package
+    // doT generates CommonJS code, but since this is an ESM package (.js files
+    // are treated as ESM), we rename to .cjs so require() can load it properly.
+    // After extracting the function, we delete the temp .cjs file since we're
+    // generating a TypeScript version instead.
     await rename(fnPath, cjsPath);
     const fn = require(fileURLToPath(cjsPath));
     await unlink(cjsPath);
