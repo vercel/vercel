@@ -292,6 +292,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandUpgrade(actual: string) {
+    this.trackCliCommand({
+      command: 'upgrade',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
