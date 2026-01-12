@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "module": "es2022",
     "noImplicitReturns": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,

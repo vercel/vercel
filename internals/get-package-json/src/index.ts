@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const cache = new Map();
 
@@ -36,8 +37,12 @@ export function getPackageJSON() {
   // the only way for `getFileName` to return `undefined` is if this function is
   // called using `eval` thus it is safe to assert `filePath` is defined at this
   // point.
-  const filePath = (callSite.getFileName() ||
-    callSite.getEvalOrigin()) as string;
+  let filePath = (callSite.getFileName() || callSite.getEvalOrigin()) as string;
+
+  // Handle ESM file:// URLs
+  if (filePath.startsWith('file://')) {
+    filePath = fileURLToPath(filePath);
+  }
 
   let rootDir = path.dirname(filePath);
 

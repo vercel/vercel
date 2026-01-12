@@ -60,7 +60,7 @@ async function createBuildProcess(
 ): Promise<ChildProcess> {
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
-  const builderWorkerPath = join(__dirname, 'builder-worker.js');
+  const builderWorkerPath = join(__dirname, 'builder-worker.cjs');
 
   // Ensure that `node` is in the builder's `PATH`
   const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
