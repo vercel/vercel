@@ -1,5 +1,39 @@
 # vercel
 
+## 50.2.0
+
+### Minor Changes
+
+- Add `vercel env run` command to run commands with environment variables from the linked Vercel project without writing them to the filesystem ([#14582](https://github.com/vercel/vercel/pull/14582))
+
+- Merge computed rewrites/redirects to routes in Vercel config ([#14518](https://github.com/vercel/vercel/pull/14518))
+
+### Patch Changes
+
+- Adding in user configured deploymentId to build output type ([#14497](https://github.com/vercel/vercel/pull/14497))
+
+- skip secondary installation for vercel.ts ([#14471](https://github.com/vercel/vercel/pull/14471))
+
+- Updated dependencies [[`2eb1b7678bece13e442f8404d519bd07891eb500`](https://github.com/vercel/vercel/commit/2eb1b7678bece13e442f8404d519bd07891eb500), [`39c95ff6b643a63509571818e67a792df09fd71f`](https://github.com/vercel/vercel/commit/39c95ff6b643a63509571818e67a792df09fd71f), [`d63084dac296ccb2077ed742bc2ade0264da851d`](https://github.com/vercel/vercel/commit/d63084dac296ccb2077ed742bc2ade0264da851d)]:
+  - @vercel/next@4.15.11
+  - @vercel/build-utils@13.2.5
+  - @vercel/redwood@2.4.6
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.16
+  - @vercel/backends@0.0.18
+  - @vercel/elysia@0.1.16
+  - @vercel/express@0.1.23
+  - @vercel/fastify@0.1.19
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.25
+  - @vercel/hono@0.2.19
+  - @vercel/hydrogen@1.3.3
+  - @vercel/nestjs@0.2.20
+  - @vercel/node@5.5.17
+  - @vercel/python@6.1.6
+  - @vercel/remix-builder@5.5.6
+  - @vercel/ruby@2.2.4
+
 ## 50.1.6
 
 ### Patch Changes
