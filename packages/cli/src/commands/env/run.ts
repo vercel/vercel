@@ -2,8 +2,7 @@ import execa from 'execa';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
-import { help } from '../help';
-import { runSubcommand, envCommand } from './command';
+import { runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
@@ -59,13 +58,7 @@ export default async function run(client: Client): Promise<number> {
 
   if (userCommand.length === 0) {
     output.error(
-      `No command provided. Usage: ${getCommandName('env run -- <command>')}`
-    );
-    output.print(
-      help(runSubcommand, {
-        parent: envCommand,
-        columns: client.stderr.columns,
-      })
+      `No command provided. Use ${getCommandName('--')} to separate flags from your command, e.g. ${getCommandName('env run -- npm start')}`
     );
     return 1;
   }
