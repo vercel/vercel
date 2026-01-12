@@ -11,6 +11,11 @@
     "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/cli"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./vc": "./dist/vc.js",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail",
     "vitest-run": "vitest --config ./vitest.config.mts",
@@ -35,27 +40,11 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "@vercel/backends": "workspace:*",
     "@vercel/blob": "1.0.2",
+    "@vercel/backends": "workspace:*",
     "@vercel/build-utils": "workspace:*",
     "@vercel/detect-agent": "workspace:*",
-    "@vercel/elysia": "workspace:*",
-    "@vercel/express": "workspace:*",
-    "@vercel/fastify": "workspace:*",
     "@vercel/fun": "1.2.0",
-    "@vercel/go": "workspace:*",
-    "@vercel/h3": "workspace:*",
-    "@vercel/hono": "workspace:*",
-    "@vercel/hydrogen": "workspace:*",
-    "@vercel/nestjs": "workspace:*",
-    "@vercel/next": "workspace:*",
-    "@vercel/node": "workspace:*",
-    "@vercel/python": "workspace:*",
-    "@vercel/redwood": "workspace:*",
-    "@vercel/remix-builder": "workspace:*",
-    "@vercel/ruby": "workspace:*",
-    "@vercel/rust": "workspace:*",
-    "@vercel/static-build": "workspace:*",
     "chokidar": "4.0.0",
     "esbuild": "0.27.0",
     "form-data": "^4.0.0",
