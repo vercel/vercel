@@ -40,7 +40,8 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import { commands } from './commands';
+import { commands, commandNames } from './commands';
+import { handleCommandTypo } from './util/handle-command-typo';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -587,6 +588,15 @@ const main = async () => {
         telemetry.trackCliExtension();
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
+          // Check if the user made a typo before falling back to deploy
+          if (
+            handleCommandTypo({
+              command: targetCommand,
+              availableCommands: commandNames,
+            })
+          ) {
+            return 1;
+          }
           // Fall back to `vc deploy <dir>`
           targetCommand = subcommand = 'deploy';
         } else {
@@ -778,8 +788,14 @@ const main = async () => {
       }
 
       if (!func || !targetCommand) {
-        const sub = param(subcommand);
-        output.error(`The ${sub} subcommand does not exist`);
+        if (
+          !handleCommandTypo({
+            command: subcommand,
+            availableCommands: commandNames,
+          })
+        ) {
+          output.error(`The ${param(subcommand)} subcommand does not exist`);
+        }
         return 1;
       }
 
