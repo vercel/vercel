@@ -40,7 +40,8 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import { commands } from './commands';
+import { commands, commandNames } from './commands';
+import { handleCommandTypo } from './util/handle-command-typo';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -62,6 +63,7 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
+import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
@@ -97,6 +99,7 @@ Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
   environment: 'stable',
+  autoSessionTracking: false,
 });
 
 let client: Client;
@@ -383,6 +386,7 @@ const main = async () => {
     'init',
     'build',
     'telemetry',
+    'upgrade',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -584,6 +588,15 @@ const main = async () => {
         telemetry.trackCliExtension();
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
+          // Check if the user made a typo before falling back to deploy
+          if (
+            handleCommandTypo({
+              command: targetCommand,
+              availableCommands: commandNames,
+            })
+          ) {
+            return 1;
+          }
           // Fall back to `vc deploy <dir>`
           targetCommand = subcommand = 'deploy';
         } else {
@@ -761,6 +774,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
+        case 'upgrade':
+          telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
+          func = require('./commands/upgrade').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
@@ -771,8 +788,14 @@ const main = async () => {
       }
 
       if (!func || !targetCommand) {
-        const sub = param(subcommand);
-        output.error(`The ${sub} subcommand does not exist`);
+        if (
+          !handleCommandTypo({
+            command: subcommand,
+            availableCommands: commandNames,
+          })
+        ) {
+          output.error(`The ${param(subcommand)} subcommand does not exist`);
+        }
         return 1;
       }
 
@@ -917,7 +940,14 @@ Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
           )
         );
-        output.print('\n\n');
+        output.print('\n');
+
+        // Prompt user to upgrade now
+        if (await client.input.confirm('Upgrade now?', true)) {
+          const upgradeExitCode = await executeUpgrade();
+          process.exitCode = upgradeExitCode;
+          return;
+        }
       }
     }
 
