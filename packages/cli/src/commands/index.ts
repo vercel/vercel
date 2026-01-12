@@ -108,3 +108,5 @@ for (const command of commandsStructs) {
 output.debug(
   `All registered commands: ${JSON.stringify(Array.from(commands.entries()))}`
 );
+
+export const commandNames = Array.from(commands.keys());

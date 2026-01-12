@@ -40,7 +40,8 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import { commands } from './commands';
+import { commands, commandNames } from './commands';
+import didYouMean from './util/did-you-mean';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -585,6 +586,14 @@ const main = async () => {
         telemetry.trackCliExtension();
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
+          // Check if the user made a typo before falling back to deploy
+          const suggestion = didYouMean(targetCommand, commandNames, 0.7);
+          if (suggestion) {
+            output.error(
+              `The ${param(targetCommand)} subcommand does not exist. Did you mean ${param(suggestion)}?`
+            );
+            return 1;
+          }
           // Fall back to `vc deploy <dir>`
           targetCommand = subcommand = 'deploy';
         } else {
@@ -773,7 +782,14 @@ const main = async () => {
 
       if (!func || !targetCommand) {
         const sub = param(subcommand);
-        output.error(`The ${sub} subcommand does not exist`);
+        const suggestion = didYouMean(subcommand, commandNames, 0.7);
+        if (suggestion) {
+          output.error(
+            `The ${sub} subcommand does not exist. Did you mean ${param(suggestion)}?`
+          );
+        } else {
+          output.error(`The ${sub} subcommand does not exist`);
+        }
         return 1;
       }
 
