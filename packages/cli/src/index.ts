@@ -62,6 +62,7 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
+import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
@@ -384,6 +385,7 @@ const main = async () => {
     'init',
     'build',
     'telemetry',
+    'upgrade',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -762,6 +764,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
+        case 'upgrade':
+          telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
+          func = require('./commands/upgrade').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
@@ -918,7 +924,30 @@ Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
           )
         );
-        output.print('\n\n');
+        output.print('\n');
+
+        // Prompt user to upgrade now (only if stdin is also interactive)
+        if (process.stdin.isTTY) {
+          output.print(`Upgrade now? ${chalk.gray('[Y/n] ')}`);
+
+          const answer = await new Promise<string>(resolve => {
+            process.stdin
+              .once('data', data => {
+                process.stdin.pause();
+                resolve(data.toString().trim().toLowerCase());
+              })
+              .resume();
+          });
+
+          if (answer === '' || answer === 'y' || answer === 'yes') {
+            output.print('\n');
+            const upgradeExitCode = await executeUpgrade();
+            process.exitCode = upgradeExitCode;
+            return;
+          }
+
+          output.print('\n');
+        }
       }
     }
 
