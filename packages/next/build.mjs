@@ -2,6 +2,8 @@ import { readFileSync, promises as fsPromises } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
+// bump
+
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';
 
