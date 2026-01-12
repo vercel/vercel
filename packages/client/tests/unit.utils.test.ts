@@ -249,4 +249,23 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(microfrontendsConfig)[0]
     );
   });
+
+  it('should include bulkRedirectsPath file when prebuilt=true', async () => {
+    const cwd = fixture('bulk-redirects-path');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+        bulkRedirectsPath: 'redirects.json',
+      },
+      noop
+    );
+
+    const bulkRedirectsFile = toAbsolutePaths(cwd, ['redirects.json']);
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths(bulkRedirectsFile)[0]
+    );
+  });
 });

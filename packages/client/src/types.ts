@@ -35,6 +35,11 @@ export interface VercelClientOptions {
   archive?: ArchiveFormat;
   agent?: Agent;
   projectName?: string;
+  /**
+   * Path to a file containing bulk redirects (relative to the project root).
+   * This file will be included in prebuilt deployments.
+   */
+  bulkRedirectsPath?: string | null;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -170,6 +175,11 @@ export interface VercelConfig {
         default5xx?: string;
         default4xx?: string;
       };
+  /**
+   * Path to a file containing bulk redirects (relative to the project root).
+   * This file will be included in prebuilt deployments.
+   */
+  bulkRedirectsPath?: string | null;
 }
 
 export interface GitMetadata {

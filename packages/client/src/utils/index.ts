@@ -88,6 +88,7 @@ export async function buildFileTree(
     vercelOutputDir,
     rootDirectory,
     projectName,
+    bulkRedirectsPath,
   }: Pick<
     VercelClientOptions,
     | 'isDirectory'
@@ -95,6 +96,7 @@ export async function buildFileTree(
     | 'vercelOutputDir'
     | 'rootDirectory'
     | 'projectName'
+    | 'bulkRedirectsPath'
   >,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
@@ -167,6 +169,31 @@ export async function buildFileTree(
       }
     } catch (e) {
       debug(`Error checking for .vercel/routes.json: ${e}`);
+    }
+
+    // Include bulkRedirectsPath file if specified (for prebuilt deployments)
+    if (prebuilt && bulkRedirectsPath) {
+      try {
+        const bulkRedirectsFullPath = join(
+          path,
+          rootDirectory || '',
+          bulkRedirectsPath
+        );
+        const bulkRedirectsContent = await maybeRead(
+          bulkRedirectsFullPath,
+          null
+        );
+        if (bulkRedirectsContent !== null) {
+          refs.add(bulkRedirectsFullPath);
+          debug(
+            `Including bulk redirects file "${bulkRedirectsPath}" in deployment`
+          );
+        } else {
+          debug(`Bulk redirects file "${bulkRedirectsPath}" not found`);
+        }
+      } catch (e) {
+        debug(`Error checking for bulk redirects file: ${e}`);
+      }
     }
 
     if (refs.size > 0) {
