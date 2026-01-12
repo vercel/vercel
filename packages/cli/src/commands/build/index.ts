@@ -963,6 +963,15 @@ async function doBuild(
           link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
         });
       }
+      // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+      const validCharacterPattern = /^[a-zA-Z0-9_-]+$/;
+      if (!validCharacterPattern.test(deploymentId)) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
     }
 
     if (existingConfig.overrides) {
@@ -1022,6 +1031,15 @@ async function doBuild(
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
         message: `The deploymentId "${mergedDeploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+    // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+    const validCharacterPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!validCharacterPattern.test(mergedDeploymentId)) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
         link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
       });
     }
