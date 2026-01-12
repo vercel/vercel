@@ -977,7 +977,8 @@ async function doBuild(
         });
       }
       // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
-      if (!VALID_DEPLOYMENT_ID_PATTERN.test(deploymentId)) {
+      const validCharacterPattern = /^[a-zA-Z0-9_-]+$/;
+      if (!validCharacterPattern.test(deploymentId)) {
         throw new NowBuildError({
           code: 'INVALID_DEPLOYMENT_ID',
           message: `The deploymentId "${deploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
@@ -1048,7 +1049,12 @@ async function doBuild(
       });
     }
     // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+<<<<<<< HEAD
     if (!VALID_DEPLOYMENT_ID_PATTERN.test(mergedDeploymentId)) {
+=======
+    const validCharacterPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!validCharacterPattern.test(mergedDeploymentId)) {
+>>>>>>> 7af572743 (update validation)
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
         message: `The deploymentId "${mergedDeploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
