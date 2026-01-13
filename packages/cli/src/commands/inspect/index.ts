@@ -16,6 +16,7 @@ import readStandardInput from '../../util/input/read-standard-input';
 import buildsList from '../../util/output/builds';
 import elapsed from '../../util/output/elapsed';
 import indent from '../../util/output/indent';
+import { validateJsonOutput } from '../../util/output-format';
 import routesList from '../../util/output/routes';
 import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
@@ -76,6 +77,7 @@ export default async function inspect(client: Client) {
   telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
   telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
   telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
   telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
 
   // validate the timeout
@@ -104,7 +106,12 @@ export default async function inspect(client: Client) {
   const until = Date.now() + timeout;
   const wait = parsedArguments.flags['--wait'] ?? false;
   const withLogs = parsedArguments.flags['--logs'];
-  const asJson = parsedArguments.flags['--json'] ?? false;
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
   const startTimestamp = Date.now();
 
   try {

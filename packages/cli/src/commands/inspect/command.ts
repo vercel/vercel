@@ -1,3 +1,4 @@
+import { formatOption, jsonOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const inspectCommand = {
@@ -33,13 +34,8 @@ export const inspectCommand = {
       deprecated: false,
       description: 'Prints the build logs instead of the deployment summary',
     },
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output the deployment information as JSON',
-    },
+    formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -64,7 +60,7 @@ export const inspectCommand = {
     },
     {
       name: 'Get deployment information as JSON',
-      value: `${packageName} inspect my-deployment.vercel.app --json`,
+      value: `${packageName} inspect my-deployment.vercel.app --format=json`,
     },
   ],
 } as const;

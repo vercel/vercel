@@ -2,11 +2,16 @@ import ms from 'ms';
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import output from '../../output-manager';
-import { targetCommand } from './command';
+import { listSubcommand, targetCommand } from './command';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { ensureLink } from '../../util/link/ensure-link';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
+import { validateJsonOutput } from '../../util/output-format';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { TargetListTelemetryClient } from '../../util/telemetry/commands/target/list';
 import type Client from '../../util/client';
 import type {
   CustomEnvironment,
@@ -49,15 +54,38 @@ const BRANCH_TRACKING_MAP: Record<
 export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
 
+  const telemetry = new TargetListTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
   const validationResult = validateLsArgs({
     commandName: 'target ls',
-    args: argv,
+    args: parsedArgs.args,
     maxArgs: 0,
     exitCode: 2,
   });
   if (validationResult !== 0) {
     return validationResult;
   }
+
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
   const link = await ensureLink(targetCommand.name, client, cwd);
   if (typeof link === 'number') {
@@ -86,33 +114,48 @@ export default async function list(client: Client, argv: string[]) {
 
   result = withDefaultEnvironmentsIncluded(result);
 
-  output.log(
-    `${result.length} Environment${
-      result.length === 1 ? '' : 's'
-    } found under ${projectSlugLink} ${chalk.gray(`[${elapsed}]`)}`
-  );
+  if (asJson) {
+    const jsonOutput = {
+      targets: result.map(target => ({
+        id: target.id,
+        slug: target.slug,
+        type: target.type,
+        description: target.description,
+        branchMatcher: target.branchMatcher,
+        createdAt: target.createdAt,
+        updatedAt: target.updatedAt,
+      })),
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  } else {
+    output.log(
+      `${result.length} Environment${
+        result.length === 1 ? '' : 's'
+      } found under ${projectSlugLink} ${chalk.gray(`[${elapsed}]`)}`
+    );
 
-  const tablePrint = table(
-    [
-      ['Target Name', 'Branch Tracking', 'Type', 'Updated'].map(header =>
-        chalk.bold(chalk.cyan(header))
-      ),
-      ...result.flatMap(target => {
-        return [
-          [
-            formatEnvironment(link.org.slug, link.project.name, target),
-            BRANCH_TRACKING_MAP[target.type](link.project, target),
-            TYPE_MAP[target.type],
-            chalk.gray(
-              target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
-            ),
-          ],
-        ];
-      }),
-    ],
-    { hsep: 3 }
-  ).replace(/^/gm, '  ');
-  output.print(`\n${tablePrint}\n\n`);
+    const tablePrint = table(
+      [
+        ['Target Name', 'Branch Tracking', 'Type', 'Updated'].map(header =>
+          chalk.bold(chalk.cyan(header))
+        ),
+        ...result.flatMap(target => {
+          return [
+            [
+              formatEnvironment(link.org.slug, link.project.name, target),
+              BRANCH_TRACKING_MAP[target.type](link.project, target),
+              TYPE_MAP[target.type],
+              chalk.gray(
+                target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
+              ),
+            ],
+          ];
+        }),
+      ],
+      { hsep: 3 }
+    ).replace(/^/gm, '  ');
+    output.print(`\n${tablePrint}\n\n`);
+  }
   return 0;
 }
 

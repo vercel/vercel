@@ -74,6 +74,35 @@ describe('upgrade', () => {
     });
   });
 
+  describe('--format', () => {
+    it('tracks telemetry for --format json', async () => {
+      client.setArgv('upgrade', '--format', 'json');
+      const exitCodePromise = upgrade(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+      ]);
+    });
+
+    it('outputs upgrade information as valid JSON that can be piped to jq', async () => {
+      client.setArgv('upgrade', '--format', 'json');
+      const exitCode = await upgrade(client);
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      // Should be valid JSON - this will throw if not parseable
+      const json = JSON.parse(output);
+
+      expect(json).toHaveProperty('currentVersion');
+      expect(json).toHaveProperty('installationType');
+      expect(json).toHaveProperty('upgradeCommand');
+    });
+  });
+
   it('should reject invalid arguments', async () => {
     client.setArgv('--invalid');
     const result = await upgrade(client);

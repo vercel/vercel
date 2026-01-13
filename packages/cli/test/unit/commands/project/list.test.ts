@@ -141,6 +141,50 @@ describe('list', () => {
     });
   });
 
+  describe('--format', () => {
+    it('should track telemetry for --format json', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls', '--format', 'json');
+      await projects(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+      ]);
+    });
+
+    it('outputs projects as valid JSON that can be piped to jq', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls', '--format', 'json');
+      const exitCode = await projects(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      // Should be valid JSON - this will throw if not parseable
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('projects');
+      expect(jsonOutput).toHaveProperty('pagination');
+      expect(Array.isArray(jsonOutput.projects)).toBe(true);
+    });
+  });
+
   it('should list projects', async () => {
     const user = useUser();
     useTeams('team_dummy');

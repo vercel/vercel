@@ -8,6 +8,7 @@ import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import { validateJsonOutput } from '../../util/output-format';
 import { AliasListTelemetryClient } from '../../util/telemetry/commands/alias/list';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
@@ -48,12 +49,20 @@ export default async function ls(client: Client, argv: string[]) {
   });
   let paginationOptions;
 
+  const formatResult = validateJsonOutput(opts);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   try {
     paginationOptions = getPaginationOpts(opts);
     const [next, limit] = paginationOptions;
 
     telemetryClient.trackCliOptionNext(next);
     telemetryClient.trackCliOptionLimit(limit);
+    telemetryClient.trackCliOptionFormat(opts['--format']);
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
@@ -69,16 +78,31 @@ export default async function ls(client: Client, argv: string[]) {
     undefined,
     ...paginationOptions
   );
-  output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
-  client.stdout.write(printAliasTable(aliases));
 
-  if (pagination.count === 20) {
-    const flags = getCommandFlags(opts, ['_', '--next']);
-    output.log(
-      `To display the next page run ${getCommandName(
-        `alias ls${flags} --next ${pagination.next}`
-      )}`
-    );
+  if (asJson) {
+    output.stopSpinner();
+    const jsonOutput = {
+      aliases: aliases.map(a => ({
+        alias: a.alias,
+        deploymentId: a.deploymentId,
+        url: a.deployment?.url ?? null,
+        createdAt: a.createdAt,
+      })),
+      pagination,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  } else {
+    output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
+    client.stdout.write(printAliasTable(aliases));
+
+    if (pagination.count === 20) {
+      const flags = getCommandFlags(opts, ['_', '--next', '--format']);
+      output.log(
+        `To display the next page run ${getCommandName(
+          `alias ls${flags} --next ${pagination.next}`
+        )}`
+      );
+    }
   }
 
   return 0;
