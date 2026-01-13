@@ -1013,9 +1013,10 @@ async function doBuild(
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
-  const mergedDeploymentId = mergeDeploymentId(
+  const mergedDeploymentId = await mergeDeploymentId(
     existingConfig?.deploymentId,
-    buildResults.values()
+    buildResults.values(),
+    workPath
   );
 
   // Validate merged deploymentId if present (from build results)
@@ -1198,10 +1199,11 @@ function mergeWildcard(
   return wildcard;
 }
 
-function mergeDeploymentId(
+async function mergeDeploymentId(
   existingDeploymentId: string | undefined,
-  buildResults: Iterable<BuildResult | BuildOutputConfig>
-): string | undefined {
+  buildResults: Iterable<BuildResult | BuildOutputConfig>,
+  workPath: string
+): Promise<string | undefined> {
   // Prefer existing deploymentId from config.json if present
   if (existingDeploymentId) {
     return existingDeploymentId;
@@ -1211,6 +1213,23 @@ function mergeDeploymentId(
     if ('deploymentId' in result && result.deploymentId) {
       return result.deploymentId;
     }
+  }
+  // For prebuilt Next.js deployments, try reading from routes-manifest.json
+  // where Next.js writes the deploymentId during build
+  try {
+    const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');
+    if (await fs.pathExists(routesManifestPath)) {
+      const routesManifest = await readJSONFile<{ deploymentId?: string }>(
+        routesManifestPath
+      );
+      if (routesManifest && !(routesManifest instanceof CantParseJSONFile)) {
+        if (routesManifest.deploymentId) {
+          return routesManifest.deploymentId;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors reading routes-manifest.json
   }
   return undefined;
 }
