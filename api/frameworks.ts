@@ -7,6 +7,7 @@ const frameworks = (_frameworks as Framework[])
     (a, b) =>
       (a.sort || Number.MAX_SAFE_INTEGER) - (b.sort || Number.MAX_SAFE_INTEGER)
   )
+  .filter(framework => !framework.experimental)
   .map(frameworkItem => {
     const framework = {
       ...frameworkItem,

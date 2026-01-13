@@ -3070,6 +3070,7 @@ export const frameworks = [
   {
     name: 'Koa',
     slug: 'koa',
+    experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/koa.svg',
     tagline: 'Expressive middleware for Node.js using ES2017 async functions',
     description:
