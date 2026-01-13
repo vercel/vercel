@@ -626,6 +626,10 @@ const main = async () => {
           telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = require('./commands/build').default;
           break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = require('./commands/buy').default;
+          break;
         case 'cache':
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = require('./commands/cache').default;
