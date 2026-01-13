@@ -8,6 +8,7 @@ import {
   FileBlob,
   FileFsRef,
   getEnvForPackageManager,
+  getRuntimeNodeVersion,
   glob,
   EdgeFunction,
   NodejsLambda,
