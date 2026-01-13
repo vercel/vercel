@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { getNodeVersion } from '@vercel/build-utils';
+import { getRuntimeNodeVersion } from '@vercel/build-utils';
 import { build } from 'esbuild';
 import {
   copy,
@@ -23,7 +23,7 @@ export const writeHandler = async ({
   handlerFile: string;
   prefix?: string;
 }) => {
-  const { major } = await getNodeVersion(process.cwd());
+  const { major } = await getRuntimeNodeVersion(process.cwd());
 
   try {
     await build({
@@ -55,7 +55,7 @@ export const writeVCConfig = async ({
   functionDir: string;
   handler?: string;
 }) => {
-  const { runtime } = await getNodeVersion(process.cwd());
+  const { runtime } = await getRuntimeNodeVersion(process.cwd());
 
   const config: NodejsServerlessFunctionConfig = {
     runtime,

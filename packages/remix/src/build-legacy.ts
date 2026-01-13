@@ -8,7 +8,7 @@ import {
   FileBlob,
   FileFsRef,
   getEnvForPackageManager,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getSpawnOptions,
   glob,
   EdgeFunction,
@@ -91,7 +91,7 @@ export const build: BuildV2 = async ({
   const entrypointFsDirname = join(workPath, mountpoint);
 
   // Run "Install Command"
-  const nodeVersion = await getNodeVersion(
+  const nodeVersion = await getRuntimeNodeVersion(
     entrypointFsDirname,
     undefined,
     config,

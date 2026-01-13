@@ -7,7 +7,7 @@ import {
   debug,
   execCommand,
   getEnvForPackageManager,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getSpawnOptions,
   glob,
   runNpmInstall,
@@ -295,7 +295,7 @@ export const build: BuildV2 = async ({
       : REMIX_FRAMEWORK_SETTINGS;
 
   // Run "Install Command"
-  const nodeVersion = await getNodeVersion(
+  const nodeVersion = await getRuntimeNodeVersion(
     entrypointFsDirname,
     undefined,
     config,

@@ -6,7 +6,7 @@ import {
   EdgeFunction,
   execCommand,
   getEnvForPackageManager,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getPrefixedEnvVars,
   getSpawnOptions,
   glob,
@@ -43,7 +43,7 @@ export const build: BuildV2 = async ({
   const entrypointDir = join(workPath, mountpoint);
 
   // Run "Install Command"
-  const nodeVersion = await getNodeVersion(
+  const nodeVersion = await getRuntimeNodeVersion(
     entrypointDir,
     undefined,
     config,
