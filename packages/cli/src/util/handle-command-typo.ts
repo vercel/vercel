@@ -29,7 +29,7 @@ export function handleCommandTypo({
   const suggestion = didYouMean(command, availableCommands, threshold);
   if (suggestion) {
     output.error(
-      `${command} is not a valid target directory or subcommand. Did you mean ${param(suggestion)}?`
+      `${param(command)} is not a valid target directory or subcommand. Did you mean ${param(suggestion)}?`
     );
     return true;
   }
