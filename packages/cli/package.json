@@ -1,6 +1,7 @@
 {
   "name": "vercel",
-  "version": "50.1.6",
+  "version": "50.3.0",
+  "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -41,7 +42,7 @@
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
     "@vercel/fastify": "workspace:*",
-    "@vercel/fun": "1.2.0",
+    "@vercel/fun": "1.2.1",
     "@vercel/go": "workspace:*",
     "@vercel/h3": "workspace:*",
     "@vercel/hono": "workspace:*",
