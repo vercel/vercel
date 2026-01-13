@@ -1,6 +1,6 @@
 import {
   defaultCachePathGlob,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getSpawnOptions,
   glob,
   runNpmInstall,
@@ -24,7 +24,7 @@ export const prepareCache: PrepareCache = async ({
     // Because the `node_modules` directory was modified to install
     // the forked Remix compiler, re-install to the "fresh" dependencies
     // state before the cache gets created.
-    const nodeVersion = await getNodeVersion(
+    const nodeVersion = await getRuntimeNodeVersion(
       entrypointFsDirname,
       undefined,
       config
