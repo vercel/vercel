@@ -178,9 +178,8 @@ describe('env set', () => {
           // and go directly to asking for the value
           await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
           client.stdin.write('testvalue\n');
-          // Accept either "Added" or "Updated" since set is an upsert operation
           await expect(client.stderr).toOutput(
-            'Environment Variable NEW_VAR to Project vercel-env-pull'
+            'Set Environment Variable NEW_VAR in Project vercel-env-pull'
           );
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "env set"').toEqual(0);
@@ -234,7 +233,7 @@ describe('env set', () => {
       client.stdin.write('updated-value\n');
 
       await expect(client.stderr).toOutput(
-        'Updated Environment Variable EXISTING_VAR to Project vercel-env-pull'
+        'Set Environment Variable EXISTING_VAR in Project vercel-env-pull'
       );
 
       const exitCode = await exitCodePromise;
@@ -257,9 +256,8 @@ describe('env set', () => {
       );
       client.stdin.write('new-value\n');
 
-      // Accept either "Added" or "Updated" since set is an upsert operation
       await expect(client.stderr).toOutput(
-        'Environment Variable BRAND_NEW_VAR to Project vercel-env-pull'
+        'Set Environment Variable BRAND_NEW_VAR in Project vercel-env-pull'
       );
 
       const exitCode = await exitCodePromise;

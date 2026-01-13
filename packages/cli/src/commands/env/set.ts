@@ -167,7 +167,7 @@ export default async function set(client: Client, argv: string[]) {
   if (!isUpdate && envTargets.length === 0) {
     while (envTargets.length === 0) {
       envTargets = await client.input.checkbox({
-        message: `Add ${envName} to which Environments (select multiple)?`,
+        message: `Set ${envName} in which Environments (select multiple)?`,
         choices,
       });
 
@@ -186,7 +186,7 @@ export default async function set(client: Client, argv: string[]) {
     envTargets[0] === 'preview'
   ) {
     envGitBranch = await client.input.text({
-      message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
+      message: `Set ${envName} for which Git branch? (leave empty for all Preview branches)?`,
     });
   }
 
@@ -237,10 +237,9 @@ export default async function set(client: Client, argv: string[]) {
     throw err;
   }
 
-  const actionWord = isUpdate ? 'Updated' : 'Added';
   output.print(
     `${prependEmoji(
-      `${actionWord} Environment Variable ${chalk.bold(envName)} to Project ${chalk.bold(
+      `Set Environment Variable ${chalk.bold(envName)} in Project ${chalk.bold(
         project.name
       )} ${chalk.gray(actionStamp())}`,
       emoji('success')
