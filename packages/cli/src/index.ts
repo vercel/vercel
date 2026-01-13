@@ -38,7 +38,7 @@ import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
-import * as Sentry from '@sentry/node';
+import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
@@ -61,7 +61,6 @@ import {
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
-import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
@@ -93,14 +92,6 @@ const GLOBAL_COMMANDS = new Set(['help']);
   This suppresses those errors.
 */
 epipebomb();
-
-// Configure the error reporting system
-Sentry.init({
-  dsn: SENTRY_DSN,
-  release: `vercel-cli@${pkg.version}`,
-  environment: 'stable',
-  autoSessionTracking: false,
-});
 
 let client: Client;
 
@@ -863,7 +854,7 @@ const main = async () => {
       }
       output.prettyError(err);
     } else {
-      await reportError(Sentry, client, err);
+      await reportError(getSentry(), client, err);
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
@@ -885,7 +876,7 @@ const handleRejection = async (err: any) => {
       await handleUnexpected(err);
     } else {
       output.error(`An unexpected rejection occurred\n  ${err}`);
-      await reportError(Sentry, client, err);
+      await reportError(getSentry(), client, err);
     }
   } else {
     output.error('An unexpected empty rejection occurred');
@@ -904,7 +895,7 @@ const handleUnexpected = async (err: Error) => {
   }
 
   output.error(`An unexpected error occurred!\n${err.stack}`);
-  await reportError(Sentry, client, err);
+  await reportError(getSentry(), client, err);
 
   process.exit(1);
 };
