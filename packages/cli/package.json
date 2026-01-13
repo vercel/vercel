@@ -47,6 +47,7 @@
     "@vercel/h3": "workspace:*",
     "@vercel/hono": "workspace:*",
     "@vercel/hydrogen": "workspace:*",
+    "@vercel/koa": "workspace:*",
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
