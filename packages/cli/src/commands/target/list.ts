@@ -11,7 +11,7 @@ import { validateJsonOutput } from '../../util/output-format';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { TargetListTelemetryClient } from '../../util/telemetry/commands/target/list';
+import { TelemetryClient } from '../../util/telemetry';
 import type Client from '../../util/client';
 import type {
   CustomEnvironment,
@@ -54,7 +54,7 @@ const BRANCH_TRACKING_MAP: Record<
 export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
 
-  const telemetry = new TargetListTelemetryClient({
+  const telemetry = new TelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
