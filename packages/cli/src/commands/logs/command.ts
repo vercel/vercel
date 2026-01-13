@@ -1,3 +1,4 @@
+import { formatOption, jsonOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 // has to be ms compliant
@@ -15,13 +16,8 @@ export const logsCommand = {
     },
   ],
   options: [
-    {
-      name: 'json',
-      shorthand: 'j',
-      type: Boolean,
-      deprecated: false,
-      description: 'Print each log line as a JSON object (compatible with JQ)',
-    },
+    formatOption,
+    jsonOption,
     {
       name: 'follow',
       shorthand: 'f',
@@ -46,12 +42,6 @@ export const logsCommand = {
       type: String,
       deprecated: true,
     },
-    {
-      name: 'output',
-      shorthand: 'o',
-      type: String,
-      deprecated: true,
-    },
   ],
   examples: [
     {
@@ -60,11 +50,11 @@ export const logsCommand = {
     },
     {
       name: 'Print all runtime logs for the deployment DEPLOYMENT_ID as json objects',
-      value: `${packageName} logs DEPLOYMENT_ID --json`,
+      value: `${packageName} logs DEPLOYMENT_ID --format=json`,
     },
     {
       name: 'Filter runtime logs for warning with JQ third party tool',
-      value: `${packageName} logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'`,
+      value: `${packageName} logs DEPLOYMENT_ID --format=json | jq 'select(.level == "warning")'`,
     },
   ],
 } as const;

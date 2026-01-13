@@ -5,6 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { executeUpgrade } from '../../util/upgrade';
 import getUpdateCommand, { isGlobal } from '../../util/get-update-command';
 import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import pkg from '../../util/pkg';
 import type Client from '../../util/client';
@@ -36,10 +37,16 @@ export default async function upgrade(client: Client): Promise<number> {
   }
 
   const dryRun = parsedArgs.flags['--dry-run'];
-  const asJson = parsedArgs.flags['--json'];
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   telemetry.trackCliFlagDryRun(dryRun);
-  telemetry.trackCliFlagJson(asJson);
+  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
 
   // --json implies --dry-run behavior
   if (dryRun || asJson) {
