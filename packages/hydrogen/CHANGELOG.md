@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.3.4
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
 ## 1.3.3
 
 ### Patch Changes
