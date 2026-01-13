@@ -1,5 +1,13 @@
 # @vercel/cervel
 
+## 0.0.9
+
+### Patch Changes
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
 ## 0.0.8
 
 ### Patch Changes

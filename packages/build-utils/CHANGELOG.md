@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 13.2.6
+
+### Patch Changes
+
+- Update http links in Node.js version incompatibility message to https ([#14583](https://github.com/vercel/vercel/pull/14583))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
 ## 13.2.5
 
 ### Patch Changes
