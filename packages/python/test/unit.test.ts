@@ -1,5 +1,6 @@
 import { getSupportedPythonVersion } from '../src/version';
 import { build } from '../src/index';
+import { getProtectedUvEnv, createVenvEnv } from '../src/utils';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -1119,5 +1120,72 @@ describe('custom install hooks', () => {
     expect(mockRunUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  describe('getProtectedUvEnv', () => {
+    it('sets UV_PYTHON_DOWNLOADS to "never" by default', () => {
+      const env = getProtectedUvEnv({});
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS when user tries to set it to "auto"', () => {
+      const userEnv = { UV_PYTHON_DOWNLOADS: 'auto' };
+      const env = getProtectedUvEnv(userEnv);
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS when user tries to unset it (undefined)', () => {
+      const userEnv = { UV_PYTHON_DOWNLOADS: undefined };
+      const env = getProtectedUvEnv(userEnv);
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS when user tries to set empty string', () => {
+      const userEnv = { UV_PYTHON_DOWNLOADS: '' };
+      const env = getProtectedUvEnv(userEnv);
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS from process.env', () => {
+      process.env.UV_PYTHON_DOWNLOADS = 'foobar';
+      const env = getProtectedUvEnv();
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('preserves other environment variables from baseEnv', () => {
+      const userEnv = {
+        HOME: '/home/user',
+        UV_PYTHON_DOWNLOADS: 'auto',
+      };
+      const env = getProtectedUvEnv(userEnv);
+
+      expect(env.HOME).toBe('/home/user');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+  });
+
+  describe('createVenvEnv', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+      process.env.UV_PYTHON_DOWNLOADS = 'manual';
+      process.env.PATH = '/usr/bin';
+      const env = createVenvEnv('/path/to/venv');
+
+      expect(env.VIRTUAL_ENV).toBe('/path/to/venv');
+      expect(env.PATH).toContain('/path/to/venv');
+      expect(env.PATH).toContain('/usr/bin');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
   });
 });
