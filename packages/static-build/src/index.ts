@@ -30,7 +30,7 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getSpawnOptions,
   debug,
   NowBuildError,
@@ -479,7 +479,7 @@ export const build: BuildV2 = async ({
       }
     }
 
-    const nodeVersion = await getNodeVersion(
+    const nodeVersion = await getRuntimeNodeVersion(
       entrypointDir,
       undefined,
       config,
@@ -844,7 +844,7 @@ export const build: BuildV2 = async ({
 
   if (!config.zeroConfig && entrypoint.endsWith('.sh')) {
     debug(`Running build script "${entrypoint}"`);
-    const nodeVersion = await getNodeVersion(
+    const nodeVersion = await getRuntimeNodeVersion(
       entrypointDir,
       undefined,
       config,

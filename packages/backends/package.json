@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -31,8 +31,7 @@
     "@vercel/nft": "1.1.1",
     "@vercel/static-config": "workspace:*",
     "@vercel/introspection": "workspace:*",
-    "fs-extra": "11.1.0",
-    "rolldown": "1.0.0-beta.35"
+    "fs-extra": "11.1.0"
   },
   "devDependencies": {
     "@types/express": "5.0.3",

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "4.15.11",
+  "version": "4.15.12",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
@@ -47,7 +47,7 @@
     "bytes": "3.1.2",
     "cheerio": "1.0.0-rc.10",
     "convert-source-map": "1.8.0",
-    "esbuild": "0.12.22",
+    "esbuild": "0.27.0",
     "escape-string-regexp": "2.0.0",
     "execa": "2.0.4",
     "find-up": "4.1.0",

@@ -28,7 +28,7 @@ import {
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
   getEnvForPackageManager,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getPathForPackageManager,
   detectPackageManager,
   getSpawnOptions,
@@ -88,7 +88,7 @@ export {
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
   getEnvForPackageManager,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
@@ -110,7 +110,7 @@ export {
 };
 
 export { EdgeFunction } from './edge-function';
-export { readConfigFile } from './fs/read-config-file';
+export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 export { getOsRelease, getProvidedRuntime } from './os';
 
