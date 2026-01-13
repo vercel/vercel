@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.12
+
+### Patch Changes
+
+- Add error status header for \_error rendering ([#14588](https://github.com/vercel/vercel/pull/14588))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
 ## 4.15.11
 
 ### Patch Changes
