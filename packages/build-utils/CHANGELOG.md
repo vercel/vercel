@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 13.2.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Add zero-config support for Koa.js ([#14567](https://github.com/vercel/vercel/pull/14567))
+
 ## 13.2.6
 
 ### Patch Changes
