@@ -103,7 +103,7 @@ export async function maybeExecBuildCommand(
   return runPackageJsonScript(
     entrypointFsDirname,
     possibleScripts,
-    spawnEnv,
+    { env: spawnEnv },
     args.config.projectSettings?.createdAt
   );
 }
