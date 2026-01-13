@@ -414,6 +414,9 @@ async function doBuild(
 ): Promise<void> {
   const { localConfigPath } = client;
 
+  // Regex pattern for validating deploymentId characters: alphanumeric, hyphen, underscore
+  const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
@@ -964,6 +967,14 @@ async function doBuild(
           link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
         });
       }
+      // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+      if (!VALID_DEPLOYMENT_ID_PATTERN.test(deploymentId)) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
     }
 
     if (existingConfig.overrides) {
@@ -1005,9 +1016,10 @@ async function doBuild(
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
-  const mergedDeploymentId = mergeDeploymentId(
+  const mergedDeploymentId = await mergeDeploymentId(
     existingConfig?.deploymentId,
-    buildResults.values()
+    buildResults.values(),
+    workPath
   );
 
   // Validate merged deploymentId if present (from build results)
@@ -1023,6 +1035,14 @@ async function doBuild(
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
         message: `The deploymentId "${mergedDeploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+    // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+    if (!VALID_DEPLOYMENT_ID_PATTERN.test(mergedDeploymentId)) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
         link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
       });
     }
@@ -1181,10 +1201,11 @@ function mergeWildcard(
   return wildcard;
 }
 
-function mergeDeploymentId(
+async function mergeDeploymentId(
   existingDeploymentId: string | undefined,
-  buildResults: Iterable<BuildResult | BuildOutputConfig>
-): string | undefined {
+  buildResults: Iterable<BuildResult | BuildOutputConfig>,
+  workPath: string
+): Promise<string | undefined> {
   // Prefer existing deploymentId from config.json if present
   if (existingDeploymentId) {
     return existingDeploymentId;
@@ -1194,6 +1215,23 @@ function mergeDeploymentId(
     if ('deploymentId' in result && result.deploymentId) {
       return result.deploymentId;
     }
+  }
+  // For prebuilt Next.js deployments, try reading from routes-manifest.json
+  // where Next.js writes the deploymentId during build
+  try {
+    const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');
+    if (await fs.pathExists(routesManifestPath)) {
+      const routesManifest = await readJSONFile<{ deploymentId?: string }>(
+        routesManifestPath
+      );
+      if (routesManifest && !(routesManifest instanceof CantParseJSONFile)) {
+        if (routesManifest.deploymentId) {
+          return routesManifest.deploymentId;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors reading routes-manifest.json
   }
   return undefined;
 }
