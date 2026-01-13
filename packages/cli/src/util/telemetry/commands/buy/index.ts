@@ -33,4 +33,11 @@ export class BuyTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandDomain(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'domain',
+      value: actual,
+    });
+  }
 }

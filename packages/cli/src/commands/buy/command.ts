@@ -89,6 +89,25 @@ export const v0Subcommand = {
   ],
 } as const;
 
+export const domainSubcommand = {
+  name: 'domain',
+  aliases: [],
+  description: 'Purchase a domain name',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Purchase a domain',
+      value: `${packageName} buy domain example.com`,
+    },
+  ],
+} as const;
+
 export const buyCommand = {
   name: 'buy',
   aliases: [],
@@ -99,6 +118,7 @@ export const buyCommand = {
     addonSubcommand,
     proSubcommand,
     v0Subcommand,
+    domainSubcommand,
   ],
   options: [],
   examples: [
@@ -117,6 +137,10 @@ export const buyCommand = {
     {
       name: 'Purchase v0',
       value: `${packageName} buy v0`,
+    },
+    {
+      name: 'Purchase a domain',
+      value: `${packageName} buy domain example.com`,
     },
   ],
 } as const;

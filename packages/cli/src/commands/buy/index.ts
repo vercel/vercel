@@ -6,12 +6,14 @@ import credits from './credits';
 import addon from './addon';
 import pro from './pro';
 import v0 from './v0';
+import domain from './domain';
 import {
   buyCommand,
   creditsSubcommand,
   addonSubcommand,
   proSubcommand,
   v0Subcommand,
+  domainSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -23,6 +25,7 @@ const COMMAND_CONFIG = {
   addon: ['addon', 'addons'],
   pro: ['pro'],
   v0: ['v0'],
+  domain: ['domain'],
 };
 
 export default async function main(client: Client) {
@@ -98,6 +101,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandV0(subcommandOriginal);
       return v0(client, args);
+    case 'domain':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('buy', subcommandOriginal);
+        return printHelp(domainSubcommand);
+      }
+      telemetry.trackCliSubcommandDomain(subcommandOriginal);
+      return domain(client, args);
     default:
       output.error(`Unknown subcommand: ${subcommand}`);
       output.print(help(buyCommand, { columns: client.stderr.columns }));
