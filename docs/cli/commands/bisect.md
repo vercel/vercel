@@ -152,6 +152,7 @@ exit $FAILED
    ```
 
 2. **For each presented deployment:**
+
    - Test the functionality
    - Enter `good` or `bad`
 
