@@ -9,6 +9,7 @@ import ls from './ls';
 import pull from './pull';
 import rm from './rm';
 import run, { needsHelpForRun } from './run';
+import set from './set';
 import update from './update';
 import {
   envCommand,
@@ -17,6 +18,7 @@ import {
   pullSubcommand,
   removeSubcommand,
   runSubcommand,
+  setSubcommand,
   updateSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -30,6 +32,7 @@ const COMMAND_CONFIG = {
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
   run: getCommandAliases(runSubcommand),
+  set: getCommandAliases(setSubcommand),
   update: getCommandAliases(updateSubcommand),
 };
 
@@ -119,6 +122,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRun(subcommandOriginal);
       return run(client);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
     case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
