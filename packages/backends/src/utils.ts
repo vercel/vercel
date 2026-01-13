@@ -4,7 +4,7 @@ import {
   download,
   runNpmInstall,
   runPackageJsonScript,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getSpawnOptions,
   execCommand,
   getEnvForPackageManager,
@@ -18,7 +18,7 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
   await download(files, workPath, meta);
 
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const nodeVersion = await getNodeVersion(
+  const nodeVersion = await getRuntimeNodeVersion(
     entrypointFsDirname,
     undefined,
     config,
