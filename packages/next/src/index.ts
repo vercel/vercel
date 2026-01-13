@@ -270,7 +270,12 @@ export const build: BuildV2 = async buildOptions => {
 
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
-  const nodeVersion = await getRuntimeNodeVersion(entryPath, undefined, config, meta);
+  const nodeVersion = await getRuntimeNodeVersion(
+    entryPath,
+    undefined,
+    config,
+    meta
+  );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,

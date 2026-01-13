@@ -3,7 +3,7 @@
 '@vercel/node': patch
 '@vercel/static-build': patch
 '@vercel/next': patch
-'@vercel/remix': patch
+'@vercel/remix-builder': patch
 '@vercel/redwood': patch
 '@vercel/hydrogen': patch
 '@vercel/gatsby-plugin-vercel-builder': patch

@@ -157,13 +157,23 @@ it('should ignore node version in vercel dev getRuntimeNodeVersion()', async () 
 
 it('should resolve to the provided bunVersion when its valid', async () => {
   await expect(
-    getRuntimeNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
+    getRuntimeNodeVersion(
+      '/tmp',
+      undefined,
+      { bunVersion: '1.x' },
+      { isDev: false }
+    )
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should resolve to the provided bunVersion on dev', async () => {
   await expect(
-    getRuntimeNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: true })
+    getRuntimeNodeVersion(
+      '/tmp',
+      undefined,
+      { bunVersion: '1.x' },
+      { isDev: true }
+    )
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
@@ -187,13 +197,21 @@ it('should select project setting from config when no package.json is found and 
 
 it('should select project setting from config when no package.json is found and fallback is null', async () => {
   expect(
-    await getRuntimeNodeVersion('/tmp', null as any, { nodeVersion: '22.x' }, {})
+    await getRuntimeNodeVersion(
+      '/tmp',
+      null as any,
+      { nodeVersion: '22.x' },
+      {}
+    )
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from fallback when no package.json is found', async () => {
-  expect(await getRuntimeNodeVersion('/tmp', '22.x')).toHaveProperty('range', '22.x');
+  expect(await getRuntimeNodeVersion('/tmp', '22.x')).toHaveProperty(
+    'range',
+    '22.x'
+  );
   expect(warningMessages).toStrictEqual([]);
 });
 
