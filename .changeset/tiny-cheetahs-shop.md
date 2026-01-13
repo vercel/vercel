@@ -1,5 +1,5 @@
 ---
-'@vercel/build-utils': major
+'@vercel/build-utils': patch
 '@vercel/static-build': patch
 '@vercel/backends': patch
 '@vercel/hydrogen': patch
