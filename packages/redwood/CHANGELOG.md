@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.4.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
 ## 2.4.6
 
 ### Patch Changes
