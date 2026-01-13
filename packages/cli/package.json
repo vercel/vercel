@@ -42,7 +42,7 @@
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
     "@vercel/fastify": "workspace:*",
-    "@vercel/fun": "1.2.0",
+    "@vercel/fun": "1.2.1",
     "@vercel/go": "workspace:*",
     "@vercel/h3": "workspace:*",
     "@vercel/hono": "workspace:*",

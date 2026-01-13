@@ -33,7 +33,7 @@
     "cjs-module-lexer": "1.2.3",
     "edge-runtime": "2.5.9",
     "es-module-lexer": "1.4.1",
-    "esbuild": "0.14.47",
+    "esbuild": "0.27.0",
     "etag": "1.8.1",
     "mime-types": "2.1.35",
     "node-fetch": "2.6.9",
