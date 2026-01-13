@@ -172,6 +172,11 @@ export default async function bisect(client: Client): Promise<number> {
     return 1;
   }
 
+  if (badDeployment.url === goodDeployment.url) {
+    output.error(`Good and Bad deployments must be different`);
+    return 1;
+  }
+
   if (badDeployment.createdAt < goodDeployment.createdAt) {
     output.error(`Good deployment must be older than the Bad deployment`);
     return 1;
