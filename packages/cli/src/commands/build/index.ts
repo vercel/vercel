@@ -723,7 +723,8 @@ async function doBuild(
             // not for static builders (which handle public/ directories)
             if (
               shouldUseExperimentalBackends(buildConfig.framework) &&
-              builderPkg.name !== '@vercel/static'
+              builderPkg.name !== '@vercel/static' &&
+              isBackendBuilder(build)
             ) {
               const experimentalBackendBuilder = await import(
                 '@vercel/backends'
