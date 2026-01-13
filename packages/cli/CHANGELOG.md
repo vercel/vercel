@@ -1,5 +1,32 @@
 # vercel
 
+## 50.3.2
+
+### Patch Changes
+
+- Fix issue with experimental backends builder that didn't respect api functions output ([#14606](https://github.com/vercel/vercel/pull/14606))
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4), [`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/build-utils@13.2.7
+  - @vercel/node@5.5.19
+  - @vercel/static-build@2.8.18
+  - @vercel/next@4.15.13
+  - @vercel/remix-builder@5.5.7
+  - @vercel/redwood@2.4.7
+  - @vercel/hydrogen@1.3.4
+  - @vercel/backends@0.0.20
+  - @vercel/koa@0.1.1
+  - @vercel/elysia@0.1.18
+  - @vercel/express@0.1.25
+  - @vercel/fastify@0.1.21
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.27
+  - @vercel/hono@0.2.21
+  - @vercel/nestjs@0.2.22
+  - @vercel/python@6.1.6
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
 ## 50.3.1
 
 ### Patch Changes
