@@ -85,6 +85,7 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import { validateCronSecret } from '../../util/validate-cron-secret';
 import {
   compileVercelConfig,
   findSourceVercelConfigFile,
@@ -488,6 +489,14 @@ async function doBuild(
 
   if (validateError) {
     throw validateError;
+  }
+
+  // Validate CRON_SECRET if crons are defined
+  if (localConfig.crons && localConfig.crons.length > 0) {
+    const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
+    if (cronSecretError) {
+      throw cronSecretError;
+    }
   }
 
   if (localConfig.customErrorPage) {
