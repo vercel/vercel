@@ -259,6 +259,11 @@ export async function runShellScript(
   return true;
 }
 
+/**
+ * @deprecated Don't use this function directly.
+ *
+ * Use getEnvForPackageManager() instead when within a builder.
+ */
 export function getSpawnOptions(
   meta: Meta,
   nodeVersion: NodeVersion
