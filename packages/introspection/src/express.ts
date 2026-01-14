@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { pathToRegexp } from 'path-to-regexp';
 import { setupCloseHandlers } from './util.js';
+import { debug } from '@vercel/build-utils';
 
 let app: Express | null = null;
 
@@ -85,9 +86,7 @@ const extractRoutes = () => {
         });
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Unknown error';
-        console.error(
-          `Error extracting routes for ${route.route.path}: ${message}`
-        );
+        debug(`Error extracting routes for ${route.route.path}: ${message}`);
         //
       }
     }

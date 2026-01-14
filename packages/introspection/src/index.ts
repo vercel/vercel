@@ -71,20 +71,14 @@ export const introspectApp = async (args: {
       );
 
       child.stdout?.on('data', data => {
-        const dataStr = data.toString().trim();
         try {
-          introspectionData = introspectionSchema.parse(JSON.parse(dataStr));
+          introspectionData = introspectionSchema.parse(
+            JSON.parse(data.toString() || '{}')
+          );
           debug(`Introspection data parsed successfully`);
         } catch (error) {
           debug('Error parsing introspection data', error);
           // Ignore errors - introspection data might be incomplete or malformed
-        }
-      });
-
-      child.stderr?.on('data', data => {
-        const errorMsg = data.toString().trim();
-        if (errorMsg) {
-          debug('Introspection stderr:', errorMsg);
         }
       });
 
