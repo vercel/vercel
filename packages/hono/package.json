@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hono",
-  "version": "0.2.20",
+  "version": "0.2.22",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
