@@ -36,6 +36,7 @@ export default async function addStore(
   } = parsedArgs;
 
   const region = flags['--region'] || 'iad1';
+  const access = flags['--access'] || 'public';
 
   let name = nameArg;
   if (!name) {
@@ -52,6 +53,7 @@ export default async function addStore(
 
   telemetryClient.trackCliArgumentName(name);
   telemetryClient.trackCliOptionRegion(flags['--region']);
+  telemetryClient.trackCliOptionAccess(flags['--access']);
 
   const link = await getLinkedProject(client);
 
@@ -62,9 +64,10 @@ export default async function addStore(
 
     output.spinner('Creating new blob store');
 
-    const requestBody: { name: string; region: string } = {
+    const requestBody: { name: string; region: string; access: string } = {
       name,
       region,
+      access,
     };
 
     const res = await client.fetch<{ store: { id: string; region?: string } }>(

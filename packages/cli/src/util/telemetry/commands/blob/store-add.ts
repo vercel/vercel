@@ -23,4 +23,13 @@ export class BlobAddStoreTelemetryClient
       });
     }
   }
+
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
 }
