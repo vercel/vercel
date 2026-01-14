@@ -1,5 +1,6 @@
 import type {
   ExperimentalServiceConfig,
+  ExperimentalServiceGroups,
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
@@ -9,6 +10,8 @@ import type { DetectorFilesystem } from './detectors/filesystem';
 export interface ResolvedService {
   name: string;
   type: ServiceType;
+  /** Service group name if this service belongs to a group */
+  group?: string;
   /* build config */
   workspace: string;
   entrypoint?: string;
@@ -72,7 +75,8 @@ function validateServiceConfig(
 
 function resolveService(
   name: string,
-  config: ExperimentalServiceConfig
+  config: ExperimentalServiceConfig,
+  group?: string
 ): ResolvedService {
   const type = config.type || 'web';
   const workspace = config.workspace || '.';
@@ -83,6 +87,7 @@ function resolveService(
   return {
     name,
     type,
+    group,
     workspace,
     entrypoint: config.entrypoint,
     routePrefix: config.routePrefix,
@@ -117,31 +122,66 @@ export async function detectServices(
   // Read vercel.json
   const configPath = workPath ? `${workPath}/vercel.json` : 'vercel.json';
   let experimentalServices: ExperimentalServices | undefined;
+  let experimentalServiceGroups: ExperimentalServiceGroups | undefined;
 
   try {
     const configBuffer = await fs.readFile(configPath);
     const config = JSON.parse(configBuffer.toString('utf-8'));
     experimentalServices = config.experimentalServices;
+    experimentalServiceGroups = config.experimentalServiceGroups;
   } catch {
     // No vercel.json or invalid JSON - return empty result
     return { services, errors };
   }
 
-  if (!experimentalServices || typeof experimentalServices !== 'object') {
-    return { services, errors };
+  // Process top-level experimentalServices
+  if (experimentalServices && typeof experimentalServices === 'object') {
+    for (const name of Object.keys(experimentalServices)) {
+      const serviceConfig = experimentalServices[name];
+
+      const validationError = validateServiceConfig(name, serviceConfig);
+      if (validationError) {
+        errors.push(validationError);
+        continue;
+      }
+
+      const resolved = resolveService(name, serviceConfig);
+      services.push(resolved);
+    }
   }
 
-  for (const name of Object.keys(experimentalServices)) {
-    const serviceConfig = experimentalServices[name];
+  // Process experimentalServiceGroups
+  if (
+    experimentalServiceGroups &&
+    typeof experimentalServiceGroups === 'object'
+  ) {
+    for (const groupName of Object.keys(experimentalServiceGroups)) {
+      const group = experimentalServiceGroups[groupName];
 
-    const validationError = validateServiceConfig(name, serviceConfig);
-    if (validationError) {
-      errors.push(validationError);
-      continue;
+      if (!group.services || typeof group.services !== 'object') {
+        errors.push({
+          code: 'INVALID_SERVICE_GROUP',
+          message: `Service group "${groupName}" is missing required "services" field`,
+        });
+        continue;
+      }
+
+      for (const serviceName of Object.keys(group.services)) {
+        const serviceConfig = group.services[serviceName];
+
+        const validationError = validateServiceConfig(
+          serviceName,
+          serviceConfig
+        );
+        if (validationError) {
+          errors.push(validationError);
+          continue;
+        }
+
+        const resolved = resolveService(serviceName, serviceConfig, groupName);
+        services.push(resolved);
+      }
     }
-
-    const resolved = resolveService(name, serviceConfig);
-    services.push(resolved);
   }
 
   return { services, errors };
