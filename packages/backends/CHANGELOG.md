@@ -1,5 +1,14 @@
 # @vercel/backends
 
+## 0.0.21
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+- Updated dependencies []:
+  - @vercel/introspection@0.0.8
+
 ## 0.0.20
 
 ### Patch Changes
