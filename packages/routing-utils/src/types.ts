@@ -98,6 +98,7 @@ export type RouteWithSrc = {
    * A middleware index in the `middleware` key under the build result
    */
   middleware?: number;
+  respectOriginCacheControl?: boolean;
 };
 
 export type RouteWithHandle = {
@@ -141,6 +142,7 @@ export interface Rewrite {
   missing?: HasField;
   statusCode?: number;
   env?: string[];
+  respectOriginCacheControl?: boolean;
 }
 
 export interface Redirect {

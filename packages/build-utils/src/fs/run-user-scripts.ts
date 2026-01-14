@@ -294,7 +294,7 @@ export function getSpawnOptions(
   return opts;
 }
 
-export async function getNodeVersion(
+export async function getRuntimeNodeVersion(
   destPath: string,
   fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
@@ -328,20 +328,20 @@ export async function getNodeVersion(
       !intersects(configuredVersion, supportedNodeVersion.range)
     ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
       );
     }
 
     if (coerce(node)?.raw === node) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
       );
     } else if (
       validRange(node) &&
       intersects(`${latestVersion.major + 1}.x`, node)
     ) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
       );
     }
   }
@@ -736,6 +736,18 @@ function checkIfAlreadyInstalled(
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
+// Track paths where custom install commands have already run (module-level since no meta object)
+let customInstallCommandSet: Set<string> | undefined;
+
+/**
+ * Reset the customInstallCommandSet. This should be called at the start of each build
+ * to prevent custom install commands from being skipped due to the set persisting
+ * across multiple builds in the same Node process (e.g., in unit tests).
+ */
+export function resetCustomInstallCommandSet(): void {
+  customInstallCommandSet = undefined;
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
@@ -770,6 +782,9 @@ export async function runNpmInstall(
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
+    // VERCEL_INSTALL_COMPLETED indicates install already ran for the root,
+    // so we add that path to the set to prevent duplicate installs while
+    // still allowing subdirectory installs to proceed
     const defaultInstall = args.length === 0;
     if (meta && packageJsonPath && defaultInstall) {
       const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
@@ -777,6 +792,14 @@ export async function runNpmInstall(
         packageJsonPath
       );
       if (alreadyInstalled) {
+        return false;
+      }
+      if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+        debug(
+          `Skipping dependency installation for ${packageJsonPath} because VERCEL_INSTALL_COMPLETED is set`
+        );
+        runNpmInstallSet.add(packageJsonPath);
+        meta.runNpmInstallSet = runNpmInstallSet;
         return false;
       }
       meta.runNpmInstallSet = runNpmInstallSet;
@@ -1356,7 +1379,31 @@ export async function runCustomInstallCommand({
   installCommand: string;
   spawnOpts?: SpawnOptions;
   projectCreatedAt?: number;
-}) {
+}): Promise<boolean> {
+  const normalizedPath = path.normalize(destPath);
+
+  const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
+    customInstallCommandSet,
+    normalizedPath
+  );
+  customInstallCommandSet = runNpmInstallSet;
+
+  if (alreadyInstalled) {
+    debug(
+      `Skipping custom install command for ${normalizedPath} because it was already run`
+    );
+    return false;
+  }
+
+  // Skip if VERCEL_INSTALL_COMPLETED is set (e.g., for vercel.ts config compilation)
+  // Path is already marked as installed above, allowing subdirectory installs to proceed
+  if (process.env.VERCEL_INSTALL_COMPLETED === '1') {
+    debug(
+      `Skipping custom install command for ${normalizedPath} because VERCEL_INSTALL_COMPLETED is set`
+    );
+    return false;
+  }
+
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const {
     cliType,
@@ -1380,6 +1427,7 @@ export async function runCustomInstallCommand({
     env,
     cwd: destPath,
   });
+  return true;
 }
 
 export async function runPackageJsonScript(

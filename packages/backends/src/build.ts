@@ -1,7 +1,11 @@
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { BuildOptions } from '@vercel/build-utils';
+import {
+  getPackageJson,
+  getScriptName,
+  type BuildOptions,
+} from '@vercel/build-utils';
 import {
   build as cervelBuild,
   findEntrypoint,
@@ -28,12 +32,6 @@ export const doBuild = async (
   // If a build command ran but no output directory was configured, that's an error
   // Exception: if the build command is a cervel command, it handles output internally
   const isCervelCommand = buildCommand?.trim().startsWith('cervel');
-  // if (buildCommandResult && !outputSetting && !isCervelCommand) {
-  //   throw new Error(
-  //     'Build command ran successfully, but no "outputDirectory" was configured. ' +
-  //       'Please specify where your build outputs files by setting "outputDirectory" in your vercel.json.'
-  //   );
-  // }
 
   // If there's no output directory configured
   if (!outputSetting) {
@@ -107,9 +105,17 @@ export const doBuild = async (
     };
   }
 
-  // If there's an output directory configured but no build command result, build ourselves
   const outputDir = join(args.workPath, outputSetting);
-  if (!buildCommandResult) {
+
+  const packageJson = await getPackageJson(args.workPath);
+
+  // Monorepo support injects a build command like 'turbo run build', but if
+  // this workspace doesn't have a build script, we need to build ourselves
+  const monorepoWithoutBuildScript =
+    args.config.projectSettings?.monorepoManager &&
+    !getScriptName(packageJson, ['build']);
+
+  if (!buildCommandResult || monorepoWithoutBuildScript) {
     const buildResult = await cervelBuild({
       cwd: args.workPath,
       out: outputDir,

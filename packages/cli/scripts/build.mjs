@@ -35,7 +35,19 @@ const externals = Object.keys(pkg.dependencies || {});
 const require = createRequire(import.meta.url);
 await esbuild({
   bundle: true,
+  format: 'esm',
   external: externals,
+  banner: {
+    // Shim for CommonJS globals in ESM
+    js: `
+import { createRequire as __createRequire } from 'node:module';
+import { fileURLToPath as __fileURLToPath } from 'node:url';
+import { dirname as __dirname_ } from 'node:path';
+const require = __createRequire(import.meta.url);
+const __filename = __fileURLToPath(import.meta.url);
+const __dirname = __dirname_(__filename);
+`.trim(),
+  },
   plugins: [
     // plugin required to handle jsonc-parser
     // https://github.com/evanw/esbuild/issues/1619
@@ -65,11 +77,11 @@ copyFileSync(
   new URL('VERCEL_DIR_README.txt', distRoot)
 );
 copyFileSync(
-  new URL('src/util/dev/builder-worker.js', repoRoot),
-  new URL('builder-worker.js', distRoot)
+  new URL('src/util/dev/builder-worker.cjs', repoRoot),
+  new URL('builder-worker.cjs', distRoot)
 );
 copyFileSync(
-  new URL('src/util/get-latest-version/get-latest-worker.js', repoRoot),
-  new URL('get-latest-worker.js', distRoot)
+  new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
+  new URL('get-latest-worker.cjs', distRoot)
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));

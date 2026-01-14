@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 13.2.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Add zero-config support for Koa.js ([#14567](https://github.com/vercel/vercel/pull/14567))
+
+## 13.2.6
+
+### Patch Changes
+
+- Update http links in Node.js version incompatibility message to https ([#14583](https://github.com/vercel/vercel/pull/14583))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+## 13.2.5
+
+### Patch Changes
+
+- Adding in user configured deploymentId to build output type ([#14497](https://github.com/vercel/vercel/pull/14497))
+
+- skip secondary installation for vercel.ts ([#14471](https://github.com/vercel/vercel/pull/14471))
+
 ## 13.2.4
 
 ### Patch Changes

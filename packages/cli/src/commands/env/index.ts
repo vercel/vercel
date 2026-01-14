@@ -8,6 +8,7 @@ import add from './add';
 import ls from './ls';
 import pull from './pull';
 import rm from './rm';
+import run, { needsHelpForRun } from './run';
 import update from './update';
 import {
   envCommand,
@@ -15,6 +16,7 @@ import {
   listSubcommand,
   pullSubcommand,
   removeSubcommand,
+  runSubcommand,
   updateSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
+  run: getCommandAliases(runSubcommand),
   update: getCommandAliases(updateSubcommand),
 };
 
@@ -101,6 +104,21 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
+    case 'run':
+      /**
+       * The run subcommand uses a helper to check for --help because of the
+       * special `--` argument separator. The user's command (after `--`) might
+       * include --help intended for their program, not for vercel. For example:
+       *   `vercel env run --help` → shows vercel's help
+       *   `vercel env run -- node --help` → runs node's help
+       */
+      if (needsHelpForRun(client)) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(runSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRun(subcommandOriginal);
+      return run(client);
     case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);

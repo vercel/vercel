@@ -1,5 +1,19 @@
 # @vercel/cervel
 
+## 0.0.9
+
+### Patch Changes
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+## 0.0.8
+
+### Patch Changes
+
+- Add support for 'main' entrypoint and search in `dist` for app entrypoint if a build script is provided ([#14550](https://github.com/vercel/vercel/pull/14550))
+
 ## 0.0.7
 
 ### Patch Changes
