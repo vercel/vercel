@@ -80,25 +80,29 @@ export const introspectApp = async (args: {
       });
 
       const timeout = setTimeout(() => {
+        debug('Introspection timeout, killing process with SIGTERM');
         child.kill('SIGTERM');
       }, 2000);
       const timeout2 = setTimeout(() => {
+        debug('Introspection timeout, killing process with SIGKILL');
         child.kill('SIGKILL');
       }, 3000);
 
       child.on('error', err => {
         clearTimeout(timeout);
         clearTimeout(timeout2);
-        console.log(`Loader error: ${err.message}`);
+        debug(`Loader error: ${err.message}`);
         resolvePromise(undefined);
       });
 
       child.on('close', () => {
         clearTimeout(timeout);
         clearTimeout(timeout2);
+        debug('Introspection process closed');
         resolvePromise(undefined);
       });
     } catch (error) {
+      debug('Introspection error', error);
       resolvePromise(undefined);
     }
   });
