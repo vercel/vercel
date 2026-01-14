@@ -222,22 +222,18 @@ export const servicesSchema = {
 } as const;
 
 /**
- * Schema for experimentalServiceGroups - a map of group name to service group configuration.
+ * Schema for experimentalServiceGroups - a map of group name to array of service names.
  * @experimental This feature is experimental and may change.
+ * @example { "app": ["site", "backend"], "admin": ["admin", "backend"] }
  */
 export const serviceGroupsSchema = {
   type: 'object',
   additionalProperties: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['services'],
-    properties: {
-      services: {
-        description:
-          'Map of service name to service configuration within this group.',
-        type: 'object',
-        additionalProperties: serviceSchema,
-      },
+    type: 'array',
+    items: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
     },
   },
 } as const;

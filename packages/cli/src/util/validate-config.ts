@@ -282,26 +282,21 @@ const experimentalServicesSchema = {
 };
 
 /**
- * Schema for a single service group.
- * @experimental This feature is experimental and may change.
- */
-const serviceGroupSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['services'],
-  properties: {
-    services: experimentalServicesSchema,
-  },
-};
-
-/**
  * Schema for experimental service groups configuration.
- * Map of group name to service group configuration.
+ * Map of group name to array of service names belonging to that group.
  * @experimental This feature is experimental and may change.
+ * @example { "app": ["site", "backend"], "admin": ["admin", "backend"] }
  */
 const experimentalServiceGroupsSchema = {
   type: 'object',
-  additionalProperties: serviceGroupSchema,
+  additionalProperties: {
+    type: 'array',
+    items: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+  },
 };
 
 const vercelConfigSchema = {
@@ -366,27 +361,11 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     });
   }
 
-  if (config.experimentalServices && config.experimentalServiceGroups) {
+  if (config.experimentalServiceGroups && !config.experimentalServices) {
     return new NowBuildError({
-      code: 'SERVICES_AND_SERVICE_GROUPS',
+      code: 'SERVICE_GROUPS_WITHOUT_SERVICES',
       message:
-        'The `experimentalServices` property cannot be used in conjunction with the `experimentalServiceGroups` property. Please remove one of them.',
-    });
-  }
-
-  if (config.experimentalServiceGroups && config.builds) {
-    return new NowBuildError({
-      code: 'SERVICE_GROUPS_AND_BUILDS',
-      message:
-        'The `experimentalServiceGroups` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
-    });
-  }
-
-  if (config.experimentalServiceGroups && config.functions) {
-    return new NowBuildError({
-      code: 'SERVICE_GROUPS_AND_FUNCTIONS',
-      message:
-        'The `experimentalServiceGroups` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
+        'The `experimentalServiceGroups` property requires `experimentalServices` to be defined. Service groups reference services by name.',
     });
   }
 
