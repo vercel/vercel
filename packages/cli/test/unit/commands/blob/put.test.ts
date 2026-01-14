@@ -340,6 +340,38 @@ describe('blob put', () => {
         expect.objectContaining({ multipart: true })
       );
     });
+
+    it('should handle --access option with private', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'private', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ access: 'private' })
+      );
+    });
+
+    it('should handle --access option with public', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ access: 'public' })
+      );
+    });
   });
 
   describe('telemetry tracking', () => {
@@ -418,6 +450,27 @@ describe('blob put', () => {
         {
           key: 'flag:force',
           value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('should track access option when provided', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'private', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:pathToFile',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'private',
         },
       ]);
     });

@@ -296,6 +296,38 @@ describe('blob copy', () => {
         },
       ]);
     });
+
+    it('should track access option when provided', async () => {
+      client.setArgv(
+        'blob',
+        'copy',
+        '--access',
+        'private',
+        'source.txt',
+        'dest.txt'
+      );
+
+      await copy(
+        client,
+        ['--access', 'private', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:fromUrlOrPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:toPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'private',
+        },
+      ]);
+    });
   });
 
   describe('flag variations', () => {
@@ -328,6 +360,40 @@ describe('blob copy', () => {
         token: testToken,
         access: 'public',
         addRandomSuffix: true,
+        contentType: undefined,
+        cacheControlMaxAge: undefined,
+      });
+    });
+
+    it('should handle --access option with private', async () => {
+      const exitCode = await copy(
+        client,
+        ['--access', 'private', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+        token: testToken,
+        access: 'private',
+        addRandomSuffix: false,
+        contentType: undefined,
+        cacheControlMaxAge: undefined,
+      });
+    });
+
+    it('should handle --access option with public', async () => {
+      const exitCode = await copy(
+        client,
+        ['--access', 'public', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+        token: testToken,
+        access: 'public',
+        addRandomSuffix: false,
         contentType: undefined,
         cacheControlMaxAge: undefined,
       });

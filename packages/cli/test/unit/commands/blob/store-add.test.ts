@@ -64,7 +64,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'my-test-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'my-test-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
       expect(mockedOutput.debug).toHaveBeenCalledWith(
@@ -109,7 +113,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'my-test-store', region: 'sfo1' }),
+        body: JSON.stringify({
+          name: 'my-test-store',
+          region: 'sfo1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
       expect(mockedOutput.success).toHaveBeenCalledWith(
@@ -137,7 +145,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'default-region-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'default-region-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
 
@@ -176,9 +188,93 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'test-store-name', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'test-store-name',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
+    });
+
+    it('should create store with private access when specified', async () => {
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'private-store',
+        '--access',
+        'private'
+      );
+
+      const exitCode = await addStore(client, [
+        'private-store',
+        '--access',
+        'private',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'private-store',
+          region: 'iad1',
+          access: 'private',
+        }),
+        accountId: 'org_123',
+      });
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:name',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'private',
+        },
+      ]);
+    });
+
+    it('should create store with public access when specified', async () => {
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'public-store',
+        '--access',
+        'public'
+      );
+
+      const exitCode = await addStore(client, [
+        'public-store',
+        '--access',
+        'public',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'public-store',
+          region: 'iad1',
+          access: 'public',
+        }),
+        accountId: 'org_123',
+      });
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:name',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
+      ]);
     });
   });
 
@@ -256,7 +352,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'standalone-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'standalone-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: undefined,
       });
       expect(client.input.confirm).not.toHaveBeenCalled();
@@ -361,7 +461,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'linked-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'linked-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
     });
@@ -379,7 +483,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'unlinked-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'unlinked-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: undefined,
       });
     });
