@@ -10,16 +10,18 @@ import {
   debug,
   type PrepareCache,
   type BuildV2,
+  getRuntimeNodeVersion,
 } from '@vercel/build-utils';
 
 export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
+  const nodeVersion = await getRuntimeNodeVersion(args.workPath);
 
   const outputConfig = await doBuild(args, downloadResult);
 
-  const { files } = await nodeFileTrace(args, downloadResult, outputConfig);
+  const { files } = await nodeFileTrace(args, nodeVersion, outputConfig);
 
   debug('Building route mapping..');
   const { routes, framework } = await introspectApp({
@@ -42,7 +44,7 @@ export const build: BuildV2 = async args => {
   );
 
   const lambda = new NodejsLambda({
-    runtime: downloadResult.nodeVersion.runtime,
+    runtime: nodeVersion.runtime,
     handler,
     files,
     shouldAddHelpers: false,
