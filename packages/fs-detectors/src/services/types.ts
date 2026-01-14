@@ -4,6 +4,7 @@ import type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
@@ -13,6 +14,7 @@ export type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Builder,
 };
 
 export interface ResolvedService {
@@ -24,7 +26,7 @@ export interface ResolvedService {
   workspace: string;
   entrypoint?: string;
   framework?: string;
-  builder?: string;
+  builder: Builder;
   buildCommand?: string;
   installCommand?: string;
   /* Lambda config */
@@ -45,6 +47,8 @@ export interface ResolvedService {
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
   workPath?: string;
+  /** Explicit services from vercel.json experimentalServices */
+  explicitServices?: ExperimentalServices;
 }
 
 export interface DetectServicesResult {
@@ -58,10 +62,41 @@ export interface ServiceDetectionError {
   serviceName?: string;
 }
 
+export interface DetectedManifest {
+  /** Full path to the manifest file (relative to project root) */
+  path: string;
+  /** Directory containing the manifest */
+  directory: string;
+  /** Runtime associated with this manifest */
+  runtime: ServiceRuntime;
+  /** The manifest filename */
+  file: string;
+}
+
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/node',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+};
+
+export const BUILDER_TO_RUNTIME: Record<string, ServiceRuntime> = {
+  '@vercel/node': 'node',
+  '@vercel/python': 'python',
+  '@vercel/go': 'go',
+  '@vercel/rust': 'rust',
+  '@vercel/ruby': 'ruby',
+};
+
+export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
+  '.ts': 'node',
+  '.mts': 'node',
+  '.js': 'node',
+  '.mjs': 'node',
+  '.cjs': 'node',
+  '.py': 'python',
+  '.go': 'go',
+  '.rs': 'rust',
+  '.rb': 'ruby',
 };

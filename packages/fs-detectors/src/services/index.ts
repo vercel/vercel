@@ -10,6 +10,7 @@ import { validateServiceConfig, resolveService } from './resolve';
 export * from './types';
 export * from './resolve';
 export * from './utils';
+export { getServicesBuilders } from './builders';
 
 /**
  * Detect and resolve services within a project.
@@ -24,17 +25,22 @@ export async function detectServices(
   const services: ResolvedService[] = [];
   const errors: ServiceDetectionError[] = [];
 
-  // Read vercel.json
-  const configPath = workPath ? `${workPath}/vercel.json` : 'vercel.json';
-  let experimentalServices: ExperimentalServices | undefined;
+  // Use explicit services if provided, otherwise read from vercel.json
+  let experimentalServices: ExperimentalServices | undefined =
+    options.explicitServices;
 
-  try {
-    const configBuffer = await fs.readFile(configPath);
-    const config = JSON.parse(configBuffer.toString('utf-8'));
-    experimentalServices = config.experimentalServices;
-  } catch {
-    // No vercel.json or invalid JSON - return empty result
-    return { services, errors };
+  if (!experimentalServices) {
+    // Read vercel.json
+    const configPath = workPath ? `${workPath}/vercel.json` : 'vercel.json';
+
+    try {
+      const configBuffer = await fs.readFile(configPath);
+      const config = JSON.parse(configBuffer.toString('utf-8'));
+      experimentalServices = config.experimentalServices;
+    } catch {
+      // No vercel.json or invalid JSON - return empty result
+      return { services, errors };
+    }
   }
 
   if (experimentalServices && typeof experimentalServices === 'object') {
