@@ -1,5 +1,13 @@
 # @vercel/introspection
 
+## 0.0.9
+
+### Patch Changes
+
+- - Parrallelize NFT and introspection steps ([#14619](https://github.com/vercel/vercel/pull/14619))
+  - Increase timeout to 8 seconds. It's taking up to 5 seconds for a large app we have been testing with
+  - Add more debug logs to introspection process
+
 ## 0.0.8
 
 ### Patch Changes

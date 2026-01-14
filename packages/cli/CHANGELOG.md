@@ -1,5 +1,16 @@
 # vercel
 
+## 50.4.0
+
+### Minor Changes
+
+- Defer sentry init until needed ([#14610](https://github.com/vercel/vercel/pull/14610))
+
+### Patch Changes
+
+- Updated dependencies [[`2763c6ce1c5e0181eb97817bb79d793c7ad13a19`](https://github.com/vercel/vercel/commit/2763c6ce1c5e0181eb97817bb79d793c7ad13a19)]:
+  - @vercel/backends@0.0.22
+
 ## 50.3.3
 
 ### Patch Changes
