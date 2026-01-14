@@ -22,7 +22,7 @@ export const build: BuildV2 = async args => {
   const outputConfig = await doBuild(args, downloadResult);
 
   debug('Building node file trace..');
-  const nftPromise = await nodeFileTrace(args, nodeVersion, outputConfig);
+  const nftPromise = nodeFileTrace(args, nodeVersion, outputConfig);
   debug('Building route mapping..');
   const { routes, framework } = await introspectApp({
     ...outputConfig,
