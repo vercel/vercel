@@ -219,7 +219,7 @@ describe('db-connections', () => {
       Date.now = originalDateNow;
     });
 
-    test('ensures minimum wait time of 100ms when process exceeds maximum duration', () => {
+    test('ensures minimum wait time of 100ms when remaining duration is negative', () => {
       // This test verifies the fix for TimeoutNegativeWarning in Node.js v24
       // When the process runs longer than 15 minutes, the remaining duration calculation
       // would become negative, causing setTimeout to receive a negative delay
@@ -227,6 +227,16 @@ describe('db-connections', () => {
       globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
         get: () => ({ waitUntil: waitUntilMock }),
       };
+
+      const originalDateNow = Date.now;
+      const currentTime = Date.now();
+
+      // Mock Date.now to simulate a scenario where:
+      // - bootTime was captured long ago (when module loaded)
+      // - Current time is way past the 15 minute maximum duration
+      // This simulates: maximumDuration - (Date.now() - bootTime) being negative
+      // We advance time by 20 minutes from current time
+      Date.now = vi.fn().mockReturnValue(currentTime + 20 * 60 * 1000);
 
       const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
 
@@ -237,20 +247,24 @@ describe('db-connections', () => {
 
       attachDatabasePool(pgPool);
 
-      // Simulate that 20 minutes have passed (well beyond the 15 minute maximum)
-      // This would make maximumDuration - (Date.now() - bootTime) negative
-      vi.setSystemTime(Date.now() + 20 * 60 * 1000);
-
       const releaseCallback = pgPool.on.mock.calls[0][1];
       releaseCallback();
 
-      // Verify setTimeout was called with a delay of at least 100ms (the minimum)
+      // Verify setTimeout was called with a positive delay
+      // With the Math.max(100, ...) fix, it should be at least 100ms
+      // Without the fix, it would be negative or very large
       const lastSetTimeoutCall =
         setTimeoutSpy.mock.calls[setTimeoutSpy.mock.calls.length - 1];
       const timeoutDelay = lastSetTimeoutCall[1];
-      expect(timeoutDelay).toBeGreaterThanOrEqual(100);
+
+      // The timeout should be the minimum of:
+      // - idleTimeoutMillis + 100 = 5100
+      // - Math.max(100, maximumDuration - elapsed) = 100 (since elapsed > maximumDuration)
+      // So it should be 100ms
+      expect(timeoutDelay).toBe(100);
 
       setTimeoutSpy.mockRestore();
+      Date.now = originalDateNow;
     });
 
     test('timeout expires and logs message', async () => {
