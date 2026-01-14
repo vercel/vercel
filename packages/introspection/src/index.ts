@@ -85,11 +85,11 @@ export const introspectApp = async (args: {
       const timeout = setTimeout(() => {
         debug('Introspection timeout, killing process with SIGTERM');
         child.kill('SIGTERM');
-      }, 2000);
+      }, 8000);
       const timeout2 = setTimeout(() => {
         debug('Introspection timeout, killing process with SIGKILL');
         child.kill('SIGKILL');
-      }, 3000);
+      }, 9000);
 
       child.on('error', err => {
         clearTimeout(timeout);
