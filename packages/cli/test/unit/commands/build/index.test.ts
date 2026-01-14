@@ -1104,6 +1104,91 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
+  it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set an invalid CRON_SECRET with a control character (newline)
+    process.env.CRON_SECRET = 'my\nsecret';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('control character');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should fail build when CRON_SECRET contains non-ASCII characters', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set an invalid CRON_SECRET with a non-ASCII character
+    process.env.CRON_SECRET = 'mysecret🔐';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('non-ASCII character');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should fail build when CRON_SECRET has leading/trailing whitespace', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set an invalid CRON_SECRET with trailing space
+    process.env.CRON_SECRET = 'mysecret ';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('leading or trailing whitespace');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should build successfully when CRON_SECRET contains valid characters', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set a valid CRON_SECRET with alphanumeric and special chars
+    process.env.CRON_SECRET = 'Bearer my-secret_token.123!@#$%^&*()';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toHaveProperty('crons');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
   it('should merge crons property from build output with vercel.json crons property', async () => {
     const cwd = fixture('with-cron-merge');
     const output = join(cwd, '.vercel', 'output');
