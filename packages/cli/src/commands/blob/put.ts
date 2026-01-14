@@ -13,6 +13,10 @@ import chalk from 'chalk';
 import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
 import { printError } from '../../util/error';
 
+function isAccess(access: string): access is 'private' | 'public' {
+  return access === 'private' || access === 'public';
+}
+
 export default async function put(
   client: Client,
   argv: string[],
@@ -48,6 +52,13 @@ export default async function put(
   } = flags;
 
   const access = accessFlag || 'public';
+
+  if (!isAccess(access)) {
+    output.error(
+      `Invalid access level: ${access}. Must be either 'private' or 'public'`
+    );
+    return 1;
+  }
 
   // Only track file path if one was provided
   if (filePath) {

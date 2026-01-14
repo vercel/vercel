@@ -8,6 +8,10 @@ import { copySubcommand } from './command';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
 
+function isAccess(access: string): access is 'private' | 'public' {
+  return access === 'private' || access === 'public';
+}
+
 export default async function copy(
   client: Client,
   argv: string[],
@@ -49,6 +53,13 @@ export default async function copy(
   } = parsedArgs;
 
   const access = accessFlag || 'public';
+
+  if (!isAccess(access)) {
+    output.error(
+      `Invalid access level: ${access}. Must be either 'private' or 'public'`
+    );
+    return 1;
+  }
 
   telemetryClient.trackCliArgumentFromUrlOrPathname(fromUrl);
   telemetryClient.trackCliArgumentToPathname(toPathname);
