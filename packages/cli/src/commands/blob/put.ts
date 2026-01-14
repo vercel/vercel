@@ -44,7 +44,10 @@ export default async function put(
     '--content-type': contentType,
     '--cache-control-max-age': cacheControlMaxAge,
     '--force': force,
+    '--access': accessFlag,
   } = flags;
+
+  const access = accessFlag || 'public';
 
   // Only track file path if one was provided
   if (filePath) {
@@ -56,6 +59,7 @@ export default async function put(
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
   telemetryClient.trackCliFlagForce(force);
+  telemetryClient.trackCliOptionAccess(accessFlag);
 
   // ReadableStream works for both stdin and ReadStream
   let putBody: ReadableStream;
@@ -132,7 +136,7 @@ export default async function put(
 
     result = await blob.put(pathname, putBody, {
       token: rwToken,
-      access: 'public',
+      access,
       addRandomSuffix: addRandomSuffix ?? false,
       multipart: multipart ?? true,
       contentType,

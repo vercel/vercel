@@ -44,14 +44,18 @@ export default async function copy(
       '--add-random-suffix': addRandomSuffix,
       '--content-type': contentType,
       '--cache-control-max-age': cacheControlMaxAge,
+      '--access': accessFlag,
     },
   } = parsedArgs;
+
+  const access = accessFlag || 'public';
 
   telemetryClient.trackCliArgumentFromUrlOrPathname(fromUrl);
   telemetryClient.trackCliArgumentToPathname(toPathname);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliOptionAccess(accessFlag);
 
   let result: blob.PutBlobResult;
   try {
@@ -61,7 +65,7 @@ export default async function copy(
 
     result = await blob.copy(fromUrl, toPathname, {
       token: rwToken,
-      access: 'public',
+      access,
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,
       cacheControlMaxAge,

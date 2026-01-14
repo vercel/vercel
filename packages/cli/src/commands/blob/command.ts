@@ -105,6 +105,15 @@ export const putSubcommand = {
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the uploaded blob (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [],
 } as const;
@@ -163,6 +172,15 @@ export const copySubcommand = {
       description:
         'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
       argument: 'Number',
+    },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the copied blob (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
     },
   ],
   examples: [],
