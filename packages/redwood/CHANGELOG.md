@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.4.8
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
 ## 2.4.7
 
 ### Patch Changes

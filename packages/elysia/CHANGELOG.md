@@ -1,5 +1,12 @@
 # @vercel/elysia
 
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/node@5.5.20
+
 ## 0.1.18
 
 ### Patch Changes

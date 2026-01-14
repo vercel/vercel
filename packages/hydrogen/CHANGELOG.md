@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.3.5
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
 ## 1.3.4
 
 ### Patch Changes

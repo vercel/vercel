@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.14
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
 ## 4.15.13
 
 ### Patch Changes
