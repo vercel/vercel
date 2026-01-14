@@ -9,9 +9,11 @@ import type {
   Config,
   BuilderFunctions,
   ProjectSettings,
+  ExperimentalServices,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
+import { getServicesBuilders } from './services';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -49,6 +51,11 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
+  /** Vercel config with optional experimentalServices (for services framework) */
+  vercelConfig?: {
+    experimentalServices?: ExperimentalServices;
+    [key: string]: unknown;
+  };
 }
 
 // We need to sort the file paths by alphabet to make
@@ -114,6 +121,16 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
 }> {
+  const { projectSettings = {} } = options;
+  const { framework } = projectSettings;
+
+  if (framework === 'services') {
+    return getServicesBuilders({
+      workPath: options.workPath,
+      experimentalServices: options.vercelConfig?.experimentalServices,
+    });
+  }
+
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
@@ -147,8 +164,7 @@ export async function detectBuilders(
 
   const absolutePathCache = new Map<string, string>();
 
-  const { projectSettings = {} } = options;
-  const { buildCommand, outputDirectory, framework } = projectSettings;
+  const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
