@@ -55,6 +55,7 @@ export const introspectApp = async (args: {
   await new Promise(resolvePromise => {
     try {
       // Use both -r (for CommonJS/require) and --import (for ESM/import)
+      debug('Spawning introspection process');
       const child = spawn(
         'node',
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
@@ -74,31 +75,37 @@ export const introspectApp = async (args: {
           introspectionData = introspectionSchema.parse(
             JSON.parse(data.toString() || '{}')
           );
+          debug(`Introspection data parsed successfully`);
         } catch (error) {
-          // Ignore errors
+          debug('Error parsing introspection data', error);
+          // Ignore errors - introspection data might be incomplete or malformed
         }
       });
 
       const timeout = setTimeout(() => {
+        debug('Introspection timeout, killing process with SIGTERM');
         child.kill('SIGTERM');
-      }, 2000);
+      }, 8000);
       const timeout2 = setTimeout(() => {
+        debug('Introspection timeout, killing process with SIGKILL');
         child.kill('SIGKILL');
-      }, 3000);
+      }, 9000);
 
       child.on('error', err => {
         clearTimeout(timeout);
         clearTimeout(timeout2);
-        console.log(`Loader error: ${err.message}`);
+        debug(`Loader error: ${err.message}`);
         resolvePromise(undefined);
       });
 
       child.on('close', () => {
         clearTimeout(timeout);
         clearTimeout(timeout2);
+        debug('Introspection process closed');
         resolvePromise(undefined);
       });
     } catch (error) {
+      debug('Introspection error', error);
       resolvePromise(undefined);
     }
   });

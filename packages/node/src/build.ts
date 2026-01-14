@@ -292,7 +292,6 @@ async function compile(
       },
     }
   );
-
   for (const warning of warnings) {
     debug(`Warning from trace: ${warning.message}`);
   }
