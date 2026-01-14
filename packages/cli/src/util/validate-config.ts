@@ -281,6 +281,29 @@ const experimentalServicesSchema = {
   additionalProperties: serviceConfigSchema,
 };
 
+/**
+ * Schema for a single service group.
+ * @experimental This feature is experimental and may change.
+ */
+const serviceGroupSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['services'],
+  properties: {
+    services: experimentalServicesSchema,
+  },
+};
+
+/**
+ * Schema for experimental service groups configuration.
+ * Map of group name to service group configuration.
+ * @experimental This feature is experimental and may change.
+ */
+const experimentalServiceGroupsSchema = {
+  type: 'object',
+  additionalProperties: serviceGroupSchema,
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -300,6 +323,7 @@ const vercelConfigSchema = {
     customErrorPage: customErrorPageSchema,
     bunVersion: { type: 'string' },
     experimentalServices: experimentalServicesSchema,
+    experimentalServiceGroups: experimentalServiceGroupsSchema,
   },
 };
 
@@ -339,6 +363,30 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       code: 'SERVICES_AND_FUNCTIONS',
       message:
         'The `experimentalServices` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
+    });
+  }
+
+  if (config.experimentalServices && config.experimentalServiceGroups) {
+    return new NowBuildError({
+      code: 'SERVICES_AND_SERVICE_GROUPS',
+      message:
+        'The `experimentalServices` property cannot be used in conjunction with the `experimentalServiceGroups` property. Please remove one of them.',
+    });
+  }
+
+  if (config.experimentalServiceGroups && config.builds) {
+    return new NowBuildError({
+      code: 'SERVICE_GROUPS_AND_BUILDS',
+      message:
+        'The `experimentalServiceGroups` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+    });
+  }
+
+  if (config.experimentalServiceGroups && config.functions) {
+    return new NowBuildError({
+      code: 'SERVICE_GROUPS_AND_FUNCTIONS',
+      message:
+        'The `experimentalServiceGroups` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
     });
   }
 

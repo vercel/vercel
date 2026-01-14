@@ -708,3 +708,21 @@ export interface ExperimentalServiceConfig {
  * @experimental This feature is experimental and may change.
  */
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
+
+/**
+ * Configuration for a service group in vercel.json.
+ * @experimental This feature is experimental and may change.
+ */
+export interface ExperimentalServiceGroup {
+  /** Map of service name to service configuration within this group. */
+  services: ExperimentalServices;
+}
+
+/**
+ * Map of service group name to service group configuration.
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalServiceGroups = Record<
+  string,
+  ExperimentalServiceGroup
+>;
