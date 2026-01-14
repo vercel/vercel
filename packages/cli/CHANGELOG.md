@@ -1,5 +1,91 @@
 # vercel
 
+## 50.3.3
+
+### Patch Changes
+
+- Updating validation for custom deployment ids ([#14594](https://github.com/vercel/vercel/pull/14594))
+
+- [cli] Add validation for CRON_SECRET environment variable during build to detect invalid HTTP header characters ([#14576](https://github.com/vercel/vercel/pull/14576))
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/build-utils@13.2.8
+  - @vercel/static-build@2.8.19
+  - @vercel/backends@0.0.21
+  - @vercel/hydrogen@1.3.5
+  - @vercel/redwood@2.4.8
+  - @vercel/remix-builder@5.5.8
+  - @vercel/next@4.15.14
+  - @vercel/node@5.5.20
+  - @vercel/elysia@0.1.19
+  - @vercel/express@0.1.26
+  - @vercel/fastify@0.1.22
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.28
+  - @vercel/hono@0.2.22
+  - @vercel/koa@0.1.2
+  - @vercel/nestjs@0.2.23
+  - @vercel/python@6.1.6
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
+## 50.3.2
+
+### Patch Changes
+
+- Fix issue with experimental backends builder that didn't respect api functions output ([#14606](https://github.com/vercel/vercel/pull/14606))
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4), [`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/build-utils@13.2.7
+  - @vercel/node@5.5.19
+  - @vercel/static-build@2.8.18
+  - @vercel/next@4.15.13
+  - @vercel/remix-builder@5.5.7
+  - @vercel/redwood@2.4.7
+  - @vercel/hydrogen@1.3.4
+  - @vercel/backends@0.0.20
+  - @vercel/koa@0.1.1
+  - @vercel/elysia@0.1.18
+  - @vercel/express@0.1.25
+  - @vercel/fastify@0.1.21
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.27
+  - @vercel/hono@0.2.21
+  - @vercel/nestjs@0.2.22
+  - @vercel/python@6.1.6
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
+## 50.3.1
+
+### Patch Changes
+
+- Exit early in `vc bisect` if good and bad URLs are the same ([#14590](https://github.com/vercel/vercel/pull/14590))
+
+- Update missing command error message ([#14603](https://github.com/vercel/vercel/pull/14603))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Updated dependencies [[`984164ff5f148fb6fd397902d16db780e9b98e6c`](https://github.com/vercel/vercel/commit/984164ff5f148fb6fd397902d16db780e9b98e6c), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e), [`540fb3594de35206b0a50d894d28a7d4d788b44b`](https://github.com/vercel/vercel/commit/540fb3594de35206b0a50d894d28a7d4d788b44b), [`239b4181e311b43cdd705376c27e83466295be2f`](https://github.com/vercel/vercel/commit/239b4181e311b43cdd705376c27e83466295be2f), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/build-utils@13.2.6
+  - @vercel/backends@0.0.19
+  - @vercel/express@0.1.24
+  - @vercel/hono@0.2.20
+  - @vercel/next@4.15.12
+  - @vercel/node@5.5.18
+  - @vercel/elysia@0.1.17
+  - @vercel/fastify@0.1.20
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.26
+  - @vercel/hydrogen@1.3.3
+  - @vercel/nestjs@0.2.21
+  - @vercel/python@6.1.6
+  - @vercel/redwood@2.4.6
+  - @vercel/remix-builder@5.5.6
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.17
+
 ## 50.3.0
 
 ### Minor Changes

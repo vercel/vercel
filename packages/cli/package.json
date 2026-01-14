@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "50.3.0",
+  "version": "50.3.3",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -47,6 +47,7 @@
     "@vercel/h3": "workspace:*",
     "@vercel/hono": "workspace:*",
     "@vercel/hydrogen": "workspace:*",
+    "@vercel/koa": "workspace:*",
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",

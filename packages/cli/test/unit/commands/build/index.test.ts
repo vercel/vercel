@@ -1104,6 +1104,91 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
+  it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set an invalid CRON_SECRET with a control character (newline)
+    process.env.CRON_SECRET = 'my\nsecret';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('control character');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should fail build when CRON_SECRET contains non-ASCII characters', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set an invalid CRON_SECRET with a non-ASCII character
+    process.env.CRON_SECRET = 'mysecret🔐';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('non-ASCII character');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should fail build when CRON_SECRET has leading/trailing whitespace', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set an invalid CRON_SECRET with trailing space
+    process.env.CRON_SECRET = 'mysecret ';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_CRON_SECRET',
+      });
+      expect(builds.error.message).toContain('leading or trailing whitespace');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('should build successfully when CRON_SECRET contains valid characters', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    // Set a valid CRON_SECRET with alphanumeric and special chars
+    process.env.CRON_SECRET = 'Bearer my-secret_token.123!@#$%^&*()';
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toHaveProperty('crons');
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
   it('should merge crons property from build output with vercel.json crons property', async () => {
     const cwd = fixture('with-cron-merge');
     const output = join(cwd, '.vercel', 'output');
@@ -1754,6 +1839,147 @@ fs.writeFileSync(
     });
 
     // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+  });
+
+  it('should reject deploymentId with invalid characters (spaces) in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my deployment id',
+  }, null, 2)
+);
+`
+    );
+
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    await expect(client.stderr).toOutput(
+      'contains invalid characters. Only alphanumeric characters'
+    );
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining('contains invalid characters'),
+    });
+  });
+
+  it('should reject deploymentId with invalid characters (question mark) in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my-deployment?id=123',
+  }, null, 2)
+);
+`
+    );
+
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining('contains invalid characters'),
+    });
+  });
+
+  it('should allow deploymentId with valid characters (base62 + hyphen + underscore) in config.json', async () => {
+    const cwd = fixture('static');
+
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my-deployment_v2-abc123XYZ',
+  }, null, 2)
+);
+`
+    );
+
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
     await fs.writeJSON(join(cwd, 'vercel.json'), {
       builds: [
         {

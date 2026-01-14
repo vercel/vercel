@@ -5,7 +5,7 @@ import { strict as assert } from 'assert';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import {
   FileBlob,
-  getNodeVersion,
+  getRuntimeNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   rename,
@@ -144,9 +144,9 @@ it('should not allow nodejs18.x when not available', async () => {
   );
 });
 
-it('should ignore node version in vercel dev getNodeVersion()', async () => {
+it('should ignore node version in vercel dev getRuntimeNodeVersion()', async () => {
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       '/tmp',
       undefined,
       { nodeVersion: '1' },
@@ -157,19 +157,29 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
 
 it('should resolve to the provided bunVersion when its valid', async () => {
   await expect(
-    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
+    getRuntimeNodeVersion(
+      '/tmp',
+      undefined,
+      { bunVersion: '1.x' },
+      { isDev: false }
+    )
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should resolve to the provided bunVersion on dev', async () => {
   await expect(
-    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: true })
+    getRuntimeNodeVersion(
+      '/tmp',
+      undefined,
+      { bunVersion: '1.x' },
+      { isDev: true }
+    )
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should fail if the provided bun version is not valid', async () => {
   await expect(
-    getNodeVersion(
+    getRuntimeNodeVersion(
       '/tmp',
       undefined,
       { bunVersion: 'bun1.x' },
@@ -180,26 +190,34 @@ it('should fail if the provided bun version is not valid', async () => {
 
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
+    await getRuntimeNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from config when no package.json is found and fallback is null', async () => {
   expect(
-    await getNodeVersion('/tmp', null as any, { nodeVersion: '22.x' }, {})
+    await getRuntimeNodeVersion(
+      '/tmp',
+      null as any,
+      { nodeVersion: '22.x' },
+      {}
+    )
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from fallback when no package.json is found', async () => {
-  expect(await getNodeVersion('/tmp', '22.x')).toHaveProperty('range', '22.x');
+  expect(await getRuntimeNodeVersion('/tmp', '22.x')).toHaveProperty(
+    'range',
+    '22.x'
+  );
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should prefer package.json engines over project setting from config and warn', async () => {
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '12.x' },
@@ -213,7 +231,7 @@ it('should prefer package.json engines over project setting from config and warn
 
 it('should warn when package.json engines is exact version', async () => {
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node-exact'),
       undefined,
       {},
@@ -227,7 +245,7 @@ it('should warn when package.json engines is exact version', async () => {
 
 it('should warn when package.json engines is greater than', async () => {
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node-greaterthan'),
       undefined,
       {},
@@ -241,7 +259,7 @@ it('should warn when package.json engines is greater than', async () => {
 
 it('should warn when project settings gets overrided', async () => {
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node-greaterthan'),
       undefined,
       { nodeVersion: '16.x' },
@@ -256,7 +274,7 @@ it('should warn when project settings gets overrided', async () => {
 
 it('should not warn when package.json engines matches project setting from config', async () => {
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '22' },
@@ -266,7 +284,7 @@ it('should not warn when package.json engines matches project setting from confi
   expect(warningMessages).toStrictEqual([]);
 
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '22.x' },
@@ -276,7 +294,7 @@ it('should not warn when package.json engines matches project setting from confi
   expect(warningMessages).toStrictEqual([]);
 
   expect(
-    await getNodeVersion(
+    await getRuntimeNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '<23' },

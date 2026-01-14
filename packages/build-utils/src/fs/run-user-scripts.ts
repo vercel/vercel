@@ -259,6 +259,11 @@ export async function runShellScript(
   return true;
 }
 
+/**
+ * @deprecated Don't use this function directly.
+ *
+ * Use getEnvForPackageManager() instead when within a builder.
+ */
 export function getSpawnOptions(
   meta: Meta,
   nodeVersion: NodeVersion
@@ -294,7 +299,7 @@ export function getSpawnOptions(
   return opts;
 }
 
-export async function getNodeVersion(
+export async function getRuntimeNodeVersion(
   destPath: string,
   fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
