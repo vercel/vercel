@@ -391,7 +391,7 @@ test('deploy from a nested directory', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings: Next.js');
 
   vc.kill();
 });
