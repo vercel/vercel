@@ -88,7 +88,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(6);
+    expect(lambdas.size).toBe(7);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();
@@ -451,7 +451,9 @@ it('Should build the 404-getstaticprops-i18n example', async () => {
 
   const handleErrorIdx = (routes || []).findIndex(r => r.handle === 'error');
   expect(routes[handleErrorIdx + 1].dest).toBe('/$nextLocale/404');
-  expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
+  expect(routes[handleErrorIdx + 1].headers).toEqual({
+    'x-next-error-status': '404',
+  });
 });
 
 it('Should build the gip-gsp-404 example', async () => {
@@ -462,7 +464,9 @@ it('Should build the gip-gsp-404 example', async () => {
 
   const handleErrorIdx = (routes || []).findIndex(r => r.handle === 'error');
   expect(routes[handleErrorIdx + 1].dest).toBe('/404');
-  expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
+  expect(routes[handleErrorIdx + 1].headers).toEqual({
+    'x-next-error-status': '404',
+  });
   expect(output['404']).toBeDefined();
   expect(output['404'].type).toBe('Prerender');
   expect(output['_next/data/testing-build-id/404.json']).toBeDefined();

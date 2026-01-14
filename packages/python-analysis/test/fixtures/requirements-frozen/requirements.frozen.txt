@@ -1,0 +1,7 @@
+# Frozen dependencies file
+flask==2.1.3
+werkzeug==2.1.2
+jinja2==3.1.2
+click==8.1.3
+itsdangerous==2.1.2
+markupsafe==2.1.1

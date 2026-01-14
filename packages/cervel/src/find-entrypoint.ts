@@ -11,7 +11,7 @@ const frameworks = [
   'h3',
 ];
 
-const entrypointFilenames = ['app', 'index', 'server'];
+const entrypointFilenames = ['app', 'index', 'server', 'main'];
 
 const entrypointExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
@@ -54,7 +54,16 @@ export const findEntrypoint = async (
   );
 
   if (!framework) {
-    throw new Error('No framework found in package.json');
+    for (const entrypoint of entrypoints) {
+      const entrypointPath = join(cwd, entrypoint);
+      try {
+        await readFile(entrypointPath, 'utf-8');
+        return entrypoint;
+      } catch (e) {
+        continue;
+      }
+    }
+    throw new Error('No entrypoint or framework found');
   }
 
   const regex = createFrameworkRegex(framework);

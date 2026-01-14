@@ -7,13 +7,116 @@ import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 
+function isRouteFormat(item: any): boolean {
+  return item && typeof item === 'object' && 'src' in item;
+}
+
+function toRouteFormat(item: any, isRedirect: boolean): any {
+  const {
+    source,
+    destination,
+    statusCode,
+    permanent,
+    respectOriginCacheControl,
+    ...rest
+  } = item;
+
+  const route: any = {
+    src: source,
+    dest: destination,
+    ...rest,
+  };
+
+  if (isRedirect) {
+    route.redirect = true;
+    route.status = statusCode || (permanent ? 308 : 307);
+  } else {
+    if (respectOriginCacheControl !== undefined) {
+      route.respectOriginCacheControl = respectOriginCacheControl;
+    }
+    if (statusCode !== undefined) {
+      route.status = statusCode;
+    }
+  }
+
+  return route;
+}
+
+function normalizeArrayField(
+  items: any[] | undefined,
+  isRedirect: boolean
+): any[] | null {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  const hasRouteFormat = items.some(isRouteFormat);
+  if (!hasRouteFormat) {
+    return null;
+  }
+
+  return items.map(item =>
+    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
+  );
+}
+
+/**
+ * Normalize config to ensure valid vercel.json output.
+ *
+ * Handles mixed Route/Rewrite types in the same array (from routes.rewrite() API).
+ * When Route format items (src/dest) are detected in rewrites/redirects arrays,
+ * the entire array is normalized to routes format.
+ *
+ * If routes and rewrites/redirects are BOTH explicitly defined,
+ * returns unchanged to let schema validation fail.
+ */
+export function normalizeConfig(config: any): any {
+  const normalized = { ...config };
+  let allRoutes: any[] = normalized.routes || [];
+
+  const hasRoutes = allRoutes.length > 0;
+  const hasRewrites = normalized.rewrites?.length > 0;
+  const hasRedirects = normalized.redirects?.length > 0;
+
+  // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects)) {
+    return normalized;
+  }
+
+  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
+  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
+
+  if (convertedRewrites) {
+    allRoutes = [...allRoutes, ...convertedRewrites];
+    delete normalized.rewrites;
+  }
+
+  if (convertedRedirects) {
+    allRoutes = [...allRoutes, ...convertedRedirects];
+    delete normalized.redirects;
+  }
+
+  if (allRoutes.length > 0) {
+    normalized.routes = allRoutes;
+  }
+
+  return normalized;
+}
+
 export interface CompileConfigResult {
   configPath: string | null;
   wasCompiled: boolean;
   sourceFile?: string;
 }
 
-const VERCEL_CONFIG_EXTENSIONS = ['ts', 'mts', 'js', 'mjs', 'cjs'] as const;
+export const VERCEL_CONFIG_EXTENSIONS = [
+  'ts',
+  'mts',
+  'js',
+  'mjs',
+  'cjs',
+] as const;
+export const DEFAULT_VERCEL_CONFIG_FILENAME = 'Vercel config';
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -66,6 +169,35 @@ async function findVercelConfigFile(workPath: string): Promise<string | null> {
   return foundFiles[0] || null;
 }
 
+function parseConfigLoaderError(stderr: string): string {
+  if (!stderr.trim()) {
+    return '';
+  }
+
+  const moduleNotFoundMatch = stderr.match(
+    /Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^']+)'/
+  );
+  if (moduleNotFoundMatch) {
+    const packageName = moduleNotFoundMatch[1];
+    return `Cannot find package '${packageName}'. Make sure it's installed in your project dependencies.`;
+  }
+
+  const syntaxErrorMatch = stderr.match(/SyntaxError: (.+?)(?:\n|$)/);
+  if (syntaxErrorMatch) {
+    return `Syntax error: ${syntaxErrorMatch[1]}`;
+  }
+
+  const errorMatch = stderr.match(
+    /^(?:Error|TypeError|ReferenceError): (.+?)(?:\n|$)/m
+  );
+  if (errorMatch) {
+    return errorMatch[1];
+  }
+
+  // otherwise just return the error
+  return stderr.trim();
+}
+
 export async function compileVercelConfig(
   workPath: string
 ): Promise<CompileConfigResult> {
@@ -77,18 +209,6 @@ export async function compileVercelConfig(
   // Check for conflicting vercel.json and now.json
   if (hasVercelJson && hasNowJson) {
     throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
-  }
-
-  // Only check for vercel.{ext} if feature flag is enabled
-  if (!process.env.VERCEL_TS_CONFIG_ENABLED) {
-    return {
-      configPath: hasVercelJson
-        ? vercelJsonPath
-        : hasNowJson
-          ? nowJsonPath
-          : null,
-      wasCompiled: false,
-    };
   }
 
   const vercelConfigPath = await findVercelConfigFile(workPath);
@@ -175,6 +295,21 @@ export async function compileVercelConfig(
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
 
+      let stderrOutput = '';
+      let stdoutOutput = '';
+
+      if (child.stderr) {
+        child.stderr.on('data', data => {
+          stderrOutput += data.toString();
+        });
+      }
+
+      if (child.stdout) {
+        child.stdout.on('data', data => {
+          stdoutOutput += data.toString();
+        });
+      }
+
       const timeout = setTimeout(() => {
         child.kill();
         reject(new Error('Config loader timed out after 10 seconds'));
@@ -194,14 +329,29 @@ export async function compileVercelConfig(
       child.on('exit', code => {
         clearTimeout(timeout);
         if (code !== 0) {
-          reject(new Error(`Config loader exited with code ${code}`));
+          if (stderrOutput.trim()) {
+            output.log(stderrOutput);
+          }
+          if (stdoutOutput.trim()) {
+            output.log(stdoutOutput);
+          }
+
+          const parsedError = parseConfigLoaderError(stderrOutput);
+          if (parsedError) {
+            reject(new Error(parsedError));
+          } else if (stdoutOutput.trim()) {
+            reject(new Error(stdoutOutput.trim()));
+          } else {
+            reject(new Error(`Config loader exited with code ${code}`));
+          }
         }
       });
     });
 
+    const normalizedConfig = normalizeConfig(config);
     await writeFile(
       compiledConfigPath,
-      JSON.stringify(config, null, 2),
+      JSON.stringify(normalizedConfig, null, 2),
       'utf-8'
     );
 

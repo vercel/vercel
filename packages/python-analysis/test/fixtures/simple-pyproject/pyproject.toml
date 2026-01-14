@@ -1,0 +1,13 @@
+[project]
+name = "simple-app"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.100.0",
+  "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]

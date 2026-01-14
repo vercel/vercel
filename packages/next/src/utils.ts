@@ -342,6 +342,13 @@ type RoutesManifestOld = {
    * as though pages router were being used.
    */
   appType?: 'app' | 'pages' | 'hybrid';
+  /**
+   * User-configured deployment ID for skew protection.
+   * This allows users to specify a custom deployment identifier
+   * in their next.config.js that will be used for version skew protection
+   * with pre-built deployments.
+   */
+  deploymentId?: string;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -375,7 +382,14 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new NowBuildError({
-      message: `The file "${pathRoutesManifest}" couldn't be found. This is often caused by a misconfiguration in your project.`,
+      message:
+        `The file "${pathRoutesManifest}" couldn't be found. ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. The "Output Directory" setting in your project is misconfigured. ` +
+        `Ensure it matches your Next.js "distDir" configuration (defaults to ".next").\n\n` +
+        `2. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add ".next/**" (or your custom distDir) to the "outputs" array in turbo.json for the build task.\n\n` +
+        `3. The build command did not complete successfully. Check the build logs above for errors.`,
       link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
@@ -597,6 +611,7 @@ export async function getDynamicRoutes({
                 !prefetchDataRoute);
 
             routes.push({
+              ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 // Now than the upstream issues has been resolved, we can safely
@@ -1969,10 +1984,17 @@ export async function getPageLambdaGroups({
         ),
         pageExtensions,
       });
+      // For App Router, source file is like `step/route.js` so config is at `../config.json`
+      // For Pages Router, source file is like `step.js` so config is at `./config.json`
+      const isAppRouterRoute =
+        sourceFile.endsWith('/route.js') || sourceFile.endsWith('/route.ts');
+      const configRelativePath = isAppRouterRoute
+        ? '../config.json'
+        : './config.json';
       const config = JSON.parse(
         await fs
           .readFile(
-            path.join(entryPath, path.dirname(sourceFile), '../config.json'),
+            path.join(entryPath, path.dirname(sourceFile), configRelativePath),
             'utf8'
           )
           .catch(() => '{}')

@@ -1,5 +1,34 @@
 # @vercel/fs-detectors
 
+## 5.7.13
+
+### Patch Changes
+
+- Updated dependencies [[`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/frameworks@3.15.5
+
+## 5.7.12
+
+### Patch Changes
+
+- Updated dependencies [[`e725853a6c41bed634d1e3e2382596f17a18f342`](https://github.com/vercel/vercel/commit/e725853a6c41bed634d1e3e2382596f17a18f342), [`567d2d41e685cd949274411ce0e60e61a3dc3942`](https://github.com/vercel/vercel/commit/567d2d41e685cd949274411ce0e60e61a3dc3942)]:
+  - @vercel/routing-utils@5.3.2
+  - @vercel/frameworks@3.15.4
+
+## 5.7.11
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 5.7.10
+
+### Patch Changes
+
+- Updated dependencies [[`288b97aa5ffda33c892dd4fb6ee85d7fef126fdc`](https://github.com/vercel/vercel/commit/288b97aa5ffda33c892dd4fb6ee85d7fef126fdc)]:
+  - @vercel/routing-utils@5.3.1
+  - @vercel/frameworks@3.15.4
+
 ## 5.7.9
 
 ### Patch Changes

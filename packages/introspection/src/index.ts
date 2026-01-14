@@ -4,7 +4,10 @@ import { dirname, isAbsolute, join, relative } from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
-import { isExperimentalBackendsWithoutIntrospectionEnabled } from '@vercel/build-utils';
+import {
+  debug,
+  isExperimentalBackendsWithoutIntrospectionEnabled,
+} from '@vercel/build-utils';
 
 const require = createRequire(import.meta.url);
 
@@ -146,31 +149,43 @@ const getFramework = (args: {
   dir: string;
   framework: string | null | undefined;
 }) => {
-  let version: string | undefined;
-  if (args.framework) {
-    // Resolve to package.json specifically
-    const frameworkLibPath = require.resolve(`${args.framework}`, {
-      paths: [args.dir],
-    });
-    const findNearestPackageJson = (dir: string): string | undefined => {
-      const packageJsonPath = join(dir, 'package.json');
-      if (existsSync(packageJsonPath)) {
-        return packageJsonPath;
+  try {
+    let version: string | undefined;
+    if (args.framework) {
+      // Resolve to package.json specifically
+      const frameworkLibPath = require.resolve(`${args.framework}`, {
+        paths: [args.dir],
+      });
+      const findNearestPackageJson = (dir: string): string | undefined => {
+        const packageJsonPath = join(dir, 'package.json');
+        if (existsSync(packageJsonPath)) {
+          return packageJsonPath;
+        }
+        const parentDir = dirname(dir);
+        if (parentDir === dir) {
+          return undefined;
+        }
+        return findNearestPackageJson(parentDir);
+      };
+      const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
+      if (nearestPackageJsonPath) {
+        const frameworkPackageJson = require(nearestPackageJsonPath);
+        version = frameworkPackageJson.version;
       }
-      const parentDir = dirname(dir);
-      if (parentDir === dir) {
-        return undefined;
-      }
-      return findNearestPackageJson(parentDir);
-    };
-    const nearestPackageJsonPath = findNearestPackageJson(frameworkLibPath);
-    if (nearestPackageJsonPath) {
-      const frameworkPackageJson = require(nearestPackageJsonPath);
-      version = frameworkPackageJson.version;
     }
+    return {
+      slug: args.framework ?? '',
+      version: version ?? '',
+    };
+  } catch (error) {
+    // NestJS actually uses `@nestjs/core` as the package name, but the framework slug is `nestjs`
+    debug(
+      `Error getting framework for ${args.framework}. Setting framework version to empty string.`,
+      error
+    );
+    return {
+      slug: args.framework ?? '',
+      version: '',
+    };
   }
-  return {
-    slug: args.framework ?? '',
-    version: version ?? '',
-  };
 };

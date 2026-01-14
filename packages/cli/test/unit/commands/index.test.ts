@@ -60,6 +60,7 @@ describe('index', () => {
         ['team', 'teams'],
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
+        ['upgrade', 'upgrade'],
         ['whoami', 'whoami'],
       ])
     );

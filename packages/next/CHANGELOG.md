@@ -1,5 +1,37 @@
 # @vercel/next
 
+## 4.15.13
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+## 4.15.12
+
+### Patch Changes
+
+- Add error status header for \_error rendering ([#14588](https://github.com/vercel/vercel/pull/14588))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+## 4.15.11
+
+### Patch Changes
+
+- Add early validation for Next.js output directory and improve error messages to guide users when the output directory is missing, empty, or misconfigured. Introduces new error codes `NEXT_OUTPUT_DIR_MISSING` and `NEXT_OUTPUT_DIR_EMPTY` with actionable guidance for common issues like Turborepo cache misconfiguration. ([#14542](https://github.com/vercel/vercel/pull/14542))
+
+## 4.15.10
+
+### Patch Changes
+
+- Fix experimentalTriggers not applying to Pages Router workflow routes ([#14505](https://github.com/vercel/vercel/pull/14505))
+
+## 4.15.9
+
+### Patch Changes
+
+- fix route info from being overwritten in dynamic routes ([#14468](https://github.com/vercel/vercel/pull/14468))
+
 ## 4.15.8
 
 ### Patch Changes

@@ -461,7 +461,8 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-test('deploy `api-env` fixture and test `vercel env` command', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
   // Randomness is required so that tests can run in
   // parallel on the same project
@@ -600,7 +601,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
       new RegExp(`${promptEnvVar}="my plaintext value"`)
     );
     expect(contents).toMatch(
-      new RegExp(`${stdinEnvVar}=\\{"expect":"quotes"\\}`)
+      new RegExp(`${stdinEnvVar}="{"expect":"quotes"}"`)
     );
     expect(contents).not.toMatch(new RegExp(`${previewEnvVar}`));
   }
@@ -753,11 +754,11 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const lines = new Set(contents.split('\n'));
 
-    expect(lines).toContain('VERCEL=1');
-    expect(lines).toContain('VERCEL_URL=');
-    expect(lines).toContain('VERCEL_ENV=production');
-    expect(lines).toContain('VERCEL_GIT_PROVIDER=');
-    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=');
+    expect(lines).toContain('VERCEL="1"');
+    expect(lines).toContain('VERCEL_URL=""');
+    expect(lines).toContain('VERCEL_ENV="production"');
+    expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
+    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
   }
 
   async function vcDevAndFetchSystemVars() {

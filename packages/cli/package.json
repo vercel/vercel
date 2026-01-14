@@ -1,6 +1,7 @@
 {
   "name": "vercel",
-  "version": "49.2.0",
+  "version": "50.3.2",
+  "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -41,13 +42,14 @@
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
     "@vercel/fastify": "workspace:*",
-    "@vercel/fun": "1.2.0",
+    "@vercel/fun": "1.2.1",
     "@vercel/go": "workspace:*",
     "@vercel/h3": "workspace:*",
     "@vercel/hono": "workspace:*",
     "@vercel/hydrogen": "workspace:*",
-    "@vercel/next": "workspace:*",
+    "@vercel/koa": "workspace:*",
     "@vercel/nestjs": "workspace:*",
+    "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
     "@vercel/python": "workspace:*",
     "@vercel/redwood": "workspace:*",
@@ -57,6 +59,7 @@
     "@vercel/static-build": "workspace:*",
     "chokidar": "4.0.0",
     "esbuild": "0.27.0",
+    "form-data": "^4.0.0",
     "jose": "5.9.6"
   },
   "devDependencies": {

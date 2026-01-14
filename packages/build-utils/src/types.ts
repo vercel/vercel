@@ -408,6 +408,7 @@ export interface ProjectSettings {
   outputDirectory?: string | null;
   rootDirectory?: string | null;
   nodeVersion?: string;
+  monorepoManager?: string | null;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
@@ -546,6 +547,14 @@ export interface BuildResultV2Typical {
     version: string;
   };
   flags?: { definitions: FlagDefinitions };
+  /**
+   * User-configured deployment ID for skew protection.
+   * This allows users to specify a custom deployment identifier
+   * in their next.config.js that will be used for version skew protection
+   * with pre-built deployments.
+   * @example "abc123"
+   */
+  deploymentId?: string;
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;

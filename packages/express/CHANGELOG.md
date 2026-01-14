@@ -1,5 +1,53 @@
 # @vercel/express
 
+## 0.1.25
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4)]:
+  - @vercel/node@5.5.19
+
+## 0.1.24
+
+### Patch Changes
+
+- Remove unnecessary dependency ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Updated dependencies [[`239b4181e311b43cdd705376c27e83466295be2f`](https://github.com/vercel/vercel/commit/239b4181e311b43cdd705376c27e83466295be2f), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/cervel@0.0.9
+  - @vercel/node@5.5.18
+
+## 0.1.23
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.17
+
+## 0.1.22
+
+### Patch Changes
+
+- Updated dependencies [[`65d137b939883f468712f61570f6e6182fd39b27`](https://github.com/vercel/vercel/commit/65d137b939883f468712f61570f6e6182fd39b27)]:
+  - @vercel/cervel@0.0.8
+
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.16
+
+## 0.1.20
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
 ## 0.1.19
 
 ### Patch Changes

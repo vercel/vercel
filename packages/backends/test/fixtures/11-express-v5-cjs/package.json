@@ -1,0 +1,7 @@
+{
+  "name": "express-v5-cjs",
+  "type": "module",
+  "dependencies": {
+    "express": "5.1.0"
+  }
+}

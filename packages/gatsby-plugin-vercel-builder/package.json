@@ -1,7 +1,7 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
   "license": "Apache-2.0",
-  "version": "2.0.113",
+  "version": "2.0.117",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
     "@vercel/build-utils": "workspace:*",
-    "esbuild": "0.14.47",
+    "esbuild": "0.27.0",
     "etag": "1.8.1",
     "fs-extra": "11.1.0"
   },

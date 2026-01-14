@@ -1666,4 +1666,345 @@ describe.skipIf(flakey)('build', () => {
       expect(files.sort()).toEqual(['index.html']);
     });
   });
+
+  it('should reject deploymentId with dpl_ prefix in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    // Create a build script that creates config.json with invalid deploymentId
+    // This simulates a builder using Build Output API that creates an invalid config.json
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'dpl_invalid123',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    await expect(client.stderr).toOutput(
+      'cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
+    );
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining('cannot start with the "dpl_" prefix'),
+    });
+  });
+
+  it('should allow deploymentId without dpl_ prefix in config.json', async () => {
+    const cwd = fixture('static');
+
+    // Create a build script that creates config.json with valid deploymentId
+    // This simulates a builder using Build Output API that creates a valid config.json
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my-deployment-123',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+  });
+
+  it('should reject deploymentId with invalid characters (spaces) in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my deployment id',
+  }, null, 2)
+);
+`
+    );
+
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    await expect(client.stderr).toOutput(
+      'contains invalid characters. Only alphanumeric characters'
+    );
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining('contains invalid characters'),
+    });
+  });
+
+  it('should reject deploymentId with invalid characters (question mark) in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my-deployment?id=123',
+  }, null, 2)
+);
+`
+    );
+
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining('contains invalid characters'),
+    });
+  });
+
+  it('should allow deploymentId with valid characters (base62 + hyphen + underscore) in config.json', async () => {
+    const cwd = fixture('static');
+
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'my-deployment_v2-abc123XYZ',
+  }, null, 2)
+);
+`
+    );
+
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+  });
+
+  it('should reject deploymentId longer than 32 characters in config.json', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+
+    // Create a build script that creates config.json with deploymentId > 32 chars
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: 'this-is-a-very-long-deployment-id-that-exceeds-32-chars',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(1);
+
+    await expect(client.stderr).toOutput(
+      'must be 32 characters or less. Please choose a shorter deploymentId in your config'
+    );
+
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toMatchObject({
+      code: 'INVALID_DEPLOYMENT_ID',
+      message: expect.stringContaining('must be 32 characters or less'),
+    });
+  });
+
+  it('should allow deploymentId with exactly 32 characters in config.json', async () => {
+    const cwd = fixture('static');
+
+    // Create a build script that creates config.json with exactly 32 character deploymentId
+    const buildScript = join(cwd, 'build.mjs');
+    await fs.writeFile(
+      buildScript,
+      `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    deploymentId: '12345678901234567890123456789012',
+  }, null, 2)
+);
+`
+    );
+
+    // Create package.json with build script
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+
+    // Create vercel.json to use the build script
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      builds: [
+        {
+          src: 'package.json',
+          use: '@vercel/static-build',
+        },
+      ],
+    });
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+  });
 });

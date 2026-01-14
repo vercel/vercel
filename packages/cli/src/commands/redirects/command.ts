@@ -152,6 +152,49 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const uploadSubcommand = {
+  name: 'upload',
+  aliases: ['import'],
+  description: 'Upload redirects from a CSV or JSON file',
+  arguments: [
+    {
+      name: 'file',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip confirmation prompt',
+    },
+    {
+      name: 'overwrite',
+      description: 'Replace all existing redirects',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Upload redirects from CSV file',
+      value: `${packageName} redirects upload redirects.csv`,
+    },
+    {
+      name: 'Upload redirects from JSON file',
+      value: `${packageName} redirects upload redirects.json`,
+    },
+    {
+      name: 'Upload and overwrite existing redirects',
+      value: `${packageName} redirects upload redirects.csv --overwrite`,
+    },
+    {
+      name: 'Upload without confirmation',
+      value: `${packageName} redirects upload redirects.csv --yes`,
+    },
+  ],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
@@ -234,6 +277,7 @@ export const redirectsCommand = {
     listSubcommand,
     listVersionsSubcommand,
     addSubcommand,
+    uploadSubcommand,
     removeSubcommand,
     promoteSubcommand,
     restoreSubcommand,

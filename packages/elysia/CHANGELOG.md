@@ -1,5 +1,39 @@
 # @vercel/elysia
 
+## 0.1.18
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4)]:
+  - @vercel/node@5.5.19
+
+## 0.1.17
+
+### Patch Changes
+
+- Updated dependencies [[`239b4181e311b43cdd705376c27e83466295be2f`](https://github.com/vercel/vercel/commit/239b4181e311b43cdd705376c27e83466295be2f)]:
+  - @vercel/node@5.5.18
+
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.17
+
+## 0.1.15
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.16
+
+## 0.1.14
+
+### Patch Changes
+
+- Export prepareCache function for backend builders ([#14454](https://github.com/vercel/vercel/pull/14454))
+
 ## 0.1.13
 
 ### Patch Changes

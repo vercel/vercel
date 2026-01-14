@@ -1,5 +1,48 @@
 # @vercel/client
 
+## 17.2.21
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4), [`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/build-utils@13.2.7
+
+## 17.2.20
+
+### Patch Changes
+
+- Updated dependencies [[`984164ff5f148fb6fd397902d16db780e9b98e6c`](https://github.com/vercel/vercel/commit/984164ff5f148fb6fd397902d16db780e9b98e6c), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/build-utils@13.2.6
+
+## 17.2.19
+
+### Patch Changes
+
+- Updated dependencies [[`e725853a6c41bed634d1e3e2382596f17a18f342`](https://github.com/vercel/vercel/commit/e725853a6c41bed634d1e3e2382596f17a18f342), [`39c95ff6b643a63509571818e67a792df09fd71f`](https://github.com/vercel/vercel/commit/39c95ff6b643a63509571818e67a792df09fd71f), [`d63084dac296ccb2077ed742bc2ade0264da851d`](https://github.com/vercel/vercel/commit/d63084dac296ccb2077ed742bc2ade0264da851d), [`567d2d41e685cd949274411ce0e60e61a3dc3942`](https://github.com/vercel/vercel/commit/567d2d41e685cd949274411ce0e60e61a3dc3942)]:
+  - @vercel/routing-utils@5.3.2
+  - @vercel/build-utils@13.2.5
+
+## 17.2.18
+
+### Patch Changes
+
+- Updated dependencies [[`c55475f865ecf22f27b8b17f6fc98b9e1455ab5d`](https://github.com/vercel/vercel/commit/c55475f865ecf22f27b8b17f6fc98b9e1455ab5d)]:
+  - @vercel/build-utils@13.2.4
+
+## 17.2.17
+
+### Patch Changes
+
+- Add support for `customErrorPage` configuration in `vercel.json` to customize pages for platform errors. ([#14466](https://github.com/vercel/vercel/pull/14466))
+
+## 17.2.16
+
+### Patch Changes
+
+- Updated dependencies [[`288b97aa5ffda33c892dd4fb6ee85d7fef126fdc`](https://github.com/vercel/vercel/commit/288b97aa5ffda33c892dd4fb6ee85d7fef126fdc)]:
+  - @vercel/routing-utils@5.3.1
+  - @vercel/build-utils@13.2.3
+
 ## 17.2.15
 
 ### Patch Changes
