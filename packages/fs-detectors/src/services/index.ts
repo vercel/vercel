@@ -4,19 +4,18 @@ import type {
   ResolvedService,
   ServiceDetectionError,
   ExperimentalServices,
-  ExperimentalServiceGroups,
 } from './types';
 import { validateServiceConfig, resolveService } from './resolve';
 
 export * from './types';
 export * from './resolve';
+export * from './utils';
 
 /**
  * Detect and resolve services within a project.
  *
- * Reads service configurations from vercel.json and resolves them
- * into ResolvedService objects. Supports both top-level
- * `experimentalServices` and grouped `experimentalServiceGroups`.
+ * Reads service configurations from vercel.json `experimentalServices`
+ * and resolves them into ResolvedService objects.
  */
 export async function detectServices(
   options: DetectServicesOptions
@@ -28,13 +27,11 @@ export async function detectServices(
   // Read vercel.json
   const configPath = workPath ? `${workPath}/vercel.json` : 'vercel.json';
   let experimentalServices: ExperimentalServices | undefined;
-  let experimentalServiceGroups: ExperimentalServiceGroups | undefined;
 
   try {
     const configBuffer = await fs.readFile(configPath);
     const config = JSON.parse(configBuffer.toString('utf-8'));
     experimentalServices = config.experimentalServices;
-    experimentalServiceGroups = config.experimentalServiceGroups;
   } catch {
     // No vercel.json or invalid JSON - return empty result
     return { services, errors };
@@ -52,39 +49,6 @@ export async function detectServices(
 
       const resolved = resolveService(name, serviceConfig);
       services.push(resolved);
-    }
-  }
-
-  if (
-    experimentalServiceGroups &&
-    typeof experimentalServiceGroups === 'object'
-  ) {
-    for (const groupName of Object.keys(experimentalServiceGroups)) {
-      const group = experimentalServiceGroups[groupName];
-
-      if (!group.services || typeof group.services !== 'object') {
-        errors.push({
-          code: 'INVALID_SERVICE_GROUP',
-          message: `Service group "${groupName}" is missing required "services" field`,
-        });
-        continue;
-      }
-
-      for (const serviceName of Object.keys(group.services)) {
-        const serviceConfig = group.services[serviceName];
-
-        const validationError = validateServiceConfig(
-          serviceName,
-          serviceConfig
-        );
-        if (validationError) {
-          errors.push(validationError);
-          continue;
-        }
-
-        const resolved = resolveService(serviceName, serviceConfig, groupName);
-        services.push(resolved);
-      }
     }
   }
 
