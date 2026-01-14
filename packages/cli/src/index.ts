@@ -95,6 +95,41 @@ epipebomb();
 
 let client: Client;
 
+// Register global error handlers early to catch errors during initialization.
+// Sentry is lazily initialized only when an error actually occurs.
+const handleRejection = async (err: any) => {
+  if (err) {
+    if (err instanceof Error) {
+      await handleUnexpected(err);
+    } else {
+      output.error(`An unexpected rejection occurred\n  ${err}`);
+      await reportError(getSentry(), client, err);
+    }
+  } else {
+    output.error('An unexpected empty rejection occurred');
+  }
+
+  process.exit(1);
+};
+
+const handleUnexpected = async (err: Error) => {
+  const { message } = err;
+
+  // We do not want to render errors about Sentry not being reachable
+  if (message.includes('sentry') && message.includes('ENOTFOUND')) {
+    output.debug(`Sentry is not reachable: ${err}`);
+    return;
+  }
+
+  output.error(`An unexpected error occurred!\n${err.stack}`);
+  await reportError(getSentry(), client, err);
+
+  process.exit(1);
+};
+
+process.on('unhandledRejection', handleRejection);
+process.on('uncaughtException', handleUnexpected);
+
 let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
@@ -869,39 +904,6 @@ const main = async () => {
 
   return exitCode;
 };
-
-const handleRejection = async (err: any) => {
-  if (err) {
-    if (err instanceof Error) {
-      await handleUnexpected(err);
-    } else {
-      output.error(`An unexpected rejection occurred\n  ${err}`);
-      await reportError(getSentry(), client, err);
-    }
-  } else {
-    output.error('An unexpected empty rejection occurred');
-  }
-
-  process.exit(1);
-};
-
-const handleUnexpected = async (err: Error) => {
-  const { message } = err;
-
-  // We do not want to render errors about Sentry not being reachable
-  if (message.includes('sentry') && message.includes('ENOTFOUND')) {
-    output.debug(`Sentry is not reachable: ${err}`);
-    return;
-  }
-
-  output.error(`An unexpected error occurred!\n${err.stack}`);
-  await reportError(getSentry(), client, err);
-
-  process.exit(1);
-};
-
-process.on('unhandledRejection', handleRejection);
-process.on('uncaughtException', handleUnexpected);
 
 main()
   .then(async exitCode => {
