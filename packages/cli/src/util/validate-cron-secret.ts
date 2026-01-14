@@ -26,7 +26,7 @@ export function validateCronSecret(
     return new NowBuildError({
       code: 'INVALID_CRON_SECRET',
       message:
-        'The `CRON_SECRET` environment variable contains leading or trailing whitespace, which is not allowed in HTTP header values.',
+        'The `CRON_SECRET` environment variable contains whitespace, or a special characters which is not allowed in HTTP header values.',
       link: 'https://vercel.link/securing-cron-jobs',
       action: 'Learn More',
     });
