@@ -4,6 +4,12 @@ export {
   detectApiDirectory,
   detectApiExtensions,
 } from './detect-builders';
+export {
+  detectServices,
+  type DetectServicesOptions,
+  type DetectServicesResult,
+  type ResolvedService,
+} from './detect-services';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
   detectFramework,
