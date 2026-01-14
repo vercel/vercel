@@ -55,6 +55,7 @@ export const introspectApp = async (args: {
   await new Promise(resolvePromise => {
     try {
       // Use both -r (for CommonJS/require) and --import (for ESM/import)
+      debug('Spawning introspection process');
       const child = spawn(
         'node',
         ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
@@ -71,10 +72,12 @@ export const introspectApp = async (args: {
 
       child.stdout?.on('data', data => {
         try {
+          debug('Introspection data received', data.toString());
           introspectionData = introspectionSchema.parse(
             JSON.parse(data.toString() || '{}')
           );
         } catch (error) {
+          debug('Error parsing introspection data', error);
           // Ignore errors
         }
       });
