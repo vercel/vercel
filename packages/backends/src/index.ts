@@ -21,17 +21,19 @@ export const build: BuildV2 = async args => {
 
   const outputConfig = await doBuild(args, downloadResult);
 
-  const { files } = await nodeFileTrace(args, nodeVersion, outputConfig);
-
   debug('Building route mapping..');
-  const { routes, framework } = await introspectApp({
-    ...outputConfig,
-    framework: args.config.framework,
-    env: {
-      ...(args.meta?.env ?? {}),
-      ...(args.meta?.buildEnv ?? {}),
-    },
-  });
+  const [{ routes, framework }, { files }] = await Promise.all([
+    introspectApp({
+      ...outputConfig,
+      framework: args.config.framework,
+      env: {
+        ...(args.meta?.env ?? {}),
+        ...(args.meta?.buildEnv ?? {}),
+      },
+    }),
+    nodeFileTrace(args, nodeVersion, outputConfig),
+  ]);
+
   if (routes.length > 2) {
     debug(`Route mapping built successfully with ${routes.length} routes`);
   } else {
