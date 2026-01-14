@@ -21,18 +21,17 @@ export const build: BuildV2 = async args => {
 
   const outputConfig = await doBuild(args, downloadResult);
 
+  debug('Building node file trace..');
+  const nftPromise = await nodeFileTrace(args, nodeVersion, outputConfig);
   debug('Building route mapping..');
-  const [{ routes, framework }, { files }] = await Promise.all([
-    introspectApp({
-      ...outputConfig,
-      framework: args.config.framework,
-      env: {
-        ...(args.meta?.env ?? {}),
-        ...(args.meta?.buildEnv ?? {}),
-      },
-    }),
-    nodeFileTrace(args, nodeVersion, outputConfig),
-  ]);
+  const { routes, framework } = await introspectApp({
+    ...outputConfig,
+    framework: args.config.framework,
+    env: {
+      ...(args.meta?.env ?? {}),
+      ...(args.meta?.buildEnv ?? {}),
+    },
+  });
 
   if (routes.length > 2) {
     debug(`Route mapping built successfully with ${routes.length} routes`);
@@ -44,6 +43,9 @@ export const build: BuildV2 = async args => {
     args.repoRootPath,
     join(outputConfig.dir, outputConfig.handler)
   );
+
+  const { files } = await nftPromise;
+  debug('Node file trace complete');
 
   const lambda = new NodejsLambda({
     runtime: nodeVersion.runtime,
