@@ -208,7 +208,6 @@ async function compile(
       ? ['bun']
       : undefined;
 
-  debug('Node file trace starting..');
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -293,7 +292,6 @@ async function compile(
       },
     }
   );
-  debug('Node file trace complete');
   for (const warning of warnings) {
     debug(`Warning from trace: ${warning.message}`);
   }
