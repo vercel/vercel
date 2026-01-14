@@ -1,6 +1,5 @@
 import type {
   ExperimentalServiceConfig,
-  ExperimentalServiceGroup,
   ExperimentalServiceGroups,
   ExperimentalServices,
   ServiceRuntime,
@@ -10,7 +9,6 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
   ExperimentalServiceConfig,
-  ExperimentalServiceGroup,
   ExperimentalServiceGroups,
   ExperimentalServices,
   ServiceRuntime,

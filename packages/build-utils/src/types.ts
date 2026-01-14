@@ -710,19 +710,12 @@ export interface ExperimentalServiceConfig {
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 
 /**
- * Configuration for a service group in vercel.json.
+ * Map of service group name to array of service names belonging to that group.
  * @experimental This feature is experimental and may change.
+ * @example
+ * {
+ *   "app": ["site", "backend"],
+ *   "admin": ["admin", "backend"]
+ * }
  */
-export interface ExperimentalServiceGroup {
-  /** Map of service name to service configuration within this group. */
-  services: ExperimentalServices;
-}
-
-/**
- * Map of service group name to service group configuration.
- * @experimental This feature is experimental and may change.
- */
-export type ExperimentalServiceGroups = Record<
-  string,
-  ExperimentalServiceGroup
->;
+export type ExperimentalServiceGroups = Record<string, string[]>;
