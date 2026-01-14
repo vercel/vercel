@@ -21,9 +21,9 @@ export const build: BuildV2 = async args => {
 
   const outputConfig = await doBuild(args, downloadResult);
 
-  debug('Building node file trace..');
+  debug('Node file trace starting..');
   const nftPromise = nodeFileTrace(args, nodeVersion, outputConfig);
-  debug('Building route mapping..');
+  debug('Introspection starting..');
   const { routes, framework } = await introspectApp({
     ...outputConfig,
     framework: args.config.framework,
@@ -34,9 +34,9 @@ export const build: BuildV2 = async args => {
   });
 
   if (routes.length > 2) {
-    debug(`Route mapping built successfully with ${routes.length} routes`);
+    debug(`Introspection completed successfully with ${routes.length} routes`);
   } else {
-    debug(`Route mapping failed to detect routes`);
+    debug(`Introspection failed to detect routes`);
   }
 
   const handler = relative(

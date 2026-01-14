@@ -72,13 +72,9 @@ export const introspectApp = async (args: {
 
       child.stdout?.on('data', data => {
         const dataStr = data.toString().trim();
-        // Skip empty or non-JSON lines
-        if (!dataStr || !dataStr.startsWith('{')) {
-          return;
-        }
         try {
-          debug('Introspection data received', dataStr);
           introspectionData = introspectionSchema.parse(JSON.parse(dataStr));
+          debug(`Introspection data parsed successfully`);
         } catch (error) {
           debug('Error parsing introspection data', error);
           // Ignore errors - introspection data might be incomplete or malformed

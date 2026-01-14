@@ -1,11 +1,10 @@
 import {
   isBunVersion,
-  BuildOptions,
   FileBlob,
   FileFsRef,
-  Files,
-  NodeVersion,
-  debug,
+  type BuildOptions,
+  type Files,
+  type NodeVersion,
 } from '@vercel/build-utils';
 import { nodeFileTrace as nft } from '@vercel/nft';
 import { existsSync, lstatSync, readFileSync } from 'fs';
@@ -24,14 +23,12 @@ export const nodeFileTrace = async (
   const files: Files = {};
   const isBun = isBunVersion(nodeVersion);
   const conditions = isBun ? ['bun'] : undefined;
-  debug('Node file trace starting');
   const nftResult = await nft([entry], {
     base: args.repoRootPath,
     ignore: args.config.excludeFiles,
     conditions,
     mixedModules: true,
   });
-  debug('Node file trace complete');
 
   const packageJsonPath = join(args.workPath, 'package.json');
 
