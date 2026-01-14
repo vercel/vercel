@@ -240,4 +240,167 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
     });
   });
+
+  describe('with experimentalServiceGroups', () => {
+    it('should detect services within a service group', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServiceGroups: {
+            backend: {
+              services: {
+                api: {
+                  entrypoint: 'api/index.ts',
+                  type: 'web',
+                },
+                worker: {
+                  type: 'worker',
+                  entrypoint: 'worker.py',
+                  topic: 'tasks',
+                },
+              },
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(2);
+      expect(result.errors).toEqual([]);
+
+      const api = result.services.find(s => s.name === 'api');
+      expect(api).toMatchObject({
+        name: 'api',
+        type: 'web',
+        group: 'backend',
+        entrypoint: 'api/index.ts',
+      });
+
+      const worker = result.services.find(s => s.name === 'worker');
+      expect(worker).toMatchObject({
+        name: 'worker',
+        type: 'worker',
+        group: 'backend',
+        topic: 'tasks',
+      });
+    });
+
+    it('should detect services across multiple groups', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServiceGroups: {
+            frontend: {
+              services: {
+                web: {
+                  framework: 'nextjs',
+                  workspace: 'apps/web',
+                },
+              },
+            },
+            backend: {
+              services: {
+                api: {
+                  entrypoint: 'src/server.ts',
+                },
+              },
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(2);
+      expect(result.errors).toEqual([]);
+
+      const web = result.services.find(s => s.name === 'web');
+      expect(web?.group).toBe('frontend');
+
+      const api = result.services.find(s => s.name === 'api');
+      expect(api?.group).toBe('backend');
+    });
+
+    it('should return error for service group without services field', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServiceGroups: {
+            invalid: {},
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_GROUP',
+        message: 'Service group "invalid" is missing required "services" field',
+      });
+    });
+
+    it('should validate cron services within groups', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServiceGroups: {
+            scheduled: {
+              services: {
+                cleanup: {
+                  type: 'cron',
+                  entrypoint: 'cron/cleanup.ts',
+                  // missing schedule
+                },
+              },
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_CRON_SCHEDULE',
+        serviceName: 'cleanup',
+      });
+    });
+  });
+
+  describe('with both experimentalServices and experimentalServiceGroups', () => {
+    it('should detect services from both sources', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            standalone: {
+              entrypoint: 'standalone.ts',
+            },
+          },
+          experimentalServiceGroups: {
+            grouped: {
+              services: {
+                api: {
+                  entrypoint: 'api/index.ts',
+                },
+              },
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(2);
+      expect(result.errors).toEqual([]);
+
+      const standalone = result.services.find(s => s.name === 'standalone');
+      expect(standalone).toMatchObject({
+        name: 'standalone',
+        entrypoint: 'standalone.ts',
+      });
+      expect(standalone?.group).toBeUndefined();
+
+      const api = result.services.find(s => s.name === 'api');
+      expect(api).toMatchObject({
+        name: 'api',
+        group: 'grouped',
+        entrypoint: 'api/index.ts',
+      });
+    });
+  });
 });
