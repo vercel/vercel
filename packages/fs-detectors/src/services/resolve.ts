@@ -1,21 +1,9 @@
-/**
- * Service resolution - transforms service configurations into
- * fully resolved service objects.
- */
-
 import type {
   ResolvedService,
   ExperimentalServiceConfig,
   ServiceDetectionError,
 } from './types';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Validation
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Validates a service configuration from vercel.json.
- */
 export function validateServiceConfig(
   name: string,
   config: ExperimentalServiceConfig
@@ -31,13 +19,6 @@ export function validateServiceConfig(
   return null;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Service Resolution
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Resolves a service configuration into a ResolvedService.
- */
 export function resolveService(
   name: string,
   config: ExperimentalServiceConfig,
@@ -69,34 +50,4 @@ export function resolveService(
     topic,
     consumer,
   };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Helper Functions
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Resolve the full entrypoint path for a service.
- * Combines workspace and entrypoint paths.
- *
- * @example
- * resolveEntrypointPath({ workspace: "apps/api", entrypoint: "src/index.ts" })
- * // → "apps/api/src/index.ts"
- *
- * resolveEntrypointPath({ workspace: ".", entrypoint: "main.py" })
- * // → "main.py"
- */
-export function resolveEntrypointPath(
-  service: ResolvedService
-): string | undefined {
-  if (!service.entrypoint) {
-    return undefined;
-  }
-
-  const workspace = service.workspace;
-  if (workspace === '.' || workspace === '') {
-    return service.entrypoint;
-  }
-
-  return `${workspace}/${service.entrypoint}`;
 }

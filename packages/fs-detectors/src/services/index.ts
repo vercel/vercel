@@ -5,9 +5,7 @@ import type {
   ServiceDetectionError,
   ExperimentalServices,
   ExperimentalServiceGroups,
-  ServiceRuntime,
 } from './types';
-import { RUNTIME_BUILDERS } from './types';
 import { validateServiceConfig, resolveService } from './resolve';
 
 export * from './types';
@@ -91,8 +89,4 @@ export async function detectServices(
   }
 
   return { services, errors };
-}
-
-export function getDefaultBuilder(runtime: ServiceRuntime): string {
-  return RUNTIME_BUILDERS[runtime];
 }

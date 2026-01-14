@@ -1,7 +1,3 @@
-/**
- * Service detection types and constants.
- */
-
 import type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroup,
@@ -12,10 +8,6 @@ import type {
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Re-exports
-// ═══════════════════════════════════════════════════════════════════════════
-
 export type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroup,
@@ -24,10 +16,6 @@ export type {
   ServiceRuntime,
   ServiceType,
 };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Service Types
-// ═══════════════════════════════════════════════════════════════════════════
 
 export interface ResolvedService {
   name: string;
@@ -71,10 +59,6 @@ export interface ServiceDetectionError {
   message: string;
   serviceName?: string;
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Runtime/Builder Mappings
-// ═══════════════════════════════════════════════════════════════════════════
 
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/node',
