@@ -402,9 +402,72 @@ export interface VercelConfig {
    * Enables Bun for the project and specifies the version to use.
    */
   bunVersion?: string;
+  /**
+   * Experimental services configuration for multi-service deployments.
+   * Map of service name to service configuration.
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalServices?: ExperimentalServices;
 }
 
 /**
  * Runtime placeholder for VercelConfig to allow named imports.
  */
 export const VercelConfig = {};
+
+export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
+
+export type ServiceType = 'web' | 'cron' | 'worker';
+
+/**
+ * Configuration for a service in vercel.json.
+ * @experimental This feature is experimental and may change.
+ */
+export interface ExperimentalServiceConfig {
+  type?: ServiceType;
+  /**
+   * Entry file for the service, relative to the workspace directory.
+   * @example "src/index.ts", "main.py", "api/server.go"
+   */
+  entrypoint?: string;
+  /**
+   * Path to the directory containing the service's manifest file
+   * (package.json, pyproject.toml, etc.).
+   * Defaults to "." (project root) if not specified.
+   */
+  workspace?: string;
+
+  /** Framework to use */
+  framework?: string;
+  /** Builder to use, e.g. @vercel/node, @vercel/python */
+  builder?: string;
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  runtime?: string;
+
+  buildCommand?: string;
+  installCommand?: string;
+
+  /** Lambda config */
+  memory?: number;
+  maxDuration?: number;
+  includeFiles?: string | string[];
+  excludeFiles?: string | string[];
+
+  /* Web service config */
+  /** URL prefix for routing */
+  routePrefix?: string;
+
+  /* Cron service config */
+  /** Cron schedule expression (e.g., "0 0 * * *") */
+  schedule?: string;
+
+  /* Worker service config */
+  topic?: string;
+  consumer?: string;
+}
+
+/**
+ * Map of service name to service configuration.
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
