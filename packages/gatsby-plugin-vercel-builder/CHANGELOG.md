@@ -1,5 +1,11 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.121
+
+### Patch Changes
+
+- Add license field to package metadata ([#13592](https://github.com/vercel/vercel/pull/13592))
+
 ## 2.0.120
 
 ### Patch Changes
