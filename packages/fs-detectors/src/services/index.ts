@@ -165,18 +165,27 @@ async function autoDetectServices(
     });
 
     if (detectedFramework) {
-      // Framework detected - use framework's builder
       const frameworkDef = frameworks.find(f => f.slug === detectedFramework);
-      const service = createServiceFromFramework(
-        dir,
-        detectedFramework,
-        frameworkDef
-      );
-      services.push(service);
-      continue;
+      const frameworkEntrypoint = frameworkDef?.useRuntime?.src;
+
+      // Verify the framework's entrypoint exists
+      if (
+        frameworkEntrypoint &&
+        (await scopedFs.hasPath(frameworkEntrypoint))
+      ) {
+        // Framework detected and entrypoint exists - use framework's builder
+        const service = createServiceFromFramework(
+          dir,
+          detectedFramework,
+          frameworkDef
+        );
+        services.push(service);
+        continue;
+      }
+      // Framework detected but entrypoint doesn't exist - fall through to runtime detection
     }
 
-    // Step 3b: No framework detected - look for entrypoints
+    // Step 3b: Look for entrypoints (either no framework, or framework entrypoint missing)
     // Get all unique runtimes from manifests in this directory
     const runtimes = [...new Set(dirManifests.map(m => m.runtime))];
 
@@ -196,10 +205,15 @@ async function autoDetectServices(
       continue;
     }
 
-    // If we found an entrypoint, create a service
+    // If we found an entrypoint, create a service (include framework if detected)
     if (detectedEntrypoints.length === 1) {
       const { path: entrypoint, runtime } = detectedEntrypoints[0];
-      const service = createServiceFromEntrypoint(dir, entrypoint, runtime);
+      const service = createServiceFromEntrypoint(
+        dir,
+        entrypoint,
+        runtime,
+        detectedFramework || undefined
+      );
       services.push(service);
       continue;
     }
@@ -233,19 +247,32 @@ function createServiceFromFramework(
   frameworkDef?: Framework
 ): ResolvedService {
   const name = workspace === '.' ? ROOT_SERVICE_NAME : workspace;
-  const builderUse = frameworkDef?.useRuntime?.use || '@vercel/static-build';
-  const builderSrc = frameworkDef?.useRuntime?.src || 'package.json';
-  const fullSrc = workspace === '.' ? builderSrc : `${workspace}/${builderSrc}`;
+  const frameworkBuilderSrc = frameworkDef?.useRuntime?.src || 'package.json';
+
+  // For root services, use the framework builder with auto-discovery
+  // For subdirectory services, use the runtime builder with explicit full path
+  // This avoids needing special workspace handling in the CLI
+  const isRoot = workspace === '.';
+  const builderUse = isRoot
+    ? frameworkDef?.useRuntime?.use || '@vercel/static-build'
+    : getBuilderForRuntime(getFrameworkRuntime(frameworkDef));
+  const builderSrc = isRoot
+    ? frameworkBuilderSrc
+    : `${workspace}/${frameworkBuilderSrc}`;
+
+  // In zero-config mode, routePrefix defaults to workspace path
+  // Root services get '/', subdirectory services get '/${workspace}'
+  const routePrefix = isRoot ? '/' : `/${workspace}`;
 
   return {
     name,
     type: 'web',
     workspace,
     framework,
-    entrypoint: builderSrc,
-    routePrefix: '/',
+    entrypoint: frameworkBuilderSrc,
+    routePrefix,
     builder: {
-      src: fullSrc,
+      src: builderSrc,
       use: builderUse,
       config: {
         zeroConfig: true,
@@ -255,29 +282,51 @@ function createServiceFromFramework(
   };
 }
 
+/**
+ * Determine the runtime for a framework based on its builder
+ */
+function getFrameworkRuntime(frameworkDef?: Framework): ServiceRuntime {
+  const builder = frameworkDef?.useRuntime?.use || '';
+  if (builder.includes('python')) return 'python';
+  if (builder.includes('go')) return 'go';
+  if (builder.includes('ruby')) return 'ruby';
+  if (builder.includes('rust')) return 'rust';
+  return 'node'; // Default to node for most frameworks
+}
+
 function createServiceFromEntrypoint(
   workspace: string,
   entrypoint: string,
-  runtime: ServiceRuntime
+  runtime: ServiceRuntime,
+  framework?: string
 ): ResolvedService {
   const name = workspace === '.' ? ROOT_SERVICE_NAME : workspace;
+  const isRoot = workspace === '.';
   const builderUse = getBuilderForRuntime(runtime);
   // Entrypoint path is already relative to project root from detectEntrypoint
-  const entrypointRelativeToWorkspace =
-    workspace === '.' ? entrypoint : entrypoint.replace(`${workspace}/`, '');
+  const entrypointRelativeToWorkspace = isRoot
+    ? entrypoint
+    : entrypoint.replace(`${workspace}/`, '');
+
+  // In zero-config mode, routePrefix defaults to workspace path
+  // Root services get '/', subdirectory services get '/${workspace}'
+  const routePrefix = isRoot ? '/' : `/${workspace}`;
 
   return {
     name,
     type: 'web',
     workspace,
     runtime,
+    framework,
     entrypoint: entrypointRelativeToWorkspace,
-    routePrefix: '/',
+    routePrefix,
     builder: {
+      // Use full path - runtime builders respect the src we pass
       src: entrypoint,
       use: builderUse,
       config: {
         zeroConfig: true,
+        ...(framework && { framework }),
       },
     },
   };
