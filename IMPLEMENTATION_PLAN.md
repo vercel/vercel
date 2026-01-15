@@ -151,13 +151,13 @@ This document outlines the prioritized implementation plan for adding wrapper mo
   - Routes to `buildHandlerAsWrapperMode()` when detected
   - Preserves all existing paths for backwards compatibility (Spec 029)
 
-- [ ] **Generate catch-all routing** - NOT IMPLEMENTED (Spec 008)
+- [x] **Generate catch-all routing** - IMPLEMENTED (Spec 008)
 
   - Wrapper mode creates a single Lambda for all routes
   - Configure routing to send all paths to this Lambda
   - User's Go router handles path dispatch internally
 
-- [ ] **Create single Lambda output** - NOT IMPLEMENTED (Spec 009)
+- [x] **Create single Lambda output** - IMPLEMENTED (Spec 009)
   - Unlike handler mode (one Lambda per file), wrapper = one Lambda total
   - All routes handled by the single Go binary
 
@@ -390,8 +390,8 @@ The wrapper mode will provide similar functionality but:
 - [x] 005: Detect wrapper via import - IMPLEMENTED (`analyze.go`)
 - [x] 006: Detect wrapper via config - IMPLEMENTED (`index.ts`)
 - [x] 007: Direct compilation in wrapper mode - IMPLEMENTED (`buildHandlerAsWrapperMode`)
-- [ ] 008: Catch-all routing generation - NOT IMPLEMENTED
-- [ ] 009: Single Lambda output - NOT IMPLEMENTED
+- [x] 008: Catch-all routing generation - IMPLEMENTED (`index.ts`)
+- [x] 009: Single Lambda output - IMPLEMENTED (`index.ts`)
 - [ ] 010: Dev server wrapper mode - NOT IMPLEMENTED
 
 ### Framework Compatibility (Specs 011-014)

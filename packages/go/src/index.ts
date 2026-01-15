@@ -273,6 +273,14 @@ export async function build({
       environment: {},
     });
 
+    if (usesWrapper) {
+      const routes = getWrapperRoutes(entrypoint);
+      return {
+        output: lambda,
+        routes,
+      };
+    }
+
     return {
       output: lambda,
     };
@@ -1012,6 +1020,31 @@ async function waitForPortFile_(opts: {
       }
     }
   }
+}
+
+export function getWrapperRoutes(entrypoint: string) {
+  const parsed = posix.parse(entrypoint);
+  let basePath = parsed.dir;
+  if (basePath === '.') {
+    basePath = '';
+  }
+
+  if (parsed.name !== 'index' && parsed.name !== 'main') {
+    basePath = posix.join(basePath, parsed.name);
+  }
+
+  if (!basePath.startsWith('/')) {
+    basePath = `/${basePath}`;
+  }
+
+  if (basePath === '/') {
+    return [{ src: '/(.*)', dest: '/' }];
+  }
+
+  return [
+    { src: `${basePath}/(.*)`, dest: basePath },
+    { src: basePath, dest: basePath },
+  ];
 }
 
 export async function prepareCache({

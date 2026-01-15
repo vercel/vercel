@@ -1,4 +1,48 @@
-import { getNewHandlerFunctionName } from '../src/index';
+import { getNewHandlerFunctionName, getWrapperRoutes } from '../src/index';
+
+describe('getWrapperRoutes', () => {
+  it('handles root main.go', () => {
+    const routes = getWrapperRoutes('main.go');
+    expect(routes).toEqual([{ src: '/(.*)', dest: '/' }]);
+  });
+
+  it('handles root index.go', () => {
+    const routes = getWrapperRoutes('index.go');
+    expect(routes).toEqual([{ src: '/(.*)', dest: '/' }]);
+  });
+
+  it('handles nested main.go', () => {
+    const routes = getWrapperRoutes('api/main.go');
+    expect(routes).toEqual([
+      { src: '/api/(.*)', dest: '/api' },
+      { src: '/api', dest: '/api' },
+    ]);
+  });
+
+  it('handles nested index.go', () => {
+    const routes = getWrapperRoutes('api/index.go');
+    expect(routes).toEqual([
+      { src: '/api/(.*)', dest: '/api' },
+      { src: '/api', dest: '/api' },
+    ]);
+  });
+
+  it('handles nested named file', () => {
+    const routes = getWrapperRoutes('api/users.go');
+    expect(routes).toEqual([
+      { src: '/api/users/(.*)', dest: '/api/users' },
+      { src: '/api/users', dest: '/api/users' },
+    ]);
+  });
+
+  it('handles deeply nested file', () => {
+    const routes = getWrapperRoutes('api/v1/posts/index.go');
+    expect(routes).toEqual([
+      { src: '/api/v1/posts/(.*)', dest: '/api/v1/posts' },
+      { src: '/api/v1/posts', dest: '/api/v1/posts' },
+    ]);
+  });
+});
 
 describe('getNewHandlerFunctionName', function () {
   it('does nothing with empty original function name', async () => {
