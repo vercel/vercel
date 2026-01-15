@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.5.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
 ## 5.5.8
 
 ### Patch Changes
