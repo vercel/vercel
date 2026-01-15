@@ -10,17 +10,59 @@ interface BaseFramework {
 export interface DetectFrameworkOptions {
   fs: DetectorFilesystem;
   frameworkList: readonly BaseFramework[];
+  /**
+   * When true, includes experimental frameworks in detection.
+   * If undefined, falls back to VERCEL_USE_EXPERIMENTAL_FRAMEWORKS env var.
+   * Defaults to false if neither is set.
+   */
+  useExperimentalFrameworks?: boolean;
 }
 
 export interface DetectFrameworkRecordOptions {
   fs: DetectorFilesystem;
   frameworkList: readonly Framework[];
+  /**
+   * When true, includes experimental frameworks in detection.
+   * If undefined, falls back to VERCEL_USE_EXPERIMENTAL_FRAMEWORKS env var.
+   * Defaults to false if neither is set.
+   */
+  useExperimentalFrameworks?: boolean;
 }
 
 type MatchResult = {
   framework: BaseFramework;
   detectedVersion?: string;
 };
+
+/**
+ * Resolves whether experimental frameworks should be included.
+ * Priority: explicit option > env var > false
+ */
+function shouldIncludeExperimentalFrameworks(
+  useExperimentalFrameworks?: boolean
+): boolean {
+  if (typeof useExperimentalFrameworks === 'boolean') {
+    return useExperimentalFrameworks;
+  }
+  return process.env.VERCEL_USE_EXPERIMENTAL_FRAMEWORKS === '1';
+}
+
+/**
+ * Filters out experimental frameworks unless explicitly opted in.
+ */
+function filterFrameworkList<T extends BaseFramework>(
+  frameworkList: readonly T[],
+  useExperimentalFrameworks?: boolean
+): readonly T[] {
+  if (shouldIncludeExperimentalFrameworks(useExperimentalFrameworks)) {
+    return frameworkList;
+  }
+  return frameworkList.filter(f => {
+    // Check if framework has experimental property and filter it out if true
+    const experimental = (f as { experimental?: boolean }).experimental;
+    return !experimental;
+  });
+}
 
 async function matches(
   fs: DetectorFilesystem,
@@ -167,9 +209,14 @@ export function removeSupersededFrameworks(
 export async function detectFramework({
   fs,
   frameworkList,
+  useExperimentalFrameworks,
 }: DetectFrameworkOptions): Promise<string | null> {
+  const filteredList = filterFrameworkList(
+    frameworkList,
+    useExperimentalFrameworks
+  );
   const result = await Promise.all(
-    frameworkList.map(async frameworkMatch => {
+    filteredList.map(async frameworkMatch => {
       if (await matches(fs, frameworkMatch)) {
         return frameworkMatch;
       }
@@ -186,9 +233,14 @@ export async function detectFramework({
 export async function detectFrameworks({
   fs,
   frameworkList,
+  useExperimentalFrameworks,
 }: DetectFrameworkRecordOptions): Promise<Framework[]> {
+  const filteredList = filterFrameworkList(
+    frameworkList,
+    useExperimentalFrameworks
+  );
   const result = await Promise.all(
-    frameworkList.map(async frameworkMatch => {
+    filteredList.map(async frameworkMatch => {
       if (await matches(fs, frameworkMatch)) {
         return frameworkMatch;
       }
@@ -211,9 +263,14 @@ type VersionedFramework = Framework & {
 export async function detectFrameworkRecord({
   fs,
   frameworkList,
+  useExperimentalFrameworks,
 }: DetectFrameworkRecordOptions): Promise<VersionedFramework | null> {
+  const filteredList = filterFrameworkList(
+    frameworkList,
+    useExperimentalFrameworks
+  );
   const result = await Promise.all(
-    frameworkList.map(async frameworkMatch => {
+    filteredList.map(async frameworkMatch => {
       const matchResult = await matches(fs, frameworkMatch);
       if (matchResult) {
         return {

@@ -3,6 +3,7 @@ import { withApiHandler } from './_lib/util/with-api-handler';
 import _frameworks, { Framework } from '../packages/frameworks';
 
 const frameworks = (_frameworks as Framework[])
+  .filter(f => !f.experimental)
   .sort(
     (a, b) =>
       (a.sort || Number.MAX_SAFE_INTEGER) - (b.sort || Number.MAX_SAFE_INTEGER)
