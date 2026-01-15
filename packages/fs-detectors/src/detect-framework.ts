@@ -44,7 +44,10 @@ function shouldIncludeExperimentalFrameworks(
   if (typeof useExperimentalFrameworks === 'boolean') {
     return useExperimentalFrameworks;
   }
-  return process.env.VERCEL_USE_EXPERIMENTAL_FRAMEWORKS === '1';
+  const experimentalEnv = process.env.VERCEL_USE_EXPERIMENTAL_FRAMEWORKS;
+  const isEnabled = (val?: string) =>
+    val === '1' || (typeof val === 'string' && val.toLowerCase() === 'true');
+  return isEnabled(experimentalEnv);
 }
 
 /**
