@@ -1,3 +1,7 @@
+// Using unique delimiters with newlines and double underscores to minimize collision risk
+export const BEGIN_INTROSPECTION_RESULT = '\n__VERCEL_INTROSPECTION_BEGIN__\n';
+export const END_INTROSPECTION_RESULT = '\n__VERCEL_INTROSPECTION_END__\n';
+
 export const setupCloseHandlers = (
   cb: () =>
     | {
@@ -9,7 +13,9 @@ export const setupCloseHandlers = (
   const callCallback = () => {
     const result = cb();
     if (result) {
-      console.log(JSON.stringify(result));
+      console.log(
+        `${BEGIN_INTROSPECTION_RESULT}${JSON.stringify(result)}${END_INTROSPECTION_RESULT}`
+      );
     }
   };
 

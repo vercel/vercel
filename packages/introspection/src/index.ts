@@ -8,6 +8,10 @@ import {
   debug,
   isExperimentalBackendsWithoutIntrospectionEnabled,
 } from '@vercel/build-utils';
+import {
+  BEGIN_INTROSPECTION_RESULT,
+  END_INTROSPECTION_RESULT,
+} from './util.js';
 
 const require = createRequire(import.meta.url);
 
@@ -70,15 +74,38 @@ export const introspectApp = async (args: {
         }
       );
 
+      // Buffer to accumulate stdout data across chunks
+      let stdoutBuffer = '';
+
       child.stdout?.on('data', data => {
         try {
-          introspectionData = introspectionSchema.parse(
-            JSON.parse(data.toString() || '{}')
+          // Accumulate data in buffer to handle chunked output
+          stdoutBuffer += data.toString();
+
+          // Check if we have a complete introspection result
+          const beginIndex = stdoutBuffer.indexOf(BEGIN_INTROSPECTION_RESULT);
+          const endIndex = stdoutBuffer.indexOf(END_INTROSPECTION_RESULT);
+
+          if (beginIndex === -1 || endIndex === -1) {
+            return; // Don't have complete data yet
+          }
+
+          const introspectionString = stdoutBuffer.substring(
+            beginIndex + BEGIN_INTROSPECTION_RESULT.length,
+            endIndex
           );
+
+          if (!introspectionString) {
+            return;
+          }
+
+          const introspectionResult = introspectionSchema.parse(
+            JSON.parse(introspectionString)
+          );
+          introspectionData = introspectionResult;
           debug(`Introspection data parsed successfully`);
         } catch (error) {
-          debug('Error parsing introspection data', error);
-          // Ignore errors - introspection data might be incomplete or malformed
+          debug(`Error parsing introspection data: ${error}`);
         }
       });
 
