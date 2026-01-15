@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
@@ -18,7 +19,6 @@ import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
-import { getWriteableDirectory } from '@vercel/build-utils';
 
 const streamPipeline = promisify(pipeline);
 
@@ -308,16 +308,22 @@ export async function createGo({
       goDir = goCacheDir;
     } else if (isUnix && goDir === goCacheDir) {
       // Using local cache → link temp writable directories
-      const tmpBase = await getWriteableDirectory();
-      const tmpModCache = join(tmpBase, 'pkg');
-      const tmpBuildCache = join(tmpBase, '.cache');
+      // Use deterministic path based on workPath so all function builds
+      // within the same deployment share the same cache paths
+      const hash = createHash('md5').update(workPath).digest('hex').slice(0, 8);
+      const tmpBase = join(tmpdir(), `vercel-go-cache-${hash}`);
+      const tmpModCache = join(tmpBase, 'mod');
+      const tmpBuildCache = join(tmpBase, 'go-build');
 
-      await Promise.all([
-        mkdirp(join(goDir, 'pkg', 'mod')),
-        mkdirp(join(goDir, '.cache', 'go-build')),
-        symlink(join(goCacheDir, 'pkg', 'mod'), tmpModCache),
-        symlink(join(goCacheDir, '.cache', 'go-build'), tmpBuildCache),
-      ]);
+      await mkdirp(join(goDir, 'pkg', 'mod'));
+      await mkdirp(join(goDir, 'go-build'));
+
+      // Create symlinks (remove first to handle broken symlinks)
+      await mkdirp(tmpBase);
+      await remove(tmpModCache);
+      await symlink(join(goCacheDir, 'pkg', 'mod'), tmpModCache);
+      await remove(tmpBuildCache);
+      await symlink(join(goCacheDir, 'go-build'), tmpBuildCache);
 
       setEnvPaths(tmpModCache, tmpBuildCache);
     }
