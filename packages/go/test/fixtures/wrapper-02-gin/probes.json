@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "body": "Hello from Gin"
+    }
+  ]
+}
