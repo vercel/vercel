@@ -836,7 +836,7 @@ export const build: BuildV2 = async ({
 
   if (!config.zeroConfig && entrypoint.endsWith('.sh')) {
     debug(`Running build script "${entrypoint}"`);
-    await runShellScript(path.join(workPath, entrypoint), []);
+    await runShellScript(path.join(workPath, entrypoint));
     validateDistDir(distPath, workPath);
 
     const output = await glob('**', distPath, mountpoint);
