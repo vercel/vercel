@@ -1,20 +1,20 @@
-import { ResolvedService, RUNTIME_BUILDERS, ServiceRuntime } from './types';
+import {
+  RUNTIME_BUILDERS,
+  ServiceRuntime,
+  ENTRYPOINT_EXTENSIONS,
+} from './types';
 
-export function resolveEntrypointPath(
-  service: ResolvedService
-): string | undefined {
-  if (!service.entrypoint) {
-    return undefined;
-  }
-
-  const workspace = service.workspace;
-  if (workspace === '.' || workspace === '') {
-    return service.entrypoint;
-  }
-
-  return `${workspace}/${service.entrypoint}`;
+export function getBuilderForRuntime(runtime: ServiceRuntime): string {
+  return RUNTIME_BUILDERS[runtime];
 }
 
-export function getDefaultBuilder(runtime: ServiceRuntime): string {
-  return RUNTIME_BUILDERS[runtime];
+export function inferRuntimeFromExtension(
+  entrypoint: string
+): ServiceRuntime | null {
+  for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
+    if (entrypoint.endsWith(ext)) {
+      return runtime;
+    }
+  }
+  return null;
 }

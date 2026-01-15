@@ -4,8 +4,10 @@ import type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
+import type { Framework } from '@vercel/frameworks';
 
 export type {
   ExperimentalServiceConfig,
@@ -13,6 +15,7 @@ export type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Builder,
 };
 
 export interface ResolvedService {
@@ -24,15 +27,10 @@ export interface ResolvedService {
   workspace: string;
   entrypoint?: string;
   framework?: string;
-  builder?: string;
+  builder: Builder;
   buildCommand?: string;
   installCommand?: string;
-  /* Lambda config */
   runtime?: string;
-  memory?: number;
-  maxDuration?: number;
-  includeFiles?: string | string[];
-  excludeFiles?: string | string[];
   /* Web service config */
   routePrefix?: string;
   /* Cron service config */
@@ -45,11 +43,22 @@ export interface ResolvedService {
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
   workPath?: string;
+  /** Explicit services from vercel.json experimentalServices */
+  explicitServices?: ExperimentalServices;
+  /** Framework list for zero-config detection */
+  frameworkList?: readonly Framework[];
 }
 
 export interface DetectServicesResult {
   services: ResolvedService[];
   errors: ServiceDetectionError[];
+  warnings?: ServiceDetectionWarning[];
+}
+
+export interface ServiceDetectionWarning {
+  code: string;
+  message: string;
+  serviceName?: string;
 }
 
 export interface ServiceDetectionError {
@@ -58,10 +67,33 @@ export interface ServiceDetectionError {
   serviceName?: string;
 }
 
+export interface DetectedManifest {
+  /** Full path to the manifest file (relative to project root) */
+  path: string;
+  /** Directory containing the manifest */
+  directory: string;
+  /** Runtime associated with this manifest */
+  runtime: ServiceRuntime;
+  /** The manifest filename */
+  file: string;
+}
+
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/node',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+};
+
+export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
+  '.ts': 'node',
+  '.mts': 'node',
+  '.js': 'node',
+  '.mjs': 'node',
+  '.cjs': 'node',
+  '.py': 'python',
+  '.go': 'go',
+  '.rs': 'rust',
+  '.rb': 'ruby',
 };

@@ -3,9 +3,11 @@ export {
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  type Options as DetectBuildersOptions,
 } from './detect-builders';
 export {
   detectServices,
+  getServicesBuilders,
   type DetectServicesOptions,
   type DetectServicesResult,
   type ResolvedService,
