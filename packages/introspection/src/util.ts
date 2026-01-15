@@ -13,6 +13,7 @@ export const setupCloseHandlers = (
   const callCallback = () => {
     const result = cb();
     if (result) {
+      // Use console.log with delimiters to send structured data via stdout
       console.log(
         `${BEGIN_INTROSPECTION_RESULT}${JSON.stringify(result)}${END_INTROSPECTION_RESULT}`
       );
