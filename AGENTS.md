@@ -148,8 +148,12 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
 }
 
 // Optional exports
-export async function prepareCache(options: PrepareCacheOptions): Promise<Files> {}
-export async function startDevServer(options: StartDevServerOptions): Promise<StartDevServerResult> {}
+export async function prepareCache(
+  options: PrepareCacheOptions
+): Promise<Files> {}
+export async function startDevServer(
+  options: StartDevServerOptions
+): Promise<StartDevServerResult> {}
 ```
 
 ## CLI Development
