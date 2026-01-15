@@ -40,7 +40,27 @@ export const createWebExportsHandler = (awaiter: Awaiter) => {
 
     return (req: IncomingMessage, res: ServerResponse) => {
       const method = req.method ?? 'GET';
-      handlerByMethod[method](req, res);
+      const handler = handlerByMethod[method];
+
+      // Wrap the handler to catch any errors that might occur during response conversion
+      // This is particularly important for status codes like 400 where buildToNodeHandler
+      // might throw errors when converting Web API Response objects
+      try {
+        handler(req, res);
+      } catch (error) {
+        // If the handler throws an error, ensure we send a proper error response
+        // instead of letting it propagate as FUNCTION_INVOCATION_FAILED
+        if (!res.headersSent) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              error: 'Internal Server Error',
+              message: error instanceof Error ? error.message : String(error),
+            })
+          );
+        }
+      }
     };
   }
 
