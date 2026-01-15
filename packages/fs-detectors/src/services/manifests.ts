@@ -1,22 +1,8 @@
-/**
- * Manifest detection for service discovery.
- *
- * This module walks the project filesystem to find manifest files
- * (package.json, pyproject.toml, go.mod, etc.) that indicate
- * buildable services.
- */
-
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type { ServiceRuntime } from '@vercel/build-utils';
 import type { DetectedManifest } from './types';
+import { debug } from 'console';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Constants
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Mapping of manifest files to their associated runtimes.
- */
 export const MANIFEST_FILES: Record<string, ServiceRuntime> = {
   'package.json': 'node',
   'pyproject.toml': 'python',
@@ -27,10 +13,8 @@ export const MANIFEST_FILES: Record<string, ServiceRuntime> = {
   Gemfile: 'ruby',
 };
 
-/**
- * Directories to skip during manifest detection.
- */
-export const IGNORED_DIRECTORIES = new Set([
+// Directories to skip during manifest detection.
+const IGNORED_DIRECTORIES = new Set([
   'node_modules',
   '.git',
   '.svn',
@@ -59,14 +43,8 @@ export const IGNORED_DIRECTORIES = new Set([
   '.cache',
 ]);
 
-/**
- * Maximum depth to search for manifests from the project root.
- */
-export const MAX_MANIFEST_SEARCH_DEPTH = 3;
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Main Detection Function
-// ═══════════════════════════════════════════════════════════════════════════
+// Maximum depth to search for manifests from the project root.
+const MAX_MANIFEST_SEARCH_DEPTH = 3;
 
 /**
  * Detects all manifest files in a project by walking the directory tree.
@@ -117,7 +95,7 @@ export async function detectManifests(
         }
       }
     } catch {
-      // Silently skip unreadable directories
+      debug(`Skipping unreadable directory: ${dir}`);
     }
   }
 
@@ -125,13 +103,6 @@ export async function detectManifests(
   return manifests;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Helper Functions
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Groups detected manifests by their containing directory.
- */
 export function groupManifestsByDirectory(
   manifests: DetectedManifest[]
 ): Map<string, DetectedManifest[]> {
@@ -150,25 +121,17 @@ export function groupManifestsByDirectory(
 }
 
 /**
- * Get the primary runtime for a directory based on its manifests.
- * Priority: node > python > go > rust > ruby
+ * In zero-config services detection, a service base directory can't have more than one
+ * detected service because we'd have no way to disambiguate how to route requests.
+ *
+ * For example, if a directory has both `server.ts` and `server.py`, we can't determine
+ * which service should handle a given request since they'd both be mounted at the same path.
+ *
+ * Note: Having multiple manifest files (e.g. `package.json` + `pyproject.toml`) in the same
+ * directory is fine as long as only one service entrypoint is detected.
+ *
+ * @param detectedEntrypoints - Array of entrypoint paths detected in the same directory
  */
-export function getPrimaryRuntime(
-  manifests: DetectedManifest[]
-): ServiceRuntime {
-  const runtimes = new Set(manifests.map(m => m.runtime));
-  if (runtimes.has('node')) return 'node';
-  if (runtimes.has('python')) return 'python';
-  if (runtimes.has('go')) return 'go';
-  if (runtimes.has('rust')) return 'rust';
-  if (runtimes.has('ruby')) return 'ruby';
-  return manifests[0].runtime;
-}
-
-/**
- * Check if a directory has conflicting runtimes.
- */
-export function hasConflictingRuntimes(manifests: DetectedManifest[]): boolean {
-  const runtimes = new Set(manifests.map(m => m.runtime));
-  return runtimes.size > 1;
+export function hasConflictingServices(detectedEntrypoints: string[]): boolean {
+  return detectedEntrypoints.length > 1;
 }

@@ -7,6 +7,7 @@ import type {
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
+import type { Framework } from '@vercel/frameworks';
 
 export type {
   ExperimentalServiceConfig,
@@ -29,12 +30,7 @@ export interface ResolvedService {
   builder: Builder;
   buildCommand?: string;
   installCommand?: string;
-  /* Lambda config */
   runtime?: string;
-  memory?: number;
-  maxDuration?: number;
-  includeFiles?: string | string[];
-  excludeFiles?: string | string[];
   /* Web service config */
   routePrefix?: string;
   /* Cron service config */
@@ -49,11 +45,20 @@ export interface DetectServicesOptions {
   workPath?: string;
   /** Explicit services from vercel.json experimentalServices */
   explicitServices?: ExperimentalServices;
+  /** Framework list for zero-config detection */
+  frameworkList?: readonly Framework[];
 }
 
 export interface DetectServicesResult {
   services: ResolvedService[];
   errors: ServiceDetectionError[];
+  warnings?: ServiceDetectionWarning[];
+}
+
+export interface ServiceDetectionWarning {
+  code: string;
+  message: string;
+  serviceName?: string;
 }
 
 export interface ServiceDetectionError {
@@ -79,14 +84,6 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
-};
-
-export const BUILDER_TO_RUNTIME: Record<string, ServiceRuntime> = {
-  '@vercel/node': 'node',
-  '@vercel/python': 'python',
-  '@vercel/go': 'go',
-  '@vercel/rust': 'rust',
-  '@vercel/ruby': 'ruby',
 };
 
 export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {

@@ -1,19 +1,10 @@
-/**
- * Builder and route generation for services.
- *
- * This module transforms detected services into Vercel builders
- * and routes for deployment.
- */
-
 import type { Route } from '@vercel/routing-utils';
 import type { Builder, ExperimentalServices } from '@vercel/build-utils';
+import type { Framework } from '@vercel/frameworks';
 import type { ResolvedService } from './types';
 import { detectServices } from './index';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════════════════
+import frameworkList from '@vercel/frameworks';
 
 export interface ErrorResponse {
   code: string;
@@ -25,6 +16,7 @@ export interface ErrorResponse {
 export interface ServicesBuilderOptions {
   workPath?: string;
   experimentalServices?: ExperimentalServices;
+  frameworkList?: readonly Framework[];
 }
 
 export interface ServicesBuilderResult {
@@ -35,23 +27,28 @@ export interface ServicesBuilderResult {
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  services?: ResolvedService[];
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Main Function
-// ═══════════════════════════════════════════════════════════════════════════
-
 /**
- * Get builders for the "services" framework preset.
+ * This function is called from detectBuilders when `framework === 'services'`.
+ * If experimentalServices is configured in vercel.json, returns the builders
+ * for the specified services.
+ * Otherwise, auto-detects services via zero-config entrypoint detection.
  *
- * This is called from detectBuilders when `framework === 'services'`.
- * It uses experimentalServices from vercel.json if configured,
- * otherwise auto-detects services via zero-config entrypoint detection.
+ * Auto-detection flow:
+ * 1. Walk project to find manifest files (package.json, pyproject.toml, etc.)
+ * 2. For each directory with a manifest:
+ *    - Run framework detection - if detected, use framework's builder
+ *    - If no framework, search for entrypoints for that manifest's runtime
+ *    - If entrypoints found, create a service
+ * 3. Error if multiple entrypoints at same level (ambiguous routing)
  */
 export async function getServicesBuilders(
   options: ServicesBuilderOptions
 ): Promise<ServicesBuilderResult> {
   const { experimentalServices, workPath } = options;
+  const frameworks = options.frameworkList || frameworkList;
 
   if (!workPath) {
     return {
@@ -74,7 +71,14 @@ export async function getServicesBuilders(
   const result = await detectServices({
     fs,
     explicitServices: experimentalServices,
+    frameworkList: frameworks,
   });
+
+  // Convert warnings to error format
+  const warningResponses: ErrorResponse[] = (result.warnings || []).map(w => ({
+    code: w.code,
+    message: w.message,
+  }));
 
   if (result.errors.length > 0) {
     return {
@@ -83,7 +87,7 @@ export async function getServicesBuilders(
         code: e.code,
         message: e.message,
       })),
-      warnings: [],
+      warnings: warningResponses,
       defaultRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
@@ -98,10 +102,10 @@ export async function getServicesBuilders(
         {
           code: 'NO_SERVICES_DETECTED',
           message:
-            'No services detected. When using framework "services", you must either configure services in vercel.json under "experimentalServices" or have a supported entrypoint file (e.g., index.js, app.py, server.go).',
+            'No services detected. Please configure `experimentalServices` in vercel.json.',
         },
       ],
-      warnings: [],
+      warnings: warningResponses,
       defaultRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
@@ -109,10 +113,7 @@ export async function getServicesBuilders(
     };
   }
 
-  // Convert services to builders
   const builders: Builder[] = result.services.map(service => service.builder);
-
-  // Generate routes from services
   const { rewriteRoutes, defaultRoutes } = generateServicesRoutes(
     result.services
   );
@@ -120,21 +121,16 @@ export async function getServicesBuilders(
   return {
     builders: builders.length > 0 ? builders : null,
     errors: null,
-    warnings: [],
+    warnings: warningResponses,
     defaultRoutes,
     redirectRoutes: [],
     rewriteRoutes,
     errorRoutes: [],
+    services: result.services,
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Route Generation
-// ═══════════════════════════════════════════════════════════════════════════
-
 /**
- * Generate routes from detected services.
- *
  * Routes are ordered by prefix length (longest first) to ensure
  * more specific routes are matched before catch-all routes.
  */

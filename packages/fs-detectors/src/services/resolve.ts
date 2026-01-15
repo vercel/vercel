@@ -3,22 +3,12 @@ import type {
   ExperimentalServiceConfig,
   ServiceDetectionError,
 } from './types';
-import { RUNTIME_BUILDERS, ENTRYPOINT_EXTENSIONS } from './types';
+import { ENTRYPOINT_EXTENSIONS, RUNTIME_BUILDERS } from './types';
+import { getBuilderForRuntime, inferRuntimeFromExtension } from './utils';
 import type { ServiceRuntime } from '@vercel/build-utils';
+import frameworkList from '@vercel/frameworks';
 
-/**
- * Get runtime from file extension.
- */
-export function getRuntimeFromExtension(
-  entrypoint: string
-): ServiceRuntime | null {
-  for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
-    if (entrypoint.endsWith(ext)) {
-      return runtime;
-    }
-  }
-  return null;
-}
+const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 export function validateServiceConfig(
   name: string,
@@ -31,13 +21,56 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-
   if (config.type === 'cron' && !config.schedule) {
     return {
       code: 'MISSING_CRON_SCHEDULE',
-      message: `Cron service "${name}" is missing required "schedule" field`,
+      message: `Cron service "${name}" is missing required "schedule" field.`,
       serviceName: name,
     };
+  }
+  if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
+    return {
+      code: 'INVALID_RUNTIME',
+      message: `Service "${name}" has invalid runtime "${config.runtime}".`,
+      serviceName: name,
+    };
+  }
+  if (config.framework && !frameworksBySlug.has(config.framework)) {
+    return {
+      code: 'INVALID_FRAMEWORK',
+      message: `Service "${name}" has invalid framework "${config.framework}".`,
+      serviceName: name,
+    };
+  }
+
+  const hasFramework = Boolean(config.framework);
+  const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
+  const hasEntrypoint = Boolean(config.entrypoint);
+
+  if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
+    return {
+      code: 'MISSING_SERVICE_CONFIG',
+      message: `Service "${name}" must specify "framework", "entrypoint", or both "builder"/"runtime" with "entrypoint".`,
+      serviceName: name,
+    };
+  }
+  if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+    return {
+      code: 'MISSING_ENTRYPOINT',
+      message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
+      serviceName: name,
+    };
+  }
+  if (hasEntrypoint && !hasBuilderOrRuntime && !hasFramework) {
+    const runtime = inferRuntimeFromExtension(config.entrypoint!);
+    if (!runtime) {
+      const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
+      return {
+        code: 'UNSUPPORTED_ENTRYPOINT',
+        message: `Service "${name}" has unsupported entrypoint "${config.entrypoint}". Use a supported extension (${supported}) or specify "builder", "framework", or "runtime".`,
+        serviceName: name,
+      };
+    }
   }
 
   return null;
@@ -54,30 +87,28 @@ export function resolveService(
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
-  // Determine the builder
   let builderUse: string;
+  let builderSrc: string;
 
-  if (config.builder) {
-    // Explicit builder takes precedence
+  if (config.framework) {
+    const framework = frameworksBySlug.get(config.framework);
+    builderUse = framework?.useRuntime?.use || '@vercel/static-build';
+    builderSrc = framework?.useRuntime?.src || 'package.json';
+  } else if (config.builder) {
     builderUse = config.builder;
+    builderSrc = config.entrypoint!;
   } else if (config.runtime) {
-    // Runtime specified - map to builder
     const runtime = config.runtime as ServiceRuntime;
-    builderUse = RUNTIME_BUILDERS[runtime] || '@vercel/node';
-  } else if (config.entrypoint) {
-    // Infer from entrypoint extension
-    const runtime = getRuntimeFromExtension(config.entrypoint);
-    builderUse = runtime ? RUNTIME_BUILDERS[runtime] : '@vercel/node';
+    builderUse = RUNTIME_BUILDERS[runtime];
+    builderSrc = config.entrypoint!;
   } else {
-    // Default to node
-    builderUse = '@vercel/node';
+    const runtime = inferRuntimeFromExtension(config.entrypoint!);
+    builderUse = getBuilderForRuntime(runtime!);
+    builderSrc = config.entrypoint!;
   }
 
-  // Determine route prefix (default to service name if not root)
-  const routePrefix =
-    config.routePrefix ?? (name === 'default' ? '/' : `/${name}`);
+  const routePrefix = config.routePrefix ?? '/';
 
-  // Build the builder config
   const builderConfig: Record<string, unknown> = {};
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
@@ -93,17 +124,13 @@ export function resolveService(
     routePrefix,
     framework: config.framework,
     builder: {
-      src: config.entrypoint || '',
+      src: builderSrc,
       use: builderUse,
       config: Object.keys(builderConfig).length > 0 ? builderConfig : undefined,
     },
     runtime: config.runtime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
-    memory: config.memory,
-    maxDuration: config.maxDuration,
-    includeFiles: config.includeFiles,
-    excludeFiles: config.excludeFiles,
     schedule: config.schedule,
     topic,
     consumer,
