@@ -94,6 +94,7 @@ import {
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
+import { servicesToBuildsAndRoutes } from '../../util/services';
 import { mkdir, writeFile } from 'fs/promises';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
@@ -552,20 +553,37 @@ async function doBuild(
     });
   }
 
-  let builds = localConfig.builds || [];
+  let builds: Builder[] = [];
   let zeroConfigRoutes: Route[] = [];
+  let serviceRoutes: Route[] = [];
   let isZeroConfig = false;
 
-  if (builds.length > 0) {
+  // Process services if present
+  if (Array.isArray((localConfig as any).services)) {
+    const { builds: serviceBuilds, rewriteRoutes } =
+      await servicesToBuildsAndRoutes((localConfig as any).services, workPath);
+    builds = builds.concat(serviceBuilds);
+    // Insert service rewrites into filesystem phase before user routes
+    serviceRoutes = appendRoutesToPhase({
+      routes: [],
+      newRoutes: rewriteRoutes,
+      phase: 'filesystem',
+    });
+  }
+
+  // If `builds` is provided explicitly, expand and skip zero-config detection
+  if ((localConfig.builds || []).length > 0) {
+    const explicitBuilds = localConfig.builds || [];
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
-    builds = builds.map(b => expandBuild(files, b)).flat();
+    builds = builds
+      .concat(explicitBuilds.map(b => expandBuild(files, b)).flat())
+      .flat();
   } else {
-    // Zero config
+    // Zero config (frontend detection only)
     isZeroConfig = true;
 
-    // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...localConfig,
       projectSettings,
@@ -582,11 +600,43 @@ async function doBuild(
       output.warn(w.message, null, w.link, w.action || 'Learn More');
     }
 
-    if (detectedBuilders.builders) {
-      builds = detectedBuilders.builders;
-    } else {
-      builds = [{ src: '**', use: '@vercel/static' }];
+    const detected = detectedBuilders.builders || [
+      { src: '**', use: '@vercel/static' },
+    ];
+    const hasServices = Array.isArray((localConfig as any).services);
+    let selectedDetectedBuilders = detected;
+    if (hasServices) {
+      // When services are defined, exclude backend frameworks from zero-config
+      selectedDetectedBuilders = detected.filter(b => {
+        if (!b.use) return false;
+        if (b.use === '@vercel/static') return true;
+        const fr = frameworkList.find(f => f.useRuntime?.use === b.use) as any;
+        return !fr || fr.kind !== 'backend';
+      });
     }
+
+    const hasFrontend = selectedDetectedBuilders.some(b => {
+      if (!b.use) return false;
+      const fr = frameworkList.find(f => f.useRuntime?.use === b.use) as any;
+      return !!fr && fr.kind !== 'backend';
+    });
+    if (hasFrontend && hasServices) {
+      const servicesArr = (localConfig as any).services as any[];
+      const hasRootService = servicesArr.some(
+        s => !s || typeof s.prefix !== 'string' || s.prefix.trim() === '/'
+      );
+      if (hasRootService) {
+        throw new NowBuildError({
+          code: 'SERVICES_FRONTEND_REQUIRES_PREFIX',
+          message:
+            'A zero-config frontend framework was detected. Each backend service in `services` must specify a unique `prefix` to avoid route conflicts.',
+          link: 'https://vercel.link/services-config',
+          action: 'Add a `prefix` to all services',
+        });
+      }
+    }
+
+    builds = builds.concat(selectedDetectedBuilders);
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     zeroConfigRoutes.push(
@@ -1015,6 +1065,13 @@ async function doBuild(
       use: '@vercel/zero-config-routes',
       entrypoint: '/',
       routes: zeroConfigRoutes,
+    });
+  }
+  if (serviceRoutes.length) {
+    builderRoutes.unshift({
+      use: '@vercel/services-routes',
+      entrypoint: '/',
+      routes: serviceRoutes,
     });
   }
   const mergedRoutes = mergeRoutes({
