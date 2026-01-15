@@ -1,5 +1,14 @@
 # @vercel/static-build
 
+## 2.8.20
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.119
+
 ## 2.8.19
 
 ### Patch Changes

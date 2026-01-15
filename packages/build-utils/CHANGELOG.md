@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
 ## 13.2.8
 
 ### Patch Changes
