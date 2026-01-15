@@ -23,7 +23,7 @@ import {
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   debug,
   isSymbolicLink,
   walkParentDirs,
@@ -75,7 +75,7 @@ async function downloadInstallAndBundle({
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const nodeVersion = await getRuntimeNodeVersion(
+  const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,
     config,

@@ -10,14 +10,14 @@ import {
   debug,
   type PrepareCache,
   type BuildV2,
-  getRuntimeNodeVersion,
+  getNodeVersion,
 } from '@vercel/build-utils';
 
 export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
-  const nodeVersion = await getRuntimeNodeVersion(args.workPath);
+  const nodeVersion = await getNodeVersion(args.workPath);
 
   const outputConfig = await doBuild(args, downloadResult);
 

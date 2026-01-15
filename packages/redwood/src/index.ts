@@ -16,7 +16,7 @@ import {
   download,
   glob,
   debug,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   getPrefixedEnvVars,
   runNpmInstall,
   runPackageJsonScript,
@@ -68,7 +68,7 @@ export const build: BuildV2 = async ({
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
-  const nodeVersion = await getRuntimeNodeVersion(
+  const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,
     config,

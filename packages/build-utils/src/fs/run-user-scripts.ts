@@ -299,7 +299,7 @@ export function getSpawnOptions(
   return opts;
 }
 
-export async function getRuntimeNodeVersion(
+export async function getNodeVersion(
   destPath: string,
   fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
