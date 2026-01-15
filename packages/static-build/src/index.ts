@@ -30,7 +30,7 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   debug,
   NowBuildError,
   scanParentDirs,
@@ -478,7 +478,7 @@ export const build: BuildV2 = async ({
       }
     }
 
-    const nodeVersion = await getRuntimeNodeVersion(
+    const nodeVersion = await getNodeVersion(
       entrypointDir,
       undefined,
       config,
@@ -836,7 +836,7 @@ export const build: BuildV2 = async ({
 
   if (!config.zeroConfig && entrypoint.endsWith('.sh')) {
     debug(`Running build script "${entrypoint}"`);
-    await runShellScript(path.join(workPath, entrypoint));
+    await runShellScript(path.join(workPath, entrypoint), []);
     validateDistDir(distPath, workPath);
 
     const output = await glob('**', distPath, mountpoint);
