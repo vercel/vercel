@@ -1,5 +1,45 @@
 # vercel
 
+## 50.4.0
+
+### Minor Changes
+
+- Defer sentry init until needed ([#14610](https://github.com/vercel/vercel/pull/14610))
+
+### Patch Changes
+
+- Updated dependencies [[`2763c6ce1c5e0181eb97817bb79d793c7ad13a19`](https://github.com/vercel/vercel/commit/2763c6ce1c5e0181eb97817bb79d793c7ad13a19)]:
+  - @vercel/backends@0.0.22
+
+## 50.3.3
+
+### Patch Changes
+
+- Updating validation for custom deployment ids ([#14594](https://github.com/vercel/vercel/pull/14594))
+
+- [cli] Add validation for CRON_SECRET environment variable during build to detect invalid HTTP header characters ([#14576](https://github.com/vercel/vercel/pull/14576))
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/build-utils@13.2.8
+  - @vercel/static-build@2.8.19
+  - @vercel/backends@0.0.21
+  - @vercel/hydrogen@1.3.5
+  - @vercel/redwood@2.4.8
+  - @vercel/remix-builder@5.5.8
+  - @vercel/next@4.15.14
+  - @vercel/node@5.5.20
+  - @vercel/elysia@0.1.19
+  - @vercel/express@0.1.26
+  - @vercel/fastify@0.1.22
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.28
+  - @vercel/hono@0.2.22
+  - @vercel/koa@0.1.2
+  - @vercel/nestjs@0.2.23
+  - @vercel/python@6.1.6
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
 ## 50.3.2
 
 ### Patch Changes

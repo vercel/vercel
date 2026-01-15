@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  debug,
   getPackageJson,
   getScriptName,
   type BuildOptions,
@@ -35,13 +36,16 @@ export const doBuild = async (
 
   // If there's no output directory configured
   if (!outputSetting) {
+    debug('No output directory configured, using default output directory');
     // If cervel was run as build command, use its default output location
     if (isCervelCommand) {
+      debug('Cervel command ran, using its default output location');
       // Cervel defaults to outputting to a `dist` directory
       const cervelOutputDir = join(args.workPath, 'dist');
       const cervelJsonPath = join(cervelOutputDir, '.cervel.json');
 
       if (existsSync(cervelJsonPath)) {
+        debug('Cervel JSON file found, using its handler');
         const { handler } = await getBuildSummary(cervelOutputDir);
         return {
           dir: cervelOutputDir,
@@ -60,6 +64,7 @@ export const doBuild = async (
     // Check if a `dist` directory exists (common build output convention)
     const distDir = join(args.workPath, 'dist');
     if (existsSync(distDir)) {
+      debug('Dist directory found, checking for .cervel.json');
       const cervelJsonPath = join(distDir, '.cervel.json');
 
       // If .cervel.json exists, use it
@@ -75,8 +80,10 @@ export const doBuild = async (
       // Otherwise, detect entrypoint in dist directory
       let handler: string;
       try {
+        debug('Finding entrypoint in dist directory');
         handler = await findEntrypoint(distDir);
       } catch (error) {
+        debug('Finding entrypoint in dist directory with ignoreRegex');
         handler = await findEntrypoint(distDir, { ignoreRegex: true });
       }
 
@@ -89,6 +96,7 @@ export const doBuild = async (
       };
     }
 
+    debug('No dist directory found, building ourselves');
     // Otherwise, we need to build ourselves
     const buildResult = await cervelBuild({
       cwd: args.workPath,
