@@ -188,6 +188,12 @@ export async function build({
     const usesWrapper =
       analyzed.usesWrapper || (config && config.wrapper === true);
 
+    if (analyzed.usesWrapper && !analyzed.callsStart) {
+      throw new Error(
+        'Detected "github.com/vercel/vercel-go" import but no usage of "vercel.Start(handler)". Please call "vercel.Start(handler)" in your main function.'
+      );
+    }
+
     // If package main with go.mod but NOT wrapper mode, throw an error
     if (goModPath && packageName === 'main' && !usesWrapper) {
       throw new Error(

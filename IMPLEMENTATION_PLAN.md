@@ -29,7 +29,7 @@ This document outlines the prioritized implementation plan for adding wrapper mo
 | `go/vercel.go`              | **COMPLETE** | Start function with environment detection          |
 | `go/lambda.go`              | **COMPLETE** | Lambda event handling, request/response conversion |
 | `go/lambda_test.go`         | **COMPLETE** | 10 test functions, all passing                     |
-| `packages/go/analyze.go`    | **COMPLETE** | Detects wrapper import                             |
+| `packages/go/analyze.go`    | **COMPLETE** | Detects wrapper import and usage                   |
 | `packages/go/src/index.ts`  | **COMPLETE** | Wrapper mode build path, validation                |
 | `packages/go/dev-server.go` | **COMPLETE** | Wrapper mode support                               |
 | Test fixtures (wrapper-\*)  | **COMPLETE** | All wrapper fixtures created                       |
@@ -63,7 +63,7 @@ This document outlines the prioritized implementation plan for adding wrapper mo
 #### 2.3 Validation and Error Handling
 
 - [x] **Validate wrapper import presence** - IMPLEMENTED (Spec 021)
-- [ ] **Validate wrapper usage** - NOT IMPLEMENTED (Spec 022)
+- [x] **Validate wrapper usage** - IMPLEMENTED (Spec 022)
 
 #### 2.4 Dev Server Support
 
@@ -148,6 +148,7 @@ Create new fixtures in `packages/go/test/fixtures/`:
 | -------------------------- | ----------------------------------- | -------- |
 | `go/vercel.go`             | Add dev server support              | MODIFIED |
 | `packages/go/src/index.ts` | Add wrapper mode dev server support | MODIFIED |
+| `packages/go/analyze.go`   | Add wrapper usage validation        | MODIFIED |
 
 ---
 
@@ -188,7 +189,7 @@ Create new fixtures in `packages/go/test/fixtures/`:
 ### Validation (Specs 021-022)
 
 - [x] 021: Missing wrapper import error - IMPLEMENTED
-- [ ] 022: Wrapper usage validation - NOT IMPLEMENTED
+- [x] 022: Wrapper usage validation - IMPLEMENTED
 
 ### Go Ecosystem (Specs 023-025)
 
@@ -230,7 +231,6 @@ Create new fixtures in `packages/go/test/fixtures/`:
 
 The following items are pending for full wrapper mode support:
 
-- **Spec 022:** Validation of wrapper usage.
 - **Spec 023-025:** Go ecosystem support verification.
 - **Spec 035-036:** Migration guide and examples.
 

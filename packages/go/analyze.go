@@ -31,6 +31,7 @@ type analyze struct {
 	FuncName    string   `json:"functionName"`
 	Watch       []string `json:"watch"`
 	UsesWrapper bool     `json:"usesWrapper"`
+	CallsStart  bool     `json:"callsStart"`
 }
 
 // parse go file
@@ -110,12 +111,37 @@ func main() {
 
 	// Check for wrapper mode import (github.com/vercel/vercel-go)
 	usesWrapper := false
+	wrapperPackageName := "vercel"
 	for _, imp := range parsed.Imports {
 		// Import path is quoted, so we need to check for the quoted value
 		if imp.Path.Value == `"github.com/vercel/vercel-go"` {
 			usesWrapper = true
+			if imp.Name != nil {
+				wrapperPackageName = imp.Name.Name
+			}
 			break
 		}
+	}
+
+	// Check for vercel.Start() call
+	callsStart := false
+	if usesWrapper {
+		ast.Inspect(parsed, func(n ast.Node) bool {
+			// Look for function calls
+			if call, ok := n.(*ast.CallExpr); ok {
+				// Check if it's a selector expression like vercel.Start
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					// Check if X is an identifier (the package name)
+					if x, ok := sel.X.(*ast.Ident); ok {
+						if x.Name == wrapperPackageName && sel.Sel.Name == "Start" {
+							callsStart = true
+							return false // Found it, stop looking
+						}
+					}
+				}
+			}
+			return true
+		})
 	}
 
 	// If wrapper import is detected, return early with wrapper mode info
@@ -124,6 +150,7 @@ func main() {
 			PackageName: parsed.Name.Name,
 			FuncName:    "main", // Not used in wrapper mode, but provide a value
 			UsesWrapper: true,
+			CallsStart:  callsStart,
 		}
 		analyzedJSON, _ := json.Marshal(analyzed)
 		fmt.Print(string(analyzedJSON))

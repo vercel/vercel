@@ -87,6 +87,7 @@ interface Analyzed {
   packageName: string;
   watch?: boolean;
   usesWrapper?: boolean;
+  callsStart?: boolean;
 }
 
 /**
