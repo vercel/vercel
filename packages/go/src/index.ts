@@ -875,7 +875,7 @@ async function writeGoWork(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, config, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
 
@@ -887,8 +887,8 @@ export async function startDevServer(
   }
 
   const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
-  const tmpPackage = join(tmp, entrypointDir);
-  await mkdirp(tmpPackage);
+  // Ensure tmp dir exists for both modes
+  await mkdirp(tmp);
 
   const { goModPath } = await findGoModPath(
     join(workPath, entrypointDir),
@@ -901,16 +901,8 @@ export async function startDevServer(
     workPath,
   });
 
-  await Promise.all([
-    copyEntrypoint(entrypointWithExt, tmpPackage),
-    copyDevServer(analyzed.functionName, tmpPackage),
-    writeGoMod({
-      destDir: tmp,
-      goModPath,
-      packageName: analyzed.packageName,
-    }),
-    writeGoWork(tmp, workPath, modulePath),
-  ]);
+  const usesWrapper =
+    analyzed.usesWrapper || (config && config.wrapper === true);
 
   const portFile = join(
     TMP,
@@ -921,32 +913,78 @@ export async function startDevServer(
     VERCEL_DEV_PORT_FILE: portFile,
   });
 
-  const executable = `./vercel-dev-server-go${
-    process.platform === 'win32' ? '.exe' : ''
-  }`;
+  let child;
 
-  // Note: We must run `go build`, then manually spawn the dev server instead
-  // of spawning `go run`. See https://github.com/vercel/vercel/pull/8718 for
-  // more info.
+  if (usesWrapper) {
+    debug('Starting dev server in wrapper mode');
 
-  // build the dev server
-  const go = await createGo({
-    modulePath,
-    opts: {
+    const executablePath = join(
+      tmp,
+      `vercel-dev-server-go${process.platform === 'win32' ? '.exe' : ''}`
+    );
+
+    const go = await createGo({
+      modulePath,
+      opts: {
+        cwd: join(workPath, entrypointDir),
+        env,
+      },
+      workPath,
+    });
+
+    try {
+      // Build the user's package directly to the tmp executable
+      await go.build(['.'], executablePath);
+    } catch (err) {
+      console.error('Failed to `go build`');
+      throw err;
+    }
+
+    debug(`SPAWNING ${executablePath} CWD=${join(workPath, entrypointDir)}`);
+    child = spawn(executablePath, [], {
+      cwd: join(workPath, entrypointDir),
+      env,
+      stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+    });
+  } else {
+    debug('Starting dev server in legacy handler mode');
+    const tmpPackage = join(tmp, entrypointDir);
+    await mkdirp(tmpPackage);
+
+    await Promise.all([
+      copyEntrypoint(entrypointWithExt, tmpPackage),
+      copyDevServer(analyzed.functionName, tmpPackage),
+      writeGoMod({
+        destDir: tmp,
+        goModPath,
+        packageName: analyzed.packageName,
+      }),
+      writeGoWork(tmp, workPath, modulePath),
+    ]);
+
+    const executable = `./vercel-dev-server-go${
+      process.platform === 'win32' ? '.exe' : ''
+    }`;
+
+    // build the dev server
+    const go = await createGo({
+      modulePath,
+      opts: {
+        cwd: tmp,
+        env,
+      },
+      workPath,
+    });
+    await go.build('./...', executable);
+
+    // run the dev server
+    debug(`SPAWNING ${executable} CWD=${tmp}`);
+    child = spawn(executable, [], {
       cwd: tmp,
       env,
-    },
-    workPath,
-  });
-  await go.build('./...', executable);
-
-  // run the dev server
-  debug(`SPAWNING ${executable} CWD=${tmp}`);
-  const child = spawn(executable, [], {
-    cwd: tmp,
-    env,
-    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
-  });
+      stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+    });
+  }
 
   child.on('close', async () => {
     try {
@@ -961,7 +999,7 @@ export async function startDevServer(
     throw new Error('File descriptor 3 is not readable');
   }
 
-  // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
+  // `dev-server.go` (and vercel.Start) writes the ephemeral port number to FD 3 to be consumed here
   const onPort = new Promise<PortInfo>(resolve => {
     portPipe.setEncoding('utf8');
     portPipe.once('data', d => {

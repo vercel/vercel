@@ -43,142 +43,33 @@ This document outlines the prioritized implementation plan for adding wrapper mo
 
 **Status: All items implemented and tested**
 
-#### 1.1 Main Entry Point (`go/vercel.go`) - **COMPLETE**
+### Phase 2: Builder Wrapper Mode Support (`packages/go/`) - **COMPLETE**
 
-- [x] **Create `Start(handler http.Handler)` function** - IMPLEMENTED
-
-  - Primary API for wrapper mode users
-  - Accepts any `http.Handler` implementation (stdlib, Gin, Chi, gorilla/mux)
-  - Detect runtime environment and route to appropriate mode
-  - _Specs: 011, 012, 013, 014_
-
-- [x] **Implement Lambda environment detection** - IMPLEMENTED (Spec 001)
-
-  - Check `AWS_LAMBDA_FUNCTION_NAME` environment variable
-  - If present: start Lambda handler mode
-  - If absent: start local HTTP server mode
-
-- [x] **Implement local HTTP server mode** - IMPLEMENTED (Spec 004)
-  - Start `http.Server` on `PORT` env var (default 3000)
-  - For `vercel dev` and local testing
-
-#### 1.2 Lambda Event Handling (`go/lambda.go`) - **COMPLETE**
-
-- [x] **Add `github.com/aws/aws-lambda-go` dependency to `go/go.mod`** - IMPLEMENTED
-
-  - Version 1.52.0 added via `go mod tidy`
-
-- [x] **Implement Lambda handler registration** - IMPLEMENTED
-
-  - Uses `lambda.Start()` with custom handler function
-
-- [x] **Convert APIGatewayProxyRequest to http.Request** - IMPLEMENTED (Specs 002, 015-017, 026-028)
-
-  - Parse HTTP method, path, headers from event
-  - Reconstruct URL with path parameters (Spec 026)
-  - Parse and include query parameters (Spec 027)
-  - Preserve all request headers including `Host` (Spec 015)
-  - Handle request body with base64 decoding (Specs 016, 017)
-  - Set `RemoteAddr` from `X-Forwarded-For` header (Spec 028)
-
-- [x] **Convert http.Response to APIGatewayProxyResponse** - IMPLEMENTED (Specs 003, 018-020)
-
-  - Use `httptest.NewRecorder()` to capture response
-  - Extract status code (Spec 019)
-  - Extract all response headers (Spec 018)
-  - Base64 encode binary responses (Spec 020)
-
-- [x] **Handle multi-value headers** - IMPLEMENTED
-  - Supports both `MultiValueHeaders` and single-value `Headers`
-
-#### 1.3 Unit Tests (`go/lambda_test.go`) - **COMPLETE**
-
-- [x] **Create unit tests for request conversion** - IMPLEMENTED
-
-  - `TestConvertEventToRequest`: HTTP method, path, host, body
-  - `TestQueryParameters`: Single and multi-value query parameters
-  - `TestRequestHeaders`: Single and multi-value headers
-  - `TestRemoteAddrFromXFF`: X-Forwarded-For extraction
-  - `TestPathParameters`: Path preservation for routers
-
-- [x] **Create unit tests for response conversion** - IMPLEMENTED
-
-  - `TestConvertResponseToEvent`: Status codes 200, 201, 400, 404, 500
-  - `TestBinaryResponse`: Base64 encoding for binary content
-  - `TestIsBinaryContentType`: 25 content type tests
-
-- [x] **Integration test** - IMPLEMENTED
-  - `TestLambdaHandlerIntegration`: Full request/response cycle
-  - `TestIsLambdaEnvironment`: Environment detection
-
----
-
-### Phase 2: Builder Wrapper Mode Support (`packages/go/`) - **IN PROGRESS**
-
-**Status: Core detection and build path implemented. Dev server and routing pending.**
+**Status: Core detection, build path, and dev server support implemented.**
 
 #### 2.1 Wrapper Mode Detection - **COMPLETE**
 
 - [x] **Add import scanning to `analyze.go`** - IMPLEMENTED (Spec 005)
-
-  - Added `UsesWrapper bool` field to output JSON struct
-  - Scans imports for `"github.com/vercel/vercel-go"`
-  - Returns early with `usesWrapper: true` when detected
-
 - [x] **Support `wrapper: true` in vercel.json config** - IMPLEMENTED (Spec 006)
-
-  - Check `config.wrapper` boolean in build options
-  - Either import OR config enables wrapper mode
-
 - [x] **Update mode detection logic in `index.ts`** - IMPLEMENTED (Spec 030)
-  - Updated error message to guide users toward wrapper mode
-  - Detection priority now:
-    1. Config `wrapper: true` OR import detected - wrapper mode
-    2. `package handler` with exported `Handler` - legacy handler mode
-    3. `package main` without wrapper import - error with helpful message
 
-#### 2.2 Wrapper Mode Build Path (`packages/go/src/index.ts`) - **PARTIAL**
+#### 2.2 Wrapper Mode Build Path (`packages/go/src/index.ts`) - **COMPLETE**
 
 - [x] **Create `buildHandlerAsWrapperMode()` function** - IMPLEMENTED (Spec 007)
-
-  - Compiles user's `main.go` directly with `go build`
-  - Skips handler function renaming (not applicable)
-  - Output binary as the Lambda bootstrap handler
-
 - [x] **Modify build routing logic** - IMPLEMENTED
-
-  - Added wrapper mode check before existing handler mode checks
-  - Routes to `buildHandlerAsWrapperMode()` when detected
-  - Preserves all existing paths for backwards compatibility (Spec 029)
-
 - [x] **Generate catch-all routing** - IMPLEMENTED (Spec 008)
-
-  - Wrapper mode creates a single Lambda for all routes
-  - Configure routing to send all paths to this Lambda
-  - User's Go router handles path dispatch internally
-
 - [x] **Create single Lambda output** - IMPLEMENTED (Spec 009)
-  - Unlike handler mode (one Lambda per file), wrapper = one Lambda total
-  - All routes handled by the single Go binary
 
 #### 2.3 Validation and Error Handling
 
 - [x] **Validate wrapper import presence** - IMPLEMENTED (Spec 021)
-
-  - If `package main` but no `vercel.Start()` import detected
-  - Shows helpful error with guidance toward wrapper mode
-
 - [ ] **Validate wrapper usage** - NOT IMPLEMENTED (Spec 022)
-  - If import present but `vercel.Start()` not called
-  - Runtime error is acceptable fallback (static analysis is limited)
 
 #### 2.4 Dev Server Support
 
-- [ ] **Implement wrapper mode in dev server** - NOT IMPLEMENTED (Spec 010)
-  - Current state: `packages/go/dev-server.go` compiles entrypoint and starts server for handler mode only
-  - Needed: Detect wrapper mode during `vercel dev`
-  - Needed: Run the Go binary directly (it starts its own HTTP server via `Start()`)
-  - Needed: Proxy requests to the Go server
+- [x] **Implement wrapper mode in dev server** - IMPLEMENTED (Spec 010)
+  - Updated `go/vercel.go` to support `VERCEL_DEV_PORT_FILE` protocol
+  - Updated `packages/go/src/index.ts` to build and run wrapper mode projects directly
 
 ---
 
@@ -191,82 +82,24 @@ This document outlines the prioritized implementation plan for adding wrapper mo
 Create new fixtures in `packages/go/test/fixtures/`:
 
 - [ ] **`wrapper-01-stdlib/`** - NOT EXISTS (Spec 011)
-
-  - Basic `http.ServeMux` with `vercel.Start()`
-
-  ```
-  main.go - uses vercel.Start() with ServeMux
-  go.mod  - requires github.com/vercel/vercel-go
-  ```
-
 - [ ] **`wrapper-02-gin/`** - NOT EXISTS (Spec 012)
-
-  - Gin framework integration
-
-  ```
-  main.go - uses vercel.Start() with gin.Default()
-  go.mod  - requires gin-gonic/gin and vercel-go
-  ```
-
 - [ ] **`wrapper-03-chi/`** - NOT EXISTS (Spec 013)
-
-  - Chi router integration
-
-  ```
-  main.go - uses vercel.Start() with chi.NewRouter()
-  go.mod  - requires go-chi/chi and vercel-go
-  ```
-
 - [ ] **`wrapper-04-gorilla/`** - NOT EXISTS (Spec 014)
-
-  - gorilla/mux integration
-
-  ```
-  main.go - uses vercel.Start() with mux.NewRouter()
-  go.mod  - requires gorilla/mux and vercel-go
-  ```
-
 - [ ] **`wrapper-05-binary-request/`** - NOT EXISTS (Spec 017)
-
-  - Binary body handling test
-
 - [ ] **`wrapper-06-binary-response/`** - NOT EXISTS (Spec 020)
-
-  - Binary response handling test
-
 - [ ] **`wrapper-07-headers/`** - NOT EXISTS (Specs 015, 018)
-
-  - Header preservation test
-
 - [ ] **`wrapper-08-query-params/`** - NOT EXISTS (Spec 027)
-
-  - Query parameter handling test
-
 - [ ] **`wrapper-09-path-params/`** - NOT EXISTS (Spec 026)
-  - Path parameter handling test
 
 #### 3.2 Backwards Compatibility Testing
 
 - [ ] **Verify all existing fixtures pass** - NOT VERIFIED (Spec 029)
-  - Fixtures 01-26 in `packages/go/test/fixtures/`
-  - All existing `package handler` projects must continue working
-  - Handler mode remains default when no wrapper signals detected
 
 #### 3.3 Go Ecosystem Support
 
 - [ ] **Verify `includeFiles` config works with wrapper mode** - NOT VERIFIED (Spec 023)
-
-  - Existing `includeFiles` configuration should work
-  - Common use: static assets, templates, config files
-
 - [ ] **Verify go.mod dependencies work with wrapper mode** - NOT VERIFIED (Spec 024)
-
-  - Builder already handles `go.mod` in handler mode
-  - Same logic should work for wrapper mode
-
 - [ ] **Verify go.work workspaces work with wrapper mode** - NOT VERIFIED (Spec 025)
-  - Existing `go.work` support should extend to wrapper mode
-  - Test with `wrapper-10-go-work/` fixture if needed
 
 ---
 
@@ -277,22 +110,11 @@ Create new fixtures in `packages/go/test/fixtures/`:
 #### 4.1 Performance Targets
 
 - [ ] **Cold start < 1 second** - NOT TESTED (Spec 031)
-
-  - Measure Lambda cold start time
-  - Optimize binary size: `-ldflags="-s -w"` (already in builder)
-  - Ensure `CGO_ENABLED=0` for static binary
-
 - [ ] **Warm response < 100ms** - NOT TESTED (Spec 032)
-  - Measure request handling latency
-  - Profile conversion overhead
-  - Minimize allocations in hot path
 
 #### 4.2 Security
 
 - [ ] **Sanitize error messages** - NOT IMPLEMENTED (Spec 033)
-  - Catch panics and return generic 500 errors
-  - Do not expose Lambda ARN, request ID, or AWS account details
-  - Log details server-side but return sanitized client response
 
 ---
 
@@ -303,25 +125,11 @@ Create new fixtures in `packages/go/test/fixtures/`:
 #### 5.1 Package Documentation
 
 - [ ] **Create README.md for `go/` module** - NOT EXISTS (Spec 034)
-  - Quick start example
-  - API reference for `vercel.Start()`
-  - Environment variable documentation
-  - Link to Vercel Go documentation
 
 #### 5.2 Migration and Examples
 
 - [ ] **Write migration guide** - NOT EXISTS (Spec 035)
-
-  - Before/after code examples
-  - Handler mode vs wrapper mode comparison
-  - When to use each mode
-  - Step-by-step migration instructions
-
 - [ ] **Create framework examples** - NOT EXISTS (Spec 036)
-  - Stdlib example with ServeMux
-  - Gin example with middleware
-  - Chi example with URL parameters
-  - gorilla/mux example with path variables
 
 ---
 
@@ -329,70 +137,37 @@ Create new fixtures in `packages/go/test/fixtures/`:
 
 ### New Files to Create
 
-| File                                  | Purpose                                  | Status          |
-| ------------------------------------- | ---------------------------------------- | --------------- |
-| `go/vercel.go`                        | Main entry point with `Start()` function | NOT IMPLEMENTED |
-| `go/lambda.go`                        | Lambda event handling and conversion     | NOT IMPLEMENTED |
-| `go/lambda_test.go`                   | Unit tests for conversion logic          | NOT IMPLEMENTED |
-| `go/README.md`                        | Package documentation                    | NOT IMPLEMENTED |
-| `packages/go/test/fixtures/wrapper-*` | Test fixtures for wrapper mode           | NOT IMPLEMENTED |
+| File                                  | Purpose                        | Status          |
+| ------------------------------------- | ------------------------------ | --------------- |
+| `go/README.md`                        | Package documentation          | NOT IMPLEMENTED |
+| `packages/go/test/fixtures/wrapper-*` | Test fixtures for wrapper mode | NOT IMPLEMENTED |
 
 ### Files to Modify
 
-| File                        | Changes                                       | Status       |
-| --------------------------- | --------------------------------------------- | ------------ |
-| `go/go.mod`                 | Add `github.com/aws/aws-lambda-go` dependency | NOT MODIFIED |
-| `packages/go/src/index.ts`  | Add wrapper mode detection and build path     | NOT MODIFIED |
-| `packages/go/analyze.go`    | Add import scanning for wrapper detection     | NOT MODIFIED |
-| `packages/go/dev-server.go` | Add wrapper mode support                      | NOT MODIFIED |
-
-### Files to Verify (No Changes Expected)
-
-| File                              | Verification                                   | Status       |
-| --------------------------------- | ---------------------------------------------- | ------------ |
-| `packages/go/test/fixtures/01-26` | All existing handler mode tests must pass      | NOT VERIFIED |
-| `packages/go/main.go`             | Existing template for handler mode (unchanged) | VERIFIED     |
-
----
-
-## Reference: Existing go-bridge Pattern
-
-The existing `github.com/vercel/go-bridge` (used in `packages/go/main.go`) shows the pattern:
-
-```go
-// main.go template uses:
-import vc "github.com/vercel/go-bridge/go/bridge"
-// ...
-vc.Start(http.HandlerFunc(__VC_HANDLER_FUNC_NAME))
-```
-
-The wrapper mode will provide similar functionality but:
-
-1. Be part of the `github.com/vercel/vercel-go` module
-2. Accept any `http.Handler` (not just `http.HandlerFunc`)
-3. Allow users to write their own `package main`
+| File                       | Changes                             | Status   |
+| -------------------------- | ----------------------------------- | -------- |
+| `go/vercel.go`             | Add dev server support              | MODIFIED |
+| `packages/go/src/index.ts` | Add wrapper mode dev server support | MODIFIED |
 
 ---
 
 ## Spec Status Tracking
 
-**Phase 1 complete:** Core runtime specs implemented at runtime level. Builder integration (Phase 2) required for end-to-end spec validation.
-
 ### Core Runtime (Specs 001-004) - **RUNTIME COMPLETE**
 
-- [x] 001: Lambda environment detection - IMPLEMENTED (`isLambdaEnvironment()`)
-- [x] 002: Lambda event to http.Request conversion - IMPLEMENTED (`convertEventToRequest()`)
-- [x] 003: http.Response to Lambda response conversion - IMPLEMENTED (`convertResponseToEvent()`)
-- [x] 004: Local HTTP server mode - IMPLEMENTED (`startLocalServer()`)
+- [x] 001: Lambda environment detection - IMPLEMENTED
+- [x] 002: Lambda event to http.Request conversion - IMPLEMENTED
+- [x] 003: http.Response to Lambda response conversion - IMPLEMENTED
+- [x] 004: Local HTTP server mode - IMPLEMENTED
 
-### Builder Support (Specs 005-010) - **PARTIAL**
+### Builder Support (Specs 005-010) - **COMPLETE**
 
-- [x] 005: Detect wrapper via import - IMPLEMENTED (`analyze.go`)
-- [x] 006: Detect wrapper via config - IMPLEMENTED (`index.ts`)
-- [x] 007: Direct compilation in wrapper mode - IMPLEMENTED (`buildHandlerAsWrapperMode`)
-- [x] 008: Catch-all routing generation - IMPLEMENTED (`index.ts`)
-- [x] 009: Single Lambda output - IMPLEMENTED (`index.ts`)
-- [ ] 010: Dev server wrapper mode - NOT IMPLEMENTED
+- [x] 005: Detect wrapper via import - IMPLEMENTED
+- [x] 006: Detect wrapper via config - IMPLEMENTED
+- [x] 007: Direct compilation in wrapper mode - IMPLEMENTED
+- [x] 008: Catch-all routing generation - IMPLEMENTED
+- [x] 009: Single Lambda output - IMPLEMENTED
+- [x] 010: Dev server wrapper mode - IMPLEMENTED
 
 ### Framework Compatibility (Specs 011-014)
 
@@ -403,12 +178,12 @@ The wrapper mode will provide similar functionality but:
 
 ### Request/Response Handling (Specs 015-020) - **RUNTIME COMPLETE**
 
-- [x] 015: Request header preservation - IMPLEMENTED (`setRequestHeaders()`)
-- [x] 016: Request body preservation - IMPLEMENTED (`getRequestBody()`)
-- [x] 017: Binary request bodies - IMPLEMENTED (base64 decoding)
-- [x] 018: Response headers - IMPLEMENTED (`convertResponseToEvent()`)
-- [x] 019: Status codes - IMPLEMENTED (status code passthrough)
-- [x] 020: Binary response bodies - IMPLEMENTED (`isBinaryContentType()`, base64 encoding)
+- [x] 015: Request header preservation - IMPLEMENTED
+- [x] 016: Request body preservation - IMPLEMENTED
+- [x] 017: Binary request bodies - IMPLEMENTED
+- [x] 018: Response headers - IMPLEMENTED
+- [x] 019: Status codes - IMPLEMENTED
+- [x] 020: Binary response bodies - IMPLEMENTED
 
 ### Validation (Specs 021-022)
 
@@ -423,14 +198,14 @@ The wrapper mode will provide similar functionality but:
 
 ### Parameter Handling (Specs 026-028) - **RUNTIME COMPLETE**
 
-- [x] 026: Path parameters - IMPLEMENTED (path preserved for routers)
-- [x] 027: Query parameters - IMPLEMENTED (`buildURL()`)
-- [x] 028: RemoteAddr from X-Forwarded-For - IMPLEMENTED (`getXForwardedFor()`)
+- [x] 026: Path parameters - IMPLEMENTED
+- [x] 027: Query parameters - IMPLEMENTED
+- [x] 028: RemoteAddr from X-Forwarded-For - IMPLEMENTED
 
 ### Backwards Compatibility (Specs 029-030) - **PARTIAL**
 
-- [ ] 029: Legacy handler mode works - NOT VERIFIED (unit tests pass)
-- [x] 030: Mode detection (wrapper vs legacy) - IMPLEMENTED (`index.ts`)
+- [ ] 029: Legacy handler mode works - NOT VERIFIED
+- [x] 030: Mode detection (wrapper vs legacy) - IMPLEMENTED
 
 ### Performance (Specs 031-032)
 
@@ -451,80 +226,12 @@ The wrapper mode will provide similar functionality but:
 
 ## Critical Blockers
 
-### ~~Current Blocker: No Go Runtime Code~~ - **RESOLVED**
-
-~~The `go/` module is empty except for `go.mod`.~~ **Phase 1 complete.** The core wrapper runtime is now implemented:
-
-- `go/vercel.go`: `Start()` function with environment detection
-- `go/lambda.go`: Full Lambda event handling and conversion
-- `go/lambda_test.go`: 10 test functions, all passing
-
-### ~~Current Blocker: Builder Error for `package main`~~ - **RESOLVED**
-
-~~`packages/go/src/index.ts` throws an error when detecting `package main` with `go.mod`.~~
-
-**Status: Fixed in Phase 2.** The builder now:
-
-1. Checks for wrapper mode (via import or config) before throwing the error
-2. Routes wrapper mode projects to `buildHandlerAsWrapperMode()`
-3. Shows a helpful error message guiding users toward wrapper mode if not detected
-
 ### Remaining Work
 
 The following items are pending for full wrapper mode support:
 
-- **Spec 008:** Catch-all routing generation
-- **Spec 009:** Single Lambda output configuration
-- **Spec 010:** Dev server wrapper mode support
 - **Specs 011-014:** Framework compatibility testing (requires test fixtures)
 - **Specs 031-033:** Performance and security testing
-
----
-
-## Implementation Notes
-
-### Use Go stdlib Where Possible
-
-The wrapper runtime should minimize external dependencies:
-
-- **Use stdlib**: `net/http`, `net/http/httptest`, `encoding/base64`, `encoding/json`, `os`, `strings`
-- **Required external**: `github.com/aws/aws-lambda-go` (for Lambda integration)
-- **NOT needed**: The existing `go-bridge` - we're replacing its functionality
-
-### Key Code Patterns
-
-**Request conversion using stdlib:**
-
-```go
-// Use httptest.NewRequest for construction
-req := httptest.NewRequest(event.HTTPMethod, url, body)
-for key, values := range event.MultiValueHeaders {
-    for _, value := range values {
-        req.Header.Add(key, value)
-    }
-}
-```
-
-**Response capture using stdlib:**
-
-```go
-// Use httptest.NewRecorder for capture
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-// Extract: rec.Code, rec.Header(), rec.Body.Bytes()
-```
-
-**Binary detection heuristics:**
-
-```go
-func isBinaryContentType(contentType string) bool {
-    return strings.HasPrefix(contentType, "image/") ||
-           strings.HasPrefix(contentType, "audio/") ||
-           strings.HasPrefix(contentType, "video/") ||
-           contentType == "application/octet-stream" ||
-           // ... other binary types
-}
-```
 
 ---
 
@@ -537,32 +244,3 @@ func isBinaryContentType(contentType string) bool {
 5. Documentation complete and accurate
 
 ---
-
-## Recommended Implementation Order
-
-1. **Week 1:** Phase 1 - Core Wrapper Runtime
-
-   - Implement `go/vercel.go` with `Start()` function
-   - Implement `go/lambda.go` with event conversion
-   - Add unit tests in `go/lambda_test.go`
-   - Verify Specs 001-004 pass
-
-2. **Week 2:** Phase 2 - Builder Support
-
-   - Update `analyze.go` with import scanning
-   - Update `index.ts` with wrapper mode detection and build path
-   - Update dev server if needed
-   - Verify Specs 005-010 pass
-
-3. **Week 3:** Phase 3 - Test Fixtures and Compatibility
-
-   - Create wrapper test fixtures
-   - Verify framework compatibility
-   - Verify backwards compatibility
-   - Verify Specs 011-029 pass
-
-4. **Week 4:** Phase 4-5 - Performance, Security, Documentation
-   - Performance testing and optimization
-   - Security hardening
-   - Documentation
-   - Verify all remaining specs pass

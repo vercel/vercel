@@ -24,8 +24,10 @@ package vercel
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 // Start initializes the appropriate server based on the runtime environment.
@@ -58,6 +60,13 @@ func isLambdaEnvironment() bool {
 // startLocalServer starts a standard HTTP server for local development.
 // It reads the port from the PORT environment variable, defaulting to 3000.
 func startLocalServer(handler http.Handler) {
+	// If running under 'vercel dev', we need to signal the port we're listening on.
+	// We check for VERCEL_DEV_PORT_FILE which is set by the Vercel CLI.
+	if portFile := os.Getenv("VERCEL_DEV_PORT_FILE"); portFile != "" {
+		startDevServer(handler, portFile)
+		return
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
@@ -67,6 +76,38 @@ func startLocalServer(handler http.Handler) {
 	fmt.Printf("Starting local server on http://localhost%s\n", addr)
 
 	if err := http.ListenAndServe(addr, handler); err != nil {
+		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func startDevServer(handler http.Handler, portFile string) {
+	// Listen on an ephemeral port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating listener: %v\n", err)
+		os.Exit(1)
+	}
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	portBytes := []byte(strconv.Itoa(port))
+
+	// Try writing to FD 3 (pipe) first, as used by legacy dev-server.go
+	file := os.NewFile(3, "pipe")
+	if _, err := file.Write(portBytes); err != nil {
+		// Fallback to writing to the file specified by env var
+		// We unset the env var to avoid confusion if we were to support reloading,
+		// but matching dev-server.go logic:
+		os.Unsetenv("VERCEL_DEV_PORT_FILE")
+		if err := os.WriteFile(portFile, portBytes, 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing port file: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	fmt.Printf("Starting dev server on http://localhost:%d\n", port)
+
+	if err := http.Serve(listener, handler); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
 	}

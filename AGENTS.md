@@ -9,6 +9,7 @@ Run these after implementing to get immediate feedback:
 - Tests: `go test ./...`
 - Vet: `go vet ./...`
 - Lint: `golangci-lint run ./...`
+- Builder Tests (TS): `cd packages/go && npm test`
 
 ## Operational Notes:
 
