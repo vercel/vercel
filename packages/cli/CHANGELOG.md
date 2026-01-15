@@ -1,5 +1,14 @@
 # vercel
 
+## 50.4.4
+
+### Patch Changes
+
+- Adjust `vc blob --help` wording for the `store` subcommand ([#14631](https://github.com/vercel/vercel/pull/14631))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.8.22
+
 ## 50.4.3
 
 ### Patch Changes
