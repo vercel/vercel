@@ -113,48 +113,43 @@ This document outlines the prioritized implementation plan for adding wrapper mo
 
 ---
 
-### Phase 2: Builder Wrapper Mode Support (`packages/go/`)
+### Phase 2: Builder Wrapper Mode Support (`packages/go/`) - **IN PROGRESS**
 
-**Depends on: Phase 1 completion**
+**Status: Core detection and build path implemented. Dev server and routing pending.**
 
-#### 2.1 Wrapper Mode Detection
+#### 2.1 Wrapper Mode Detection - **COMPLETE**
 
-- [ ] **Add import scanning to `analyze.go`** - NOT IMPLEMENTED (Spec 005)
+- [x] **Add import scanning to `analyze.go`** - IMPLEMENTED (Spec 005)
 
-  - Current state: Only scans for `http.HandlerFunc` signature (lines 110-159)
-  - Needed: Extend AST analysis to check import declarations for `github.com/vercel/vercel-go`
-  - Needed: Add `UsesWrapper bool` field to output JSON
-  - Current output JSON has `packageName` and `functionName` but NO `usesWrapper` field
+  - Added `UsesWrapper bool` field to output JSON struct
+  - Scans imports for `"github.com/vercel/vercel-go"`
+  - Returns early with `usesWrapper: true` when detected
 
-- [ ] **Support `wrapper: true` in vercel.json config** - NOT IMPLEMENTED (Spec 006)
+- [x] **Support `wrapper: true` in vercel.json config** - IMPLEMENTED (Spec 006)
 
   - Check `config.wrapper` boolean in build options
   - Either import OR config enables wrapper mode
 
-- [ ] **Update mode detection logic in `index.ts`** - NOT IMPLEMENTED (Spec 030)
-  - Current state (line 188-190): Throws error "Please change `package main` to `package handler`" when `package main` + `go.mod` detected
-  - Current mode selection (line 247-251): Only supports legacy (`main` without go.mod) or go.mod mode
-  - Needed detection priority:
-    1. Config `wrapper: true` - wrapper mode
-    2. Import `github.com/vercel/vercel-go` detected - wrapper mode
-    3. `package handler` with exported `Handler` - legacy handler mode
-    4. `package main` without wrapper import - error with helpful message
+- [x] **Update mode detection logic in `index.ts`** - IMPLEMENTED (Spec 030)
+  - Updated error message to guide users toward wrapper mode
+  - Detection priority now:
+    1. Config `wrapper: true` OR import detected - wrapper mode
+    2. `package handler` with exported `Handler` - legacy handler mode
+    3. `package main` without wrapper import - error with helpful message
 
-#### 2.2 Wrapper Mode Build Path (`packages/go/src/index.ts`)
+#### 2.2 Wrapper Mode Build Path (`packages/go/src/index.ts`) - **PARTIAL**
 
-- [ ] **Create `buildHandlerAsWrapperMode()` function** - NOT IMPLEMENTED (Spec 007)
+- [x] **Create `buildHandlerAsWrapperMode()` function** - IMPLEMENTED (Spec 007)
 
-  - Function does not exist
-  - Do NOT generate `main.go` - user provides their own
-  - Compile user's `main.go` directly with `go build`
+  - Compiles user's `main.go` directly with `go build`
+  - Skips handler function renaming (not applicable)
   - Output binary as the Lambda bootstrap handler
-  - Set `GOOS=linux`, `GOARCH=amd64`
 
-- [ ] **Modify build routing logic** - NOT IMPLEMENTED
+- [x] **Modify build routing logic** - IMPLEMENTED
 
-  - Add wrapper mode check before existing handler mode checks
-  - Route to `buildHandlerAsWrapperMode()` when detected
-  - Preserve all existing paths for backwards compatibility (Spec 029)
+  - Added wrapper mode check before existing handler mode checks
+  - Routes to `buildHandlerAsWrapperMode()` when detected
+  - Preserves all existing paths for backwards compatibility (Spec 029)
 
 - [ ] **Generate catch-all routing** - NOT IMPLEMENTED (Spec 008)
 
@@ -168,10 +163,10 @@ This document outlines the prioritized implementation plan for adding wrapper mo
 
 #### 2.3 Validation and Error Handling
 
-- [ ] **Validate wrapper import presence** - NOT IMPLEMENTED (Spec 021)
+- [x] **Validate wrapper import presence** - IMPLEMENTED (Spec 021)
 
   - If `package main` but no `vercel.Start()` import detected
-  - Show helpful error: "Did you mean to use wrapper mode? Import github.com/vercel/vercel-go"
+  - Shows helpful error with guidance toward wrapper mode
 
 - [ ] **Validate wrapper usage** - NOT IMPLEMENTED (Spec 022)
   - If import present but `vercel.Start()` not called
@@ -390,11 +385,11 @@ The wrapper mode will provide similar functionality but:
 - [x] 003: http.Response to Lambda response conversion - IMPLEMENTED (`convertResponseToEvent()`)
 - [x] 004: Local HTTP server mode - IMPLEMENTED (`startLocalServer()`)
 
-### Builder Support (Specs 005-010)
+### Builder Support (Specs 005-010) - **PARTIAL**
 
-- [ ] 005: Detect wrapper via import - NOT IMPLEMENTED
-- [ ] 006: Detect wrapper via config - NOT IMPLEMENTED
-- [ ] 007: Direct compilation in wrapper mode - NOT IMPLEMENTED
+- [x] 005: Detect wrapper via import - IMPLEMENTED (`analyze.go`)
+- [x] 006: Detect wrapper via config - IMPLEMENTED (`index.ts`)
+- [x] 007: Direct compilation in wrapper mode - IMPLEMENTED (`buildHandlerAsWrapperMode`)
 - [ ] 008: Catch-all routing generation - NOT IMPLEMENTED
 - [ ] 009: Single Lambda output - NOT IMPLEMENTED
 - [ ] 010: Dev server wrapper mode - NOT IMPLEMENTED
@@ -432,10 +427,10 @@ The wrapper mode will provide similar functionality but:
 - [x] 027: Query parameters - IMPLEMENTED (`buildURL()`)
 - [x] 028: RemoteAddr from X-Forwarded-For - IMPLEMENTED (`getXForwardedFor()`)
 
-### Backwards Compatibility (Specs 029-030)
+### Backwards Compatibility (Specs 029-030) - **PARTIAL**
 
-- [ ] 029: Legacy handler mode works - NOT VERIFIED
-- [ ] 030: Mode detection (wrapper vs legacy) - NOT IMPLEMENTED
+- [ ] 029: Legacy handler mode works - NOT VERIFIED (unit tests pass)
+- [x] 030: Mode detection (wrapper vs legacy) - IMPLEMENTED (`index.ts`)
 
 ### Performance (Specs 031-032)
 
@@ -464,20 +459,25 @@ The wrapper mode will provide similar functionality but:
 - `go/lambda.go`: Full Lambda event handling and conversion
 - `go/lambda_test.go`: 10 test functions, all passing
 
-### Current Blocker: Builder Error for `package main`
+### ~~Current Blocker: Builder Error for `package main`~~ - **RESOLVED**
 
-`packages/go/src/index.ts` (lines 188-190) currently throws an error when detecting `package main` with `go.mod`:
+~~`packages/go/src/index.ts` throws an error when detecting `package main` with `go.mod`.~~
 
-```
-"Please change `package main` to `package handler`"
-```
+**Status: Fixed in Phase 2.** The builder now:
 
-**Impact:**
+1. Checks for wrapper mode (via import or config) before throwing the error
+2. Routes wrapper mode projects to `buildHandlerAsWrapperMode()`
+3. Shows a helpful error message guiding users toward wrapper mode if not detected
 
-- Users cannot use wrapper mode even if they import `github.com/vercel/vercel-go`
-- The error is thrown before any wrapper detection can occur
+### Remaining Work
 
-**Resolution:** Update mode detection logic in Phase 2 to check for wrapper mode before throwing this error.
+The following items are pending for full wrapper mode support:
+
+- **Spec 008:** Catch-all routing generation
+- **Spec 009:** Single Lambda output configuration
+- **Spec 010:** Dev server wrapper mode support
+- **Specs 011-014:** Framework compatibility testing (requires test fixtures)
+- **Specs 031-033:** Performance and security testing
 
 ---
 

@@ -30,6 +30,7 @@ type analyze struct {
 	PackageName string   `json:"packageName"`
 	FuncName    string   `json:"functionName"`
 	Watch       []string `json:"watch"`
+	UsesWrapper bool     `json:"usesWrapper"`
 }
 
 // parse go file
@@ -106,6 +107,28 @@ func main() {
 
 	parsed := parse(fileName)
 	offset := parsed.Pos()
+
+	// Check for wrapper mode import (github.com/vercel/vercel-go)
+	usesWrapper := false
+	for _, imp := range parsed.Imports {
+		// Import path is quoted, so we need to check for the quoted value
+		if imp.Path.Value == `"github.com/vercel/vercel-go"` {
+			usesWrapper = true
+			break
+		}
+	}
+
+	// If wrapper import is detected, return early with wrapper mode info
+	if usesWrapper {
+		analyzed := analyze{
+			PackageName: parsed.Name.Name,
+			FuncName:    "main", // Not used in wrapper mode, but provide a value
+			UsesWrapper: true,
+		}
+		analyzedJSON, _ := json.Marshal(analyzed)
+		fmt.Print(string(analyzedJSON))
+		os.Exit(0)
+	}
 
 	for _, decl := range parsed.Decls {
 		fn, ok := decl.(*ast.FuncDecl)

@@ -185,26 +185,37 @@ export async function build({
     // check if package name other than main
     // using `go.mod` way building the handler
     const packageName = analyzed.packageName;
-    if (goModPath && packageName === 'main') {
-      throw new Error('Please change `package main` to `package handler`');
+    const usesWrapper =
+      analyzed.usesWrapper || (config && config.wrapper === true);
+
+    // If package main with go.mod but NOT wrapper mode, throw an error
+    if (goModPath && packageName === 'main' && !usesWrapper) {
+      throw new Error(
+        'Please change `package main` to `package handler`, or use wrapper mode by importing "github.com/vercel/vercel-go" and calling vercel.Start(handler).'
+      );
     }
 
-    // rename the Go handler function name in the original entrypoint file
-    const originalFunctionName = analyzed.functionName;
-    const handlerFunctionName = getNewHandlerFunctionName(
-      originalFunctionName,
-      entrypoint
-    );
-    await renameHandlerFunction(
-      entrypointAbsolute,
-      originalFunctionName,
-      handlerFunctionName
-    );
-    undo.functionRenames.push({
-      fsPath: originalEntrypointAbsolute,
-      from: handlerFunctionName,
-      to: originalFunctionName,
-    });
+    // For wrapper mode, skip handler function renaming (user provides their own main)
+    let originalFunctionName = '';
+    let handlerFunctionName = '';
+    if (!usesWrapper) {
+      // rename the Go handler function name in the original entrypoint file
+      originalFunctionName = analyzed.functionName;
+      handlerFunctionName = getNewHandlerFunctionName(
+        originalFunctionName,
+        entrypoint
+      );
+      await renameHandlerFunction(
+        entrypointAbsolute,
+        originalFunctionName,
+        handlerFunctionName
+      );
+      undo.functionRenames.push({
+        fsPath: originalEntrypointAbsolute,
+        from: handlerFunctionName,
+        to: originalFunctionName,
+      });
+    }
 
     const includedFiles: Files = {};
     if (config && config.includeFiles) {
@@ -242,9 +253,12 @@ export async function build({
       outDir,
       packageName,
       undo,
+      usesWrapper,
     };
 
-    if (packageName === 'main') {
+    if (usesWrapper) {
+      await buildHandlerAsWrapperMode(buildOptions);
+    } else if (packageName === 'main') {
       await buildHandlerAsPackageMain(buildOptions);
     } else {
       await buildHandlerWithGoMod(buildOptions);
@@ -290,6 +304,7 @@ type BuildHandlerOptions = {
   outDir: string;
   packageName: string;
   undo: UndoActions;
+  usesWrapper?: boolean;
 };
 
 /**
@@ -485,6 +500,42 @@ async function buildHandlerAsPackageMain({
       entrypointAbsolute,
     ].map(file => normalize(file));
     await go.build(src, destPath);
+  } catch (err) {
+    console.error('failed to `go build`');
+    throw err;
+  }
+}
+
+/**
+ * Builds the Go function in wrapper mode where the user provides their own
+ * `package main` that imports `github.com/vercel/vercel-go` and calls
+ * `vercel.Start(handler)`. This mode compiles the user's code directly
+ * without generating a wrapper.
+ */
+async function buildHandlerAsWrapperMode({
+  entrypointDirname,
+  go,
+  goModPath,
+  outDir,
+}: BuildHandlerOptions): Promise<void> {
+  debug('Building Go handler in wrapper mode');
+
+  const goModDirname = goModPath ? dirname(goModPath) : entrypointDirname;
+
+  debug('Running `go mod tidy`...');
+  try {
+    await go.mod();
+  } catch (err) {
+    console.error('failed to `go mod tidy`');
+    throw err;
+  }
+
+  debug('Running `go build`...');
+  const destPath = join(outDir, HANDLER_FILENAME);
+  try {
+    // Build the entire module - the user's main.go is the entrypoint
+    // Use the directory containing the entrypoint (or go.mod) as the build target
+    await go.build([goModDirname], destPath);
   } catch (err) {
     console.error('failed to `go build`');
     throw err;

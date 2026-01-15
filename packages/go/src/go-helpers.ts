@@ -86,6 +86,7 @@ interface Analyzed {
   functionName: string;
   packageName: string;
   watch?: boolean;
+  usesWrapper?: boolean;
 }
 
 /**
