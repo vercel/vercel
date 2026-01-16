@@ -12,6 +12,8 @@ describe('determineAgent', () => {
     vi.stubEnv('CURSOR_AGENT', '');
     vi.stubEnv('GEMINI_CLI', '');
     vi.stubEnv('CODEX_SANDBOX', '');
+    vi.stubEnv('AUGMENT_AGENT', '');
+    vi.stubEnv('OPENCODE_CLIENT', '');
     vi.stubEnv('CLAUDECODE', '');
     vi.stubEnv('CLAUDE_CODE', '');
     vi.stubEnv('REPL_ID', '');
@@ -137,6 +139,52 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('augment cli detection', () => {
+    describe('AUGMENT_AGENT not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('AUGMENT_AGENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('AUGMENT_AGENT', '1');
+      });
+
+      it('detects augment cli', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.AUGMENT_CLI },
+        });
+      });
+    });
+  });
+
+  describe('opencode detection', () => {
+    describe('OPENCODE_CLIENT not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('OPENCODE_CLIENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('OPENCODE_CLIENT', 'opencode');
+      });
+
+      it('detects opencode', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.OPENCODE },
+        });
+      });
+    });
+  });
+
   describe('claude detection', () => {
     describe('CLAUDE_CODE not set', () => {
       it('returns no agent', async () => {
@@ -231,6 +279,8 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('AUGMENT_AGENT', '1');
+      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       mockFs({
@@ -251,6 +301,8 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('AUGMENT_AGENT', '1');
+      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       mockFs({
@@ -270,6 +322,8 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('AUGMENT_AGENT', '1');
+      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       mockFs({
