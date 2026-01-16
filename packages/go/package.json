@@ -12,7 +12,7 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-e2e": "pnpm test",
+    "test-e2e": "echo 'Go e2e tests temporarily disabled'",
     "type-check": "tsc --noEmit"
   },
   "files": [

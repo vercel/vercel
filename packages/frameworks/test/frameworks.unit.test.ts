@@ -200,6 +200,7 @@ const Schema = {
       cachePattern: { type: 'string' },
       defaultVersion: { type: 'string' },
       supersedes: { type: 'array', items: { type: 'string' } },
+      experimental: { type: 'boolean' },
     },
   },
 };
@@ -231,6 +232,7 @@ describe('frameworks', () => {
     const getExample = (name: string) => join(root, 'examples', name);
 
     const result = frameworkList
+      .filter(f => !f.experimental) // Skip experimental frameworks
       .map(f => f.slug)
       .filter(isString)
       .filter(slug => !skipExamples.includes(slug))
