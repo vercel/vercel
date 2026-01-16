@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.3.3
+
+### Patch Changes
+
+- [go] fix ci failing e2e tests ([#14640](https://github.com/vercel/vercel/pull/14640))
+
 ## 3.3.2
 
 ### Patch Changes
