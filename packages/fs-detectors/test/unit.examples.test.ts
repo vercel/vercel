@@ -31,7 +31,7 @@ describe('examples should be detected', () => {
         throw new Error(`Framework not detected for example "${exampleName}".`);
       }
 
-      expect(framework).toBe(overrides.get(exampleName) ?? exampleName);
+      expect(framework).toBe(overrides.get(framework) ?? framework);
     }
   );
 });
