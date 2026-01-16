@@ -23,6 +23,13 @@ export const logsCommand = {
       description: 'Print each log line as a JSON object (compatible with JQ)',
     },
     {
+      name: 'error',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Filter logs to only show error level logs',
+    },
+    {
       name: 'follow',
       shorthand: 'f',
       type: Boolean,
@@ -61,6 +68,10 @@ export const logsCommand = {
     {
       name: 'Print all runtime logs for the deployment DEPLOYMENT_ID as json objects',
       value: `${packageName} logs DEPLOYMENT_ID --json`,
+    },
+    {
+      name: 'Filter runtime logs for error level only',
+      value: `${packageName} logs DEPLOYMENT_ID --error`,
     },
     {
       name: 'Filter runtime logs for warning with JQ third party tool',
