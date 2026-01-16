@@ -3,13 +3,6 @@ import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
 
-/**
- * Escapes special regex characters in a string to treat it as a literal pattern.
- */
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 export const rolldown = async (args: {
   entrypoint: string;
   workPath: string;
@@ -40,7 +33,6 @@ export const rolldown = async (args: {
   const resolvedExtension = extensionInfo.extension;
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
-  const external: string[] = [];
   let pkg: Record<string, unknown> = {};
   if (existsSync(packageJsonPath)) {
     const source = await readFile(packageJsonPath, 'utf8');
@@ -56,18 +48,6 @@ export const rolldown = async (args: {
         resolvedFormat = 'cjs';
       }
     }
-    for (const dependency of Object.keys(pkg.dependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.devDependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.peerDependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
-      external.push(dependency);
-    }
   }
 
   const relativeOutputDir = args.out;
@@ -79,13 +59,27 @@ export const rolldown = async (args: {
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    external: external.map(pkg => new RegExp(`^${escapeRegExp(pkg)}`)),
+    // Externalize native binaries (.node files) which can't be transpiled
+    external: [/\.node$/],
+    onLog: (level, log, defaultHandler) => {
+      // Since we're processing node modules, suppress EVAL logs from internal packages
+      // that we need to fix
+      if (log.code === 'EVAL') {
+        // Copied logic from build-utils, but avoiding a dep to keep this package decoupled
+        if (process.env.VERCEL_BUILDER_DEBUG === '1') {
+          defaultHandler(level, log);
+        }
+      } else {
+        defaultHandler(level, log);
+      }
+    },
     output: {
       cleanDir: true,
       dir: outputDir,
       format: resolvedFormat,
       entryFileNames: `[name].${resolvedExtension}`,
       preserveModules: true,
+      preserveModulesRoot: args.repoRootPath,
       sourcemap: false,
     },
   });
