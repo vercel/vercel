@@ -176,6 +176,7 @@ export default class Now {
       rootDirectory,
       noWait,
       withFullLogs,
+      bulkRedirectsPath: nowConfig.bulkRedirectsPath,
     });
 
     if (deployment && deployment.warnings) {
