@@ -55,9 +55,19 @@ export const nodeFileTrace = async (
 
   for (const file of nftResult.fileList) {
     const fullPath = join(args.repoRootPath, file);
-    const pathToResolve = replacedPaths.get(fullPath) || fullPath;
-    const stats = lstatSync(pathToResolve, {});
-    files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
+    const fallbackPath = replacedPaths.get(fullPath);
+    const pathToResolve = fallbackPath ?? fullPath;
+    try {
+      const stats = lstatSync(pathToResolve, {});
+      files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
+    } catch (e) {
+      if (!fallbackPath) {
+        debug(
+          `Unabled to find traced file at ${fullPath}, using fallback path ${fallbackPath}`
+        );
+        debug(replacedPaths.toString());
+      }
+    }
   }
 
   return { files };
