@@ -85,14 +85,14 @@ export async function forkDevServer(options: {
 
     if (options.maybeTranspile) {
       if (options.isTypeScript) {
-        nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
+        nodeOptions = `--require "${cjsLoader}" --loader "${esmLoader}" ${
           nodeOptions || ''
         }`;
       } else {
         if (options.isEsm) {
           // no transform needed because Node.js supports ESM natively
         } else {
-          nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+          nodeOptions = `--require "${cjsLoader}" ${nodeOptions || ''}`;
         }
       }
     }
