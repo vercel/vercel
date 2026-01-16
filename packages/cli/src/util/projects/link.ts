@@ -75,19 +75,26 @@ export function getVercelDirectory(cwd: string): string {
   return existingDirs[0] || possibleDirs[0];
 }
 
+export interface GetProjectLinkOptions {
+  projectName?: string;
+  autoConfirm?: boolean;
+}
+
 export async function getProjectLink(
   client: Client,
-  path: string
+  path: string,
+  options: GetProjectLinkOptions = {}
 ): Promise<ProjectLink | null> {
   return (
-    (await getProjectLinkFromRepoLink(client, path)) ||
+    (await getProjectLinkFromRepoLink(client, path, options)) ||
     (await getLinkFromDir(getVercelDirectory(path)))
   );
 }
 
 async function getProjectLinkFromRepoLink(
   client: Client,
-  path: string
+  path: string,
+  options: GetProjectLinkOptions = {}
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -103,13 +110,30 @@ async function getProjectLinkFromRepoLink(
   } else {
     const selectableProjects =
       projects.length > 0 ? projects : repoLink.repoConfig.projects;
-    project = await client.input.select({
-      message: `Please select a Project:`,
-      choices: selectableProjects.map(p => ({
-        value: p,
-        name: p.name,
-      })),
-    });
+
+    // If --project flag is provided, try to find a matching project
+    if (options.projectName) {
+      project = selectableProjects.find(p => p.name === options.projectName);
+      if (!project) {
+        // Project name provided but not found in the list
+        throw new Error(
+          `Project "${options.projectName}" not found. Available projects: ${selectableProjects.map(p => p.name).join(', ')}`
+        );
+      }
+    } else if (options.autoConfirm) {
+      // --yes flag provided but no --project flag and multiple projects match
+      throw new Error(
+        `Multiple projects found for this directory. Use --project to specify which project to link: ${selectableProjects.map(p => p.name).join(', ')}`
+      );
+    } else {
+      project = await client.input.select({
+        message: `Please select a Project:`,
+        choices: selectableProjects.map(p => ({
+          value: p,
+          name: p.name,
+        })),
+      });
+    }
   }
   if (project) {
     return {
@@ -210,7 +234,8 @@ async function hasProjectLink(
 
 export async function getLinkedProject(
   client: Client,
-  path = client.cwd
+  path = client.cwd,
+  options: GetProjectLinkOptions = {}
 ): Promise<ProjectLinkResult> {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
@@ -230,7 +255,7 @@ export async function getLinkedProject(
   const link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path);
+      : await getProjectLink(client, path, options);
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };

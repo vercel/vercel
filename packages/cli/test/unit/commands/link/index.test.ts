@@ -54,6 +54,88 @@ describe('link', () => {
     });
   });
 
+  describe('--repo with multiple projects for same directory', () => {
+    it('should error when --yes is used but multiple projects match and no --project', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/test/test.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      // Create repo.json with multiple projects for the same directory
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        orgId: user.id,
+        remoteName: 'origin',
+        projects: [
+          { id: 'proj1', name: 'vercel-dash', directory: 'apps/vercel-site' },
+          { id: 'proj2', name: 'vercel-site', directory: 'apps/vercel-site' },
+        ],
+      });
+
+      // Create the apps/vercel-site directory
+      await mkdirp(join(cwd, 'apps/vercel-site'));
+
+      useTeams('team_dummy');
+
+      client.cwd = join(cwd, 'apps/vercel-site');
+      client.setArgv('link', '--yes');
+      const exitCodePromise = link(client);
+
+      // Wait for the error message
+      await expect(client.stderr).toOutput(
+        'Multiple projects found for this directory'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should error when --project does not match any project', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/test/test.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      // Create repo.json with multiple projects for the same directory
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        orgId: user.id,
+        remoteName: 'origin',
+        projects: [
+          { id: 'proj1', name: 'vercel-dash', directory: 'apps/vercel-site' },
+          { id: 'proj2', name: 'vercel-site', directory: 'apps/vercel-site' },
+        ],
+      });
+
+      // Create the apps/vercel-site directory
+      await mkdirp(join(cwd, 'apps/vercel-site'));
+
+      useTeams('team_dummy');
+
+      client.cwd = join(cwd, 'apps/vercel-site');
+      client.setArgv('link', '--project', 'non-existent', '--yes');
+      const exitCodePromise = link(client);
+
+      // Wait for the error message
+      await expect(client.stderr).toOutput('Project "non-existent" not found');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+  });
+
   describe('--repo', () => {
     it('should support linking using `--repo` flag', async () => {
       const user = useUser();
