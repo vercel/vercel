@@ -7,6 +7,7 @@ import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js
 
 const require = createRequire(import.meta.url);
 
+// bump
 const { copyFile } = fsPromises;
 
 const pkgPath = join(process.cwd(), 'package.json');
