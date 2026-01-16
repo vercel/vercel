@@ -105,6 +105,15 @@ export const putSubcommand = {
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the uploaded blob (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [],
 } as const;
@@ -164,6 +173,15 @@ export const copySubcommand = {
         'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
       argument: 'Number',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the copied blob (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [],
 } as const;
@@ -188,6 +206,15 @@ export const addStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the Blob store (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [
     {
@@ -197,6 +224,14 @@ export const addStoreSubcommand = {
     {
       name: 'Create a blob store in a specific region',
       value: 'vercel blob store add my-store --region cdg1',
+    },
+    {
+      name: 'Create a private blob store',
+      value: 'vercel blob store add my-store --access private',
+    },
+    {
+      name: 'Create a public blob store',
+      value: 'vercel blob store add my-store --access public',
     },
   ],
 } as const;

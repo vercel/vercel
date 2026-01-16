@@ -8,6 +8,10 @@ import { copySubcommand } from './command';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
 
+function isAccess(access: string): access is 'private' | 'public' {
+  return access === 'private' || access === 'public';
+}
+
 export default async function copy(
   client: Client,
   argv: string[],
@@ -44,14 +48,25 @@ export default async function copy(
       '--add-random-suffix': addRandomSuffix,
       '--content-type': contentType,
       '--cache-control-max-age': cacheControlMaxAge,
+      '--access': accessFlag,
     },
   } = parsedArgs;
+
+  const access = accessFlag || 'public';
+
+  if (!isAccess(access)) {
+    output.error(
+      `Invalid access level: ${access}. Must be either 'private' or 'public'`
+    );
+    return 1;
+  }
 
   telemetryClient.trackCliArgumentFromUrlOrPathname(fromUrl);
   telemetryClient.trackCliArgumentToPathname(toPathname);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliOptionAccess(accessFlag);
 
   let result: blob.PutBlobResult;
   try {
@@ -61,7 +76,7 @@ export default async function copy(
 
     result = await blob.copy(fromUrl, toPathname, {
       token: rwToken,
-      access: 'public',
+      access,
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,
       cacheControlMaxAge,
