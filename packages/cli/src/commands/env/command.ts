@@ -304,6 +304,70 @@ export const updateSubcommand = {
   ],
 } as const;
 
+export const setSubcommand = {
+  name: 'set',
+  aliases: [],
+  description:
+    'Set an Environment Variable (upsert: add if not exists, update if exists)',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'environment',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'sensitive',
+      description: 'Set as a sensitive Environment Variable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'guidance',
+      description: 'Receive command suggestions once command is complete',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Set a variable (creates or updates)',
+      value: [
+        `${packageName} env set <name>`,
+        `${packageName} env set API_TOKEN`,
+      ],
+    },
+    {
+      name: 'Set a variable for a specific Environment',
+      value: [
+        `${packageName} env set <name> ${targetPlaceholder}`,
+        `${packageName} env set DB_PASS production`,
+      ],
+    },
+    {
+      name: 'Set a variable for a specific Environment and Git Branch',
+      value: [
+        `${packageName} env set <name> ${targetPlaceholder} <gitbranch>`,
+        `${packageName} env set NPM_RC preview feat1`,
+      ],
+    },
+    {
+      name: 'Set a variable from stdin',
+      value: [
+        `cat <file> | ${packageName} env set <name> ${targetPlaceholder}`,
+        `cat ~/.npmrc | ${packageName} env set NPM_RC preview`,
+        `${packageName} env set API_URL production < url.txt`,
+      ],
+    },
+  ],
+} as const;
+
 export const envCommand = {
   name: 'env',
   aliases: [],
@@ -315,6 +379,7 @@ export const envCommand = {
     pullSubcommand,
     removeSubcommand,
     runSubcommand,
+    setSubcommand,
     updateSubcommand,
   ],
   options: [],

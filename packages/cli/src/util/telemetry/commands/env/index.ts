@@ -40,6 +40,13 @@ export class EnvTelemetryClient
     });
   }
 
+  trackCliSubcommandSet(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'set',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandUpdate(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'update',
