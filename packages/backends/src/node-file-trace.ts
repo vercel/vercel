@@ -1,14 +1,15 @@
 import {
   isBunVersion,
-  FileBlob,
   FileFsRef,
   type BuildOptions,
   type Files,
   type NodeVersion,
+  debug,
 } from '@vercel/build-utils';
 import { nodeFileTrace as nft } from '@vercel/nft';
-import { existsSync, lstatSync, readFileSync } from 'fs';
+import { lstatSync } from 'fs';
 import { join, relative } from 'path';
+import fs from 'fs/promises';
 
 export const nodeFileTrace = async (
   args: BuildOptions,
@@ -28,21 +29,39 @@ export const nodeFileTrace = async (
     ignore: args.config.excludeFiles,
     conditions,
     mixedModules: true,
+    readFile: async fsPath => {
+      try {
+        return await fs.readFile(fsPath);
+      } catch (error) {
+        // Return empty buffer for files that don't exist
+        // Returning null causes NFT to throw "File does not exist" error
+        // An empty buffer lets NFT continue processing, we'll resolve
+        // the real location when building up the files object below
+        return Buffer.from('');
+      }
+    },
   });
 
-  const packageJsonPath = join(args.workPath, 'package.json');
-
-  if (existsSync(packageJsonPath)) {
-    const { mode } = lstatSync(packageJsonPath);
-    const source = readFileSync(packageJsonPath);
-    const relPath = relative(args.repoRootPath, packageJsonPath);
-    files[relPath] = new FileBlob({ data: source, mode });
+  for (const warning of nftResult.warnings) {
+    debug(`Warning from trace: ${warning.message}`);
   }
 
   for (const file of nftResult.fileList) {
     const fullPath = join(args.repoRootPath, file);
-    const stats = lstatSync(fullPath, {});
-    files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
+    try {
+      const stats = lstatSync(fullPath, {});
+      files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
+    } catch (error) {
+      const relativePath = relative(outputDir, fullPath);
+      const fallbackPath = join(args.repoRootPath, relativePath);
+
+      debug(
+        `Unabled to find traced file at ${fullPath}, using fallback path ${fallbackPath}`,
+        fallbackPath
+      );
+      const stats = lstatSync(fallbackPath, {});
+      files[file] = new FileFsRef({ fsPath: fallbackPath, mode: stats.mode });
+    }
   }
 
   return { files };
