@@ -17,4 +17,4 @@ Wrapper mode supports go.mod dependencies
 
 ## Status
 
-- [ ] Passes
+- [x] Passes

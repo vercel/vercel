@@ -11,7 +11,13 @@ const ms = require('ms');
 const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
+async function nowDeploy(
+  projectName,
+  bodies,
+  randomness,
+  uploadNowJson,
+  opts = {}
+) {
   const files = Object.keys(bodies)
     .filter(n =>
       uploadNowJson

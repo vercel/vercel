@@ -260,6 +260,7 @@ export async function build({
       packageName,
       undo,
       usesWrapper,
+      workPath,
     };
 
     if (usesWrapper) {
@@ -319,6 +320,7 @@ type BuildHandlerOptions = {
   packageName: string;
   undo: UndoActions;
   usesWrapper?: boolean;
+  workPath: string;
 };
 
 /**
@@ -531,17 +533,24 @@ async function buildHandlerAsWrapperMode({
   go,
   goModPath,
   outDir,
+  workPath,
 }: BuildHandlerOptions): Promise<void> {
   debug('Building Go handler in wrapper mode');
 
   const goModDirname = goModPath ? dirname(goModPath) : entrypointDirname;
 
-  debug('Running `go mod tidy`...');
-  try {
-    await go.mod();
-  } catch (err) {
-    console.error('failed to `go mod tidy`');
-    throw err;
+  // Check if go.work exists
+  const goWorkPath = await findGoWorkFile(goModDirname, workPath);
+  if (goWorkPath) {
+    debug(`Found go.work at ${goWorkPath}, skipping 'go mod tidy'...`);
+  } else {
+    debug('Running `go mod tidy`...');
+    try {
+      await go.mod();
+    } catch (err) {
+      console.error('failed to `go mod tidy`');
+      throw err;
+    }
   }
 
   debug('Running `go build`...');

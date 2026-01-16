@@ -17,4 +17,4 @@ Wrapper mode respects includeFiles config
 
 ## Status
 
-- [ ] Passes
+- [x] Passes

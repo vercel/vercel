@@ -20,7 +20,7 @@ Succinct learnings about how to RUN the project:
 - Integration tests in `packages/go` fail without `VERCEL_TOKEN`. Use unit tests and manual verification (compilation) for local changes.
 - `go` module logic is verified by `go/lambda_test.go`.
 - Builder logic is verified by `packages/go/test/index.test.ts` (unit) and partially by `packages/go/test/fixtures.test.js`.
-- `analyze.go` now detects `vercel.Start` calls to validate wrapper usage.
+- `go mod tidy` ignores `go.work`, so `packages/go` builder skips it when `go.work` is detected to support local unpublished modules.
 
 ### References
 

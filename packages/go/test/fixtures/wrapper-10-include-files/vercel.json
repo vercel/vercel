@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.go",
+      "use": "@vercel/go",
+      "config": {
+        "wrapper": true,
+        "includeFiles": ["templates/**"]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/index.go",
+      "mustContain": "Hello from included file!"
+    }
+  ]
+}

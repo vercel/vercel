@@ -410,6 +410,16 @@ async function testDeployment(fixturePath, opts = {}) {
     opts.projectSettings.nodeVersion = nodeVersion;
   }
 
+  // If a builderUrl is provided, replace @vercel/go with the custom URL in builds
+  if (opts.builderUrl && nowJson.builds) {
+    nowJson.builds = nowJson.builds.map(build => {
+      if (build.use === '@vercel/go') {
+        return { ...build, use: opts.builderUrl };
+      }
+      return build;
+    });
+  }
+
   const probePath = path.resolve(fixturePath, 'probe.js');
   let probes = [];
   if ('probes' in nowJson) {

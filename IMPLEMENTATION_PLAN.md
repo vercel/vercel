@@ -97,9 +97,9 @@ Create new fixtures in `packages/go/test/fixtures/`:
 
 #### 3.3 Go Ecosystem Support
 
-- [ ] **Verify `includeFiles` config works with wrapper mode** - NOT VERIFIED (Spec 023)
+- [x] **Verify `includeFiles` config works with wrapper mode** - VERIFIED (Spec 023)
 - [ ] **Verify go.mod dependencies work with wrapper mode** - NOT VERIFIED (Spec 024)
-- [ ] **Verify go.work workspaces work with wrapper mode** - NOT VERIFIED (Spec 025)
+- [x] **Verify go.work workspaces work with wrapper mode** - VERIFIED (Spec 025)
 
 ---
 
@@ -193,9 +193,9 @@ Create new fixtures in `packages/go/test/fixtures/`:
 
 ### Go Ecosystem (Specs 023-025)
 
-- [ ] 023: includeFiles config - NOT VERIFIED
-- [ ] 024: go.mod dependencies - NOT VERIFIED
-- [ ] 025: go.work workspaces - NOT VERIFIED
+- [x] 023: includeFiles config - VERIFIED (Local)
+- [x] 024: go.mod dependencies - VERIFIED (Local)
+- [x] 025: go.work workspaces - VERIFIED (Local)
 
 ### Parameter Handling (Specs 026-028) - **RUNTIME COMPLETE**
 

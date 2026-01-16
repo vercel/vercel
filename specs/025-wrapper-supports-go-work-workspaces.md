@@ -17,4 +17,4 @@ Wrapper mode supports go.work workspaces
 
 ## Status
 
-- [ ] Passes
+- [x] Passes

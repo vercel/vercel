@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app/index.go",
+      "use": "@vercel/go",
+      "config": {
+        "wrapper": true
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hello from shared module"
+    }
+  ]
+}
