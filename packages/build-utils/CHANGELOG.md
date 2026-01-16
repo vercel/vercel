@@ -1,11 +1,5 @@
 # @vercel/build-utils
 
-## 13.2.11
-
-### Patch Changes
-
-- Add 'go' as a valid runtimeLanguage option for Lambda functions ([#14628](https://github.com/vercel/vercel/pull/14628))
-
 ## 13.2.10
 
 ### Patch Changes
