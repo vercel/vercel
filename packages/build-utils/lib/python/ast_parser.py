@@ -17,17 +17,19 @@ def contains_app_or_handler(file_path: str) -> bool:
         return False
 
     for node in ast.iter_child_nodes(tree):
-        # Check for top-level assignment to 'app'
+        # Check for top-level assignment to 'app' or 'handler'
         # e.g., app = Sanic() or app = Flask(__name__) or app = create_app()
+        # e.g., handler = MyHandler
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "app":
+                if isinstance(target, ast.Name) and target.id in ("app", "handler"):
                     return True
 
-        # Check for annotated assignment to 'app'
+        # Check for annotated assignment to 'app' or 'handler'
         # e.g., app: Sanic = Sanic()
+        # e.g., handler: BaseHTTPRequestHandler = MyHandler
         if isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id == "app":
+            if isinstance(node.target, ast.Name) and node.target.id in ("app", "handler"):
                 return True
 
         # Check for function named 'app'
@@ -40,15 +42,17 @@ def contains_app_or_handler(file_path: str) -> bool:
         if isinstance(node, ast.AsyncFunctionDef) and node.name == "app":
             return True
 
-        # Check for import of 'app'
+        # Check for import of 'app' or 'handler'
         # e.g., from server import app
         # e.g., from server import application as app
+        # e.g., from handlers import handler
+        # e.g., from handlers import MyHandler as handler
         if isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 # alias.asname is the 'as' name, alias.name is the original name
                 # If aliased, check asname; otherwise check the original name
                 imported_as = alias.asname if alias.asname else alias.name
-                if imported_as == "app":
+                if imported_as in ("app", "handler"):
                     return True
 
         # Check for top-level class named 'handler'

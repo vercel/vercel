@@ -2282,17 +2282,20 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         featHandleMiss,
       });
 
+    // Python files are consolidated into a single builder (api/py.py)
+    // Go files still get individual builders
     expect(builders).toStrictEqual([
       {
-        use: '@vercel/go',
-        src: 'api/golang.go',
+        use: '@vercel/python',
+        src: 'api/py.py',
         config: {
           zeroConfig: true,
+          consolidatedApi: true,
         },
       },
       {
-        use: '@vercel/python',
-        src: 'api/python.py',
+        use: '@vercel/go',
+        src: 'api/golang.go',
         config: {
           zeroConfig: true,
         },
@@ -2309,12 +2312,20 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)(?:\\.(?:go|py))$',
+        // py comes first because consolidated Python builder is added first
+        src: '^/api/(.+)(?:\\.(?:py|go))$',
         dest: '/api/$1',
         check: true,
       },
     ]);
-    expect(rewriteRoutes).toStrictEqual([]);
+    // Python routes are rewritten to the consolidated function
+    expect(rewriteRoutes).toStrictEqual([
+      {
+        src: '^/api/(python/|python|python\\.py)$',
+        dest: 'api/py',
+        check: true,
+      },
+    ]);
     expect(errorRoutes).toStrictEqual([
       {
         status: 404,
