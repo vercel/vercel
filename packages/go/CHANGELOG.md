@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.3.2
+
+### Patch Changes
+
+- Set runtimeLanguage to 'go' when creating Lambda functions ([#14628](https://github.com/vercel/vercel/pull/14628))
+
 ## 3.3.1
 
 ### Patch Changes
