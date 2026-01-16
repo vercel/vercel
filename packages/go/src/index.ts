@@ -255,6 +255,7 @@ export async function build({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
       runtime,
+      runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
     });
