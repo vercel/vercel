@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.15.6
+
+### Patch Changes
+
+- [frameworks] experimental framework flagging ([#14637](https://github.com/vercel/vercel/pull/14637))
+
 ## 3.15.5
 
 ### Patch Changes
