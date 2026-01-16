@@ -728,6 +728,7 @@ async function doBuild(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
       let buildResult: BuildResultV2 | BuildResultV3;
+      let builderName = builderPkg.name;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
           async () => {
@@ -741,6 +742,8 @@ async function doBuild(
               const experimentalBackendBuilder = await import(
                 '@vercel/backends'
               );
+              // Override the builder name to be the backend builder name for the trace
+              builderName = '@vercel/backends';
               return experimentalBackendBuilder.build(buildOptions);
             }
             return builder.build(buildOptions);
@@ -875,6 +878,7 @@ async function doBuild(
         builderSpan
           .child('vc.builder.writeBuildResult', {
             buildOutputLength: String(buildOutputLength),
+            builderName,
           })
           .trace<Record<string, PathOverride> | undefined | void>(() =>
             writeBuildResult({
