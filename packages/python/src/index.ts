@@ -11,6 +11,7 @@ import {
   execCommand,
   scanParentDirs,
   getEnvForPackageManager,
+  isPythonFramework,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -41,8 +42,7 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 import {
-  FASTAPI_CANDIDATE_ENTRYPOINTS,
-  FLASK_CANDIDATE_ENTRYPOINTS,
+  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
 
@@ -104,8 +104,8 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For FastAPI/Flask, also honor project install/build commands (vercel.json/dashboard)
-  if (framework === 'fastapi' || framework === 'flask') {
+  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
     const {
       cliType,
       lockfileVersion,
@@ -154,7 +154,7 @@ export const build: BuildV3 = async ({
 
   // Zero config entrypoint discovery
   if (
-    (framework === 'fastapi' || framework === 'flask') &&
+    isPythonFramework(framework) &&
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
     const detected = await detectPythonEntrypoint(
@@ -168,10 +168,7 @@ export const build: BuildV3 = async ({
       );
       entrypoint = detected;
     } else {
-      const searchedList =
-        framework === 'fastapi'
-          ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
-          : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+      const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
@@ -254,12 +251,11 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
-  // If a custom install command is configured for FastAPI/Flask, treat it as
+  // If a custom install command is configured for Python frameworks, treat it as
   // an override for the default dependency installation: run the command inside
   // the build virtualenv
   const hasCustomInstallCommand =
-    (framework === 'fastapi' || framework === 'flask') &&
-    !!projectInstallCommand;
+    isPythonFramework(framework) && !!projectInstallCommand;
 
   if (hasCustomInstallCommand) {
     const baseEnv = spawnEnv || process.env;
@@ -273,11 +269,11 @@ export const build: BuildV3 = async ({
       cwd: workPath,
     });
   } else {
-    // If a pyproject install script is configured for FastAPI/Flask, treat it as
+    // If a pyproject install script is configured for Python frameworks, treat it as
     // an override for the default dependency installation: run the script inside
     // the build virtualenv.
     let ranPyprojectInstall = false;
-    if (framework === 'fastapi' || framework === 'flask') {
+    if (isPythonFramework(framework)) {
       const baseEnv = spawnEnv || process.env;
       const pythonEnv = createVenvEnv(venvPath, baseEnv);
       pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
