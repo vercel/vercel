@@ -98,4 +98,59 @@ describe('domains ls', () => {
       ]);
     });
   });
+
+  describe('--format', () => {
+    it('tracks telemetry for --format json', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--format', 'json');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+      ]);
+    });
+
+    it('outputs domains as valid JSON that can be piped to jq', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--format', 'json');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      // Should be valid JSON - this will throw if not parseable
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('domains');
+      expect(jsonOutput).toHaveProperty('pagination');
+      expect(Array.isArray(jsonOutput.domains)).toBe(true);
+    });
+
+    it('outputs correct domain structure in JSON', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--format', 'json');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput.domains.length).toBeGreaterThan(0);
+      const firstDomain = jsonOutput.domains[0];
+      expect(firstDomain).toHaveProperty('name');
+      expect(firstDomain).toHaveProperty('registrar');
+      expect(firstDomain).toHaveProperty('nameservers');
+      expect(firstDomain).toHaveProperty('createdAt');
+    });
+  });
 });

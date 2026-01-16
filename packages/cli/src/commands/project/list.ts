@@ -5,6 +5,7 @@ import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import { ProjectListTelemetryClient } from '../../util/telemetry/commands/project/list';
 import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -20,7 +21,15 @@ const TABLE_HEADERS = [
   'Updated',
   'Node Version',
 ];
-const PAGINATION_FLAGS_TO_EXCLUDE = ['_', '--next', '-N', '-d', '-y', '--json'];
+const PAGINATION_FLAGS_TO_EXCLUDE = [
+  '_',
+  '--next',
+  '-N',
+  '-d',
+  '-y',
+  '--json',
+  '--format',
+];
 const BASE_PROJECTS_URL = '/v9/projects?limit=20';
 
 export default async function list(
@@ -59,6 +68,11 @@ export default async function list(
 
   // Process flags and build URL
   const flags = processFlags(opts, telemetryClient);
+  if ('error' in flags) {
+    output.stopSpinner();
+    output.error(flags.error);
+    return 1;
+  }
   const projectsUrl = buildProjectsUrl(flags);
 
   const {
@@ -99,14 +113,19 @@ export default async function list(
 function processFlags(
   opts: Record<string, any>,
   telemetryClient: ProjectListTelemetryClient
-) {
+): { deprecated: boolean; next?: number; json: boolean } | { error: string } {
   const deprecated = opts['--update-required'] || false;
   const next = opts['--next'];
-  const json = opts['--json'] || false;
+  const formatResult = validateJsonOutput(opts);
+  if (!formatResult.valid) {
+    return { error: formatResult.error };
+  }
+  const json = formatResult.jsonOutput;
 
   telemetryClient.trackCliFlagUpdateRequired(deprecated);
   telemetryClient.trackCliOptionNext(next);
-  telemetryClient.trackCliFlagJson(json);
+  telemetryClient.trackCliOptionFormat(opts['--format']);
+  telemetryClient.trackCliFlagJson(opts['--json']);
 
   return { deprecated, next, json };
 }

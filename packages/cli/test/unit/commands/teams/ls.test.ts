@@ -103,5 +103,53 @@ describe('teams ls', () => {
         ]);
       });
     });
+
+    describe('--format', () => {
+      it('tracks telemetry for --format json', async () => {
+        client.setArgv('teams', 'ls', '--format', 'json');
+        const exitCode = await teams(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:list',
+            value: 'ls',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+        ]);
+      });
+
+      it('outputs teams as valid JSON that can be piped to jq', async () => {
+        client.setArgv('teams', 'ls', '--format', 'json');
+        const exitCode = await teams(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        // Should be valid JSON - this will throw if not parseable
+        const jsonOutput = JSON.parse(output);
+
+        expect(jsonOutput).toHaveProperty('teams');
+        expect(Array.isArray(jsonOutput.teams)).toBe(true);
+      });
+
+      it('outputs correct team structure in JSON', async () => {
+        client.setArgv('teams', 'ls', '--format', 'json');
+        const exitCode = await teams(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const jsonOutput = JSON.parse(output);
+
+        expect(jsonOutput.teams.length).toBeGreaterThan(0);
+        const firstTeam = jsonOutput.teams[0];
+        expect(firstTeam).toHaveProperty('id');
+        expect(firstTeam).toHaveProperty('slug');
+        expect(firstTeam).toHaveProperty('name');
+        expect(firstTeam).toHaveProperty('current');
+      });
+    });
   });
 });

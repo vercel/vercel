@@ -11,6 +11,7 @@ import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
+import { validateJsonOutput } from '../../util/output-format';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
@@ -19,13 +20,7 @@ import { stateString } from '../list';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
-const deprecatedFlags = [
-  '--follow',
-  '--limit',
-  '--since',
-  '--until',
-  '--output',
-];
+const deprecatedFlags = ['--follow', '--limit', '--since', '--until', '--json'];
 
 const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
 
@@ -71,7 +66,12 @@ export default async function logs(client: Client) {
     parsedArguments.args.shift();
   }
 
-  const asJson = parsedArguments.flags['--json'];
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   // extract the first parameter
   let [deploymentIdOrHost] = parsedArguments.args;
@@ -84,15 +84,12 @@ export default async function logs(client: Client) {
   }
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
-  telemetry.trackCliFlagJson(asJson);
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetry.trackCliFlagFollow(parsedArguments.flags['--follow']);
   telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);
   telemetry.trackCliOptionSince(parsedArguments.flags['--since']);
   telemetry.trackCliOptionUntil(parsedArguments.flags['--until']);
-
-  // Note: only send literal values to telemetry for known values
-  const outputMode = parsedArguments.flags['--output'];
-  telemetry.trackCliOptionOutput(outputMode);
 
   let contextName: string | null = null;
 

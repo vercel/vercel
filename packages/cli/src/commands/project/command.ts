@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -51,13 +56,8 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output in JSON format',
-    },
+    formatOption,
+    jsonOption,
     {
       name: 'update-required',
       description: 'A list of projects affected by an upcoming deprecation',
@@ -73,7 +73,7 @@ export const listSubcommand = {
     },
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
-      value: `${packageName} project ls --update-required --json`,
+      value: `${packageName} project ls --update-required --format=json`,
     },
   ],
 } as const;

@@ -1,3 +1,4 @@
+import { formatOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const listSubcommand = {
@@ -5,7 +6,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'List targets defined for the current Project',
   arguments: [],
-  options: [],
+  options: [formatOption],
   examples: [
     {
       name: 'List all targets for the current Project',
