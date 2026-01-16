@@ -24,6 +24,9 @@ export const nodeFileTrace = async (
   const files: Files = {};
   const isBun = isBunVersion(nodeVersion);
   const conditions = isBun ? ['bun'] : undefined;
+
+  const replacedPaths = new Map<string, string>();
+
   const nftResult = await nft([entry], {
     base: args.repoRootPath,
     ignore: args.config.excludeFiles,
@@ -33,11 +36,15 @@ export const nodeFileTrace = async (
       try {
         return await fs.readFile(fsPath);
       } catch (error) {
-        // Return empty buffer for files that don't exist
-        // Returning null causes NFT to throw "File does not exist" error
-        // An empty buffer lets NFT continue processing, we'll resolve
-        // the real location when building up the files object below
-        return Buffer.from('');
+        const fallbackPath = join(
+          args.repoRootPath,
+          relative(outputDir, fsPath)
+        );
+        debug(
+          `Unabled to find traced file at ${fsPath}, using fallback path ${fallbackPath}`
+        );
+        replacedPaths.set(fsPath, fallbackPath);
+        return await fs.readFile(fallbackPath);
       }
     },
   });
@@ -48,20 +55,9 @@ export const nodeFileTrace = async (
 
   for (const file of nftResult.fileList) {
     const fullPath = join(args.repoRootPath, file);
-    try {
-      const stats = lstatSync(fullPath, {});
-      files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
-    } catch (error) {
-      const relativePath = relative(outputDir, fullPath);
-      const fallbackPath = join(args.repoRootPath, relativePath);
-
-      debug(
-        `Unabled to find traced file at ${fullPath}, using fallback path ${fallbackPath}`,
-        fallbackPath
-      );
-      const stats = lstatSync(fallbackPath, {});
-      files[file] = new FileFsRef({ fsPath: fallbackPath, mode: stats.mode });
-    }
+    const pathToResolve = replacedPaths.get(fullPath) || fullPath;
+    const stats = lstatSync(pathToResolve, {});
+    files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
   }
 
   return { files };
