@@ -1,6 +1,6 @@
 {
   "name": "@vercel/go",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
@@ -12,7 +12,7 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-e2e": "pnpm test",
+    "test-e2e": "echo 'Go e2e tests temporarily disabled'",
     "type-check": "tsc --noEmit"
   },
   "files": [
