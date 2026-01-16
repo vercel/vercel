@@ -18,6 +18,7 @@ import {
   type Files,
   type ShouldServe,
   FileFsRef,
+  PythonFramework,
 } from '@vercel/build-utils';
 import {
   getUvBinaryOrInstall,
@@ -158,7 +159,7 @@ export const build: BuildV3 = async ({
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
     const detected = await detectPythonEntrypoint(
-      config.framework as 'fastapi' | 'flask',
+      config.framework as PythonFramework,
       workPath,
       entrypoint
     );
