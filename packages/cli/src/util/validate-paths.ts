@@ -1,6 +1,7 @@
 import { lstat } from 'fs-extra';
 import chalk from 'chalk';
 import { homedir } from 'os';
+import { sep } from 'path';
 import toHumanPath from './humanize-path';
 import type Client from './client';
 import output from '../output-manager';
@@ -19,7 +20,7 @@ export async function validateRootDirectory(
   if (!pathStat) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
+        `"${toHumanPath(path)}"`
       )} does not exist.${suffix}`
     );
     return false;
@@ -28,7 +29,7 @@ export async function validateRootDirectory(
   if (!pathStat.isDirectory()) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
+        `"${toHumanPath(path)}"`
       )} is a file, but expected a directory.${suffix}`
     );
     return false;
@@ -37,7 +38,7 @@ export async function validateRootDirectory(
   if (!path.startsWith(cwd)) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
+        `"${toHumanPath(path)}"`
       )} is outside of the project.${suffix}`
     );
     return false;
@@ -48,7 +49,8 @@ export async function validateRootDirectory(
 
 export default async function validatePaths(
   client: Client,
-  paths: string[]
+  paths: string[],
+  originalArg?: string
 ): Promise<{ valid: true; path: string } | { valid: false; exitCode: number }> {
   // can't deploy more than 1 path
   if (paths.length > 1) {
@@ -62,7 +64,18 @@ export default async function validatePaths(
   const pathStat = await lstat(path).catch(() => null);
 
   if (!pathStat) {
-    output.error(`Could not find ${chalk.cyan(`“${toHumanPath(path)}”`)}`);
+    // Check if the original argument looks like a potential subcommand
+    // (i.e., it doesn't contain path separators)
+    const looksLikeSubcommand =
+      originalArg && !originalArg.includes(sep) && !originalArg.includes('/');
+
+    if (looksLikeSubcommand) {
+      output.error(
+        `The specified path ${chalk.cyan(`"${toHumanPath(path)}"`)} does not exist and ${chalk.cyan(`"${originalArg}"`)} is not a known command.\n  Run ${chalk.cyan(`"vercel help"`)} to see available commands.`
+      );
+    } else {
+      output.error(`Could not find ${chalk.cyan(`"${toHumanPath(path)}"`)}`);
+    }
     return { valid: false, exitCode: 1 };
   }
 

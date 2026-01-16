@@ -140,6 +140,8 @@ export default async (client: Client): Promise<number> => {
 
   // #region Path validation
   let paths;
+  // Keep track of the original argument for better error messages
+  const originalArg = parsedArguments.args[0];
   if (parsedArguments.args.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
@@ -150,7 +152,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   // check paths
-  const pathValidation = await validatePaths(client, paths);
+  const pathValidation = await validatePaths(client, paths, originalArg);
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
