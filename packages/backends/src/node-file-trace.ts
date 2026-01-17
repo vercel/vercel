@@ -1,5 +1,6 @@
 import {
   isBunVersion,
+  FileBlob,
   FileFsRef,
   type BuildOptions,
   type Files,
@@ -7,8 +8,8 @@ import {
   debug,
 } from '@vercel/build-utils';
 import { nodeFileTrace as nft } from '@vercel/nft';
-import { lstatSync } from 'fs';
-import { join } from 'path';
+import { existsSync, lstatSync, readFileSync } from 'fs';
+import { join, relative } from 'path';
 
 export const nodeFileTrace = async (
   args: BuildOptions,
@@ -24,52 +25,34 @@ export const nodeFileTrace = async (
   const isBun = isBunVersion(nodeVersion);
   const conditions = isBun ? ['bun'] : undefined;
 
-  const replacedPaths = new Map<string, string>();
-
   const nftResult = await nft([entry], {
     base: outputDir,
     ignore: args.config.excludeFiles,
     conditions,
     mixedModules: true,
-    // readFile: async fsPath => {
-    //   try {
-    //     return await fs.readFile(fsPath);
-    //   } catch (error) {
-    //     const fallbackPath = join(
-    //       args.repoRootPath,
-    //       relative(outputDir, fsPath)
-    //     );
-    //     debug(
-    //       `Unabled to find traced file at ${fsPath}, using fallback path ${fallbackPath}`
-    //     );
-    //     replacedPaths.set(fsPath, fallbackPath);
-    //     return await fs.readFile(fallbackPath);
-    //   }
-    // },
   });
 
   for (const warning of nftResult.warnings) {
     debug(`Warning from trace: ${warning.message}`);
   }
 
+  const packageJsonPath = join(args.workPath, 'package.json');
+
+  if (existsSync(packageJsonPath)) {
+    const { mode } = lstatSync(packageJsonPath);
+    const source = readFileSync(packageJsonPath);
+    const relPath = relative(args.repoRootPath, packageJsonPath);
+    files[relPath] = new FileBlob({ data: source, mode });
+  }
+
   for (const file of nftResult.fileList) {
     const fullPath = join(outputDir, file);
-    const fallbackPath = replacedPaths.get(fullPath);
-    if (fallbackPath) {
-      console.log({ fallbackPath, file });
-    }
-    const pathToResolve = fallbackPath ?? fullPath;
-    try {
-      const stats = lstatSync(pathToResolve, {});
-      files[file] = new FileFsRef({ fsPath: pathToResolve, mode: stats.mode });
-    } catch (e) {
-      if (!fallbackPath) {
-        debug(
-          `Unabled to find traced file at ${fullPath}, using fallback path ${fallbackPath}`
-        );
-        debug(replacedPaths.toString());
-      }
-    }
+    const stats = lstatSync(fullPath, {});
+    files[relative(args.repoRootPath, fullPath)] = new FileFsRef({
+      fsPath: fullPath,
+      mode: stats.mode,
+    });
+    // files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
   }
 
   return { files };
