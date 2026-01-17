@@ -4147,6 +4147,7 @@ export const frameworks = [
         value: 'N/A',
       },
     },
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Other',
