@@ -95,7 +95,10 @@ export const rolldown = async (args: {
       entryFileNames: `[name].${resolvedExtension}`,
       preserveModules: !isBundled,
       sourcemap: false,
-      banner: `import{fileURLToPath}from'url';import{dirname}from'path';const __filename=typeof import.meta.filename!=='undefined'?import.meta.filename:fileURLToPath(import.meta.url);const __dirname=typeof import.meta.dirname!=='undefined'?import.meta.dirname:dirname(__filename);`,
+      banner:
+        resolvedFormat === 'esm'
+          ? `import{fileURLToPath}from'url';import{dirname}from'path';const __filename=typeof import.meta.filename!=='undefined'?import.meta.filename:fileURLToPath(import.meta.url);const __dirname=typeof import.meta.dirname!=='undefined'?import.meta.dirname:dirname(__filename);`
+          : undefined,
     },
   });
   let handler: string | null = null;
