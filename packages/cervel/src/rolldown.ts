@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { rm, readFile, writeFile } from 'fs/promises';
+import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
 
@@ -57,15 +57,18 @@ export const rolldown = async (args: {
 
   const external: string[] = [];
   if (!isBundled) {
-    Object.entries(pkg.dependencies || {}).forEach(([key]) => {
-      external.push(key);
-    });
-    Object.entries(pkg.devDependencies || {}).forEach(([key]) => {
-      external.push(key);
-    });
-    Object.entries(pkg.peerDependencies || {}).forEach(([key]) => {
-      external.push(key);
-    });
+    for (const dependency of Object.keys(pkg.dependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.devDependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.peerDependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
+      external.push(dependency);
+    }
   }
 
   const out = await rolldownBuild({
@@ -74,7 +77,6 @@ export const rolldown = async (args: {
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    // Externalize native binaries (.node files) which can't be transpiled
     external,
     onLog: (level, log, defaultHandler) => {
       // Since we're processing node modules, suppress EVAL logs from internal packages
@@ -116,12 +118,6 @@ export const rolldown = async (args: {
   const cleanup = async () => {
     await rm(outputDir, { recursive: true, force: true });
   };
-
-  // Write package.json with type: module so Node.js treats .js files as ESM
-  if (resolvedFormat === 'esm') {
-    const outputPkgJson = join(outputDir, 'package.json');
-    await writeFile(outputPkgJson, JSON.stringify({ type: 'module' }, null, 2));
-  }
 
   return {
     result: {

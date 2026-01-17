@@ -45,14 +45,23 @@ export const nodeFileTrace = async (
     files[relPath] = new FileBlob({ data: source, mode });
   }
 
+  const isBundled = process.env.VERCEL_BUILDER_BUNDLE_NODE === '1';
+
   for (const file of nftResult.fileList) {
-    const fullPath = join(outputDir, file);
-    const stats = lstatSync(fullPath, {});
-    files[relative(args.repoRootPath, fullPath)] = new FileFsRef({
-      fsPath: fullPath,
-      mode: stats.mode,
-    });
-    // files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
+    // FIXME: We're losing the file structure when bundling, so we're just tracing the built files.
+    // And the value of NFT traces is arguably lost at this point.
+    if (isBundled) {
+      const fullPath = join(outputDir, file);
+      const stats = lstatSync(fullPath, {});
+      files[relative(args.repoRootPath, fullPath)] = new FileFsRef({
+        fsPath: fullPath,
+        mode: stats.mode,
+      });
+    } else {
+      const fullPath = join(args.repoRootPath, file);
+      const stats = lstatSync(fullPath, {});
+      files[file] = new FileFsRef({ fsPath: fullPath, mode: stats.mode });
+    }
   }
 
   return { files };
