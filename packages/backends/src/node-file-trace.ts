@@ -8,8 +8,7 @@ import {
 } from '@vercel/build-utils';
 import { nodeFileTrace as nft } from '@vercel/nft';
 import { lstatSync } from 'fs';
-import { join, relative } from 'path';
-import fs from 'fs/promises';
+import { join } from 'path';
 
 export const nodeFileTrace = async (
   args: BuildOptions,
@@ -28,25 +27,25 @@ export const nodeFileTrace = async (
   const replacedPaths = new Map<string, string>();
 
   const nftResult = await nft([entry], {
-    base: args.repoRootPath,
+    base: outputDir,
     ignore: args.config.excludeFiles,
     conditions,
     mixedModules: true,
-    readFile: async fsPath => {
-      try {
-        return await fs.readFile(fsPath);
-      } catch (error) {
-        const fallbackPath = join(
-          args.repoRootPath,
-          relative(outputDir, fsPath)
-        );
-        debug(
-          `Unabled to find traced file at ${fsPath}, using fallback path ${fallbackPath}`
-        );
-        replacedPaths.set(fsPath, fallbackPath);
-        return await fs.readFile(fallbackPath);
-      }
-    },
+    // readFile: async fsPath => {
+    //   try {
+    //     return await fs.readFile(fsPath);
+    //   } catch (error) {
+    //     const fallbackPath = join(
+    //       args.repoRootPath,
+    //       relative(outputDir, fsPath)
+    //     );
+    //     debug(
+    //       `Unabled to find traced file at ${fsPath}, using fallback path ${fallbackPath}`
+    //     );
+    //     replacedPaths.set(fsPath, fallbackPath);
+    //     return await fs.readFile(fallbackPath);
+    //   }
+    // },
   });
 
   for (const warning of nftResult.warnings) {
@@ -54,7 +53,7 @@ export const nodeFileTrace = async (
   }
 
   for (const file of nftResult.fileList) {
-    const fullPath = join(args.repoRootPath, file);
+    const fullPath = join(outputDir, file);
     const fallbackPath = replacedPaths.get(fullPath);
     if (fallbackPath) {
       console.log({ fallbackPath, file });

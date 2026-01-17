@@ -56,7 +56,7 @@ export const rolldown = async (args: {
   const isBundled = process.env.VERCEL_BUILDER_BUNDLE_NODE === '1';
 
   const external: string[] = [];
-  if (isBundled) {
+  if (!isBundled) {
     Object.entries(pkg.dependencies || {}).forEach(([key]) => {
       external.push(key);
     });
