@@ -55,6 +55,39 @@ export function isFlaskEntrypoint(
   }
 }
 
+// Django zero-config detection
+export const DJANGO_ENTRYPOINT_FILENAMES = [
+  'asgi',
+  'wsgi',
+  'app',
+  'index',
+  'server',
+  'main',
+];
+export const DJANGO_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api', 'config'];
+export const DJANGO_CONTENT_REGEX =
+  /\b(?:app|application)\s*=\s*get_(?:wsgi|asgi)_application\s*\(/;
+
+export const DJANGO_CANDIDATE_ENTRYPOINTS = DJANGO_ENTRYPOINT_FILENAMES.flatMap(
+  (filename: string) =>
+    DJANGO_ENTRYPOINT_DIRS.map((dir: string) =>
+      pathPosix.join(dir, `${filename}.py`)
+    )
+);
+
+export function isDjangoEntrypoint(
+  file: FileFsRef | { fsPath?: string }
+): boolean {
+  try {
+    const fsPath = (file as FileFsRef).fsPath;
+    if (!fsPath) return false;
+    const contents = fs.readFileSync(fsPath, 'utf8');
+    return DJANGO_CONTENT_REGEX.test(contents);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Detect a Flask entrypoint path relative to workPath, or return null if not found.
  */
@@ -85,6 +118,40 @@ export async function detectFlaskEntrypoint(
     return null;
   } catch {
     debug('Failed to discover entrypoint for Flask');
+    return null;
+  }
+}
+
+/**
+ * Detect a Django entrypoint path relative to workPath, or return null if not found.
+ */
+export async function detectDjangoEntrypoint(
+  workPath: string,
+  configuredEntrypoint: string
+): Promise<string | null> {
+  const entry = configuredEntrypoint.endsWith('.py')
+    ? configuredEntrypoint
+    : `${configuredEntrypoint}.py`;
+
+  try {
+    const fsFiles = await glob('**', workPath);
+    if (fsFiles[entry]) return entry;
+
+    const candidates = DJANGO_CANDIDATE_ENTRYPOINTS.filter(
+      (c: string) => !!fsFiles[c]
+    );
+    if (candidates.length > 0) {
+      const djangoEntrypoint =
+        candidates.find((c: string) =>
+          isDjangoEntrypoint(fsFiles[c] as FileFsRef)
+        ) || candidates[0];
+      debug(`Detected Django entrypoint: ${djangoEntrypoint}`);
+      return djangoEntrypoint;
+    }
+
+    return null;
+  } catch {
+    debug('Failed to discover entrypoint for Django');
     return null;
   }
 }
@@ -167,7 +234,7 @@ export async function getPyprojectEntrypoint(
  * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
  */
 export async function detectPythonEntrypoint(
-  framework: 'fastapi' | 'flask',
+  framework: 'fastapi' | 'flask' | 'django',
   workPath: string,
   configuredEntrypoint: string
 ): Promise<string | null> {
@@ -176,6 +243,8 @@ export async function detectPythonEntrypoint(
     entrypoint = await detectFastapiEntrypoint(workPath, configuredEntrypoint);
   } else if (framework === 'flask') {
     entrypoint = await detectFlaskEntrypoint(workPath, configuredEntrypoint);
+  } else if (framework === 'django') {
+    entrypoint = await detectDjangoEntrypoint(workPath, configuredEntrypoint);
   }
   if (entrypoint) return entrypoint;
   return await getPyprojectEntrypoint(workPath);
