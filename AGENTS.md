@@ -105,17 +105,17 @@ Many tests in this repo deploy to Vercel. When a test fails, investigate whether
 
 1. **Check the test output** for a deployment URL (e.g., `https://my-project-xxx.vercel.app`)
 
-2. **Get deployment details** using the Vercel CLI (expected to be available locally):
+2. **Get deployment details** using the Vercel CLI (expected to be available locally). Always use `--scope zero-conf-vtest314` for e2e/integration test deployments:
 
    ```bash
    # List recent deployments for a project
-   vercel ls <project-name>
+   vercel ls <project-name> --scope zero-conf-vtest314
 
    # Get deployment logs by URL or deployment ID
-   vercel logs <deployment-url-or-id>
+   vercel logs <deployment-url-or-id> --scope zero-conf-vtest314
 
    # Inspect deployment details
-   vercel inspect <deployment-url-or-id>
+   vercel inspect <deployment-url-or-id> --scope zero-conf-vtest314
    ```
 
 3. **Common deployment failure causes**:
