@@ -121,11 +121,12 @@ Many tests in this repo deploy to Vercel. When a test fails, investigate whether
 3. **Common deployment failure causes**:
 
    - Build errors (check `vercel logs`)
-   - Missing environment variables
+   - Connection reset issues (network flakiness)
+   - Timeouts - both build timeouts and response timeouts when tests make HTTP requests
    - Framework detection issues
-   - Timeout during build
+   - **Deployment Protection** - if a test fails making requests to a deployment URL and you see auth-related errors or redirects, the project may have Deployment Protection enabled. Check the project settings and disable it for the test project.
 
-4. **For CI failures**, deployment URLs are usually printed in the test output. Copy the URL and run `vercel logs <url>` locally to see the full build output.
+4. **For CI failures**, deployment URLs are usually printed in the test output. Copy the URL and run `vercel logs <url> --scope zero-conf-vtest314` locally to see the full build output.
 
 ## Package Development
 
