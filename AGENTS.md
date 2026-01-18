@@ -99,6 +99,34 @@ describe('feature', () => {
 });
 ```
 
+### Investigating Test Failures
+
+Many tests in this repo deploy to Vercel. When a test fails, investigate whether the deployment itself failed:
+
+1. **Check the test output** for a deployment URL (e.g., `https://my-project-xxx.vercel.app`)
+
+2. **Get deployment details** using the Vercel CLI (expected to be available locally):
+
+   ```bash
+   # List recent deployments for a project
+   vercel ls <project-name>
+
+   # Get deployment logs by URL or deployment ID
+   vercel logs <deployment-url-or-id>
+
+   # Inspect deployment details
+   vercel inspect <deployment-url-or-id>
+   ```
+
+3. **Common deployment failure causes**:
+
+   - Build errors (check `vercel logs`)
+   - Missing environment variables
+   - Framework detection issues
+   - Timeout during build
+
+4. **For CI failures**, deployment URLs are usually printed in the test output. Copy the URL and run `vercel logs <url>` locally to see the full build output.
+
 ## Package Development
 
 Each package follows this structure:
