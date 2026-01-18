@@ -17,7 +17,7 @@ const args = process.argv
 if (isListMode) {
   // Run vitest list with --filesOnly to output just file paths (like jest --listTests)
   const child = spawn(
-    'npx',
+    'pnpm exec',
     [
       'vitest',
       'list',
@@ -50,7 +50,7 @@ if (isListMode) {
 } else {
   // Run vitest normally
   const child = spawn(
-    'npx',
+    'pnpm exec',
     ['vitest', '--config', './vitest.config.mts', ...args],
     {
       cwd: cliRoot,
