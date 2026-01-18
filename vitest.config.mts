@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
     pool: 'forks',
+    // Include both .test.* and .spec.* files
+    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     env: {
       // Vitest supresses color output when `process.env.CI` is true
       // so override that behavior
@@ -19,8 +21,8 @@ export default defineConfig({
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
-      // some artifacts in the fixtures have spec files that we're not using
-      '**/*.spec.js',
+      // Fixture directories contain framework test files (Angular, React, etc.) that shouldn't be run by vitest
+      '**/fixtures/**',
     ],
   },
 });
