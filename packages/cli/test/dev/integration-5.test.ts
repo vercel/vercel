@@ -10,7 +10,7 @@ import {
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
-import { test, expect } from 'vitest';
+import { test, expect, describe } from 'vitest';
 
 test(
   '[vercel dev] temporary directory listing',
