@@ -229,12 +229,54 @@ export const getStoreSubcommand = {
   examples: [],
 } as const;
 
+export const listStoreSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all Blob stores',
+  arguments: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output results as JSON',
+    },
+    {
+      name: 'no-projects',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Hide the Projects column',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all blob stores for the current team',
+      value: 'vercel blob store list',
+    },
+    {
+      name: 'Output as JSON',
+      value: 'vercel blob store list --json',
+    },
+    {
+      name: 'List without projects column',
+      value: 'vercel blob store list --no-projects',
+    },
+  ],
+} as const;
+
 export const storeSubcommand = {
   name: 'store',
   aliases: [],
   description: 'Interact with Blob stores',
   arguments: [],
-  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
+  subcommands: [
+    addStoreSubcommand,
+    removeStoreSubcommand,
+    getStoreSubcommand,
+    listStoreSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
