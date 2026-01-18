@@ -9,9 +9,10 @@ import {
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
+import { vi, test, expect, beforeAll, afterAll } from 'vitest';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 

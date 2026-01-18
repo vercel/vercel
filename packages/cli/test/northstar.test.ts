@@ -8,6 +8,7 @@ import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import formatOutput from './helpers/format-output';
 import type { User } from '@vercel-internals/types';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 

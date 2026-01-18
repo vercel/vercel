@@ -8,6 +8,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+import { test, expect } from 'vitest';
 
 test(
   '[vercel dev] 25-nextjs-src-dir',

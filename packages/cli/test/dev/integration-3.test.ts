@@ -11,6 +11,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+import { test, expect } from 'vitest';
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {

@@ -12,9 +12,9 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail",
+    "test": "vitest --config ./vitest.config.mts",
     "vitest-run": "vitest --config ./vitest.config.mts",
-    "vitest-unit": "jest test/unit/ --listTests",
+    "vitest-unit": "node scripts/list-tests.mjs test/unit/",
     "test-e2e-node-all-versions": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts test/integration-link-env-pull.test.ts",
     "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
@@ -63,7 +63,6 @@
     "jose": "5.9.6"
   },
   "devDependencies": {
-    "@alex_neo/jest-expect-message": "1.0.5",
     "@edge-runtime/node-utils": "2.3.0",
     "@inquirer/checkbox": "2.2.2",
     "@inquirer/confirm": "3.1.2",
@@ -84,8 +83,6 @@
     "@types/escape-html": "0.0.20",
     "@types/fs-extra": "9.0.13",
     "@types/ini": "1.3.31",
-    "@types/jest": "27.4.1",
-    "@types/jest-expect-message": "1.0.3",
     "@types/json-parse-better-errors": "1.0.0",
     "@types/load-json-file": "2.0.7",
     "@types/mime-types": "2.1.0",
@@ -150,7 +147,6 @@
     "is-port-reachable": "3.1.0",
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
-    "jest-junit": "16.0.0",
     "jest-matcher-utils": "29.3.1",
     "json-parse-better-errors": "1.0.2",
     "jsonlines": "0.1.1",

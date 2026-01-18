@@ -8,8 +8,9 @@ import { satisfies } from 'semver';
 import stripAnsi from 'strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
+import { vi, expect, beforeEach, afterEach } from 'vitest';
 
-jest.setTimeout(10 * 60 * 1000);
+vi.setConfig({ testTimeout: 10 * 60 * 1000 });
 
 const isCI = !!process.env.CI;
 
