@@ -7,7 +7,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, '..');
 
 // Filter out --listTests from arguments since vitest uses 'list' subcommand instead
-const args = process.argv.slice(2).filter(arg => arg !== '--listTests' && arg !== '--');
+const args = process.argv
+  .slice(2)
+  .filter(arg => arg !== '--listTests' && arg !== '--');
 
 // Run vitest list with --filesOnly to output just file paths (like jest --listTests)
 const child = spawn(
