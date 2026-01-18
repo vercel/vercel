@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import output from '../output-manager';
 
 /** Defines the options for executing Git commands */
 export type GitExecOptions = Readonly<{
@@ -11,6 +12,8 @@ export type GitExecOptions = Readonly<{
    */
   cwd: string;
 }>;
+
+export type GitRemoteMap = Readonly<Record<string, string>>;
 
 const DEFAULT_GIT_EXEC_OPTS = {
   unsafe: false,
@@ -30,7 +33,7 @@ const DEFAULT_GIT_EXEC_OPTS = {
  *
  * @throws {Error} Can throw an error if `opts.unsafe` is set to `true`
  */
-function getGitDirectory(opts: GitExecOptions): string | null {
+export function getGitDirectory(opts: GitExecOptions): string | null {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
@@ -40,8 +43,77 @@ function getGitDirectory(opts: GitExecOptions): string | null {
       stdio: ['ignore', 'pipe', 'ignore'],
     });
 
-    return gitConfigPath;
+    return gitConfigPath.trim();
   } catch (error) {
+    output.debug(`Failed to get Git directory: ${error}`);
+    if (unsafe) {
+      throw error;
+    }
+
+    return null;
+  }
+}
+
+/**
+ * Returns the absolute path to the root of the Git repository for the given cwd.
+ */
+export function getGitRootDirectory(opts: GitExecOptions): string | null {
+  const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
+
+  try {
+    const gitRoot = execSync('git rev-parse --show-toplevel', {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+
+    return gitRoot.trim();
+  } catch (error) {
+    output.debug(`Failed to get Git root directory: ${error}`);
+    if (unsafe) {
+      throw error;
+    }
+
+    return null;
+  }
+}
+
+/**
+ * Returns all Git remotes (fetch URLs) configured for the provided cwd.
+ */
+export function getGitRemoteUrls(opts: GitExecOptions): GitRemoteMap | null {
+  const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
+
+  try {
+    const remotesOutput = execSync('git remote -v', {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+
+    if (!remotesOutput) {
+      return null;
+    }
+
+    const remoteUrls: Record<string, string> = {};
+    for (const line of remotesOutput.split('\n')) {
+      const remoteLine = line.trim();
+      if (!remoteLine) continue;
+
+      const match = remoteLine.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/);
+      if (!match) {
+        continue;
+      }
+      const [, remoteName, remoteUrl, remoteType] = match;
+
+      if (remoteType === 'fetch' || !remoteUrls[remoteName]) {
+        remoteUrls[remoteName] = remoteUrl;
+      }
+    }
+
+    return Object.keys(remoteUrls).length ? remoteUrls : null;
+  } catch (error) {
+    output.debug(`Failed to get Git remote URLs: ${error}`);
     if (unsafe) {
       throw error;
     }

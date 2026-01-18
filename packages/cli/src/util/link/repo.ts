@@ -8,7 +8,6 @@ import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
-import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
@@ -20,7 +19,7 @@ import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
-import { isGitWorktreeOrSubmodule } from '../git-helpers';
+import { getGitRemoteUrls, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
 
 const home = homedir();
@@ -123,7 +122,7 @@ export async function ensureRepoLink(
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    const remoteUrls = await getRemoteUrls(join(rootPath, '.git/config'));
+    const remoteUrls = getGitRemoteUrls({ cwd: client.cwd });
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
     }
@@ -345,14 +344,6 @@ export async function findRepoRoot(
 ): Promise<string | undefined> {
   const { debug } = output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
-  /**
-   * If the current repo is a git submodule or git worktree '.git' is a file
-   * with a pointer to the "parent" git repository instead of a directory.
-   */
-  const GIT_PATH = isGitWorktreeOrSubmodule({ cwd: client.cwd })
-    ? normalize('.git')
-    : normalize('.git/config');
-
   for (const current of traverseUpDirectories({ start })) {
     if (current === home) {
       // Sometimes the $HOME directory is set up as a Git repo
@@ -365,7 +356,7 @@ export async function findRepoRoot(
     // if `.vercel/repo.json` exists (already linked),
     // then consider this the repo root
     const repoConfigPath = join(current, REPO_JSON_PATH);
-    let stat = await lstat(repoConfigPath).catch(err => {
+    const stat = await lstat(repoConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
@@ -373,19 +364,20 @@ export async function findRepoRoot(
       return current;
     }
 
-    // if `.git/config` exists (unlinked),
-    // then consider this the repo root
-    const gitConfigPath = join(current, GIT_PATH);
-    stat = await lstat(gitConfigPath).catch(err => {
-      if (err.code !== 'ENOENT') throw err;
-    });
-    if (stat) {
-      debug(`Found "${GIT_PATH}" - detected "${current}" as repo root`);
-      return current;
-    }
+    // continue searching upwards if repo.json not found
   }
 
-  debug('Aborting search for repo root');
+  const gitRoot = getGitRootDirectory({ cwd: start });
+  if (gitRoot && normalize(gitRoot) !== normalize(home)) {
+    debug(`Detected Git root via git: "${gitRoot}"`);
+    return gitRoot;
+  }
+
+  if (gitRoot && normalize(gitRoot) === normalize(home)) {
+    debug('Git root resolved to home directory, aborting');
+  } else {
+    debug('Aborting search for repo root');
+  }
 }
 
 function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
