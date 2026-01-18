@@ -128,6 +128,8 @@ Many tests in this repo deploy to Vercel. When a test fails, investigate whether
 
 4. **For CI failures**, deployment URLs are usually printed in the test output. Copy the URL and run `vercel logs <url> --scope zero-conf-vtest314` locally to see the full build output.
 
+5. **If the Vercel CLI returns an authentication error** (e.g., "No existing credentials found"), provide the exact command to the user so they can run it themselves after authenticating. Then resume the investigation once the user provides the output or confirms auth is available.
+
 ## Package Development
 
 Each package follows this structure:
