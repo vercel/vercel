@@ -130,6 +130,27 @@ Many tests in this repo deploy to Vercel. When a test fails, investigate whether
 
 5. **If the Vercel CLI returns an authentication error** (e.g., "No existing credentials found"), provide the exact command to the user so they can run it themselves after authenticating. Then resume the investigation once the user provides the output or confirms auth is available.
 
+6. **Compare with previous successful deployments** to determine if an issue is new:
+
+   ```bash
+   # List recent deployments to find successful vs failed ones
+   vercel ls <project-name> --scope zero-conf-vtest314
+
+   # Get deployment ID from inspect
+   vercel inspect <deployment-url> --scope zero-conf-vtest314
+   ```
+
+   Note: `vercel logs` only works for deployments in "Ready" state. For failed deployments or to get full build logs, use the Vercel API directly:
+
+   ```bash
+   # Get build logs via API (works for both successful and failed deployments)
+   curl -s -H "Authorization: Bearer $(cat ~/.vercel/auth.json | jq -r '.token')" \
+     "https://api.vercel.com/v2/deployments/<deployment-id>/events?teamId=team_dC6tJLPHCIbKnx9RAz6Dvsya" \
+     | jq -r '.[].payload.text // empty'
+   ```
+
+   Compare logs between a failing and a recent successful deployment to identify what changed.
+
 ## Package Development
 
 Each package follows this structure:
