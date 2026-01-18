@@ -229,6 +229,15 @@ export default async (client: Client): Promise<number> => {
     flags: parsedArguments.flags,
   });
 
+  // Validate that --skip-domain is only used with production deployments
+  const skipDomain = parsedArguments.flags['--skip-domain'];
+  if (skipDomain && target !== 'production') {
+    output.error(
+      'The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+    );
+    return 1;
+  }
+
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
     typeof parsedArchive === 'string' &&
