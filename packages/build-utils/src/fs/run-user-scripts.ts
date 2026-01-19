@@ -25,7 +25,7 @@ import {
   getSupportedBunVersion,
   isBunVersion,
 } from './node-version';
-import { readConfigFile } from './read-config-file';
+import { readConfigFile, readLockfileVersion } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
 import yaml from 'js-yaml';
@@ -432,12 +432,8 @@ export async function scanParentDirs(
   const bunLockPath = bunLockTextPath ?? bunLockBinPath;
   const [packageLockJson, pnpmLockYaml, bunLock, yarnLock, vltLock] =
     await Promise.all([
-      npmLockPath
-        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-        : null,
-      pnpmLockPath
-        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-        : null,
+      npmLockPath ? readLockfileVersion(npmLockPath) : null,
+      pnpmLockPath ? readLockfileVersion(pnpmLockPath) : null,
       bunLockPath ? fs.readFile(bunLockPath) : null,
       yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
       vltLockPath ? readConfigFile(vltLockPath) : null,
