@@ -114,10 +114,10 @@ function extractPnpmLockfileVersion(content: string): number | null {
 }
 
 /**
- * Extracts lockfileVersion from package-lock.json header.
+ * Extracts lockfileVersion from package-lock.json or bun.lock header.
  * Format: "lockfileVersion": 2
  */
-function extractNpmLockfileVersion(content: string): number | null {
+function extractJsonLockfileVersion(content: string): number | null {
   const match = content.match(/"lockfileVersion":\s*(\d+)/);
   if (match) {
     return Number(match[1]);
@@ -146,8 +146,8 @@ export async function readLockfileVersion(
 
   if (filename === 'pnpm-lock.yaml') {
     lockfileVersion = extractPnpmLockfileVersion(header);
-  } else if (filename === 'package-lock.json') {
-    lockfileVersion = extractNpmLockfileVersion(header);
+  } else if (filename === 'package-lock.json' || filename === 'bun.lock') {
+    lockfileVersion = extractJsonLockfileVersion(header);
   }
 
   // If we found the version in the header, return it
@@ -159,11 +159,11 @@ export async function readLockfileVersion(
   const config = await readConfigFile<{ lockfileVersion: number | string }>(
     filePath
   );
-  
+
   // Ensure lockfileVersion is always a number, even if YAML parsing returns a string
   if (config && config.lockfileVersion) {
     return { lockfileVersion: Number(config.lockfileVersion) };
   }
-  
+
   return null;
 }

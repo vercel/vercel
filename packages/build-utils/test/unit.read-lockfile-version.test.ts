@@ -71,6 +71,30 @@ describe('Test `readLockfileVersion()`', () => {
     });
   });
 
+  describe('bun.lock', () => {
+    it('should extract lockfileVersion 0 from bun.lock', async () => {
+      const lockfilePath = join(fixturesPath, '32-bun-v1-lock', 'bun.lock');
+      const result = await readLockfileVersion(lockfilePath);
+      expect(result).toEqual({ lockfileVersion: 0 });
+    });
+
+    it('should extract lockfileVersion 1 from bun.lock', async () => {
+      const lockfilePath = join(fixturesPath, '45-bun-lock-v1', 'bun.lock');
+      const result = await readLockfileVersion(lockfilePath);
+      expect(result).toEqual({ lockfileVersion: 1 });
+    });
+
+    it('should handle bun.lock with various formats', async () => {
+      const testFile = join(tempDir, 'bun.lock');
+      await writeFile(
+        testFile,
+        '{\n  "lockfileVersion": 2,\n  "workspaces": {}\n}'
+      );
+      const result = await readLockfileVersion(testFile);
+      expect(result).toEqual({ lockfileVersion: 2 });
+    });
+  });
+
   describe('non-existent files', () => {
     it('should return null for non-existent pnpm-lock.yaml', async () => {
       const result = await readLockfileVersion(
@@ -82,6 +106,13 @@ describe('Test `readLockfileVersion()`', () => {
     it('should return null for non-existent package-lock.json', async () => {
       const result = await readLockfileVersion(
         join(tempDir, 'non-existent', 'package-lock.json')
+      );
+      expect(result).toBeNull();
+    });
+
+    it('should return null for non-existent bun.lock', async () => {
+      const result = await readLockfileVersion(
+        join(tempDir, 'non-existent', 'bun.lock')
       );
       expect(result).toBeNull();
     });

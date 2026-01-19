@@ -809,6 +809,16 @@ it('should return cliType bun and correct lock file for bun v1 with bun.lock', a
   const fixture = path.join(__dirname, 'fixtures', '32-bun-v1-lock');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('bun');
+  // lockfileVersion is read from the actual bun.lock file content
+  expect(result.lockfileVersion).toEqual(0);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lock'));
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should return cliType bun and lockfileVersion 1 for bun.lock v1', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '45-bun-lock-v1');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('bun');
   expect(result.lockfileVersion).toEqual(1);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lock'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));

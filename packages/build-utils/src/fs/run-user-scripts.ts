@@ -430,14 +430,22 @@ export async function scanParentDirs(
   let cliType: CliType;
 
   const bunLockPath = bunLockTextPath ?? bunLockBinPath;
-  const [packageLockJson, pnpmLockYaml, bunLock, yarnLock, vltLock] =
-    await Promise.all([
-      npmLockPath ? readLockfileVersion(npmLockPath) : null,
-      pnpmLockPath ? readLockfileVersion(pnpmLockPath) : null,
-      bunLockPath ? fs.readFile(bunLockPath) : null,
-      yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
-      vltLockPath ? readConfigFile(vltLockPath) : null,
-    ]);
+  const [
+    packageLockJson,
+    pnpmLockYaml,
+    bunLockText,
+    bunLockBin,
+    yarnLock,
+    vltLock,
+  ] = await Promise.all([
+    npmLockPath ? readLockfileVersion(npmLockPath) : null,
+    pnpmLockPath ? readLockfileVersion(pnpmLockPath) : null,
+    bunLockTextPath ? readLockfileVersion(bunLockTextPath) : null,
+    bunLockBinPath ? fs.pathExists(bunLockBinPath) : null,
+    yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
+    vltLockPath ? readConfigFile(vltLockPath) : null,
+  ]);
+  const bunLock = bunLockText || bunLockBin;
 
   const rootProjectInfo = readPackageJson
     ? await readProjectRootInfo({
@@ -458,7 +466,8 @@ export async function scanParentDirs(
   if (bunLock && yarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    lockfileVersion = bunLockTextPath ? 1 : 0;
+    // Use parsed version for bun.lock (text), fallback to 0 for bun.lockb (binary)
+    lockfileVersion = bunLockText?.lockfileVersion ?? 0;
   } else if (yarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
@@ -474,7 +483,8 @@ export async function scanParentDirs(
   } else if (bunLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    lockfileVersion = bunLockTextPath ? 1 : 0;
+    // Use parsed version for bun.lock (text), fallback to 0 for bun.lockb (binary)
+    lockfileVersion = bunLockText?.lockfileVersion ?? 0;
   } else if (vltLock) {
     cliType = 'vlt';
     lockfilePath = vltLockPath;
