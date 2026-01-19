@@ -35,6 +35,7 @@ import {
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
+  findPackageJson,
   traverseUpDirectories,
 } from './fs/run-user-scripts';
 import {
@@ -102,6 +103,7 @@ export {
   isDirectory,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  findPackageJson,
   getIgnoreFilter,
   cloneEnv,
   hardLinkDir,
