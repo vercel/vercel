@@ -3,7 +3,7 @@ import {
   DEFAULT_PYTHON_VERSION,
 } from '../src/version';
 import { build } from '../src/index';
-import { getProtectedUvEnv, createVenvEnv } from '../src/utils';
+import { getProtectedUvEnv, createVenvEnv, getVenvBinDir } from '../src/utils';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -1301,10 +1301,11 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
     it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'manual';
       process.env.PATH = '/usr/bin';
-      const env = createVenvEnv('/path/to/venv');
+      const venvPath = '/path/to/venv';
+      const env = createVenvEnv(venvPath);
 
-      expect(env.VIRTUAL_ENV).toBe('/path/to/venv');
-      expect(env.PATH).toContain('/path/to/venv');
+      expect(env.VIRTUAL_ENV).toBe(venvPath);
+      expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
     });
