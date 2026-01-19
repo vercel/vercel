@@ -122,7 +122,7 @@ export async function ensureRepoLink(
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    const remoteUrls = getGitRemoteUrls({ cwd: client.cwd });
+    const remoteUrls = await getGitRemoteUrls({ cwd: client.cwd });
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
     }
@@ -334,9 +334,10 @@ export async function ensureRepoLink(
 }
 
 /**
- * Given a `start` directory, traverses up the directory hierarchy until
- * the nearest `.git/config` file is found. Returns the directory where
- * the Git config was found, or `undefined` when no Git repo was found.
+ * Given a `start` directory, finds the root of the Git repository.
+ * First checks for an existing `.vercel/repo.json` file, then falls back
+ * to using `git rev-parse --show-toplevel`. Returns `undefined` when no
+ * Git repo was found.
  */
 export async function findRepoRoot(
   client: Client,
@@ -367,7 +368,7 @@ export async function findRepoRoot(
     // continue searching upwards if repo.json not found
   }
 
-  const gitRoot = getGitRootDirectory({ cwd: start });
+  const gitRoot = await getGitRootDirectory({ cwd: start });
   if (gitRoot && normalize(gitRoot) !== normalize(home)) {
     debug(`Detected Git root via git: "${gitRoot}"`);
     return gitRoot;

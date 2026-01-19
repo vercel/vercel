@@ -3,9 +3,8 @@ import { connectGitRepository } from '../../../../src/util/link/setup-and-link';
 import { client } from '../../../mocks/client';
 
 // Mock modules
-vi.mock('../../../../src/util/create-git-meta', () => ({
-  parseGitConfig: vi.fn(),
-  pluckRemoteUrls: vi.fn(),
+vi.mock('../../../../src/util/git-helpers', () => ({
+  getGitRemoteUrls: vi.fn(),
 }));
 
 vi.mock('../../../../src/util/git/connect-git-provider', () => ({
@@ -15,8 +14,7 @@ vi.mock('../../../../src/util/git/connect-git-provider', () => ({
 }));
 
 describe('connectGitRepository()', () => {
-  let parseGitConfig: any;
-  let pluckRemoteUrls: any;
+  let getGitRemoteUrls: any;
   let formatProvider: any;
   let selectAndParseRemoteUrl: any;
   let checkExistsAndConnect: any;
@@ -25,13 +23,12 @@ describe('connectGitRepository()', () => {
     vi.clearAllMocks();
 
     // Import the mocked modules
-    const gitMeta = await import('../../../../src/util/create-git-meta');
+    const gitHelpers = await import('../../../../src/util/git-helpers');
     const gitProvider = await import(
       '../../../../src/util/git/connect-git-provider'
     );
 
-    parseGitConfig = gitMeta.parseGitConfig;
-    pluckRemoteUrls = gitMeta.pluckRemoteUrls;
+    getGitRemoteUrls = gitHelpers.getGitRemoteUrls;
     formatProvider = gitProvider.formatProvider;
     selectAndParseRemoteUrl = gitProvider.selectAndParseRemoteUrl;
     checkExistsAndConnect = gitProvider.checkExistsAndConnect;
@@ -44,10 +41,7 @@ describe('connectGitRepository()', () => {
   it('should connect git when exactly one remote is found', async () => {
     const testPath = '/test-project';
 
-    vi.mocked(parseGitConfig).mockResolvedValue({
-      remote: { origin: { url: 'https://github.com/user/repo.git' } },
-    });
-    vi.mocked(pluckRemoteUrls).mockReturnValue({
+    vi.mocked(getGitRemoteUrls).mockResolvedValue({
       origin: 'https://github.com/user/repo.git',
     });
     vi.mocked(selectAndParseRemoteUrl).mockResolvedValue({
@@ -80,14 +74,8 @@ describe('connectGitRepository()', () => {
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    // Mock git config parsing with multiple remotes
-    vi.mocked(parseGitConfig).mockResolvedValue({
-      remote: {
-        origin: { url: 'https://github.com/user/repo.git' },
-        upstream: { url: 'https://github.com/vercel/repo.git' },
-      },
-    });
-    vi.mocked(pluckRemoteUrls).mockReturnValue({
+    // Mock git remote URLs with multiple remotes
+    vi.mocked(getGitRemoteUrls).mockResolvedValue({
       origin: 'https://github.com/user/repo.git',
       upstream: 'https://github.com/vercel/repo.git',
     });
@@ -120,11 +108,8 @@ describe('connectGitRepository()', () => {
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    // Mock git config parsing with no remotes
-    vi.mocked(parseGitConfig).mockResolvedValue({
-      core: { repositoryformatversion: '0' },
-    });
-    vi.mocked(pluckRemoteUrls).mockReturnValue({});
+    // Mock git remote URLs returning empty object
+    vi.mocked(getGitRemoteUrls).mockResolvedValue({});
 
     await connectGitRepository(client, testPath, project, true, org);
 
@@ -137,8 +122,8 @@ describe('connectGitRepository()', () => {
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    // Mock no git config found
-    vi.mocked(parseGitConfig).mockResolvedValue(undefined);
+    // Mock no git repo found
+    vi.mocked(getGitRemoteUrls).mockResolvedValue(null);
 
     await connectGitRepository(client, testPath, project, true, org);
 
@@ -151,11 +136,8 @@ describe('connectGitRepository()', () => {
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    // Mock git config parsing with invalid URL
-    vi.mocked(parseGitConfig).mockResolvedValue({
-      remote: { origin: { url: 'invalid-url' } },
-    });
-    vi.mocked(pluckRemoteUrls).mockReturnValue({ origin: 'invalid-url' });
+    // Mock git remote URLs with invalid URL
+    vi.mocked(getGitRemoteUrls).mockResolvedValue({ origin: 'invalid-url' });
     vi.mocked(selectAndParseRemoteUrl).mockResolvedValue(null); // Invalid URL parsing
 
     await connectGitRepository(client, testPath, project, true, org);
@@ -170,10 +152,7 @@ describe('connectGitRepository()', () => {
     const project = { id: 'test-project-id' };
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
-    vi.mocked(parseGitConfig).mockResolvedValue({
-      remote: { origin: { url: 'https://github.com/user/repo.git' } },
-    });
-    vi.mocked(pluckRemoteUrls).mockReturnValue({
+    vi.mocked(getGitRemoteUrls).mockResolvedValue({
       origin: 'https://github.com/user/repo.git',
     });
     vi.mocked(selectAndParseRemoteUrl).mockResolvedValue({

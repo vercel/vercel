@@ -2,14 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
 import os from 'os';
-import createLineIterator from 'line-async-iterator';
-import { getWriteableDirectory } from '@vercel/build-utils';
-import {
-  createGitMeta,
-  getOriginUrl,
-  getRemoteUrls,
-  isDirty,
-} from '../../../../src/util/create-git-meta';
+import { createGitMeta, isDirty } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
@@ -22,44 +15,6 @@ vi.setConfig({ testTimeout: 10 * 1000 });
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
-
-describe('getOriginUrl', () => {
-  it('does not provide data for no-origin', async () => {
-    const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getOriginUrl(configPath);
-    expect(data).toBeNull();
-  });
-  it('displays debug message when repo data cannot be parsed', async () => {
-    const dir = await getWriteableDirectory();
-    output.initialize({ debug: true });
-    const data = await getOriginUrl(join(dir, 'git/config'));
-    expect(data).toBeNull();
-    await expect(client.stderr).toOutput('Error while parsing repo data');
-  });
-});
-
-describe('getRemoteUrls', () => {
-  it('does not provide data when there are no remote urls', async () => {
-    const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getRemoteUrls(configPath);
-    expect(data).toBeUndefined();
-  });
-  it('returns an object when multiple urls are present', async () => {
-    const configPath = join(fixture('multiple-remotes'), 'git/config');
-    const data = await getRemoteUrls(configPath);
-    expect(data).toMatchObject({
-      origin: 'https://github.com/user/repo',
-      secondary: 'https://github.com/user/repo2',
-    });
-  });
-  it('returns an object for origin url', async () => {
-    const configPath = join(fixture('test-github'), 'git/config');
-    const data = await getRemoteUrls(configPath);
-    expect(data).toMatchObject({
-      origin: 'https://github.com/user/repo.git',
-    });
-  });
-});
 
 describe('parseRepoUrl', () => {
   it('should be null when a url does not match the regex', () => {
@@ -306,10 +261,8 @@ describe('createGitMeta', () => {
       output.initialize({ debug: true });
       const data = await createGitMeta(tmpDir);
 
-      const lines = createLineIterator(client.stderr);
-
-      const line = await lines.next();
-      expect(line.value).toContain(
+      // Should see debug messages about failures and return undefined
+      await expect(client.stderr).toOutput(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
 

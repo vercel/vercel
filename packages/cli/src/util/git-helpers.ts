@@ -1,5 +1,8 @@
-import { execSync } from 'node:child_process';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 import output from '../output-manager';
+
+const execAsync = promisify(exec);
 
 /** Defines the options for executing Git commands */
 export type GitExecOptions = Readonly<{
@@ -27,23 +30,20 @@ const DEFAULT_GIT_EXEC_OPTS = {
  * determining if the current working environment is within a Git repository.
  *
  * @param {GitExecOptions} opts - The options for executing the Git command.
- * @returns {string | null} The path to the Git directory if found; otherwise, null.
+ * @returns {Promise<string | null>} The path to the Git directory if found; otherwise, null.
  * If `opts.unsafe` is set to true and an error occurs, the function will throw
  * an error instead of returning null.
  *
  * @throws {Error} Can throw an error if `opts.unsafe` is set to `true`
  */
-export function getGitDirectory(opts: GitExecOptions): string | null {
+export async function getGitDirectory(
+  opts: GitExecOptions
+): Promise<string | null> {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
-    const gitConfigPath = execSync('git rev-parse --git-dir', {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-
-    return gitConfigPath.trim();
+    const { stdout } = await execAsync('git rev-parse --git-dir', { cwd });
+    return stdout.trim();
   } catch (error) {
     output.debug(`Failed to get Git directory: ${error}`);
     if (unsafe) {
@@ -57,17 +57,16 @@ export function getGitDirectory(opts: GitExecOptions): string | null {
 /**
  * Returns the absolute path to the root of the Git repository for the given cwd.
  */
-export function getGitRootDirectory(opts: GitExecOptions): string | null {
+export async function getGitRootDirectory(
+  opts: GitExecOptions
+): Promise<string | null> {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
-    const gitRoot = execSync('git rev-parse --show-toplevel', {
+    const { stdout } = await execAsync('git rev-parse --show-toplevel', {
       cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
     });
-
-    return gitRoot.trim();
+    return stdout.trim();
   } catch (error) {
     output.debug(`Failed to get Git root directory: ${error}`);
     if (unsafe) {
@@ -81,15 +80,14 @@ export function getGitRootDirectory(opts: GitExecOptions): string | null {
 /**
  * Returns all Git remotes (fetch URLs) configured for the provided cwd.
  */
-export function getGitRemoteUrls(opts: GitExecOptions): GitRemoteMap | null {
+export async function getGitRemoteUrls(
+  opts: GitExecOptions
+): Promise<GitRemoteMap | null> {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
-    const remotesOutput = execSync('git remote -v', {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
+    const { stdout } = await execAsync('git remote -v', { cwd });
+    const remotesOutput = stdout.trim();
 
     if (!remotesOutput) {
       return null;
@@ -106,7 +104,7 @@ export function getGitRemoteUrls(opts: GitExecOptions): GitRemoteMap | null {
       }
       const [, remoteName, remoteUrl, remoteType] = match;
 
-      if (remoteType === 'fetch' || !remoteUrls[remoteName]) {
+      if (remoteType === 'fetch') {
         remoteUrls[remoteName] = remoteUrl;
       }
     }
@@ -123,37 +121,11 @@ export function getGitRemoteUrls(opts: GitExecOptions): GitRemoteMap | null {
 }
 
 /**
- * Checks if a given directory is a Git worktree or Git submodule.
- *
- * A Git worktree is a linked working tree, which allows you to have multiple
- * working trees attached to the same repository. This function checks if the
- * specified directory (or the current working directory if none is specified)
- * is a Git worktree by looking for the '.git/worktrees/' path in the Git
- * configuration.
- *
- * A Git submodule is a repository embedded inside another repository. This
- * function checks if the current working directory or the specified directory
- * is part of a Git submodule by looking for the '.git/modules/' path in the
- * Git configuration.
- *
- * @param {GitExecOptions} [opts={}] The options to use. Options include:
- *        - `cwd`: The directory to check. Defaults to `process.cwd()`.
- *        - `unsafe`: If true, throws if an error occurs during execution.
- *        Defaults to `false`.
- * @returns {boolean} Returns `true` if the directory is a Git worktree or Git
- * Submodule, otherwise `false`.
- *
- * @throws {Error} Can throw an error if `opts.unsafe` is set to `true`
+ * Returns the URL of the "origin" remote for the given cwd, or null if not found.
  */
-export function isGitWorktreeOrSubmodule(opts: GitExecOptions): boolean {
-  const gitDir = getGitDirectory(opts);
-
-  if (gitDir === null) {
-    return false;
-  }
-
-  const isGitWorktree = gitDir.includes('.git/worktrees/');
-  const isGitSubmodule = gitDir.includes('.git/modules/');
-
-  return isGitWorktree || isGitSubmodule;
+export async function getGitOriginUrl(
+  opts: GitExecOptions
+): Promise<string | null> {
+  const remoteUrls = await getGitRemoteUrls(opts);
+  return remoteUrls?.['origin'] ?? null;
 }

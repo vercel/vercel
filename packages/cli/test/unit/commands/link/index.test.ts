@@ -1,15 +1,9 @@
 import { EOL } from 'node:os';
+import { execSync } from 'node:child_process';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
-import {
-  readJSON,
-  mkdirp,
-  writeFile,
-  writeJSON,
-  pathExists,
-  remove,
-} from 'fs-extra';
+import { mkdirp, readJSON, writeJSON, pathExists, remove } from 'fs-extra';
 import link from '../../../../src/commands/link';
 import pull from '../../../../src/commands/env/pull';
 import { client } from '../../../mocks/client';
@@ -30,6 +24,22 @@ import { ProjectNotFound } from '../../../../src/util/errors-ts';
 // Mock the env pull command
 vi.mock('../../../../src/commands/env/pull');
 const mockPull = vi.mocked(pull);
+
+/**
+ * Initialize a git repository with a remote configured.
+ * This is required because git-helpers uses `git` commands that need a real repo.
+ */
+function initGitRepo(cwd: string, remoteName: string, remoteUrl: string): void {
+  execSync('git init', { cwd, stdio: 'ignore' });
+  execSync('git config user.email "test@test.com"', { cwd, stdio: 'ignore' });
+  execSync('git config user.name "Test"', { cwd, stdio: 'ignore' });
+  execSync(`git remote add ${remoteName} ${remoteUrl}`, {
+    cwd,
+    stdio: 'ignore',
+  });
+  // Create an initial commit so the repo has a HEAD
+  execSync('git commit --allow-empty -m "initial"', { cwd, stdio: 'ignore' });
+}
 
 describe('link', () => {
   beforeEach(() => {
@@ -59,13 +69,9 @@ describe('link', () => {
       const user = useUser();
       const cwd = setupTmpDir();
 
-      // Set up a `.git/config` file to simulate a repo
-      await mkdirp(join(cwd, '.git'));
+      // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/test/test.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
-      );
+      initGitRepo(cwd, 'upstream', repoUrl);
 
       useTeams('team_dummy');
       const { project } = useProject({
@@ -125,13 +131,9 @@ describe('link', () => {
       const user = useUser();
       const cwd = setupTmpDir();
 
-      // Set up a `.git/config` file to simulate a repo
-      await mkdirp(join(cwd, '.git'));
+      // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/user/repo.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
-      );
+      initGitRepo(cwd, 'upstream', repoUrl);
 
       // Set up the root-level `package.json` to simulate a Next.js project
       await writeJSON(join(cwd, 'package.json'), {
@@ -203,12 +205,8 @@ describe('link', () => {
       const user = useUser();
       const cwd = setupTmpDir();
 
-      await mkdirp(join(cwd, '.git'));
       const repoUrl = 'https://github.com/user/repo.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
-      );
+      initGitRepo(cwd, 'origin', repoUrl);
 
       await writeJSON(join(cwd, 'package.json'), {
         name: 'my-monorepo',
@@ -309,13 +307,9 @@ describe('link', () => {
       useUser();
       const cwd = setupTmpDir();
 
-      // Set up a `.git/config` file to simulate a repo
-      await mkdirp(join(cwd, '.git'));
+      // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/user/repo.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
-      );
+      initGitRepo(cwd, 'upstream', repoUrl);
 
       // Set up the root-level `package.json` to simulate a Next.js project
       await writeJSON(join(cwd, 'package.json'), {
@@ -370,13 +364,9 @@ describe('link', () => {
       useUser();
       const cwd = setupTmpDir();
 
-      // Set up a `.git/config` file to simulate a repo
-      await mkdirp(join(cwd, '.git'));
+      // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/test/test.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
-      );
+      initGitRepo(cwd, 'upstream', repoUrl);
 
       useTeams('team_dummy');
       useProject({

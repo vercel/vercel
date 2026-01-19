@@ -6,6 +6,7 @@ import {
   getGitDirectory,
   getGitRootDirectory,
   getGitRemoteUrls,
+  getGitOriginUrl,
 } from '../../../src/util/git-helpers';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
 
@@ -14,46 +15,60 @@ const vercelRepoRoot = join(__dirname, '../../../../..');
 
 describe('git-helpers', () => {
   describe('getGitDirectory()', () => {
-    it('should return .git for a normal repo', () => {
-      const result = getGitDirectory({ cwd: vercelRepoRoot });
+    it('should return .git for a normal repo', async () => {
+      const result = await getGitDirectory({ cwd: vercelRepoRoot });
       expect(result).toEqual('.git');
     });
 
-    it('should return null for non-git directory', () => {
+    it('should return null for non-git directory', async () => {
       const cwd = setupTmpDir();
-      const result = getGitDirectory({ cwd });
+      const result = await getGitDirectory({ cwd });
       expect(result).toEqual(null);
     });
   });
 
   describe('getGitRootDirectory()', () => {
-    it('should return repo root from root', () => {
-      const result = getGitRootDirectory({ cwd: vercelRepoRoot });
+    it('should return repo root from root', async () => {
+      const result = await getGitRootDirectory({ cwd: vercelRepoRoot });
       expect(result).toEqual(vercelRepoRoot);
     });
 
-    it('should return repo root from subdirectory', () => {
-      const result = getGitRootDirectory({ cwd: __dirname });
+    it('should return repo root from subdirectory', async () => {
+      const result = await getGitRootDirectory({ cwd: __dirname });
       expect(result).toEqual(vercelRepoRoot);
     });
 
-    it('should return null for non-git directory', () => {
+    it('should return null for non-git directory', async () => {
       const cwd = setupTmpDir();
-      const result = getGitRootDirectory({ cwd });
+      const result = await getGitRootDirectory({ cwd });
       expect(result).toEqual(null);
     });
   });
 
   describe('getGitRemoteUrls()', () => {
-    it('should return remote URLs for a repo with remotes', () => {
-      const result = getGitRemoteUrls({ cwd: vercelRepoRoot });
+    it('should return remote URLs for a repo with remotes', async () => {
+      const result = await getGitRemoteUrls({ cwd: vercelRepoRoot });
       expect(result).not.toBeNull();
       expect(result).toHaveProperty('origin');
     });
 
-    it('should return null for non-git directory', () => {
+    it('should return null for non-git directory', async () => {
       const cwd = setupTmpDir();
-      const result = getGitRemoteUrls({ cwd });
+      const result = await getGitRemoteUrls({ cwd });
+      expect(result).toEqual(null);
+    });
+  });
+
+  describe('getGitOriginUrl()', () => {
+    it('should return origin URL for a repo with origin remote', async () => {
+      const result = await getGitOriginUrl({ cwd: vercelRepoRoot });
+      expect(result).not.toBeNull();
+      expect(typeof result).toBe('string');
+    });
+
+    it('should return null for non-git directory', async () => {
+      const cwd = setupTmpDir();
+      const result = await getGitOriginUrl({ cwd });
       expect(result).toEqual(null);
     });
   });
@@ -102,26 +117,31 @@ describe('git-helpers', () => {
       expect(content).toContain('gitdir:');
     });
 
-    it('getGitDirectory() should return path containing worktrees/', () => {
-      const result = getGitDirectory({ cwd: worktreePath });
+    it('getGitDirectory() should return path containing worktrees/', async () => {
+      const result = await getGitDirectory({ cwd: worktreePath });
       expect(result).not.toBeNull();
       // For bare repo worktrees, the path is like /path/to/repo.git/worktrees/worktree
       // NOT like /path/to/.git/worktrees/worktree
       expect(result).toContain('worktrees/');
     });
 
-    it('getGitRootDirectory() should return the worktree path', () => {
-      const result = getGitRootDirectory({ cwd: worktreePath });
+    it('getGitRootDirectory() should return the worktree path', async () => {
+      const result = await getGitRootDirectory({ cwd: worktreePath });
       expect(result).toEqual(worktreePath);
     });
 
-    it('getGitRemoteUrls() should return remotes from the bare repo', () => {
-      const result = getGitRemoteUrls({ cwd: worktreePath });
+    it('getGitRemoteUrls() should return remotes from the bare repo', async () => {
+      const result = await getGitRemoteUrls({ cwd: worktreePath });
       expect(result).not.toBeNull();
       expect(result).toHaveProperty('origin');
       expect(result?.origin).toEqual(
         'https://github.com/example/test-repo.git'
       );
+    });
+
+    it('getGitOriginUrl() should return origin URL from the bare repo', async () => {
+      const result = await getGitOriginUrl({ cwd: worktreePath });
+      expect(result).toEqual('https://github.com/example/test-repo.git');
     });
   });
 });

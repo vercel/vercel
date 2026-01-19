@@ -1,9 +1,8 @@
 import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
-import { join } from 'path';
 import type { Org, Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
-import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
+import { getGitRemoteUrls } from '../../util/git-helpers';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -30,7 +29,7 @@ interface ConnectArgParams {
 }
 
 interface ConnectGitArgParams extends ConnectArgParams {
-  gitConfig: Dictionary<any>;
+  remoteUrls: Dictionary<string>;
 }
 
 interface PromptConnectArgParams {
@@ -90,9 +89,8 @@ export default async function connect(client: Client, argv: string[]) {
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  // get project from .git
-  const gitConfigPath = join(cwd, '.git/config');
-  const gitConfig = await parseGitConfig(gitConfigPath);
+  // get remote URLs from git
+  const remoteUrls = await getGitRemoteUrls({ cwd });
 
   if (repoArg) {
     // parse repo arg
@@ -103,13 +101,13 @@ export default async function connect(client: Client, argv: string[]) {
       );
       return 1;
     }
-    if (gitConfig) {
+    if (remoteUrls) {
       return await connectArgWithLocalGit({
         client,
         org,
         project,
         confirm,
-        gitConfig,
+        remoteUrls,
         repoInfo: parsedUrlArg,
       });
     }
@@ -122,7 +120,7 @@ export default async function connect(client: Client, argv: string[]) {
     });
   }
 
-  if (!gitConfig) {
+  if (!remoteUrls) {
     output.error(
       `No local Git repository found. Run ${chalk.cyan(
         '`git clone <url>`'
@@ -130,8 +128,7 @@ export default async function connect(client: Client, argv: string[]) {
     );
     return 1;
   }
-  const remoteUrls = pluckRemoteUrls(gitConfig);
-  if (!remoteUrls) {
+  if (Object.keys(remoteUrls).length === 0) {
     output.error(
       `No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
         '`git remote --help`'
@@ -203,39 +200,33 @@ async function connectArgWithLocalGit({
   org,
   project,
   confirm,
-  gitConfig,
+  remoteUrls,
   repoInfo,
 }: ConnectGitArgParams) {
-  const remoteUrls = pluckRemoteUrls(gitConfig);
-  if (remoteUrls) {
-    const shouldConnect = await promptConnectArg({
-      client,
-      yes: confirm,
-      repoInfo,
-      remoteUrls,
-    });
-    if (!shouldConnect) {
-      return 1;
-    }
-    if (shouldConnect) {
-      const result = await checkExistsAndConnect({
-        client,
-        confirm,
-        gitProviderLink: project.link,
-        org,
-        gitOrg: repoInfo.org,
-        project,
-        provider: repoInfo.provider,
-        repo: repoInfo.repo,
-        repoPath: `${repoInfo.org}/${repoInfo.repo}`,
-      });
-      if (typeof result === 'number') {
-        return result;
-      }
-    }
-    return 0;
+  const shouldConnect = await promptConnectArg({
+    client,
+    yes: confirm,
+    repoInfo,
+    remoteUrls,
+  });
+  if (!shouldConnect) {
+    return 1;
   }
-  return await connectArg({ client, confirm, org, project, repoInfo });
+  const result = await checkExistsAndConnect({
+    client,
+    confirm,
+    gitProviderLink: project.link,
+    org,
+    gitOrg: repoInfo.org,
+    project,
+    provider: repoInfo.provider,
+    repo: repoInfo.repo,
+    repoPath: `${repoInfo.org}/${repoInfo.repo}`,
+  });
+  if (typeof result === 'number') {
+    return result;
+  }
+  return 0;
 }
 
 async function promptConnectArg({
