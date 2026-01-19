@@ -1,0 +1,15 @@
+{
+  "name": "api",
+  "type": "module",
+  "scripts": {
+    "dev": "vc dev"
+  },
+  "dependencies": {
+    "@repo/echo": "workspace:*",
+    "hono": "^4.8.10"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.8.3"
+  }
+}

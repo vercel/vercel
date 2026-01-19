@@ -1,5 +1,17 @@
 # @vercel/go
 
+## 3.3.2
+
+### Patch Changes
+
+- Set runtimeLanguage to 'go' when creating Lambda functions ([#14628](https://github.com/vercel/vercel/pull/14628))
+
+## 3.3.1
+
+### Patch Changes
+
+- Use deterministic tmpdir when setting GOMODCACHE and GOCACHE dirs. ([#14626](https://github.com/vercel/vercel/pull/14626))
+
 ## 3.3.0
 
 ### Minor Changes

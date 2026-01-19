@@ -1,5 +1,31 @@
 # @vercel/next
 
+## 4.15.15
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+## 4.15.14
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+## 4.15.13
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+## 4.15.12
+
+### Patch Changes
+
+- Add error status header for \_error rendering ([#14588](https://github.com/vercel/vercel/pull/14588))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
 ## 4.15.11
 
 ### Patch Changes

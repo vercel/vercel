@@ -259,6 +259,11 @@ export async function runShellScript(
   return true;
 }
 
+/**
+ * @deprecated Don't use this function directly.
+ *
+ * Use getEnvForPackageManager() instead when within a builder.
+ */
 export function getSpawnOptions(
   meta: Meta,
   nodeVersion: NodeVersion
@@ -328,20 +333,20 @@ export async function getNodeVersion(
       !intersects(configuredVersion, supportedNodeVersion.range)
     ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
       );
     }
 
     if (coerce(node)?.raw === node) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
       );
     } else if (
       validRange(node) &&
       intersects(`${latestVersion.major + 1}.x`, node)
     ) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
       );
     }
   }
