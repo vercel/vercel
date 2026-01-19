@@ -1,31 +1,29 @@
 import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
-import formatTable from '../../util/format-table';
 import { packageName } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
-import list from '../../util/input/list';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import cmd from '../../util/output/cmd';
 import indent from '../../util/output/indent';
 import { getLinkedProject } from '../../util/projects/link';
-import type {
-  BillingPlan,
-  Integration,
-  IntegrationInstallation,
-  IntegrationProduct,
-  Metadata,
-} from '../../util/integration/types';
-import { createMetadataWizard, type MetadataWizard } from './wizard';
-import { provisionStoreResource } from '../../util/integration/provision-store-resource';
+import type { Integration, Metadata } from '../../util/integration/types';
+import { createMetadataWizard } from './wizard';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
-import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
-import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import {
+  autoProvisionResource,
+  type AutoProvisionResponse,
+  type PlanSelectionStep,
+  type PaymentRequiredStep,
+} from '../../util/integration/auto-provision-resource';
+import { createAuthorization } from '../../util/integration/create-authorization';
+import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import sleep from '../../util/sleep';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
-import { createAuthorization } from '../../util/integration/create-authorization';
-import sleep from '../../util/sleep';
-import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { addSubcommand } from './command';
 
 export async function add(client: Client, args: string[]) {
   const telemetry = new IntegrationAddTelemetryClient({
@@ -34,12 +32,21 @@ export async function add(client: Client, args: string[]) {
     },
   });
 
-  if (args.length > 1) {
+  // Parse flags
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  const { flags } = parseArguments(args, flagsSpecification);
+  const acceptTerms = !!flags['--accept-terms'];
+  telemetry.trackCliFlagAcceptTerms(acceptTerms);
+
+  // Filter out flags from args to get positional arguments
+  const positionalArgs = args.filter(arg => !arg.startsWith('-'));
+
+  if (positionalArgs.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const integrationSlug = positionalArgs[0];
 
   if (!integrationSlug) {
     output.error('You must pass an integration slug');
@@ -74,235 +81,185 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  const [productResult, installationsResult] = await Promise.allSettled([
-    selectProduct(client, integration),
-    fetchInstallations(client, integration),
-  ]);
-
-  if (productResult.status === 'rejected' || !productResult.value) {
+  const product = await selectProduct(client, integration);
+  if (!product) {
     output.error('Product not found');
     return 1;
   }
-
-  if (installationsResult.status === 'rejected') {
-    output.error(
-      `Failed to get integration installations: ${installationsResult.reason}`
-    );
-    return 1;
-  }
-
-  const product = productResult.value;
-  const installations = installationsResult.value;
-
-  const teamInstallations = installations.filter(
-    install =>
-      install.ownerId === team.id && install.installationType === 'marketplace'
-  );
-
-  if (teamInstallations.length > 1) {
-    output.error(
-      `Found more than one existing installation of ${integration.name}. Please contact Vercel Support at https://vercel.com/help`
-    );
-    return 1;
-  }
-
-  const installation = teamInstallations[0] as
-    | IntegrationInstallation
-    | undefined;
 
   output.log(
     `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
   );
 
-  const metadataSchema = product.metadataSchema;
-  const metadataWizard = createMetadataWizard(metadataSchema);
-
-  // The provisioning via cli is possible when
-  // 1. The integration was installed once (terms have been accepted)
-  // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
-  // 3. The selected billing plan is supported (handled at time of billing plan selection)
-  const provisionResourceViaCLIIsSupported =
-    installation && metadataWizard.isSupported;
-
-  if (!provisionResourceViaCLIIsSupported) {
-    const projectLink = await getOptionalLinkedProject(client);
-
-    if (projectLink?.status === 'error') {
-      return projectLink.exitCode;
-    }
-
-    const openInWeb = await client.input.confirm(
-      !installation
-        ? 'Terms have not been accepted. Open Vercel Dashboard?'
-        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
-      true
-    );
-
-    if (openInWeb) {
-      provisionResourceViaWebUI(
-        team.id,
-        integration.id,
-        product.id,
-        projectLink?.project?.id
-      );
-    }
-
-    return 0;
-  }
-
-  return await provisionResourceViaCLI(
-    client,
-    team.id,
-    integration,
-    installation,
-    product,
-    metadataWizard
-  );
-}
-
-async function getOptionalLinkedProject(client: Client) {
-  const linkedProject = await getLinkedProject(client);
-
-  if (linkedProject.status === 'not_linked') {
-    return;
-  }
-
-  const shouldLinkToProject = await client.input.confirm(
-    'Do you want to link this resource to the current project?',
-    true
-  );
-
-  if (!shouldLinkToProject) {
-    return;
-  }
-
-  if (linkedProject.status === 'error') {
-    return { status: 'error', exitCode: linkedProject.exitCode };
-  }
-
-  return { status: 'success', project: linkedProject.project };
-}
-
-function provisionResourceViaWebUI(
-  teamId: string,
-  integrationId: string,
-  productId: string,
-  projectId?: string
-) {
-  const url = new URL('/api/marketplace/cli', 'https://vercel.com');
-  url.searchParams.set('teamId', teamId);
-  url.searchParams.set('integrationId', integrationId);
-  url.searchParams.set('productId', productId);
-  if (projectId) {
-    url.searchParams.set('projectId', projectId);
-  }
-  url.searchParams.set('cmd', 'add');
-  output.print('Opening the Vercel Dashboard to continue the installation...');
-  open(url.href);
-}
-
-async function provisionResourceViaCLI(
-  client: Client,
-  teamId: string,
-  integration: Integration,
-  installation: IntegrationInstallation,
-  product: IntegrationProduct,
-  metadataWizard: MetadataWizard
-) {
+  // Get resource name
   const name = await client.input.text({
     message: 'What is the name of the resource?',
   });
 
-  const metadata = await metadataWizard.run(client);
+  // Get metadata if needed
+  const metadataSchema = product.metadataSchema;
+  const metadataWizard = createMetadataWizard(metadataSchema);
+  let metadata: Metadata = {};
 
-  let billingPlans: BillingPlan[] | undefined;
+  if (metadataWizard.isSupported) {
+    metadata = await metadataWizard.run(client);
+  }
+
+  // Try auto-provision without policies first (in case installation already exists)
+  output.spinner('Provisioning resource...', 500);
+  let response: AutoProvisionResponse;
   try {
-    const billingPlansResponse = await fetchBillingPlans(
-      client,
-      integration,
-      product,
-      metadata
-    );
-    billingPlans = billingPlansResponse.plans;
-  } catch (error) {
-    output.error(`Failed to get billing plans: ${(error as Error).message}`);
-    return 1;
-  }
-
-  const enabledBillingPlans = billingPlans.filter(plan => !plan.disabled);
-
-  if (!enabledBillingPlans.length) {
-    output.error('No billing plans available');
-    return 1;
-  }
-
-  const billingPlan = await selectBillingPlan(client, enabledBillingPlans);
-
-  if (!billingPlan) {
-    output.error('No billing plan selected');
-    return 1;
-  }
-
-  if (billingPlan.type !== 'subscription') {
-    // offer to open the web UI to continue the resource provisioning
-    const projectLink = await getOptionalLinkedProject(client);
-
-    if (projectLink?.status === 'error') {
-      return projectLink.exitCode;
-    }
-
-    const openInWeb = await client.input.confirm(
-      'You have selected a plan that cannot be provisioned through the CLI. Open Vercel Dashboard?',
-      true
-    );
-
-    if (openInWeb) {
-      provisionResourceViaWebUI(
-        teamId,
-        integration.id,
-        product.id,
-        projectLink?.project?.id
-      );
-    }
-
-    return 0;
-  }
-
-  const confirmed = await confirmProductSelection(
-    client,
-    product,
-    name,
-    metadata,
-    billingPlan
-  );
-
-  if (!confirmed) {
-    return 1;
-  }
-
-  try {
-    const authorizationId = await getAuthorizationId(
-      client,
-      teamId,
-      installation,
-      product,
-      metadata,
-      billingPlan
-    );
-
-    return await provisionStorageProduct(
-      client,
-      product,
-      installation,
+    response = await autoProvisionResource(client, {
+      integrationIdOrSlug: integration.slug,
+      productIdOrSlug: product.slug,
       name,
       metadata,
-      billingPlan,
-      authorizationId
-    );
+      source: 'cli',
+    });
   } catch (error) {
-    output.error((error as Error).message);
+    output.stopSpinner();
+    output.error(`Failed to provision resource: ${(error as Error).message}`);
     return 1;
   }
+  output.stopSpinner();
+
+  // Handle 'install' response - need to accept policies
+  if (response.kind === 'install') {
+    const policies = response.integration.policies;
+    const vercelTermsUrl =
+      'https://vercel.com/legal/integration-marketplace-end-users-addendum';
+
+    output.log('');
+    output.log(chalk.bold('Terms & Conditions'));
+    output.log('By continuing, you agree to the following:');
+    output.log('');
+    output.log(`  • Vercel Integration Marketplace End User Addendum`);
+    output.log(`    ${chalk.cyan(vercelTermsUrl)}`);
+    if (policies.eula) {
+      output.log(`  • ${response.integration.name} EULA`);
+      output.log(`    ${chalk.cyan(policies.eula)}`);
+    }
+    if (policies.privacy) {
+      output.log(`  • ${response.integration.name} Privacy Policy`);
+      output.log(`    ${chalk.cyan(policies.privacy)}`);
+    }
+    output.log('');
+
+    let shouldAccept = acceptTerms;
+    if (!acceptTerms) {
+      shouldAccept = await client.input.confirm('Accept all terms?', false);
+    }
+
+    if (!shouldAccept) {
+      output.log('Terms not accepted. Installation cancelled.');
+      return 1;
+    }
+
+    // Build acceptedPolicies with current timestamp
+    const now = new Date().toISOString();
+    const acceptedPolicies: Record<string, string> = {};
+    if (policies.eula) {
+      acceptedPolicies.eula = now;
+    }
+    if (policies.privacy) {
+      acceptedPolicies.privacy = now;
+    }
+
+    // Retry with accepted policies
+    output.spinner('Accepting terms and provisioning resource...', 500);
+    try {
+      response = await autoProvisionResource(client, {
+        integrationIdOrSlug: integration.slug,
+        productIdOrSlug: product.slug,
+        name,
+        metadata,
+        acceptedPolicies,
+        source: 'cli',
+      });
+    } catch (error) {
+      output.stopSpinner();
+      output.error(`Failed to provision resource: ${(error as Error).message}`);
+      return 1;
+    }
+    output.stopSpinner();
+  }
+
+  // Handle 'metadata' response - should not happen since we collected metadata
+  if (response.kind === 'metadata') {
+    return openWebUI(
+      response.url,
+      'This resource requires additional configuration. Opening Vercel Dashboard...'
+    );
+  }
+
+  // Handle 'plan_selection' response - let user pick a plan
+  if (response.kind === 'plan_selection') {
+    const selectedPlan = await selectBillingPlan(client, response);
+    if (!selectedPlan) {
+      output.log('No plan selected. Installation cancelled.');
+      return 1;
+    }
+
+    // Retry with selected plan
+    return await provisionWithPlan(client, {
+      integrationIdOrSlug: integration.slug,
+      productIdOrSlug: product.slug,
+      name,
+      metadata,
+      source: 'cli',
+      billingPlanId: selectedPlan.id,
+      installationId: response.installation.id,
+    });
+  }
+
+  // Handle 'payment_required' response - create authorization and retry
+  if (response.kind === 'payment_required') {
+    return await handlePaymentRequired(client, response, {
+      integrationIdOrSlug: integration.slug,
+      productIdOrSlug: product.slug,
+      name,
+      metadata,
+      source: 'cli',
+      billingPlanId: response.billingPlan.id,
+      installationId: response.installation.id,
+    });
+  }
+
+  // Handle 'requires_action' response - 3DS verification needed
+  if (response.kind === 'requires_action') {
+    output.log(
+      'Payment verification required. Please complete verification in your browser.'
+    );
+    // TODO: Open Stripe 3DS verification page
+    output.error('3DS verification via CLI is not yet supported.');
+    return 1;
+  }
+
+  // Handle 'unknown' response - need to use web UI
+  if (response.kind === 'unknown') {
+    return openWebUI(
+      response.url,
+      'This resource requires the Vercel Dashboard to complete provisioning. Opening browser...'
+    );
+  }
+
+  // Handle 'provisioned' response - success!
+  if (response.kind === 'provisioned') {
+    output.log(
+      `${chalk.bold(response.resource.name)} successfully provisioned`
+    );
+
+    if (response.billingPlan) {
+      output.log(`  Plan: ${response.billingPlan.name}`);
+    }
+
+    // Optionally connect to project
+    return await maybeConnectToProject(client, response.resource.id, name);
+  }
+
+  // Should not reach here
+  output.error('Unexpected response from server');
+  return 1;
 }
 
 async function selectProduct(client: Client, integration: Integration) {
@@ -328,225 +285,38 @@ async function selectProduct(client: Client, integration: Integration) {
   return selected;
 }
 
-async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
-  const billingPlanId = await list(client, {
-    message: 'Choose a billing plan',
-    separator: true,
-    choices: billingPlans.map(plan => {
-      const body = [plan.description];
-
-      if (plan.type !== 'subscription') {
-        body.push(
-          'This plan is not subscription-based. Selecting it will prompt you to use the Vercel Dashboard.'
-        );
-      }
-
-      if (plan.details?.length) {
-        const detailsTable = formatTable(
-          ['', ''],
-          ['l', 'r'],
-          [
-            {
-              name: 'Details',
-              rows: plan.details.map(detail => [
-                detail.label,
-                detail.value || '-',
-              ]),
-            },
-          ]
-        );
-
-        body.push(detailsTable);
-      }
-
-      if (plan.highlightedDetails?.length) {
-        const hightlightedDetailsTable = formatTable(
-          ['', ''],
-          ['l', 'r'],
-          [
-            {
-              name: 'More Details',
-              rows: plan.highlightedDetails.map(detail => [
-                detail.label,
-                detail.value || '-',
-              ]),
-            },
-          ]
-        );
-
-        body.push(hightlightedDetailsTable);
-      }
-
-      let planName = plan.name;
-      if (plan.cost) {
-        planName += ` ${plan.cost}`;
-      }
-
-      return {
-        name: [planName, '', indent(body.join('\n'), 4)].join('\n'),
-        value: plan.id,
-        short: planName,
-        disabled: plan.disabled,
-      };
-    }),
-    pageSize: 1000,
-  });
-
-  return billingPlans.find(plan => plan.id === billingPlanId);
+function openWebUI(url: string, message: string): number {
+  output.log(message);
+  output.log(`  ${chalk.cyan(url)}`);
+  open(url);
+  return 0;
 }
 
-async function confirmProductSelection(
+async function maybeConnectToProject(
   client: Client,
-  product: IntegrationProduct,
-  name: string,
-  metadata: Metadata,
-  billingPlan: BillingPlan
-) {
-  output.print('Selected product:\n');
-  output.print(`${chalk.dim(`- ${chalk.bold('Name:')} ${name}`)}\n`);
-  for (const [key, value] of Object.entries(metadata)) {
-    output.print(
-      `${chalk.dim(`- ${chalk.bold(`${product.metadataSchema.properties[key]['ui:label']}:`)} ${value}`)}\n`
-    );
-  }
-  output.print(
-    `${chalk.dim(`- ${chalk.bold('Plan:')} ${billingPlan.name}`)}\n`
-  );
+  resourceId: string,
+  resourceName: string
+): Promise<number> {
+  const linkedProject = await getLinkedProject(client);
 
-  return client.input.confirm('Confirm selection?', true);
-}
-
-async function getAuthorizationId(
-  client: Client,
-  teamId: string,
-  installation: IntegrationInstallation,
-  product: IntegrationProduct,
-  metadata: Metadata,
-  billingPlan: BillingPlan
-): Promise<string> {
-  output.spinner('Validating payment...', 250);
-  const originalAuthorizationState = await createAuthorization(
-    client,
-    installation.integrationId,
-    installation.id,
-    product.id,
-    billingPlan.id,
-    metadata
-  );
-
-  if (!originalAuthorizationState.authorization) {
-    output.stopSpinner();
-    throw new Error(
-      'Failed to get an authorization state. If the problem persists, please contact support.'
-    );
-  }
-
-  let authorization = originalAuthorizationState.authorization;
-
-  while (authorization.status === 'pending') {
-    await sleep(200);
-    authorization = await fetchAuthorization(
-      client,
-      originalAuthorizationState.authorization.id
-    );
-  }
-
-  output.stopSpinner();
-
-  if (authorization.status === 'succeeded') {
-    output.log('Validation complete.');
-    return authorization.id;
-  }
-
-  if (authorization.status === 'failed') {
-    throw new Error(
-      'Payment validation failed. Please change your payment method via the web UI and try again.'
-    );
-  }
-
-  output.spinner(
-    'Payment validation requires manual action. Please complete the steps in your browser...'
-  );
-
-  handleManualVerificationAction(
-    teamId,
-    originalAuthorizationState.authorization.id
-  );
-
-  while (authorization.status !== 'succeeded') {
-    await sleep(200);
-    authorization = await fetchAuthorization(
-      client,
-      originalAuthorizationState.authorization.id
-    );
-    if (authorization.status === 'failed') {
-      throw new Error(
-        'Payment validation failed. Please change your payment method via the web UI and try again.'
-      );
-    }
-  }
-
-  output.stopSpinner();
-
-  output.log('Validation complete.');
-  return authorization.id;
-}
-
-function handleManualVerificationAction(
-  teamId: string,
-  authorizationId: string
-) {
-  const url = new URL('/api/marketplace/cli', 'https://vercel.com');
-  url.searchParams.set('teamId', teamId);
-  url.searchParams.set('authorizationId', authorizationId);
-  url.searchParams.set('cmd', 'authorize');
-  output.print('Opening the Vercel Dashboard to continue the installation...');
-  open(url.href);
-}
-
-async function provisionStorageProduct(
-  client: Client,
-  product: IntegrationProduct,
-  installation: IntegrationInstallation,
-  name: string,
-  metadata: Metadata,
-  billingPlan: BillingPlan,
-  authorizationId: string
-) {
-  output.spinner('Provisioning resource...');
-  let storeId: string;
-  try {
-    const result = await provisionStoreResource(
-      client,
-      installation.id,
-      product.id,
-      billingPlan.id,
-      name,
-      metadata,
-      authorizationId
-    );
-    storeId = result.store.id;
-  } catch (error) {
-    output.error(
-      `Failed to provision ${product.name}: ${(error as Error).message}`
-    );
-    return 1;
-  } finally {
-    output.stopSpinner();
-  }
-  output.log(`${product.name} successfully provisioned`);
-
-  const projectLink = await getOptionalLinkedProject(client);
-
-  if (projectLink?.status === 'error') {
-    return projectLink.exitCode;
-  }
-
-  if (!projectLink?.project) {
+  if (linkedProject.status === 'not_linked') {
     return 0;
   }
 
-  const project = projectLink.project;
+  if (linkedProject.status === 'error') {
+    return linkedProject.exitCode;
+  }
+
+  const shouldLink = await client.input.confirm(
+    'Do you want to link this resource to the current project?',
+    true
+  );
+
+  if (!shouldLink) {
+    return 0;
+  }
+
+  const project = linkedProject.project;
 
   const environments = await client.input.checkbox({
     message: 'Select environments',
@@ -558,28 +328,239 @@ async function provisionStorageProduct(
   });
 
   output.spinner(
-    `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
+    `Connecting ${chalk.bold(resourceName)} to ${chalk.bold(project.name)}...`
   );
   try {
     await connectResourceToProject(
       client,
-      projectLink.project.id,
-      storeId,
+      project.id,
+      resourceId,
       environments
     );
   } catch (error) {
+    output.stopSpinner();
     output.error(
-      `Failed to connect store to project: ${(error as Error).message}`
+      `Failed to connect resource to project: ${(error as Error).message}`
     );
     return 1;
-  } finally {
-    output.stopSpinner();
   }
+  output.stopSpinner();
+
   output.log(
-    `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
+    `${chalk.bold(resourceName)} successfully connected to ${chalk.bold(project.name)}
 
 ${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variables`, 4)}`
   );
 
   return 0;
+}
+
+async function selectBillingPlan(client: Client, response: PlanSelectionStep) {
+  const enabledPlans = response.plans.filter(plan => !plan.disabled);
+
+  if (!enabledPlans.length) {
+    output.error('No billing plans available for this product.');
+    return undefined;
+  }
+
+  if (enabledPlans.length === 1) {
+    const plan = enabledPlans[0];
+    const confirmed = await client.input.confirm(
+      `This product requires the "${plan.name}" plan${plan.cost ? ` (${plan.cost})` : ''}. Continue?`,
+      true
+    );
+    return confirmed ? plan : undefined;
+  }
+
+  const selected = await client.input.select({
+    message: 'Select a billing plan',
+    choices: enabledPlans.map(plan => ({
+      name: `${plan.name}${plan.cost ? ` - ${plan.cost}` : ''}`,
+      description: plan.description,
+      value: plan,
+    })),
+  });
+
+  return selected;
+}
+
+interface ProvisionWithPlanOptions {
+  integrationIdOrSlug: string;
+  productIdOrSlug: string;
+  name: string;
+  metadata: Metadata;
+  source: string;
+  billingPlanId: string;
+  installationId: string;
+}
+
+async function provisionWithPlan(
+  client: Client,
+  options: ProvisionWithPlanOptions
+): Promise<number> {
+  output.spinner('Provisioning resource...', 500);
+  let response: AutoProvisionResponse;
+  try {
+    response = await autoProvisionResource(client, {
+      integrationIdOrSlug: options.integrationIdOrSlug,
+      productIdOrSlug: options.productIdOrSlug,
+      name: options.name,
+      metadata: options.metadata,
+      source: options.source,
+      billingPlanId: options.billingPlanId,
+    });
+  } catch (error) {
+    output.stopSpinner();
+    output.error(`Failed to provision resource: ${(error as Error).message}`);
+    return 1;
+  }
+  output.stopSpinner();
+
+  // Handle payment_required - create authorization
+  if (response.kind === 'payment_required') {
+    return await handlePaymentRequired(client, response, options);
+  }
+
+  // Handle requires_action - 3DS needed
+  if (response.kind === 'requires_action') {
+    output.error('3DS verification via CLI is not yet supported.');
+    return 1;
+  }
+
+  // Handle provisioned - success
+  if (response.kind === 'provisioned') {
+    output.log(
+      `${chalk.bold(response.resource.name)} successfully provisioned`
+    );
+    if (response.billingPlan) {
+      output.log(`  Plan: ${response.billingPlan.name}`);
+    }
+    return await maybeConnectToProject(
+      client,
+      response.resource.id,
+      response.resource.name
+    );
+  }
+
+  output.error('Unexpected response from server');
+  return 1;
+}
+
+async function handlePaymentRequired(
+  client: Client,
+  response: PaymentRequiredStep,
+  options: ProvisionWithPlanOptions
+): Promise<number> {
+  const plan = response.billingPlan;
+
+  output.log('');
+  output.log(chalk.bold('Payment Authorization Required'));
+  output.log(`Plan: ${plan.name}${plan.cost ? ` (${plan.cost})` : ''}`);
+
+  if (plan.preauthorizationAmount && plan.preauthorizationAmount > 0) {
+    output.log(
+      `A pre-authorization of $${(plan.preauthorizationAmount / 100).toFixed(2)} will be placed on your payment method.`
+    );
+  }
+  output.log('');
+
+  const confirmed = await client.input.confirm(
+    'Authorize payment and continue?',
+    true
+  );
+
+  if (!confirmed) {
+    output.log('Payment not authorized. Installation cancelled.');
+    return 1;
+  }
+
+  // Create authorization
+  output.spinner('Creating payment authorization...', 500);
+  let authorizationId: string;
+  try {
+    const authResult = await createAuthorization(
+      client,
+      options.integrationIdOrSlug,
+      options.installationId,
+      options.productIdOrSlug,
+      options.billingPlanId,
+      options.metadata,
+      plan.preauthorizationAmount
+    );
+
+    if (!authResult.authorization) {
+      output.stopSpinner();
+      output.error('Failed to create payment authorization.');
+      return 1;
+    }
+
+    authorizationId = authResult.authorization.id;
+
+    // Wait for authorization to be ready
+    let authorization = authResult.authorization;
+    while (authorization.status === 'pending') {
+      await sleep(1000);
+      authorization = await fetchAuthorization(client, authorizationId);
+    }
+
+    if (authorization.status === 'requires_action') {
+      output.stopSpinner();
+      output.error(
+        '3DS verification required. Please complete the purchase in the Vercel Dashboard.'
+      );
+      return 1;
+    }
+
+    if (authorization.status !== 'succeeded') {
+      output.stopSpinner();
+      output.error(
+        `Payment authorization failed: ${authorization.reason || 'Unknown error'}`
+      );
+      return 1;
+    }
+  } catch (error) {
+    output.stopSpinner();
+    output.error(
+      `Failed to create payment authorization: ${(error as Error).message}`
+    );
+    return 1;
+  }
+  output.stopSpinner();
+
+  // Retry provisioning with authorization
+  output.spinner('Provisioning resource...', 500);
+  let provisionResponse: AutoProvisionResponse;
+  try {
+    provisionResponse = await autoProvisionResource(client, {
+      integrationIdOrSlug: options.integrationIdOrSlug,
+      productIdOrSlug: options.productIdOrSlug,
+      name: options.name,
+      metadata: options.metadata,
+      source: options.source,
+      billingPlanId: options.billingPlanId,
+      authorizationId,
+    });
+  } catch (error) {
+    output.stopSpinner();
+    output.error(`Failed to provision resource: ${(error as Error).message}`);
+    return 1;
+  }
+  output.stopSpinner();
+
+  if (provisionResponse.kind === 'provisioned') {
+    output.log(
+      `${chalk.bold(provisionResponse.resource.name)} successfully provisioned`
+    );
+    if (provisionResponse.billingPlan) {
+      output.log(`  Plan: ${provisionResponse.billingPlan.name}`);
+    }
+    return await maybeConnectToProject(
+      client,
+      provisionResponse.resource.id,
+      provisionResponse.resource.name
+    );
+  }
+
+  output.error('Unexpected response from server after payment authorization');
+  return 1;
 }

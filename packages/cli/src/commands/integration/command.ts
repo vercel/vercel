@@ -11,7 +11,15 @@ export const addSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'accept-terms',
+      description: 'Automatically accept terms of service (for CI/automation)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
   examples: [
     {
       name: 'Install a marketplace integration',
@@ -19,6 +27,10 @@ export const addSubcommand = {
         `${packageName} integration add <integration-name>`,
         `${packageName} integration add acme`,
       ],
+    },
+    {
+      name: 'Install an integration and accept terms (for automation)',
+      value: [`${packageName} integration add acme --accept-terms`],
     },
   ],
 } as const;

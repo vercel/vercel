@@ -12,11 +12,23 @@ export const installCommand: Command = {
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'accept-terms',
+      description: 'Automatically accept terms of service (for CI/automation)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
   examples: [
     {
       name: 'Install an integration from the marketplace',
       value: `${packageName} install acme`,
+    },
+    {
+      name: 'Install an integration and accept terms (for automation)',
+      value: `${packageName} install acme --accept-terms`,
     },
   ],
 };

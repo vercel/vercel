@@ -14,4 +14,10 @@ export class IntegrationAddTelemetryClient
       });
     }
   }
+
+  trackCliFlagAcceptTerms(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('accept-terms');
+    }
+  }
 }
