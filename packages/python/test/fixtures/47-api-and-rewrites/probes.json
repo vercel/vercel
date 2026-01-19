@@ -1,0 +1,24 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "sanic:ok"
+    },
+    {
+      "path": "/greet/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "Hello, RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/starlette",
+      "status": 200,
+      "mustContain": "starlette:ok"
+    },
+    {
+      "path": "/starlette/greet/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "Hello, RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

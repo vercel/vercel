@@ -48,6 +48,12 @@ import {
 
 export const version = 3;
 
+// Additional dependencies required for consolidated Python API mode
+const CONSOLIDATED_API_DEPENDENCIES = [
+  'starlette>=0.31.0,<1.0.0',
+  'asgiref>=3.0.0,<4.0.0',
+];
+
 export async function downloadFilesInWorkPath({
   entrypoint,
   workPath,
@@ -311,10 +317,20 @@ export const build: BuildV3 = async ({
       // are intentionally unpinned so they can resolve alongside user-declared
       // dependencies (for example, modern Flask versions that require newer
       // Werkzeug releases).
-      const runtimeDependencies =
+      let runtimeDependencies =
         framework === 'flask'
           ? ['werkzeug>=1.0.1']
           : ['werkzeug>=1.0.1', 'uvicorn>=0.24'];
+
+      // For consolidated API mode, add starlette for meta-app routing
+      if (config.consolidatedApi === true) {
+        runtimeDependencies = [
+          ...new Set([
+            ...runtimeDependencies,
+            ...CONSOLIDATED_API_DEPENDENCIES,
+          ]),
+        ];
+      }
 
       // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
       // for consistent installation logic and idempotency.
@@ -342,6 +358,13 @@ export const build: BuildV3 = async ({
       });
     }
   }
+
+  const isConsolidatedApi = config.consolidatedApi === true;
+  if (isConsolidatedApi) {
+    debug('Consolidated API mode: using vc_meta_app.py as entrypoint');
+    entrypoint = 'vc_meta_app.py';
+  }
+
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
@@ -402,6 +425,14 @@ export const build: BuildV3 = async ({
   const handlerPyFilename = 'vc__handler__python';
 
   files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
+
+  // For consolidated API mode, add the vc_meta_app.py library
+  if (isConsolidatedApi) {
+    const metaAppLibPath = join(__dirname, '..', 'vc_meta_app.py');
+    const metaAppLibContents = await readFile(metaAppLibPath, 'utf8');
+    files['vc_meta_app.py'] = new FileBlob({ data: metaAppLibContents });
+    debug('Added vc_meta_app.py for consolidated API');
+  }
 
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails

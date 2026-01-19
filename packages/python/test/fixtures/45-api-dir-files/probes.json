@@ -2,6 +2,7 @@
   "probes": [
     {"path": "/api", "status": 200},
     { "path": "/api/helper", "status": 404 },
-    { "path": "/api/app", "status": 200 }
+    { "path": "/api/app", "status": 200, "mustContain": "app" },
+    { "path": "/api/asgi", "status": 200, "mustContain": "asgi" }
   ]
 }
