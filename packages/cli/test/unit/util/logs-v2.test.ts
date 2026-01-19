@@ -34,14 +34,18 @@ describe('logs-v2 utility', () => {
   });
 
   describe('fetchRequestLogs', () => {
-    it('should fetch logs with projectId', async () => {
+    it('should fetch logs with projectId and ownerId', async () => {
       const mockLogs = [createMockLog()];
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         expect(req.query.projectId).toEqual('prj_test');
-        res.json({ logs: mockLogs, pagination: {} });
+        expect(req.query.ownerId).toEqual('team_test');
+        res.json({ rows: mockLogs, hasMoreRows: false });
       });
 
-      const result = await fetchRequestLogs(client, { projectId: 'prj_test' });
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+      });
 
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0].id).toEqual('log_123');
@@ -50,11 +54,12 @@ describe('logs-v2 utility', () => {
     it('should include deploymentId in query when provided', async () => {
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         expect(req.query.deploymentId).toEqual('dpl_specific');
-        res.json({ logs: [], pagination: {} });
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         deploymentId: 'dpl_specific',
       });
     });
@@ -62,63 +67,51 @@ describe('logs-v2 utility', () => {
     it('should include environment filter in query', async () => {
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         expect(req.query.environment).toEqual('production');
-        res.json({ logs: [], pagination: {} });
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         environment: 'production',
       });
     });
 
     it('should include multiple level filters in query', async () => {
-      const receivedLevels: string[] = [];
       client.scenario.get('/api/logs/request-logs', (req, res) => {
-        if (Array.isArray(req.query.level)) {
-          receivedLevels.push(...req.query.level);
-        } else if (req.query.level) {
-          receivedLevels.push(req.query.level);
-        }
-        res.json({ logs: [], pagination: {} });
+        expect(req.query.level).toEqual('error,warning');
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         level: ['error', 'warning'],
       });
-
-      expect(receivedLevels).toContain('error');
-      expect(receivedLevels).toContain('warning');
     });
 
     it('should include multiple source filters in query', async () => {
-      const receivedSources: string[] = [];
       client.scenario.get('/api/logs/request-logs', (req, res) => {
-        if (Array.isArray(req.query.source)) {
-          receivedSources.push(...req.query.source);
-        } else if (req.query.source) {
-          receivedSources.push(req.query.source);
-        }
-        res.json({ logs: [], pagination: {} });
+        expect(req.query.source).toEqual('serverless,edge-function');
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         source: ['serverless', 'edge-function'],
       });
-
-      expect(receivedSources).toContain('serverless');
-      expect(receivedSources).toContain('edge-function');
     });
 
     it('should include statusCode filter in query', async () => {
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         expect(req.query.statusCode).toEqual('500');
-        res.json({ logs: [], pagination: {} });
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         statusCode: '500',
       });
     });
@@ -126,60 +119,29 @@ describe('logs-v2 utility', () => {
     it('should include search query in request', async () => {
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         expect(req.query.search).toEqual('timeout');
-        res.json({ logs: [], pagination: {} });
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         search: 'timeout',
-      });
-    });
-
-    it('should include limit in query', async () => {
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        expect(req.query.limit).toEqual('50');
-        res.json({ logs: [], pagination: {} });
-      });
-
-      await fetchRequestLogs(client, {
-        projectId: 'prj_test',
-        limit: 50,
-      });
-    });
-
-    it('should default limit to 100', async () => {
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        expect(req.query.limit).toEqual('100');
-        res.json({ logs: [], pagination: {} });
-      });
-
-      await fetchRequestLogs(client, { projectId: 'prj_test' });
-    });
-
-    it('should include cursor for pagination', async () => {
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        expect(req.query.cursor).toEqual('cursor_abc123');
-        res.json({ logs: [], pagination: {} });
-      });
-
-      await fetchRequestLogs(client, {
-        projectId: 'prj_test',
-        cursor: 'cursor_abc123',
       });
     });
 
     it('should parse relative time for --since option', async () => {
       client.scenario.get('/api/logs/request-logs', (req, res) => {
-        const sinceMs = parseInt(req.query.since as string, 10);
+        const startDateMs = parseInt(req.query.startDate as string, 10);
         const now = Date.now();
         const oneHourAgo = now - 60 * 60 * 1000;
-        expect(sinceMs).toBeGreaterThan(oneHourAgo - 1000);
-        expect(sinceMs).toBeLessThan(oneHourAgo + 1000);
-        res.json({ logs: [], pagination: {} });
+        expect(startDateMs).toBeGreaterThan(oneHourAgo - 1000);
+        expect(startDateMs).toBeLessThan(oneHourAgo + 1000);
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         since: '1h',
       });
     });
@@ -189,13 +151,14 @@ describe('logs-v2 utility', () => {
       const expectedMs = new Date(isoDate).getTime();
 
       client.scenario.get('/api/logs/request-logs', (req, res) => {
-        const sinceMs = parseInt(req.query.since as string, 10);
-        expect(sinceMs).toEqual(expectedMs);
-        res.json({ logs: [], pagination: {} });
+        const startDateMs = parseInt(req.query.startDate as string, 10);
+        expect(startDateMs).toEqual(expectedMs);
+        res.json({ rows: [], hasMoreRows: false });
       });
 
       await fetchRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         since: isoDate,
       });
     });
@@ -208,12 +171,13 @@ describe('logs-v2 utility', () => {
         createMockLog({ id: 'log_2' }),
       ];
       client.scenario.get('/api/logs/request-logs', (_req, res) => {
-        res.json({ logs: mockLogs, pagination: { hasMore: false } });
+        res.json({ rows: mockLogs, hasMoreRows: false });
       });
 
       const logs: RequestLogEntry[] = [];
       for await (const log of fetchAllRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
       })) {
         logs.push(log);
       }
@@ -227,15 +191,16 @@ describe('logs-v2 utility', () => {
       let requestCount = 0;
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         requestCount++;
-        if (!req.query.cursor) {
+        const page = req.query.page;
+        if (page === '0') {
           res.json({
-            logs: [createMockLog({ id: 'log_page1' })],
-            pagination: { next: 'cursor_page2', hasMore: true },
+            rows: [createMockLog({ id: 'log_page1' })],
+            hasMoreRows: true,
           });
-        } else if (req.query.cursor === 'cursor_page2') {
+        } else if (page === '1') {
           res.json({
-            logs: [createMockLog({ id: 'log_page2' })],
-            pagination: { hasMore: false },
+            rows: [createMockLog({ id: 'log_page2' })],
+            hasMoreRows: false,
           });
         }
       });
@@ -243,6 +208,7 @@ describe('logs-v2 utility', () => {
       const logs: RequestLogEntry[] = [];
       for await (const log of fetchAllRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         limit: 200,
       })) {
         logs.push(log);
@@ -259,17 +225,18 @@ describe('logs-v2 utility', () => {
       client.scenario.get('/api/logs/request-logs', (_req, res) => {
         requestCount++;
         res.json({
-          logs: [
+          rows: [
             createMockLog({ id: `log_${requestCount}_1` }),
             createMockLog({ id: `log_${requestCount}_2` }),
           ],
-          pagination: { next: `cursor_${requestCount + 1}`, hasMore: true },
+          hasMoreRows: true,
         });
       });
 
       const logs: RequestLogEntry[] = [];
       for await (const log of fetchAllRequestLogs(client, {
         projectId: 'prj_test',
+        ownerId: 'team_test',
         limit: 3,
       })) {
         logs.push(log);

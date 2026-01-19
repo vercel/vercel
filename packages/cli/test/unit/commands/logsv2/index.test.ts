@@ -31,12 +31,10 @@ function createMockLog(
 }
 
 function useRequestLogs(logs: RequestLogEntry[] = []) {
-  client.scenario.get('/api/logs/request-logs', (req, res) => {
+  client.scenario.get('/api/logs/request-logs', (_req, res) => {
     res.json({
-      logs,
-      pagination: {
-        hasMore: false,
-      },
+      rows: logs,
+      hasMoreRows: false,
     });
   });
 }

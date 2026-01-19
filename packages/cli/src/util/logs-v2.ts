@@ -1,5 +1,4 @@
 import ms from 'ms';
-import fetch from 'node-fetch';
 import type Client from './client';
 
 export interface RequestLogEntry {
@@ -57,13 +56,6 @@ function parseRelativeTime(input: string): number {
   throw new Error(`Invalid time format: ${input}`);
 }
 
-function formatStatusCodeFilter(statusCode: string): string {
-  if (statusCode.endsWith('xx')) {
-    return statusCode;
-  }
-  return statusCode;
-}
-
 export async function fetchRequestLogs(
   client: Client,
   options: FetchRequestLogsOptions
@@ -108,41 +100,30 @@ export async function fetchRequestLogs(
   }
 
   if (statusCode) {
-    query.set('statusCode', formatStatusCodeFilter(statusCode));
+    query.set('statusCode', statusCode);
   }
 
   if (source && source.length > 0) {
     query.set('source', source.join(','));
   } else {
-    // Default sources matching the dashboard
-    query.set('source', 'serverless,middleware,cache');
+    query.set('source', 'serverless,edge-function,edge-middleware,static');
   }
 
   if (search) {
     query.set('search', search);
   }
 
-  const url = `https://vercel.com/api/logs/request-logs?${query.toString()}`;
+  const url = `/api/logs/request-logs?${query.toString()}`;
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${client.authConfig.token}`,
-    },
-  });
+  const data = await client.fetch<{
+    rows?: RequestLogEntry[];
+    hasMoreRows?: boolean;
+  }>(url);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to fetch logs: ${response.status} ${error}`);
-  }
-
-  const data = await response.json();
-
-  // Normalize the response - API returns 'rows' and 'hasMoreRows'
-  const apiData = data as { rows?: RequestLogEntry[]; hasMoreRows?: boolean };
   return {
-    logs: apiData.rows || [],
+    logs: data.rows || [],
     pagination: {
-      hasMore: apiData.hasMoreRows ?? false,
+      hasMore: data.hasMoreRows ?? false,
     },
   };
 }
