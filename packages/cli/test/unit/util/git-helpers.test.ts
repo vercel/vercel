@@ -9,6 +9,7 @@ import {
   getGitOriginUrl,
 } from '../../../src/util/git-helpers';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
+import { initBareGitRepo, initGitRepo } from '../../helpers/git-test-helpers';
 
 // Root of `vercel/vercel` repo
 const vercelRepoRoot = join(__dirname, '../../../../..');
@@ -57,6 +58,13 @@ describe('git-helpers', () => {
       const result = await getGitRemoteUrls({ cwd });
       expect(result).toEqual(null);
     });
+
+    it('should return empty object for git repo with no remotes', async () => {
+      const cwd = setupTmpDir();
+      initGitRepo(cwd, {}); // No remotes
+      const result = await getGitRemoteUrls({ cwd });
+      expect(result).toEqual({});
+    });
   });
 
   describe('getGitOriginUrl()', () => {
@@ -86,14 +94,11 @@ describe('git-helpers', () => {
       bareRepoPath = join(testDir, 'repo.git');
       worktreePath = join(testDir, 'worktree');
 
-      // Initialize a bare repository
-      execSync('git init --bare repo.git', { cwd: testDir });
-
-      // Add a remote to the bare repo
-      execSync(
-        'git remote add origin https://github.com/example/test-repo.git',
-        { cwd: bareRepoPath }
-      );
+      // Initialize a bare repository with remote
+      execSync('mkdir repo.git', { cwd: testDir });
+      initBareGitRepo(bareRepoPath, {
+        origin: 'https://github.com/example/test-repo.git',
+      });
 
       // Create an initial commit in the bare repo (required to create a worktree).
       // We do this by creating a temporary clone, committing, and pushing.

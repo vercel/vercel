@@ -1,5 +1,4 @@
 import { EOL } from 'node:os';
-import { execSync } from 'node:child_process';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
@@ -18,28 +17,13 @@ import {
   setupTmpDir,
   setupUnitFixture,
 } from '../../../helpers/setup-unit-fixture';
+import { initGitRepo } from '../../../helpers/git-test-helpers';
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../../../src/util/errors-ts';
 
 // Mock the env pull command
 vi.mock('../../../../src/commands/env/pull');
 const mockPull = vi.mocked(pull);
-
-/**
- * Initialize a git repository with a remote configured.
- * This is required because git-helpers uses `git` commands that need a real repo.
- */
-function initGitRepo(cwd: string, remoteName: string, remoteUrl: string): void {
-  execSync('git init', { cwd, stdio: 'ignore' });
-  execSync('git config user.email "test@test.com"', { cwd, stdio: 'ignore' });
-  execSync('git config user.name "Test"', { cwd, stdio: 'ignore' });
-  execSync(`git remote add ${remoteName} ${remoteUrl}`, {
-    cwd,
-    stdio: 'ignore',
-  });
-  // Create an initial commit so the repo has a HEAD
-  execSync('git commit --allow-empty -m "initial"', { cwd, stdio: 'ignore' });
-}
 
 describe('link', () => {
   beforeEach(() => {
@@ -71,7 +55,7 @@ describe('link', () => {
 
       // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/test/test.git';
-      initGitRepo(cwd, 'upstream', repoUrl);
+      initGitRepo(cwd, { upstream: repoUrl });
 
       useTeams('team_dummy');
       const { project } = useProject({
@@ -133,7 +117,7 @@ describe('link', () => {
 
       // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/user/repo.git';
-      initGitRepo(cwd, 'upstream', repoUrl);
+      initGitRepo(cwd, { upstream: repoUrl });
 
       // Set up the root-level `package.json` to simulate a Next.js project
       await writeJSON(join(cwd, 'package.json'), {
@@ -206,7 +190,7 @@ describe('link', () => {
       const cwd = setupTmpDir();
 
       const repoUrl = 'https://github.com/user/repo.git';
-      initGitRepo(cwd, 'origin', repoUrl);
+      initGitRepo(cwd, { origin: repoUrl });
 
       await writeJSON(join(cwd, 'package.json'), {
         name: 'my-monorepo',
@@ -309,7 +293,7 @@ describe('link', () => {
 
       // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/user/repo.git';
-      initGitRepo(cwd, 'upstream', repoUrl);
+      initGitRepo(cwd, { upstream: repoUrl });
 
       // Set up the root-level `package.json` to simulate a Next.js project
       await writeJSON(join(cwd, 'package.json'), {
@@ -366,7 +350,7 @@ describe('link', () => {
 
       // Initialize a git repo with a remote
       const repoUrl = 'https://github.com/test/test.git';
-      initGitRepo(cwd, 'upstream', repoUrl);
+      initGitRepo(cwd, { upstream: repoUrl });
 
       useTeams('team_dummy');
       useProject({

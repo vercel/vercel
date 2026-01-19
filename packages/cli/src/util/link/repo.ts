@@ -123,7 +123,7 @@ export async function ensureRepoLink(
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     const remoteUrls = await getGitRemoteUrls({ cwd: client.cwd });
-    if (!remoteUrls) {
+    if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
       throw new Error('Could not determine Git remote URLs');
     }
     const remoteNames = Object.keys(remoteUrls).sort();

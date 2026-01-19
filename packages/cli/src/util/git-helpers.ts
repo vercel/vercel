@@ -90,7 +90,7 @@ export async function getGitRemoteUrls(
     const remotesOutput = stdout.trim();
 
     if (!remotesOutput) {
-      return null;
+      return {};
     }
 
     const remoteUrls: Record<string, string> = {};
@@ -109,7 +109,7 @@ export async function getGitRemoteUrls(
       }
     }
 
-    return Object.keys(remoteUrls).length ? remoteUrls : null;
+    return remoteUrls;
   } catch (error) {
     output.debug(`Failed to get Git remote URLs: ${error}`);
     if (unsafe) {
