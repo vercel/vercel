@@ -1,6 +1,6 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
-  "version": "2.0.122",
+  "version": "2.0.123",
   "main": "dist/index.js",
   "files": [
     "dist",
