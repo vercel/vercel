@@ -122,6 +122,7 @@ export default async function main(client: Client) {
         printHelp(productsSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandProducts(subcommandOriginal);
       return products(client, subArgs);
     }
     default: {
