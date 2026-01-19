@@ -161,7 +161,8 @@ export async function readLockfileVersion(
   );
 
   // Ensure lockfileVersion is always a number, even if YAML parsing returns a string
-  if (config && config.lockfileVersion) {
+  // Use !== undefined to handle lockfileVersion: 0 correctly (0 is falsy but valid)
+  if (config && config.lockfileVersion !== undefined) {
     return { lockfileVersion: Number(config.lockfileVersion) };
   }
 

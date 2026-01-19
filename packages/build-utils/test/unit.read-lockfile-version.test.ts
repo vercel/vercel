@@ -130,5 +130,16 @@ describe('Test `readLockfileVersion()`', () => {
       // Falls back to readConfigFile which returns the full parsed object
       expect(result).toMatchObject({ lockfileVersion: 5 });
     });
+
+    it('should handle lockfileVersion 0 correctly in fallback path', async () => {
+      // lockfileVersion: 0 is falsy but valid - ensure it's not skipped
+      const testFile = join(tempDir, 'custom-lock-v0.json');
+      await writeFile(
+        testFile,
+        '{\n  "lockfileVersion": 0,\n  "dependencies": {}\n}'
+      );
+      const result = await readLockfileVersion(testFile);
+      expect(result).toEqual({ lockfileVersion: 0 });
+    });
   });
 });
