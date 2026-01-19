@@ -1,4 +1,7 @@
-import { getSupportedPythonVersion } from '../src/version';
+import {
+  getSupportedPythonVersion,
+  DEFAULT_PYTHON_VERSION,
+} from '../src/version';
 import { build } from '../src/index';
 import { getProtectedUvEnv, createVenvEnv } from '../src/utils';
 import fs from 'fs-extra';
@@ -115,12 +118,130 @@ describe('requires-python range parsing', () => {
   });
 });
 
-it('should select latest supported installed version when no Piplock detected', () => {
+describe('Python 3.13 and 3.14 support', () => {
+  it('selects Python 3.13 when specified in requires-python', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.13',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.13');
+  });
+
+  it('selects Python 3.14 when specified in requires-python', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('selects Python 3.14 as highest when range allows multiple versions', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('selects Python 3.13 when upper bound excludes 3.14', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.12,<3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.13');
+  });
+
+  it('respects compatible release "~=3.13" (>=3.13,<3.14)', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '~=3.13',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.13');
+  });
+
+  it('respects compatible release "~=3.14" (>=3.14,<3.15)', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '~=3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+});
+
+describe('default Python version behavior', () => {
+  it('uses DEFAULT_PYTHON_VERSION when no version specified and default is installed', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    makeMockPython(DEFAULT_PYTHON_VERSION);
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: undefined,
+    });
+    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+  });
+
+  it('falls back to latest installed when default is not installed', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    // Note: NOT installing DEFAULT_PYTHON_VERSION (3.12)
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: undefined,
+    });
+    // Should pick 3.14 as the latest installed
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('respects explicit version even when default is installed', () => {
+    makeMockPython(DEFAULT_PYTHON_VERSION);
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    // Should pick 3.14 because it was explicitly requested
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('DEFAULT_PYTHON_VERSION constant is exported and has expected value', () => {
+    expect(DEFAULT_PYTHON_VERSION).toBe('3.12');
+  });
+});
+
+it('should select default or latest installed version when no Piplock detected', () => {
   makeMockPython('3.10');
   const result = getSupportedPythonVersion({
     declaredPythonVersion: undefined,
   });
   expect(result).toHaveProperty('runtime');
+  // When default version isn't installed, falls back to latest available
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([]);
 });

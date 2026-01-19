@@ -1,0 +1,9 @@
+[project]
+name = "fixture-python-latest"
+version = "0.0.1"
+# Uses broad range to automatically work with any Python >= 3.12
+# This fixture tests that the build works with the latest available Python
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+]

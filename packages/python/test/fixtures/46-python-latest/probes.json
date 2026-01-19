@@ -1,0 +1,12 @@
+{
+  "probes": [
+    {
+      "path": "/api/version",
+      "mustContain": "\"python_version\":"
+    },
+    {
+      "path": "/api/health",
+      "mustContain": "\"ok\":true"
+    }
+  ]
+}
