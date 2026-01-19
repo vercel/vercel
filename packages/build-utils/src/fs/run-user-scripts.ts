@@ -24,6 +24,7 @@ import {
   getAvailableNodeVersions,
   getSupportedBunVersion,
   isBunVersion,
+  getNodeVersionByMajor,
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
@@ -76,6 +77,98 @@ export interface ScanParentDirsResult extends FindPackageJsonResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
+}
+
+const VALID_CLI_TYPES: CliType[] = ['npm', 'yarn', 'pnpm', 'bun', 'vlt'];
+
+/**
+ * Returns a ScanParentDirsResult from CI environment variables if available.
+ * This allows CI to skip filesystem scanning when the package manager info is already known.
+ *
+ * Environment variables:
+ * - VERCEL_CI_CLI_TYPE: Package manager type (npm, yarn, pnpm, bun, vlt)
+ * - VERCEL_CI_LOCKFILE_VERSION: Lockfile version number
+ * - VERCEL_CI_PACKAGE_MANAGER: package.json packageManager field value
+ * - VERCEL_CI_TURBO_SUPPORTS_COREPACK: Whether turbo supports corepack ("1" or "0")
+ */
+export function getOverriddenScanParentDirsResult():
+  | ScanParentDirsResult
+  | undefined {
+  const cliType = process.env.VERCEL_CI_CLI_TYPE as CliType | undefined;
+
+  // Minimum required: cliType must be set and valid
+  if (cliType === undefined || !VALID_CLI_TYPES.includes(cliType)) {
+    return undefined;
+  }
+
+  const lockfileVersionStr = process.env.VERCEL_CI_LOCKFILE_VERSION;
+  const lockfileVersion =
+    lockfileVersionStr !== undefined ? Number(lockfileVersionStr) : undefined;
+
+  const packageJsonPackageManager = process.env.VERCEL_CI_PACKAGE_MANAGER;
+
+  const turboSupportsCorepackStr =
+    process.env.VERCEL_CI_TURBO_SUPPORTS_COREPACK;
+  const turboSupportsCorepackHome =
+    turboSupportsCorepackStr === '1'
+      ? true
+      : turboSupportsCorepackStr === '0'
+        ? false
+        : undefined;
+
+  debug(
+    `Using CI-provided package manager info: ` +
+      `cliType=${cliType}, lockfileVersion=${lockfileVersion}, ` +
+      `packageManager=${packageJsonPackageManager}, turboSupportsCorepack=${turboSupportsCorepackHome}`
+  );
+
+  return {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+    // Intentionally undefined - no filesystem reads performed
+    packageJsonPath: undefined,
+    packageJson: undefined,
+    lockfilePath: undefined,
+  };
+}
+
+/**
+ * Returns a NodeVersion from CI environment variables if available.
+ * This allows CI to skip node version detection when already known.
+ *
+ * Environment variables:
+ * - VERCEL_CI_NODE_VERSION: Node.js major version number (e.g., "18", "20", "22")
+ */
+export function getOverriddenNodeVersion(): NodeVersion | undefined {
+  const nodeVersionStr = process.env.VERCEL_CI_NODE_VERSION;
+  if (nodeVersionStr === undefined) {
+    return undefined;
+  }
+
+  const major = parseInt(nodeVersionStr, 10);
+  if (isNaN(major)) {
+    debug(`Invalid VERCEL_CI_NODE_VERSION value: ${nodeVersionStr}`);
+    return undefined;
+  }
+
+  // Find matching version from known node versions
+  const version = getNodeVersionByMajor(major);
+  if (version !== undefined) {
+    debug(`Using CI-provided Node.js version: ${major}.x`);
+    return version;
+  }
+
+  // If not in known versions, construct one
+  debug(
+    `Using CI-provided Node.js version: ${major}.x (not in known versions list)`
+  );
+  return new NodeVersion({
+    major,
+    range: `${major}.x`,
+    runtime: `nodejs${major}.x`,
+  });
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -309,8 +402,14 @@ export async function getNodeVersion(
   meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion | BunVersion> {
-  if (config.bunVersion) {
+  if (config.bunVersion !== undefined) {
     return getSupportedBunVersion(config.bunVersion);
+  }
+
+  // Check for CI override first
+  const override = getOverriddenNodeVersion();
+  if (override !== undefined) {
+    return override;
   }
 
   const latestVersion = getLatestNodeVersion(availableVersions);
@@ -396,6 +495,12 @@ export async function scanParentDirs(
   readPackageJson = false,
   base = '/'
 ): Promise<ScanParentDirsResult> {
+  // Check for CI environment variable overrides first
+  const override = getOverriddenScanParentDirsResult();
+  if (override !== undefined) {
+    return override;
+  }
+
   assert(path.isAbsolute(destPath));
 
   const { packageJsonPath: pkgJsonPath, packageJson } = await findPackageJson(

@@ -37,6 +37,8 @@ import {
   scanParentDirs,
   findPackageJson,
   traverseUpDirectories,
+  getOverriddenScanParentDirsResult,
+  getOverriddenNodeVersion,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -109,6 +111,8 @@ export {
   hardLinkDir,
   traverseUpDirectories,
   validateNpmrc,
+  getOverriddenScanParentDirsResult,
+  getOverriddenNodeVersion,
 };
 
 export { EdgeFunction } from './edge-function';
