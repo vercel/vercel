@@ -20,6 +20,13 @@ export const addSubcommand = {
         `${packageName} integration add acme`,
       ],
     },
+    {
+      name: 'Install a specific product from an integration',
+      value: [
+        `${packageName} integration add <integration>/<product>`,
+        `${packageName} integration add acme/cache`,
+      ],
+    },
   ],
 } as const;
 
