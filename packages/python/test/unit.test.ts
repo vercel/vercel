@@ -254,7 +254,7 @@ it('should select latest supported installed version and warn when invalid Piplo
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([
-    'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version',
+    'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. https://vercel.link/python-version',
   ]);
 });
 
@@ -292,7 +292,7 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
     })
   ).toHaveProperty('runtime', 'python3.6');
   expect(warningMessages).toStrictEqual([
-    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
+    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. https://vercel.link/python-version',
   ]);
 });
 
