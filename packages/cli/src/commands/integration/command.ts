@@ -153,6 +153,28 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const productsSubcommand = {
+  name: 'products',
+  aliases: [],
+  description: 'Lists available products for a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'List products for an integration',
+      value: [
+        `${packageName} integration products <integration>`,
+        `${packageName} integration products aws`,
+      ],
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
@@ -163,6 +185,7 @@ export const integrationCommand = {
     addSubcommand,
     listSubcommand,
     openSubcommand,
+    productsSubcommand,
     removeSubcommand,
   ],
   examples: [],
