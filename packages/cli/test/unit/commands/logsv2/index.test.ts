@@ -188,17 +188,21 @@ describe('logsv2', () => {
     });
 
     it('should filter by error level', async () => {
-      const errorLog = createMockLog({
-        level: 'error',
-        message: 'Error occurred',
+      let receivedLevel: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedLevel = req.query.level as string;
+        res.json({
+          rows: [createMockLog({ level: 'error', message: 'Error occurred' })],
+          hasMoreRows: false,
+        });
       });
-      useRequestLogs([errorLog]);
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--level', 'error');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedLevel).toEqual('error');
     });
 
     it('should track telemetry for valid --level values', async () => {
@@ -253,13 +257,21 @@ describe('logsv2', () => {
     });
 
     it('should filter by production environment', async () => {
-      useRequestLogs([createMockLog({ environment: 'production' })]);
+      let receivedEnvironment: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedEnvironment = req.query.environment as string;
+        res.json({
+          rows: [createMockLog({ environment: 'production' })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--environment', 'production');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedEnvironment).toEqual('production');
     });
 
     it('should track telemetry for production environment', async () => {
@@ -314,13 +326,21 @@ describe('logsv2', () => {
     });
 
     it('should filter by serverless source', async () => {
-      useRequestLogs([createMockLog({ source: 'serverless' })]);
+      let receivedSource: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedSource = req.query.source as string;
+        res.json({
+          rows: [createMockLog({ source: 'serverless' })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--source', 'serverless');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedSource).toEqual('serverless');
     });
 
     it('should track telemetry for valid --source values', async () => {
@@ -360,13 +380,21 @@ describe('logsv2', () => {
     });
 
     it('should filter by status code', async () => {
-      useRequestLogs([createMockLog({ responseStatusCode: 500 })]);
+      let receivedStatusCode: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedStatusCode = req.query.statusCode as string;
+        res.json({
+          rows: [createMockLog({ responseStatusCode: 500 })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--status-code', '500');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedStatusCode).toEqual('500');
     });
 
     it('should track telemetry for --status-code option', async () => {
@@ -397,13 +425,25 @@ describe('logsv2', () => {
     });
 
     it('should filter by time range', async () => {
-      useRequestLogs([createMockLog()]);
+      let receivedStartDate: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedStartDate = req.query.startDate as string;
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--since', '1h');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      const startDateMs = parseInt(receivedStartDate!, 10);
+      const now = Date.now();
+      const oneHourAgo = now - 60 * 60 * 1000;
+      expect(startDateMs).toBeGreaterThan(oneHourAgo - 1000);
+      expect(startDateMs).toBeLessThan(oneHourAgo + 1000);
     });
 
     it('should track telemetry for --since option', async () => {
@@ -486,13 +526,21 @@ describe('logsv2', () => {
     });
 
     it('should search logs', async () => {
-      useRequestLogs([createMockLog({ message: 'timeout error occurred' })]);
+      let receivedSearch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedSearch = req.query.search as string;
+        res.json({
+          rows: [createMockLog({ message: 'timeout error occurred' })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--search', 'timeout');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedSearch).toEqual('timeout');
     });
 
     it('should track telemetry for --search option', async () => {
@@ -523,13 +571,21 @@ describe('logsv2', () => {
     });
 
     it('should filter by deployment ID', async () => {
-      useRequestLogs([createMockLog({ deploymentId: 'dpl_specific123' })]);
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: 'dpl_specific123' })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--deployment', 'dpl_specific123');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual('dpl_specific123');
     });
 
     it('should track telemetry for --deployment option', async () => {
@@ -560,13 +616,21 @@ describe('logsv2', () => {
     });
 
     it('should filter by request ID', async () => {
-      useRequestLogs([createMockLog({ id: 'req_specific123' })]);
+      let receivedRequestId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedRequestId = req.query.requestId as string;
+        res.json({
+          rows: [createMockLog({ id: 'req_specific123' })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logsv2', '--request-id', 'req_specific123');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedRequestId).toEqual('req_specific123');
     });
 
     it('should track telemetry for --request-id option', async () => {
