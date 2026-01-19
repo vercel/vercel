@@ -391,6 +391,9 @@ importers:
       execa:
         specifier: 3.2.0
         version: 3.2.0
+      nf3:
+        specifier: 0.1.12
+        version: 0.1.12
       rolldown:
         specifier: 1.0.0-beta.60
         version: 1.0.0-beta.60
@@ -16153,6 +16156,10 @@ packages:
     engines: {node: '>= 0.4.0'}
     dev: true
 
+  /nf3@0.1.12:
+    resolution: {integrity: sha512-qbMXT7RTGh74MYWPeqTIED8nDW70NXOULVHpdWcdZ7IVHVnAsMV9fNugSNnvooipDc1FMOzpis7T9nXJEbJhvQ==}
+    dev: false
+
   /nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
     dev: true
@@ -18534,6 +18541,7 @@ packages:
   /tar@7.4.3:
     resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0

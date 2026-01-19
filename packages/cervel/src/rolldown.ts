@@ -2,6 +2,8 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
+import { externals } from './plugins/externals.js';
+import { workspace } from './plugins/workspace.js';
 
 export const rolldown = async (args: {
   entrypoint: string;
@@ -53,22 +55,35 @@ export const rolldown = async (args: {
   const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
 
+  // Manually clean the output directory before build
+  // (can't use cleanDir: true because it runs after buildEnd hook)
+  if (existsSync(outputDir)) {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+
   const isBundled = process.env.VERCEL_BUILDER_BUNDLE_NODE === '1';
 
-  const external: string[] = [];
+  // Build plugins array
+  const plugins = [];
+
   if (!isBundled) {
-    for (const dependency of Object.keys(pkg.dependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.devDependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.peerDependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
-      external.push(dependency);
-    }
+    // Add externals plugin for npm dependencies
+    plugins.push(
+      externals({
+        rootDir: args.workPath,
+        outputDir: outputDir,
+        repoRootPath: args.repoRootPath,
+      })
+    );
+
+    // Add workspace plugin for monorepo packages
+    plugins.push(
+      workspace({
+        repoRootPath: args.repoRootPath,
+        outputDir: outputDir,
+        format: resolvedFormat || 'esm',
+      })
+    );
   }
 
   const out = await rolldownBuild({
@@ -77,7 +92,7 @@ export const rolldown = async (args: {
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    external,
+    plugins,
     onLog: (level, log, defaultHandler) => {
       // Since we're processing node modules, suppress EVAL logs from internal packages
       // that we need to fix
@@ -91,7 +106,7 @@ export const rolldown = async (args: {
       }
     },
     output: {
-      cleanDir: true,
+      cleanDir: false, // TEMPORARY: Disable to test if this is deleting node_modules
       dir: outputDir,
       format: resolvedFormat,
       entryFileNames: `[name].${resolvedExtension}`,
@@ -103,6 +118,8 @@ export const rolldown = async (args: {
           : undefined,
     },
   });
+
+  console.log('[cervel] Rolldown build completed, output written');
   let handler: string | null = null;
   for (const entry of out.output) {
     if (entry.type === 'chunk') {
