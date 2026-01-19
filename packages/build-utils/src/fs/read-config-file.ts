@@ -156,5 +156,14 @@ export async function readLockfileVersion(
   }
 
   // Fall back to full file parsing for unknown formats or if not found in header
-  return readConfigFile<{ lockfileVersion: number }>(filePath);
+  const config = await readConfigFile<{ lockfileVersion: number | string }>(
+    filePath
+  );
+  
+  // Ensure lockfileVersion is always a number, even if YAML parsing returns a string
+  if (config && config.lockfileVersion) {
+    return { lockfileVersion: Number(config.lockfileVersion) };
+  }
+  
+  return null;
 }
