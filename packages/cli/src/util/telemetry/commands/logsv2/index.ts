@@ -117,4 +117,13 @@ export class Logsv2TelemetryClient
       });
     }
   }
+
+  trackCliOptionRequestId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'request-id',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

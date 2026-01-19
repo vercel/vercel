@@ -129,6 +129,19 @@ describe('logs-v2 utility', () => {
       });
     });
 
+    it('should include requestId filter in query', async () => {
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        expect(req.query.requestId).toEqual('req_abc123');
+        res.json({ rows: [], hasMoreRows: false });
+      });
+
+      await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        requestId: 'req_abc123',
+      });
+    });
+
     it('should parse relative time for --since option', async () => {
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         const startDateMs = parseInt(req.query.startDate as string, 10);

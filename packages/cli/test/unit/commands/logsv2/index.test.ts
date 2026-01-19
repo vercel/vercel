@@ -548,6 +548,43 @@ describe('logsv2', () => {
     });
   });
 
+  describe('--request-id option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logsv2test',
+        name: 'logsv2-test-project',
+      });
+    });
+
+    it('should filter by request ID', async () => {
+      useRequestLogs([createMockLog({ id: 'req_specific123' })]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logsv2', '--request-id', 'req_specific123');
+      const exitCode = await logsv2(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should track telemetry for --request-id option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logsv2', '--request-id', 'req_abc123');
+      await logsv2(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:request-id',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
   describe('error handling', () => {
     it('should error when not linked and no project specified', async () => {
       useUser();

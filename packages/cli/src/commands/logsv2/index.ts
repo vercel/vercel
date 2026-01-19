@@ -68,6 +68,7 @@ export default async function logsv2(client: Client) {
   const limitOption = parsedArguments.flags['--limit'];
   const jsonOption = parsedArguments.flags['--json'];
   const searchOption = parsedArguments.flags['--search'];
+  const requestIdOption = parsedArguments.flags['--request-id'];
 
   telemetry.trackCliOptionProject(projectOption);
   telemetry.trackCliOptionDeployment(deploymentOption);
@@ -80,6 +81,7 @@ export default async function logsv2(client: Client) {
   telemetry.trackCliOptionLimit(limitOption);
   telemetry.trackCliFlagJson(jsonOption);
   telemetry.trackCliOptionSearch(searchOption);
+  telemetry.trackCliOptionRequestId(requestIdOption);
 
   let contextName: string | null = null;
 
@@ -200,6 +202,7 @@ export default async function logsv2(client: Client) {
       until: untilOption,
       limit,
       search: searchOption,
+      requestId: requestIdOption,
     })) {
       output.stopSpinner();
       if (jsonOption) {

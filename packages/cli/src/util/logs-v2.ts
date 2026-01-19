@@ -40,6 +40,7 @@ export interface FetchRequestLogsOptions {
   until?: string;
   limit?: number;
   search?: string;
+  requestId?: string;
   page?: number;
 }
 
@@ -71,6 +72,7 @@ export async function fetchRequestLogs(
     since,
     until,
     search,
+    requestId,
     page = 0,
   } = options;
 
@@ -111,6 +113,10 @@ export async function fetchRequestLogs(
 
   if (search) {
     query.set('search', search);
+  }
+
+  if (requestId) {
+    query.set('requestId', requestId);
   }
 
   const url = `/api/logs/request-logs?${query.toString()}`;

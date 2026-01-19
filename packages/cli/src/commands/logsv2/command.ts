@@ -85,6 +85,13 @@ export const logsv2Command = {
       deprecated: false,
       description: 'Full-text search query',
     },
+    {
+      name: 'request-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Filter by request ID',
+    },
   ],
   examples: [
     {
@@ -110,6 +117,10 @@ export const logsv2Command = {
     {
       name: 'Display production logs only',
       value: `${packageName} logsv2 --environment production`,
+    },
+    {
+      name: 'Display logs for a specific request',
+      value: `${packageName} logsv2 --request-id req_xxxxx`,
     },
   ],
 } as const;
