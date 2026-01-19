@@ -1,5 +1,30 @@
 # vercel
 
+## 50.4.6
+
+### Patch Changes
+
+- Updated dependencies [[`186967277069593406948c0e3099477ba43e181a`](https://github.com/vercel/vercel/commit/186967277069593406948c0e3099477ba43e181a), [`b6767ac1736e308146399d675b53fef68b99fad3`](https://github.com/vercel/vercel/commit/b6767ac1736e308146399d675b53fef68b99fad3)]:
+  - @vercel/build-utils@13.2.12
+  - @vercel/go@3.3.3
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.23
+  - @vercel/express@0.1.30
+  - @vercel/fastify@0.1.26
+  - @vercel/h3@0.1.32
+  - @vercel/hono@0.2.26
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.6
+  - @vercel/nestjs@0.2.27
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.24
+  - @vercel/python@6.1.6
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.24
+
 ## 50.4.5
 
 ### Patch Changes
