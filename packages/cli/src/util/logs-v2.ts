@@ -1,4 +1,5 @@
 import ms from 'ms';
+import fetch from 'node-fetch';
 import type Client from './client';
 
 export interface RequestLogEntry {
@@ -23,13 +24,14 @@ export interface RequestLogEntry {
 export interface RequestLogsResponse {
   logs: RequestLogEntry[];
   pagination?: {
-    next?: string;
+    page?: number;
     hasMore?: boolean;
   };
 }
 
 export interface FetchRequestLogsOptions {
   projectId: string;
+  ownerId: string;
   deploymentId?: string;
   environment?: string;
   level?: string[];
@@ -39,7 +41,7 @@ export interface FetchRequestLogsOptions {
   until?: string;
   limit?: number;
   search?: string;
-  cursor?: string;
+  page?: number;
 }
 
 function parseRelativeTime(input: string): number {
@@ -68,6 +70,7 @@ export async function fetchRequestLogs(
 ): Promise<RequestLogsResponse> {
   const {
     projectId,
+    ownerId,
     deploymentId,
     environment,
     level,
@@ -75,14 +78,22 @@ export async function fetchRequestLogs(
     source,
     since,
     until,
-    limit = 100,
     search,
-    cursor,
+    page = 0,
   } = options;
+
+  const now = Date.now();
+  const defaultStartDate = now - 24 * 60 * 60 * 1000; // 24 hours ago
 
   const query = new URLSearchParams();
   query.set('projectId', projectId);
-  query.set('limit', String(limit));
+  query.set('ownerId', ownerId);
+  query.set('page', String(page));
+  query.set(
+    'startDate',
+    String(since ? parseRelativeTime(since) : defaultStartDate)
+  );
+  query.set('endDate', String(until ? parseRelativeTime(until) : now));
 
   if (deploymentId) {
     query.set('deploymentId', deploymentId);
@@ -93,9 +104,7 @@ export async function fetchRequestLogs(
   }
 
   if (level && level.length > 0) {
-    for (const l of level) {
-      query.append('level', l);
-    }
+    query.set('level', level.join(','));
   }
 
   if (statusCode) {
@@ -103,48 +112,58 @@ export async function fetchRequestLogs(
   }
 
   if (source && source.length > 0) {
-    for (const s of source) {
-      query.append('source', s);
-    }
-  }
-
-  if (since) {
-    const sinceMs = parseRelativeTime(since);
-    query.set('since', String(sinceMs));
-  }
-
-  if (until) {
-    const untilMs = parseRelativeTime(until);
-    query.set('until', String(untilMs));
+    query.set('source', source.join(','));
+  } else {
+    // Default sources matching the dashboard
+    query.set('source', 'serverless,middleware,cache');
   }
 
   if (search) {
     query.set('search', search);
   }
 
-  if (cursor) {
-    query.set('cursor', cursor);
+  const url = `https://vercel.com/api/logs/request-logs?${query.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${client.authConfig.token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to fetch logs: ${response.status} ${error}`);
   }
 
-  const url = `/api/logs/request-logs?${query.toString()}`;
+  const data = await response.json();
 
-  return client.fetch<RequestLogsResponse>(url);
+  // Normalize the response - API returns 'rows' and 'hasMoreRows'
+  const apiData = data as { rows?: RequestLogEntry[]; hasMoreRows?: boolean };
+  return {
+    logs: apiData.rows || [],
+    pagination: {
+      hasMore: apiData.hasMoreRows ?? false,
+    },
+  };
 }
 
 export async function* fetchAllRequestLogs(
   client: Client,
   options: FetchRequestLogsOptions
 ): AsyncGenerator<RequestLogEntry> {
-  let cursor: string | undefined;
+  let page = 0;
   let remaining = options.limit ?? 100;
+  let hasMore = true;
 
-  do {
-    const batchLimit = Math.min(remaining, 100);
+  while (hasMore && remaining > 0) {
     const response = await fetchRequestLogs(client, {
       ...options,
-      limit: batchLimit,
-      cursor,
+      page,
     });
+
+    if (!response.logs || response.logs.length === 0) {
+      break;
+    }
 
     for (const log of response.logs) {
       yield log;
@@ -154,8 +173,9 @@ export async function* fetchAllRequestLogs(
       }
     }
 
-    cursor = response.pagination?.next;
-  } while (cursor && remaining > 0);
+    hasMore = response.pagination?.hasMore ?? false;
+    page++;
+  }
 }
 
 export async function resolveDeploymentId(

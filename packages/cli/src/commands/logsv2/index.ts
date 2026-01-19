@@ -97,6 +97,7 @@ export default async function logsv2(client: Client) {
   }
 
   let projectId: string;
+  let ownerId: string;
 
   if (projectOption) {
     output.spinner(`Fetching project "${projectOption}"`, 1000);
@@ -112,6 +113,7 @@ export default async function logsv2(client: Client) {
       return 1;
     }
     projectId = project.id;
+    ownerId = project.accountId;
   } else {
     const link = await getLinkedProject(client);
     if (link.status === 'error') {
@@ -127,6 +129,7 @@ export default async function logsv2(client: Client) {
     client.config.currentTeam =
       link.org.type === 'team' ? link.org.id : undefined;
     projectId = link.project.id;
+    ownerId = link.org.id;
   }
 
   let deploymentId: string | undefined;
@@ -187,6 +190,7 @@ export default async function logsv2(client: Client) {
   try {
     for await (const log of fetchAllRequestLogs(client, {
       projectId,
+      ownerId,
       deploymentId,
       environment: environmentOption,
       level: levels.length > 0 ? levels : undefined,
