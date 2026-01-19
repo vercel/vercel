@@ -1,6 +1,8 @@
 import ms from 'ms';
 import type Client from './client';
 
+const DASHBOARD_API_BASE_URL = 'https://vercel.com';
+
 export interface RequestLogEntry {
   id: string;
   timestamp: number;
@@ -42,6 +44,8 @@ export interface FetchRequestLogsOptions {
   search?: string;
   requestId?: string;
   page?: number;
+  /** Base URL for the dashboard API (defaults to https://vercel.com, override for tests) */
+  baseUrl?: string;
 }
 
 function parseRelativeTime(input: string): number {
@@ -74,7 +78,15 @@ export async function fetchRequestLogs(
     search,
     requestId,
     page = 0,
+    baseUrl,
   } = options;
+
+  // Use client's apiUrl if it's localhost (test environment), otherwise use dashboard URL
+  const effectiveBaseUrl =
+    baseUrl ??
+    (client.apiUrl.startsWith('http://127.0.0.1')
+      ? client.apiUrl
+      : DASHBOARD_API_BASE_URL);
 
   const now = Date.now();
   const defaultStartDate = now - 24 * 60 * 60 * 1000; // 24 hours ago
@@ -119,7 +131,7 @@ export async function fetchRequestLogs(
     query.set('requestId', requestId);
   }
 
-  const url = `/api/logs/request-logs?${query.toString()}`;
+  const url = `${effectiveBaseUrl}/api/logs/request-logs?${query.toString()}`;
 
   const data = await client.fetch<{
     rows?: RequestLogEntry[];
