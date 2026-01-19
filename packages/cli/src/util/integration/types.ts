@@ -79,6 +79,10 @@ export interface Integration {
   slug: string;
   name: string;
   products?: IntegrationProduct[];
+  /** Provider's End User License Agreement URL */
+  eulaDocUri?: string;
+  /** Provider's Privacy Policy URL */
+  privacyDocUri?: string;
 }
 
 export interface IntegrationInstallation {

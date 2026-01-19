@@ -4,6 +4,8 @@ import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import { packageName } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import list from '../../util/input/list';
 import cmd from '../../util/output/cmd';
 import indent from '../../util/output/indent';
@@ -21,11 +23,13 @@ import { connectResourceToProject } from '../../util/integration-resource/connec
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { createInstallation } from '../../util/integration/create-installation';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { addSubcommand } from './command';
 
 export async function add(client: Client, args: string[]) {
   const telemetry = new IntegrationAddTelemetryClient({
@@ -34,12 +38,21 @@ export async function add(client: Client, args: string[]) {
     },
   });
 
-  if (args.length > 1) {
+  // Parse flags
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  const { flags } = parseArguments(args, flagsSpecification);
+  const acceptTerms = !!flags['--accept-terms'];
+  telemetry.trackCliFlagAcceptTerms(acceptTerms);
+
+  // Filter out flags from args to get positional arguments
+  const positionalArgs = args.filter(arg => !arg.startsWith('-'));
+
+  if (positionalArgs.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const integrationSlug = positionalArgs[0];
 
   if (!integrationSlug) {
     output.error('You must pass an integration slug');
@@ -106,7 +119,7 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  const installation = teamInstallations[0] as
+  let installation = teamInstallations[0] as
     | IntegrationInstallation
     | undefined;
 
@@ -114,17 +127,54 @@ export async function add(client: Client, args: string[]) {
     `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
   );
 
+  // Handle first-time installation (terms acceptance)
+  if (!installation) {
+    const vercelTermsUrl =
+      'https://vercel.com/legal/integration-marketplace-end-users-addendum';
+
+    output.log('');
+    output.log(chalk.bold('Terms & Conditions'));
+    output.log('By continuing, you agree to the following:');
+    output.log('');
+    output.log(`  • Vercel Integration Marketplace End User Addendum`);
+    output.log(`    ${chalk.cyan(vercelTermsUrl)}`);
+    if (integration.eulaDocUri) {
+      output.log(`  • ${integration.name} EULA`);
+      output.log(`    ${chalk.cyan(integration.eulaDocUri)}`);
+    }
+    if (integration.privacyDocUri) {
+      output.log(`  • ${integration.name} Privacy Policy`);
+      output.log(`    ${chalk.cyan(integration.privacyDocUri)}`);
+    }
+    output.log('');
+
+    let shouldAccept = acceptTerms;
+    if (!acceptTerms) {
+      shouldAccept = await client.input.confirm('Accept all terms?', false);
+    }
+
+    if (!shouldAccept) {
+      output.log('Terms not accepted. Installation cancelled.');
+      return 1;
+    }
+
+    output.spinner('Accepting terms and creating installation...', 500);
+    try {
+      installation = await createInstallation(client, team.id, integration.id);
+    } catch (error) {
+      output.stopSpinner();
+      output.error(`Failed to accept terms: ${(error as Error).message}`);
+      return 1;
+    }
+    output.stopSpinner();
+    output.log('Terms accepted.');
+  }
+
   const metadataSchema = product.metadataSchema;
   const metadataWizard = createMetadataWizard(metadataSchema);
 
-  // The provisioning via cli is possible when
-  // 1. The integration was installed once (terms have been accepted)
-  // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
-  // 3. The selected billing plan is supported (handled at time of billing plan selection)
-  const provisionResourceViaCLIIsSupported =
-    installation && metadataWizard.isSupported;
-
-  if (!provisionResourceViaCLIIsSupported) {
+  // Check if metadata is supported for CLI provisioning
+  if (!metadataWizard.isSupported) {
     const projectLink = await getOptionalLinkedProject(client);
 
     if (projectLink?.status === 'error') {
@@ -132,9 +182,7 @@ export async function add(client: Client, args: string[]) {
     }
 
     const openInWeb = await client.input.confirm(
-      !installation
-        ? 'Terms have not been accepted. Open Vercel Dashboard?'
-        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
+      'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
       true
     );
 
@@ -189,7 +237,8 @@ function provisionResourceViaWebUI(
   productId: string,
   projectId?: string
 ) {
-  const url = new URL('/api/marketplace/cli', 'https://vercel.com');
+  const baseUrl = process.env.VERCEL_BASE_URL || 'https://vercel.com';
+  const url = new URL('/api/marketplace/cli', baseUrl);
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('integrationId', integrationId);
   url.searchParams.set('productId', productId);
@@ -198,6 +247,7 @@ function provisionResourceViaWebUI(
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.print(`URL: ${url.href}`);
   open(url.href);
 }
 
@@ -496,11 +546,13 @@ function handleManualVerificationAction(
   teamId: string,
   authorizationId: string
 ) {
-  const url = new URL('/api/marketplace/cli', 'https://vercel.com');
+  const baseUrl = process.env.VERCEL_BASE_URL || 'https://vercel.com';
+  const url = new URL('/api/marketplace/cli', baseUrl);
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('authorizationId', authorizationId);
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.print(`URL: ${url.href}`);
   open(url.href);
 }
 
