@@ -38,12 +38,12 @@ export const build: BuildV2 = async args => {
   });
 
   debug('Node file trace starting..');
-  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
+  const nftSpan = span.child('vc.builder.nodeFileTrace');
   const nftPromise = nftSpan.trace(() =>
     nodeFileTrace(args, nodeVersion, outputConfig)
   );
   debug('Introspection starting..');
-  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
+  const introspectAppSpan = span.child('vc.builder.introspectApp');
   const { routes, framework } = await introspectAppSpan.trace(async () =>
     introspectApp({
       ...outputConfig,
@@ -102,9 +102,11 @@ export const build: BuildV2 = async args => {
 
   // Don't return until the TypeScript compilation is complete
   if (outputConfig.tsPromise) {
-    const tsSpan = span.child('vc.builder.backends.tsCompile');
+    const tsSpan = span.child('vc.builder.tsCompile');
     await tsSpan.trace(() => outputConfig.tsPromise);
   }
+
+  await span.stop();
 
   return {
     routes,
