@@ -45,7 +45,6 @@ describe('logs-v2 utility', () => {
       const result = await fetchRequestLogs(client, {
         projectId: 'prj_test',
         ownerId: 'team_test',
-        baseUrl: client.apiUrl,
       });
 
       expect(result.logs).toHaveLength(1);
@@ -62,7 +61,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         deploymentId: 'dpl_specific',
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -76,7 +74,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         environment: 'production',
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -90,7 +87,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         level: ['error', 'warning'],
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -104,7 +100,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         source: ['serverless', 'edge-function'],
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -118,7 +113,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         statusCode: '500',
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -132,7 +126,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         search: 'timeout',
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -146,7 +139,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         requestId: 'req_abc123',
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -164,7 +156,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         since: '1h',
-        baseUrl: client.apiUrl,
       });
     });
 
@@ -182,7 +173,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         since: isoDate,
-        baseUrl: client.apiUrl,
       });
     });
   });
@@ -201,7 +191,6 @@ describe('logs-v2 utility', () => {
       for await (const log of fetchAllRequestLogs(client, {
         projectId: 'prj_test',
         ownerId: 'team_test',
-        baseUrl: client.apiUrl,
       })) {
         logs.push(log);
       }
@@ -234,7 +223,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         limit: 200,
-        baseUrl: client.apiUrl,
       })) {
         logs.push(log);
       }
@@ -263,7 +251,6 @@ describe('logs-v2 utility', () => {
         projectId: 'prj_test',
         ownerId: 'team_test',
         limit: 3,
-        baseUrl: client.apiUrl,
       })) {
         logs.push(log);
       }
