@@ -19,19 +19,24 @@ export const version = 2;
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(args.workPath);
+  const builderName = '@vercel/backends';
 
   const span =
     args.span ??
     new Span({
-      name: '@vercel/backends',
+      name: builderName,
     });
+
+  span.setAttributes({
+    'builder.name': builderName,
+  });
 
   const doBuildSpan = span.child('vc.builder.backends.doBuild');
   const outputConfig = await doBuildSpan.trace(async span => {
     const result = await doBuild(args, downloadResult);
     span.setAttributes({
-      dir: result.dir,
-      handler: result.handler,
+      'outputConfig.dir': result.dir,
+      'outputConfig.handler': result.handler,
     });
     return result;
   });
@@ -53,7 +58,7 @@ export const build: BuildV2 = async args => {
       },
     });
     span.setAttributes({
-      routes: String(result.routes.length),
+      'introspectApp.routes': String(result.routes.length),
     });
     return result;
   });
