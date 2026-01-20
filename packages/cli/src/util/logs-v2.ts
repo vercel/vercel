@@ -119,7 +119,13 @@ export async function fetchRequestLogs(
     query.set('requestId', requestId);
   }
 
-  const url = `/api/logs/request-logs?${query.toString()}`;
+  // The request-logs API is on vercel.com, not api.vercel.com
+  // In tests, client.apiUrl points to the mock server, so use that
+  const baseUrl =
+    client.apiUrl === 'https://api.vercel.com'
+      ? 'https://vercel.com'
+      : client.apiUrl;
+  const url = `${baseUrl}/api/logs/request-logs?${query.toString()}`;
 
   const data = await client.fetch<{
     rows?: RequestLogEntry[];
