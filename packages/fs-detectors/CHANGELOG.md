@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.7.15
+
+### Patch Changes
+
+- [frameworks] experimental framework flagging ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- Updated dependencies [[`9de063fe733651c295d39f956930a34d88b01e37`](https://github.com/vercel/vercel/commit/9de063fe733651c295d39f956930a34d88b01e37), [`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02), [`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02)]:
+  - @vercel/frameworks@3.15.7
+
 ## 5.7.14
 
 ### Patch Changes
