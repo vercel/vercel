@@ -16,19 +16,22 @@ import { ConflictingConfigFiles } from './errors-ts';
 // Input item that may be in legacy Route format (src) or modern format (source)
 type RouteInput = RouteWithSrc | Rewrite | Redirect | Header;
 
-function isRouteFormat(item: RouteInput): item is RouteWithSrc {
-  return item && typeof item === 'object' && 'src' in item;
-}
+type RouteItemType = 'route' | 'rewrite' | 'redirect' | 'header';
 
-type RouteItemType = 'rewrite' | 'redirect' | 'header';
+function detectRouteType(item: RouteInput): RouteItemType {
+  if ('src' in item) return 'route';
+  if ('permanent' in item || 'statusCode' in item) return 'redirect';
+  if ('headers' in item && Array.isArray(item.headers)) return 'header';
+  return 'rewrite';
+}
 
 /**
  * Convert a rewrite, redirect, or header rule to Route format.
  * If already in Route format, returns unchanged.
  */
 function toRouteFormat(item: RouteInput, type: RouteItemType): RouteWithSrc {
-  if (isRouteFormat(item)) {
-    return item;
+  if (detectRouteType(item) === 'route') {
+    return item as RouteWithSrc;
   }
 
   const { source, destination, headers, statusCode, permanent, ...rest } =
@@ -121,12 +124,9 @@ export function normalizeConfig(config: ConfigWithRouting): ConfigWithRouting {
   // Normalize any remaining items in routes array
   // (e.g., routes.redirect() mixed with routes.rewrite() in the routes array)
   if (allRoutes.length > 0) {
-    // Detect type: redirects have 'permanent' or 'statusCode', everything else is a rewrite
-    allRoutes = allRoutes.map(item => {
-      const type: RouteItemType =
-        'permanent' in item || 'statusCode' in item ? 'redirect' : 'rewrite';
-      return toRouteFormat(item, type);
-    });
+    allRoutes = allRoutes.map(item =>
+      toRouteFormat(item, detectRouteType(item))
+    );
     normalized.routes = allRoutes;
   }
 
