@@ -19,6 +19,9 @@
 /packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management @vercel/ai-sdk
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 /packages/config                         @vercel/ci-cd @vercel/edge-ingress @pranavkarthik10 @MatthewStanciu
+/packages/python                         @vercel/team-python
+/python                                  @vercel/team-python
+/.github/workflows/*python*.yml          @vercel/team-python
 
 # Unrestricted Paths
 # These paths are updated by the changeset CLI for "Version Packages" pull requests
