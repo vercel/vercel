@@ -1,8 +1,14 @@
-import { spawn } from 'child_process';
-import { existsSync } from 'fs';
-import { dirname, isAbsolute, join, relative } from 'path';
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
+import { dirname, isAbsolute, join, relative } from 'node:path';
+import {
+  existsSync,
+  createWriteStream,
+  readFileSync,
+  unlinkSync,
+} from 'node:fs';
+import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { z } from 'zod';
 import {
   debug,
@@ -73,39 +79,19 @@ export const introspectApp = async (args: {
         }
       );
 
-      // Buffer to accumulate stdout data across chunks
-      let stdoutBuffer = '';
+      // Create a temporary file to write stdout data
+      const tempFilePath = join(
+        tmpdir(),
+        `introspection-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`
+      );
+      const writeStream = createWriteStream(tempFilePath);
+      let streamClosed = false;
 
-      child.stdout?.on('data', data => {
-        try {
-          // Accumulate data in buffer to handle chunked output
-          stdoutBuffer += data.toString();
+      // Pipe stdout to the file stream
+      child.stdout?.pipe(writeStream);
 
-          // Check if we have a complete introspection result
-          const beginIndex = stdoutBuffer.indexOf(BEGIN_INTROSPECTION_RESULT);
-          const endIndex = stdoutBuffer.indexOf(END_INTROSPECTION_RESULT);
-
-          if (beginIndex === -1 || endIndex === -1) {
-            return; // Don't have complete data yet
-          }
-
-          const introspectionString = stdoutBuffer.substring(
-            beginIndex + BEGIN_INTROSPECTION_RESULT.length,
-            endIndex
-          );
-
-          if (!introspectionString) {
-            return;
-          }
-
-          const introspectionResult = introspectionSchema.parse(
-            JSON.parse(introspectionString)
-          );
-          introspectionData = introspectionResult;
-          debug('Introspection data parsed successfully');
-        } catch (error) {
-          debug(`Error parsing introspection data: ${error}`);
-        }
+      writeStream.on('error', err => {
+        debug(`Write stream error: ${err.message}`);
       });
 
       const timeout = setTimeout(() => {
@@ -121,6 +107,10 @@ export const introspectApp = async (args: {
         clearTimeout(timeout);
         clearTimeout(timeout2);
         debug(`Loader error: ${err.message}`);
+        if (!streamClosed) {
+          writeStream.close();
+          streamClosed = true;
+        }
         resolvePromise(undefined);
       });
 
@@ -128,7 +118,49 @@ export const introspectApp = async (args: {
         clearTimeout(timeout);
         clearTimeout(timeout2);
         debug('Introspection process closed');
-        resolvePromise(undefined);
+
+        if (!streamClosed) {
+          writeStream.end(() => {
+            streamClosed = true;
+            // Read the file once the stream is closed
+            try {
+              const stdoutBuffer = readFileSync(tempFilePath, 'utf8');
+
+              // Check if we have a complete introspection result
+              const beginIndex = stdoutBuffer.indexOf(
+                BEGIN_INTROSPECTION_RESULT
+              );
+              const endIndex = stdoutBuffer.indexOf(END_INTROSPECTION_RESULT);
+
+              if (beginIndex !== -1 && endIndex !== -1) {
+                const introspectionString = stdoutBuffer.substring(
+                  beginIndex + BEGIN_INTROSPECTION_RESULT.length,
+                  endIndex
+                );
+
+                if (introspectionString) {
+                  const introspectionResult = introspectionSchema.parse(
+                    JSON.parse(introspectionString)
+                  );
+                  introspectionData = introspectionResult;
+                  debug('Introspection data parsed successfully');
+                }
+              }
+            } catch (error) {
+              debug(`Error parsing introspection data: ${error}`);
+            } finally {
+              // Clean up the temporary file
+              try {
+                unlinkSync(tempFilePath);
+              } catch (err) {
+                debug(`Error deleting temp file: ${err}`);
+              }
+              resolvePromise(undefined);
+            }
+          });
+        } else {
+          resolvePromise(undefined);
+        }
       });
     } catch (error) {
       debug('Introspection error', error);
