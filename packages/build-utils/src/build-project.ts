@@ -2,16 +2,14 @@ import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import semver from 'semver';
 import { join, normalize, sep } from 'path';
-import {
-  frameworkList,
-  type Framework as FrameworkType,
-} from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
+import type { Framework as FrameworkType } from '@vercel/frameworks';
 import {
   appendRoutesToPhase,
   mergeRoutes,
   sourceToRegex,
-  type Route as RoutingRoute,
 } from '@vercel/routing-utils';
+import type { Route as RoutingRoute } from '@vercel/routing-utils';
 import { NowBuildError } from './errors';
 import { getInstalledPackageVersion } from './get-installed-package-version';
 import {
