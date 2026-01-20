@@ -109,10 +109,21 @@ export const introspectApp = async (args: {
         clearTimeout(timeout2);
         debug(`Loader error: ${err.message}`);
         if (!streamClosed) {
-          writeStream.close();
-          streamClosed = true;
+          // Use end() with callback instead of close() to ensure buffered data is flushed
+          // before resolving the promise, preventing data loss
+          writeStream.end(() => {
+            streamClosed = true;
+            // Clean up the temporary file on error
+            try {
+              unlinkSync(tempFilePath);
+            } catch (cleanupErr) {
+              debug(`Error deleting temp file on error: ${cleanupErr}`);
+            }
+            resolvePromise(undefined);
+          });
+        } else {
+          resolvePromise(undefined);
         }
-        resolvePromise(undefined);
       });
 
       child.on('close', () => {
