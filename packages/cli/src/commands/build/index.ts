@@ -16,12 +16,13 @@ import {
   validateNpmrc,
   type PackageJson,
   runBuild,
-  expandBuild,
+  prepareBuild,
   type BuildsManifest,
   type BuildLogger,
   type BuilderWithPkg,
   type VercelConfig as BuildUtilsVercelConfig,
   type RunBuildOptions,
+  type PrepareBuildOptions,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -38,7 +39,6 @@ import {
   getTransformedRoutes,
   mergeRoutes,
   sourceToRegex,
-  type Route,
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
@@ -502,66 +502,24 @@ async function doBuild(
     throw routesResult.error;
   }
 
-  if (localConfig.builds && localConfig.functions) {
-    throw new NowBuildError({
-      code: 'bad_request',
-      message:
-        'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
-      link: 'https://vercel.link/functions-and-builds',
-    });
-  }
+  // Create the build logger
+  const logger = createBuildLogger();
 
-  let builds = localConfig.builds || [];
-  let zeroConfigRoutes: Route[] = [];
-  let isZeroConfig = false;
+  // Prepare the build configuration (detect builders, routes, etc.)
+  const prepareBuildOptions: PrepareBuildOptions = {
+    files,
+    pkg: pkg || null,
+    localConfig: localConfig as BuildUtilsVercelConfig,
+    projectSettings: projectSettings as PrepareBuildOptions['projectSettings'],
+    workPath,
+    logger,
+    detectBuilders: detectBuilders as PrepareBuildOptions['detectBuilders'],
+    appendRoutesToPhase:
+      appendRoutesToPhase as PrepareBuildOptions['appendRoutesToPhase'],
+  };
 
-  if (builds.length > 0) {
-    output.warn(
-      'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
-    );
-    builds = builds.map(b => expandBuild(files, b)).flat();
-  } else {
-    // Zero config
-    isZeroConfig = true;
-
-    // Detect the Vercel Builders that will need to be invoked
-    const detectedBuilders = await detectBuilders(files, pkg, {
-      ...localConfig,
-      projectSettings,
-      ignoreBuildScript: true,
-      featHandleMiss: true,
-      workPath,
-    });
-
-    if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
-      throw detectedBuilders.errors[0];
-    }
-
-    for (const w of detectedBuilders.warnings) {
-      output.warn(w.message, null, w.link, w.action || 'Learn More');
-    }
-
-    if (detectedBuilders.builders) {
-      builds = detectedBuilders.builders;
-    } else {
-      builds = [{ src: '**', use: '@vercel/static' }];
-    }
-
-    zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
-    zeroConfigRoutes.push(
-      ...appendRoutesToPhase({
-        routes: [],
-        newRoutes: detectedBuilders.rewriteRoutes,
-        phase: 'filesystem',
-      })
-    );
-    zeroConfigRoutes = appendRoutesToPhase({
-      routes: zeroConfigRoutes,
-      newRoutes: detectedBuilders.errorRoutes,
-      phase: 'error',
-    });
-    zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
-  }
+  const { builds, zeroConfigRoutes, isZeroConfig } =
+    await prepareBuild(prepareBuildOptions);
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
@@ -576,9 +534,6 @@ async function doBuild(
 
   // Sort builders for execution order
   const sortedBuilders = sortBuilders(builds);
-
-  // Create the build logger
-  const logger = createBuildLogger();
 
   // Call the core build function from build-utils
   await runBuild({
@@ -603,8 +558,6 @@ async function doBuild(
     frameworkList: frameworkList as unknown as RunBuildOptions['frameworkList'],
     writeBuildResult: writeBuildResult as RunBuildOptions['writeBuildResult'],
     mergeRoutes: mergeRoutes as unknown as RunBuildOptions['mergeRoutes'],
-    getTransformedRoutes:
-      getTransformedRoutes as unknown as RunBuildOptions['getTransformedRoutes'],
     sourceToRegex: sourceToRegex as unknown as RunBuildOptions['sourceToRegex'],
     detectFrameworkRecord:
       detectFrameworkRecord as unknown as RunBuildOptions['detectFrameworkRecord'],

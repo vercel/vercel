@@ -14,6 +14,8 @@ import download from './fs/download';
 import type { Span } from './trace';
 import type {
   Builder,
+  BuilderV2 as TypesBuilderV2,
+  BuilderV3 as TypesBuilderV3,
   BuildOptions,
   BuildResultV2,
   BuildResultV2Typical,
@@ -24,6 +26,7 @@ import type {
   FlagDefinitions,
   Meta,
   PackageJson,
+  ProjectSettings as TypesProjectSettings,
 } from './types';
 import type { Lambda } from './lambda';
 
@@ -92,6 +95,12 @@ export interface BuildLogger {
 }
 
 /**
+ * Re-export BuilderV2 and BuilderV3 from types for consumers
+ */
+export type BuilderV2 = TypesBuilderV2;
+export type BuilderV3 = TypesBuilderV3;
+
+/**
  * Builder with package information
  */
 export interface BuilderWithPkg {
@@ -99,29 +108,6 @@ export interface BuilderWithPkg {
   pkgPath: string;
   builder: BuilderV2 | BuilderV3;
   pkg: PackageJson & { name: string };
-}
-
-/**
- * Builder interface (v2)
- */
-export interface BuilderV2 {
-  version: 2;
-  build: (options: BuildOptions) => Promise<BuildResultV2>;
-  diagnostics?: (options: BuildOptions) => Promise<Files>;
-  prepareCache?: (options: any) => Promise<Files>;
-  shouldServe?: (options: any) => boolean | Promise<boolean>;
-}
-
-/**
- * Builder interface (v3)
- */
-export interface BuilderV3 {
-  version: 3;
-  build: (options: BuildOptions) => Promise<BuildResultV3>;
-  diagnostics?: (options: BuildOptions) => Promise<Files>;
-  prepareCache?: (options: any) => Promise<Files>;
-  shouldServe?: (options: any) => boolean | Promise<boolean>;
-  startDevServer?: (options: any) => Promise<any>;
 }
 
 /**
@@ -152,21 +138,9 @@ export interface Framework {
 }
 
 /**
- * Project settings interface
+ * Re-export ProjectSettings from types for consumers
  */
-export interface ProjectSettings {
-  framework?: string | null;
-  devCommand?: string | null;
-  installCommand?: string | null;
-  buildCommand?: string | null;
-  outputDirectory?: string | null;
-  rootDirectory?: string | null;
-  nodeVersion?: string;
-  monorepoManager?: string | null;
-  createdAt?: number;
-  analyticsId?: string;
-  [key: string]: unknown;
-}
+export type ProjectSettings = TypesProjectSettings;
 
 /**
  * Vercel config interface (simplified)
@@ -375,9 +349,181 @@ export interface DetectedFramework {
 }
 
 /**
+ * Options for preparing the build
+ */
+export interface PrepareBuildOptions {
+  /**
+   * List of source files (relative paths)
+   */
+  files: string[];
+
+  /**
+   * Package.json contents
+   */
+  pkg: PackageJson | null;
+
+  /**
+   * Local vercel.json configuration
+   */
+  localConfig: VercelConfig;
+
+  /**
+   * Project settings
+   */
+  projectSettings: ProjectSettings;
+
+  /**
+   * Work path (project root)
+   */
+  workPath: string;
+
+  /**
+   * Logger for build output
+   */
+  logger: BuildLogger;
+
+  /**
+   * Function to detect builders
+   */
+  detectBuilders: (
+    files: string[],
+    pkg: PackageJson | null,
+    options: any
+  ) => Promise<DetectBuildersResult>;
+
+  /**
+   * Function to append routes to a phase
+   */
+  appendRoutesToPhase: (args: {
+    routes: Route[];
+    newRoutes?: Route[];
+    phase?: string;
+  }) => Route[];
+}
+
+/**
+ * Result from detectBuilders
+ */
+export interface DetectBuildersResult {
+  builders?: Builder[] | null;
+  errors?: Array<{ message: string; code?: string }> | null;
+  warnings: Array<{ message: string; link?: string; action?: string }>;
+  redirectRoutes?: Route[] | null;
+  rewriteRoutes?: Route[] | null;
+  errorRoutes?: Route[] | null;
+  defaultRoutes?: Route[] | null;
+}
+
+/**
+ * Result from prepareBuild
+ */
+export interface PrepareBuildResult {
+  /**
+   * List of builders to execute
+   */
+  builds: Builder[];
+
+  /**
+   * Zero-config routes
+   */
+  zeroConfigRoutes: Route[];
+
+  /**
+   * Whether this is a zero-config build
+   */
+  isZeroConfig: boolean;
+}
+
+/**
  * Regex pattern for validating deploymentId characters
  */
 const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+/**
+ * Prepares the build configuration by detecting builders and routes.
+ * This function handles the setup logic before actual build execution.
+ */
+export async function prepareBuild(
+  options: PrepareBuildOptions
+): Promise<PrepareBuildResult> {
+  const {
+    files,
+    pkg,
+    localConfig,
+    projectSettings,
+    workPath,
+    logger,
+    detectBuilders,
+    appendRoutesToPhase,
+  } = options;
+
+  if (localConfig.builds && localConfig.functions) {
+    throw new NowBuildError({
+      code: 'bad_request',
+      message:
+        'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+      link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  let builds = localConfig.builds || [];
+  let zeroConfigRoutes: Route[] = [];
+  let isZeroConfig = false;
+
+  if (builds.length > 0) {
+    logger.warn(
+      'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
+    );
+    builds = builds.map(b => expandBuild(files, b)).flat();
+  } else {
+    // Zero config
+    isZeroConfig = true;
+
+    // Detect the Vercel Builders that will need to be invoked
+    const detectedBuilders = await detectBuilders(files, pkg, {
+      ...localConfig,
+      projectSettings,
+      ignoreBuildScript: true,
+      featHandleMiss: true,
+      workPath,
+    });
+
+    if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
+      throw detectedBuilders.errors[0];
+    }
+
+    for (const w of detectedBuilders.warnings) {
+      logger.warn(w.message);
+    }
+
+    if (detectedBuilders.builders) {
+      builds = detectedBuilders.builders;
+    } else {
+      builds = [{ src: '**', use: '@vercel/static' }];
+    }
+
+    zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
+    zeroConfigRoutes.push(
+      ...appendRoutesToPhase({
+        routes: [],
+        newRoutes: detectedBuilders.rewriteRoutes ?? undefined,
+        phase: 'filesystem',
+      })
+    );
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: detectedBuilders.errorRoutes ?? undefined,
+      phase: 'error',
+    });
+    zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+  }
+
+  return {
+    builds,
+    zeroConfigRoutes,
+    isZeroConfig,
+  };
+}
 
 /**
  * Expands a build specification by matching src patterns against files
@@ -574,7 +720,7 @@ export async function writeFlagsJSON(
       continue;
 
     for (const [key, definition] of Object.entries(result.flags.definitions)) {
-      if (result.flags.definitions[key]) {
+      if (flags.definitions[key]) {
         logger.warn(
           `The flag "${key}" was found multiple times. Only its first occurrence will be considered.`
         );

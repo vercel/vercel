@@ -145,6 +145,7 @@ export * from './python';
 
 export {
   runBuild,
+  prepareBuild,
   expandBuild,
   mergeImages,
   mergeCrons,
@@ -177,4 +178,7 @@ export type {
   DetectFrameworkArgs,
   DetectedFramework,
   ExperimentalBackendsBuilder,
+  PrepareBuildOptions,
+  PrepareBuildResult,
+  DetectBuildersResult,
 } from './build-project';
