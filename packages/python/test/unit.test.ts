@@ -317,6 +317,15 @@ function makeMockPython(version: string) {
       fs.writeFileSync(shim, isWin ? winScript : posixScript, 'utf8');
       if (!isWin) fs.chmodSync(shim, 0o755);
     }
+
+    // Also provide fully unversioned "python"/"pip" shims (needed on Windows where
+    // runStdlibPyScript uses "python" instead of "python3")
+    const unversionedShim = path.join(
+      tmpPythonDir,
+      `${name}${isWin ? '.cmd' : ''}`
+    );
+    fs.writeFileSync(unversionedShim, isWin ? winScript : posixScript, 'utf8');
+    if (!isWin) fs.chmodSync(unversionedShim, 0o755);
   }
 
   // mock uv: ensure a uv.lock file exists whenever the binary is invoked.
