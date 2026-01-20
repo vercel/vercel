@@ -123,7 +123,7 @@ jobs:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
-    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    if: ${{ needs.setup.result != 'skipped' && needs.setup.outputs['tests'] != '[]' }}
     needs:
       - setup
     strategy:
