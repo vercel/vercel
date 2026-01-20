@@ -12,6 +12,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  findPackageJson,
   Prerender,
 } from '../src';
 import type { Files } from '../src';
@@ -997,6 +998,46 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
+});
+
+describe('findPackageJson', () => {
+  it('should find package.json and return path without reading contents', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, false);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeUndefined();
+  });
+
+  it('should find package.json and read contents when readPackageJson is true', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+    expect(result.packageJson?.name).toBeDefined();
+  });
+
+  it('should traverse up directories to find package.json', async () => {
+    const base = path.join(__dirname, 'fixtures', '21-npm-workspaces');
+    const fixture = path.join(base, 'a');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should respect the base parameter boundary', async () => {
+    const base = path.join(__dirname, 'fixtures', '23-pnpm-workspaces');
+    const fixture = path.join(base, 'c');
+    const result = await findPackageJson(fixture, true, base);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should return undefined when no package.json is found', async () => {
+    // Use a directory that definitely has no package.json
+    const result = await findPackageJson('/tmp', false, '/tmp');
+    expect(result.packageJsonPath).toBeUndefined();
+    expect(result.packageJson).toBeUndefined();
+  });
 });
 
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
