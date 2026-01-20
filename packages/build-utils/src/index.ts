@@ -142,3 +142,35 @@ export {
 } from './framework-helpers';
 
 export * from './python';
+
+export {
+  runBuild,
+  expandBuild,
+  mergeImages,
+  mergeCrons,
+  mergeWildcard,
+  mergeDeploymentId,
+  validateDeploymentId,
+  writeBuildJson,
+  writeFlagsJSON,
+  getFrameworkRoutes,
+  getFramework,
+  type BuildResult,
+  type SerializedBuilder,
+  type BuildOutputConfig,
+  type BuildsManifest,
+  type PathOverride,
+  type BuildLogger,
+  type BuilderWithPkg,
+  type BuilderV2,
+  type BuilderV3,
+  type Route,
+  type Framework,
+  type ProjectSettings,
+  type VercelConfig,
+  type RunBuildOptions,
+  type WriteBuildResultArgs,
+  type MergeRoutesArgs,
+  type DetectFrameworkArgs,
+  type DetectedFramework,
+} from './build-project';

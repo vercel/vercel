@@ -1,15 +1,9 @@
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
-import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
-import semver from 'semver';
+import { join, relative, resolve } from 'path';
 
 import {
-  download,
-  FileFsRef,
-  getDiscontinuedNodeVersions,
-  getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -19,24 +13,18 @@ import {
   Span,
   type TraceEvent,
   validateNpmrc,
-  type Builder,
-  type BuildOptions,
-  type BuildResultV2,
-  type BuildResultV2Typical,
-  type BuildResultV3,
-  type Config,
-  type Cron,
-  type Files,
-  type FlagDefinitions,
-  type Meta,
   type PackageJson,
-  shouldUseExperimentalBackends,
-  isBackendBuilder,
-  type Lambda,
+  runBuild,
+  expandBuild,
+  type BuildsManifest,
+  type BuildLogger,
+  type BuilderWithPkg,
+  type VercelConfig as BuildUtilsVercelConfig,
+  type RunBuildOptions,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import {
   detectBuilders,
   detectFrameworkRecord,
@@ -49,7 +37,6 @@ import {
   getTransformedRoutes,
   mergeRoutes,
   sourceToRegex,
-  type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
 
@@ -62,7 +49,6 @@ import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
-  type PathOverride,
 } from '../../util/build/write-build-result';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -96,45 +82,8 @@ import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
 import { mkdir, writeFile } from 'fs/promises';
 
-type BuildResult = BuildResultV2 | BuildResultV3;
-
-interface SerializedBuilder extends Builder {
-  error?: any;
-  require?: string;
-  requirePath?: string;
-  apiVersion: number;
-}
-
-/**
- *  Build Output API `config.json` file interface.
- */
-interface BuildOutputConfig {
-  version?: 3;
-  wildcard?: BuildResultV2Typical['wildcard'];
-  images?: BuildResultV2Typical['images'];
-  routes?: BuildResultV2Typical['routes'];
-  overrides?: Record<string, PathOverride>;
-  framework?: {
-    version: string;
-  };
-  crons?: Cron[];
-  deploymentId?: string;
-}
-
-/**
- * Contents of the `builds.json` file.
- */
-export interface BuildsManifest {
-  '//': string;
-  target: string;
-  argv: string[];
-  error?: any;
-  builds?: SerializedBuilder[];
-  features?: {
-    speedInsightsVersion?: string | undefined;
-    webAnalyticsVersion?: string | undefined;
-  };
-}
+// Re-export BuildsManifest for other modules that import from this file
+export type { BuildsManifest } from '@vercel/build-utils';
 
 class InMemoryReporter implements Reporter {
   public events: TraceEvent[] = [];
@@ -142,6 +91,18 @@ class InMemoryReporter implements Reporter {
   report(event: TraceEvent) {
     this.events.push(event);
   }
+}
+
+/**
+ * Create a BuildLogger that wraps the CLI output manager
+ */
+function createBuildLogger(): BuildLogger {
+  return {
+    log: (message: string) => output.log(message),
+    warn: (message: string) => output.warn(message),
+    error: (message: string) => output.error(message),
+    debug: (message: string) => output.debug(message),
+  };
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -415,9 +376,6 @@ async function doBuild(
 ): Promise<void> {
   const { localConfigPath } = client;
 
-  // Regex pattern for validating deploymentId characters: alphanumeric, hyphen, underscore
-  const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
@@ -608,475 +566,56 @@ async function doBuild(
 
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
-  // Populate Files -> FileFsRef mapping
-  const filesMap: Files = {};
-  for (const path of files) {
-    const fsPath = join(workPath, path);
-    const { mode } = await fs.stat(fsPath);
-    filesMap[path] = new FileFsRef({ mode, fsPath });
-  }
-
   const buildStamp = stamp();
 
-  // Create fresh new output directory
-  await fs.mkdirp(outputDir);
-
-  const ops: Promise<Error | void>[] = [];
-
-  // Write the `detectedBuilders` result to output dir
-  const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
-    builds.map(build => {
-      const builderWithPkg = buildersWithPkgs.get(build.use);
-      if (!builderWithPkg) {
-        throw new Error(`Failed to load Builder "${build.use}"`);
-      }
-      const { builder, pkg: builderPkg } = builderWithPkg;
-      return [
-        build,
-        {
-          require: builderPkg.name,
-          requirePath: builderWithPkg.path,
-          apiVersion: builder.version,
-          ...build,
-        },
-      ];
-    })
-  );
-
-  buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  await writeBuildJson(buildsJson, outputDir);
-
-  // The `meta` config property is re-used for each Builder
-  // invocation so that Builders can share state between
-  // subsequent entrypoint builds.
-  const meta: Meta = {
-    skipDownload: true,
-    cliVersion: cliPkg.version,
-  };
-
-  // Execute Builders for detected entrypoints
-  // TODO: parallelize builds (except for frontend)
-  const sortedBuilders = sortBuilders(builds);
-  const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
-  const overrides: PathOverride[] = [];
-  const repoRootPath = cwd;
   // Only initialize corepack if not already done during early install
   if (!corepackShimDir) {
-    corepackShimDir = await initCorepack({ repoRootPath });
+    corepackShimDir = await initCorepack({ repoRootPath: cwd });
   }
-  const diagnostics: Files = {};
 
-  for (const build of sortedBuilders) {
-    if (typeof build.src !== 'string') continue;
+  // Sort builders for execution order
+  const sortedBuilders = sortBuilders(builds);
 
-    const builderWithPkg = buildersWithPkgs.get(build.use);
-    if (!builderWithPkg) {
-      throw new Error(`Failed to load Builder "${build.use}"`);
-    }
+  // Create the build logger
+  const logger = createBuildLogger();
 
-    try {
-      const { builder, pkg: builderPkg } = builderWithPkg;
-
-      for (const key of [
-        'buildCommand',
-        'installCommand',
-        'outputDirectory',
-        'nodeVersion',
-      ] as const) {
-        const value = projectSettings[key];
-        if (typeof value === 'string') {
-          const envKey =
-            `VERCEL_PROJECT_SETTINGS_` +
-            key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
-          process.env[envKey] = value;
-          output.debug(`Setting env ${envKey} to "${value}"`);
-        }
-      }
-
-      const isFrontendBuilder = build.config && 'framework' in build.config;
-      const buildConfig: Config = isZeroConfig
-        ? {
-            outputDirectory: projectSettings.outputDirectory ?? undefined,
-            ...build.config,
-            projectSettings,
-            installCommand: projectSettings.installCommand ?? undefined,
-            devCommand: projectSettings.devCommand ?? undefined,
-            buildCommand: projectSettings.buildCommand ?? undefined,
-            framework: projectSettings.framework,
-            nodeVersion: projectSettings.nodeVersion,
-            bunVersion: localConfig.bunVersion ?? undefined,
-          }
-        : {
-            ...(build.config || {}),
-            bunVersion: localConfig.bunVersion ?? undefined,
-          };
-
-      const builderSpan = span.child('vc.builder', {
-        name: builderPkg.name,
-      });
-
-      const buildOptions: BuildOptions = {
-        files: filesMap,
-        entrypoint: build.src,
-        workPath,
-        repoRootPath,
-        config: buildConfig,
-        meta,
-        span: builderSpan,
-      };
-      output.debug(
-        `Building entrypoint "${build.src}" with "${builderPkg.name}"`
-      );
-      let buildResult: BuildResultV2 | BuildResultV3;
-      try {
-        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          async () => {
-            // Use experimental backends builder only for backend framework builders,
-            // not for static builders (which handle public/ directories)
-            if (
-              shouldUseExperimentalBackends(buildConfig.framework) &&
-              builderPkg.name !== '@vercel/static' &&
-              isBackendBuilder(build)
-            ) {
-              const experimentalBackendBuilder = await import(
-                '@vercel/backends'
-              );
-              return experimentalBackendBuilder.build(buildOptions);
-            }
-            return builder.build(buildOptions);
-          }
-        );
-
-        // If the build result has no routes and the framework has default routes,
-        // then add the default routes to the build result
-        if (
-          buildConfig.zeroConfig &&
-          isFrontendBuilder &&
-          'output' in buildResult &&
-          !buildResult.routes
-        ) {
-          const framework = frameworkList.find(
-            f => f.slug === buildConfig.framework
-          );
-          if (framework) {
-            const defaultRoutes = await getFrameworkRoutes(framework, workPath);
-            buildResult.routes = defaultRoutes;
-          }
-        }
-      } finally {
-        // Make sure we don't fail the build
-        try {
-          const builderDiagnostics = await builderSpan
-            .child('vc.builder.diagnostics')
-            .trace(async () => {
-              return await builder.diagnostics?.(buildOptions);
-            });
-          Object.assign(diagnostics, builderDiagnostics);
-        } catch (error) {
-          output.error('Collecting diagnostics failed');
-          output.debug(error);
-        }
-      }
-
-      if (
-        buildResult &&
-        'output' in buildResult &&
-        'runtime' in buildResult.output &&
-        'type' in buildResult.output &&
-        buildResult.output.type === 'Lambda'
-      ) {
-        const lambdaRuntime = buildResult.output.runtime;
-        if (
-          getDiscontinuedNodeVersions().some(o => o.runtime === lambdaRuntime)
-        ) {
-          throw new NowBuildError({
-            code: 'NODEJS_DISCONTINUED_VERSION',
-            message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
-            link: 'https://vercel.link/function-runtimes',
-          });
-        }
-      }
-
-      if (
-        'output' in buildResult &&
-        buildResult.output &&
-        (isBackendBuilder(build) || build.use === '@vercel/python')
-      ) {
-        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
-        if (existsSync(routesJsonPath)) {
-          try {
-            const routesJson = await readJSONFile(routesJsonPath);
-            if (
-              routesJson &&
-              typeof routesJson === 'object' &&
-              'routes' in routesJson &&
-              Array.isArray(routesJson.routes)
-            ) {
-              // This is a v2 build output, so only remap the outputs
-              // if we have an index lambda
-              const indexLambda =
-                'index' in buildResult.output
-                  ? (buildResult.output['index'] as Lambda)
-                  : undefined;
-              // Convert routes from introspection format to Vercel routing format
-              const convertedRoutes = [];
-              const convertedOutputs: Record<string, Lambda> = indexLambda
-                ? { index: indexLambda }
-                : {};
-              for (const route of routesJson.routes) {
-                if (typeof route.source !== 'string') {
-                  continue;
-                }
-                const { src } = sourceToRegex(route.source);
-                const newRoute: Route = {
-                  src,
-                  dest: route.source,
-                };
-                if (route.methods) {
-                  newRoute.methods = route.methods;
-                }
-                if (route.source === '/') {
-                  continue;
-                }
-                if (indexLambda) {
-                  convertedOutputs[route.source] = indexLambda;
-                }
-                convertedRoutes.push(newRoute);
-              }
-              // Wrap routes with filesystem handler and catch-all
-              (buildResult as BuildResultV2Typical).routes = [
-                { handle: 'filesystem' },
-                ...convertedRoutes,
-                { src: '/(.*)', dest: '/' },
-              ];
-              if (indexLambda) {
-                (buildResult as BuildResultV2Typical).output = convertedOutputs;
-              }
-            }
-          } catch (error) {
-            output.error(`Failed to read routes.json: ${error}`);
-          }
-        }
-      }
-
-      // Store the build result to generate the final `config.json` after
-      // all builds have completed
-      buildResults.set(build, buildResult);
-
-      let buildOutputLength = 0;
-      if ('output' in buildResult) {
-        buildOutputLength = Array.isArray(buildResult.output)
-          ? buildResult.output.length
-          : 1;
-      }
-
-      // Start flushing the file outputs to the filesystem asynchronously
-      ops.push(
-        builderSpan
-          .child('vc.builder.writeBuildResult', {
-            buildOutputLength: String(buildOutputLength),
-          })
-          .trace<Record<string, PathOverride> | undefined | void>(() =>
-            writeBuildResult({
-              repoRootPath,
-              outputDir,
-              buildResult,
-              build,
-              builder,
-              builderPkg,
-              vercelConfig: localConfig,
-              standalone,
-              workPath,
-            })
-          )
-          .then(
-            (override: Record<string, PathOverride> | undefined | void) => {
-              if (override) overrides.push(override);
-            },
-            (err: Error) => err
-          )
-      );
-    } catch (err: any) {
-      const buildJsonBuild = buildsJsonBuilds.get(build);
-      if (buildJsonBuild) {
-        buildJsonBuild.error = toEnumerableError(err);
-      }
-      throw err;
-    } finally {
-      ops.push(
-        download(diagnostics, join(outputDir, 'diagnostics')).then(
-          () => undefined,
-          err => err
-        )
-      );
-    }
-  }
+  // Call the core build function from build-utils
+  await runBuild({
+    cwd,
+    workPath,
+    outputDir,
+    target: buildsJson.target,
+    projectSettings: projectSettings as RunBuildOptions['projectSettings'],
+    localConfig: localConfig as BuildUtilsVercelConfig,
+    pkg: pkg || null,
+    files,
+    buildsJson,
+    buildersWithPkgs: buildersWithPkgs as Map<string, BuilderWithPkg>,
+    sortedBuilders,
+    isZeroConfig,
+    zeroConfigRoutes: zeroConfigRoutes as RunBuildOptions['zeroConfigRoutes'],
+    userRoutes: routesResult.routes ?? undefined,
+    cliVersion: cliPkg.version,
+    standalone,
+    logger,
+    span,
+    frameworkList: frameworkList as unknown as RunBuildOptions['frameworkList'],
+    writeBuildResult: writeBuildResult as RunBuildOptions['writeBuildResult'],
+    mergeRoutes: mergeRoutes as unknown as RunBuildOptions['mergeRoutes'],
+    getTransformedRoutes:
+      getTransformedRoutes as unknown as RunBuildOptions['getTransformedRoutes'],
+    sourceToRegex: sourceToRegex as unknown as RunBuildOptions['sourceToRegex'],
+    detectFrameworkRecord:
+      detectFrameworkRecord as unknown as RunBuildOptions['detectFrameworkRecord'],
+    detectFrameworkVersion:
+      detectFrameworkVersion as unknown as RunBuildOptions['detectFrameworkVersion'],
+    LocalFileSystemDetector:
+      LocalFileSystemDetector as unknown as RunBuildOptions['LocalFileSystemDetector'],
+  });
 
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
   }
-
-  // Wait for filesystem operations to complete
-  // TODO render progress bar?
-  const errors = await Promise.all(ops);
-  for (const error of errors) {
-    if (error) {
-      throw error;
-    }
-  }
-
-  let needBuildsJsonOverride = false;
-  const speedInsightsVersion = await getInstalledPackageVersion(
-    '@vercel/speed-insights'
-  );
-  if (speedInsightsVersion) {
-    buildsJson.features = {
-      ...(buildsJson.features ?? {}),
-      speedInsightsVersion,
-    };
-    needBuildsJsonOverride = true;
-  }
-  const webAnalyticsVersion =
-    await getInstalledPackageVersion('@vercel/analytics');
-  if (webAnalyticsVersion) {
-    buildsJson.features = {
-      ...(buildsJson.features ?? {}),
-      webAnalyticsVersion,
-    };
-    needBuildsJsonOverride = true;
-  }
-  if (needBuildsJsonOverride) {
-    await writeBuildJson(buildsJson, outputDir);
-  }
-
-  // Merge existing `config.json` file into the one that will be produced
-  const configPath = join(outputDir, 'config.json');
-  const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
-  if (existingConfig instanceof CantParseJSONFile) {
-    throw existingConfig;
-  }
-  if (existingConfig) {
-    // Validate deploymentId if present (user-configured for skew protection)
-    if (
-      'deploymentId' in existingConfig &&
-      typeof existingConfig.deploymentId === 'string'
-    ) {
-      const deploymentId = existingConfig.deploymentId;
-      if (deploymentId.startsWith('dpl_')) {
-        throw new NowBuildError({
-          code: 'INVALID_DEPLOYMENT_ID',
-          message: `The deploymentId "${deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-        });
-      }
-      if (deploymentId.length > 32) {
-        throw new NowBuildError({
-          code: 'INVALID_DEPLOYMENT_ID',
-          message: `The deploymentId "${deploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
-          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-        });
-      }
-      // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
-      if (!VALID_DEPLOYMENT_ID_PATTERN.test(deploymentId)) {
-        throw new NowBuildError({
-          code: 'INVALID_DEPLOYMENT_ID',
-          message: `The deploymentId "${deploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
-          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-        });
-      }
-    }
-
-    if (existingConfig.overrides) {
-      overrides.push(existingConfig.overrides);
-    }
-    // Find the `Build` entry for this config file and update the build result
-    for (const [build, buildResult] of buildResults.entries()) {
-      if ('buildOutputPath' in buildResult) {
-        output.debug(`Using "config.json" for "${build.use}`);
-        buildResults.set(build, existingConfig);
-        break;
-      }
-    }
-  }
-
-  const builderRoutes: MergeRoutesProps['builds'] = Array.from(
-    buildResults.entries()
-  )
-    .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
-    .map(b => {
-      return {
-        use: b[0].use,
-        entrypoint: b[0].src!,
-        routes: (b[1] as BuildResultV2Typical).routes,
-      };
-    });
-  if (zeroConfigRoutes.length) {
-    builderRoutes.unshift({
-      use: '@vercel/zero-config-routes',
-      entrypoint: '/',
-      routes: zeroConfigRoutes,
-    });
-  }
-  const mergedRoutes = mergeRoutes({
-    userRoutes: routesResult.routes,
-    builds: builderRoutes,
-  });
-
-  const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
-  const mergedWildcard = mergeWildcard(buildResults.values());
-  const mergedDeploymentId = await mergeDeploymentId(
-    existingConfig?.deploymentId,
-    buildResults.values(),
-    workPath
-  );
-
-  // Validate merged deploymentId if present (from build results)
-  if (mergedDeploymentId) {
-    if (mergedDeploymentId.startsWith('dpl_')) {
-      throw new NowBuildError({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: `The deploymentId "${mergedDeploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-      });
-    }
-    if (mergedDeploymentId.length > 32) {
-      throw new NowBuildError({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: `The deploymentId "${mergedDeploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
-        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-      });
-    }
-    // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
-    if (!VALID_DEPLOYMENT_ID_PATTERN.test(mergedDeploymentId)) {
-      throw new NowBuildError({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: `The deploymentId "${mergedDeploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
-        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-      });
-    }
-  }
-
-  const mergedOverrides: Record<string, PathOverride> =
-    overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
-
-  const framework = await getFramework(workPath, buildResults);
-
-  // Write out the final `config.json` file based on the
-  // user configuration and Builder build results
-  const config: BuildOutputConfig = {
-    version: 3,
-    routes: mergedRoutes,
-    images: mergedImages,
-    wildcard: mergedWildcard,
-    overrides: mergedOverrides,
-    framework,
-    crons: mergedCrons,
-    ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
-  };
-  await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
-
-  await writeFlagsJSON(buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
   output.print(
@@ -1087,224 +626,4 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
-}
-
-async function getFramework(
-  cwd: string,
-  buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
-  const detectedFramework = await detectFrameworkRecord({
-    fs: new LocalFileSystemDetector(cwd),
-    frameworkList,
-  });
-
-  if (!detectedFramework) {
-    return;
-  }
-
-  // determine framework version from build result
-  if (detectedFramework.useRuntime) {
-    for (const [build, buildResult] of buildResults.entries()) {
-      if (
-        'framework' in buildResult &&
-        build.use === detectedFramework.useRuntime.use
-      ) {
-        return buildResult.framework;
-      }
-    }
-  }
-
-  // determine framework version from listed package.json version
-  if (detectedFramework.detectedVersion) {
-    // check for a valid, explicit version, not a range
-    if (semver.valid(detectedFramework.detectedVersion)) {
-      return {
-        version: detectedFramework.detectedVersion,
-      };
-    }
-  }
-
-  // determine framework version with runtime lookup
-  const frameworkVersion = detectFrameworkVersion(detectedFramework);
-  if (frameworkVersion) {
-    return {
-      version: frameworkVersion,
-    };
-  }
-}
-
-function expandBuild(files: string[], build: Builder): Builder[] {
-  if (!build.use) {
-    throw new NowBuildError({
-      code: `invalid_build_specification`,
-      message: 'Field `use` is missing in build specification',
-      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
-      action: 'View Documentation',
-    });
-  }
-
-  let src = normalize(build.src || '**')
-    .split(sep)
-    .join('/');
-  if (src === '.' || src === './') {
-    throw new NowBuildError({
-      code: `invalid_build_specification`,
-      message: 'A build `src` path resolves to an empty string',
-      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
-      action: 'View Documentation',
-    });
-  }
-
-  if (src[0] === '/') {
-    // Remove a leading slash so that the globbing is relative
-    // to `cwd` instead of the root of the filesystem.
-    src = src.substring(1);
-  }
-
-  const matches = files.filter(
-    name => name === src || minimatch(name, src, { dot: true })
-  );
-
-  return matches.map(m => {
-    return {
-      ...build,
-      src: m,
-    };
-  });
-}
-
-function mergeImages(
-  images: BuildResultV2Typical['images'],
-  buildResults: Iterable<BuildResult | BuildOutputConfig>
-): BuildResultV2Typical['images'] {
-  for (const result of buildResults) {
-    if ('images' in result && result.images) {
-      images = Object.assign({}, images, result.images);
-    }
-  }
-  return images;
-}
-
-function mergeCrons(
-  crons: BuildOutputConfig['crons'] = [],
-  buildResults: Iterable<BuildResult | BuildOutputConfig>
-): BuildOutputConfig['crons'] {
-  for (const result of buildResults) {
-    if ('crons' in result && result.crons) {
-      crons = crons.concat(result.crons);
-    }
-  }
-  return crons;
-}
-
-function mergeWildcard(
-  buildResults: Iterable<BuildResult | BuildOutputConfig>
-): BuildResultV2Typical['wildcard'] {
-  let wildcard: BuildResultV2Typical['wildcard'] = undefined;
-  for (const result of buildResults) {
-    if ('wildcard' in result && result.wildcard) {
-      if (!wildcard) wildcard = [];
-      wildcard.push(...result.wildcard);
-    }
-  }
-  return wildcard;
-}
-
-async function mergeDeploymentId(
-  existingDeploymentId: string | undefined,
-  buildResults: Iterable<BuildResult | BuildOutputConfig>,
-  workPath: string
-): Promise<string | undefined> {
-  // Prefer existing deploymentId from config.json if present
-  if (existingDeploymentId) {
-    return existingDeploymentId;
-  }
-  // Otherwise, take the first deploymentId from build results
-  for (const result of buildResults) {
-    if ('deploymentId' in result && result.deploymentId) {
-      return result.deploymentId;
-    }
-  }
-  // For prebuilt Next.js deployments, try reading from routes-manifest.json
-  // where Next.js writes the deploymentId during build
-  try {
-    const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');
-    if (await fs.pathExists(routesManifestPath)) {
-      const routesManifest = await readJSONFile<{ deploymentId?: string }>(
-        routesManifestPath
-      );
-      if (routesManifest && !(routesManifest instanceof CantParseJSONFile)) {
-        if (routesManifest.deploymentId) {
-          return routesManifest.deploymentId;
-        }
-      }
-    }
-  } catch {
-    // Ignore errors reading routes-manifest.json
-  }
-  return undefined;
-}
-
-/**
- * Takes the build output and writes all the flags into the `flags.json`
- * file. It'll skip flags that already exist.
- */
-async function writeFlagsJSON(
-  buildResults: Iterable<BuildResult | BuildOutputConfig>,
-  outputDir: string
-): Promise<void> {
-  const flagsFilePath = join(outputDir, 'flags.json');
-
-  let hasFlags = true;
-
-  const flags = (await fs.readJSON(flagsFilePath).catch(error => {
-    if (error.code === 'ENOENT') {
-      hasFlags = false;
-      return { definitions: {} };
-    }
-
-    throw error;
-  })) as { definitions: FlagDefinitions };
-
-  for (const result of buildResults) {
-    if (!('flags' in result) || !result.flags || !result.flags.definitions)
-      continue;
-
-    for (const [key, definition] of Object.entries(result.flags.definitions)) {
-      if (result.flags.definitions[key]) {
-        output.warn(
-          `The flag "${key}" was found multiple times. Only its first occurrence will be considered.`
-        );
-        continue;
-      }
-
-      hasFlags = true;
-      flags.definitions[key] = definition;
-    }
-  }
-
-  // Only create the file when there are flags to write,
-  // or when the file already exists.
-  // Checking `definitions` alone won't be enough in case there
-  // are other properties set.
-  if (hasFlags) {
-    await fs.writeJSON(flagsFilePath, flags, { spaces: 2 });
-  }
-}
-
-async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
-  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
-}
-
-async function getFrameworkRoutes(
-  framework: Framework,
-  dirPrefix: string
-): Promise<Route[]> {
-  let routes: Route[] = [];
-  if (typeof framework.defaultRoutes === 'function') {
-    routes = await framework.defaultRoutes(dirPrefix);
-  } else if (Array.isArray(framework.defaultRoutes)) {
-    routes = framework.defaultRoutes;
-  }
-  return routes;
 }
