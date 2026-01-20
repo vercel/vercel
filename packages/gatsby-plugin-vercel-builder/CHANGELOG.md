@@ -1,5 +1,80 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.124
+
+### Patch Changes
+
+- Updated dependencies [[`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02)]:
+  - @vercel/build-utils@13.2.13
+
+## 2.0.123
+
+### Patch Changes
+
+- Updated dependencies [[`186967277069593406948c0e3099477ba43e181a`](https://github.com/vercel/vercel/commit/186967277069593406948c0e3099477ba43e181a)]:
+  - @vercel/build-utils@13.2.12
+
+## 2.0.122
+
+### Patch Changes
+
+- Updated dependencies [[`06bf941478bf7bfe479193ca77cfe3b00ff1a85e`](https://github.com/vercel/vercel/commit/06bf941478bf7bfe479193ca77cfe3b00ff1a85e)]:
+  - @vercel/build-utils@13.2.11
+
+## 2.0.121
+
+### Patch Changes
+
+- Add license field to package metadata ([#13592](https://github.com/vercel/vercel/pull/13592))
+
+## 2.0.120
+
+### Patch Changes
+
+- Updated dependencies [[`f46cab88668c148f2ff9728dd8cafc4f4ea6dda6`](https://github.com/vercel/vercel/commit/f46cab88668c148f2ff9728dd8cafc4f4ea6dda6)]:
+  - @vercel/build-utils@13.2.10
+
+## 2.0.119
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/build-utils@13.2.9
+
+## 2.0.118
+
+### Patch Changes
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/build-utils@13.2.8
+
+## 2.0.117
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4), [`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/build-utils@13.2.7
+
+## 2.0.116
+
+### Patch Changes
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+- Updated dependencies [[`984164ff5f148fb6fd397902d16db780e9b98e6c`](https://github.com/vercel/vercel/commit/984164ff5f148fb6fd397902d16db780e9b98e6c), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/build-utils@13.2.6
+
+## 2.0.115
+
+### Patch Changes
+
+- Updated dependencies [[`39c95ff6b643a63509571818e67a792df09fd71f`](https://github.com/vercel/vercel/commit/39c95ff6b643a63509571818e67a792df09fd71f), [`d63084dac296ccb2077ed742bc2ade0264da851d`](https://github.com/vercel/vercel/commit/d63084dac296ccb2077ed742bc2ade0264da851d)]:
+  - @vercel/build-utils@13.2.5
+
 ## 2.0.114
 
 ### Patch Changes

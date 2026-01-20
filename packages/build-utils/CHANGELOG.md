@@ -1,5 +1,59 @@
 # @vercel/build-utils
 
+## 13.2.13
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+## 13.2.12
+
+### Patch Changes
+
+- Add `findPackageJson` function for optimized package.json lookup without lockfile scanning. This improves `getNodeVersion` performance by avoiding unnecessary lockfile parsing. ([#14658](https://github.com/vercel/vercel/pull/14658))
+
+## 13.2.10
+
+### Patch Changes
+
+- Add 'go' as a valid runtimeLanguage option for Lambda functions ([#14624](https://github.com/vercel/vercel/pull/14624))
+
+## 13.2.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+## 13.2.8
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+## 13.2.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Add zero-config support for Koa.js ([#14567](https://github.com/vercel/vercel/pull/14567))
+
+## 13.2.6
+
+### Patch Changes
+
+- Update http links in Node.js version incompatibility message to https ([#14583](https://github.com/vercel/vercel/pull/14583))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+## 13.2.5
+
+### Patch Changes
+
+- Adding in user configured deploymentId to build output type ([#14497](https://github.com/vercel/vercel/pull/14497))
+
+- skip secondary installation for vercel.ts ([#14471](https://github.com/vercel/vercel/pull/14471))
+
 ## 13.2.4
 
 ### Patch Changes

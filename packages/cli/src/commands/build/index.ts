@@ -14,6 +14,7 @@ import {
   NowBuildError,
   runNpmInstall,
   runCustomInstallCommand,
+  resetCustomInstallCommandSet,
   type Reporter,
   Span,
   type TraceEvent,
@@ -84,6 +85,7 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import { validateCronSecret } from '../../util/validate-cron-secret';
 import {
   compileVercelConfig,
   findSourceVercelConfigFile,
@@ -389,6 +391,12 @@ export default async function main(client: Client): Promise<number> {
     for (const key of envToUnset) {
       delete process.env[key];
     }
+
+    // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
+    delete process.env.VERCEL_INSTALL_COMPLETED;
+
+    // Reset customInstallCommandSet to allow subsequent builds in the same process
+    resetCustomInstallCommandSet();
   }
 }
 
@@ -406,6 +414,9 @@ async function doBuild(
   standalone: boolean = false
 ): Promise<void> {
   const { localConfigPath } = client;
+
+  // Regex pattern for validating deploymentId characters: alphanumeric, hyphen, underscore
+  const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
@@ -437,6 +448,7 @@ async function doBuild(
         project.settings.createdAt
       );
     }
+    process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
   const compileResult = await compileVercelConfig(workPath);
@@ -477,6 +489,14 @@ async function doBuild(
 
   if (validateError) {
     throw validateError;
+  }
+
+  // Validate CRON_SECRET if crons are defined
+  if (localConfig.crons && localConfig.crons.length > 0) {
+    const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
+    if (cronSecretError) {
+      throw cronSecretError;
+    }
   }
 
   if (localConfig.customErrorPage) {
@@ -715,7 +735,8 @@ async function doBuild(
             // not for static builders (which handle public/ directories)
             if (
               shouldUseExperimentalBackends(buildConfig.framework) &&
-              builderPkg.name !== '@vercel/static'
+              builderPkg.name !== '@vercel/static' &&
+              isBackendBuilder(build)
             ) {
               const experimentalBackendBuilder = await import(
                 '@vercel/backends'
@@ -934,22 +955,35 @@ async function doBuild(
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
-  let deploymentId: string | undefined;
   if (existingConfig) {
+    // Validate deploymentId if present (user-configured for skew protection)
     if (
       'deploymentId' in existingConfig &&
-      typeof existingConfig.deploymentId === 'string' &&
-      existingConfig.deploymentId.startsWith('dpl_')
+      typeof existingConfig.deploymentId === 'string'
     ) {
-      throw new NowBuildError({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: `The deploymentId cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-      });
-    }
-
-    if (existingConfig.deploymentId) {
-      deploymentId = existingConfig.deploymentId;
+      const deploymentId = existingConfig.deploymentId;
+      if (deploymentId.startsWith('dpl_')) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
+      if (deploymentId.length > 32) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
+      // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+      if (!VALID_DEPLOYMENT_ID_PATTERN.test(deploymentId)) {
+        throw new NowBuildError({
+          code: 'INVALID_DEPLOYMENT_ID',
+          message: `The deploymentId "${deploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
+          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+        });
+      }
     }
 
     if (existingConfig.overrides) {
@@ -991,6 +1025,38 @@ async function doBuild(
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
+  const mergedDeploymentId = await mergeDeploymentId(
+    existingConfig?.deploymentId,
+    buildResults.values(),
+    workPath
+  );
+
+  // Validate merged deploymentId if present (from build results)
+  if (mergedDeploymentId) {
+    if (mergedDeploymentId.startsWith('dpl_')) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+    if (mergedDeploymentId.length > 32) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" must be 32 characters or less. Please choose a shorter deploymentId in your config.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+    // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
+    if (!VALID_DEPLOYMENT_ID_PATTERN.test(mergedDeploymentId)) {
+      throw new NowBuildError({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: `The deploymentId "${mergedDeploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
+        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
+      });
+    }
+  }
+
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
@@ -1006,7 +1072,7 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
-    ...(deploymentId && { deploymentId }),
+    ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -1142,6 +1208,41 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+async function mergeDeploymentId(
+  existingDeploymentId: string | undefined,
+  buildResults: Iterable<BuildResult | BuildOutputConfig>,
+  workPath: string
+): Promise<string | undefined> {
+  // Prefer existing deploymentId from config.json if present
+  if (existingDeploymentId) {
+    return existingDeploymentId;
+  }
+  // Otherwise, take the first deploymentId from build results
+  for (const result of buildResults) {
+    if ('deploymentId' in result && result.deploymentId) {
+      return result.deploymentId;
+    }
+  }
+  // For prebuilt Next.js deployments, try reading from routes-manifest.json
+  // where Next.js writes the deploymentId during build
+  try {
+    const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');
+    if (await fs.pathExists(routesManifestPath)) {
+      const routesManifest = await readJSONFile<{ deploymentId?: string }>(
+        routesManifestPath
+      );
+      if (routesManifest && !(routesManifest instanceof CantParseJSONFile)) {
+        if (routesManifest.deploymentId) {
+          return routesManifest.deploymentId;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors reading routes-manifest.json
+  }
+  return undefined;
 }
 
 /**

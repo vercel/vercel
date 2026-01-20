@@ -12,7 +12,6 @@ import {
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getPrefixedEnvVars,
-  getSpawnOptions,
   getScriptName,
   glob,
   runNpmInstall,
@@ -47,6 +46,7 @@ import findUp from 'find-up';
 import {
   lstat,
   pathExists,
+  readdir,
   readFile,
   readJSON,
   remove,
@@ -270,7 +270,6 @@ export const build: BuildV2 = async buildOptions => {
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,
     lockfileVersion,
@@ -278,11 +277,11 @@ export const build: BuildV2 = async buildOptions => {
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env || {},
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -383,14 +382,14 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           await execCommand(trimmedInstallCommand, {
-            ...spawnOpts,
+            env: spawnEnv,
             cwd: entryPath,
           });
         } else {
           await runNpmInstall(
             entryPath,
             [],
-            spawnOpts,
+            { env: spawnEnv },
             meta,
             config.projectSettings?.createdAt
           );
@@ -400,7 +399,7 @@ export const build: BuildV2 = async buildOptions => {
     console.log(`Skipping "install" command...`);
   }
 
-  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+  if (spawnEnv.VERCEL_ANALYTICS_ID) {
     debug('Found VERCEL_ANALYTICS_ID in environment');
 
     const version = await getInstalledPackageVersion(
@@ -412,7 +411,7 @@ export const build: BuildV2 = async buildOptions => {
       // Next.js has a built-in integration with Vercel Speed Insights
       // with the new @vercel/speed-insights package this is no longer needed
       // and can be removed to avoid duplicate events
-      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete spawnEnv.VERCEL_ANALYTICS_ID;
       delete process.env.VERCEL_ANALYTICS_ID;
 
       debug(
@@ -488,7 +487,7 @@ export const build: BuildV2 = async buildOptions => {
     target = await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  const env: typeof process.env = { ...spawnOpts.env };
+  const env: typeof process.env = { ...spawnEnv };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -554,7 +553,6 @@ export const build: BuildV2 = async buildOptions => {
 
           console.log(`Running "${buildCommand}"`);
           await execCommand(buildCommand, {
-            ...spawnOpts,
             cwd: entryPath,
             env,
           });
@@ -563,7 +561,6 @@ export const build: BuildV2 = async buildOptions => {
             entryPath,
             buildScriptName,
             {
-              ...spawnOpts,
               env,
             },
             config.projectSettings?.createdAt
@@ -595,6 +592,40 @@ export const build: BuildV2 = async buildOptions => {
       buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
+  }
+
+  // Validate that the output directory exists and has content before reading manifests
+  const absoluteOutputDirectory = path.join(entryPath, outputDirectory);
+  const outputDirExists = await pathExists(absoluteOutputDirectory);
+
+  if (!outputDirExists) {
+    throw new NowBuildError({
+      code: 'NEXT_OUTPUT_DIR_MISSING',
+      message:
+        `The Next.js output directory "${outputDirectory}" was not found at "${absoluteOutputDirectory}". ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. The "Output Directory" setting in your project is misconfigured. ` +
+        `Check your project settings and ensure the output directory matches your Next.js configuration.\n\n` +
+        `2. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add "${outputDirectory}/**" to the "outputs" array in your turbo.json for the build task.\n\n` +
+        `3. The build command did not complete successfully. Check the build logs above for errors.`,
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
+    });
+  }
+
+  const outputDirContents = await readdir(absoluteOutputDirectory);
+  if (outputDirContents.length === 0) {
+    throw new NowBuildError({
+      code: 'NEXT_OUTPUT_DIR_EMPTY',
+      message:
+        `The Next.js output directory "${outputDirectory}" exists but is empty. ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add "${outputDirectory}/**" to the "outputs" array in your turbo.json for the build task.\n\n` +
+        `2. The build command did not generate any output. Check the build logs above for errors.\n\n` +
+        `3. A previous build step may have cleared the output directory.`,
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
+    });
   }
 
   let appMountPrefixNoTrailingSlash = path.posix
@@ -679,6 +710,7 @@ export const build: BuildV2 = async buildOptions => {
   let hasPages404 = false;
   let buildId = '';
   let escapedBuildId = '';
+  let deploymentId: string | undefined;
 
   if (isLegacy || isSharedLambdas || isServerMode) {
     try {
@@ -694,6 +726,12 @@ export const build: BuildV2 = async buildOptions => {
           'The BUILD_ID file was not found in the Output Directory. Did you forget to run "next build" in your Build Command?',
       });
     }
+  }
+
+  // Read user-configured deploymentId from routes-manifest.json
+  // This is the standard location for build metadata in Next.js
+  if (routesManifest?.deploymentId) {
+    deploymentId = routesManifest.deploymentId;
   }
 
   if (routesManifest) {
@@ -1088,6 +1126,7 @@ export const build: BuildV2 = async buildOptions => {
           : []),
       ],
       framework: { version: nextVersion },
+      ...(deploymentId && { deploymentId }),
     };
   }
 
@@ -1096,7 +1135,9 @@ export const build: BuildV2 = async buildOptions => {
     await runNpmInstall(
       entryPath,
       ['--production'],
-      spawnOpts,
+      {
+        env: spawnEnv,
+      },
       meta,
       config.projectSettings?.createdAt
     );
@@ -2904,6 +2945,7 @@ export const build: BuildV2 = async buildOptions => {
           ]),
     ],
     framework: { version: nextVersion },
+    ...(deploymentId && { deploymentId }),
   };
 };
 

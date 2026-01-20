@@ -29,7 +29,8 @@ export class WasmAssets {
       promises.push(
         (async () => {
           const bytes = await fs.readFile(filePath);
-          context[name] = await WebAssembly.compile(bytes);
+          // WebAssembly.compile accepts Buffer in Node.js runtime
+          context[name] = await WebAssembly.compile(bytes as any);
         })()
       );
     }
@@ -57,6 +58,7 @@ export function createEdgeWasmPlugin() {
         const resolvedPath = await b.resolve(wasmFile, {
           importer: data.importer,
           resolveDir: data.resolveDir,
+          kind: data.kind,
         });
 
         if (!resolvedPath.path) {
@@ -88,5 +90,6 @@ export function createEdgeWasmPlugin() {
 }
 
 function sha1(data: string | Buffer) {
-  return createHash('sha1').update(data).digest('hex');
+  const input = typeof data === 'string' ? data : new Uint8Array(data);
+  return createHash('sha1').update(input).digest('hex');
 }
