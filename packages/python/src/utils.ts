@@ -42,11 +42,25 @@ export function useVirtualEnv(
   return { pythonCmd };
 }
 
+export function getProtectedUvEnv(
+  baseEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv,
+    // Prevent uv from downloading Python interpreters at build time.
+    // The build environment must use the pre-installed system Python.
+    UV_PYTHON_DOWNLOADS: 'never',
+  };
+}
+
 export function createVenvEnv(
   venvPath: string,
   baseEnv: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...baseEnv, VIRTUAL_ENV: venvPath };
+  const env: NodeJS.ProcessEnv = {
+    ...getProtectedUvEnv(baseEnv),
+    VIRTUAL_ENV: venvPath,
+  };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env.PATH || process.env.PATH || '';
   env.PATH = existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir;
