@@ -1,5 +1,9 @@
-import { getSupportedPythonVersion } from '../src/version';
+import {
+  getSupportedPythonVersion,
+  DEFAULT_PYTHON_VERSION,
+} from '../src/version';
 import { build } from '../src/index';
+import { getProtectedUvEnv, createVenvEnv, getVenvBinDir } from '../src/utils';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -114,12 +118,130 @@ describe('requires-python range parsing', () => {
   });
 });
 
-it('should select latest supported installed version when no Piplock detected', () => {
+describe('Python 3.13 and 3.14 support', () => {
+  it('selects Python 3.13 when specified in requires-python', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.13',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.13');
+  });
+
+  it('selects Python 3.14 when specified in requires-python', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('selects Python 3.14 as highest when range allows multiple versions', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('selects Python 3.13 when upper bound excludes 3.14', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.12,<3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.13');
+  });
+
+  it('respects compatible release "~=3.13" (>=3.13,<3.14)', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '~=3.13',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.13');
+  });
+
+  it('respects compatible release "~=3.14" (>=3.14,<3.15)', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '~=3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+});
+
+describe('default Python version behavior', () => {
+  it('uses DEFAULT_PYTHON_VERSION when no version specified and default is installed', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    makeMockPython(DEFAULT_PYTHON_VERSION);
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: undefined,
+    });
+    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+  });
+
+  it('falls back to latest installed when default is not installed', () => {
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    // Note: NOT installing DEFAULT_PYTHON_VERSION (3.12)
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: undefined,
+    });
+    // Should pick 3.14 as the latest installed
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('respects explicit version even when default is installed', () => {
+    makeMockPython(DEFAULT_PYTHON_VERSION);
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.14',
+        source: 'pyproject.toml',
+      },
+    });
+    // Should pick 3.14 because it was explicitly requested
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('DEFAULT_PYTHON_VERSION constant is exported and has expected value', () => {
+    expect(DEFAULT_PYTHON_VERSION).toBe('3.12');
+  });
+});
+
+it('should select default or latest installed version when no Piplock detected', () => {
   makeMockPython('3.10');
   const result = getSupportedPythonVersion({
     declaredPythonVersion: undefined,
   });
   expect(result).toHaveProperty('runtime');
+  // When default version isn't installed, falls back to latest available
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([]);
 });
@@ -132,7 +254,7 @@ it('should select latest supported installed version and warn when invalid Piplo
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([
-    'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version',
+    'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. https://vercel.link/python-version',
   ]);
 });
 
@@ -170,7 +292,7 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
     })
   ).toHaveProperty('runtime', 'python3.6');
   expect(warningMessages).toStrictEqual([
-    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
+    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. https://vercel.link/python-version',
   ]);
 });
 
@@ -195,6 +317,15 @@ function makeMockPython(version: string) {
       fs.writeFileSync(shim, isWin ? winScript : posixScript, 'utf8');
       if (!isWin) fs.chmodSync(shim, 0o755);
     }
+
+    // Also provide fully unversioned "python"/"pip" shims (needed on Windows where
+    // runStdlibPyScript uses "python" instead of "python3")
+    const unversionedShim = path.join(
+      tmpPythonDir,
+      `${name}${isWin ? '.cmd' : ''}`
+    );
+    fs.writeFileSync(unversionedShim, isWin ? winScript : posixScript, 'utf8');
+    if (!isWin) fs.chmodSync(unversionedShim, 0o755);
   }
 
   // mock uv: ensure a uv.lock file exists whenever the binary is invoked.
@@ -1119,5 +1250,73 @@ describe('custom install hooks', () => {
     expect(mockRunUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  describe('getProtectedUvEnv', () => {
+    it('sets UV_PYTHON_DOWNLOADS to "never" by default', () => {
+      const env = getProtectedUvEnv({});
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS when user tries to set it to "auto"', () => {
+      const userEnv = { UV_PYTHON_DOWNLOADS: 'auto' };
+      const env = getProtectedUvEnv(userEnv);
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS when user tries to unset it (undefined)', () => {
+      const userEnv = { UV_PYTHON_DOWNLOADS: undefined };
+      const env = getProtectedUvEnv(userEnv);
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS when user tries to set empty string', () => {
+      const userEnv = { UV_PYTHON_DOWNLOADS: '' };
+      const env = getProtectedUvEnv(userEnv);
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('overrides UV_PYTHON_DOWNLOADS from process.env', () => {
+      process.env.UV_PYTHON_DOWNLOADS = 'foobar';
+      const env = getProtectedUvEnv();
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
+    it('preserves other environment variables from baseEnv', () => {
+      const userEnv = {
+        HOME: '/home/user',
+        UV_PYTHON_DOWNLOADS: 'auto',
+      };
+      const env = getProtectedUvEnv(userEnv);
+
+      expect(env.HOME).toBe('/home/user');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+  });
+
+  describe('createVenvEnv', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+      process.env.UV_PYTHON_DOWNLOADS = 'manual';
+      process.env.PATH = '/usr/bin';
+      const venvPath = '/path/to/venv';
+      const env = createVenvEnv(venvPath);
+
+      expect(env.VIRTUAL_ENV).toBe(venvPath);
+      expect(env.PATH).toContain(getVenvBinDir(venvPath));
+      expect(env.PATH).toContain('/usr/bin');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
   });
 });

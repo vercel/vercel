@@ -2066,6 +2066,7 @@ export const frameworks = [
     description:
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
+    supersedes: ['python'],
     useRuntime: { src: 'index.py', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
@@ -2118,6 +2119,7 @@ export const frameworks = [
     tagline: 'The Python micro web framework',
     description: 'A Flask app, ready for production',
     website: 'https://flask.palletsprojects.com',
+    supersedes: ['python'],
     useRuntime: { src: 'index.py', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
@@ -2174,6 +2176,7 @@ export const frameworks = [
     description:
       'A library for writing fast and scalable Starlette-powered web applications',
     website: 'https://fastht.ml',
+    supersedes: ['python'],
     useRuntime: { src: 'main.py', use: '@vercel/python' },
     detectors: {
       every: [
@@ -4064,6 +4067,59 @@ export const frameworks = [
     },
     dependency: 'xmcp',
     getOutputDirName: async () => 'dist',
+  },
+  {
+    name: 'Python',
+    slug: 'python',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
+    tagline:
+      'Python is a programming language that lets you work quickly and integrate systems more effectively.',
+    description:
+      'A generic Python application deployed as a serverless function.',
+    website: 'https://python.org',
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+        },
+        {
+          path: 'pyproject.toml',
+        },
+        {
+          path: 'Pipfile',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
   },
   {
     name: 'Other',
