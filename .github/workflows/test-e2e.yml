@@ -1,0 +1,194 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check-trigger:
+    name: Check E2E Trigger
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    steps:
+      - id: check
+        run: |
+          # Run if run-e2e-tests label is present
+          if [ "${{ contains(github.event.pull_request.labels.*.name, 'run-e2e-tests') }}" = "true" ]; then
+            echo "E2E tests triggered by run-e2e-tests label"
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Run if Version Packages PR from vercel-release-bot
+          if [ "${{ github.event.pull_request.title }}" = "Version Packages" ]; then
+            if [ "${{ github.event.pull_request.user.login }}" = "vercel-release-bot" ]; then
+              echo "E2E tests triggered by Version Packages PR from vercel-release-bot"
+              echo "should-run=true" >> $GITHUB_OUTPUT
+            else
+              echo "::warning::Version Packages PR not authored by vercel-release-bot, skipping e2e tests"
+              echo "should-run=false" >> $GITHUB_OUTPUT
+            fi
+            exit 0
+          fi
+
+          echo "E2E tests not triggered (no matching conditions)"
+          echo "should-run=false" >> $GITHUB_OUTPUT
+
+  setup:
+    name: Find Changes
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should-run == 'true'
+    outputs:
+      tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+      affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
+      testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
+      affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
+      totalCount: ${{ steps['affected-packages'].outputs['total'] }}
+      allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      - id: affected-packages
+        run: |
+          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ github.event.pull_request.base.sha }}" 2>&1)
+
+          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
+          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
+
+          if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
+            STRATEGY="all-e2e"
+          elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
+            STRATEGY="test-all"
+          elif [ "$PACKAGE_COUNT" -gt "0" ]; then
+            STRATEGY="affected-only"
+          else
+            STRATEGY="no-tests"
+          fi
+
+          PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
+
+          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
+
+          echo "PACKAGE_COUNT=$PACKAGE_COUNT"
+          echo "TOTAL_COUNT=$TOTAL_COUNT"
+          echo "STRATEGY=$STRATEGY"
+
+          echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+          echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
+      - id: set-tests
+        run: |
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          echo "E2E tests to run:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+        env:
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_TYPE: e2e
+      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
+        id: waitForTarball
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
+
+  test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
+    if: ${{ needs.setup.result != 'skipped' && needs.setup.outputs['tests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['tests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - run: pnpm install
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Test ${{matrix.packageName}}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        shell: bash
+        env:
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FORCE_COLOR: '1'
+      - name: 'Determine Turbo HIT or MISS'
+        if: ${{ !cancelled() }}
+        id: turbo-summary
+        shell: bash
+        run: |
+          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
+          echo "MISS COUNT: $TURBO_MISS_COUNT"
+          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
+      - name: 'Upload Test Report to Datadog'
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
+        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
+        env:
+          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          DD_ENV: ci
+
+  summary:
+    name: Summary (e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - check-trigger
+      - test
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done

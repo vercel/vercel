@@ -1,4 +1,4 @@
-name: Tests
+name: Unit Tests
 
 on:
   pull_request:
@@ -77,13 +77,13 @@ jobs:
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
-          # Set base SHA for affected package detection
-          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
-
-          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
-          echo "Files to test:"
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          echo "Unit tests to run:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+        env:
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_TYPE: unit
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
         with:
@@ -121,12 +121,12 @@ jobs:
             const unaffectedPackages = allPackagesList.filter(pkg => !affectedSet.has(pkg));
             const unaffectedList = unaffectedPackages.map(p => `1. \`${p}\``).join('\n');
 
-            let message = '## 🧪 Test Strategy\n\n';
+            let message = '## 🧪 Unit Test Strategy\n\n';
             message += `**Comparing**: [\`${baseSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${baseSha}) → [\`${headSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${headSha}) ([view diff](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${baseSha}...${headSha}))\n\n`;
 
             if (strategy === 'all-e2e') {
-              message += '**Strategy**: Code changed outside of a package - running ALL tests\n\n';
-              message += '⚠️ All tests will run because global code changes could impact all packages.\n\n';
+              message += '**Strategy**: Code changed outside of a package - running all unit tests\n\n';
+              message += '⚠️ All unit tests will run because global code changes could impact all packages.\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
                 message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
@@ -136,7 +136,7 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All affected packages will run unit tests\n';
-              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
               message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
@@ -150,18 +150,18 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: Only affected packages will run unit tests\n';
-              message += '- **E2E tests**: Only affected packages will run e2e tests\n';
+              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
               message += '- **Type checks**: Only affected packages will run type checks';
             } else if (strategy === 'no-tests') {
               message += '**Strategy**: No tests needed\n\n';
               message += '✨ No packages affected - skipping tests\n\n';
               message += '### Results\n\n';
               message += '- **Unit tests**: None\n';
-              message += '- **E2E tests**: None\n';
+              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
               message += '- **Type checks**: None';
             } else if (strategy === 'test-all') {
-              message += '**Strategy**: Full test suite\n\n';
-              message += '🔄 Running all tests (unable to determine affected packages)\n\n';
+              message += '**Strategy**: Full unit test suite\n\n';
+              message += '🔄 Running all unit tests (unable to determine affected packages)\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
                 message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
@@ -171,14 +171,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All packages will run unit tests\n';
-              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
               message += '- **Type checks**: All packages will run type checks';
             } else {
               message += '**Strategy**: Unknown\n\n';
               message += `⚠️ Unknown strategy: ${strategy}\n\n`;
               message += '### Results\n\n';
               message += '- **Unit tests**: Unknown\n';
-              message += '- **E2E tests**: Unknown\n';
+              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
               message += '- **Type checks**: Unknown';
             }
 
@@ -193,7 +193,7 @@ jobs:
 
             const existingComment = comments.find(comment =>
               comment.user.login === 'github-actions[bot]' &&
-              comment.body.includes('## 🧪 Test Strategy')
+              (comment.body.includes('## 🧪 Unit Test Strategy') || comment.body.includes('## 🧪 Test Strategy'))
             );
 
             if (existingComment) {
