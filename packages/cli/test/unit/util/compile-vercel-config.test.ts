@@ -26,7 +26,7 @@ describe('normalizeConfig', () => {
     ]);
   });
 
-  it('should leave pure Rewrite arrays unchanged', () => {
+  it('should convert pure Rewrite arrays to routes format', () => {
     const config = {
       rewrites: [
         { source: '/a', destination: '/b' },
@@ -36,8 +36,11 @@ describe('normalizeConfig', () => {
 
     const result = normalizeConfig(config);
 
-    expect(result.rewrites).toEqual(config.rewrites);
-    expect(result.routes).toBeUndefined();
+    expect(result.rewrites).toBeUndefined();
+    expect(result.routes).toEqual([
+      { src: '/a', dest: '/b' },
+      { src: '/c', dest: '/d' },
+    ]);
   });
 
   it('should move pure Route arrays from rewrites to routes', () => {
@@ -175,6 +178,284 @@ describe('normalizeConfig', () => {
     expect(result.buildCommand).toBe('npm run build');
     expect(result.routes).toEqual([{ src: '/a', dest: '/b' }]);
   });
+
+  it('should normalize routes array containing Redirect format items to Route format', () => {
+    const config = {
+      routes: [
+        { source: '/old', destination: '/new', permanent: true },
+        { source: '/temp', destination: '/other', permanent: false },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/old', dest: '/new', redirect: true, status: 308 },
+      { src: '/temp', dest: '/other', redirect: true, status: 307 },
+    ]);
+  });
+
+  it('should normalize routes array with mixed Route and Redirect formats', () => {
+    const config = {
+      routes: [
+        { src: '/api/(.*)', dest: '/backend/$1', transforms: [] },
+        {
+          source: '/redirect-me',
+          destination: '/new-location',
+          permanent: false,
+        },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/api/(.*)', dest: '/backend/$1', transforms: [] },
+      {
+        src: '/redirect-me',
+        dest: '/new-location',
+        redirect: true,
+        status: 307,
+      },
+    ]);
+  });
+
+  it('should normalize routes array with Rewrite format items to Route format', () => {
+    const config = {
+      routes: [{ source: '/api/(.*)', destination: '/backend/$1' }],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([{ src: '/api/(.*)', dest: '/backend/$1' }]);
+  });
+
+  it('should leave routes array with pure Route format unchanged', () => {
+    const config = {
+      routes: [
+        { src: '/a', dest: '/b' },
+        { src: '/c', dest: '/d', redirect: true, status: 308 },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/a', dest: '/b' },
+      { src: '/c', dest: '/d', redirect: true, status: 308 },
+    ]);
+  });
+
+  it('should preserve has/missing conditions when normalizing routes array', () => {
+    const config = {
+      routes: [
+        {
+          source: '/protected',
+          destination: '/login',
+          permanent: false,
+          has: [{ type: 'cookie', key: 'auth' }],
+          missing: [{ type: 'header', key: 'X-Admin' }],
+        },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      {
+        src: '/protected',
+        dest: '/login',
+        redirect: true,
+        status: 307,
+        has: [{ type: 'cookie', key: 'auth' }],
+        missing: [{ type: 'header', key: 'X-Admin' }],
+      },
+    ]);
+  });
+
+  it('should handle routes.redirect() with statusCode in routes array', () => {
+    const config = {
+      routes: [{ source: '/old', destination: '/new', statusCode: 301 }],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/old', dest: '/new', redirect: true, status: 301 },
+    ]);
+  });
+
+  it('should convert pure Redirect arrays to routes format', () => {
+    const config = {
+      redirects: [
+        { source: '/old', destination: '/new', permanent: true },
+        { source: '/temp', destination: '/other', permanent: false },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.redirects).toBeUndefined();
+    expect(result.routes).toEqual([
+      { src: '/old', dest: '/new', redirect: true, status: 308 },
+      { src: '/temp', dest: '/other', redirect: true, status: 307 },
+    ]);
+  });
+
+  it('should merge rewrites and redirects into a single routes array', () => {
+    const config = {
+      rewrites: [{ source: '/api/(.*)', destination: '/backend/$1' }],
+      redirects: [
+        { source: '/old', destination: '/new', permanent: true },
+        { source: '/temp', destination: '/other', permanent: false },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.rewrites).toBeUndefined();
+    expect(result.redirects).toBeUndefined();
+    expect(result.routes).toEqual([
+      { src: '/api/(.*)', dest: '/backend/$1' },
+      { src: '/old', dest: '/new', redirect: true, status: 308 },
+      { src: '/temp', dest: '/other', redirect: true, status: 307 },
+    ]);
+  });
+
+  it('should handle rewrites with transforms mixed with simple redirects', () => {
+    const config = {
+      rewrites: [
+        {
+          src: '/api/(.*)',
+          dest: '/backend/$1',
+          transforms: [
+            {
+              type: 'request.headers',
+              op: 'set',
+              target: { key: 'x-custom' },
+              args: 'value',
+            },
+          ],
+        },
+      ],
+      redirects: [{ source: '/old', destination: '/new', permanent: false }],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.rewrites).toBeUndefined();
+    expect(result.redirects).toBeUndefined();
+    expect(result.routes).toEqual([
+      {
+        src: '/api/(.*)',
+        dest: '/backend/$1',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'x-custom' },
+            args: 'value',
+          },
+        ],
+      },
+      { src: '/old', dest: '/new', redirect: true, status: 307 },
+    ]);
+  });
+
+  it('should convert headers array to routes format', () => {
+    const config = {
+      headers: [
+        {
+          source: '/api/(.*)',
+          headers: [
+            { key: 'X-Custom-Header', value: 'my-value' },
+            { key: 'X-Another', value: 'another-value' },
+          ],
+        },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.headers).toBeUndefined();
+    expect(result.routes).toEqual([
+      {
+        src: '/api/(.*)',
+        headers: {
+          'X-Custom-Header': 'my-value',
+          'X-Another': 'another-value',
+        },
+      },
+    ]);
+  });
+
+  it('should preserve has/missing conditions when converting headers', () => {
+    const config = {
+      headers: [
+        {
+          source: '/api/(.*)',
+          headers: [{ key: 'X-Custom', value: 'value' }],
+          has: [{ type: 'header', key: 'Authorization' }],
+          missing: [{ type: 'cookie', key: 'bypass' }],
+        },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.headers).toBeUndefined();
+    expect(result.routes).toEqual([
+      {
+        src: '/api/(.*)',
+        headers: { 'X-Custom': 'value' },
+        has: [{ type: 'header', key: 'Authorization' }],
+        missing: [{ type: 'cookie', key: 'bypass' }],
+      },
+    ]);
+  });
+
+  it('should merge rewrites, redirects, and headers into a single routes array', () => {
+    const config = {
+      rewrites: [{ source: '/api/(.*)', destination: '/backend/$1' }],
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+      headers: [
+        {
+          source: '/static/(.*)',
+          headers: [
+            { key: 'Cache-Control', value: 'public, max-age=31536000' },
+          ],
+        },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.rewrites).toBeUndefined();
+    expect(result.redirects).toBeUndefined();
+    expect(result.headers).toBeUndefined();
+    expect(result.routes).toEqual([
+      { src: '/api/(.*)', dest: '/backend/$1' },
+      { src: '/old', dest: '/new', redirect: true, status: 308 },
+      {
+        src: '/static/(.*)',
+        headers: { 'Cache-Control': 'public, max-age=31536000' },
+      },
+    ]);
+  });
+
+  it('should not merge when routes and headers both exist explicitly', () => {
+    const config = {
+      routes: [{ src: '/a', dest: '/b' }],
+      headers: [{ source: '/c', headers: [{ key: 'X-Test', value: 'true' }] }],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([{ src: '/a', dest: '/b' }]);
+    expect(result.headers).toEqual([
+      { source: '/c', headers: [{ key: 'X-Test', value: 'true' }] },
+    ]);
+  });
 });
 
 describe('compileVercelConfig', () => {
@@ -188,7 +469,7 @@ describe('compileVercelConfig', () => {
     await remove(tmpDir);
   });
 
-  it('should compile vercel.ts to vercel.json', async () => {
+  it('should compile vercel.ts to vercel.json and convert headers to routes', async () => {
     const vercelTsPath = join(tmpDir, 'vercel.ts');
     const vercelTsContent = `
       export default {
@@ -215,15 +496,12 @@ describe('compileVercelConfig', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compiledConfig = require(result.configPath!);
     expect(compiledConfig).toEqual({
-      headers: [
+      routes: [
         {
-          source: '/(.*)',
-          headers: [
-            {
-              key: 'X-Test',
-              value: 'true',
-            },
-          ],
+          src: '/(.*)',
+          headers: {
+            'X-Test': 'true',
+          },
         },
       ],
     });
@@ -240,7 +518,7 @@ describe('compileVercelConfig', () => {
     );
   });
 
-  it('should compile vercel.mjs to vercel.json', async () => {
+  it('should compile vercel.mjs to vercel.json and convert rewrites to routes', async () => {
     const vercelMjsPath = join(tmpDir, 'vercel.mjs');
     const vercelMjsContent = `
       export default {
@@ -262,10 +540,10 @@ describe('compileVercelConfig', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compiledConfig = require(result.configPath!);
     expect(compiledConfig).toEqual({
-      rewrites: [
+      routes: [
         {
-          source: '/api/:path*',
-          destination: '/backend/:path*',
+          src: '/api/:path*',
+          dest: '/backend/:path*',
         },
       ],
     });

@@ -11,10 +11,21 @@ function isRouteFormat(item: any): boolean {
   return item && typeof item === 'object' && 'src' in item;
 }
 
-function toRouteFormat(item: any, isRedirect: boolean): any {
+type RouteItemType = 'rewrite' | 'redirect' | 'header';
+
+/**
+ * Convert a rewrite, redirect, or header rule to Route format.
+ * If already in Route format, returns unchanged.
+ */
+function toRouteFormat(item: any, type: RouteItemType): any {
+  if (isRouteFormat(item)) {
+    return item;
+  }
+
   const {
     source,
     destination,
+    headers,
     statusCode,
     permanent,
     respectOriginCacheControl,
@@ -23,14 +34,27 @@ function toRouteFormat(item: any, isRedirect: boolean): any {
 
   const route: any = {
     src: source,
-    dest: destination,
     ...rest,
   };
 
-  if (isRedirect) {
+  // Handle destination (rewrites/redirects)
+  if (destination !== undefined) {
+    route.dest = destination;
+  }
+
+  // Handle headers array → Record conversion (header rules)
+  if (Array.isArray(headers)) {
+    const headersRecord: Record<string, string> = {};
+    for (const h of headers) {
+      headersRecord[h.key] = h.value;
+    }
+    route.headers = headersRecord;
+  }
+
+  if (type === 'redirect') {
     route.redirect = true;
     route.status = statusCode || (permanent ? 308 : 307);
-  } else {
+  } else if (type === 'rewrite') {
     if (respectOriginCacheControl !== undefined) {
       route.respectOriginCacheControl = respectOriginCacheControl;
     }
@@ -38,36 +62,20 @@ function toRouteFormat(item: any, isRedirect: boolean): any {
       route.status = statusCode;
     }
   }
+  // For 'header', no additional processing needed
 
   return route;
 }
-
-function normalizeArrayField(
-  items: any[] | undefined,
-  isRedirect: boolean
-): any[] | null {
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return null;
-  }
-
-  const hasRouteFormat = items.some(isRouteFormat);
-  if (!hasRouteFormat) {
-    return null;
-  }
-
-  return items.map(item =>
-    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
-  );
-}
-
 /**
  * Normalize config to ensure valid vercel.json output.
  *
- * Handles mixed Route/Rewrite types in the same array (from routes.rewrite() API).
- * When Route format items (src/dest) are detected in rewrites/redirects arrays,
- * the entire array is normalized to routes format.
+ * Always converts `rewrites`, `redirects`, and `headers` arrays to Route format
+ * (src/dest) and merges them into a single `routes` array. This ensures:
+ * - routes.redirect() and routes.rewrite() work consistently regardless of transforms
+ * - Users can use `rewrites`, `redirects`, `headers`, or `routes` interchangeably
+ * - All features (transforms, conditions, etc.) are supported
  *
- * If routes and rewrites/redirects are BOTH explicitly defined,
+ * If `routes` explicitly exists alongside `rewrites`/`redirects`/`headers`,
  * returns unchanged to let schema validation fail.
  */
 export function normalizeConfig(config: any): any {
@@ -77,26 +85,49 @@ export function normalizeConfig(config: any): any {
   const hasRoutes = allRoutes.length > 0;
   const hasRewrites = normalized.rewrites?.length > 0;
   const hasRedirects = normalized.redirects?.length > 0;
+  const hasHeaders = normalized.headers?.length > 0;
 
-  // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
-  if (hasRoutes && (hasRewrites || hasRedirects)) {
+  // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
     return normalized;
   }
 
-  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
-  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
-
-  if (convertedRewrites) {
+  // Convert all rewrites to Route format
+  if (hasRewrites) {
+    const convertedRewrites = normalized.rewrites.map((item: any) =>
+      toRouteFormat(item, 'rewrite')
+    );
     allRoutes = [...allRoutes, ...convertedRewrites];
     delete normalized.rewrites;
   }
 
-  if (convertedRedirects) {
+  // Convert all redirects to Route format
+  if (hasRedirects) {
+    const convertedRedirects = normalized.redirects.map((item: any) =>
+      toRouteFormat(item, 'redirect')
+    );
     allRoutes = [...allRoutes, ...convertedRedirects];
     delete normalized.redirects;
   }
 
+  // Convert all headers to Route format
+  if (hasHeaders) {
+    const convertedHeaders = normalized.headers.map((item: any) =>
+      toRouteFormat(item, 'header')
+    );
+    allRoutes = [...allRoutes, ...convertedHeaders];
+    delete normalized.headers;
+  }
+
+  // Normalize any remaining items in routes array
+  // (e.g., routes.redirect() mixed with routes.rewrite() in the routes array)
   if (allRoutes.length > 0) {
+    // Detect type: redirects have 'permanent' or 'statusCode', everything else is a rewrite
+    allRoutes = allRoutes.map(item => {
+      const type: RouteItemType =
+        'permanent' in item || 'statusCode' in item ? 'redirect' : 'rewrite';
+      return toRouteFormat(item, type);
+    });
     normalized.routes = allRoutes;
   }
 
