@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/syncpack/dist/schema.json",
+  "lintFormatting": false,
+  "source": [
+    "package.json",
+    "packages/*/package.json",
+    "internals/*/package.json",
+    "api/package.json",
+    "!**/test/**",
+    "!**/fixtures/**",
+    "!**/failing-fixtures/**",
+    "!examples/**"
+  ],
+  "versionGroups": [
+    {
+      "label": "@types/node should be ^20.0.0",
+      "packages": ["**"],
+      "dependencies": ["@types/node"],
+      "pinVersion": "^20.0.0"
+    }
+  ]
+}
