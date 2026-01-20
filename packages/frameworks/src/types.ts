@@ -229,4 +229,9 @@ export interface Framework {
    * @example true
    */
   experimental?: boolean;
+  /**
+   * Whether the framework is a "runtime" framework preset, e.g. Python, Go, etc.
+   * @example true
+   */
+  runtimeFramework?: boolean;
 }
