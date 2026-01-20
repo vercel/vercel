@@ -1,5 +1,32 @@
 # vercel
 
+## 50.4.8
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- Updated dependencies [[`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02), [`687e433a0230123108906876c4b9ea16e617f594`](https://github.com/vercel/vercel/commit/687e433a0230123108906876c4b9ea16e617f594)]:
+  - @vercel/build-utils@13.2.13
+  - @vercel/python@6.2.1
+  - @vercel/static-build@2.8.25
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.24
+  - @vercel/express@0.1.31
+  - @vercel/fastify@0.1.27
+  - @vercel/go@3.3.3
+  - @vercel/h3@0.1.33
+  - @vercel/hono@0.2.27
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.7
+  - @vercel/nestjs@0.2.28
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.25
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
 ## 50.4.7
 
 ### Patch Changes
