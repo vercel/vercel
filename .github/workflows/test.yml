@@ -77,14 +77,12 @@ jobs:
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
-          # Set base SHA for affected package detection
-          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
-
-          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
           echo "Unit tests to run:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
         env:
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           TEST_TYPE: unit
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball

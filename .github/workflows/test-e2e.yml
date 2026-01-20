@@ -103,14 +103,12 @@ jobs:
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
-          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          export TEST_TYPE=e2e
-
-          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
           echo "E2E tests to run:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
         env:
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           TEST_TYPE: e2e
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
