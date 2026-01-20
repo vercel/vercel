@@ -1,6 +1,12 @@
 {
   "version": 2,
   "builds": [{ "src": "packages/nextjs/package.json", "use": "@vercel/next" }],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/packages/nextjs/$1"
+    }
+  ],
   "probes": [
     {
       "path": "/articles",

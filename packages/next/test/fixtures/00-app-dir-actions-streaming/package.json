@@ -5,6 +5,6 @@
     "react-dom": "latest"
   },
   "scripts": {
-    "build": "next build && mkdir -p .next/output/static; cp .next/server/server-reference-manifest.json .next/output/static/"
+    "build": "next build && cp .next/server/server-reference-manifest.json public/"
   }
 }
