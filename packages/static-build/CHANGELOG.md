@@ -1,5 +1,49 @@
 # @vercel/static-build
 
+## 2.8.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.124
+
+## 2.8.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.123
+
+## 2.8.23
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.122
+
+## 2.8.22
+
+### Patch Changes
+
+- Updated dependencies [[`b5818a2d059ca58a7423968571f817a3b3a79580`](https://github.com/vercel/vercel/commit/b5818a2d059ca58a7423968571f817a3b3a79580)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.121
+
+## 2.8.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.120
+
+## 2.8.20
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.119
+
 ## 2.8.19
 
 ### Patch Changes

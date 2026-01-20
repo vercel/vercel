@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 13.2.13
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+## 13.2.12
+
+### Patch Changes
+
+- Add `findPackageJson` function for optimized package.json lookup without lockfile scanning. This improves `getNodeVersion` performance by avoiding unnecessary lockfile parsing. ([#14658](https://github.com/vercel/vercel/pull/14658))
+
+## 13.2.10
+
+### Patch Changes
+
+- Add 'go' as a valid runtimeLanguage option for Lambda functions ([#14624](https://github.com/vercel/vercel/pull/14624))
+
+## 13.2.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
 ## 13.2.8
 
 ### Patch Changes

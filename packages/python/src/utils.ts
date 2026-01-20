@@ -6,6 +6,8 @@ import execa from 'execa';
 
 const isWin = process.platform === 'win32';
 
+export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
+
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };
@@ -42,11 +44,23 @@ export function useVirtualEnv(
   return { pythonCmd };
 }
 
+export function getProtectedUvEnv(
+  baseEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv,
+    UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
+  };
+}
+
 export function createVenvEnv(
   venvPath: string,
   baseEnv: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...baseEnv, VIRTUAL_ENV: venvPath };
+  const env: NodeJS.ProcessEnv = {
+    ...getProtectedUvEnv(baseEnv),
+    VIRTUAL_ENV: venvPath,
+  };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env.PATH || process.env.PATH || '';
   env.PATH = existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir;

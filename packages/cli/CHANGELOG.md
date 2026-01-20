@@ -1,5 +1,155 @@
 # vercel
 
+## 50.4.8
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- Updated dependencies [[`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02), [`687e433a0230123108906876c4b9ea16e617f594`](https://github.com/vercel/vercel/commit/687e433a0230123108906876c4b9ea16e617f594)]:
+  - @vercel/build-utils@13.2.13
+  - @vercel/python@6.2.1
+  - @vercel/static-build@2.8.25
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.24
+  - @vercel/express@0.1.31
+  - @vercel/fastify@0.1.27
+  - @vercel/go@3.3.3
+  - @vercel/h3@0.1.33
+  - @vercel/hono@0.2.27
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.7
+  - @vercel/nestjs@0.2.28
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.25
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
+## 50.4.7
+
+### Patch Changes
+
+- Updated dependencies [[`0869e01a9b2012b8a3f07d35b92829a8e1f8b3b5`](https://github.com/vercel/vercel/commit/0869e01a9b2012b8a3f07d35b92829a8e1f8b3b5)]:
+  - @vercel/python@6.2.0
+
+## 50.4.6
+
+### Patch Changes
+
+- Updated dependencies [[`186967277069593406948c0e3099477ba43e181a`](https://github.com/vercel/vercel/commit/186967277069593406948c0e3099477ba43e181a), [`b6767ac1736e308146399d675b53fef68b99fad3`](https://github.com/vercel/vercel/commit/b6767ac1736e308146399d675b53fef68b99fad3)]:
+  - @vercel/build-utils@13.2.12
+  - @vercel/go@3.3.3
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.23
+  - @vercel/express@0.1.30
+  - @vercel/fastify@0.1.26
+  - @vercel/h3@0.1.32
+  - @vercel/hono@0.2.26
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.6
+  - @vercel/nestjs@0.2.27
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.24
+  - @vercel/python@6.1.6
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.24
+
+## 50.4.5
+
+### Patch Changes
+
+- Updated dependencies [[`06bf941478bf7bfe479193ca77cfe3b00ff1a85e`](https://github.com/vercel/vercel/commit/06bf941478bf7bfe479193ca77cfe3b00ff1a85e), [`06bf941478bf7bfe479193ca77cfe3b00ff1a85e`](https://github.com/vercel/vercel/commit/06bf941478bf7bfe479193ca77cfe3b00ff1a85e)]:
+  - @vercel/build-utils@13.2.11
+  - @vercel/go@3.3.2
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.22
+  - @vercel/express@0.1.29
+  - @vercel/fastify@0.1.25
+  - @vercel/h3@0.1.31
+  - @vercel/hono@0.2.25
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.5
+  - @vercel/nestjs@0.2.26
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.23
+  - @vercel/python@6.1.6
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.23
+
+## 50.4.4
+
+### Patch Changes
+
+- Adjust `vc blob --help` wording for the `store` subcommand ([#14631](https://github.com/vercel/vercel/pull/14631))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.8.22
+
+## 50.4.3
+
+### Patch Changes
+
+- Updated dependencies [[`1b6adc44482303dd8b7c25faca36ce37733b847a`](https://github.com/vercel/vercel/commit/1b6adc44482303dd8b7c25faca36ce37733b847a)]:
+  - @vercel/go@3.3.1
+
+## 50.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`f46cab88668c148f2ff9728dd8cafc4f4ea6dda6`](https://github.com/vercel/vercel/commit/f46cab88668c148f2ff9728dd8cafc4f4ea6dda6)]:
+  - @vercel/build-utils@13.2.10
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.21
+  - @vercel/express@0.1.28
+  - @vercel/fastify@0.1.24
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.30
+  - @vercel/hono@0.2.24
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.4
+  - @vercel/nestjs@0.2.25
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.22
+  - @vercel/python@6.1.6
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.21
+
+## 50.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/build-utils@13.2.9
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.21
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/static-build@2.8.20
+  - @vercel/backends@0.0.22
+  - @vercel/elysia@0.1.20
+  - @vercel/express@0.1.27
+  - @vercel/fastify@0.1.23
+  - @vercel/go@3.3.0
+  - @vercel/h3@0.1.29
+  - @vercel/hono@0.2.23
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.3
+  - @vercel/nestjs@0.2.24
+  - @vercel/python@6.1.6
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
 ## 50.4.0
 
 ### Minor Changes
