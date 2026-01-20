@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.2.0
+
+### Minor Changes
+
+- Support for python 3.13 and 3.14 ([#14601](https://github.com/vercel/vercel/pull/14601))
+
 ## 6.1.6
 
 ### Patch Changes
