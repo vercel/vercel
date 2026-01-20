@@ -20,6 +20,7 @@ export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(args.workPath);
 
+  const shouldStopSpan = args.span === undefined;
   const span =
     args.span?.child('vc.builder.handle', {
       name: '@vercel/backends',
@@ -29,12 +30,13 @@ export const build: BuildV2 = async args => {
     });
 
   const doBuildSpan = span.child('vc.builder.handle.doBuild');
-  const outputConfig = await doBuildSpan.trace(async () => {
-    return await doBuild(args, downloadResult);
-  });
-  doBuildSpan.setAttributes({
-    dir: outputConfig.dir,
-    handler: outputConfig.handler,
+  const outputConfig = await doBuildSpan.trace(async span => {
+    const result = await doBuild(args, downloadResult);
+    span.setAttributes({
+      dir: result.dir,
+      handler: result.handler,
+    });
+    return result;
   });
 
   debug('Node file trace starting..');
@@ -44,19 +46,19 @@ export const build: BuildV2 = async args => {
   );
   debug('Introspection starting..');
   const introspectAppSpan = span.child('vc.builder.introspectApp');
-  const { routes, framework } = await introspectAppSpan.trace(async () =>
-    introspectApp({
+  const { routes, framework } = await introspectAppSpan.trace(async span => {
+    const result = await introspectApp({
       ...outputConfig,
       framework: args.config.framework,
       env: {
         ...(args.meta?.env ?? {}),
         ...(args.meta?.buildEnv ?? {}),
       },
-    })
-  );
-
-  introspectAppSpan.setAttributes({
-    routes: String(routes.length),
+    });
+    span.setAttributes({
+      routes: String(result.routes.length),
+    });
+    return result;
   });
 
   if (routes.length > 2) {
@@ -106,7 +108,9 @@ export const build: BuildV2 = async args => {
     await tsSpan.trace(() => outputConfig.tsPromise);
   }
 
-  await span.stop();
+  if (shouldStopSpan) {
+    await span.stop();
+  }
 
   return {
     routes,
