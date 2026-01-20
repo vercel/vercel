@@ -79,6 +79,9 @@ export async function getGitRootDirectory(
 
 /**
  * Returns all Git remotes (fetch URLs) configured for the provided cwd.
+ *
+ * @returns An object mapping remote names to URLs. Returns `{}` for valid repos
+ * with no remotes configured. Returns `null` if not in a git repo or on error.
  */
 export async function getGitRemoteUrls(
   opts: GitExecOptions

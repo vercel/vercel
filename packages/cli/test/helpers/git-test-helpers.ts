@@ -45,27 +45,6 @@ export function initBareGitRepo(
 }
 
 /**
- * Create a git worktree from a bare repository.
- * Requires the bare repo to have at least one commit pushed to it.
- */
-export function initGitWorktree(
-  bareRepoPath: string,
-  worktreePath: string,
-  branchName: string = 'main'
-): void {
-  try {
-    execSync(`git worktree add ${worktreePath} -b ${branchName}`, {
-      cwd: bareRepoPath,
-      stdio: 'pipe',
-    });
-  } catch (error) {
-    throw new Error(
-      `Failed to create worktree at ${worktreePath}: ${error instanceof Error ? error.message : error}`
-    );
-  }
-}
-
-/**
  * Create a .vercel/project.json file to simulate a linked project.
  */
 export function createProjectLink(

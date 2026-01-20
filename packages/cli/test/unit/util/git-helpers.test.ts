@@ -79,6 +79,13 @@ describe('git-helpers', () => {
       const result = await getGitOriginUrl({ cwd });
       expect(result).toEqual(null);
     });
+
+    it('should return null for repo with remotes but no origin', async () => {
+      const cwd = setupTmpDir();
+      initGitRepo(cwd, { upstream: 'https://github.com/example/upstream.git' });
+      const result = await getGitOriginUrl({ cwd });
+      expect(result).toEqual(null);
+    });
   });
 
   describe('bare repository worktree', () => {

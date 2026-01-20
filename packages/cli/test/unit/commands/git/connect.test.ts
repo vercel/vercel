@@ -1,4 +1,7 @@
-import { describe, beforeEach, expect, it } from 'vitest';
+import { describe, beforeEach, beforeAll, expect, it } from 'vitest';
+import { execSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -8,6 +11,7 @@ import type { Project } from '@vercel-internals/types';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import {
   initGitRepo,
+  initBareGitRepo,
   createProjectLink,
 } from '../../../helpers/git-test-helpers';
 
@@ -629,5 +633,75 @@ describe('git connect', () => {
     });
 
     await expect(gitPromise).resolves.toEqual(0);
+  });
+
+  describe('connecting from a bare repository worktree', () => {
+    let testDir: string;
+    let bareRepoPath: string;
+    let worktreePath: string;
+
+    beforeAll(() => {
+      // Set up bare repo with worktree (same pattern as git-helpers.test.ts)
+      testDir = setupTmpDir('connect-worktree-test');
+      bareRepoPath = join(testDir, 'repo.git');
+      worktreePath = join(testDir, 'worktree');
+
+      // Initialize a bare repository with remote
+      execSync('mkdir repo.git', { cwd: testDir });
+      initBareGitRepo(bareRepoPath, {
+        origin: 'https://github.com/user/repo.git',
+      });
+
+      // Create an initial commit in the bare repo (required to create a worktree).
+      // We do this by creating a temporary clone, committing, and pushing.
+      const tempClone = join(testDir, 'temp-clone');
+      execSync(`git clone ${bareRepoPath} temp-clone`, { cwd: testDir });
+      execSync('git config user.email "test@test.com"', { cwd: tempClone });
+      execSync('git config user.name "Test"', { cwd: tempClone });
+      execSync('touch README.md', { cwd: tempClone });
+      execSync('git add .', { cwd: tempClone });
+      execSync('git commit -m "initial commit"', { cwd: tempClone });
+      execSync('git push origin HEAD:main', { cwd: tempClone });
+      rmSync(tempClone, { recursive: true });
+
+      // Create a worktree from the bare repo
+      execSync(`git worktree add ${worktreePath} main`, { cwd: bareRepoPath });
+    });
+
+    it('should connect a project from within a worktree', async () => {
+      createProjectLink(worktreePath, 'worktree-project');
+      client.cwd = worktreePath;
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'worktree-project',
+        name: 'worktree-project',
+      });
+
+      client.setArgv('git', 'connect', '--yes');
+      const gitPromise = git(client);
+
+      await expect(client.stderr).toOutput(
+        `Connecting GitHub repository: https://github.com/user/repo`
+      );
+      await expect(client.stderr).toOutput(`> Connected\n`);
+
+      const exitCode = await gitPromise;
+      expect(exitCode).toEqual(0);
+
+      const project: Project = await client.fetch(
+        `/v8/projects/worktree-project`
+      );
+      expect(project.link).toMatchObject({
+        type: 'github',
+        repo: 'user/repo',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      });
+    });
   });
 });
