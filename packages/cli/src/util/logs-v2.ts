@@ -107,9 +107,8 @@ export async function fetchRequestLogs(
 
   if (source && source.length > 0) {
     query.set('source', source.join(','));
-  } else {
-    query.set('source', 'serverless,edge-function,edge-middleware,static');
   }
+  // Don't set a default source filter - let the API return all sources
 
   if (search) {
     query.set('search', search);
