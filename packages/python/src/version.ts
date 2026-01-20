@@ -9,8 +9,18 @@ interface PythonVersion {
   discontinueDate?: Date;
 }
 
+// keep 3.12 as the default for now and only opt-in to 3.13 by pinning the specific version
+// this is to avoid silently upgrading current deployments on 3.12 to 3.13
+const DEFAULT = '3.12';
+
 // The order must be most recent first
 const allOptions: PythonVersion[] = [
+  {
+    version: '3.13',
+    pipPath: 'pip3.13',
+    pythonPath: 'python3.13',
+    runtime: 'python3.13',
+  },
   {
     version: '3.12',
     pipPath: 'pip3.12',
@@ -52,6 +62,31 @@ function getDevPythonVersion(): PythonVersion {
     pythonPath: 'python3',
     runtime: 'python3',
   };
+}
+
+export function getDefaultPythonVersion({
+  isDev,
+}: {
+  isDev?: boolean;
+}): PythonVersion {
+  if (isDev) {
+    return getDevPythonVersion();
+  }
+
+  const defaultVersion = allOptions.find(
+    o => o.version === DEFAULT && isInstalled(o)
+  );
+  const latestVersion = allOptions.find(isInstalled);
+
+  if (!latestVersion) {
+    throw new NowBuildError({
+      code: 'PYTHON_NOT_FOUND',
+      link: 'http://vercel.link/python-version',
+      message: `Unable to find any supported Python versions. Please install Python ${DEFAULT} or a later version.`,
+    });
+  }
+
+  return defaultVersion ?? latestVersion;
 }
 
 export function getLatestPythonVersion({
@@ -193,7 +228,7 @@ export function getSupportedPythonVersion({
     return getDevPythonVersion();
   }
 
-  let selection = getLatestPythonVersion({ isDev: false });
+  let selection = getDefaultPythonVersion({ isDev: false });
 
   if (declaredPythonVersion) {
     const { version, source } = declaredPythonVersion;
