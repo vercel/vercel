@@ -176,4 +176,5 @@ export type {
   MergeRoutesArgs,
   DetectFrameworkArgs,
   DetectedFramework,
+  ExperimentalBackendsBuilder,
 } from './build-project';

@@ -8,6 +8,7 @@ import {
   isBackendBuilder,
   shouldUseExperimentalBackends,
 } from './framework-helpers';
+import { getDiscontinuedNodeVersions } from './fs/node-version';
 import FileFsRef from './file-fs-ref';
 import download from './fs/download';
 import type { Span } from './trace';
@@ -183,6 +184,13 @@ export interface VercelConfig {
 }
 
 /**
+ * Experimental backends builder interface
+ */
+export interface ExperimentalBackendsBuilder {
+  build: (options: BuildOptions) => Promise<BuildResultV2 | BuildResultV3>;
+}
+
+/**
  * Options for the runBuild function
  */
 export interface RunBuildOptions {
@@ -294,14 +302,6 @@ export interface RunBuildOptions {
   mergeRoutes: (args: MergeRoutesArgs) => Route[];
 
   /**
-   * Function to get transformed routes
-   */
-  getTransformedRoutes: (config: VercelConfig) => {
-    routes?: Route[];
-    error?: Error;
-  };
-
-  /**
    * Function to convert source to regex
    */
   sourceToRegex: (source: string) => { src: string };
@@ -322,6 +322,11 @@ export interface RunBuildOptions {
    * LocalFileSystemDetector class
    */
   LocalFileSystemDetector: new (path: string) => any;
+
+  /**
+   * Optional experimental backends builder (for @vercel/backends support)
+   */
+  experimentalBackendsBuilder?: ExperimentalBackendsBuilder;
 }
 
 /**
@@ -686,6 +691,7 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
     detectFrameworkRecord,
     detectFrameworkVersion,
     LocalFileSystemDetector,
+    experimentalBackendsBuilder,
   } = options;
 
   // Populate Files -> FileFsRef mapping
@@ -808,21 +814,12 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
             // Use experimental backends builder only for backend framework builders,
             // not for static builders (which handle public/ directories)
             if (
+              experimentalBackendsBuilder &&
               shouldUseExperimentalBackends(buildConfig.framework) &&
               builderPkg.name !== '@vercel/static' &&
               isBackendBuilder(build)
             ) {
-              // Dynamic import of @vercel/backends - module is provided at runtime by CLI
-              // Using a variable to prevent TypeScript from trying to resolve the module
-              const backendsModule = '@vercel/backends';
-              const experimentalBackendBuilder = (await import(
-                backendsModule
-              )) as {
-                build: (
-                  options: BuildOptions
-                ) => Promise<BuildResultV2 | BuildResultV3>;
-              };
-              return experimentalBackendBuilder.build(buildOptions);
+              return experimentalBackendsBuilder.build(buildOptions);
             }
             return builder.build(buildOptions);
           }
@@ -866,9 +863,6 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
         'type' in buildResult.output &&
         buildResult.output.type === 'Lambda'
       ) {
-        const { getDiscontinuedNodeVersions } = await import(
-          './fs/node-version'
-        );
         const lambdaRuntime = (buildResult.output as Lambda).runtime;
         if (
           getDiscontinuedNodeVersions().some(o => o.runtime === lambdaRuntime)

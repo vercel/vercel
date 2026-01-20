@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import { join, relative, resolve } from 'path';
+import * as experimentalBackends from '@vercel/backends';
 
 import {
   normalizePath,
@@ -611,6 +612,7 @@ async function doBuild(
       detectFrameworkVersion as unknown as RunBuildOptions['detectFrameworkVersion'],
     LocalFileSystemDetector:
       LocalFileSystemDetector as unknown as RunBuildOptions['LocalFileSystemDetector'],
+    experimentalBackendsBuilder: experimentalBackends,
   });
 
   if (corepackShimDir) {
