@@ -1183,7 +1183,15 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
     } catch (err: any) {
       const buildJsonBuild = buildsJsonBuilds.get(build);
       if (buildJsonBuild) {
-        buildJsonBuild.error = err;
+        // Serialize error with non-enumerable properties (message, stack, name)
+        // which are otherwise lost during JSON serialization
+        buildJsonBuild.error = {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+          code: err.code,
+          ...err,
+        };
       }
       throw err;
     } finally {
