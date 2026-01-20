@@ -21,16 +21,18 @@ export const build: BuildV2 = async args => {
   const nodeVersion = await getNodeVersion(args.workPath);
 
   const span =
-    args.span ??
+    args.span?.child('vc.builder.handle', {
+      name: '@vercel/backends',
+    }) ??
     new Span({
       name: '@vercel/backends',
     });
 
-  const doBuildSpan = span.child('vc.builder.backends.doBuild');
+  const doBuildSpan = span.child('vc.builder.handle.doBuild');
   const outputConfig = await doBuildSpan.trace(async () => {
     return await doBuild(args, downloadResult);
   });
-  doBuildSpan.child('vc.builder.backends.doBuild.outputConfig', {
+  doBuildSpan.setAttributes({
     dir: outputConfig.dir,
     handler: outputConfig.handler,
   });
@@ -53,7 +55,7 @@ export const build: BuildV2 = async args => {
     })
   );
 
-  introspectAppSpan.child('vc.builder.backends.introspectApp.routes', {
+  introspectAppSpan.setAttributes({
     routes: String(routes.length),
   });
 
@@ -100,7 +102,8 @@ export const build: BuildV2 = async args => {
 
   // Don't return until the TypeScript compilation is complete
   if (outputConfig.tsPromise) {
-    await outputConfig.tsPromise;
+    const tsSpan = span.child('vc.builder.backends.tsCompile');
+    await tsSpan.trace(() => outputConfig.tsPromise);
   }
 
   return {
