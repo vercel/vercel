@@ -13,6 +13,10 @@ const require = createRequire(import.meta.url);
 // Re-export findEntrypoint for use in other packages
 export { findEntrypoint };
 
+// Re-export plugins for advanced usage
+export { externals, getTracedFiles } from './plugins/externals.js';
+export { workspace, getWorkspaceFiles } from './plugins/workspace.js';
+
 export const getBuildSummary = async (outputDir: string) => {
   const buildSummary = await readFile(join(outputDir, '.cervel.json'), 'utf-8');
   return JSON.parse(buildSummary);

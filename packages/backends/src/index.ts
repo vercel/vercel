@@ -1,6 +1,5 @@
 import { downloadInstallAndBundle } from './utils.js';
 import { introspectApp } from '@vercel/introspection';
-import { nodeFileTrace } from './node-file-trace.js';
 import { relative, join } from 'node:path';
 import { doBuild } from './build.js';
 import {
@@ -11,6 +10,7 @@ import {
   type PrepareCache,
   type BuildV2,
   getNodeVersion,
+  Files,
 } from '@vercel/build-utils';
 
 export const version = 2;
@@ -21,8 +21,6 @@ export const build: BuildV2 = async args => {
 
   const outputConfig = await doBuild(args, downloadResult);
 
-  debug('Node file trace starting..');
-  const nftPromise = nodeFileTrace(args, nodeVersion, outputConfig);
   debug('Introspection starting..');
   const { routes, framework } = await introspectApp({
     ...outputConfig,
@@ -44,13 +42,23 @@ export const build: BuildV2 = async args => {
     join(outputConfig.dir, outputConfig.handler)
   );
 
-  const { files } = await nftPromise;
-  debug('Node file trace complete');
+  // Build files manifest from the output directory
+  const files = await glob('**', outputConfig.dir);
+  const finalFiles: Files = {};
+  for (const [filePath, fileRef] of Object.entries(files)) {
+    const relPath = relative(
+      args.repoRootPath,
+      join(outputConfig.dir, filePath)
+    );
+    finalFiles[relPath] = fileRef;
+  }
+
+  debug(`Files manifest complete: ${Object.keys(finalFiles).length} files`);
 
   const lambda = new NodejsLambda({
     runtime: nodeVersion.runtime,
     handler,
-    files,
+    files: finalFiles,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: true,
     framework: {

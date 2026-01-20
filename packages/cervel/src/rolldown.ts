@@ -2,13 +2,8 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
-
-/**
- * Escapes special regex characters in a string to treat it as a literal pattern.
- */
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+import { externals } from './plugins/externals.js';
+import { workspace } from './plugins/workspace.js';
 
 export const rolldown = async (args: {
   entrypoint: string;
@@ -40,7 +35,6 @@ export const rolldown = async (args: {
   const resolvedExtension = extensionInfo.extension;
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
-  const external: string[] = [];
   let pkg: Record<string, unknown> = {};
   if (existsSync(packageJsonPath)) {
     const source = await readFile(packageJsonPath, 'utf8');
@@ -56,22 +50,41 @@ export const rolldown = async (args: {
         resolvedFormat = 'cjs';
       }
     }
-    for (const dependency of Object.keys(pkg.dependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.devDependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.peerDependencies || {})) {
-      external.push(dependency);
-    }
-    for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
-      external.push(dependency);
-    }
   }
 
   const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
+
+  // Manually clean the output directory before build
+  // (can't use cleanDir: true because it runs after buildEnd hook)
+  if (existsSync(outputDir)) {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+
+  const isBundled = process.env.VERCEL_BUILDER_BUNDLE_NODE === '1';
+
+  // Build plugins array
+  const plugins = [];
+
+  if (!isBundled) {
+    // Add externals plugin for npm dependencies
+    plugins.push(
+      externals({
+        rootDir: args.workPath,
+        outputDir: outputDir,
+        repoRootPath: args.repoRootPath,
+      })
+    );
+
+    // Add workspace plugin for monorepo packages
+    plugins.push(
+      workspace({
+        repoRootPath: args.repoRootPath,
+        outputDir: outputDir,
+        format: resolvedFormat || 'esm',
+      })
+    );
+  }
 
   const out = await rolldownBuild({
     // @ts-ignore tsconfig: true and cleanDir: true are not valid options
@@ -79,16 +92,34 @@ export const rolldown = async (args: {
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    external: external.map(pkg => new RegExp(`^${escapeRegExp(pkg)}`)),
+    plugins,
+    onLog: (level, log, defaultHandler) => {
+      // Since we're processing node modules, suppress EVAL logs from internal packages
+      // that we need to fix
+      if (log.code === 'EVAL') {
+        // Copied logic from build-utils, but avoiding a dep to keep this package decoupled
+        if (process.env.VERCEL_BUILDER_DEBUG === '1') {
+          defaultHandler(level, log);
+        }
+      } else {
+        defaultHandler(level, log);
+      }
+    },
     output: {
-      cleanDir: true,
+      cleanDir: false, // TEMPORARY: Disable to test if this is deleting node_modules
       dir: outputDir,
       format: resolvedFormat,
       entryFileNames: `[name].${resolvedExtension}`,
-      preserveModules: true,
+      preserveModules: !isBundled,
       sourcemap: false,
+      banner:
+        resolvedFormat === 'esm'
+          ? `import{fileURLToPath}from'url';import{dirname}from'path';const __filename=typeof import.meta.filename!=='undefined'?import.meta.filename:fileURLToPath(import.meta.url);const __dirname=typeof import.meta.dirname!=='undefined'?import.meta.dirname:dirname(__filename);`
+          : undefined,
     },
   });
+
+  console.log('[cervel] Rolldown build completed, output written');
   let handler: string | null = null;
   for (const entry of out.output) {
     if (entry.type === 'chunk') {
