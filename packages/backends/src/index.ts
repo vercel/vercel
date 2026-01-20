@@ -11,6 +11,7 @@ import {
   type PrepareCache,
   type BuildV2,
   getNodeVersion,
+  Span,
 } from '@vercel/build-utils';
 
 export const version = 2;
@@ -19,18 +20,41 @@ export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(args.workPath);
 
-  const outputConfig = await doBuild(args, downloadResult);
+  const span =
+    args.span ??
+    new Span({
+      name: '@vercel/backends',
+    });
+
+  const doBuildSpan = span.child('vc.builder.backends.doBuild');
+  const outputConfig = await doBuildSpan.trace(async () => {
+    return await doBuild(args, downloadResult);
+  });
+  doBuildSpan.child('vc.builder.backends.doBuild.outputConfig', {
+    dir: outputConfig.dir,
+    handler: outputConfig.handler,
+  });
 
   debug('Node file trace starting..');
-  const nftPromise = nodeFileTrace(args, nodeVersion, outputConfig);
+  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
+  const nftPromise = nftSpan.trace(() =>
+    nodeFileTrace(args, nodeVersion, outputConfig)
+  );
   debug('Introspection starting..');
-  const { routes, framework } = await introspectApp({
-    ...outputConfig,
-    framework: args.config.framework,
-    env: {
-      ...(args.meta?.env ?? {}),
-      ...(args.meta?.buildEnv ?? {}),
-    },
+  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
+  const { routes, framework } = await introspectAppSpan.trace(async () =>
+    introspectApp({
+      ...outputConfig,
+      framework: args.config.framework,
+      env: {
+        ...(args.meta?.env ?? {}),
+        ...(args.meta?.buildEnv ?? {}),
+      },
+    })
+  );
+
+  introspectAppSpan.child('vc.builder.backends.introspectApp.routes', {
+    routes: String(routes.length),
   });
 
   if (routes.length > 2) {
