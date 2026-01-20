@@ -880,6 +880,7 @@ describe.skipIf(flakey)('build', () => {
 
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(env.VERCEL_ENV).toEqual('preview');
+    expect(env.VERCEL_TARGET_ENV).toEqual('preview');
     expect(env.NEXT_PUBLIC_VERCEL_ENV).toEqual('preview');
     expect(env.NEXT_PUBLIC_VERCEL_TARGET_ENV).toEqual('preview');
   });
@@ -894,6 +895,7 @@ describe.skipIf(flakey)('build', () => {
 
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(env.VERCEL_ENV).toEqual('production');
+    expect(env.VERCEL_TARGET_ENV).toEqual('production');
     expect(env.NEXT_PUBLIC_VERCEL_ENV).toEqual('production');
     expect(env.NEXT_PUBLIC_VERCEL_TARGET_ENV).toEqual('production');
   });
@@ -908,6 +910,7 @@ describe.skipIf(flakey)('build', () => {
 
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(env.VERCEL_ENV).toEqual('production');
+    expect(env.VERCEL_TARGET_ENV).toEqual('production');
     expect(env.NEXT_PUBLIC_VERCEL_ENV).toEqual('production');
     expect(env.NEXT_PUBLIC_VERCEL_TARGET_ENV).toEqual('production');
   });

@@ -4,7 +4,7 @@
 
 Inject NEXT_PUBLIC_VERCEL_ENV and NEXT_PUBLIC_VERCEL_TARGET_ENV during `vercel build` and `vercel deploy --prebuilt`.
 
-When using `vercel build` locally followed by `vercel deploy --prebuilt`, the CLI now automatically injects `VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_ENV`, and `NEXT_PUBLIC_VERCEL_TARGET_ENV` environment variables based on the deployment target:
+When using `vercel build` locally followed by `vercel deploy --prebuilt`, the CLI now automatically injects `VERCEL_ENV`, `VERCEL_TARGET_ENV`, `NEXT_PUBLIC_VERCEL_ENV`, and `NEXT_PUBLIC_VERCEL_TARGET_ENV` environment variables based on the deployment target:
 
 - With `--prod` flag → `production`
 - With `--target production` → `production`  
