@@ -9,7 +9,6 @@ import { validateServiceConfig, resolveService } from './resolve';
 
 export * from './types';
 export * from './resolve';
-export * from './utils';
 
 /**
  * Detect and resolve services within a project.
