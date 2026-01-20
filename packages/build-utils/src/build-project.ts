@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import semver from 'semver';
-import { join, normalize, sep } from 'path';
+import { delimiter, join, normalize, sep } from 'path';
 import { frameworkList } from '@vercel/frameworks';
 import type { Framework as FrameworkType } from '@vercel/frameworks';
 import {
@@ -17,6 +17,7 @@ import {
   shouldUseExperimentalBackends,
 } from './framework-helpers';
 import { getDiscontinuedNodeVersions } from './fs/node-version';
+import { spawnAsync } from './fs/run-user-scripts';
 import FileFsRef from './file-fs-ref';
 import download from './fs/download';
 import type { Span } from './trace';
@@ -266,6 +267,16 @@ export interface RunBuildOptions {
    * LocalFileSystemDetector class
    */
   LocalFileSystemDetector: new (path: string) => any;
+
+  /**
+   * Cache directory for corepack and other build caches
+   */
+  cacheDir: string;
+
+  /**
+   * Corepack shim directory if already initialized (for early install)
+   */
+  corepackShimDir?: string | null;
 
   /**
    * Optional experimental backends builder (for @vercel/backends support)
@@ -699,6 +710,88 @@ export async function writeFlagsJSON(
 }
 
 /**
+ * Initialize corepack for package manager support.
+ * Returns the shim directory path if corepack was enabled, null otherwise.
+ */
+export async function initCorepack(options: {
+  repoRootPath: string;
+  cacheDir: string;
+  logger: BuildLogger;
+}): Promise<string | null> {
+  const { repoRootPath, cacheDir, logger } = options;
+
+  if (process.env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
+    // Since corepack is experimental, we need to exit early
+    // unless the user explicitly enables it with the env var.
+    return null;
+  }
+
+  const pkgPath = join(repoRootPath, 'package.json');
+  let pkg: PackageJson | null = null;
+  try {
+    if (await fs.pathExists(pkgPath)) {
+      pkg = await fs.readJSON(pkgPath);
+    }
+  } catch (error) {
+    logger.warn(
+      'Warning: Could not enable corepack because package.json could not be read'
+    );
+    return null;
+  }
+
+  if (!pkg?.packageManager) {
+    logger.warn(
+      'Warning: Could not enable corepack because package.json is missing "packageManager" property'
+    );
+    return null;
+  }
+
+  logger.log(
+    `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
+  );
+
+  const corepackRootDir = join(cacheDir, 'corepack');
+  const corepackHomeDir = join(corepackRootDir, 'home');
+  const corepackShimDir = join(corepackRootDir, 'shim');
+  await fs.mkdirp(corepackHomeDir);
+  await fs.mkdirp(corepackShimDir);
+  process.env.COREPACK_HOME = corepackHomeDir;
+  process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
+  const pkgManagerName = pkg.packageManager.split('@')[0];
+
+  // We must explicitly call `corepack enable npm` since `corepack enable`
+  // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
+  // Also, `corepack enable` is too broad and will change the version of
+  // yarn & pnpm even though those versions are not specified by the user.
+  // See https://github.com/nodejs/corepack#known-good-releases
+  // Finally, we use `--install-directory` so we can cache the result to
+  // reuse for subsequent builds. See `@vercel/vc-build` for `prepareCache`.
+  await spawnAsync(
+    'corepack',
+    ['enable', pkgManagerName, '--install-directory', corepackShimDir],
+    {
+      prettyCommand: `corepack enable ${pkgManagerName}`,
+    }
+  );
+  return corepackShimDir;
+}
+
+/**
+ * Cleanup corepack environment after build.
+ */
+export function cleanupCorepack(corepackShimDir: string): void {
+  if (process.env.COREPACK_HOME) {
+    delete process.env.COREPACK_HOME;
+  }
+  if (process.env.PATH) {
+    process.env.PATH = process.env.PATH.replace(
+      `${corepackShimDir}${delimiter}`,
+      ''
+    );
+  }
+}
+
+/**
  * Gets framework routes from a framework definition
  */
 export async function getFrameworkRoutes(
@@ -792,8 +885,20 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
     detectFrameworkRecord,
     detectFrameworkVersion,
     LocalFileSystemDetector,
+    cacheDir,
+    corepackShimDir: existingCorepackShimDir,
     experimentalBackendsBuilder,
   } = options;
+
+  // Initialize corepack if not already done
+  let corepackShimDir = existingCorepackShimDir;
+  if (!corepackShimDir) {
+    corepackShimDir = await initCorepack({
+      repoRootPath: cwd,
+      cacheDir,
+      logger,
+    });
+  }
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -1236,4 +1341,9 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
   await writeFlagsJSON(buildResults.values(), outputDir, logger);
+
+  // Cleanup corepack if we initialized it
+  if (corepackShimDir && !existingCorepackShimDir) {
+    cleanupCorepack(corepackShimDir);
+  }
 }

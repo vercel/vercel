@@ -156,6 +156,8 @@ export {
   writeFlagsJSON,
   getFrameworkRoutes,
   getFramework,
+  initCorepack,
+  cleanupCorepack,
 } from './build-project';
 
 export type {
@@ -178,6 +180,6 @@ export type {
   PrepareBuildOptions,
   PrepareBuildResult,
   DetectBuildersResult,
-  ExperimentalBackendsBuilder,
   DetectedFramework,
+  ExperimentalBackendsBuilder,
 } from './build-project';

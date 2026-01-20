@@ -17,6 +17,8 @@ import {
   type PackageJson,
   runBuild,
   prepareBuild,
+  initCorepack,
+  cleanupCorepack,
   type BuildsManifest,
   type BuildLogger,
   type BuilderWithPkg,
@@ -36,7 +38,6 @@ import {
 import { getTransformedRoutes } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
-import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { scrubArgv } from '../../util/build/scrub-argv';
@@ -373,10 +374,25 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  // Create the build logger early for use throughout the build
+  const logger = createBuildLogger();
+
+  // Cache directory for corepack and other build artifacts
+  const cacheDir = join(
+    cwd,
+    project.settings.rootDirectory || '.',
+    VERCEL_DIR,
+    'cache'
+  );
+
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
   if (sourceConfigFile) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
+    corepackShimDir = await initCorepack({
+      repoRootPath: cwd,
+      cacheDir,
+      logger,
+    });
 
     const installCommand = project.settings.installCommand;
     if (typeof installCommand === 'string') {
@@ -496,9 +512,6 @@ async function doBuild(
     throw routesResult.error;
   }
 
-  // Create the build logger
-  const logger = createBuildLogger();
-
   // Prepare the build configuration (detect builders, routes, etc.)
   const { builds, zeroConfigRoutes, isZeroConfig } = await prepareBuild({
     files,
@@ -515,11 +528,6 @@ async function doBuild(
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   const buildStamp = stamp();
-
-  // Only initialize corepack if not already done during early install
-  if (!corepackShimDir) {
-    corepackShimDir = await initCorepack({ repoRootPath: cwd });
-  }
 
   // Sort builders for execution order
   const sortedBuilders = sortBuilders(builds);
@@ -551,9 +559,12 @@ async function doBuild(
       detectFrameworkVersion as unknown as RunBuildOptions['detectFrameworkVersion'],
     LocalFileSystemDetector:
       LocalFileSystemDetector as RunBuildOptions['LocalFileSystemDetector'],
+    cacheDir,
+    corepackShimDir,
     experimentalBackendsBuilder: experimentalBackends,
   });
 
+  // Cleanup early-initialized corepack (runBuild handles its own cleanup)
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
   }

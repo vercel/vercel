@@ -271,6 +271,9 @@ importers:
 
   packages/build-utils:
     dependencies:
+      '@vercel/backends':
+        specifier: '*'
+        version: link:../backends
       '@vercel/frameworks':
         specifier: workspace:*
         version: link:../frameworks
