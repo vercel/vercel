@@ -4,6 +4,8 @@ import {
   createWriteStream,
   readFileSync,
   unlinkSync,
+  mkdtempSync,
+  rmSync,
 } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -79,11 +81,10 @@ export const introspectApp = async (args: {
         }
       );
 
-      // Create a temporary file to write stdout data
-      const tempFilePath = join(
-        tmpdir(),
-        `introspection-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`
-      );
+      // Create a temporary directory with secure permissions (0700)
+      // mkdtemp creates the directory with mode 0700 by default (owner rwx only)
+      const tempDir = mkdtempSync(join(tmpdir(), 'introspection-'));
+      const tempFilePath = join(tempDir, 'output.txt');
       const writeStream = createWriteStream(tempFilePath);
       let streamClosed = false;
 
@@ -149,11 +150,11 @@ export const introspectApp = async (args: {
             } catch (error) {
               debug(`Error parsing introspection data: ${error}`);
             } finally {
-              // Clean up the temporary file
+              // Clean up the temporary directory and file
               try {
-                unlinkSync(tempFilePath);
+                rmSync(tempDir, { recursive: true, force: true });
               } catch (err) {
-                debug(`Error deleting temp file: ${err}`);
+                debug(`Error deleting temp directory: ${err}`);
               }
               resolvePromise(undefined);
             }
