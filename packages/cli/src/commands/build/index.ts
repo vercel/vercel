@@ -26,7 +26,6 @@ import {
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
-import { frameworkList } from '@vercel/frameworks';
 import {
   detectBuilders,
   detectFrameworkRecord,
@@ -34,12 +33,7 @@ import {
   detectInstrumentation,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
-import {
-  appendRoutesToPhase,
-  getTransformedRoutes,
-  mergeRoutes,
-  sourceToRegex,
-} from '@vercel/routing-utils';
+import { getTransformedRoutes } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
@@ -506,7 +500,7 @@ async function doBuild(
   const logger = createBuildLogger();
 
   // Prepare the build configuration (detect builders, routes, etc.)
-  const prepareBuildOptions: PrepareBuildOptions = {
+  const { builds, zeroConfigRoutes, isZeroConfig } = await prepareBuild({
     files,
     pkg: pkg || null,
     localConfig: localConfig as BuildUtilsVercelConfig,
@@ -514,12 +508,7 @@ async function doBuild(
     workPath,
     logger,
     detectBuilders: detectBuilders as PrepareBuildOptions['detectBuilders'],
-    appendRoutesToPhase:
-      appendRoutesToPhase as PrepareBuildOptions['appendRoutesToPhase'],
-  };
-
-  const { builds, zeroConfigRoutes, isZeroConfig } =
-    await prepareBuild(prepareBuildOptions);
+  });
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
@@ -555,16 +544,13 @@ async function doBuild(
     standalone,
     logger,
     span,
-    frameworkList: frameworkList as unknown as RunBuildOptions['frameworkList'],
     writeBuildResult: writeBuildResult as RunBuildOptions['writeBuildResult'],
-    mergeRoutes: mergeRoutes as unknown as RunBuildOptions['mergeRoutes'],
-    sourceToRegex: sourceToRegex as unknown as RunBuildOptions['sourceToRegex'],
     detectFrameworkRecord:
       detectFrameworkRecord as unknown as RunBuildOptions['detectFrameworkRecord'],
     detectFrameworkVersion:
       detectFrameworkVersion as unknown as RunBuildOptions['detectFrameworkVersion'],
     LocalFileSystemDetector:
-      LocalFileSystemDetector as unknown as RunBuildOptions['LocalFileSystemDetector'],
+      LocalFileSystemDetector as RunBuildOptions['LocalFileSystemDetector'],
     experimentalBackendsBuilder: experimentalBackends,
   });
 

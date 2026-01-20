@@ -175,10 +175,9 @@ export type {
   RunBuildOptions,
   WriteBuildResultArgs,
   MergeRoutesArgs,
-  DetectFrameworkArgs,
-  DetectedFramework,
-  ExperimentalBackendsBuilder,
   PrepareBuildOptions,
   PrepareBuildResult,
   DetectBuildersResult,
+  ExperimentalBackendsBuilder,
+  DetectedFramework,
 } from './build-project';

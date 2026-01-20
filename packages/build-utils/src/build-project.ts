@@ -2,6 +2,16 @@ import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import semver from 'semver';
 import { join, normalize, sep } from 'path';
+import {
+  frameworkList,
+  type Framework as FrameworkType,
+} from '@vercel/frameworks';
+import {
+  appendRoutesToPhase,
+  mergeRoutes,
+  sourceToRegex,
+  type Route as RoutingRoute,
+} from '@vercel/routing-utils';
 import { NowBuildError } from './errors';
 import { getInstalledPackageVersion } from './get-installed-package-version';
 import {
@@ -111,31 +121,14 @@ export interface BuilderWithPkg {
 }
 
 /**
- * Route type (simplified)
+ * Re-export Route from @vercel/routing-utils
  */
-export interface Route {
-  src?: string;
-  dest?: string;
-  headers?: Record<string, string>;
-  methods?: string[];
-  handle?: string;
-  status?: number;
-  continue?: boolean;
-  check?: boolean;
-  redirect?: boolean;
-  [key: string]: unknown;
-}
+export type Route = RoutingRoute;
 
 /**
- * Framework interface (simplified)
+ * Re-export Framework from @vercel/frameworks
  */
-export interface Framework {
-  slug: string;
-  name: string;
-  useRuntime?: { use: string };
-  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
-  [key: string]: unknown;
-}
+export type Framework = FrameworkType;
 
 /**
  * Re-export ProjectSettings from types for consumers
@@ -155,13 +148,6 @@ export interface VercelConfig {
   bunVersion?: string;
   customErrorPage?: string | { default5xx?: string; default4xx?: string };
   [key: string]: unknown;
-}
-
-/**
- * Experimental backends builder interface
- */
-export interface ExperimentalBackendsBuilder {
-  build: (options: BuildOptions) => Promise<BuildResultV2 | BuildResultV3>;
 }
 
 /**
@@ -259,11 +245,6 @@ export interface RunBuildOptions {
   span: Span;
 
   /**
-   * Framework list for route detection
-   */
-  frameworkList: Framework[];
-
-  /**
    * Function to write build results to filesystem
    */
   writeBuildResult: (
@@ -271,21 +252,12 @@ export interface RunBuildOptions {
   ) => Promise<Record<string, PathOverride> | undefined | void>;
 
   /**
-   * Function to merge routes
-   */
-  mergeRoutes: (args: MergeRoutesArgs) => Route[];
-
-  /**
-   * Function to convert source to regex
-   */
-  sourceToRegex: (source: string) => { src: string };
-
-  /**
    * Function to detect framework record
    */
-  detectFrameworkRecord: (
-    args: DetectFrameworkArgs
-  ) => Promise<DetectedFramework | null>;
+  detectFrameworkRecord: (args: {
+    fs: any;
+    frameworkList: any[];
+  }) => Promise<DetectedFramework | null>;
 
   /**
    * Function to detect framework version
@@ -301,6 +273,23 @@ export interface RunBuildOptions {
    * Optional experimental backends builder (for @vercel/backends support)
    */
   experimentalBackendsBuilder?: ExperimentalBackendsBuilder;
+}
+
+/**
+ * Experimental backends builder interface
+ */
+export interface ExperimentalBackendsBuilder {
+  build: (options: BuildOptions) => Promise<BuildResultV2 | BuildResultV3>;
+}
+
+/**
+ * Detected framework result
+ */
+export interface DetectedFramework {
+  slug: string;
+  useRuntime?: { use: string };
+  detectedVersion?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -328,24 +317,6 @@ export interface MergeRoutesArgs {
     entrypoint: string;
     routes?: Route[];
   }>;
-}
-
-/**
- * Arguments for detectFrameworkRecord
- */
-export interface DetectFrameworkArgs {
-  fs: any;
-  frameworkList: Framework[];
-}
-
-/**
- * Detected framework result
- */
-export interface DetectedFramework {
-  slug: string;
-  useRuntime?: { use: string };
-  detectedVersion?: string;
-  [key: string]: unknown;
 }
 
 /**
@@ -390,15 +361,6 @@ export interface PrepareBuildOptions {
     pkg: PackageJson | null,
     options: any
   ) => Promise<DetectBuildersResult>;
-
-  /**
-   * Function to append routes to a phase
-   */
-  appendRoutesToPhase: (args: {
-    routes: Route[];
-    newRoutes?: Route[];
-    phase?: string;
-  }) => Route[];
 }
 
 /**
@@ -454,7 +416,6 @@ export async function prepareBuild(
     workPath,
     logger,
     detectBuilders,
-    appendRoutesToPhase,
   } = options;
 
   if (localConfig.builds && localConfig.functions) {
@@ -506,13 +467,13 @@ export async function prepareBuild(
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
-        newRoutes: detectedBuilders.rewriteRoutes ?? undefined,
+        newRoutes: detectedBuilders.rewriteRoutes || null,
         phase: 'filesystem',
       })
     );
     zeroConfigRoutes = appendRoutesToPhase({
       routes: zeroConfigRoutes,
-      newRoutes: detectedBuilders.errorRoutes ?? undefined,
+      newRoutes: detectedBuilders.errorRoutes || null,
       phase: 'error',
     });
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
@@ -763,12 +724,11 @@ export async function getFramework(
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
   detectFrameworkRecord: RunBuildOptions['detectFrameworkRecord'],
   detectFrameworkVersion: RunBuildOptions['detectFrameworkVersion'],
-  LocalFileSystemDetector: RunBuildOptions['LocalFileSystemDetector'],
-  frameworkList: Framework[]
+  LocalFileSystemDetector: RunBuildOptions['LocalFileSystemDetector']
 ): Promise<{ version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
-    frameworkList,
+    frameworkList: frameworkList as Framework[],
   });
 
   if (!detectedFramework) {
@@ -830,10 +790,7 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
     standalone = false,
     logger,
     span,
-    frameworkList,
     writeBuildResult,
-    mergeRoutes,
-    sourceToRegex,
     detectFrameworkRecord,
     detectFrameworkVersion,
     LocalFileSystemDetector,
@@ -1263,8 +1220,7 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
     buildResults,
     detectFrameworkRecord,
     detectFrameworkVersion,
-    LocalFileSystemDetector,
-    frameworkList
+    LocalFileSystemDetector
   );
 
   // Write out the final `config.json` file based on the

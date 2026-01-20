@@ -18,6 +18,10 @@
     "vitest-e2e": "glob --absolute 'test/integration*.test.ts'",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@vercel/frameworks": "workspace:*",
+    "@vercel/routing-utils": "workspace:*"
+  },
   "devDependencies": {
     "@iarna/toml": "2.2.3",
     "@types/async-retry": "^1.2.1",
@@ -35,7 +39,6 @@
     "@types/semver": "6.0.0",
     "@types/yazl": "2.4.2",
     "@vercel/error-utils": "workspace:*",
-    "@vercel/routing-utils": "workspace:*",
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",

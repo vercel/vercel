@@ -270,6 +270,13 @@ importers:
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/build-utils:
+    dependencies:
+      '@vercel/frameworks':
+        specifier: workspace:*
+        version: link:../frameworks
+      '@vercel/routing-utils':
+        specifier: workspace:*
+        version: link:../routing-utils
     devDependencies:
       '@iarna/toml':
         specifier: 2.2.3
@@ -319,9 +326,6 @@ importers:
       '@vercel/error-utils':
         specifier: workspace:*
         version: link:../error-utils
-      '@vercel/routing-utils':
-        specifier: workspace:*
-        version: link:../routing-utils
       aggregate-error:
         specifier: 3.0.1
         version: 3.0.1
