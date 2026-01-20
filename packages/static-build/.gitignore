@@ -6,3 +6,5 @@ dist/
 
 /src/bridge.*
 /src/launcher.*
+
+# trigger invalidation
