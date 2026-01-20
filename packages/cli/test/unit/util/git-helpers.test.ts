@@ -1,6 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { execSync } from 'node:child_process';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   getGitDirectory,
@@ -9,7 +8,10 @@ import {
   getGitOriginUrl,
 } from '../../../src/util/git-helpers';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
-import { initBareGitRepo, initGitRepo } from '../../helpers/git-test-helpers';
+import {
+  initGitRepo,
+  setupBareRepoWithWorktree,
+} from '../../helpers/git-test-helpers';
 
 // Root of `vercel/vercel` repo
 const vercelRepoRoot = join(__dirname, '../../../../..');
@@ -89,38 +91,14 @@ describe('git-helpers', () => {
   });
 
   describe('bare repository worktree', () => {
-    let testDir: string;
-    let bareRepoPath: string;
     let worktreePath: string;
 
     beforeAll(() => {
-      // setupTmpDir uses realpathSync internally, which resolves symlinks.
-      // This is important because Git commands return resolved paths
-      // (e.g., on macOS /var is a symlink to /private/var).
-      testDir = setupTmpDir('bare-worktree-test');
-      bareRepoPath = join(testDir, 'repo.git');
-      worktreePath = join(testDir, 'worktree');
-
-      // Initialize a bare repository with remote
-      execSync('mkdir repo.git', { cwd: testDir });
-      initBareGitRepo(bareRepoPath, {
-        origin: 'https://github.com/example/test-repo.git',
-      });
-
-      // Create an initial commit in the bare repo (required to create a worktree).
-      // We do this by creating a temporary clone, committing, and pushing.
-      const tempClone = join(testDir, 'temp-clone');
-      execSync(`git clone ${bareRepoPath} temp-clone`, { cwd: testDir });
-      execSync('git config user.email "test@test.com"', { cwd: tempClone });
-      execSync('git config user.name "Test"', { cwd: tempClone });
-      execSync('touch README.md', { cwd: tempClone });
-      execSync('git add .', { cwd: tempClone });
-      execSync('git commit -m "initial commit"', { cwd: tempClone });
-      execSync('git push origin HEAD:main', { cwd: tempClone });
-      rmSync(tempClone, { recursive: true });
-
-      // Create a worktree from the bare repo
-      execSync(`git worktree add ${worktreePath} main`, { cwd: bareRepoPath });
+      const testDir = setupTmpDir('bare-worktree-test');
+      ({ worktreePath } = setupBareRepoWithWorktree(
+        testDir,
+        'https://github.com/example/test-repo.git'
+      ));
     });
 
     it('should have .git as a file (not directory) in worktree', () => {

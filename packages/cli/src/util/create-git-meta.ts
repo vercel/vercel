@@ -1,5 +1,5 @@
 import git from 'git-last-commit';
-import { exec } from 'child_process';
+import { exec } from 'node:child_process';
 import type { GitMetadata, Project } from '@vercel-internals/types';
 import { normalizeError } from '@vercel/error-utils';
 import output from '../output-manager';

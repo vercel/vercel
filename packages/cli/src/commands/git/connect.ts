@@ -173,24 +173,16 @@ async function connectArg({
   project,
   repoInfo,
 }: ConnectArgParams) {
-  const { url: repoUrl } = repoInfo;
-  const parsedRepoArg = parseRepoUrl(repoUrl);
-  if (!parsedRepoArg) {
-    output.error(
-      `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
-    );
-    return 1;
-  }
   const result = await checkExistsAndConnect({
     client,
     confirm,
     gitProviderLink: project.link,
     org,
-    gitOrg: parsedRepoArg.org,
+    gitOrg: repoInfo.org,
     project,
-    provider: parsedRepoArg.provider,
-    repo: parsedRepoArg.repo,
-    repoPath: `${parsedRepoArg.org}/${parsedRepoArg.repo}`,
+    provider: repoInfo.provider,
+    repo: repoInfo.repo,
+    repoPath: `${repoInfo.org}/${repoInfo.repo}`,
   });
   if (typeof result === 'number') {
     return result;
@@ -251,7 +243,9 @@ async function promptConnectArg({
       return false;
     }
     if (
-      JSON.stringify(repoInfoFromGitConfig) === JSON.stringify(repoInfoFromArg)
+      repoInfoFromGitConfig.org === repoInfoFromArg.org &&
+      repoInfoFromGitConfig.repo === repoInfoFromArg.repo &&
+      repoInfoFromGitConfig.provider === repoInfoFromArg.provider
     ) {
       return true;
     }
