@@ -1548,13 +1548,13 @@ export async function runPipInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'pip3 install' };
+  const opts = { ...spawnOpts, cwd: destPath };
 
-  await spawnAsync(
-    'pip3',
-    ['install', '--disable-pip-version-check', ...args],
-    opts
-  );
+  await spawnAsync('uv', ['add', ...args], {
+    ...opts,
+    prettyCommand: 'uv add',
+  });
+  await spawnAsync('uv', ['sync'], { ...opts, prettyCommand: 'uv sync' });
 }
 
 export function getScriptName(
