@@ -13,10 +13,10 @@
   ],
   "versionGroups": [
     {
-      "label": "@types/node should be ^20.0.0",
+      "label": "@types/node should be 20.11.0",
       "packages": ["**"],
       "dependencies": ["@types/node"],
-      "pinVersion": "^20.0.0"
+      "pinVersion": "20.11.0"
     },
     {
       "label": "Ignore all other dependencies",

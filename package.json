@@ -7,7 +7,7 @@
   "devDependencies": {
     "@changesets/cli": "2.27.8",
     "@svitejs/changesets-changelog-github-compact": "1.1.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "20.11.0",
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
     "@vercel/build-utils": "*",

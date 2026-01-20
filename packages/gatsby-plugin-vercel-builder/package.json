@@ -29,7 +29,7 @@
     "@types/etag": "1.8.0",
     "@types/fs-extra": "11.0.1",
     "@types/jest": "27.5.1",
-    "@types/node": "^20.0.0",
+    "@types/node": "20.11.0",
     "@types/react": "18.0.26",
     "@vercel/routing-utils": "workspace:*",
     "jest-junit": "16.0.0",

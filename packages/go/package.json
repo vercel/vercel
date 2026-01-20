@@ -25,7 +25,7 @@
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "^5.0.5",
     "@types/jest": "28.1.6",
-    "@types/node": "^20.0.0",
+    "@types/node": "20.11.0",
     "@types/node-fetch": "^2.3.0",
     "@types/tar": "6.1.5",
     "@types/yauzl-promise": "2.1.0",

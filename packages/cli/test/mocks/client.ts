@@ -136,6 +136,14 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
   ref() {
     return this;
   }
+  destroySoon() {
+    return;
+  }
+  resetAndDestroy() {
+    return this;
+  }
+  autoSelectFamilyAttemptedAddresses: string[] = [];
+  pending = false;
   // END: Stub `WriteStream` interface to avoid TypeScript errors
 }
 

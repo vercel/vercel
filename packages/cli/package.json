@@ -92,7 +92,7 @@
     "@types/minimatch": "3.0.3",
     "@types/mock-fs": "4.13.4",
     "@types/ms": "0.7.30",
-    "@types/node": "^20.0.0",
+    "@types/node": "20.11.0",
     "@types/node-fetch": "2.5.10",
     "@types/npm-package-arg": "6.1.0",
     "@types/pluralize": "0.0.29",
