@@ -1,5 +1,6 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { errorToString } from '@vercel/error-utils';
 import output from '../output-manager';
 
 const execAsync = promisify(exec);
@@ -45,7 +46,7 @@ export async function getGitDirectory(
     const { stdout } = await execAsync('git rev-parse --git-dir', { cwd });
     return stdout.trim();
   } catch (error) {
-    output.debug(`Failed to get Git directory: ${error}`);
+    output.debug(`Failed to get Git directory: ${errorToString(error)}`);
     if (unsafe) {
       throw error;
     }
@@ -68,7 +69,7 @@ export async function getGitRootDirectory(
     });
     return stdout.trim();
   } catch (error) {
-    output.debug(`Failed to get Git root directory: ${error}`);
+    output.debug(`Failed to get Git root directory: ${errorToString(error)}`);
     if (unsafe) {
       throw error;
     }
@@ -114,7 +115,7 @@ export async function getGitRemoteUrls(
 
     return remoteUrls;
   } catch (error) {
-    output.debug(`Failed to get Git remote URLs: ${error}`);
+    output.debug(`Failed to get Git remote URLs: ${errorToString(error)}`);
     if (unsafe) {
       throw error;
     }
