@@ -66,8 +66,8 @@ describe('normalizeConfig', () => {
         {
           source: '/api/(.*)',
           destination: '/backend/$1',
-          has: [{ type: 'header', key: 'X-Custom' }],
-          missing: [{ type: 'cookie', key: 'auth' }],
+          has: [{ type: 'header' as const, key: 'X-Custom' }],
+          missing: [{ type: 'cookie' as const, key: 'auth' }],
           respectOriginCacheControl: false,
         },
         { src: '/other', dest: '/dest' },
@@ -128,7 +128,7 @@ describe('normalizeConfig', () => {
     const config = {
       redirects: [
         { source: '/old', destination: '/new', permanent: true },
-        { src: '/complex', dest: '/dest', redirect: true, status: 308 },
+        { src: '/complex', dest: '/dest', status: 308 },
       ],
     };
 
@@ -136,8 +136,8 @@ describe('normalizeConfig', () => {
 
     expect(result.redirects).toBeUndefined();
     expect(result.routes).toEqual([
-      { src: '/old', dest: '/new', redirect: true, status: 308 },
-      { src: '/complex', dest: '/dest', redirect: true, status: 308 },
+      { src: '/old', dest: '/new', status: 308 },
+      { src: '/complex', dest: '/dest', status: 308 },
     ]);
   });
 
@@ -190,8 +190,8 @@ describe('normalizeConfig', () => {
     const result = normalizeConfig(config);
 
     expect(result.routes).toEqual([
-      { src: '/old', dest: '/new', redirect: true, status: 308 },
-      { src: '/temp', dest: '/other', redirect: true, status: 307 },
+      { src: '/old', dest: '/new', status: 308 },
+      { src: '/temp', dest: '/other', status: 307 },
     ]);
   });
 
@@ -214,7 +214,6 @@ describe('normalizeConfig', () => {
       {
         src: '/redirect-me',
         dest: '/new-location',
-        redirect: true,
         status: 307,
       },
     ]);
@@ -234,7 +233,7 @@ describe('normalizeConfig', () => {
     const config = {
       routes: [
         { src: '/a', dest: '/b' },
-        { src: '/c', dest: '/d', redirect: true, status: 308 },
+        { src: '/c', dest: '/d', status: 308 },
       ],
     };
 
@@ -242,7 +241,7 @@ describe('normalizeConfig', () => {
 
     expect(result.routes).toEqual([
       { src: '/a', dest: '/b' },
-      { src: '/c', dest: '/d', redirect: true, status: 308 },
+      { src: '/c', dest: '/d', status: 308 },
     ]);
   });
 
@@ -253,8 +252,8 @@ describe('normalizeConfig', () => {
           source: '/protected',
           destination: '/login',
           permanent: false,
-          has: [{ type: 'cookie', key: 'auth' }],
-          missing: [{ type: 'header', key: 'X-Admin' }],
+          has: [{ type: 'cookie' as const, key: 'auth' }],
+          missing: [{ type: 'header' as const, key: 'X-Admin' }],
         },
       ],
     };
@@ -265,7 +264,6 @@ describe('normalizeConfig', () => {
       {
         src: '/protected',
         dest: '/login',
-        redirect: true,
         status: 307,
         has: [{ type: 'cookie', key: 'auth' }],
         missing: [{ type: 'header', key: 'X-Admin' }],
@@ -280,9 +278,7 @@ describe('normalizeConfig', () => {
 
     const result = normalizeConfig(config);
 
-    expect(result.routes).toEqual([
-      { src: '/old', dest: '/new', redirect: true, status: 301 },
-    ]);
+    expect(result.routes).toEqual([{ src: '/old', dest: '/new', status: 301 }]);
   });
 
   it('should convert pure Redirect arrays to routes format', () => {
@@ -297,8 +293,8 @@ describe('normalizeConfig', () => {
 
     expect(result.redirects).toBeUndefined();
     expect(result.routes).toEqual([
-      { src: '/old', dest: '/new', redirect: true, status: 308 },
-      { src: '/temp', dest: '/other', redirect: true, status: 307 },
+      { src: '/old', dest: '/new', status: 308 },
+      { src: '/temp', dest: '/other', status: 307 },
     ]);
   });
 
@@ -317,8 +313,8 @@ describe('normalizeConfig', () => {
     expect(result.redirects).toBeUndefined();
     expect(result.routes).toEqual([
       { src: '/api/(.*)', dest: '/backend/$1' },
-      { src: '/old', dest: '/new', redirect: true, status: 308 },
-      { src: '/temp', dest: '/other', redirect: true, status: 307 },
+      { src: '/old', dest: '/new', status: 308 },
+      { src: '/temp', dest: '/other', status: 307 },
     ]);
   });
 
@@ -330,8 +326,8 @@ describe('normalizeConfig', () => {
           dest: '/backend/$1',
           transforms: [
             {
-              type: 'request.headers',
-              op: 'set',
+              type: 'request.headers' as const,
+              op: 'set' as const,
               target: { key: 'x-custom' },
               args: 'value',
             },
@@ -358,7 +354,7 @@ describe('normalizeConfig', () => {
           },
         ],
       },
-      { src: '/old', dest: '/new', redirect: true, status: 307 },
+      { src: '/old', dest: '/new', status: 307 },
     ]);
   });
 
@@ -395,8 +391,8 @@ describe('normalizeConfig', () => {
         {
           source: '/api/(.*)',
           headers: [{ key: 'X-Custom', value: 'value' }],
-          has: [{ type: 'header', key: 'Authorization' }],
-          missing: [{ type: 'cookie', key: 'bypass' }],
+          has: [{ type: 'header' as const, key: 'Authorization' }],
+          missing: [{ type: 'cookie' as const, key: 'bypass' }],
         },
       ],
     };
@@ -435,7 +431,7 @@ describe('normalizeConfig', () => {
     expect(result.headers).toBeUndefined();
     expect(result.routes).toEqual([
       { src: '/api/(.*)', dest: '/backend/$1' },
-      { src: '/old', dest: '/new', redirect: true, status: 308 },
+      { src: '/old', dest: '/new', status: 308 },
       {
         src: '/static/(.*)',
         headers: { 'Cache-Control': 'public, max-age=31536000' },

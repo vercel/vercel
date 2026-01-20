@@ -4,10 +4,19 @@ import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
 import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
+import type {
+  RouteWithSrc,
+  Rewrite,
+  Redirect,
+  Header,
+} from '@vercel/routing-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 
-function isRouteFormat(item: any): boolean {
+// Input item that may be in legacy Route format (src) or modern format (source)
+type RouteInput = RouteWithSrc | Rewrite | Redirect | Header;
+
+function isRouteFormat(item: RouteInput): item is RouteWithSrc {
   return item && typeof item === 'object' && 'src' in item;
 }
 
@@ -17,32 +26,23 @@ type RouteItemType = 'rewrite' | 'redirect' | 'header';
  * Convert a rewrite, redirect, or header rule to Route format.
  * If already in Route format, returns unchanged.
  */
-function toRouteFormat(item: any, type: RouteItemType): any {
+function toRouteFormat(item: RouteInput, type: RouteItemType): RouteWithSrc {
   if (isRouteFormat(item)) {
     return item;
   }
 
-  const {
-    source,
-    destination,
-    headers,
-    statusCode,
-    permanent,
-    respectOriginCacheControl,
-    ...rest
-  } = item;
+  const { source, destination, headers, statusCode, permanent, ...rest } =
+    item as Rewrite & Redirect & Header;
 
-  const route: any = {
+  const route: RouteWithSrc = {
     src: source,
     ...rest,
   };
 
-  // Handle destination (rewrites/redirects)
   if (destination !== undefined) {
     route.dest = destination;
   }
 
-  // Handle headers array → Record conversion (header rules)
   if (Array.isArray(headers)) {
     const headersRecord: Record<string, string> = {};
     for (const h of headers) {
@@ -52,72 +52,71 @@ function toRouteFormat(item: any, type: RouteItemType): any {
   }
 
   if (type === 'redirect') {
-    route.redirect = true;
     route.status = statusCode || (permanent ? 308 : 307);
-  } else if (type === 'rewrite') {
-    if (respectOriginCacheControl !== undefined) {
-      route.respectOriginCacheControl = respectOriginCacheControl;
-    }
-    if (statusCode !== undefined) {
-      route.status = statusCode;
-    }
+  } else if (type === 'rewrite' && statusCode !== undefined) {
+    route.status = statusCode;
   }
-  // For 'header', no additional processing needed
 
   return route;
 }
+
+export interface ConfigWithRouting {
+  routes?: RouteInput[];
+  rewrites?: RouteInput[];
+  redirects?: RouteInput[];
+  headers?: RouteInput[];
+  [key: string]: unknown;
+}
+
+function isNonEmptyArray(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
 /**
- * Normalize config to ensure valid vercel.json output.
+ * Converts `rewrites`, `redirects`, and `headers` arrays to Route format
+ * and merges them into a single `routes` array.
  *
- * Always converts `rewrites`, `redirects`, and `headers` arrays to Route format
- * (src/dest) and merges them into a single `routes` array. This ensures:
- * - routes.redirect() and routes.rewrite() work consistently regardless of transforms
- * - Users can use `rewrites`, `redirects`, `headers`, or `routes` interchangeably
- * - All features (transforms, conditions, etc.) are supported
+ * This allows users to write configs using the modern `rewrites`/`redirects`/`headers`
+ * syntax while still supporting transforms and other Route-only features.
  *
  * If `routes` explicitly exists alongside `rewrites`/`redirects`/`headers`,
  * returns unchanged to let schema validation fail.
  */
-export function normalizeConfig(config: any): any {
-  const normalized = { ...config };
-  let allRoutes: any[] = normalized.routes || [];
+export function normalizeConfig(config: ConfigWithRouting): ConfigWithRouting {
+  const normalized: ConfigWithRouting = { ...config };
+  let allRoutes: RouteWithSrc[] = [];
+
+  if (isNonEmptyArray(normalized.routes)) {
+    allRoutes = normalized.routes as RouteWithSrc[];
+  }
 
   const hasRoutes = allRoutes.length > 0;
-  const hasRewrites = normalized.rewrites?.length > 0;
-  const hasRedirects = normalized.redirects?.length > 0;
-  const hasHeaders = normalized.headers?.length > 0;
+  const { rewrites, redirects, headers } = normalized;
 
-  // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
-  if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
+  if (
+    hasRoutes &&
+    (isNonEmptyArray(rewrites) ||
+      isNonEmptyArray(redirects) ||
+      isNonEmptyArray(headers))
+  ) {
     return normalized;
   }
 
-  // Convert all rewrites to Route format
-  if (hasRewrites) {
-    const convertedRewrites = normalized.rewrites.map((item: any) =>
-      toRouteFormat(item, 'rewrite')
-    );
-    allRoutes = [...allRoutes, ...convertedRewrites];
-    delete normalized.rewrites;
+  function convertToRoutes(
+    items: RouteInput[] | undefined,
+    type: RouteItemType,
+    key: 'rewrites' | 'redirects' | 'headers'
+  ): RouteWithSrc[] {
+    if (!isNonEmptyArray(items)) return [];
+    delete normalized[key];
+    return items.map(item => toRouteFormat(item, type));
   }
 
-  // Convert all redirects to Route format
-  if (hasRedirects) {
-    const convertedRedirects = normalized.redirects.map((item: any) =>
-      toRouteFormat(item, 'redirect')
-    );
-    allRoutes = [...allRoutes, ...convertedRedirects];
-    delete normalized.redirects;
-  }
-
-  // Convert all headers to Route format
-  if (hasHeaders) {
-    const convertedHeaders = normalized.headers.map((item: any) =>
-      toRouteFormat(item, 'header')
-    );
-    allRoutes = [...allRoutes, ...convertedHeaders];
-    delete normalized.headers;
-  }
+  allRoutes.push(
+    ...convertToRoutes(rewrites, 'rewrite', 'rewrites'),
+    ...convertToRoutes(redirects, 'redirect', 'redirects'),
+    ...convertToRoutes(headers, 'header', 'headers')
+  );
 
   // Normalize any remaining items in routes array
   // (e.g., routes.redirect() mixed with routes.rewrite() in the routes array)
@@ -321,7 +320,7 @@ export async function compileVercelConfig(
     `;
     await writeFile(loaderPath, loaderScript, 'utf-8');
 
-    const config = await new Promise((resolve, reject) => {
+    const config = await new Promise<ConfigWithRouting>((resolve, reject) => {
       const child = fork(loaderPath, [tempOutPath], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       });
@@ -349,7 +348,7 @@ export async function compileVercelConfig(
       child.on('message', message => {
         clearTimeout(timeout);
         child.kill();
-        resolve(message);
+        resolve(message as ConfigWithRouting);
       });
 
       child.on('error', err => {
