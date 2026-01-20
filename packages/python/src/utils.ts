@@ -6,6 +6,8 @@ import execa from 'execa';
 
 const isWin = process.platform === 'win32';
 
+export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
+
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };
@@ -47,9 +49,7 @@ export function getProtectedUvEnv(
 ): NodeJS.ProcessEnv {
   return {
     ...baseEnv,
-    // Prevent uv from downloading Python interpreters at build time.
-    // The build environment must use the pre-installed system Python.
-    UV_PYTHON_DOWNLOADS: 'never',
+    UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
   };
 }
 

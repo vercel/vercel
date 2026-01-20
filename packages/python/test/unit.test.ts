@@ -3,7 +3,12 @@ import {
   DEFAULT_PYTHON_VERSION,
 } from '../src/version';
 import { build } from '../src/index';
-import { getProtectedUvEnv, createVenvEnv, getVenvBinDir } from '../src/utils';
+import {
+  getProtectedUvEnv,
+  createVenvEnv,
+  getVenvBinDir,
+  UV_PYTHON_DOWNLOADS_MODE,
+} from '../src/utils';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -1256,33 +1261,33 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
   });
 
   describe('getProtectedUvEnv', () => {
-    it('sets UV_PYTHON_DOWNLOADS to "never" by default', () => {
+    it('sets UV_PYTHON_DOWNLOADS to the configured mode by default', () => {
       const env = getProtectedUvEnv({});
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
     it('overrides UV_PYTHON_DOWNLOADS when user tries to set it to "auto"', () => {
       const userEnv = { UV_PYTHON_DOWNLOADS: 'auto' };
       const env = getProtectedUvEnv(userEnv);
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
     it('overrides UV_PYTHON_DOWNLOADS when user tries to unset it (undefined)', () => {
       const userEnv = { UV_PYTHON_DOWNLOADS: undefined };
       const env = getProtectedUvEnv(userEnv);
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
     it('overrides UV_PYTHON_DOWNLOADS when user tries to set empty string', () => {
       const userEnv = { UV_PYTHON_DOWNLOADS: '' };
       const env = getProtectedUvEnv(userEnv);
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
     it('overrides UV_PYTHON_DOWNLOADS from process.env', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'foobar';
       const env = getProtectedUvEnv();
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
     it('preserves other environment variables from baseEnv', () => {
@@ -1293,7 +1298,7 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       const env = getProtectedUvEnv(userEnv);
 
       expect(env.HOME).toBe('/home/user');
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
   });
 
@@ -1307,7 +1312,7 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.VIRTUAL_ENV).toBe(venvPath);
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
-      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+      expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
   });
 });
