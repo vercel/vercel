@@ -20,16 +20,13 @@ export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(args.workPath);
 
-  const shouldStopSpan = args.span === undefined;
   const span =
-    args.span?.child('vc.builder.handle', {
-      name: '@vercel/backends',
-    }) ??
+    args.span ??
     new Span({
       name: '@vercel/backends',
     });
 
-  const doBuildSpan = span.child('vc.builder.handle.doBuild');
+  const doBuildSpan = span.child('vc.builder.backends.doBuild');
   const outputConfig = await doBuildSpan.trace(async span => {
     const result = await doBuild(args, downloadResult);
     span.setAttributes({
@@ -40,12 +37,12 @@ export const build: BuildV2 = async args => {
   });
 
   debug('Node file trace starting..');
-  const nftSpan = span.child('vc.builder.nodeFileTrace');
+  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
   const nftPromise = nftSpan.trace(() =>
     nodeFileTrace(args, nodeVersion, outputConfig)
   );
   debug('Introspection starting..');
-  const introspectAppSpan = span.child('vc.builder.introspectApp');
+  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
   const { routes, framework } = await introspectAppSpan.trace(async span => {
     const result = await introspectApp({
       ...outputConfig,
@@ -104,12 +101,8 @@ export const build: BuildV2 = async args => {
 
   // Don't return until the TypeScript compilation is complete
   if (outputConfig.tsPromise) {
-    const tsSpan = span.child('vc.builder.tsCompile');
+    const tsSpan = span.child('vc.builder.backends.tsCompile');
     await tsSpan.trace(() => outputConfig.tsPromise);
-  }
-
-  if (shouldStopSpan) {
-    await span.stop();
   }
 
   return {
