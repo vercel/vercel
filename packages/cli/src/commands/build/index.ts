@@ -353,6 +353,9 @@ export default async function main(client: Client): Promise<number> {
     envToUnset.add('VERCEL_ENV');
     process.env.VERCEL_ENV = target;
 
+    envToUnset.add('VERCEL_TARGET_ENV');
+    process.env.VERCEL_TARGET_ENV = target;
+
     // Inject NEXT_PUBLIC_VERCEL_ENV for Next.js client-side code
     envToUnset.add('NEXT_PUBLIC_VERCEL_ENV');
     process.env.NEXT_PUBLIC_VERCEL_ENV = target;
