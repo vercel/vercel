@@ -200,6 +200,8 @@ const Schema = {
       cachePattern: { type: 'string' },
       defaultVersion: { type: 'string' },
       supersedes: { type: 'array', items: { type: 'string' } },
+      experimental: { type: 'boolean' },
+      runtimeFramework: { type: 'boolean' },
     },
   },
 };
@@ -231,6 +233,8 @@ describe('frameworks', () => {
     const getExample = (name: string) => join(root, 'examples', name);
 
     const result = frameworkList
+      .filter(f => !f.experimental) // Skip experimental frameworks
+      .filter(f => !f.runtimeFramework) // Skip runtime frameworks (e.g. Python, Go)
       .map(f => f.slug)
       .filter(isString)
       .filter(slug => !skipExamples.includes(slug))

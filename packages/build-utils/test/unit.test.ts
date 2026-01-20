@@ -5,13 +5,14 @@ import { strict as assert } from 'assert';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import {
   FileBlob,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  findPackageJson,
   Prerender,
 } from '../src';
 import type { Files } from '../src';
@@ -144,9 +145,9 @@ it('should not allow nodejs18.x when not available', async () => {
   );
 });
 
-it('should ignore node version in vercel dev getRuntimeNodeVersion()', async () => {
+it('should ignore node version in vercel dev getNodeVersion()', async () => {
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       '/tmp',
       undefined,
       { nodeVersion: '1' },
@@ -157,29 +158,19 @@ it('should ignore node version in vercel dev getRuntimeNodeVersion()', async () 
 
 it('should resolve to the provided bunVersion when its valid', async () => {
   await expect(
-    getRuntimeNodeVersion(
-      '/tmp',
-      undefined,
-      { bunVersion: '1.x' },
-      { isDev: false }
-    )
+    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: false })
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should resolve to the provided bunVersion on dev', async () => {
   await expect(
-    getRuntimeNodeVersion(
-      '/tmp',
-      undefined,
-      { bunVersion: '1.x' },
-      { isDev: true }
-    )
+    getNodeVersion('/tmp', undefined, { bunVersion: '1.x' }, { isDev: true })
   ).resolves.toHaveProperty('runtime', 'bun1.x');
 });
 
 it('should fail if the provided bun version is not valid', async () => {
   await expect(
-    getRuntimeNodeVersion(
+    getNodeVersion(
       '/tmp',
       undefined,
       { bunVersion: 'bun1.x' },
@@ -190,34 +181,26 @@ it('should fail if the provided bun version is not valid', async () => {
 
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
-    await getRuntimeNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '22.x' }, {})
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from config when no package.json is found and fallback is null', async () => {
   expect(
-    await getRuntimeNodeVersion(
-      '/tmp',
-      null as any,
-      { nodeVersion: '22.x' },
-      {}
-    )
+    await getNodeVersion('/tmp', null as any, { nodeVersion: '22.x' }, {})
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from fallback when no package.json is found', async () => {
-  expect(await getRuntimeNodeVersion('/tmp', '22.x')).toHaveProperty(
-    'range',
-    '22.x'
-  );
+  expect(await getNodeVersion('/tmp', '22.x')).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should prefer package.json engines over project setting from config and warn', async () => {
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '12.x' },
@@ -231,7 +214,7 @@ it('should prefer package.json engines over project setting from config and warn
 
 it('should warn when package.json engines is exact version', async () => {
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node-exact'),
       undefined,
       {},
@@ -245,7 +228,7 @@ it('should warn when package.json engines is exact version', async () => {
 
 it('should warn when package.json engines is greater than', async () => {
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node-greaterthan'),
       undefined,
       {},
@@ -259,7 +242,7 @@ it('should warn when package.json engines is greater than', async () => {
 
 it('should warn when project settings gets overrided', async () => {
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node-greaterthan'),
       undefined,
       { nodeVersion: '16.x' },
@@ -274,7 +257,7 @@ it('should warn when project settings gets overrided', async () => {
 
 it('should not warn when package.json engines matches project setting from config', async () => {
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '22' },
@@ -284,7 +267,7 @@ it('should not warn when package.json engines matches project setting from confi
   expect(warningMessages).toStrictEqual([]);
 
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '22.x' },
@@ -294,7 +277,7 @@ it('should not warn when package.json engines matches project setting from confi
   expect(warningMessages).toStrictEqual([]);
 
   expect(
-    await getRuntimeNodeVersion(
+    await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '<23' },
@@ -1015,6 +998,46 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
+});
+
+describe('findPackageJson', () => {
+  it('should find package.json and return path without reading contents', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, false);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeUndefined();
+  });
+
+  it('should find package.json and read contents when readPackageJson is true', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+    expect(result.packageJson?.name).toBeDefined();
+  });
+
+  it('should traverse up directories to find package.json', async () => {
+    const base = path.join(__dirname, 'fixtures', '21-npm-workspaces');
+    const fixture = path.join(base, 'a');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should respect the base parameter boundary', async () => {
+    const base = path.join(__dirname, 'fixtures', '23-pnpm-workspaces');
+    const fixture = path.join(base, 'c');
+    const result = await findPackageJson(fixture, true, base);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should return undefined when no package.json is found', async () => {
+    // Use a directory that definitely has no package.json
+    const result = await findPackageJson('/tmp', false, '/tmp');
+    expect(result.packageJsonPath).toBeUndefined();
+    expect(result.packageJson).toBeUndefined();
+  });
 });
 
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {

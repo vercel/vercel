@@ -43,3 +43,6 @@ packages/remix/test/fixtures-*
 
 # gatsby-plugin-vercel-analytics
 packages/gatsby-plugin-vercel-analytics
+
+# functions
+packages/functions/**/*.js
