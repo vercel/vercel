@@ -348,6 +348,19 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
+    // Inject VERCEL_ENV and related environment variables based on target
+    // This makes the local build environment match Vercel's infrastructure
+    envToUnset.add('VERCEL_ENV');
+    process.env.VERCEL_ENV = target;
+
+    // Inject NEXT_PUBLIC_VERCEL_ENV for Next.js client-side code
+    envToUnset.add('NEXT_PUBLIC_VERCEL_ENV');
+    process.env.NEXT_PUBLIC_VERCEL_ENV = target;
+
+    // Inject NEXT_PUBLIC_VERCEL_TARGET_ENV (same as VERCEL_ENV for local builds)
+    envToUnset.add('NEXT_PUBLIC_VERCEL_TARGET_ENV');
+    process.env.NEXT_PUBLIC_VERCEL_TARGET_ENV = target;
+
     try {
       await rootSpan
         .child('vc.doBuild')

@@ -871,6 +871,47 @@ describe.skipIf(flakey)('build', () => {
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
   });
 
+  it('should set `VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_ENV`, and `NEXT_PUBLIC_VERCEL_TARGET_ENV` environment variables with default target', async () => {
+    const cwd = fixture('vercel-analytics-id');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(env.VERCEL_ENV).toEqual('preview');
+    expect(env.NEXT_PUBLIC_VERCEL_ENV).toEqual('preview');
+    expect(env.NEXT_PUBLIC_VERCEL_TARGET_ENV).toEqual('preview');
+  });
+
+  it('should set `VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_ENV`, and `NEXT_PUBLIC_VERCEL_TARGET_ENV` to "production" with --prod flag', async () => {
+    const cwd = fixture('vercel-analytics-id');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    client.setArgv('build', '--prod');
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(env.VERCEL_ENV).toEqual('production');
+    expect(env.NEXT_PUBLIC_VERCEL_ENV).toEqual('production');
+    expect(env.NEXT_PUBLIC_VERCEL_TARGET_ENV).toEqual('production');
+  });
+
+  it('should set `VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_ENV`, and `NEXT_PUBLIC_VERCEL_TARGET_ENV` to "production" with --target production flag', async () => {
+    const cwd = fixture('vercel-analytics-id');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    client.setArgv('build', '--target', 'production');
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(env.VERCEL_ENV).toEqual('production');
+    expect(env.NEXT_PUBLIC_VERCEL_ENV).toEqual('production');
+    expect(env.NEXT_PUBLIC_VERCEL_TARGET_ENV).toEqual('production');
+  });
+
   describe.each([
     {
       fixtureName: 'with-valid-vercel-otel',
