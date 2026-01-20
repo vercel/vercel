@@ -35,7 +35,7 @@
     "@types/jest": "27.5.1",
     "@types/js-yaml": "4.0.5",
     "@types/minimatch": "3.0.5",
-    "@types/node": "14.18.33",
+    "@types/node": "^20.0.0",
     "@types/semver": "7.3.10",
     "@vercel/build-utils": "workspace:*",
     "jest-junit": "16.0.0",

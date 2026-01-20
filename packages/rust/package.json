@@ -25,7 +25,7 @@
   "devDependencies": {
     "@types/jest": "^29.4.0",
     "@types/ms": "^0.7.31",
-    "@types/node": "^18.11.18",
+    "@types/node": "^20.0.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
     "@vercel/style-guide": "^4.0.2",

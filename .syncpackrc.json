@@ -17,6 +17,12 @@
       "packages": ["**"],
       "dependencies": ["@types/node"],
       "pinVersion": "^20.0.0"
+    },
+    {
+      "label": "Ignore all other dependencies",
+      "packages": ["**"],
+      "dependencies": ["**"],
+      "isIgnored": true
     }
   ]
 }

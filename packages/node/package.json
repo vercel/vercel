@@ -24,7 +24,7 @@
     "@edge-runtime/node-utils": "2.3.0",
     "@edge-runtime/primitives": "4.1.0",
     "@edge-runtime/vm": "3.2.0",
-    "@types/node": "16.18.11",
+    "@types/node": "^20.0.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/error-utils": "workspace:*",
     "@vercel/nft": "1.1.1",

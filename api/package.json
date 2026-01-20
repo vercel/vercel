@@ -13,7 +13,7 @@
     "tar-fs": "2.0.0"
   },
   "devDependencies": {
-    "@types/node": "16.18.11",
+    "@types/node": "^20.0.0",
     "@types/node-fetch": "2.5.4",
     "@types/tar-fs": "1.16.1",
     "@vercel/node": "workspace:*"
