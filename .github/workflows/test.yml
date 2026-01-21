@@ -231,6 +231,12 @@ jobs:
         with:
           node-version: ${{ matrix.nodeVersion }}
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19

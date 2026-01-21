@@ -1,0 +1,21 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/*",
+]
+
+[workspace.package]
+edition = "2024"
+publish = false
+rust-version = "1.90"
+
+[workspace.dependencies]
+wit-bindgen = { version = "0.51", features = ["macros"] }
+wit-bindgen-rust = { version = "0.51" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
