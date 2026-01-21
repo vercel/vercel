@@ -54,7 +54,7 @@
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
-    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci:version": "changeset version && node utils/sync-python-version.js && pnpm install --no-frozen-lockfile",
     "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },

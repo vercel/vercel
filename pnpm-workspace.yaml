@@ -3,3 +3,4 @@ packages:
   - 'api'
   - 'examples'
   - 'internals/*'
+  - 'python/vercel-runtime'
