@@ -1536,25 +1536,68 @@ export async function runBundleInstall(
   await spawnAsync('bundle', args.concat(['install']), opts);
 }
 
+export interface PipInstallResult {
+  /**
+   * The directory where packages were installed.
+   * Add this to PYTHONPATH when running Python commands.
+   */
+  targetDir?: string;
+}
+
 export async function runPipInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta
-) {
+): Promise<PipInstallResult> {
   if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
-    return;
+    return {};
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'pip3 install' };
 
+  // Install to a target directory so we can set PYTHONPATH to point to it
+  const targetDir = path.join(destPath, '.vercel_python_packages');
+
+  const uvOpts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'uv pip install',
+  };
+  try {
+    await spawnAsync(
+      'uv',
+      ['pip', 'install', '--target', targetDir, ...args],
+      uvOpts
+    );
+    return { targetDir };
+  } catch (err: unknown) {
+    // Only fall back to pip3 if uv is not found (ENOENT)
+    // Other errors (e.g., install failures) should propagate
+    const isUvNotFound =
+      err instanceof Error &&
+      'code' in err &&
+      (err as NodeJS.ErrnoException).code === 'ENOENT';
+    if (!isUvNotFound) {
+      throw err;
+    }
+    debug('uv not found, falling back to pip3');
+  }
+
+  // Fallback to pip3 (only when uv is not available)
+  const pipOpts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'pip3 install',
+  };
   await spawnAsync(
     'pip3',
-    ['install', '--disable-pip-version-check', ...args],
-    opts
+    ['install', '--disable-pip-version-check', '--target', targetDir, ...args],
+    pipOpts
   );
+
+  return { targetDir };
 }
 
 export function getScriptName(

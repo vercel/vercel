@@ -383,6 +383,7 @@ export const build: BuildV2 = async ({
     let isNpmInstall = false;
     let isBundleInstall = false;
     let isPipInstall = false;
+    let pipTargetDir: string | undefined;
     let output: Files = {};
     let images: ImagesConfig | undefined;
     const routes: Route[] = [];
@@ -572,12 +573,13 @@ export const build: BuildV2 = async ({
         if (existsSync(requirementsPath)) {
           debug('Detected requirements.txt');
           printInstall();
-          await runPipInstall(
+          const pipResult = await runPipInstall(
             workPath,
             ['-r', requirementsPath],
             undefined,
             meta
           );
+          pipTargetDir = pipResult.targetDir;
           isPipInstall = true;
         }
         if (pkg) {
@@ -633,8 +635,13 @@ export const build: BuildV2 = async ({
       }
     }
 
-    if (isPipInstall) {
-      // TODO: Add bins to PATH once we implement pip caching
+    if (isPipInstall && pipTargetDir) {
+      // Add pip bin directory to PATH for CLI commands (e.g., `mkdocs` instead of `python3 -m mkdocs`)
+      const pipBinDir = path.join(pipTargetDir, 'bin');
+      pathList.push(pipBinDir);
+      debug(
+        `Added "${pipBinDir}" to PATH env because a requirements.txt was found`
+      );
     }
 
     if (spawnEnv.PATH) {
@@ -642,10 +649,23 @@ export const build: BuildV2 = async ({
       pathList.push(spawnEnv.PATH);
     }
 
+    // Set up PYTHONPATH so Python can find packages installed via pip
+    let pythonPath: string | undefined;
+    if (isPipInstall && pipTargetDir) {
+      const existingPythonPath = process.env.PYTHONPATH;
+      pythonPath = existingPythonPath
+        ? `${pipTargetDir}${path.delimiter}${existingPythonPath}`
+        : pipTargetDir;
+      debug(
+        `Set PYTHONPATH="${pythonPath}" because a requirements.txt was found`
+      );
+    }
+
     const cliEnv = {
       ...process.env,
       PATH: pathList.join(path.delimiter),
       GEM_HOME: gemHome,
+      ...(pythonPath && { PYTHONPATH: pythonPath }),
     };
 
     if (
