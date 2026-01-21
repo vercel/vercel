@@ -579,8 +579,10 @@ export const build: BuildV2 = async ({
             undefined,
             meta
           );
-          pipTargetDir = pipResult.targetDir;
-          isPipInstall = true;
+          if (pipResult.installed) {
+            pipTargetDir = pipResult.targetDir;
+            isPipInstall = true;
+          }
         }
         if (pkg) {
           await runNpmInstall(
