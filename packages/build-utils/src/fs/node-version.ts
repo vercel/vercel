@@ -79,16 +79,13 @@ function getOptions(): NodeVersion[] {
 }
 
 function isNodeVersionAvailable(version: NodeVersion): boolean {
-  try {
-    return statSync(`/node${version.major}`).isDirectory();
-  } catch {
-    // ENOENT, or any other error, we don't care about
-  }
-  return false;
+  const stat = statSync(`/node${version.major}`, { throwIfNoEntry: false });
+  return stat?.isDirectory() ?? false;
 }
 
 export function getAvailableNodeVersions(): NodeVersionMajor[] {
   return getOptions()
+    .filter(v => v.state !== 'discontinued')
     .filter(isNodeVersionAvailable)
     .map(n => n.major);
 }
