@@ -10,22 +10,22 @@
       "path": "/",
       "status": 200,
       "mustContain": "index page",
-      "retries": 10,
-      "retryDelay": 3000
+      "retries": 3,
+      "retryDelay": 5000
     },
     {
       "path": "/another",
       "status": 200,
       "mustContain": "another page",
-      "retries": 10,
-      "retryDelay": 3000
+      "retries": 3,
+      "retryDelay": 5000
     },
     {
       "path": "/blog/first",
       "status": 200,
       "mustContain": "dynamic page",
-      "retries": 10,
-      "retryDelay": 3000
+      "retries": 3,
+      "retryDelay": 5000
     }
   ]
 }

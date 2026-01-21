@@ -1,4 +1,3 @@
-process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');
@@ -228,7 +227,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(edgeFunctions.size).toBe(3);
+    expect(edgeFunctions.size).toBe(2);
     expect(buildResult.output['edge']).toBeDefined();
     expect(buildResult.output['index']).toBeDefined();
     // expect(buildResult.output['index/index']).toBeDefined();

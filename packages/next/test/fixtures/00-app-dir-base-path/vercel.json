@@ -181,7 +181,7 @@
       "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
     },
     {
-      "path": "/hello/world",
+      "path": "/hello/world/",
       "status": 200,
       "mustContain": "index app page"
     },
@@ -211,7 +211,7 @@
       "mustContain": "hello from app/dashboard/changelog"
     },
     {
-      "path": "/hello/world",
+      "path": "/hello/world/",
       "status": 200,
       "headers": {
         "rsc": "1"
