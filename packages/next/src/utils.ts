@@ -3285,13 +3285,15 @@ export const onPrerenderRoute =
                 ) + prefetchSegmentSuffix;
 
               // Only use the fallback value when the allowQuery is defined and
-              // is empty, which means that the segments do not vary based on
-              // the route parameters. This is safer than ensuring that we only
-              // use the fallback when this is not a fallback because we know in
-              // this new logic that it doesn't vary based on the route
-              // parameters and therefore can be used for all requests instead.
+              // either: (1) it is empty, meaning segments do not vary by params,
+              // or (2) client param parsing is enabled, meaning the segment
+              // payloads are safe to reuse across params.
               let fallback: FileFsRef | null = null;
-              if (segmentAllowQuery && segmentAllowQuery.length === 0) {
+              const shouldAttachSegmentFallback =
+                segmentAllowQuery &&
+                (segmentAllowQuery.length === 0 ||
+                  isAppClientParamParsingEnabled);
+              if (shouldAttachSegmentFallback) {
                 const fsPath = path.join(
                   segmentsDir,
                   segmentPath + prefetchSegmentSuffix
