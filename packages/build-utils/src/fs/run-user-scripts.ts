@@ -1536,25 +1536,45 @@ export async function runBundleInstall(
   await spawnAsync('bundle', args.concat(['install']), opts);
 }
 
+export type PipInstallResult =
+  | { installed: false }
+  | {
+      installed: true;
+      /**
+       * The directory where packages were installed.
+       * Add this to PYTHONPATH when running Python commands.
+       */
+      targetDir: string;
+    };
+
 export async function runPipInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta
-) {
+): Promise<PipInstallResult> {
   if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
-    return;
+    return { installed: false };
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'pip3 install' };
 
+  // Install to a target directory so we can set PYTHONPATH to point to it
+  const targetDir = path.join(destPath, '.vercel_python_packages');
+
+  const opts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'uv pip install',
+  };
   await spawnAsync(
-    'pip3',
-    ['install', '--disable-pip-version-check', ...args],
+    'uv',
+    ['pip', 'install', '--target', targetDir, ...args],
     opts
   );
+
+  return { installed: true, targetDir };
 }
 
 export function getScriptName(

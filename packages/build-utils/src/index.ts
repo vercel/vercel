@@ -37,6 +37,7 @@ import {
   scanParentDirs,
   findPackageJson,
   traverseUpDirectories,
+  PipInstallResult,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -85,6 +86,7 @@ export {
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
+  PipInstallResult,
   runShellScript,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
