@@ -99,6 +99,58 @@ describe('feature', () => {
 });
 ```
 
+### Investigating Test Failures
+
+Many tests in this repo deploy to Vercel. When a test fails, investigate whether the deployment itself failed:
+
+1. **Check the test output** for a deployment URL (e.g., `https://my-project-xxx.vercel.app`)
+
+2. **Get deployment details** using the Vercel CLI (expected to be available locally). Always use `--scope zero-conf-vtest314` for e2e/integration test deployments:
+
+   ```bash
+   # List recent deployments for a project
+   vercel ls <project-name> --scope zero-conf-vtest314
+
+   # Get deployment logs by URL or deployment ID
+   vercel logs <deployment-url-or-id> --scope zero-conf-vtest314
+
+   # Inspect deployment details
+   vercel inspect <deployment-url-or-id> --scope zero-conf-vtest314
+   ```
+
+3. **Common deployment failure causes**:
+
+   - Build errors (check `vercel logs`)
+   - Connection reset issues (network flakiness)
+   - Timeouts - both build timeouts and response timeouts when tests make HTTP requests
+   - Framework detection issues
+   - **Deployment Protection** - if a test fails making requests to a deployment URL and you see auth-related errors or redirects, the project may have Deployment Protection enabled. Check the project settings and disable it for the test project.
+
+4. **For CI failures**, deployment URLs are usually printed in the test output. Copy the URL and run `vercel logs <url> --scope zero-conf-vtest314` locally to see the full build output.
+
+5. **If the Vercel CLI returns an authentication error** (e.g., "No existing credentials found"), provide the exact command to the user so they can run it themselves after authenticating. Then resume the investigation once the user provides the output or confirms auth is available.
+
+6. **Compare with previous successful deployments** to determine if an issue is new:
+
+   ```bash
+   # List recent deployments to find successful vs failed ones
+   vercel ls <project-name> --scope zero-conf-vtest314
+
+   # Get deployment ID from inspect
+   vercel inspect <deployment-url> --scope zero-conf-vtest314
+   ```
+
+   Note: `vercel logs` only works for deployments in "Ready" state. For failed deployments or to get full build logs, use the Vercel API directly:
+
+   ```bash
+   # Get build logs via API (works for both successful and failed deployments)
+   curl -s -H "Authorization: Bearer $(cat ~/.vercel/auth.json | jq -r '.token')" \
+     "https://api.vercel.com/v2/deployments/<deployment-id>/events?teamId=team_dC6tJLPHCIbKnx9RAz6Dvsya" \
+     | jq -r '.[].payload.text // empty'
+   ```
+
+   Compare logs between a failing and a recent successful deployment to identify what changed.
+
 ## Package Development
 
 Each package follows this structure:

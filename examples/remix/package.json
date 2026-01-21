@@ -30,5 +30,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "overrides": {
+    "esbuild-plugins-node-modules-polyfill": "1.7.1"
   }
 }

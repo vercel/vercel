@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { isIP } from 'net';
 import { exec, fixture, testFixture, testFixtureStdio } from './utils';
+import { test, expect } from 'vitest';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');

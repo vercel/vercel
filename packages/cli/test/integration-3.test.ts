@@ -24,9 +24,10 @@ import formatOutput from './helpers/format-output';
 import type { DeploymentLike } from './helpers/types';
 import { teamPromise, userPromise } from './helpers/get-account';
 import { apiFetch } from './helpers/api-fetch';
+import { vi, test, expect, beforeAll, afterAll } from 'vitest';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
