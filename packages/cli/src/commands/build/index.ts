@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import { join, relative, resolve } from 'path';
-import * as experimentalBackends from '@vercel/backends';
 
 import {
   normalizePath,
@@ -31,9 +30,6 @@ import type {
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
 import {
-  detectBuilders,
-  detectFrameworkRecord,
-  detectFrameworkVersion,
   detectInstrumentation,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
@@ -522,7 +518,6 @@ async function doBuild(
     projectSettings: projectSettings as PrepareBuildOptions['projectSettings'],
     workPath,
     logger,
-    detectBuilders: detectBuilders as PrepareBuildOptions['detectBuilders'],
   });
 
   const builderSpecs = new Set(builds.map(b => b.use));
@@ -534,7 +529,7 @@ async function doBuild(
   // Sort builders for execution order
   const sortedBuilders = sortBuilders(builds);
 
-  // Call the core build function from build-utils
+  // Call the core build function from @vercel/build
   await runBuild({
     cwd,
     workPath,
@@ -555,15 +550,8 @@ async function doBuild(
     logger,
     span,
     writeBuildResult: writeBuildResult as RunBuildOptions['writeBuildResult'],
-    detectFrameworkRecord:
-      detectFrameworkRecord as unknown as RunBuildOptions['detectFrameworkRecord'],
-    detectFrameworkVersion:
-      detectFrameworkVersion as unknown as RunBuildOptions['detectFrameworkVersion'],
-    LocalFileSystemDetector:
-      LocalFileSystemDetector as RunBuildOptions['LocalFileSystemDetector'],
     cacheDir,
     corepackShimDir,
-    experimentalBackendsBuilder: experimentalBackends,
   });
 
   // Cleanup early-initialized corepack (runBuild handles its own cleanup)

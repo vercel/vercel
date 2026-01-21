@@ -23,8 +23,10 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@vercel/backends": "workspace:*",
     "@vercel/build-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
+    "@vercel/fs-detectors": "workspace:*",
     "@vercel/routing-utils": "workspace:*"
   },
   "devDependencies": {

@@ -11,6 +11,13 @@ import {
 } from '@vercel/routing-utils';
 import type { Route as RoutingRoute } from '@vercel/routing-utils';
 import {
+  detectBuilders,
+  detectFrameworkRecord,
+  detectFrameworkVersion,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
+import * as experimentalBackends from '@vercel/backends';
+import {
   NowBuildError,
   getInstalledPackageVersion,
   isBackendBuilder,
@@ -251,24 +258,6 @@ export interface RunBuildOptions {
   ) => Promise<Record<string, PathOverride> | undefined | void>;
 
   /**
-   * Function to detect framework record
-   */
-  detectFrameworkRecord: (args: {
-    fs: any;
-    frameworkList: any[];
-  }) => Promise<DetectedFramework | null>;
-
-  /**
-   * Function to detect framework version
-   */
-  detectFrameworkVersion: (framework: DetectedFramework) => string | undefined;
-
-  /**
-   * LocalFileSystemDetector class
-   */
-  LocalFileSystemDetector: new (path: string) => any;
-
-  /**
    * Cache directory for corepack and other build caches
    */
   cacheDir: string;
@@ -277,18 +266,6 @@ export interface RunBuildOptions {
    * Corepack shim directory if already initialized (for early install)
    */
   corepackShimDir?: string | null;
-
-  /**
-   * Optional experimental backends builder (for @vercel/backends support)
-   */
-  experimentalBackendsBuilder?: ExperimentalBackendsBuilder;
-}
-
-/**
- * Experimental backends builder interface
- */
-export interface ExperimentalBackendsBuilder {
-  build: (options: BuildOptions) => Promise<BuildResultV2 | BuildResultV3>;
 }
 
 /**
@@ -361,15 +338,6 @@ export interface PrepareBuildOptions {
    * Logger for build output
    */
   logger: BuildLogger;
-
-  /**
-   * Function to detect builders
-   */
-  detectBuilders: (
-    files: string[],
-    pkg: PackageJson | null,
-    options: any
-  ) => Promise<DetectBuildersResult>;
 }
 
 /**
@@ -417,15 +385,8 @@ const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 export async function prepareBuild(
   options: PrepareBuildOptions
 ): Promise<PrepareBuildResult> {
-  const {
-    files,
-    pkg,
-    localConfig,
-    projectSettings,
-    workPath,
-    logger,
-    detectBuilders,
-  } = options;
+  const { files, pkg, localConfig, projectSettings, workPath, logger } =
+    options;
 
   if (localConfig.builds && localConfig.functions) {
     throw new NowBuildError({
@@ -456,7 +417,7 @@ export async function prepareBuild(
       ignoreBuildScript: true,
       featHandleMiss: true,
       workPath,
-    });
+    } as Parameters<typeof detectBuilders>[2]);
 
     if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
       throw detectedBuilders.errors[0];
@@ -812,10 +773,7 @@ export async function getFrameworkRoutes(
  */
 export async function getFramework(
   cwd: string,
-  buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
-  detectFrameworkRecord: RunBuildOptions['detectFrameworkRecord'],
-  detectFrameworkVersion: RunBuildOptions['detectFrameworkVersion'],
-  LocalFileSystemDetector: RunBuildOptions['LocalFileSystemDetector']
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>
 ): Promise<{ version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
@@ -882,12 +840,8 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
     logger,
     span,
     writeBuildResult,
-    detectFrameworkRecord,
-    detectFrameworkVersion,
-    LocalFileSystemDetector,
     cacheDir,
     corepackShimDir: existingCorepackShimDir,
-    experimentalBackendsBuilder,
   } = options;
 
   // Initialize corepack if not already done
@@ -1020,12 +974,11 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
             // Use experimental backends builder only for backend framework builders,
             // not for static builders (which handle public/ directories)
             if (
-              experimentalBackendsBuilder &&
               shouldUseExperimentalBackends(buildConfig.framework) &&
               builderPkg.name !== '@vercel/static' &&
               isBackendBuilder(build)
             ) {
-              return experimentalBackendsBuilder.build(buildOptions);
+              return experimentalBackends.build(buildOptions);
             }
             return builder.build(buildOptions);
           }
@@ -1326,13 +1279,7 @@ export async function runBuild(options: RunBuildOptions): Promise<void> {
         )
       : undefined;
 
-  const framework = await getFramework(
-    workPath,
-    buildResults,
-    detectFrameworkRecord,
-    detectFrameworkVersion,
-    LocalFileSystemDetector
-  );
+  const framework = await getFramework(workPath, buildResults);
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results

@@ -271,12 +271,18 @@ importers:
 
   packages/build:
     dependencies:
+      '@vercel/backends':
+        specifier: workspace:*
+        version: link:../backends
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
       '@vercel/frameworks':
         specifier: workspace:*
         version: link:../frameworks
+      '@vercel/fs-detectors':
+        specifier: workspace:*
+        version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: workspace:*
         version: link:../routing-utils
@@ -456,9 +462,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@vercel/backends':
-        specifier: workspace:*
-        version: link:../backends
       '@vercel/blob':
         specifier: 1.0.2
         version: 1.0.2
@@ -9787,7 +9790,7 @@ packages:
       '@vitest/spy': 2.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.21
-      vite: 5.1.8(@types/node@14.18.33)
+      vite: 5.1.8(@types/node@22.5.0)
     dev: true
 
   /@vitest/pretty-format@2.0.3:
@@ -12441,7 +12444,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.35.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.62.0(eslint@8.35.0)(typescript@4.9.4)
       eslint: 8.35.0
-      jest: 29.5.0(@types/node@14.14.31)
+      jest: 29.5.0(@types/node@14.18.33)
     transitivePeerDependencies:
       - supports-color
       - typescript

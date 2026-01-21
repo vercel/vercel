@@ -35,7 +35,6 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "@vercel/backends": "workspace:*",
     "@vercel/blob": "1.0.2",
     "@vercel/build": "workspace:*",
     "@vercel/build-utils": "workspace:*",
