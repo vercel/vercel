@@ -11,6 +11,7 @@ import {
   type PrepareCache,
   type BuildV2,
   getNodeVersion,
+  Span,
 } from '@vercel/build-utils';
 
 export const version = 2;
@@ -18,19 +19,48 @@ export const version = 2;
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(args.workPath);
+  const builderName = '@vercel/backends';
 
-  const outputConfig = await doBuild(args, downloadResult);
+  const span =
+    args.span ??
+    new Span({
+      name: builderName,
+    });
+
+  span.setAttributes({
+    'builder.name': builderName,
+  });
+
+  const doBuildSpan = span.child('vc.builder.backends.doBuild');
+  const outputConfig = await doBuildSpan.trace(async span => {
+    const result = await doBuild(args, downloadResult);
+    span.setAttributes({
+      'outputConfig.dir': result.dir,
+      'outputConfig.handler': result.handler,
+    });
+    return result;
+  });
 
   debug('Node file trace starting..');
-  const nftPromise = nodeFileTrace(args, nodeVersion, outputConfig);
+  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
+  const nftPromise = nftSpan.trace(() =>
+    nodeFileTrace(args, nodeVersion, outputConfig)
+  );
   debug('Introspection starting..');
-  const { routes, framework } = await introspectApp({
-    ...outputConfig,
-    framework: args.config.framework,
-    env: {
-      ...(args.meta?.env ?? {}),
-      ...(args.meta?.buildEnv ?? {}),
-    },
+  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
+  const { routes, framework } = await introspectAppSpan.trace(async span => {
+    const result = await introspectApp({
+      ...outputConfig,
+      framework: args.config.framework,
+      env: {
+        ...(args.meta?.env ?? {}),
+        ...(args.meta?.buildEnv ?? {}),
+      },
+    });
+    span.setAttributes({
+      'introspectApp.routes': String(result.routes.length),
+    });
+    return result;
   });
 
   if (routes.length > 2) {
@@ -76,7 +106,8 @@ export const build: BuildV2 = async args => {
 
   // Don't return until the TypeScript compilation is complete
   if (outputConfig.tsPromise) {
-    await outputConfig.tsPromise;
+    const tsSpan = span.child('vc.builder.backends.tsCompile');
+    await tsSpan.trace(() => outputConfig.tsPromise);
   }
 
   return {

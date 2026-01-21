@@ -19,8 +19,8 @@
     "build": "node ../../utils/build.mjs",
     "generate:schemas": "ts-to-zod --all",
     "prebuild": "pnpm generate:schemas",
-    "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
-    "test-unit": "pnpm test test/*.test.ts",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -34,10 +34,9 @@
   },
   "devDependencies": {
     "@types/fs-extra": "11.0.4",
-    "@types/jest": "27.4.1",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "14.18.33",
-    "jest-junit": "16.0.0",
-    "ts-to-zod": "^3"
+    "@types/node": "20.11.0",
+    "ts-to-zod": "^3",
+    "vitest": "2.1.4"
   }
 }
