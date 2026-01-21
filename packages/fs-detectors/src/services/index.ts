@@ -292,12 +292,16 @@ function createServiceFromFramework(
   // Root services get '/', subdirectory services get '/${workspace}'
   const routePrefix = isRoot ? '/' : `/${workspace}`;
 
+  // The function path is where routing rules will direct traffic
+  const functionPath = `/_services/${name}`;
+
   return {
     name,
     type: 'web',
     workspace,
     framework,
     entrypoint: frameworkBuilderSrc,
+    functionPath,
     routePrefix,
     builder: {
       src: builderSrc,
@@ -340,6 +344,9 @@ function createServiceFromEntrypoint(
   // Root services get '/', subdirectory services get '/${workspace}'
   const routePrefix = isRoot ? '/' : `/${workspace}`;
 
+  // The function path is where routing rules will direct traffic
+  const functionPath = `/_services/${name}`;
+
   return {
     name,
     type: 'web',
@@ -347,6 +354,7 @@ function createServiceFromEntrypoint(
     runtime,
     framework,
     entrypoint: entrypointRelativeToWorkspace,
+    functionPath,
     routePrefix,
     builder: {
       // Use full path - runtime builders respect the src we pass
@@ -385,11 +393,9 @@ function generateServicesRoutes(services: ResolvedService[]): ServicesRoutes {
 
   for (const service of sortedServices) {
     const prefix = service.routePrefix || '';
-    const builderSrc = service.builder.src || '';
-    // The function path is derived from the source entrypoint (e.g., "api/index.ts" -> "/api/index").
-    // This becomes the `dest` in routing rules, pointing to the serverless function
-    // that will be created from this source file during the build.
-    const functionPath = '/' + builderSrc.replace(/\.[^/.]+$/, '');
+    // Use the explicit functionPath - this is set during service resolution
+    // and represents where the routing layer should direct traffic
+    const { functionPath } = service;
 
     // Worker and Cron services have internal routes
     if (service.type === 'worker' || service.type === 'cron') {

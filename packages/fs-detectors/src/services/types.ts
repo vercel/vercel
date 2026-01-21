@@ -32,6 +32,16 @@ export interface ResolvedService {
   buildCommand?: string;
   installCommand?: string;
   runtime?: string;
+  /**
+   * The path where this service's serverless function will be accessible.
+   * Used as the `dest` in routing rules. This is the OUTPUT path for routing,
+   * not the INPUT source file path.
+   *
+   * Examples:
+   * - "/_services/api" for a service named "api"
+   * - "/_services/frontend" for a service named "frontend"
+   */
+  functionPath: string;
   /* Web service config */
   routePrefix?: string;
   /* Cron service config */

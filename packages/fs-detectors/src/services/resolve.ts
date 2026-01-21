@@ -109,6 +109,10 @@ export function resolveService(
 
   const routePrefix = config.routePrefix ?? '/';
 
+  // The function path is where routing rules will direct traffic.
+  // Use a consistent convention based on service name.
+  const functionPath = `/_services/${name}`;
+
   const builderConfig: Record<string, unknown> = {};
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
@@ -121,6 +125,7 @@ export function resolveService(
     group,
     workspace,
     entrypoint: config.entrypoint,
+    functionPath,
     routePrefix,
     framework: config.framework,
     builder: {
