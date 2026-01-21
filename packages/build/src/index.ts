@@ -10,18 +10,18 @@ import {
   sourceToRegex,
 } from '@vercel/routing-utils';
 import type { Route as RoutingRoute } from '@vercel/routing-utils';
-import { NowBuildError } from './errors';
-import { getInstalledPackageVersion } from './get-installed-package-version';
 import {
+  NowBuildError,
+  getInstalledPackageVersion,
   isBackendBuilder,
   shouldUseExperimentalBackends,
-} from './framework-helpers';
-import { getDiscontinuedNodeVersions } from './fs/node-version';
-import { spawnAsync } from './fs/run-user-scripts';
-import FileFsRef from './file-fs-ref';
-import download from './fs/download';
-import type { Span } from './trace';
+  getDiscontinuedNodeVersions,
+  spawnAsync,
+  FileFsRef,
+  download,
+} from '@vercel/build-utils';
 import type {
+  Span,
   Builder,
   BuilderV2 as TypesBuilderV2,
   BuilderV3 as TypesBuilderV3,
@@ -36,8 +36,8 @@ import type {
   Meta,
   PackageJson,
   ProjectSettings as TypesProjectSettings,
-} from './types';
-import type { Lambda } from './lambda';
+  Lambda,
+} from '@vercel/build-utils';
 
 /**
  * Re-export types for consumers

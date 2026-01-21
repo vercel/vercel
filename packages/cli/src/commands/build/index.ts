@@ -10,22 +10,24 @@ import {
   runNpmInstall,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
-  type Reporter,
   Span,
-  type TraceEvent,
   validateNpmrc,
-  type PackageJson,
+} from '@vercel/build-utils';
+import type { Reporter, TraceEvent, PackageJson } from '@vercel/build-utils';
+import {
   runBuild,
   prepareBuild,
   initCorepack,
   cleanupCorepack,
-  type BuildsManifest,
-  type BuildLogger,
-  type BuilderWithPkg,
-  type VercelConfig as BuildUtilsVercelConfig,
-  type RunBuildOptions,
-  type PrepareBuildOptions,
-} from '@vercel/build-utils';
+} from '@vercel/build';
+import type {
+  BuildsManifest,
+  BuildLogger,
+  BuilderWithPkg,
+  VercelConfig as BuildUtilsVercelConfig,
+  RunBuildOptions,
+  PrepareBuildOptions,
+} from '@vercel/build';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
 import {
@@ -79,7 +81,7 @@ import { buildCommand } from './command';
 import { mkdir, writeFile } from 'fs/promises';
 
 // Re-export BuildsManifest for other modules that import from this file
-export type { BuildsManifest } from '@vercel/build-utils';
+export type { BuildsManifest } from '@vercel/build';
 
 class InMemoryReporter implements Reporter {
   public events: TraceEvent[] = [];
