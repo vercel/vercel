@@ -102,7 +102,10 @@ export async function getGitRemoteUrls(
       const remoteLine = line.trim();
       if (!remoteLine) continue;
 
-      const match = remoteLine.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/);
+      // Allow optional annotations like [blob:none] from partial clones
+      const match = remoteLine.match(
+        /^(\S+)\s+(\S+)\s+\((fetch|push)\)(?:\s+\[.*\])?$/
+      );
       if (!match) {
         continue;
       }

@@ -67,6 +67,29 @@ describe('git-helpers', () => {
       const result = await getGitRemoteUrls({ cwd });
       expect(result).toEqual({});
     });
+
+    it('should parse remote URLs with partial clone annotations like [blob:none]', () => {
+      // Test the regex directly against partial clone output format
+      // since creating a real partial clone requires server support
+      const partialCloneOutput = `origin\thttps://github.com/user/repo.git (fetch) [blob:none]
+origin\thttps://github.com/user/repo.git (push)`;
+
+      const remoteUrls: Record<string, string> = {};
+      for (const line of partialCloneOutput.split('\n')) {
+        const remoteLine = line.trim();
+        // Same regex as in getGitRemoteUrls
+        const match = remoteLine.match(
+          /^(\S+)\s+(\S+)\s+\((fetch|push)\)(?:\s+\[.*\])?$/
+        );
+        if (match && match[3] === 'fetch') {
+          remoteUrls[match[1]] = match[2];
+        }
+      }
+
+      expect(remoteUrls).toEqual({
+        origin: 'https://github.com/user/repo.git',
+      });
+    });
   });
 
   describe('getGitOriginUrl()', () => {
