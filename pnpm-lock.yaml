@@ -2511,6 +2511,8 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
 
+  python/vercel-runtime: {}
+
 packages:
 
   /@alex_neo/jest-expect-message@1.0.5:
