@@ -28,13 +28,14 @@ import {
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
   getEnvForPackageManager,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   getPathForPackageManager,
   detectPackageManager,
   getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
+  findPackageJson,
   traverseUpDirectories,
 } from './fs/run-user-scripts';
 import {
@@ -88,7 +89,7 @@ export {
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
   getEnvForPackageManager,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
@@ -102,6 +103,7 @@ export {
   isDirectory,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  findPackageJson,
   getIgnoreFilter,
   cloneEnv,
   hardLinkDir,
@@ -137,6 +139,9 @@ export {
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
+  PYTHON_FRAMEWORKS,
+  PythonFramework,
+  isPythonFramework,
 } from './framework-helpers';
 
 export * from './python';

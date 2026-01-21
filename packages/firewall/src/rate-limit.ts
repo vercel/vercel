@@ -164,7 +164,9 @@ export { checkRateLimit as unstable_checkRateLimit };
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
-  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subtle = (globalThis as any).crypto.subtle;
+  const hashBuffer = await subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray
     .map(byte => byte.toString(16).padStart(2, '0'))

@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.15
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
 ## 4.15.14
 
 ### Patch Changes

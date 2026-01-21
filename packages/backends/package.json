@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -37,7 +37,7 @@
     "@types/express": "5.0.3",
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
-    "@types/node": "22",
+    "@types/node": "20.11.0",
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "hono": "4.10.1",
