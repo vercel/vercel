@@ -1550,6 +1550,10 @@ export async function runPipInstall(
   assert(path.isAbsolute(destPath));
   const opts = { ...spawnOpts, cwd: destPath };
 
+  await spawnAsync('uv', ['init'], {
+    ...opts,
+    prettyCommand: 'uv init',
+  });
   await spawnAsync('uv', ['add', ...args], {
     ...opts,
     prettyCommand: 'uv add',
