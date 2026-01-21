@@ -112,6 +112,8 @@ function resolveExplicitServices(
       code: 'MULTIPLE_ROOT_SERVICES',
       message: `Only one web service can omit "routePrefix". Web services without routePrefix: ${webServicesWithoutRoutePrefix.join(', ')}`,
     });
+    // Don't return ambiguous services - user must fix the config
+    return { services: [], errors };
   }
 
   return { services, errors };
@@ -212,7 +214,7 @@ async function autoDetectServices(
         dir,
         entrypoint,
         runtime,
-        detectedFramework || undefined
+        detectedFramework ?? undefined
       );
       services.push(service);
       continue;

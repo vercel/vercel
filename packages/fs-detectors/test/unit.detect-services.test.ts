@@ -97,9 +97,26 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toEqual([]);
-      expect(result.warnings).toBeDefined();
-      expect(result.warnings!.length).toBeGreaterThan(0);
+      expect(result.warnings).toHaveLength(1);
       expect(result.warnings![0].code).toBe('NO_ENTRYPOINT');
+      // Should also have NO_SERVICES_DETECTED error since no services were created
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('NO_SERVICES_DETECTED');
+    });
+
+    it('should return NO_SERVICES_DETECTED when all directories fail', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({ name: 'root' }),
+        'backend/pyproject.toml': '[project]\nname = "backend"',
+        // No entrypoints in either directory
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('NO_SERVICES_DETECTED');
+      // Should have warnings for each directory without entrypoints
+      expect(result.warnings).toHaveLength(2);
     });
   });
 
@@ -263,6 +280,46 @@ describe('detectServices', () => {
 
       expect(result.services[0].topic).toBeUndefined();
       expect(result.services[0].consumer).toBeUndefined();
+    });
+
+    it('should error when multiple web services omit routePrefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              entrypoint: 'web/index.ts',
+            },
+            api: {
+              entrypoint: 'api/index.ts',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MULTIPLE_ROOT_SERVICES');
+    });
+
+    it('should allow multiple web services when only one omits routePrefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              entrypoint: 'web/index.ts',
+            },
+            api: {
+              entrypoint: 'api/index.ts',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(2);
+      expect(result.errors).toEqual([]);
     });
   });
 
