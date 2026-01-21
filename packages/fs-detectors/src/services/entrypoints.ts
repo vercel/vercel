@@ -75,7 +75,10 @@ function generateEntrypointPaths(config: RuntimeEntrypointConfig): string[] {
 
 /**
  * Detect a single entrypoint for a specific runtime in a directory.
- * Returns the first matching entrypoint file path, or null if none found.
+ * Returns the first matching entrypoint file path (by priority order), or null if none found.
+ *
+ * Paths are checked in parallel for performance, but the result respects
+ * the priority order defined in RUNTIME_ENTRYPOINTS (e.g., index.ts before app.ts).
  */
 async function detectEntrypoint(
   fs: DetectorFilesystem,
@@ -86,11 +89,17 @@ async function detectEntrypoint(
   if (!config) return null;
 
   const paths = generateEntrypointPaths(config);
-  for (const path of paths) {
-    const fullPath = workDir === '.' ? path : `${workDir}/${path}`;
-    const exists = await fs.hasPath(fullPath);
-    if (exists) {
-      return fullPath;
+  const fullPaths = paths.map(path =>
+    workDir === '.' ? path : `${workDir}/${path}`
+  );
+
+  // Check all paths and return the first that exists
+  const existsResults = await Promise.all(
+    fullPaths.map(fullPath => fs.hasPath(fullPath))
+  );
+  for (let i = 0; i < fullPaths.length; i++) {
+    if (existsResults[i]) {
+      return fullPaths[i];
     }
   }
 
@@ -107,14 +116,12 @@ export async function detectAllEntrypoints(
   workDir: string,
   runtimes: ServiceRuntime[]
 ): Promise<DetectedEntrypoint[]> {
-  const detected: DetectedEntrypoint[] = [];
+  const results = await Promise.all(
+    runtimes.map(async runtime => {
+      const entrypoint = await detectEntrypoint(fs, runtime, workDir);
+      return entrypoint ? { path: entrypoint, runtime } : null;
+    })
+  );
 
-  for (const runtime of runtimes) {
-    const entrypoint = await detectEntrypoint(fs, runtime, workDir);
-    if (entrypoint) {
-      detected.push({ path: entrypoint, runtime });
-    }
-  }
-
-  return detected;
+  return results.filter((r): r is DetectedEntrypoint => r !== null);
 }
