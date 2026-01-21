@@ -11,6 +11,14 @@ import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import {
+  getEnvValueWarnings,
+  getEnvKeyWarnings,
+  formatWarnings,
+  hasOnlyWhitespaceWarnings,
+  trimValue,
+  removePublicPrefix,
+} from '../../util/env/validate-env';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
@@ -51,6 +59,7 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
   if (args.length > 3) {
     output.error(
@@ -80,6 +89,61 @@ export default async function add(client: Client, argv: string[]) {
       message: `What's the name of the variable?`,
       validate: val => (val ? true : 'Name cannot be empty'),
     });
+  }
+
+  // Validate key name early (before value entry) with re-entry option
+  const skipConfirm = opts['--yes'] || !!stdInput;
+  if (!skipConfirm) {
+    let keyAccepted = false;
+    while (!keyAccepted) {
+      const keyWarnings = getEnvKeyWarnings(envName);
+      const sensitiveWarning = keyWarnings.find(w => w.requiresConfirmation);
+
+      if (!sensitiveWarning) {
+        // Non-sensitive public prefix: just show info, no action needed
+        for (const w of keyWarnings) {
+          output.warn(w.message);
+        }
+        keyAccepted = true;
+        break;
+      }
+
+      // Sensitive public variable: show all warnings then options
+      for (const w of keyWarnings) {
+        output.warn(w.message);
+      }
+
+      const nameWithoutPrefix = removePublicPrefix(envName);
+      const choices = [
+        { name: 'Leave as is', value: 'c' },
+        { name: `Rename to ${nameWithoutPrefix}`, value: 'p' },
+        { name: 'Re-enter', value: 'r' },
+      ];
+
+      const action = await client.input.select({
+        message: 'How to proceed?',
+        choices,
+      });
+
+      if (action === 'c') {
+        keyAccepted = true;
+      } else if (action === 'p') {
+        envName = nameWithoutPrefix;
+        output.log(`Renamed to ${envName}`);
+        keyAccepted = true;
+      } else {
+        envName = await client.input.text({
+          message: `What's the name of the variable?`,
+          validate: val => (val ? true : 'Name cannot be empty'),
+        });
+      }
+    }
+  } else {
+    // Non-interactive: just show warnings
+    const keyWarnings = getEnvKeyWarnings(envName);
+    for (const w of keyWarnings) {
+      output.warn(w.message);
+    }
   }
 
   const link = await getLinkedProject(client);
@@ -161,6 +225,61 @@ export default async function add(client: Client, argv: string[]) {
     });
   }
 
+  // Validate and handle value warnings with re-entry option
+  let finalValue = envValue;
+
+  if (!skipConfirm) {
+    let valueAccepted = false;
+    while (!valueAccepted) {
+      const valueWarnings = getEnvValueWarnings(finalValue);
+      const warningMessage = formatWarnings(valueWarnings);
+
+      if (!warningMessage) {
+        valueAccepted = true;
+        break;
+      }
+
+      output.warn(warningMessage);
+
+      const canTrim = hasOnlyWhitespaceWarnings(valueWarnings);
+      const choices = canTrim
+        ? [
+            { name: 'Leave as is', value: 'c' },
+            { name: 'Re-enter', value: 'r' },
+            { name: 'Trim whitespace', value: 't' },
+          ]
+        : [
+            { name: 'Leave as is', value: 'c' },
+            { name: 'Re-enter', value: 'r' },
+          ];
+
+      const action = await client.input.select({
+        message: 'How to proceed?',
+        choices,
+      });
+
+      if (action === 'c') {
+        valueAccepted = true;
+      } else if (action === 't') {
+        finalValue = trimValue(finalValue);
+        output.log('Trimmed whitespace');
+        valueAccepted = true;
+      } else {
+        finalValue = await client.input.password({
+          message: `What's the value of ${envName}?`,
+          mask: true,
+        });
+      }
+    }
+  } else {
+    // Non-interactive: just show warning
+    const valueWarnings = getEnvValueWarnings(finalValue);
+    const warningMessage = formatWarnings(valueWarnings);
+    if (warningMessage) {
+      output.warn(warningMessage);
+    }
+  }
+
   while (envTargets.length === 0) {
     envTargets = await client.input.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
@@ -194,7 +313,7 @@ export default async function add(client: Client, argv: string[]) {
       upsert,
       type,
       envName,
-      envValue,
+      finalValue,
       envTargets,
       envGitBranch
     );

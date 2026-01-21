@@ -8,6 +8,12 @@ import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import {
+  getEnvValueWarnings,
+  formatWarnings,
+  hasOnlyWhitespaceWarnings,
+  trimValue,
+} from '../../util/env/validate-env';
 import formatEnvironments from '../../util/env/format-environments';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
@@ -180,8 +186,68 @@ export default async function update(client: Client, argv: string[]) {
     });
   }
 
-  // Confirm the update unless --yes flag is provided
-  if (!opts['--yes']) {
+  // Validate and handle value warnings with re-entry option
+  let finalValue = envValue;
+  const skipConfirm = opts['--yes'] || !!stdInput;
+  let alreadyConfirmed = false;
+
+  if (!skipConfirm) {
+    let valueAccepted = false;
+    while (!valueAccepted) {
+      const valueWarnings = getEnvValueWarnings(finalValue);
+      const warningMessage = formatWarnings(valueWarnings);
+
+      if (!warningMessage) {
+        valueAccepted = true;
+        break;
+      }
+
+      output.warn(warningMessage);
+
+      const canTrim = hasOnlyWhitespaceWarnings(valueWarnings);
+      const choices = canTrim
+        ? [
+            { name: 'Leave as is', value: 'c' },
+            { name: 'Re-enter', value: 'r' },
+            { name: 'Trim whitespace', value: 't' },
+          ]
+        : [
+            { name: 'Leave as is', value: 'c' },
+            { name: 'Re-enter', value: 'r' },
+          ];
+
+      const action = await client.input.select({
+        message: 'How to proceed?',
+        choices,
+      });
+
+      if (action === 'c') {
+        valueAccepted = true;
+        // Check if any warnings require confirmation
+        if (valueWarnings.some(w => w.requiresConfirmation)) {
+          alreadyConfirmed = true;
+        }
+      } else if (action === 't') {
+        finalValue = trimValue(finalValue);
+        output.log('Trimmed whitespace');
+        valueAccepted = true;
+      } else {
+        finalValue = await client.input.text({
+          message: `What's the new value of ${envName}?`,
+        });
+      }
+    }
+  } else {
+    // Non-interactive: just show warning
+    const valueWarnings = getEnvValueWarnings(finalValue);
+    const warningMessage = formatWarnings(valueWarnings);
+    if (warningMessage) {
+      output.warn(warningMessage);
+    }
+  }
+
+  // Confirm the update unless --yes flag is provided or already confirmed from validation
+  if (!opts['--yes'] && !alreadyConfirmed) {
     const currentTargets = formatEnvironments(
       link,
       selectedEnv,
@@ -215,7 +281,7 @@ export default async function update(client: Client, argv: string[]) {
       selectedEnv.id,
       type,
       envName,
-      envValue,
+      finalValue,
       allTargets,
       selectedEnv.gitBranch || ''
     );
