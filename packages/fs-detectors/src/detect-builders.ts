@@ -54,7 +54,6 @@ export interface Options {
   /** Vercel config with optional experimentalServices (for services framework) */
   vercelConfig?: {
     experimentalServices?: ExperimentalServices;
-    [key: string]: unknown;
   };
 }
 
