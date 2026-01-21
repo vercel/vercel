@@ -60,8 +60,7 @@
     "chokidar": "4.0.0",
     "esbuild": "0.27.0",
     "form-data": "^4.0.0",
-    "jose": "5.9.6",
-    "vercel": "50.4.5"
+    "jose": "5.9.6"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
