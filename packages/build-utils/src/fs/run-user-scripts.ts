@@ -1548,9 +1548,13 @@ export async function runPipInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'uv pip install' };
+  const opts = { ...spawnOpts, cwd: destPath };
 
-  await spawnAsync('uv', ['run', 'python', 'pip', 'install', ...args], opts);
+  await spawnAsync('uv', ['add', ...args], {
+    ...opts,
+    prettyCommand: 'uv add',
+  });
+  await spawnAsync('uv', ['sync'], { ...opts, prettyCommand: 'uv sync' });
 }
 
 export function getScriptName(
