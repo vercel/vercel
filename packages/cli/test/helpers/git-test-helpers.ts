@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { realpathSync, rmSync } from 'node:fs';
 import { join } from 'path';
 import fs from 'fs-extra';
 
@@ -75,7 +75,8 @@ export function setupBareRepoWithWorktree(
   // Create a worktree from the bare repo
   execSync(`git worktree add ${worktreePath} main`, { cwd: bareRepoPath });
 
-  return { bareRepoPath, worktreePath };
+  // Resolve to canonical path to handle Windows short paths (e.g., RUNNER~1 vs runneradmin)
+  return { bareRepoPath, worktreePath: realpathSync(worktreePath) };
 }
 
 /**
