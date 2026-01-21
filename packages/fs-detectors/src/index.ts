@@ -8,9 +8,11 @@ export {
 export {
   detectServices,
   getServicesBuilders,
+  generateServicesRoutes,
   type DetectServicesOptions,
   type DetectServicesResult,
   type ResolvedService,
+  type ServicesRoutes,
 } from './services';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {

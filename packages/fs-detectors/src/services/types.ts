@@ -1,3 +1,4 @@
+import type { Route } from '@vercel/routing-utils';
 import type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
@@ -42,17 +43,30 @@ export interface ResolvedService {
 
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
+  /**
+   * Working directory path (relative to fs root).
+   * If provided, vercel.json is read from this path.
+   */
   workPath?: string;
-  /** Explicit services from vercel.json experimentalServices */
-  explicitServices?: ExperimentalServices;
-  /** Framework list for zero-config detection */
+  /** Framework list for auto-detection */
   frameworkList?: readonly Framework[];
+}
+
+export interface ServicesRoutes {
+  /** Rewrite routes for non-root services */
+  rewrites: Route[];
+  /** Default routes (catch-all for root service) */
+  defaults: Route[];
 }
 
 export interface DetectServicesResult {
   services: ResolvedService[];
+  /** How these services were discovered */
+  source: 'configured' | 'detected';
+  /** Routing rules derived from services */
+  routes: ServicesRoutes;
   errors: ServiceDetectionError[];
-  warnings?: ServiceDetectionWarning[];
+  warnings: ServiceDetectionWarning[];
 }
 
 export interface ServiceDetectionWarning {

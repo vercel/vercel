@@ -126,7 +126,6 @@ export async function detectBuilders(
   if (framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
-      experimentalServices: options.vercelConfig?.experimentalServices,
     });
   }
 

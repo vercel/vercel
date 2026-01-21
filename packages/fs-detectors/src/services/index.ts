@@ -1,3 +1,4 @@
+import type { Route } from '@vercel/routing-utils';
 import type {
   DetectServicesOptions,
   DetectServicesResult,
@@ -6,6 +7,7 @@ import type {
   ServiceDetectionWarning,
   ExperimentalServices,
   ServiceRuntime,
+  ServicesRoutes,
 } from './types';
 import type { Framework } from '@vercel/frameworks';
 import { validateServiceConfig, resolveService } from './resolve';
@@ -16,7 +18,7 @@ import {
 } from './manifests';
 import { detectAllEntrypoints } from './entrypoints';
 import { detectFramework } from '../detect-framework';
-import { getBuilderForRuntime } from './utils';
+import { getBuilderForRuntime, readVercelConfig } from './utils';
 import frameworkList from '@vercel/frameworks';
 
 // Default service name when workspace is at root directory
@@ -26,68 +28,88 @@ export * from './types';
 export * from './resolve';
 export * from './utils';
 export { getServicesBuilders } from './builders';
+export { generateServicesRoutes };
 
 /**
  * Detect and resolve services within a project.
  *
- * If `explicitServices` is provided (from vercel.json), only those services
- * are built (exhaustive mode). Otherwise, services are auto-detected from
- * manifest files and entrypoints (zero-config mode).
+ * This is the main entry point for service detection. It:
+ * 1. Reads vercel.json to check for configured services
+ * 2. If `experimentalServices` exists, resolves those (configured)
+ * 3. Otherwise, auto-detects from manifests and entrypoints (detected)
+ * 4. Generates routing rules for the services
  */
 export async function detectServices(
   options: DetectServicesOptions
 ): Promise<DetectServicesResult> {
-  const { fs, workPath = '' } = options;
-
-  // Use explicit services if provided, otherwise read from vercel.json
-  let experimentalServices: ExperimentalServices | undefined =
-    options.explicitServices;
-
-  if (!experimentalServices) {
-    const configPath = workPath ? `${workPath}/vercel.json` : 'vercel.json';
-
-    const hasVercelJson = await fs.hasPath(configPath);
-    if (hasVercelJson) {
-      try {
-        const configBuffer = await fs.readFile(configPath);
-        const config = JSON.parse(configBuffer.toString('utf-8'));
-        experimentalServices = config.experimentalServices;
-      } catch (err) {
-        return {
-          services: [],
-          errors: [
-            {
-              code: 'INVALID_VERCEL_JSON',
-              message: `Failed to parse vercel.json: ${err instanceof Error ? err.message : 'Invalid JSON'}`,
-            },
-          ],
-        };
-      }
-    }
-    // No vercel.json - continue to auto-detection
-  }
-
-  if (experimentalServices && typeof experimentalServices === 'object') {
-    return resolveExplicitServices(experimentalServices);
-  }
-
-  // Auto-detect services from manifests and entrypoints
+  const { fs, workPath } = options;
   const frameworks = options.frameworkList || frameworkList;
-  return autoDetectServices(fs, frameworks);
+
+  // Scope filesystem to workPath if provided
+  const scopedFs = workPath ? fs.chdir(workPath) : fs;
+
+  // Step 1: Read vercel.json
+  const { config: vercelConfig, error: configError } =
+    await readVercelConfig(scopedFs);
+
+  if (configError) {
+    return {
+      services: [],
+      source: 'configured',
+      routes: { rewrites: [], defaults: [] },
+      errors: [configError],
+      warnings: [],
+    };
+  }
+
+  const configuredServices = vercelConfig?.experimentalServices;
+  const hasConfiguredServices =
+    configuredServices && Object.keys(configuredServices).length > 0;
+
+  // Step 2: Resolve services from the appropriate source
+  let services: ResolvedService[];
+  let errors: ServiceDetectionError[];
+  let warnings: ServiceDetectionWarning[];
+
+  if (hasConfiguredServices) {
+    // Use explicitly configured services from vercel.json
+    const result = resolveConfiguredServices(configuredServices);
+    services = result.services;
+    errors = result.errors;
+    warnings = [];
+  } else {
+    // Auto-detect services from manifests and entrypoints
+    const result = await autoDetectServices(scopedFs, frameworks);
+    services = result.services;
+    errors = result.errors;
+    warnings = result.warnings;
+  }
+
+  // Step 3: Generate routes
+  const routes = generateServicesRoutes(services);
+
+  return {
+    services,
+    source: hasConfiguredServices ? 'configured' : 'detected',
+    routes,
+    errors,
+    warnings,
+  };
 }
 
 /**
- * Resolve explicit services from vercel.json experimentalServices.
+ * Resolve services explicitly configured in vercel.json experimentalServices.
  */
-function resolveExplicitServices(
-  experimentalServices: ExperimentalServices
-): DetectServicesResult {
-  const services: ResolvedService[] = [];
+function resolveConfiguredServices(services: ExperimentalServices): {
+  services: ResolvedService[];
+  errors: ServiceDetectionError[];
+} {
+  const resolved: ResolvedService[] = [];
   const errors: ServiceDetectionError[] = [];
   const webServicesWithoutRoutePrefix: string[] = [];
 
-  for (const name of Object.keys(experimentalServices)) {
-    const serviceConfig = experimentalServices[name];
+  for (const name of Object.keys(services)) {
+    const serviceConfig = services[name];
 
     const validationError = validateServiceConfig(name, serviceConfig);
     if (validationError) {
@@ -101,8 +123,8 @@ function resolveExplicitServices(
       webServicesWithoutRoutePrefix.push(name);
     }
 
-    const resolved = resolveService(name, serviceConfig);
-    services.push(resolved);
+    const service = resolveService(name, serviceConfig);
+    resolved.push(service);
   }
 
   // Only one web service can omit routePrefix (defaults to "/")
@@ -116,7 +138,7 @@ function resolveExplicitServices(
     return { services: [], errors };
   }
 
-  return { services, errors };
+  return { services: resolved, errors };
 }
 
 /**
@@ -134,7 +156,11 @@ function resolveExplicitServices(
 async function autoDetectServices(
   fs: Parameters<typeof detectServices>[0]['fs'],
   frameworks: readonly Framework[]
-): Promise<DetectServicesResult> {
+): Promise<{
+  services: ResolvedService[];
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
+}> {
   const services: ResolvedService[] = [];
   const errors: ServiceDetectionError[] = [];
   const warnings: ServiceDetectionWarning[] = [];
@@ -332,4 +358,70 @@ function createServiceFromEntrypoint(
       },
     },
   };
+}
+
+/**
+ * Generate routing rules for services.
+ *
+ * Routes are ordered by prefix length (longest first) to ensure more specific
+ * routes match before broader ones. For example, `/api/users` must be checked
+ * before `/api`, which must be checked before the catch-all `/`.
+ */
+function generateServicesRoutes(services: ResolvedService[]): ServicesRoutes {
+  const rewrites: Route[] = [];
+  const defaults: Route[] = [];
+
+  // Sort by prefix length (longest first) so specific routes match before broad ones.
+  // Primary services (empty prefix "/") go last as the catch-all fallback.
+  const sortedServices = [...services].sort((a, b) => {
+    const prefixA = a.routePrefix || '';
+    const prefixB = b.routePrefix || '';
+    // Empty prefix (primary) should come last
+    if (prefixA === '' && prefixB !== '') return 1;
+    if (prefixB === '' && prefixA !== '') return -1;
+    // Otherwise sort by length (longest first)
+    return prefixB.length - prefixA.length;
+  });
+
+  for (const service of sortedServices) {
+    const prefix = service.routePrefix || '';
+    const builderSrc = service.builder.src || '';
+    // The function path is derived from the source entrypoint (e.g., "api/index.ts" -> "/api/index").
+    // This becomes the `dest` in routing rules, pointing to the serverless function
+    // that will be created from this source file during the build.
+    const functionPath = '/' + builderSrc.replace(/\.[^/.]+$/, '');
+
+    // Worker and Cron services have internal routes
+    if (service.type === 'worker' || service.type === 'cron') {
+      // Add a direct route for the function path itself
+      rewrites.push({
+        src: `^${functionPath}(?:/.*)?$`,
+        dest: functionPath,
+        check: true,
+      });
+      continue;
+    }
+
+    // Web services
+    if (prefix === '' || prefix === '/') {
+      // Primary service: catch-all route
+      defaults.push({
+        src: '^/(.*)$',
+        dest: functionPath,
+        check: true,
+      });
+    } else {
+      // Non-primary service: prefix-based rewrite
+      const normalizedPrefix = prefix.startsWith('/')
+        ? prefix.slice(1)
+        : prefix;
+      rewrites.push({
+        src: `^/${normalizedPrefix}(?:/(.*))?$`,
+        dest: functionPath,
+        check: true,
+      });
+    }
+  }
+
+  return { rewrites, defaults };
 }

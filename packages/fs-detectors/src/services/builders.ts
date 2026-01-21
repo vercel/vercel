@@ -1,5 +1,5 @@
 import type { Route } from '@vercel/routing-utils';
-import type { Builder, ExperimentalServices } from '@vercel/build-utils';
+import type { Builder } from '@vercel/build-utils';
 import type { Framework } from '@vercel/frameworks';
 import type { ResolvedService } from './types';
 import { detectServices } from './index';
@@ -13,13 +13,12 @@ export interface ErrorResponse {
   link?: string;
 }
 
-export interface ServicesBuilderOptions {
+export interface GetServicesBuildersOptions {
   workPath?: string;
-  experimentalServices?: ExperimentalServices;
   frameworkList?: readonly Framework[];
 }
 
-export interface ServicesBuilderResult {
+export interface ServicesBuildersResult {
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
@@ -31,23 +30,17 @@ export interface ServicesBuilderResult {
 }
 
 /**
- * This function is called from detectBuilders when `framework === 'services'`.
- * If experimentalServices is configured in vercel.json, returns the builders
- * for the specified services.
- * Otherwise, auto-detects services via zero-config entrypoint detection.
+ * Get builders for services - adapter for detectBuilders.
  *
- * Auto-detection flow:
- * 1. Walk project to find manifest files (package.json, pyproject.toml, etc.)
- * 2. For each directory with a manifest:
- *    - Run framework detection - if detected, use framework's builder
- *    - If no framework, search for entrypoints for that manifest's runtime
- *    - If entrypoints found, create a service
- * 3. Error if multiple entrypoints at same level (ambiguous routing)
+ * This function wraps `detectServices` and transforms the result into
+ * the shape expected by `detectBuilders` when `framework === 'services'`.
+ *
+ * Use `detectServices` directly for the cleaner API with full type safety.
  */
 export async function getServicesBuilders(
-  options: ServicesBuilderOptions
-): Promise<ServicesBuilderResult> {
-  const { experimentalServices, workPath } = options;
+  options: GetServicesBuildersOptions
+): Promise<ServicesBuildersResult> {
+  const { workPath } = options;
   const frameworks = options.frameworkList || frameworkList;
 
   if (!workPath) {
@@ -70,16 +63,16 @@ export async function getServicesBuilders(
   const fs = new LocalFileSystemDetector(workPath);
   const result = await detectServices({
     fs,
-    explicitServices: experimentalServices,
     frameworkList: frameworks,
   });
 
-  // Convert warnings to error format
-  const warningResponses: ErrorResponse[] = (result.warnings || []).map(w => ({
+  // Transform warnings to ErrorResponse format
+  const warningResponses: ErrorResponse[] = result.warnings.map(w => ({
     code: w.code,
     message: w.message,
   }));
 
+  // Transform errors and return early if any
   if (result.errors.length > 0) {
     return {
       builders: null,
@@ -113,82 +106,19 @@ export async function getServicesBuilders(
     };
   }
 
+  // Extract builders from services
   const builders: Builder[] = result.services.map(service => service.builder);
-  const { rewriteRoutes, defaultRoutes } = generateServicesRoutes(
-    result.services
-  );
 
   return {
     builders: builders.length > 0 ? builders : null,
     errors: null,
     warnings: warningResponses,
-    defaultRoutes,
+    defaultRoutes:
+      result.routes.defaults.length > 0 ? result.routes.defaults : null,
     redirectRoutes: [],
-    rewriteRoutes,
+    rewriteRoutes:
+      result.routes.rewrites.length > 0 ? result.routes.rewrites : null,
     errorRoutes: [],
     services: result.services,
   };
-}
-
-/**
- * Routes are ordered by prefix length (longest first) to ensure
- * more specific routes are matched before catch-all routes.
- */
-export function generateServicesRoutes(services: ResolvedService[]): {
-  rewriteRoutes: Route[];
-  defaultRoutes: Route[];
-} {
-  const rewriteRoutes: Route[] = [];
-  const defaultRoutes: Route[] = [];
-
-  // Sort services by route prefix length (longest first, then primary last)
-  const sortedServices = [...services].sort((a, b) => {
-    const prefixA = a.routePrefix || '';
-    const prefixB = b.routePrefix || '';
-    // Empty prefix (primary) should come last
-    if (prefixA === '' && prefixB !== '') return 1;
-    if (prefixB === '' && prefixA !== '') return -1;
-    // Otherwise sort by length (longest first)
-    return prefixB.length - prefixA.length;
-  });
-
-  for (const service of sortedServices) {
-    const prefix = service.routePrefix || '';
-    const builderSrc = service.builder.src || '';
-    // Strip extension to get function path
-    const functionPath = '/' + builderSrc.replace(/\.[^/.]+$/, '');
-
-    // Worker and Cron services have internal routes
-    if (service.type === 'worker' || service.type === 'cron') {
-      // Add a direct route for the function path itself
-      rewriteRoutes.push({
-        src: `^${functionPath}(?:/.*)?$`,
-        dest: functionPath,
-        check: true,
-      });
-      continue;
-    }
-
-    // Web services
-    if (prefix === '' || prefix === '/') {
-      // Primary service: catch-all route
-      defaultRoutes.push({
-        src: '^/(.*)$',
-        dest: functionPath,
-        check: true,
-      });
-    } else {
-      // Non-primary service: prefix-based rewrite
-      const normalizedPrefix = prefix.startsWith('/')
-        ? prefix.slice(1)
-        : prefix;
-      rewriteRoutes.push({
-        src: `^/${normalizedPrefix}(?:/(.*))?$`,
-        dest: functionPath,
-        check: true,
-      });
-    }
-  }
-
-  return { rewriteRoutes, defaultRoutes };
 }

@@ -8,6 +8,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toEqual([]);
+      expect(result.source).toBe('detected');
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('NO_MANIFESTS_FOUND');
     });
@@ -20,6 +21,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
+      expect(result.source).toBe('detected');
       expect(result.services[0]).toMatchObject({
         name: 'root',
         type: 'web',
@@ -28,6 +30,9 @@ describe('detectServices', () => {
         runtime: 'node',
       });
       expect(result.errors).toEqual([]);
+      // Routes should be generated
+      expect(result.routes.defaults).toHaveLength(1);
+      expect(result.routes.rewrites).toHaveLength(0);
     });
 
     it('should auto-detect Python service from pyproject.toml + entrypoint', async () => {
@@ -153,6 +158,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
+      expect(result.source).toBe('configured');
       expect(result.services[0]).toMatchObject({
         name: 'api',
         type: 'web',
@@ -160,6 +166,8 @@ describe('detectServices', () => {
         entrypoint: 'src/index.ts',
       });
       expect(result.errors).toEqual([]);
+      // Routes should be generated for configured services too
+      expect(result.routes.defaults).toHaveLength(1);
     });
 
     it('should detect multiple services', async () => {
