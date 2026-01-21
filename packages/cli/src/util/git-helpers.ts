@@ -1,5 +1,6 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { normalize } from 'node:path';
 import { errorToString } from '@vercel/error-utils';
 import output from '../output-manager';
 
@@ -67,7 +68,7 @@ export async function getGitRootDirectory(
     const { stdout } = await execAsync('git rev-parse --show-toplevel', {
       cwd,
     });
-    return stdout.trim();
+    return normalize(stdout.trim());
   } catch (error) {
     output.debug(`Failed to get Git root directory: ${errorToString(error)}`);
     if (unsafe) {
