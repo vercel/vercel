@@ -7,7 +7,11 @@ export const main = async () => {
   const { cwd, out, ...rest } = options.values;
   const [command, entrypoint] = options.positionals;
   if (command === 'build') {
-    const { tsPromise } = await build({ cwd, out, entrypoint });
+    const { tsPromise } = await build({
+      cwd,
+      out,
+      entrypoint,
+    });
     await tsPromise;
   } else {
     await serve({ cwd, rest });
@@ -29,10 +33,13 @@ function parseArgs(args: string[]) {
       },
       ...srvxOptions,
     },
-  });
+  } as const);
 
   return {
-    values,
+    values: values as { cwd: string; out: string } & Record<
+      string,
+      string | boolean | undefined
+    >,
     positionals,
   };
 }
