@@ -17,7 +17,7 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    if: github.event_name == 'pull_request'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.waitForTarball.outputs.url }}
@@ -94,7 +94,7 @@ jobs:
   comment-test-strategy:
     name: Comment Test Strategy
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    if: github.event_name == 'pull_request'
     needs:
       - setup
     steps:
