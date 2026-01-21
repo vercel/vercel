@@ -230,7 +230,7 @@ export default async function update(client: Client, argv: string[]) {
       } else if (action === 't') {
         finalValue = trimValue(finalValue);
         output.log('Trimmed whitespace');
-        valueAccepted = true;
+        // Loop back to re-validate (trimmed value might be empty)
       } else {
         finalValue = await client.input.text({
           message: `What's the new value of ${envName}?`,

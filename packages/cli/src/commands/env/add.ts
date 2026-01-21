@@ -130,7 +130,7 @@ export default async function add(client: Client, argv: string[]) {
       } else if (action === 'p') {
         envName = nameWithoutPrefix;
         output.log(`Renamed to ${envName}`);
-        keyAccepted = true;
+        // Loop back to re-validate (might have nested prefix)
       } else {
         envName = await client.input.text({
           message: `What's the name of the variable?`,
@@ -263,7 +263,7 @@ export default async function add(client: Client, argv: string[]) {
       } else if (action === 't') {
         finalValue = trimValue(finalValue);
         output.log('Trimmed whitespace');
-        valueAccepted = true;
+        // Loop back to re-validate (trimmed value might be empty)
       } else {
         finalValue = await client.input.password({
           message: `What's the value of ${envName}?`,

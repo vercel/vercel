@@ -186,5 +186,26 @@ describe('env update', () => {
       const exitCode = await updatePromise;
       expect(exitCode).toBe(0);
     });
+
+    it('re-validates trimmed value when it becomes empty', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('   \n'); // Whitespace only
+      await expect(client.stderr).toOutput('starts and ends with whitespace');
+      await expect(client.stderr).toOutput('How to proceed?');
+      client.stdin.write('\x1B[B\x1B[B\n'); // Select Trim (third option)
+      await expect(client.stderr).toOutput('Trimmed whitespace');
+      // After trimming, value becomes empty - should show empty warning
+      await expect(client.stderr).toOutput('Value is empty');
+      await expect(client.stderr).toOutput('How to proceed?');
+      client.stdin.write('\n'); // Leave as is
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
   });
 });

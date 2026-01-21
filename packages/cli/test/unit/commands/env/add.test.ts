@@ -374,6 +374,56 @@ describe('env add', () => {
         await expect(client.stderr).toOutput('Trimmed whitespace');
         await expect(exitCodePromise).resolves.toBe(0);
       });
+
+      it('re-validates trimmed value when it becomes empty', async () => {
+        client.setArgv('env', 'add', 'TRIMMED_EMPTY', 'preview', 'branchName');
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Mark as sensitive?');
+        client.stdin.write('n\n');
+        await expect(client.stderr).toOutput(
+          "What's the value of TRIMMED_EMPTY?"
+        );
+        client.stdin.write('   \n'); // Whitespace only
+        await expect(client.stderr).toOutput('starts and ends with whitespace');
+        await expect(client.stderr).toOutput('How to proceed?');
+        client.stdin.write('\x1B[B\x1B[B\n'); // Select Trim
+        await expect(client.stderr).toOutput('Trimmed whitespace');
+        // After trimming, value becomes empty - should show empty warning
+        await expect(client.stderr).toOutput('Value is empty');
+        await expect(client.stderr).toOutput('How to proceed?');
+        client.stdin.write('\n'); // Leave as is
+        await expect(exitCodePromise).resolves.toBe(0);
+      });
+
+      it('re-validates renamed key with nested public prefix', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_NEXT_PUBLIC_SECRET',
+          'preview',
+          'branchName'
+        );
+        const exitCodePromise = env(client);
+        // First warning for outer prefix
+        await expect(client.stderr).toOutput(
+          'The NEXT_PUBLIC_ prefix will make NEXT_PUBLIC_SECRET visible'
+        );
+        await expect(client.stderr).toOutput('How to proceed?');
+        client.stdin.write('\x1B[B\n'); // Select rename to NEXT_PUBLIC_SECRET
+        await expect(client.stderr).toOutput('Renamed to NEXT_PUBLIC_SECRET');
+        // Now should warn again for inner prefix
+        await expect(client.stderr).toOutput(
+          'The NEXT_PUBLIC_ prefix will make SECRET visible'
+        );
+        await expect(client.stderr).toOutput('How to proceed?');
+        client.stdin.write('\x1B[B\n'); // Rename again to SECRET
+        await expect(client.stderr).toOutput('Renamed to SECRET');
+        await expect(client.stderr).toOutput('Mark as sensitive?');
+        client.stdin.write('n\n');
+        await expect(client.stderr).toOutput("What's the value of SECRET?");
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+      });
     });
 
     describe('[environment]', () => {
