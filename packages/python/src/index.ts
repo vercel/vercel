@@ -258,6 +258,8 @@ export const build: BuildV3 = async ({
   const hasCustomInstallCommand =
     isPythonFramework(framework) && !!projectInstallCommand;
 
+  let useRuntime = false;
+
   if (hasCustomInstallCommand) {
     const baseEnv = spawnEnv || process.env;
     const pythonEnv = createVenvEnv(venvPath, baseEnv);
@@ -303,15 +305,26 @@ export const build: BuildV3 = async ({
         );
       }
 
+      const baseEnv = spawnEnv || process.env;
+      useRuntime = !!baseEnv.VERCEL_RUNTIME_PYTHON_ENABLED;
+
+      const runtimeDependencies = [];
+
+      if (useRuntime) {
+        runtimeDependencies.push(
+          baseEnv.VERCEL_RUNTIME_PYTHON || 'vercel-runtime==0.1.0'
+        );
+      }
+
       // Runtime framework dependencies are managed via the uv project so that the
       // lockfile is the single source of truth for all installed packages. These
       // are intentionally unpinned so they can resolve alongside user-declared
       // dependencies (for example, modern Flask versions that require newer
       // Werkzeug releases).
-      const runtimeDependencies =
-        framework === 'flask'
-          ? ['werkzeug>=1.0.1']
-          : ['werkzeug>=1.0.1', 'uvicorn>=0.24'];
+      runtimeDependencies.push('werkzeug>=1.0.1');
+      if (framework !== 'flask') {
+        runtimeDependencies.push('uvicorn>=0.24');
+      }
 
       // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
       // for consistent installation logic and idempotency.
@@ -339,8 +352,6 @@ export const build: BuildV3 = async ({
       });
     }
   }
-  const originalPyPath = join(__dirname, '..', 'vc_init.py');
-  const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -349,10 +360,55 @@ export const build: BuildV3 = async ({
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
-  const handlerPyContents = originalHandlerPyContents
-    .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
-    .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
+
+  let handlerPyContents: string;
+  if (useRuntime) {
+    handlerPyContents = `
+import importlib
+import os
+import os.path
+import site
+import sys
+
+_here = os.path.dirname(__file__)
+
+os.environ.update({
+  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
+  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
+  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+})
+
+_vendor_rel = '${vendorDir}'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
+
+from vercel_runtime.vc_init import vc_handler
+`;
+  } else {
+    const originalPyPath = join(__dirname, '..', 'vc_init.py');
+    const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
+    handlerPyContents = originalHandlerPyContents
+      .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
+      .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
+      .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
+  }
 
   const predefinedExcludes = [
     '.git/**',
