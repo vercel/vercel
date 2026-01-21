@@ -13,7 +13,7 @@ const path = require('path');
 
 const PYTHON_PACKAGES = [
   {
-    name: 'vercel-runtime',
+    name: '@vercel/python-runtime',
     packageJsonPath: 'python/vercel-runtime/package.json',
     pyprojectPath: 'python/vercel-runtime/pyproject.toml',
   },
