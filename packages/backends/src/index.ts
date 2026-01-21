@@ -10,20 +10,20 @@ import {
   debug,
   type PrepareCache,
   type BuildV2,
-  getRuntimeNodeVersion,
+  getNodeVersion,
 } from '@vercel/build-utils';
 
 export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
-  const nodeVersion = await getRuntimeNodeVersion(args.workPath);
+  const nodeVersion = await getNodeVersion(args.workPath);
 
   const outputConfig = await doBuild(args, downloadResult);
 
-  const { files } = await nodeFileTrace(args, nodeVersion, outputConfig);
-
-  debug('Building route mapping..');
+  debug('Node file trace starting..');
+  const nftPromise = nodeFileTrace(args, nodeVersion, outputConfig);
+  debug('Introspection starting..');
   const { routes, framework } = await introspectApp({
     ...outputConfig,
     framework: args.config.framework,
@@ -32,16 +32,20 @@ export const build: BuildV2 = async args => {
       ...(args.meta?.buildEnv ?? {}),
     },
   });
+
   if (routes.length > 2) {
-    debug(`Route mapping built successfully with ${routes.length} routes`);
+    debug(`Introspection completed successfully with ${routes.length} routes`);
   } else {
-    debug(`Route mapping failed to detect routes`);
+    debug(`Introspection failed to detect routes`);
   }
 
   const handler = relative(
     args.repoRootPath,
     join(outputConfig.dir, outputConfig.handler)
   );
+
+  const { files } = await nftPromise;
+  debug('Node file trace complete');
 
   const lambda = new NodejsLambda({
     runtime: nodeVersion.runtime,

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "5.7.13",
+  "version": "5.7.15",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -35,7 +35,7 @@
     "@types/jest": "27.5.1",
     "@types/js-yaml": "4.0.5",
     "@types/minimatch": "3.0.5",
-    "@types/node": "14.18.33",
+    "@types/node": "20.11.0",
     "@types/semver": "7.3.10",
     "@vercel/build-utils": "workspace:*",
     "jest-junit": "16.0.0",

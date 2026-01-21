@@ -255,6 +255,7 @@ export async function build({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
       runtime,
+      runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
     });
@@ -918,7 +919,7 @@ export async function startDevServer(
   if (isPortInfo(result)) {
     return {
       port: result.port,
-      pid: child.pid,
+      pid: child.pid!,
     };
   } else if (Array.isArray(result)) {
     // Got "exit" event from child process

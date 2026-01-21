@@ -55,7 +55,8 @@ export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
   const createData: S['createData'] = async (data, expires) => {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const id = `${prefix}:${crypto.randomUUID()}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const id = `${prefix}:${(globalThis as any).crypto.randomUUID()}`;
       // `exists` returns the number of keys that match the
       // given pattern, so if it's 0 then the key doesn't exist.
       if ((await kv.exists(id)) === 0) {

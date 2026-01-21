@@ -1,10 +1,10 @@
 import {
   isBunVersion,
-  BuildOptions,
   FileBlob,
   FileFsRef,
-  Files,
-  NodeVersion,
+  type BuildOptions,
+  type Files,
+  type NodeVersion,
 } from '@vercel/build-utils';
 import { nodeFileTrace as nft } from '@vercel/nft';
 import { existsSync, lstatSync, readFileSync } from 'fs';

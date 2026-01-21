@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "2.4.7",
+  "version": "2.4.9",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
-    "@types/node": "14.18.33",
+    "@types/node": "20.11.0",
     "@types/semver": "6.0.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/routing-utils": "workspace:*",

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
-  "version": "2.0.117",
+  "version": "2.0.124",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -29,7 +29,7 @@
     "@types/etag": "1.8.0",
     "@types/fs-extra": "11.0.1",
     "@types/jest": "27.5.1",
-    "@types/node": "14.18.33",
+    "@types/node": "20.11.0",
     "@types/react": "18.0.26",
     "@vercel/routing-utils": "workspace:*",
     "jest-junit": "16.0.0",
@@ -37,5 +37,6 @@
   },
   "pnpm": {
     "neverBuiltDependencies": []
-  }
+  },
+  "license": "Apache-2.0"
 }
