@@ -9,7 +9,6 @@ import type {
   Config,
   BuilderFunctions,
   ProjectSettings,
-  ExperimentalServices,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
@@ -51,10 +50,6 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
-  /** experimentalServices from vercel.json needed for "services" framework builds */
-  vercelConfig?: {
-    experimentalServices?: ExperimentalServices;
-  };
 }
 
 // We need to sort the file paths by alphabet to make

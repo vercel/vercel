@@ -34,8 +34,6 @@ export interface ServicesBuildersResult {
  *
  * This function wraps `detectServices` and transforms the result into
  * the shape expected by `detectBuilders` when `framework === 'services'`.
- *
- * Use `detectServices` directly for the cleaner API with full type safety.
  */
 export async function getServicesBuilders(
   options: GetServicesBuildersOptions
