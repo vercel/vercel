@@ -626,6 +626,10 @@ export const build: BuildV2 = async ({
       if (rubyVersion.status === 0 && typeof rubyVersion.stdout === 'string') {
         gemHome = path.join(dir, rubyVersion.stdout.trim());
         debug(`Set GEM_HOME="${gemHome}" because a Gemfile was found`);
+        // Add gem executable bin directory to PATH (where `bundle install` places executables)
+        const gemBin = path.join(gemHome, 'bin');
+        pathList.push(gemBin);
+        debug(`Added "${gemBin}" to PATH env because a Gemfile was found`);
       }
     }
 
