@@ -4,14 +4,8 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
-    "vercel-monorepo",
     "vercel-runtime",
 ]
-
-[[package]]
-name = "vercel-monorepo"
-version = "0.0.0"
-source = { virtual = "." }
 
 [[package]]
 name = "vercel-runtime"

@@ -90,4 +90,4 @@ jobs:
             python/vercel-runtime/tests/release_smoke_test.py
 
       - name: Publish
-        run: uv publish
+        run: uv publish --directory python/vercel-runtime/
