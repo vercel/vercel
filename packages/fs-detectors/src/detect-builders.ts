@@ -51,7 +51,7 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
-  /** Vercel config with optional experimentalServices (for services framework) */
+  /** experimentalServices from vercel.json needed for "services" framework builds */
   vercelConfig?: {
     experimentalServices?: ExperimentalServices;
   };
