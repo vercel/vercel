@@ -5,7 +5,9 @@ import { join } from 'path';
 import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
-import { ParseArgsOptionsConfig } from 'util';
+import type { ParseArgsConfig } from 'util';
+
+type ParseArgsOptionsConfig = NonNullable<ParseArgsConfig['options']>;
 import { readFile, writeFile } from 'fs/promises';
 
 const require = createRequire(import.meta.url);
