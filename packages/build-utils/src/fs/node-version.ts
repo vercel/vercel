@@ -146,7 +146,7 @@ export async function getSupportedNodeVersion(
       throw new NowBuildError({
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link: 'https://vercel.link/node-version',
-        message: `Found invalid Node.js Version: "${engineRange}". ${getHint(
+        message: `Found invalid or discontinued Node.js Version: "${engineRange}". ${getHint(
           isAuto,
           availableVersions
         )}`,
