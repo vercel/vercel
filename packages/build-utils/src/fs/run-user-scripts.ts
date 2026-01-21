@@ -1550,13 +1550,18 @@ export async function runPipInstall(
   assert(path.isAbsolute(destPath));
 
   // Try uv pip install first (faster and works with uv-managed Python per PEP 668)
+  // Use --python python3 to target the Python that python3 resolves to (not system Python)
   const uvOpts = {
     ...spawnOpts,
     cwd: destPath,
     prettyCommand: 'uv pip install',
   };
   try {
-    await spawnAsync('uv', ['pip', 'install', '--system', ...args], uvOpts);
+    await spawnAsync(
+      'uv',
+      ['pip', 'install', '--python', 'python3', '--system', ...args],
+      uvOpts
+    );
     return;
   } catch (err: unknown) {
     // Only fall back to pip3 if uv is not found (ENOENT)
