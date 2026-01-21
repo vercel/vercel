@@ -465,7 +465,7 @@ describe('compileVercelConfig', () => {
     await remove(tmpDir);
   });
 
-  it('should compile vercel.ts to vercel.json and convert headers to routes', async () => {
+  it('should compile vercel.ts to vercel.json', async () => {
     const vercelTsPath = join(tmpDir, 'vercel.ts');
     const vercelTsContent = `
       export default {
@@ -514,7 +514,7 @@ describe('compileVercelConfig', () => {
     );
   });
 
-  it('should compile vercel.mjs to vercel.json and convert rewrites to routes', async () => {
+  it('should compile vercel.mjs to vercel.json', async () => {
     const vercelMjsPath = join(tmpDir, 'vercel.mjs');
     const vercelMjsContent = `
       export default {
