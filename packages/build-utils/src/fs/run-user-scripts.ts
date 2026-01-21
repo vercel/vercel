@@ -13,7 +13,7 @@ import {
   gte,
   minVersion,
 } from 'semver';
-import { SpawnOptions } from 'child_process';
+import { SpawnOptions, execSync } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
@@ -1550,30 +1550,47 @@ export async function runPipInstall(
   assert(path.isAbsolute(destPath));
 
   // Try uv pip install first (faster and works with uv-managed Python per PEP 668)
-  // Use --python python3 to target the Python that python3 resolves to (not system Python)
-  const uvOpts = {
-    ...spawnOpts,
-    cwd: destPath,
-    prettyCommand: 'uv pip install',
-  };
+  // Resolve python3 path from PATH since uv doesn't search PATH for --python
+  let python3Path: string | undefined;
   try {
-    await spawnAsync(
-      'uv',
-      ['pip', 'install', '--python', 'python3', '--system', ...args],
-      uvOpts
-    );
-    return;
-  } catch (err: unknown) {
-    // Only fall back to pip3 if uv is not found (ENOENT)
-    // Other errors (e.g., install failures) should propagate
-    const isUvNotFound =
-      err instanceof Error &&
-      'code' in err &&
-      (err as NodeJS.ErrnoException).code === 'ENOENT';
-    if (!isUvNotFound) {
-      throw err;
+    python3Path = execSync('which python3', { encoding: 'utf8' }).trim();
+  } catch {
+    debug('Could not resolve python3 path');
+  }
+
+  if (python3Path) {
+    const uvOpts = {
+      ...spawnOpts,
+      cwd: destPath,
+      prettyCommand: 'uv pip install',
+    };
+    try {
+      // Use --break-system-packages to allow installing into uv-managed Python
+      await spawnAsync(
+        'uv',
+        [
+          'pip',
+          'install',
+          '--python',
+          python3Path,
+          '--break-system-packages',
+          ...args,
+        ],
+        uvOpts
+      );
+      return;
+    } catch (err: unknown) {
+      // Only fall back to pip3 if uv is not found (ENOENT)
+      // Other errors (e.g., install failures) should propagate
+      const isUvNotFound =
+        err instanceof Error &&
+        'code' in err &&
+        (err as NodeJS.ErrnoException).code === 'ENOENT';
+      if (!isUvNotFound) {
+        throw err;
+      }
+      debug('uv not found, falling back to pip3');
     }
-    debug('uv not found, falling back to pip3');
   }
 
   // Fallback to pip3 (only when uv is not available)
