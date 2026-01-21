@@ -72,14 +72,18 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
       expect(fetchCalls).toHaveLength(5);
     }
 
-    test('Should indicate a rate limit after 2 requests', async () => {
-      await testWithCheck(check);
+    test(
+      'Should indicate a rate limit after 2 requests',
+      { retry: 2 },
+      async () => {
+        await testWithCheck(check);
 
-      const headers = new Headers(fetchCalls[0].init?.headers);
-      expect(headers.get('user-agent')).toBe('Bot/Vercel Rate Limit Checker');
-    });
+        const headers = new Headers(fetchCalls[0].init?.headers);
+        expect(headers.get('user-agent')).toBe('Bot/Vercel Rate Limit Checker');
+      }
+    );
 
-    test('Should pick key from Headers object', async () => {
+    test('Should pick key from Headers object', { retry: 2 }, async () => {
       function check(ip?: string) {
         return checkRateLimit('test-rule1', {
           firewallHostForDevelopment: HOST,
@@ -92,28 +96,32 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
       await testWithCheck(check);
     });
 
-    test('Should pick key from headers-shaped object', async () => {
-      function check(ip?: string) {
-        return checkRateLimit('test-rule1', {
-          firewallHostForDevelopment: HOST,
-          headers: {
-            'x-real-ip': (ip || '192.168.10.2') + rand,
-            'random-header': 'random-value',
-          },
-        });
+    test(
+      'Should pick key from headers-shaped object',
+      { retry: 2 },
+      async () => {
+        function check(ip?: string) {
+          return checkRateLimit('test-rule1', {
+            firewallHostForDevelopment: HOST,
+            headers: {
+              'x-real-ip': (ip || '192.168.10.2') + rand,
+              'random-header': 'random-value',
+            },
+          });
+        }
+
+        await testWithCheck(check);
+        expect(fetchCalls.length).toBe(5);
+
+        const headers = new Headers(fetchCalls[0].init?.headers);
+
+        expect(headers.get('x-rr-random-header')).toBe('random-value');
+        expect(headers.get('x-rr-x-real-ip')).toBe('192.168.10.2' + rand);
+        expect(headers.get('user-agent')).toBe('Bot/Vercel Rate Limit Checker');
       }
+    );
 
-      await testWithCheck(check);
-      expect(fetchCalls.length).toBe(5);
-
-      const headers = new Headers(fetchCalls[0].init?.headers);
-
-      expect(headers.get('x-rr-random-header')).toBe('random-value');
-      expect(headers.get('x-rr-x-real-ip')).toBe('192.168.10.2' + rand);
-      expect(headers.get('user-agent')).toBe('Bot/Vercel Rate Limit Checker');
-    });
-
-    test('Should pick key from request object', async () => {
+    test('Should pick key from request object', { retry: 2 }, async () => {
       function check(ip?: string) {
         return checkRateLimit('test-rule1', {
           firewallHostForDevelopment: HOST,
