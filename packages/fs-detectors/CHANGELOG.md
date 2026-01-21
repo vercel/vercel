@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.7.16
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
 ## 5.7.15
 
 ### Patch Changes

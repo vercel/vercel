@@ -1,5 +1,14 @@
 # @vercel/static-build
 
+## 2.8.26
+
+### Patch Changes
+
+- [ruby] fix static build failures, add gem executable to PATH ([#14683](https://github.com/vercel/vercel/pull/14683))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.125
+
 ## 2.8.25
 
 ### Patch Changes

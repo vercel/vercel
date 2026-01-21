@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.26
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
 ## 0.0.25
 
 ### Patch Changes
