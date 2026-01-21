@@ -1548,17 +1548,40 @@ export async function runPipInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath };
 
-  await spawnAsync('uv', ['init'], {
-    ...opts,
-    prettyCommand: 'uv init',
-  });
-  await spawnAsync('uv', ['add', ...args], {
-    ...opts,
-    prettyCommand: 'uv add',
-  });
-  await spawnAsync('uv', ['sync'], { ...opts, prettyCommand: 'uv sync' });
+  // Try uv pip install first (faster and works with uv-managed Python per PEP 668)
+  const uvOpts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'uv pip install',
+  };
+  try {
+    await spawnAsync('uv', ['pip', 'install', '--system', ...args], uvOpts);
+    return;
+  } catch (err: unknown) {
+    // Only fall back to pip3 if uv is not found (ENOENT)
+    // Other errors (e.g., install failures) should propagate
+    const isUvNotFound =
+      err instanceof Error &&
+      'code' in err &&
+      (err as NodeJS.ErrnoException).code === 'ENOENT';
+    if (!isUvNotFound) {
+      throw err;
+    }
+    debug('uv not found, falling back to pip3');
+  }
+
+  // Fallback to pip3 (only when uv is not available)
+  const pipOpts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'pip3 install',
+  };
+  await spawnAsync(
+    'pip3',
+    ['install', '--disable-pip-version-check', ...args],
+    pipOpts
+  );
 }
 
 export function getScriptName(
