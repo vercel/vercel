@@ -8,7 +8,7 @@ Vercel Marketplace offers pre-built integrations for common services:
 - **Neon** - Serverless Postgres with branching
 - **PlanetScale** - MySQL-compatible serverless database
 - **Supabase** - Postgres with Auth, Realtime, and Storage
-- **Upstash** - Serverless Redis and Kafka
+- **Upstash** - Serverless Redis (recommended for key-value storage) and Kafka
 - **MongoDB Atlas** - Document database
 
 ### Authentication
