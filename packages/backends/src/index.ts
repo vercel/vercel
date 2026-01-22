@@ -42,10 +42,10 @@ export const build: BuildV2 = async args => {
   });
 
   debug('Node file trace starting..');
-  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
-  const nftPromise = nftSpan.trace(() =>
-    nodeFileTrace(args, nodeVersion, outputConfig)
-  );
+  // const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
+  // const nftPromise = nftSpan.trace(() =>
+  //   nodeFileTrace(args, nodeVersion, outputConfig)
+  // );
   debug('Introspection starting..');
   const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
   const { routes, framework } = await introspectAppSpan.trace(async span => {
@@ -74,7 +74,8 @@ export const build: BuildV2 = async args => {
     join(outputConfig.dir, outputConfig.handler)
   );
 
-  const { files } = await nftPromise;
+  const files = {};
+  // const { files } = await nftPromise;
   debug('Node file trace complete');
 
   const lambda = new NodejsLambda({

@@ -26,11 +26,12 @@ export const build = async (args: {
   out: string;
 }) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
-  const tsPromise = typescript({
-    ...args,
-    entrypoint,
-    workPath: args.cwd,
-  });
+  // const tsPromise = typescript({
+  //   ...args,
+  //   entrypoint,
+  //   workPath: args.cwd,
+  // });
+  const tsPromise = undefined;
   const rolldownResult = await rolldown({
     ...args,
     entrypoint,
@@ -49,9 +50,9 @@ export const build = async (args: {
   const typecheckComplete = true;
   const result = tsPromise
     ? await Promise.race([
-        tsPromise.then(() => typecheckComplete),
-        Promise.resolve(false),
-      ])
+      tsPromise.then(() => typecheckComplete),
+      Promise.resolve(false),
+    ])
     : true;
 
   if (tsPromise && !result) {

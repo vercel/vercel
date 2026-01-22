@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "execa": "3.2.0",
+    "nf3": "0.3.5",
     "rolldown": "1.0.0-beta.59",
     "srvx": "0.8.9",
     "tsx": "4.21.0"
@@ -42,8 +43,8 @@
   },
   "devDependencies": {
     "@types/node": "20.11.0",
-    "typescript": "4.9.5",
     "tsdown": "0.16.3",
+    "typescript": "4.9.5",
     "vitest": "^2.0.1"
   }
 }

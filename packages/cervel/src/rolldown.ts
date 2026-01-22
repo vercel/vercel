@@ -2,13 +2,8 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
-
-/**
- * Escapes special regex characters in a string to treat it as a literal pattern.
- */
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+import { externals } from 'nf3/plugin';
+import { plugin } from './plugin.js';
 
 export const rolldown = async (args: {
   entrypoint: string;
@@ -16,9 +11,8 @@ export const rolldown = async (args: {
   repoRootPath: string;
   out: string;
 }) => {
-  const baseDir = args.repoRootPath || args.workPath;
+  const baseDir = args.workPath;
   const entrypointPath = join(args.workPath, args.entrypoint);
-  const shouldAddSourcemapSupport = false;
 
   const extension = extname(args.entrypoint);
   const extensionMap: Record<
@@ -73,19 +67,35 @@ export const rolldown = async (args: {
   const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
 
+  const input = entrypointPath;
   const out = await rolldownBuild({
-    // @ts-ignore tsconfig: true and cleanDir: true are not valid options
-    input: entrypointPath,
+    input,
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    external: external.map(pkg => new RegExp(`^${escapeRegExp(pkg)}`)),
+    external: [/node_modules/],
+    plugins: [
+      // this needs to go first to not break the shim plugin
+      externals({
+        rootDir: args.repoRootPath,
+        exclude: [/^@repo\//],
+        trace: {
+          outDir: '.vercel',
+        },
+      }),
+      plugin({
+        rootDir: args.repoRootPath,
+        outDir: '.vercel',
+        shimBareImports: true, // Enable CJS shim generation
+      }),
+    ],
     output: {
       cleanDir: true,
       dir: outputDir,
       format: resolvedFormat,
       entryFileNames: `[name].${resolvedExtension}`,
       preserveModules: true,
+      preserveModulesRoot: args.repoRootPath,
       sourcemap: false,
     },
   });
@@ -101,17 +111,13 @@ export const rolldown = async (args: {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
 
-  const cleanup = async () => {
-    await rm(outputDir, { recursive: true, force: true });
-  };
-
   return {
     result: {
-      pkg,
-      shouldAddSourcemapSupport,
       handler,
       outputDir,
     },
-    cleanup,
+    cleanup: async () => {
+      await rm(outputDir, { recursive: true, force: true });
+    },
   };
 };

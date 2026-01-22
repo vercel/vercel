@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  server: {
+    watch: {
+      ignored: ['**/test/fixtures/tmp/**', '**/node_modules/**', '**/dist/**'],
+    },
+  },
   test: {
     // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
     pool: 'forks',

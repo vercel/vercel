@@ -57,7 +57,7 @@ export const doBuild = async (
       // Cervel command ran but didn't produce expected output
       throw new Error(
         `Build command "${buildCommand}" completed, but no output was found at ${cervelOutputDir}. ` +
-          'Make sure your cervel command is configured correctly.'
+        'Make sure your cervel command is configured correctly.'
       );
     }
 
