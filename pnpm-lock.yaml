@@ -423,8 +423,8 @@ importers:
         specifier: workspace:*
         version: link:../backends
       '@vercel/blob':
-        specifier: 2.1.0-39df1d8-20260121161119
-        version: 2.1.0-39df1d8-20260121161119
+        specifier: 2.1.0-06d6754-20260122183144
+        version: 2.1.0-06d6754-20260122183144
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
@@ -9398,8 +9398,8 @@ packages:
     dev: true
     optional: true
 
-  /@vercel/blob@2.1.0-39df1d8-20260121161119:
-    resolution: {integrity: sha512-fKqYFmQ0FxDIcilU/8PLYnXpvj40TpoGUP5cRnQ41IXk1kwf0ZIOVhWAVBlzkEsQfIhS3O/uhz3H3v3OH4mq/g==}
+  /@vercel/blob@2.1.0-06d6754-20260122183144:
+    resolution: {integrity: sha512-6nzRqhqPWM5mm7g/yY2b/27BNemlg8iwz2UMXhY1I4uVGguo+cees3Ux+iLG4SH2a1ZeKTS6uB21di29KIYmGQ==}
     engines: {node: '>=20.0.0'}
     dependencies:
       async-retry: 1.3.3
