@@ -36,12 +36,13 @@ import {
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import { frameworkList, runtimeList, type Framework } from '@vercel/frameworks';
 import {
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  detectRuntime,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -531,6 +532,18 @@ async function doBuild(
     projectSettings.rootDirectory !== '.'
   ) {
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
+  }
+
+  // If no framework or runtime has been configured, attempt to detect a
+  // project-level runtime (for example, a Python app without a framework).
+  if (!projectSettings.framework && !projectSettings.runtime) {
+    const runtimeRecord = await detectRuntime({
+      fs: new LocalFileSystemDetector(workPath),
+      runtimeList,
+    });
+    if (runtimeRecord?.slug) {
+      projectSettings.runtime = runtimeRecord.slug;
+    }
   }
 
   // Get a list of source files
