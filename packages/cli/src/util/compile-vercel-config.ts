@@ -97,7 +97,13 @@ export function normalizeConfig(config: any): any {
   }
 
   if (allRoutes.length > 0) {
-    normalized.routes = allRoutes;
+    normalized.routes = allRoutes.map(item => {
+      if (isRouteFormat(item)) {
+        return item;
+      }
+      const isRedirect = 'permanent' in item || 'statusCode' in item;
+      return toRouteFormat(item, isRedirect);
+    });
   }
 
   return normalized;

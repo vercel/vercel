@@ -175,6 +175,68 @@ describe('normalizeConfig', () => {
     expect(result.buildCommand).toBe('npm run build');
     expect(result.routes).toEqual([{ src: '/a', dest: '/b' }]);
   });
+
+  it('should normalize mixed Route and Redirect formats in routes array', () => {
+    // This simulates: routes.rewrite() with transforms (Route format) + routes.redirect() without transforms (Redirect format)
+    const config = {
+      routes: [
+        {
+          src: '/test-header',
+          dest: 'https://httpbin.org/headers',
+          requestHeaders: { authorization: 'Bearer token' },
+        },
+        {
+          source: '/test-build',
+          destination: 'https://httpbin.org/headers',
+          permanent: false,
+        },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      {
+        src: '/test-header',
+        dest: 'https://httpbin.org/headers',
+        requestHeaders: { authorization: 'Bearer token' },
+      },
+      {
+        src: '/test-build',
+        dest: 'https://httpbin.org/headers',
+        redirect: true,
+        status: 307,
+      },
+    ]);
+  });
+
+  it('should normalize Rewrite format items in routes array', () => {
+    const config = {
+      routes: [
+        { src: '/route-format', dest: '/dest' },
+        { source: '/rewrite-format', destination: '/dest' },
+      ],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/route-format', dest: '/dest' },
+      { src: '/rewrite-format', dest: '/dest' },
+    ]);
+  });
+
+  it('should normalize redirects with statusCode in routes array', () => {
+    const config = {
+      routes: [{ source: '/old', destination: '/new', statusCode: 301 }],
+    };
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/old', dest: '/new', redirect: true, status: 301 },
+    ]);
+  });
 });
 
 describe('compileVercelConfig', () => {
