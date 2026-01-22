@@ -292,16 +292,12 @@ function createServiceFromFramework(
   // Root services get '/', subdirectory services get '/${workspace}'
   const routePrefix = isRoot ? '/' : `/${workspace}`;
 
-  // The function path is where routing rules will direct traffic
-  const functionPath = `/_services/${name}`;
-
   return {
     name,
     type: 'web',
     workspace,
     framework,
     entrypoint: frameworkBuilderSrc,
-    functionPath,
     routePrefix,
     builder: {
       src: builderSrc,
@@ -344,9 +340,6 @@ function createServiceFromEntrypoint(
   // Root services get '/', subdirectory services get '/${workspace}'
   const routePrefix = isRoot ? '/' : `/${workspace}`;
 
-  // The function path is where routing rules will direct traffic
-  const functionPath = `/_services/${name}`;
-
   return {
     name,
     type: 'web',
@@ -354,7 +347,6 @@ function createServiceFromEntrypoint(
     runtime,
     framework,
     entrypoint: entrypointRelativeToWorkspace,
-    functionPath,
     routePrefix,
     builder: {
       // Use full path - runtime builders respect the src we pass
@@ -380,50 +372,39 @@ function generateServicesRoutes(services: ResolvedService[]): ServicesRoutes {
   const defaults: Route[] = [];
 
   // Sort by prefix length (longest first) so specific routes match before broad ones.
-  // Primary services (empty prefix "/") go last as the catch-all fallback.
+  // Root services ("/") go last as the catch-all fallback.
   const sortedServices = [...services].sort((a, b) => {
-    const prefixA = a.routePrefix || '';
-    const prefixB = b.routePrefix || '';
-    // Empty prefix (primary) should come last
-    if (prefixA === '' && prefixB !== '') return 1;
-    if (prefixB === '' && prefixA !== '') return -1;
+    // Root prefix should come last
+    if (a.routePrefix === '/') return 1;
+    if (b.routePrefix === '/') return -1;
     // Otherwise sort by length (longest first)
-    return prefixB.length - prefixA.length;
+    return b.routePrefix.length - a.routePrefix.length;
   });
 
   for (const service of sortedServices) {
-    const prefix = service.routePrefix || '';
-    // Use the explicit functionPath - this is set during service resolution
-    // and represents where the routing layer should direct traffic
-    const { functionPath } = service;
+    const { routePrefix } = service;
 
-    // Worker and Cron services have internal routes
+    // TODO: implement worker and cron routing next
     if (service.type === 'worker' || service.type === 'cron') {
-      // Add a direct route for the function path itself
-      rewrites.push({
-        src: `^${functionPath}(?:/.*)?$`,
-        dest: functionPath,
-        check: true,
-      });
       continue;
     }
 
     // Web services
-    if (prefix === '' || prefix === '/') {
-      // Primary service: catch-all route
+    if (routePrefix === '/') {
+      // Root service: catch-all route
       defaults.push({
         src: '^/(.*)$',
-        dest: functionPath,
+        dest: '/',
         check: true,
       });
     } else {
-      // Non-primary service: prefix-based rewrite
-      const normalizedPrefix = prefix.startsWith('/')
-        ? prefix.slice(1)
-        : prefix;
+      // Non-root service: prefix-based rewrite
+      const normalizedPrefix = routePrefix.startsWith('/')
+        ? routePrefix.slice(1)
+        : routePrefix;
       rewrites.push({
-        src: `^/${normalizedPrefix}(?:/(.*))?$`,
-        dest: functionPath,
+        src: `^/${normalizedPrefix}(?:/.*)?$`,
+        dest: routePrefix,
         check: true,
       });
     }

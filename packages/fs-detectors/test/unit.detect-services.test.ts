@@ -50,6 +50,12 @@ describe('detectServices', () => {
         entrypoint: 'main.py',
         runtime: 'python',
       });
+      expect(result.routes.defaults).toHaveLength(1);
+      expect(result.routes.defaults[0]).toMatchObject({
+        src: '^/(.*)$',
+        dest: '/',
+        check: true,
+      });
       expect(result.errors).toEqual([]);
     });
 
@@ -84,6 +90,7 @@ describe('detectServices', () => {
         workspace: '.',
         entrypoint: 'index.ts',
         runtime: 'node',
+        routePrefix: '/',
       });
 
       const backend = result.services.find(s => s.name === 'backend');
@@ -91,6 +98,13 @@ describe('detectServices', () => {
         workspace: 'backend',
         entrypoint: 'app.py',
         runtime: 'python',
+        routePrefix: '/backend',
+      });
+      expect(result.routes.rewrites).toHaveLength(1);
+      expect(result.routes.rewrites[0]).toMatchObject({
+        src: '^/backend(?:/.*)?$',
+        dest: '/backend',
+        check: true,
       });
     });
 

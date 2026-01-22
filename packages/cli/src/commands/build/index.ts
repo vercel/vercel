@@ -571,7 +571,6 @@ async function doBuild(
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...localConfig,
       projectSettings,
-      vercelConfig: localConfig,
       ignoreBuildScript: true,
       featHandleMiss: true,
       workPath,

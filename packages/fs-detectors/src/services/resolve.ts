@@ -1,3 +1,4 @@
+import { posix as posixPath } from 'path';
 import type {
   ResolvedService,
   ExperimentalServiceConfig,
@@ -109,9 +110,11 @@ export function resolveService(
 
   const routePrefix = config.routePrefix ?? '/';
 
-  // The function path is where routing rules will direct traffic.
-  // Use a consistent convention based on service name.
-  const functionPath = `/_services/${name}`;
+  // Ensure builder.src is fully qualified for non-root workspaces
+  const isRoot = workspace === '.';
+  if (!isRoot && !builderSrc.startsWith(workspace + '/')) {
+    builderSrc = posixPath.join(workspace, builderSrc);
+  }
 
   const builderConfig: Record<string, unknown> = {};
   if (config.memory) builderConfig.memory = config.memory;
@@ -125,7 +128,6 @@ export function resolveService(
     group,
     workspace,
     entrypoint: config.entrypoint,
-    functionPath,
     routePrefix,
     framework: config.framework,
     builder: {
