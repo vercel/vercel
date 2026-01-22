@@ -1,5 +1,15 @@
 # @vercel/backends
 
+## 0.0.23
+
+### Patch Changes
+
+- Add tracing for backends builder usage ([#14671](https://github.com/vercel/vercel/pull/14671))
+
+- Updated dependencies [[`6782a7a16c33dd56873a78a687f0ab4870466fc7`](https://github.com/vercel/vercel/commit/6782a7a16c33dd56873a78a687f0ab4870466fc7), [`31a5321f0914f09236d1100c962dfeb201885302`](https://github.com/vercel/vercel/commit/31a5321f0914f09236d1100c962dfeb201885302), [`8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4`](https://github.com/vercel/vercel/commit/8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4)]:
+  - @vercel/introspection@0.0.10
+  - @vercel/cervel@0.0.10
+
 ## 0.0.22
 
 ### Patch Changes
