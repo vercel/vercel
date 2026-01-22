@@ -82,7 +82,7 @@ describe('LocalFileSystemDetector', () => {
     const server = net.createServer();
 
     try {
-      await fs.mkdir(socketdir, { recursive: true });
+      fs.mkdir(socketdir, { recursive: true });
       await new Promise<void>(resolve => {
         server.listen(path.join(socketdir, 'socket'), () => resolve());
       });
