@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@vercel/backends": "workspace:*",
-    "@vercel/blob": "2.1.0-39df1d8-20260121161119",
+    "@vercel/blob": "2.1.0-06d6754-20260122183144",
     "@vercel/build-utils": "workspace:*",
     "@vercel/detect-agent": "workspace:*",
     "@vercel/elysia": "workspace:*",
