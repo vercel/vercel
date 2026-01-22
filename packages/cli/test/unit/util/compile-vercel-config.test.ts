@@ -226,7 +226,7 @@ describe('normalizeConfig', () => {
     ]);
   });
 
-  it('should normalize redirects with statusCode in routes array', () => {
+  it('should normalize redirects in routes array', () => {
     const config = {
       routes: [
         {
