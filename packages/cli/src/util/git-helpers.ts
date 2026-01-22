@@ -1,6 +1,7 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { normalize } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { errorToString } from '@vercel/error-utils';
 import output from '../output-manager';
 
@@ -68,7 +69,9 @@ export async function getGitRootDirectory(
     const { stdout } = await execAsync('git rev-parse --show-toplevel', {
       cwd,
     });
-    return normalize(stdout.trim());
+    // Use realpathSync to resolve Windows 8.3 short paths (e.g., RUNNER~1)
+    // to their canonical form for consistent path comparisons
+    return realpathSync(normalize(stdout.trim()));
   } catch (error) {
     output.debug(`Failed to get Git root directory: ${errorToString(error)}`);
     if (unsafe) {
