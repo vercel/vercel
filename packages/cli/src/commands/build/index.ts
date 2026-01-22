@@ -415,6 +415,9 @@ async function doBuild(
 ): Promise<void> {
   const { localConfigPath } = client;
 
+  // Regex pattern for validating deploymentId characters: alphanumeric, hyphen, underscore
+  const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
@@ -967,8 +970,7 @@ async function doBuild(
         });
       }
       // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
-      const validCharacterPattern = /^[a-zA-Z0-9_-]+$/;
-      if (!validCharacterPattern.test(deploymentId)) {
+      if (!VALID_DEPLOYMENT_ID_PATTERN.test(deploymentId)) {
         throw new NowBuildError({
           code: 'INVALID_DEPLOYMENT_ID',
           message: `The deploymentId "${deploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
