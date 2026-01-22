@@ -9,7 +9,7 @@ import {
   delSubcommand,
   listSubcommand,
   putSubcommand,
-  getSubcommand,
+  getSubcommand as getBlobGetSubcommand,
   copySubcommand,
   storeSubcommand,
 } from './command';
@@ -28,7 +28,7 @@ import { getBlobRWToken } from '../../util/blob/token';
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   put: getCommandAliases(putSubcommand),
-  get: getCommandAliases(getSubcommand),
+  get: getCommandAliases(getBlobGetSubcommand),
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
   store: getCommandAliases(storeSubcommand),
@@ -109,7 +109,7 @@ export default async function main(client: Client) {
     case 'get':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
-        printHelp(getSubcommand);
+        printHelp(getBlobGetSubcommand);
         return 2;
       }
 
