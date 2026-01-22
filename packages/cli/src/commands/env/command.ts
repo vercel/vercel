@@ -46,6 +46,40 @@ export const addSubcommand = {
   ],
   options: [
     {
+      name: 'target',
+      shorthand: null,
+      type: [String],
+      argument: 'TARGET',
+      deprecated: false,
+    },
+    {
+      name: 'git-branch',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+    {
+      name: 'value',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
+      deprecated: false,
+    },
+    {
+      name: 'value-file',
+      shorthand: null,
+      type: String,
+      argument: 'FILE',
+      deprecated: false,
+    },
+    {
+      name: 'value-stdin',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
       name: 'sensitive',
       description: 'Add a sensitive Environment Variable',
       shorthand: null,
@@ -56,6 +90,12 @@ export const addSubcommand = {
       ...forceOption,
       description: 'Force overwrites when a command would normally fail',
       shorthand: null,
+    },
+    {
+      name: 'replace',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
     },
     {
       name: 'guidance',
