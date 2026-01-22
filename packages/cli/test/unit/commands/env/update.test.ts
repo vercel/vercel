@@ -98,4 +98,114 @@ describe('env update', () => {
     const exitCode = await updatePromise;
     expect(exitCode).toBe(0);
   });
+
+  describe('validation warnings', () => {
+    it('warns for empty value and allows continue', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Value is empty');
+      await expect(client.stderr).toOutput('How to proceed?');
+      client.stdin.write('\n'); // Select Continue (first option)
+      // Since we chose Continue with confirmation-level warning, skip "Are you sure?"
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
+
+    it('allows re-entering value when warned', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('"quoted"\n');
+      await expect(client.stderr).toOutput('includes surrounding quotes');
+      await expect(client.stderr).toOutput('How to proceed?');
+      // Select Re-enter (second option)
+      client.stdin.write('\x1B[B\n'); // Arrow down then enter
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('clean-value\n');
+      await expect(client.stderr).toOutput('Are you sure?');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
+
+    it('offers trim option for whitespace warnings', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write(' spaced \n');
+      await expect(client.stderr).toOutput('starts and ends with whitespace');
+      await expect(client.stderr).toOutput('How to proceed?');
+      // Select Trim (third option)
+      client.stdin.write('\x1B[B\x1B[B\n'); // Arrow down twice then enter
+      await expect(client.stderr).toOutput('Trimmed whitespace');
+      await expect(client.stderr).toOutput('Are you sure?');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
+
+    it('--yes skips empty value confirmation', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR', '--yes');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Value is empty');
+      // Should NOT prompt for confirmation with --yes
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
+
+    it('--yes skips quoted value confirmation', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR', '--yes');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('"quoted-value"\n');
+      await expect(client.stderr).toOutput('includes surrounding quotes');
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
+
+    it('re-validates trimmed value when it becomes empty', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'update', 'TEST_VAR');
+      const updatePromise = env(client);
+
+      await expect(client.stderr).toOutput("What's the new value of TEST_VAR?");
+      client.stdin.write('   \n'); // Whitespace only
+      await expect(client.stderr).toOutput('starts and ends with whitespace');
+      await expect(client.stderr).toOutput('How to proceed?');
+      client.stdin.write('\x1B[B\x1B[B\n'); // Select Trim (third option)
+      await expect(client.stderr).toOutput('Trimmed whitespace');
+      // After trimming, value becomes empty - should show empty warning
+      await expect(client.stderr).toOutput('Value is empty');
+      await expect(client.stderr).toOutput('How to proceed?');
+      client.stdin.write('\n'); // Leave as is
+      await expect(client.stderr).toOutput('Updated Environment Variable');
+      const exitCode = await updatePromise;
+      expect(exitCode).toBe(0);
+    });
+  });
 });

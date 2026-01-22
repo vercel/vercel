@@ -1795,9 +1795,10 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Options:
 
-   --force      Force overwrites when a command would normally fail                                                      
-   --guidance   Receive command suggestions once command is complete                                                     
-   --sensitive  Add a sensitive Environment Variable                                                                     
+       --force      Force overwrites when a command would normally fail                                                      
+       --guidance   Receive command suggestions once command is complete                                                     
+       --sensitive  Add a sensitive Environment Variable                                                                     
+  -y,  --yes        Skip the confirmation prompt when adding an Environment Variable                                         
 
 
   Global Options:
