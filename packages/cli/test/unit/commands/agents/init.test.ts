@@ -85,14 +85,27 @@ describe('vercel agents init', () => {
       ).toBe(true);
     });
 
-    it('should not overwrite existing files without force flag', async () => {
+    it('should preserve custom content and update Vercel section', async () => {
       const { generateAgentFiles } = await import(
         '../../../../src/util/agent-files'
       );
 
-      // Create existing file
+      // Create existing file with custom content and Vercel markers
       const agentsPath = join(tempDir, 'AGENTS.md');
-      await fs.writeFile(agentsPath, 'existing content');
+      await fs.writeFile(
+        agentsPath,
+        `# My Custom Header
+
+Some custom instructions here.
+
+<!-- VERCEL DEPLOYMENT GUIDE START -->
+old vercel content
+<!-- VERCEL DEPLOYMENT GUIDE END -->
+
+## My Custom Footer
+More custom stuff.
+`
+      );
 
       const result = await generateAgentFiles({
         cwd: tempDir,
@@ -100,21 +113,27 @@ describe('vercel agents init', () => {
         projectName: 'test-project',
       });
 
-      expect(result.status).toBe('exists');
+      expect(result.status).toBe('generated');
 
-      // Verify file was not overwritten
+      // Verify custom content was preserved
       const content = await fs.readFile(agentsPath, 'utf-8');
-      expect(content).toBe('existing content');
+      expect(content).toContain('# My Custom Header');
+      expect(content).toContain('Some custom instructions here.');
+      expect(content).toContain('## My Custom Footer');
+      expect(content).toContain('More custom stuff.');
+      // Verify Vercel content was updated
+      expect(content).toContain('Vercel Deployment Guide');
+      expect(content).not.toContain('old vercel content');
     });
 
-    it('should overwrite existing files with force flag', async () => {
+    it('should overwrite entire file with force flag', async () => {
       const { generateAgentFiles } = await import(
         '../../../../src/util/agent-files'
       );
 
       // Create existing file
       const agentsPath = join(tempDir, 'AGENTS.md');
-      await fs.writeFile(agentsPath, 'existing content');
+      await fs.writeFile(agentsPath, 'custom content to be removed');
 
       const result = await generateAgentFiles({
         cwd: tempDir,
@@ -128,6 +147,7 @@ describe('vercel agents init', () => {
       // Verify file was overwritten
       const content = await fs.readFile(agentsPath, 'utf-8');
       expect(content).toContain('Vercel Deployment Guide');
+      expect(content).not.toContain('custom content to be removed');
     });
 
     it('should respect VERCEL_AGENT_FILES_DISABLED env var', async () => {
@@ -169,7 +189,8 @@ describe('vercel agents init', () => {
       expect(result.framework).toBe('nextjs');
 
       const content = await fs.readFile(join(tempDir, 'AGENTS.md'), 'utf-8');
-      expect(content).toContain('Next.js on Vercel');
+      expect(content).toContain('## Next.js');
+      expect(content).toContain('Framework: nextjs');
     });
 
     it('should include vercel.json config in output', async () => {

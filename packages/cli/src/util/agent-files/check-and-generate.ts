@@ -20,6 +20,9 @@ import {
   renderCopilotContent,
 } from './templates';
 
+const VERCEL_SECTION_START = '<!-- VERCEL DEPLOYMENT GUIDE START -->';
+const VERCEL_SECTION_END = '<!-- VERCEL DEPLOYMENT GUIDE END -->';
+
 /**
  * Check if agent file generation is disabled
  */
@@ -135,6 +138,78 @@ function renderContent(format: AgentFileFormat, ctx: ProjectContext): string {
 }
 
 /**
+ * Read existing file and extract custom content outside Vercel section
+ */
+async function readExistingContent(filePath: string): Promise<{
+  before: string;
+  after: string;
+} | null> {
+  try {
+    if (!existsSync(filePath)) {
+      return null;
+    }
+
+    const content = await readFile(filePath, 'utf-8');
+
+    // Check if file has our markers
+    const startIndex = content.indexOf(VERCEL_SECTION_START);
+    const endIndex = content.indexOf(VERCEL_SECTION_END);
+
+    if (startIndex === -1 || endIndex === -1) {
+      // No markers found - preserve entire existing content as "before"
+      return { before: content.trim(), after: '' };
+    }
+
+    // Extract content before and after our section
+    const before = content.substring(0, startIndex).trim();
+    const after = content
+      .substring(endIndex + VERCEL_SECTION_END.length)
+      .trim();
+
+    return { before, after };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Wrap Vercel content with markers for incremental updates
+ */
+function wrapWithMarkers(content: string): string {
+  return `${VERCEL_SECTION_START}\n${content}\n${VERCEL_SECTION_END}`;
+}
+
+/**
+ * Merge existing content with new Vercel content
+ */
+function mergeContent(
+  existing: { before: string; after: string } | null,
+  vercelContent: string
+): string {
+  const wrappedContent = wrapWithMarkers(vercelContent);
+
+  if (!existing) {
+    return wrappedContent;
+  }
+
+  const parts: string[] = [];
+
+  if (existing.before) {
+    parts.push(existing.before);
+    parts.push('');
+  }
+
+  parts.push(wrappedContent);
+
+  if (existing.after) {
+    parts.push('');
+    parts.push(existing.after);
+  }
+
+  return parts.join('\n');
+}
+
+/**
  * Generate agent configuration files
  */
 export async function generateAgentFiles(
@@ -175,21 +250,31 @@ export async function generateAgentFiles(
   for (const format of formats) {
     const formatConfig = getFormatConfig(format);
     const filePath = formatConfig.filePath(cwd);
+    const fileExists = existsSync(filePath);
 
-    // Check if file exists
-    if (existsSync(filePath) && !force) {
-      // Skip silently
+    // Read existing content to preserve custom sections
+    const existingContent = await readExistingContent(filePath);
+
+    // If file exists without our markers and no force flag, skip
+    // (unless it has our markers, then we update the Vercel section only)
+    if (fileExists && !force && !existingContent) {
       continue;
     }
 
-    // Render content
-    const content = renderContent(format, ctx);
+    // Render new Vercel content
+    const vercelContent = renderContent(format, ctx);
+
+    // Merge with existing content (preserves custom content)
+    const finalContent = mergeContent(
+      force ? null : existingContent,
+      vercelContent
+    );
 
     if (dryRun) {
       generatedFiles.push({
         path: filePath,
         format,
-        content,
+        content: finalContent,
       });
       anyGenerated = true;
       continue;
@@ -203,7 +288,7 @@ export async function generateAgentFiles(
 
     // Write file
     try {
-      await writeFile(filePath, content, 'utf-8');
+      await writeFile(filePath, finalContent, 'utf-8');
       generatedFiles.push({
         path: filePath,
         format,

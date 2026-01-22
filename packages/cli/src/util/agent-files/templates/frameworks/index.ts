@@ -2,35 +2,31 @@ import { renderNextjsSection } from './nextjs';
 import { renderGenericFrameworkSection } from './generic';
 
 const NEXTJS_FRAMEWORKS = ['nextjs', 'blitzjs'];
-const REMIX_FRAMEWORKS = ['remix', 'react-router'];
-const ASTRO_FRAMEWORKS = ['astro'];
-const SVELTEKIT_FRAMEWORKS = ['sveltekit', 'sveltekit-1'];
-const NUXT_FRAMEWORKS = ['nuxtjs'];
 
 export function renderFrameworkSection(framework: string | null): string {
   if (!framework) {
     return renderGenericFrameworkSection();
   }
 
-  const normalizedFramework = framework.toLowerCase();
+  const normalized = framework.toLowerCase();
 
-  if (NEXTJS_FRAMEWORKS.includes(normalizedFramework)) {
+  if (NEXTJS_FRAMEWORKS.includes(normalized)) {
     return renderNextjsSection();
   }
 
-  if (REMIX_FRAMEWORKS.includes(normalizedFramework)) {
+  if (normalized.includes('remix') || normalized.includes('react-router')) {
     return renderRemixSection();
   }
 
-  if (ASTRO_FRAMEWORKS.includes(normalizedFramework)) {
+  if (normalized.includes('astro')) {
     return renderAstroSection();
   }
 
-  if (SVELTEKIT_FRAMEWORKS.includes(normalizedFramework)) {
+  if (normalized.includes('svelte')) {
     return renderSvelteKitSection();
   }
 
-  if (NUXT_FRAMEWORKS.includes(normalizedFramework)) {
+  if (normalized.includes('nuxt')) {
     return renderNuxtSection();
   }
 
@@ -38,170 +34,59 @@ export function renderFrameworkSection(framework: string | null): string {
 }
 
 function renderRemixSection(): string {
-  return `## Remix on Vercel
+  return `## Remix
 
-### Route Structure
-Remix uses file-based routing in \`app/routes/\`:
+**Routes:** \`app/routes/\` (file-based routing)
 
-\`\`\`
-app/
-├── routes/
-│   ├── _index.tsx        # / route
-│   ├── about.tsx         # /about route
-│   └── blog.$slug.tsx    # /blog/:slug route
-└── root.tsx
-\`\`\`
-
-### Loaders and Actions
-
+**Loader/Action:**
 \`\`\`typescript
-// app/routes/posts.tsx
-import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
-
 export async function loader({ request }: LoaderFunctionArgs) {
-  const posts = await getPosts();
-  return json({ posts });
+  return json({ data: await getData() });
 }
-
 export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  // Handle form submission
+  const form = await request.formData();
   return json({ success: true });
 }
-\`\`\`
-
-### Edge Runtime
-Enable edge runtime for specific routes:
-
-\`\`\`typescript
-export const config = { runtime: 'edge' };
 \`\`\`
 
 `;
 }
 
 function renderAstroSection(): string {
-  return `## Astro on Vercel
+  return `## Astro
 
-### SSR Configuration
-Enable SSR with the Vercel adapter:
-
+**SSR Config:** \`astro.config.mjs\`
 \`\`\`javascript
-// astro.config.mjs
-import { defineConfig } from 'astro/config';
 import vercel from '@astrojs/vercel/serverless';
-
-export default defineConfig({
-  output: 'server', // or 'hybrid'
-  adapter: vercel(),
-});
+export default defineConfig({ output: 'server', adapter: vercel() });
 \`\`\`
 
-### API Routes
-Create API endpoints in \`src/pages/api/\`:
-
-\`\`\`typescript
-// src/pages/api/hello.ts
-import type { APIRoute } from 'astro';
-
-export const GET: APIRoute = async ({ request }) => {
-  return new Response(JSON.stringify({ message: 'Hello!' }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-};
-\`\`\`
-
-### Edge Functions
-
-\`\`\`javascript
-// astro.config.mjs
-export default defineConfig({
-  adapter: vercel({
-    edgeMiddleware: true,
-  }),
-});
-\`\`\`
+**API Routes:** \`src/pages/api/*.ts\`
 
 `;
 }
 
 function renderSvelteKitSection(): string {
-  return `## SvelteKit on Vercel
+  return `## SvelteKit
 
-### Adapter Configuration
-
+**Adapter:** \`svelte.config.js\`
 \`\`\`javascript
-// svelte.config.js
 import adapter from '@sveltejs/adapter-vercel';
-
-export default {
-  kit: {
-    adapter: adapter({
-      runtime: 'nodejs20.x', // or 'edge'
-    }),
-  },
-};
+export default { kit: { adapter: adapter() } };
 \`\`\`
 
-### Load Functions
-
-\`\`\`typescript
-// src/routes/+page.server.ts
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async ({ params }) => {
-  return {
-    posts: await getPosts(),
-  };
-};
-\`\`\`
-
-### Form Actions
-
-\`\`\`typescript
-// src/routes/+page.server.ts
-import type { Actions } from './$types';
-
-export const actions: Actions = {
-  default: async ({ request }) => {
-    const data = await request.formData();
-    // Handle form submission
-  },
-};
-\`\`\`
+**Load Functions:** \`+page.server.ts\`
 
 `;
 }
 
 function renderNuxtSection(): string {
-  return `## Nuxt on Vercel
+  return `## Nuxt
 
-### Deployment
-Nuxt 3 works out of the box with Vercel. The \`nuxt build\` command automatically detects Vercel.
-
-### Server Routes
-Create API routes in \`server/api/\`:
-
+Auto-detected by Vercel. Server routes in \`server/api/\`.
 \`\`\`typescript
 // server/api/hello.ts
-export default defineEventHandler((event) => {
-  return { message: 'Hello World' };
-});
-\`\`\`
-
-### Route Rules
-Configure caching and rendering per-route:
-
-\`\`\`typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  routeRules: {
-    '/': { prerender: true },
-    '/api/**': { cors: true },
-    '/admin/**': { ssr: false },
-  },
-});
+export default defineEventHandler(() => ({ message: 'Hello' }));
 \`\`\`
 
 `;
