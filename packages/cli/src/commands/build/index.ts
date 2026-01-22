@@ -962,13 +962,6 @@ async function doBuild(
       typeof existingConfig.deploymentId === 'string'
     ) {
       const deploymentId = existingConfig.deploymentId;
-      if (deploymentId.startsWith('dpl_')) {
-        throw new NowBuildError({
-          code: 'INVALID_DEPLOYMENT_ID',
-          message: `The deploymentId "${deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-        });
-      }
       if (deploymentId.length > 32) {
         throw new NowBuildError({
           code: 'INVALID_DEPLOYMENT_ID',
@@ -1033,13 +1026,6 @@ async function doBuild(
 
   // Validate merged deploymentId if present (from build results)
   if (mergedDeploymentId) {
-    if (mergedDeploymentId.startsWith('dpl_')) {
-      throw new NowBuildError({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: `The deploymentId "${mergedDeploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-        link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-      });
-    }
     if (mergedDeploymentId.length > 32) {
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
@@ -1225,7 +1211,7 @@ async function mergeDeploymentId(
       return result.deploymentId;
     }
   }
-  // For prebuilt Next.js deployments, try reading from routes-manifest.json
+  // For Next.js builds, try reading from routes-manifest.json
   // where Next.js writes the deploymentId during build
   try {
     const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');

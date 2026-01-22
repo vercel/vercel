@@ -1765,62 +1765,6 @@ describe.skipIf(flakey)('build', () => {
       );
     });
 
-    it('should reject deploymentId with dpl_ prefix in config.json', async () => {
-      const cwd = fixture('static');
-      const output = join(cwd, '.vercel/output');
-
-      // Create a build script that creates config.json with invalid deploymentId
-      // This simulates a builder using Build Output API that creates an invalid config.json
-      const buildScript = join(cwd, 'build.mjs');
-      await fs.writeFile(
-        buildScript,
-        `import fs from 'fs';
-import { join } from 'path';
-
-const outputDir = join(process.cwd(), '.vercel', 'output');
-fs.mkdirSync(outputDir, { recursive: true });
-fs.writeFileSync(
-  join(outputDir, 'config.json'),
-  JSON.stringify({
-    version: 3,
-    deploymentId: 'dpl_invalid123',
-  }, null, 2)
-);
-`
-      );
-
-      // Create package.json with build script
-      await fs.writeJSON(join(cwd, 'package.json'), {
-        scripts: {
-          build: 'node build.mjs',
-        },
-      });
-
-      // Create vercel.json to use the build script
-      await fs.writeJSON(join(cwd, 'vercel.json'), {
-        builds: [
-          {
-            src: 'package.json',
-            use: '@vercel/static-build',
-          },
-        ],
-      });
-
-      client.cwd = cwd;
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(1);
-
-      await expect(client.stderr).toOutput(
-        'cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
-      );
-
-      const builds = await fs.readJSON(join(output, 'builds.json'));
-      expect(builds.error).toMatchObject({
-        code: 'INVALID_DEPLOYMENT_ID',
-        message: expect.stringContaining('cannot start with the "dpl_" prefix'),
-      });
-    });
-
     it('should allow deploymentId without dpl_ prefix in config.json', async () => {
       const cwd = fixture('static');
 
