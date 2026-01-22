@@ -415,9 +415,6 @@ async function doBuild(
 ): Promise<void> {
   const { localConfigPath } = client;
 
-  // Regex pattern for validating deploymentId characters: alphanumeric, hyphen, underscore
-  const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
@@ -962,13 +959,6 @@ async function doBuild(
       typeof existingConfig.deploymentId === 'string'
     ) {
       const deploymentId = existingConfig.deploymentId;
-      if (deploymentId.startsWith('dpl_')) {
-        throw new NowBuildError({
-          code: 'INVALID_DEPLOYMENT_ID',
-          message: `The deploymentId "${deploymentId}" cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config.`,
-          link: 'https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id',
-        });
-      }
       if (deploymentId.length > 32) {
         throw new NowBuildError({
           code: 'INVALID_DEPLOYMENT_ID',
@@ -1049,12 +1039,8 @@ async function doBuild(
       });
     }
     // Validate character set: only base62 (a-z, A-Z, 0-9) plus hyphen and underscore
-<<<<<<< HEAD
-    if (!VALID_DEPLOYMENT_ID_PATTERN.test(mergedDeploymentId)) {
-=======
     const validCharacterPattern = /^[a-zA-Z0-9_-]+$/;
     if (!validCharacterPattern.test(mergedDeploymentId)) {
->>>>>>> 7af572743 (update validation)
       throw new NowBuildError({
         code: 'INVALID_DEPLOYMENT_ID',
         message: `The deploymentId "${mergedDeploymentId}" contains invalid characters. Only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), and underscores (_) are allowed.`,
@@ -1231,7 +1217,7 @@ async function mergeDeploymentId(
       return result.deploymentId;
     }
   }
-  // For prebuilt Next.js deployments, try reading from routes-manifest.json
+  // For Next.js builds, try reading from routes-manifest.json
   // where Next.js writes the deploymentId during build
   try {
     const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');
