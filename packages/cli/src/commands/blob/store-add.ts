@@ -40,14 +40,23 @@ export default async function addStore(
   } = parsedArgs;
 
   const region = flags['--region'] || 'iad1';
-  const access = flags['--access'] || 'public';
+  const accessFlag = flags['--access'];
 
-  if (!isAccess(access)) {
+  if (!accessFlag) {
     output.error(
-      `Invalid access level: ${access}. Must be either 'private' or 'public'`
+      `Missing access level. Must specify --access with either 'private' or 'public'`
     );
     return 1;
   }
+
+  if (!isAccess(accessFlag)) {
+    output.error(
+      `Invalid access level: ${accessFlag}. Must be either 'private' or 'public'`
+    );
+    return 1;
+  }
+
+  const access = accessFlag;
 
   let name = nameArg;
   if (!name) {

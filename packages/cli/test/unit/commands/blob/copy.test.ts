@@ -37,11 +37,18 @@ describe('blob copy', () => {
 
   describe('successful copy', () => {
     it('should copy blob successfully and track telemetry', async () => {
-      client.setArgv('blob', 'copy', 'source.txt', 'dest.txt');
+      client.setArgv(
+        'blob',
+        'copy',
+        '--access',
+        'public',
+        'source.txt',
+        'dest.txt'
+      );
 
       const exitCode = await copy(
         client,
-        ['source.txt', 'dest.txt'],
+        ['--access', 'public', 'source.txt', 'dest.txt'],
         testToken
       );
 
@@ -68,6 +75,10 @@ describe('blob copy', () => {
           key: 'argument:toPathname',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -80,6 +91,8 @@ describe('blob copy', () => {
         'image/png',
         '--cache-control-max-age',
         '86400',
+        '--access',
+        'public',
         'source.png',
         'dest.png'
       );
@@ -92,6 +105,8 @@ describe('blob copy', () => {
           'image/png',
           '--cache-control-max-age',
           '86400',
+          '--access',
+          'public',
           'source.png',
           'dest.png',
         ],
@@ -128,14 +143,29 @@ describe('blob copy', () => {
           key: 'option:cache-control-max-age',
           value: '86400',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
     it('should handle URL as source', async () => {
       const sourceUrl = 'https://example.com/source.txt';
-      client.setArgv('blob', 'copy', sourceUrl, 'dest.txt');
+      client.setArgv(
+        'blob',
+        'copy',
+        '--access',
+        'public',
+        sourceUrl,
+        'dest.txt'
+      );
 
-      const exitCode = await copy(client, [sourceUrl, 'dest.txt'], testToken);
+      const exitCode = await copy(
+        client,
+        ['--access', 'public', sourceUrl, 'dest.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.copy).toHaveBeenCalledWith(sourceUrl, 'dest.txt', {
@@ -149,11 +179,18 @@ describe('blob copy', () => {
 
     it('should use provided token directly', async () => {
       const customToken = 'vercel_blob_rw_custom_456';
-      client.setArgv('blob', 'copy', 'source.txt', 'dest.txt');
+      client.setArgv(
+        'blob',
+        'copy',
+        '--access',
+        'public',
+        'source.txt',
+        'dest.txt'
+      );
 
       const exitCode = await copy(
         client,
-        ['source.txt', 'dest.txt'],
+        ['--access', 'public', 'source.txt', 'dest.txt'],
         customToken
       );
 
@@ -187,7 +224,7 @@ describe('blob copy', () => {
 
       const exitCode = await copy(
         client,
-        ['source.txt', 'dest.txt'],
+        ['--access', 'public', 'source.txt', 'dest.txt'],
         testToken
       );
 
@@ -198,14 +235,18 @@ describe('blob copy', () => {
     });
 
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await copy(client, [], testToken);
+      const exitCode = await copy(client, ['--access', 'public'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
 
     it('should return 1 when only one argument is provided', async () => {
-      const exitCode = await copy(client, ['source.txt'], testToken);
+      const exitCode = await copy(
+        client,
+        ['--access', 'public', 'source.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -214,11 +255,22 @@ describe('blob copy', () => {
 
   describe('telemetry tracking', () => {
     it('should not track optional flags when not provided', async () => {
-      client.setArgv('blob', 'copy', 'source.txt', 'dest.txt');
+      client.setArgv(
+        'blob',
+        'copy',
+        '--access',
+        'public',
+        'source.txt',
+        'dest.txt'
+      );
 
-      await copy(client, ['source.txt', 'dest.txt'], testToken);
+      await copy(
+        client,
+        ['--access', 'public', 'source.txt', 'dest.txt'],
+        testToken
+      );
 
-      // Should only have argument events, no flag or option events
+      // Should only have argument events and access, no flag or content-type events
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
         {
           key: 'flag:add-random-suffix',
@@ -239,13 +291,22 @@ describe('blob copy', () => {
         'copy',
         '--content-type',
         'application/json',
+        '--access',
+        'public',
         'source.json',
         'dest.json'
       );
 
       await copy(
         client,
-        ['--content-type', 'application/json', 'source.json', 'dest.json'],
+        [
+          '--content-type',
+          'application/json',
+          '--access',
+          'public',
+          'source.json',
+          'dest.json',
+        ],
         testToken
       );
 
@@ -262,6 +323,10 @@ describe('blob copy', () => {
           key: 'option:content-type',
           value: 'application/json',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -271,13 +336,22 @@ describe('blob copy', () => {
         'copy',
         '--cache-control-max-age',
         '3600',
+        '--access',
+        'public',
         'source.txt',
         'dest.txt'
       );
 
       await copy(
         client,
-        ['--cache-control-max-age', '3600', 'source.txt', 'dest.txt'],
+        [
+          '--cache-control-max-age',
+          '3600',
+          '--access',
+          'public',
+          'source.txt',
+          'dest.txt',
+        ],
         testToken
       );
 
@@ -293,6 +367,10 @@ describe('blob copy', () => {
         {
           key: 'option:cache-control-max-age',
           value: '3600',
+        },
+        {
+          key: 'option:access',
+          value: 'public',
         },
       ]);
     });
@@ -334,7 +412,7 @@ describe('blob copy', () => {
     it('should handle addRandomSuffix flag correctly when false', async () => {
       const exitCode = await copy(
         client,
-        ['source.txt', 'dest.txt'],
+        ['--access', 'public', 'source.txt', 'dest.txt'],
         testToken
       );
 
@@ -351,7 +429,7 @@ describe('blob copy', () => {
     it('should handle addRandomSuffix flag correctly when true', async () => {
       const exitCode = await copy(
         client,
-        ['--add-random-suffix', 'source.txt', 'dest.txt'],
+        ['--add-random-suffix', '--access', 'public', 'source.txt', 'dest.txt'],
         testToken
       );
 
@@ -398,6 +476,34 @@ describe('blob copy', () => {
         cacheControlMaxAge: undefined,
       });
     });
+
+    it('should return 1 when --access has invalid value', async () => {
+      const exitCode = await copy(
+        client,
+        ['--access', 'invalid', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Invalid access level: invalid. Must be either 'private' or 'public'"
+      );
+      expect(mockedBlob.copy).not.toHaveBeenCalled();
+    });
+
+    it('should return 1 when --access is not provided', async () => {
+      const exitCode = await copy(
+        client,
+        ['source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Missing access level. Must specify --access with either 'private' or 'public'"
+      );
+      expect(mockedBlob.copy).not.toHaveBeenCalled();
+    });
   });
 
   describe('token handling', () => {
@@ -409,7 +515,11 @@ describe('blob copy', () => {
       ];
 
       for (const token of tokenFormats) {
-        const exitCode = await copy(client, ['source.txt', 'dest.txt'], token);
+        const exitCode = await copy(
+          client,
+          ['--access', 'public', 'source.txt', 'dest.txt'],
+          token
+        );
 
         expect(exitCode).toBe(0);
         expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
@@ -423,7 +533,11 @@ describe('blob copy', () => {
     });
 
     it('should handle empty token', async () => {
-      const exitCode = await copy(client, ['source.txt', 'dest.txt'], '');
+      const exitCode = await copy(
+        client,
+        ['--access', 'public', 'source.txt', 'dest.txt'],
+        ''
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
@@ -447,7 +561,11 @@ describe('blob copy', () => {
       ];
 
       for (const filename of specialFiles) {
-        const exitCode = await copy(client, [filename, 'dest.txt'], testToken);
+        const exitCode = await copy(
+          client,
+          ['--access', 'public', filename, 'dest.txt'],
+          testToken
+        );
         expect(exitCode).toBe(0);
         expect(mockedBlob.copy).toHaveBeenCalledWith(
           filename,
@@ -466,7 +584,11 @@ describe('blob copy', () => {
       ];
 
       for (const dest of destinations) {
-        const exitCode = await copy(client, ['source.txt', dest], testToken);
+        const exitCode = await copy(
+          client,
+          ['--access', 'public', 'source.txt', dest],
+          testToken
+        );
         expect(exitCode).toBe(0);
         expect(mockedBlob.copy).toHaveBeenCalledWith(
           'source.txt',
@@ -485,6 +607,8 @@ describe('blob copy', () => {
           'application/pdf',
           '--cache-control-max-age',
           '7200',
+          '--access',
+          'public',
           'document.pdf',
           'backup/document-copy.pdf',
         ],
@@ -524,6 +648,10 @@ describe('blob copy', () => {
         {
           key: 'option:cache-control-max-age',
           value: '7200',
+        },
+        {
+          key: 'option:access',
+          value: 'public',
         },
       ]);
     });

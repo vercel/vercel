@@ -51,14 +51,21 @@ export default async function put(
     '--access': accessFlag,
   } = flags;
 
-  const access = accessFlag || 'public';
-
-  if (!isAccess(access)) {
+  if (!accessFlag) {
     output.error(
-      `Invalid access level: ${access}. Must be either 'private' or 'public'`
+      `Missing access level. Must specify --access with either 'private' or 'public'`
     );
     return 1;
   }
+
+  if (!isAccess(accessFlag)) {
+    output.error(
+      `Invalid access level: ${accessFlag}. Must be either 'private' or 'public'`
+    );
+    return 1;
+  }
+
+  const access = accessFlag;
 
   // Only track file path if one was provided
   if (filePath) {
