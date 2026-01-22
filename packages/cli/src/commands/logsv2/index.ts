@@ -8,12 +8,13 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
-import { ProjectNotFound } from '../../util/errors-ts';
 import {
-  fetchAllRequestLogs,
-  resolveDeploymentId,
-  type RequestLogEntry,
-} from '../../util/logs-v2';
+  DeploymentNotFound,
+  InvalidDeploymentId,
+  ProjectNotFound,
+} from '../../util/errors-ts';
+import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
+import getDeployment from '../../util/get-deployment';
 import { getCommandName } from '../../util/pkg-name';
 import { Logsv2TelemetryClient } from '../../util/telemetry/commands/logsv2';
 import { help } from '../help';
@@ -137,8 +138,26 @@ export default async function logsv2(client: Client) {
   let deploymentId: string | undefined;
   if (deploymentOption) {
     output.spinner(`Resolving deployment "${deploymentOption}"`, 1000);
-    deploymentId = await resolveDeploymentId(client, deploymentOption);
-    output.stopSpinner();
+    try {
+      const deployment = await getDeployment(
+        client,
+        contextName!,
+        deploymentOption
+      );
+      deploymentId = deployment.id;
+      output.stopSpinner();
+    } catch (err) {
+      output.stopSpinner();
+      if (err instanceof DeploymentNotFound) {
+        output.error(`Deployment not found: ${deploymentOption}`);
+        return 1;
+      }
+      if (err instanceof InvalidDeploymentId) {
+        output.error(`Invalid deployment ID: ${deploymentOption}`);
+        return 1;
+      }
+      throw err;
+    }
   }
 
   if (

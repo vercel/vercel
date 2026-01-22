@@ -169,31 +169,3 @@ export async function* fetchAllRequestLogs(
     page++;
   }
 }
-
-export async function resolveDeploymentId(
-  client: Client,
-  deploymentIdOrUrl: string
-): Promise<string> {
-  if (
-    deploymentIdOrUrl.startsWith('dpl_') ||
-    !deploymentIdOrUrl.includes('.')
-  ) {
-    return deploymentIdOrUrl;
-  }
-
-  try {
-    const url = new URL(
-      deploymentIdOrUrl.startsWith('http')
-        ? deploymentIdOrUrl
-        : `https://${deploymentIdOrUrl}`
-    );
-    const hostname = url.hostname;
-
-    const deployment = await client.fetch<{ id: string }>(
-      `/v13/deployments/get?url=${encodeURIComponent(hostname)}`
-    );
-    return deployment.id;
-  } catch {
-    return deploymentIdOrUrl;
-  }
-}

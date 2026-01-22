@@ -3,6 +3,7 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
+import { useDeployment } from '../../../mocks/deployment';
 import logsv2 from '../../../../src/commands/logsv2';
 import { join } from 'path';
 import type { RequestLogEntry } from '../../../../src/util/logs-v2';
@@ -571,28 +572,33 @@ describe('logsv2', () => {
     });
 
     it('should filter by deployment ID', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
       let receivedDeploymentId: string | undefined;
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         receivedDeploymentId = req.query.deploymentId as string;
         res.json({
-          rows: [createMockLog({ deploymentId: 'dpl_specific123' })],
+          rows: [createMockLog({ deploymentId: deployment.id })],
           hasMoreRows: false,
         });
       });
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logsv2', '--deployment', 'dpl_specific123');
+      client.setArgv('logsv2', '--deployment', deployment.id);
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
-      expect(receivedDeploymentId).toEqual('dpl_specific123');
+      expect(receivedDeploymentId).toEqual(deployment.id);
     });
 
     it('should track telemetry for --deployment option', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
       useRequestLogs([]);
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logsv2', '--deployment', 'dpl_abc123');
+      client.setArgv('logsv2', '--deployment', deployment.id);
       await logsv2(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
