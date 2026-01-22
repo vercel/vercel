@@ -26,7 +26,9 @@ export default async function agents(client: Client) {
   const flagsSpecification = getFlagsSpecification(agentsCommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (err) {
     printError(err);
     return 1;
