@@ -365,7 +365,7 @@ export default async function main(client: Client): Promise<number> {
       const { autoGenerateAgentFiles } = await import('../../util/agent-files');
       const agentResult = await autoGenerateAgentFiles(
         cwd,
-        project.settings.projectId,
+        project.projectName,
         undefined
       );
       if (agentResult.status === 'generated' && agentResult.files.length > 0) {
