@@ -274,7 +274,6 @@ describe('compileVercelConfig', () => {
     expect(result.wasCompiled).toBe(true);
     expect(result.configPath).toBe(join(tmpDir, VERCEL_DIR, 'vercel.json'));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compiledConfig = require(result.configPath!);
     expect(compiledConfig).toEqual({
       headers: [
@@ -321,7 +320,6 @@ describe('compileVercelConfig', () => {
     expect(result.wasCompiled).toBe(true);
     expect(result.configPath).toBe(join(tmpDir, VERCEL_DIR, 'vercel.json'));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compiledConfig = require(result.configPath!);
     expect(compiledConfig).toEqual({
       rewrites: [
@@ -331,5 +329,49 @@ describe('compileVercelConfig', () => {
         },
       ],
     });
+  });
+
+  it('should not merge routes and rewrites even if both contain transforms', async () => {
+    const vercelTsPath = join(tmpDir, 'vercel.ts');
+    const vercelTsContent = `
+      export default {
+        routes: [
+          {
+            src: '/api/(.*)',
+            dest: 'https://backend.example.com/$1',
+            headers: { 'x-custom': 'value' }
+          }
+        ],
+        rewrites: [
+          {
+            src: '/other/(.*)',
+            dest: 'https://other.example.com/$1',
+            headers: { 'x-other': 'value' }
+          }
+        ]
+      };
+    `;
+    await writeFile(vercelTsPath, vercelTsContent);
+
+    const result = await compileVercelConfig(tmpDir);
+
+    expect(result.wasCompiled).toBe(true);
+
+    const compiledConfig = require(result.configPath!);
+
+    expect(compiledConfig.routes).toEqual([
+      {
+        src: '/api/(.*)',
+        dest: 'https://backend.example.com/$1',
+        headers: { 'x-custom': 'value' },
+      },
+    ]);
+    expect(compiledConfig.rewrites).toEqual([
+      {
+        src: '/other/(.*)',
+        dest: 'https://other.example.com/$1',
+        headers: { 'x-other': 'value' },
+      },
+    ]);
   });
 });
