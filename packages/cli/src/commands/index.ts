@@ -1,4 +1,5 @@
 import { aliasCommand } from './alias/command';
+import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
@@ -45,6 +46,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   aliasCommand,
+  apiCommand,
   blobCommand,
   bisectCommand,
   buildCommand,
