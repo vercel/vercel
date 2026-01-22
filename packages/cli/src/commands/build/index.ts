@@ -566,8 +566,6 @@ async function doBuild(
     isZeroConfig = true;
 
     // Detect the Vercel Builders that will need to be invoked
-    // Note: detectBuilders handles the "services" framework internally when
-    // projectSettings.framework === 'services'
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...localConfig,
       projectSettings,
