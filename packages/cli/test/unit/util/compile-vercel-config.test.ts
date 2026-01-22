@@ -228,7 +228,14 @@ describe('normalizeConfig', () => {
 
   it('should normalize redirects with statusCode in routes array', () => {
     const config = {
-      routes: [{ source: '/old', destination: '/new', statusCode: 301 }],
+      routes: [
+        {
+          source: '/old',
+          destination: '/new',
+          statusCode: 301,
+          permanent: true,
+        },
+      ],
     };
 
     const result = normalizeConfig(config);

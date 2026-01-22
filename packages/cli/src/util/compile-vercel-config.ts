@@ -101,7 +101,7 @@ export function normalizeConfig(config: any): any {
       if (isRouteFormat(item)) {
         return item;
       }
-      const isRedirect = 'permanent' in item || 'statusCode' in item;
+      const isRedirect = 'permanent' in item;
       return toRouteFormat(item, isRedirect);
     });
   }
