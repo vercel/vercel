@@ -2,7 +2,7 @@ import type { Route } from '@vercel/routing-utils';
 import type { Builder } from '@vercel/build-utils';
 import type { Framework } from '@vercel/frameworks';
 import type { ResolvedService } from './types';
-import { detectServices } from './index';
+import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
 import frameworkList from '@vercel/frameworks';
 

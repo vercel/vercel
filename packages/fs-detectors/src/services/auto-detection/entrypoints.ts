@@ -1,4 +1,4 @@
-import type { DetectorFilesystem } from '../detectors/filesystem';
+import type { DetectorFilesystem } from '../../detectors/filesystem';
 import type { ServiceRuntime } from '@vercel/build-utils';
 
 export interface RuntimeEntrypointConfig {

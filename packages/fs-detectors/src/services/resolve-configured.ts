@@ -2,6 +2,7 @@ import { posix as posixPath } from 'path';
 import type {
   ResolvedService,
   ExperimentalServiceConfig,
+  ExperimentalServices,
   ServiceDetectionError,
 } from './types';
 import { ENTRYPOINT_EXTENSIONS, RUNTIME_BUILDERS } from './types';
@@ -11,6 +12,9 @@ import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
+/**
+ * Validate a service configuration from vercel.json experimentalServices.
+ */
 export function validateServiceConfig(
   name: string,
   config: ExperimentalServiceConfig
@@ -77,7 +81,10 @@ export function validateServiceConfig(
   return null;
 }
 
-export function resolveService(
+/**
+ * Resolve a single service from user configuration.
+ */
+export function resolveConfiguredService(
   name: string,
   config: ExperimentalServiceConfig,
   group?: string
@@ -142,4 +149,49 @@ export function resolveService(
     topic,
     consumer,
   };
+}
+
+/**
+ * Resolve all services from vercel.json experimentalServices.
+ * Validates each service and checks for routing conflicts.
+ */
+export function resolveAllConfiguredServices(services: ExperimentalServices): {
+  services: ResolvedService[];
+  errors: ServiceDetectionError[];
+} {
+  const resolved: ResolvedService[] = [];
+  const errors: ServiceDetectionError[] = [];
+  const webServicesWithoutRoutePrefix: string[] = [];
+
+  for (const name of Object.keys(services)) {
+    const serviceConfig = services[name];
+
+    const validationError = validateServiceConfig(name, serviceConfig);
+    if (validationError) {
+      errors.push(validationError);
+      continue;
+    }
+
+    // Only web services need routePrefix for routing
+    const serviceType = serviceConfig.type || 'web';
+    if (serviceType === 'web' && serviceConfig.routePrefix === undefined) {
+      webServicesWithoutRoutePrefix.push(name);
+    }
+
+    const service = resolveConfiguredService(name, serviceConfig);
+    resolved.push(service);
+  }
+
+  // Only one web service can omit routePrefix (defaults to "/")
+  // Workers and crons don't need routePrefix since they're not routed via HTTP
+  if (webServicesWithoutRoutePrefix.length > 1) {
+    errors.push({
+      code: 'MULTIPLE_ROOT_SERVICES',
+      message: `Only one web service can omit "routePrefix". Web services without routePrefix: ${webServicesWithoutRoutePrefix.join(', ')}`,
+    });
+    // Don't return ambiguous services - user must fix the config
+    return { services: [], errors };
+  }
+
+  return { services: resolved, errors };
 }

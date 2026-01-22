@@ -1,6 +1,7 @@
-import type { DetectorFilesystem } from '../detectors/filesystem';
+import type { DetectorFilesystem } from '../../detectors/filesystem';
 import type { ServiceRuntime } from '@vercel/build-utils';
-import type { DetectedManifest } from './types';
+import type { DetectedManifest } from '../types';
+import { COMMON_IGNORED_DIRECTORIES } from '../../constants';
 import { debug } from 'console';
 
 export const MANIFEST_FILES: Record<string, ServiceRuntime> = {
@@ -12,36 +13,6 @@ export const MANIFEST_FILES: Record<string, ServiceRuntime> = {
   'Cargo.toml': 'rust',
   Gemfile: 'ruby',
 };
-
-// Directories to skip during manifest detection.
-const IGNORED_DIRECTORIES = new Set([
-  'node_modules',
-  '.git',
-  '.svn',
-  '.hg',
-  '.venv',
-  'venv',
-  'env',
-  '.env',
-  '__pycache__',
-  '.pytest_cache',
-  '.mypy_cache',
-  'dist',
-  'build',
-  'out',
-  '.vercel',
-  '.next',
-  '.nuxt',
-  '.output',
-  '.svelte-kit',
-  'target',
-  'vendor',
-  'pkg',
-  '.bundle',
-  'coverage',
-  '.turbo',
-  '.cache',
-]);
 
 // Maximum depth to search for manifests from the project root.
 const MAX_MANIFEST_SEARCH_DEPTH = 3;
@@ -86,7 +57,7 @@ export async function detectManifests(
         } else if (entry.type === 'dir') {
           // Skip ignored and hidden directories
           if (
-            IGNORED_DIRECTORIES.has(entry.name) ||
+            COMMON_IGNORED_DIRECTORIES.has(entry.name) ||
             entry.name.startsWith('.')
           ) {
             continue;
