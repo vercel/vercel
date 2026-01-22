@@ -1,18 +1,10 @@
 export function renderGenericFrameworkSection(): string {
-  return `## Serverless Functions
-
-Place functions in \`api/\` directory:
+  return `## API Routes
 \`\`\`typescript
 // api/hello.ts
-export default function handler(req, res) {
-  res.status(200).json({ message: 'Hello' });
-}
-\`\`\`
+export default (req, res) => res.json({ message: 'Hello' });
 
-**Edge Function:**
-\`\`\`typescript
-export const config = { runtime: 'edge' };
-export default (req: Request) => new Response('Hello from Edge');
+// Edge: export const config = { runtime: 'edge' };
 \`\`\`
 
 `;

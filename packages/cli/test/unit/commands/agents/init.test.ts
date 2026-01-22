@@ -36,7 +36,7 @@ describe('vercel agents init', () => {
       expect(await fs.pathExists(agentsPath)).toBe(true);
 
       const content = await fs.readFile(agentsPath, 'utf-8');
-      expect(content).toContain('Vercel Deployment Guide');
+      expect(content).toContain('Vercel Guide');
       expect(content).toContain('test-project');
     });
 
@@ -122,7 +122,7 @@ More custom stuff.
       expect(content).toContain('## My Custom Footer');
       expect(content).toContain('More custom stuff.');
       // Verify Vercel content was updated
-      expect(content).toContain('Vercel Deployment Guide');
+      expect(content).toContain('Vercel Guide');
       expect(content).not.toContain('old vercel content');
     });
 
@@ -146,7 +146,7 @@ More custom stuff.
 
       // Verify file was overwritten
       const content = await fs.readFile(agentsPath, 'utf-8');
-      expect(content).toContain('Vercel Deployment Guide');
+      expect(content).toContain('Vercel Guide');
       expect(content).not.toContain('custom content to be removed');
     });
 
@@ -190,7 +190,7 @@ More custom stuff.
 
       const content = await fs.readFile(join(tempDir, 'AGENTS.md'), 'utf-8');
       expect(content).toContain('## Next.js');
-      expect(content).toContain('Framework: nextjs');
+      expect(content).toContain('(nextjs)');
     });
 
     it('should include vercel.json config in output', async () => {
@@ -239,6 +239,42 @@ More custom stuff.
 
       // File should not exist
       expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(false);
+    });
+
+    it('should include Workflow SDK guidance', async () => {
+      const { generateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const result = await generateAgentFiles({
+        cwd: tempDir,
+        format: 'markdown',
+        projectName: 'test-project',
+      });
+
+      expect(result.status).toBe('generated');
+
+      const content = await fs.readFile(join(tempDir, 'AGENTS.md'), 'utf-8');
+      expect(content).toContain('Workflow SDK');
+      expect(content).toContain('@vercel/workflow');
+    });
+
+    it('should include AI Gateway guidance', async () => {
+      const { generateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const result = await generateAgentFiles({
+        cwd: tempDir,
+        format: 'markdown',
+        projectName: 'test-project',
+      });
+
+      expect(result.status).toBe('generated');
+
+      const content = await fs.readFile(join(tempDir, 'AGENTS.md'), 'utf-8');
+      expect(content).toContain('AI Gateway');
+      expect(content).toContain('generateText');
     });
   });
 
