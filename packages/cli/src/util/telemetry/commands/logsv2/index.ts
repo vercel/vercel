@@ -109,10 +109,10 @@ export class Logsv2TelemetryClient
     }
   }
 
-  trackCliOptionSearch(v: string | undefined) {
+  trackCliOptionQuery(v: string | undefined) {
     if (v) {
       this.trackCliOption({
-        option: 'search',
+        option: 'query',
         value: this.redactedValue,
       });
     }

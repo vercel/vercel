@@ -514,7 +514,7 @@ describe('logsv2', () => {
     });
   });
 
-  describe('--search option', () => {
+  describe('--query option', () => {
     beforeEach(() => {
       useUser();
       useTeams('team_dummy');
@@ -536,23 +536,23 @@ describe('logsv2', () => {
       });
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logsv2', '--search', 'timeout');
+      client.setArgv('logsv2', '--query', 'timeout');
       const exitCode = await logsv2(client);
 
       expect(exitCode).toEqual(0);
       expect(receivedSearch).toEqual('timeout');
     });
 
-    it('should track telemetry for --search option', async () => {
+    it('should track telemetry for --query option', async () => {
       useRequestLogs([]);
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logsv2', '--search', 'error');
+      client.setArgv('logsv2', '--query', 'error');
       await logsv2(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'option:search',
+          key: 'option:query',
           value: '[REDACTED]',
         },
       ]);

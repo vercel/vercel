@@ -79,8 +79,8 @@ export const logsv2Command = {
       description: 'Output logs as JSON Lines for piping to other tools',
     },
     {
-      name: 'search',
-      shorthand: 's',
+      name: 'query',
+      shorthand: 'q',
       type: String,
       deprecated: false,
       description: 'Full-text search query',
@@ -112,7 +112,7 @@ export const logsv2Command = {
     },
     {
       name: 'Search logs and pipe to jq',
-      value: `${packageName} logsv2 --search "timeout" --json | jq '.message'`,
+      value: `${packageName} logsv2 --query "timeout" --json | jq '.message'`,
     },
     {
       name: 'Display production logs only',
