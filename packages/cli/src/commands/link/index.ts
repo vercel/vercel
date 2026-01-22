@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
@@ -9,6 +10,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
+import { determineAgent } from '@vercel/detect-agent';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -59,6 +61,9 @@ export default async function link(client: Client) {
     cwd = client.cwd;
   }
 
+  let projectName: string | undefined;
+  let orgSlug: string | undefined;
+
   if (parsedArgs.flags['--repo']) {
     output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
     try {
@@ -77,6 +82,23 @@ export default async function link(client: Client) {
 
     if (typeof link === 'number') {
       return link;
+    }
+
+    projectName = link.project?.name;
+    orgSlug = link.org?.slug;
+  }
+
+  // Auto-generate agent files if agent is detected
+  const { isAgent } = await determineAgent();
+  if (isAgent) {
+    const { autoGenerateAgentFiles } = await import('../../util/agent-files');
+    const agentResult = await autoGenerateAgentFiles(cwd, projectName, orgSlug);
+    if (agentResult.status === 'generated' && agentResult.files.length > 0) {
+      output.print(
+        chalk.dim(
+          `Generated agent configuration files with Vercel best practices\n`
+        )
+      );
     }
   }
 

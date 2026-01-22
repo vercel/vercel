@@ -28,6 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import { determineAgent } from '@vercel/detect-agent';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -128,6 +129,24 @@ export default async function pull(
     client.cwd,
     source
   );
+
+  // Auto-generate agent files if agent is detected
+  const { isAgent } = await determineAgent();
+  if (isAgent) {
+    const { autoGenerateAgentFiles } = await import('../../util/agent-files');
+    const agentResult = await autoGenerateAgentFiles(
+      client.cwd,
+      link.project.name,
+      link.org.slug
+    );
+    if (agentResult.status === 'generated' && agentResult.files.length > 0) {
+      output.print(
+        chalk.dim(
+          `Generated agent configuration files with Vercel best practices\n`
+        )
+      );
+    }
+  }
 
   return 0;
 }

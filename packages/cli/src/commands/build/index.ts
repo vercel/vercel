@@ -54,6 +54,7 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
+import { determineAgent } from '@vercel/detect-agent';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -356,6 +357,22 @@ export default async function main(client: Client): Promise<number> {
         );
     } finally {
       await rootSpan.stop();
+    }
+
+    // Auto-generate agent files if agent is detected
+    const { isAgent } = await determineAgent();
+    if (isAgent) {
+      const { autoGenerateAgentFiles } = await import('../../util/agent-files');
+      const agentResult = await autoGenerateAgentFiles(
+        cwd,
+        project.settings.projectId,
+        undefined
+      );
+      if (agentResult.status === 'generated' && agentResult.files.length > 0) {
+        output.print(
+          `${prependEmoji('Generated agent configuration files', emoji('success'))}\n`
+        );
+      }
     }
 
     return 0;

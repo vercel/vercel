@@ -1,3 +1,4 @@
+import { agentsCommand } from './agents/command';
 import { aliasCommand } from './alias/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
@@ -43,6 +44,7 @@ import type { Command } from './help';
 import output from '../output-manager';
 
 const commandsStructs = [
+  agentsCommand,
   aliasCommand,
   blobCommand,
   bisectCommand,

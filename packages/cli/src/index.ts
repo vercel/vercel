@@ -636,6 +636,10 @@ const main = async () => {
     if (subcommand) {
       let func: any;
       switch (targetCommand) {
+        case 'agents':
+          telemetry.trackCliCommandAgents(userSuppliedSubCommand);
+          func = require('./commands/agents').default;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = require('./commands/alias').default;
