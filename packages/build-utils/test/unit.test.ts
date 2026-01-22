@@ -141,7 +141,7 @@ it('should only nodejs24.x', async () => {
 it('should not allow nodejs18.x when not available', async () => {
   // Simulates AL2023 build-container
   await expect(getSupportedNodeVersion('18.x', true, [20])).rejects.toThrow(
-    'Found invalid Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
+    'Found invalid or discontinued Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
   );
 });
 
