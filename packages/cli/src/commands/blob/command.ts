@@ -132,6 +132,50 @@ export const delSubcommand = {
   examples: [],
 } as const;
 
+export const getSubcommand = {
+  name: 'get',
+  aliases: [],
+  description: 'Get a blob from the Blob store',
+  arguments: [
+    {
+      name: 'urlOrPathname',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description:
+        "Access level for the blob (required). Must be 'public' or 'private'",
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
+    {
+      name: 'output',
+      shorthand: 'o',
+      type: String,
+      deprecated: false,
+      description: 'Output file path to save the blob content',
+      argument: 'STRING',
+    },
+  ],
+  examples: [
+    {
+      name: 'Get a public blob by URL',
+      value:
+        'vercel blob get https://example.blob.vercel-storage.com/file.txt --access public',
+    },
+    {
+      name: 'Get a private blob and save to file',
+      value:
+        'vercel blob get my-file.txt --access private --output ./downloaded.txt',
+    },
+  ],
+} as const;
+
 export const copySubcommand = {
   name: 'copy',
   aliases: ['cp'],
@@ -282,6 +326,7 @@ export const blobCommand = {
   subcommands: [
     listSubcommand,
     putSubcommand,
+    getSubcommand,
     delSubcommand,
     copySubcommand,
     storeSubcommand,
