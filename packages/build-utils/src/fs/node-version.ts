@@ -84,10 +84,13 @@ function isNodeVersionAvailable(version: NodeVersion): boolean {
 }
 
 export function getAvailableNodeVersions(): NodeVersionMajor[] {
-  return getOptions()
-    .filter(v => v.state !== 'discontinued')
-    .filter(isNodeVersionAvailable)
-    .map(n => n.major);
+  return (
+    getOptions()
+      // Only check versions >= 18, as older versions don't have directories in the build container
+      .filter(v => v.major >= 18)
+      .filter(isNodeVersionAvailable)
+      .map(n => n.major)
+  );
 }
 
 function getHint(isAuto = false, availableVersions?: NodeVersionMajor[]) {
