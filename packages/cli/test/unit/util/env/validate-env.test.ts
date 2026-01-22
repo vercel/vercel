@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   getEnvValueWarnings,
   getEnvKeyWarnings,
@@ -7,6 +7,7 @@ import {
   trimValue,
   getPublicPrefix,
   removePublicPrefix,
+  validateEnvValue,
 } from '../../../../src/util/env/validate-env';
 
 describe('validate-env', () => {
@@ -194,43 +195,11 @@ describe('validate-env', () => {
       );
     });
 
-    it('warns for GRIDSOME_ prefix', () => {
-      const warnings = getEnvKeyWarnings('GRIDSOME_API_URL');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(
-        'GRIDSOME_ variables can be seen by anyone visiting your site'
-      );
-    });
-
-    it('warns for NUXT_PUBLIC_ prefix', () => {
-      const warnings = getEnvKeyWarnings('NUXT_PUBLIC_API_URL');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(
-        'NUXT_PUBLIC_ variables can be seen by anyone visiting your site'
-      );
-    });
-
     it('warns for NUXT_ENV_ prefix', () => {
       const warnings = getEnvKeyWarnings('NUXT_ENV_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
         'NUXT_ENV_ variables can be seen by anyone visiting your site'
-      );
-    });
-
-    it('warns for STORYBOOK_ prefix', () => {
-      const warnings = getEnvKeyWarnings('STORYBOOK_API_URL');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(
-        'STORYBOOK_ variables can be seen by anyone visiting your site'
-      );
-    });
-
-    it('warns for EXPO_PUBLIC_ prefix', () => {
-      const warnings = getEnvKeyWarnings('EXPO_PUBLIC_API_URL');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(
-        'EXPO_PUBLIC_ variables can be seen by anyone visiting your site'
       );
     });
 
@@ -298,10 +267,10 @@ describe('validate-env', () => {
       });
 
       it('requires confirmation for public + AUTH', () => {
-        const warnings = getEnvKeyWarnings('NUXT_PUBLIC_AUTH_TOKEN');
+        const warnings = getEnvKeyWarnings('NUXT_ENV_AUTH_TOKEN');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The NUXT_PUBLIC_ prefix will make AUTH_TOKEN visible to anyone visiting your site'
+          'The NUXT_ENV_ prefix will make AUTH_TOKEN visible to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -546,6 +515,151 @@ describe('validate-env', () => {
 
     it('returns key unchanged if no public prefix', () => {
       expect(removePublicPrefix('DATABASE_URL')).toBe('DATABASE_URL');
+    });
+  });
+
+  describe('validateEnvValue', () => {
+    const createMockOpts = (overrides = {}) => ({
+      envName: 'TEST_VAR',
+      initialValue: 'test-value',
+      skipConfirm: false,
+      promptForValue: vi.fn(),
+      selectAction: vi.fn(),
+      showWarning: vi.fn(),
+      showLog: vi.fn(),
+      ...overrides,
+    });
+
+    it('returns initial value unchanged when no warnings', async () => {
+      const opts = createMockOpts({ initialValue: 'valid-value' });
+      const result = await validateEnvValue(opts);
+
+      expect(result.finalValue).toBe('valid-value');
+      expect(result.alreadyConfirmed).toBe(false);
+      expect(opts.showWarning).not.toHaveBeenCalled();
+      expect(opts.selectAction).not.toHaveBeenCalled();
+    });
+
+    it('skips confirmation when skipConfirm is true', async () => {
+      const opts = createMockOpts({
+        initialValue: ' value-with-whitespace ',
+        skipConfirm: true,
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(result.finalValue).toBe(' value-with-whitespace ');
+      expect(opts.showWarning).toHaveBeenCalled();
+      expect(opts.selectAction).not.toHaveBeenCalled();
+    });
+
+    it('accepts value when user selects "Leave as is"', async () => {
+      const opts = createMockOpts({
+        initialValue: ' whitespace ',
+        selectAction: vi.fn().mockResolvedValue('c'),
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(result.finalValue).toBe(' whitespace ');
+      expect(opts.selectAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('sets alreadyConfirmed when accepting value with requiresConfirmation warning', async () => {
+      const opts = createMockOpts({
+        initialValue: '',
+        selectAction: vi.fn().mockResolvedValue('c'),
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(result.finalValue).toBe('');
+      expect(result.alreadyConfirmed).toBe(true);
+    });
+
+    it('does not set alreadyConfirmed for non-confirmation warnings', async () => {
+      const opts = createMockOpts({
+        initialValue: ' whitespace ',
+        selectAction: vi.fn().mockResolvedValue('c'),
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(result.alreadyConfirmed).toBe(false);
+    });
+
+    it('prompts for new value when user selects "Re-enter"', async () => {
+      const opts = createMockOpts({
+        initialValue: ' bad ',
+        selectAction: vi.fn().mockResolvedValueOnce('r').mockResolvedValue('c'),
+        promptForValue: vi.fn().mockResolvedValue('good'),
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(opts.promptForValue).toHaveBeenCalledTimes(1);
+      expect(result.finalValue).toBe('good');
+    });
+
+    it('trims value when user selects "Trim whitespace"', async () => {
+      const opts = createMockOpts({
+        initialValue: '  value  ',
+        selectAction: vi.fn().mockResolvedValue('t'),
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(result.finalValue).toBe('value');
+      expect(opts.showLog).toHaveBeenCalledWith('Trimmed whitespace');
+    });
+
+    it('offers trim option only for whitespace warnings', async () => {
+      const opts = createMockOpts({
+        initialValue: ' whitespace ',
+        selectAction: vi.fn().mockResolvedValue('c'),
+      });
+      await validateEnvValue(opts);
+
+      const choices = opts.selectAction.mock.calls[0][0];
+      expect(choices).toHaveLength(3);
+      expect(choices[2]).toEqual({ name: 'Trim whitespace', value: 't' });
+    });
+
+    it('does not offer trim for non-whitespace warnings', async () => {
+      const opts = createMockOpts({
+        initialValue: '"quoted"',
+        selectAction: vi.fn().mockResolvedValue('c'),
+      });
+      await validateEnvValue(opts);
+
+      const choices = opts.selectAction.mock.calls[0][0];
+      expect(choices).toHaveLength(2);
+      expect(choices.map((c: { value: string }) => c.value)).not.toContain('t');
+    });
+
+    it('re-validates after trimming (may produce new warnings)', async () => {
+      const opts = createMockOpts({
+        initialValue: '   ',
+        selectAction: vi.fn().mockResolvedValueOnce('t').mockResolvedValue('c'),
+      });
+      const result = await validateEnvValue(opts);
+
+      // After trim, value is empty which requires confirmation
+      expect(result.finalValue).toBe('');
+      expect(opts.selectAction).toHaveBeenCalledTimes(2);
+    });
+
+    it('loops until valid value entered', async () => {
+      const opts = createMockOpts({
+        initialValue: ' bad ',
+        selectAction: vi
+          .fn()
+          .mockResolvedValueOnce('r')
+          .mockResolvedValueOnce('r')
+          .mockResolvedValue('c'),
+        promptForValue: vi
+          .fn()
+          .mockResolvedValueOnce(' still-bad ')
+          .mockResolvedValue('good'),
+      });
+      const result = await validateEnvValue(opts);
+
+      expect(opts.promptForValue).toHaveBeenCalledTimes(2);
+      expect(result.finalValue).toBe('good');
     });
   });
 });

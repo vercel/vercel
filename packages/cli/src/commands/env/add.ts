@@ -12,12 +12,9 @@ import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import {
-  getEnvValueWarnings,
   getEnvKeyWarnings,
-  formatWarnings,
-  hasOnlyWhitespaceWarnings,
-  trimValue,
   removePublicPrefix,
+  validateEnvValue,
 } from '../../util/env/validate-env';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
@@ -225,60 +222,20 @@ export default async function add(client: Client, argv: string[]) {
     });
   }
 
-  // Validate and handle value warnings with re-entry option
-  let finalValue = envValue;
-
-  if (!skipConfirm) {
-    let valueAccepted = false;
-    while (!valueAccepted) {
-      const valueWarnings = getEnvValueWarnings(finalValue);
-      const warningMessage = formatWarnings(valueWarnings);
-
-      if (!warningMessage) {
-        valueAccepted = true;
-        break;
-      }
-
-      output.warn(warningMessage);
-
-      const canTrim = hasOnlyWhitespaceWarnings(valueWarnings);
-      const choices = canTrim
-        ? [
-            { name: 'Leave as is', value: 'c' },
-            { name: 'Re-enter', value: 'r' },
-            { name: 'Trim whitespace', value: 't' },
-          ]
-        : [
-            { name: 'Leave as is', value: 'c' },
-            { name: 'Re-enter', value: 'r' },
-          ];
-
-      const action = await client.input.select({
-        message: 'How to proceed?',
-        choices,
-      });
-
-      if (action === 'c') {
-        valueAccepted = true;
-      } else if (action === 't') {
-        finalValue = trimValue(finalValue);
-        output.log('Trimmed whitespace');
-        // Loop back to re-validate (trimmed value might be empty)
-      } else {
-        finalValue = await client.input.password({
-          message: `What's the value of ${envName}?`,
-          mask: true,
-        });
-      }
-    }
-  } else {
-    // Non-interactive: just show warning
-    const valueWarnings = getEnvValueWarnings(finalValue);
-    const warningMessage = formatWarnings(valueWarnings);
-    if (warningMessage) {
-      output.warn(warningMessage);
-    }
-  }
+  const { finalValue } = await validateEnvValue({
+    envName,
+    initialValue: envValue,
+    skipConfirm,
+    promptForValue: () =>
+      client.input.password({
+        message: `What's the value of ${envName}?`,
+        mask: true,
+      }),
+    selectAction: choices =>
+      client.input.select({ message: 'How to proceed?', choices }),
+    showWarning: msg => output.warn(msg),
+    showLog: msg => output.log(msg),
+  });
 
   while (envTargets.length === 0) {
     envTargets = await client.input.checkbox({

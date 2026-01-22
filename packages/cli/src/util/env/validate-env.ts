@@ -1,3 +1,5 @@
+import { frameworkList } from '@vercel/frameworks';
+
 export interface EnvWarning {
   message: string;
   requiresConfirmation: boolean;
@@ -81,23 +83,15 @@ export function formatWarnings(warnings: EnvWarning[]): string | null {
 
 /** Framework prefixes that expose variables to the browser. */
 const PUBLIC_PREFIXES = [
-  'NEXT_PUBLIC_', // Next.js
-  'REACT_APP_', // Create React App
-  'VUE_APP_', // Vue CLI
-  'VITE_', // Vite (Vue, Svelte, React, etc.)
-  'GATSBY_', // Gatsby
-  'GRIDSOME_', // Gridsome
-  'NUXT_PUBLIC_', // Nuxt 3
-  'NUXT_ENV_', // Nuxt 2
-  'STORYBOOK_', // Storybook
-  'EXPO_PUBLIC_', // Expo
-  'PUBLIC_', // Generic / SvelteKit default
+  ...new Set(
+    frameworkList.map(f => f.envPrefix).filter((p): p is string => !!p)
+  ),
 ];
 
 // Require word boundaries: pattern must be preceded/followed by _ or string boundary
 // Matches: _PASSWORD_, _SECRET, KEY_, etc. but not KEYBOARD, ACCESSIBLE
 const SENSITIVE_PATTERN =
-  /(?:^|_)(password|secret|private|token|key|auth|jwt|signature|access)(?:_|$)/i;
+  /(?:^|_)(password|secret|private|token|key|auth|jwt|signature)(?:_|$)/i;
 
 /**
  * Returns true if all warnings are whitespace-related (can be trimmed).
@@ -136,6 +130,81 @@ export function removePublicPrefix(key: string): string {
   const prefix = getPublicPrefix(key);
   if (!prefix) return key;
   return key.slice(prefix.length);
+}
+
+export interface ValidateEnvValueResult {
+  finalValue: string;
+  alreadyConfirmed: boolean;
+}
+
+interface ValidateEnvValueOptions {
+  envName: string;
+  initialValue: string;
+  skipConfirm: boolean;
+  promptForValue: () => Promise<string>;
+  selectAction: (choices: { name: string; value: string }[]) => Promise<string>;
+  showWarning: (message: string) => void;
+  showLog: (message: string) => void;
+}
+
+/**
+ * Validates env value with interactive re-entry option.
+ * Used by both `env add` and `env update` commands.
+ */
+export async function validateEnvValue(
+  opts: ValidateEnvValueOptions
+): Promise<ValidateEnvValueResult> {
+  let finalValue = opts.initialValue;
+  let alreadyConfirmed = false;
+
+  if (!opts.skipConfirm) {
+    let valueAccepted = false;
+    while (!valueAccepted) {
+      const valueWarnings = getEnvValueWarnings(finalValue);
+      const warningMessage = formatWarnings(valueWarnings);
+
+      if (!warningMessage) {
+        valueAccepted = true;
+        break;
+      }
+
+      opts.showWarning(warningMessage);
+
+      const canTrim = hasOnlyWhitespaceWarnings(valueWarnings);
+      const choices = canTrim
+        ? [
+            { name: 'Leave as is', value: 'c' },
+            { name: 'Re-enter', value: 'r' },
+            { name: 'Trim whitespace', value: 't' },
+          ]
+        : [
+            { name: 'Leave as is', value: 'c' },
+            { name: 'Re-enter', value: 'r' },
+          ];
+
+      const action = await opts.selectAction(choices);
+
+      if (action === 'c') {
+        valueAccepted = true;
+        if (valueWarnings.some(w => w.requiresConfirmation)) {
+          alreadyConfirmed = true;
+        }
+      } else if (action === 't') {
+        finalValue = trimValue(finalValue);
+        opts.showLog('Trimmed whitespace');
+      } else {
+        finalValue = await opts.promptForValue();
+      }
+    }
+  } else {
+    const valueWarnings = getEnvValueWarnings(finalValue);
+    const warningMessage = formatWarnings(valueWarnings);
+    if (warningMessage) {
+      opts.showWarning(warningMessage);
+    }
+  }
+
+  return { finalValue, alreadyConfirmed };
 }
 
 export function getEnvKeyWarnings(key: string): EnvWarning[] {
