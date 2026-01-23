@@ -89,7 +89,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
       await expect(client.stderr).toOutput(
@@ -163,7 +163,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
       await expect(client.stderr).toOutput(`No Projects are linked`);
@@ -171,7 +171,7 @@ describe('link', () => {
         `Detected 1 new Project that may be created.`
       );
       await expect(client.stderr).toOutput(`Which Projects should be created?`);
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
@@ -255,7 +255,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
       await expect(client.stderr).toOutput(`No Projects are linked`);
@@ -263,7 +263,7 @@ describe('link', () => {
         `Detected 2 new Projects that may be created.`
       );
       await expect(client.stderr).toOutput(`Which Projects should be created?`);
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
         `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
@@ -349,7 +349,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
       await expect(client.stderr).toOutput(`No Projects are linked`);
@@ -357,7 +357,7 @@ describe('link', () => {
         `Detected 1 new Project that may be created.`
       );
       await expect(client.stderr).toOutput(`Which Projects should be created?`);
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       // This next step should fail because `POST /v1/projects` returns a 400
       await expect(client.stderr).toOutput('Error: Response Error (400)');
@@ -576,7 +576,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to it?');
     client.stdin.write('y\n');
@@ -615,7 +615,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
@@ -737,7 +737,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -782,7 +782,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -827,7 +827,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -879,7 +879,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -928,7 +928,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -975,7 +975,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -1022,7 +1022,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
