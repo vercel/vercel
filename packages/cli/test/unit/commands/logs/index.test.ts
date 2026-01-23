@@ -92,7 +92,8 @@ describe('logs', () => {
 
           Options:
 
-          -j,  --json  Print each log line as a JSON object (compatible with JQ)        
+               --error  Filter logs to only show error level logs                        
+          -j,  --json   Print each log line as a JSON object (compatible with JQ)        
 
 
           Global Options:
@@ -118,6 +119,10 @@ describe('logs', () => {
           - Print all runtime logs for the deployment DEPLOYMENT_ID as json objects
 
             $ vercel logs DEPLOYMENT_ID --json
+
+          - Filter runtime logs for error level only
+
+            $ vercel logs DEPLOYMENT_ID --error
 
           - Filter runtime logs for warning with JQ third party tool
 
@@ -682,6 +687,149 @@ describe('logs', () => {
             value: '[REDACTED]',
           },
         ]);
+      });
+    });
+
+    describe('--error', () => {
+      it('should track usage of `--error` flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--error');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:error',
+            value: 'TRUE',
+          },
+        ]);
+      });
+
+      it('should add levels=error query parameter to API request', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--error');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(runtimeEndpointSpy).toHaveBeenCalledWith(
+          `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+          { format: 'lines', levels: 'error' }
+        );
+        expect(runtimeEndpointSpy).toHaveBeenCalledOnce();
+      });
+
+      it('should work with --json flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--error', '--json');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(runtimeEndpointSpy).toHaveBeenCalledWith(
+          `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+          { format: 'lines', levels: 'error' }
+        );
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:json',
+            value: 'TRUE',
+          },
+          {
+            key: 'flag:error',
+            value: 'TRUE',
+          },
+        ]);
+      });
+
+      it('should display error logs in pretty format', async () => {
+        const errorLog = {
+          rowId: 3,
+          timestampInMs: 1717426870600,
+          level: 'error',
+          message: 'Something went wrong!',
+          messageTruncated: false,
+          domain: 'acme.com',
+          requestMethod: 'POST',
+          requestPath: '/api/error',
+          responseStatusCode: 500,
+        };
+
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            yield errorLog;
+          },
+        });
+        client.setArgv('logs', deployment.url, '--error');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.getFullOutput();
+        expect(output).toContain('Something went wrong!');
+        expect(output).toContain('🚫'); // Error level icon
+        expect(output).toContain('POST');
+        expect(output).toContain('500');
+        expect(output).toContain('/api/error');
+      });
+
+      it('should display error logs in JSON format', async () => {
+        const errorLog = {
+          rowId: 3,
+          timestampInMs: 1717426870600,
+          level: 'error',
+          message: 'Something went wrong!',
+          messageTruncated: false,
+          domain: 'acme.com',
+          requestMethod: 'POST',
+          requestPath: '/api/error',
+          responseStatusCode: 500,
+        };
+
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            yield errorLog;
+          },
+        });
+        client.setArgv('logs', deployment.url, '--error', '--json');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        expect(output).toContain(JSON.stringify(errorLog));
       });
     });
   });

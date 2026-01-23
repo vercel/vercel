@@ -72,6 +72,7 @@ export default async function logs(client: Client) {
   }
 
   const asJson = parsedArguments.flags['--json'];
+  const errorLogs = parsedArguments.flags['--error'];
 
   // extract the first parameter
   let [deploymentIdOrHost] = parsedArguments.args;
@@ -85,6 +86,7 @@ export default async function logs(client: Client) {
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
   telemetry.trackCliFlagJson(asJson);
+  telemetry.trackCliFlagError(errorLogs);
   telemetry.trackCliFlagFollow(parsedArguments.flags['--follow']);
   telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);
   telemetry.trackCliOptionSince(parsedArguments.flags['--since']);
@@ -149,6 +151,7 @@ export default async function logs(client: Client) {
       deploymentId: deployment.id,
       projectId: deployment.projectId,
       parse: !asJson,
+      errorLogs,
     },
     abortController
   );

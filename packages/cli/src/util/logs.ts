@@ -64,6 +64,7 @@ export interface DisplayRuntimeLogsOptions {
   projectId?: string;
   deploymentId: string;
   parse?: boolean;
+  errorLogs?: boolean;
 }
 
 const runtimeLogSpinnerMessage = `waiting for new logs...`;
@@ -125,9 +126,13 @@ export async function displayRuntimeLogs(
   abortController: AbortController
 ): Promise<number> {
   const { log, debug, print, spinner, stopSpinner, warn } = output;
-  const { projectId, deploymentId, parse } = options;
+  const { projectId, deploymentId, parse, errorLogs } = options;
 
   const query = new URLSearchParams({ format: 'lines' });
+
+  if (errorLogs) {
+    query.set('levels', 'error');
+  }
 
   const url = `/v1/projects/${projectId}/deployments/${deploymentId}/runtime-logs?${query}`;
   spinner(runtimeLogSpinnerMessage);
