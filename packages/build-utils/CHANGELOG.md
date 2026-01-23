@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.2.15
+
+### Patch Changes
+
+- Optimize `getAvailableNodeVersions` to skip discontinued versions and use non-throwing `statSync` ([#14686](https://github.com/vercel/vercel/pull/14686))
+
 ## 13.2.14
 
 ### Patch Changes
