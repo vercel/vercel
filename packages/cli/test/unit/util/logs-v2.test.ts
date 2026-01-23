@@ -4,7 +4,6 @@ import { useUser } from '../../mocks/user';
 import {
   fetchRequestLogs,
   fetchAllRequestLogs,
-  resolveDeploymentId,
   type RequestLogEntry,
 } from '../../../src/util/logs-v2';
 
@@ -256,50 +255,6 @@ describe('logs-v2 utility', () => {
       }
 
       expect(logs).toHaveLength(3);
-    });
-  });
-
-  describe('resolveDeploymentId', () => {
-    it('should return deployment ID as-is if it starts with dpl_', async () => {
-      const result = await resolveDeploymentId(client, 'dpl_abc123');
-      expect(result).toEqual('dpl_abc123');
-    });
-
-    it('should return ID as-is if it does not contain a dot', async () => {
-      const result = await resolveDeploymentId(client, 'abc123');
-      expect(result).toEqual('abc123');
-    });
-
-    it('should resolve URL to deployment ID', async () => {
-      client.scenario.get('/v13/deployments/get', (req, res) => {
-        expect(req.query.url).toEqual('my-app.vercel.app');
-        res.json({ id: 'dpl_resolved123' });
-      });
-
-      const result = await resolveDeploymentId(client, 'my-app.vercel.app');
-      expect(result).toEqual('dpl_resolved123');
-    });
-
-    it('should handle full URL with https', async () => {
-      client.scenario.get('/v13/deployments/get', (req, res) => {
-        expect(req.query.url).toEqual('my-app.vercel.app');
-        res.json({ id: 'dpl_fromhttps' });
-      });
-
-      const result = await resolveDeploymentId(
-        client,
-        'https://my-app.vercel.app'
-      );
-      expect(result).toEqual('dpl_fromhttps');
-    });
-
-    it('should return input on resolution failure', async () => {
-      client.scenario.get('/v13/deployments/get', (_req, res) => {
-        res.status(404).json({ error: { code: 'not_found' } });
-      });
-
-      const result = await resolveDeploymentId(client, 'unknown.vercel.app');
-      expect(result).toEqual('unknown.vercel.app');
     });
   });
 });
