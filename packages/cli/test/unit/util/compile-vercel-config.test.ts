@@ -125,7 +125,7 @@ describe('normalizeConfig', () => {
     const config = {
       redirects: [
         { source: '/old', destination: '/new', permanent: true },
-        { src: '/complex', dest: '/dest', status: 308 },
+        { src: '/complex', dest: '/dest', redirect: true, status: 308 },
       ],
     };
 
@@ -133,8 +133,8 @@ describe('normalizeConfig', () => {
 
     expect(result.redirects).toBeUndefined();
     expect(result.routes).toEqual([
-      { src: '/old', dest: '/new', status: 308 },
-      { src: '/complex', dest: '/dest', status: 308 },
+      { src: '/old', dest: '/new', redirect: true, status: 308 },
+      { src: '/complex', dest: '/dest', redirect: true, status: 308 },
     ]);
   });
 
@@ -204,6 +204,7 @@ describe('normalizeConfig', () => {
       {
         src: '/test-build',
         dest: 'https://httpbin.org/headers',
+        redirect: true,
         status: 307,
       },
     ]);
@@ -239,7 +240,9 @@ describe('normalizeConfig', () => {
 
     const result = normalizeConfig(config);
 
-    expect(result.routes).toEqual([{ src: '/old', dest: '/new', status: 301 }]);
+    expect(result.routes).toEqual([
+      { src: '/old', dest: '/new', redirect: true, status: 301 },
+    ]);
   });
 });
 
