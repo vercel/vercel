@@ -1,5 +1,11 @@
 # @vercel/detect-agent
 
+## 1.1.0
+
+### Minor Changes
+
+- Detect Augment and OpenCode agents ([#14635](https://github.com/vercel/vercel/pull/14635))
+
 ## 1.0.0
 
 ### Major Changes
