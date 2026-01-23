@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { writeFile, remove } from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { VercelConfig } from '@vercel/client';
 import {
   compileVercelConfig,
   normalizeConfig,
@@ -15,7 +16,7 @@ describe('normalizeConfig', () => {
         { source: '/simple', destination: '/dest' },
         { src: '/complex', dest: '/dest', transforms: [] },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -46,7 +47,7 @@ describe('normalizeConfig', () => {
         { src: '/a', dest: '/b' },
         { src: '/c', dest: '/d' },
       ],
-    };
+    } as unknown as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -69,7 +70,7 @@ describe('normalizeConfig', () => {
         },
         { src: '/other', dest: '/dest' },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -101,7 +102,7 @@ describe('normalizeConfig', () => {
         },
         { src: '/other', dest: '/dest' },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -127,7 +128,7 @@ describe('normalizeConfig', () => {
         { source: '/old', destination: '/new', permanent: true },
         { src: '/complex', dest: '/dest', status: 308 },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -167,7 +168,7 @@ describe('normalizeConfig', () => {
       framework: 'nextjs',
       buildCommand: 'npm run build',
       rewrites: [{ src: '/a', dest: '/b' }],
-    };
+    } as unknown as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -191,7 +192,7 @@ describe('normalizeConfig', () => {
           permanent: false,
         },
       ],
-    };
+    } as unknown as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -215,7 +216,7 @@ describe('normalizeConfig', () => {
         { src: '/route-format', dest: '/dest' },
         { source: '/rewrite-format', destination: '/dest' },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -235,7 +236,7 @@ describe('normalizeConfig', () => {
           permanent: true,
         },
       ],
-    };
+    } as unknown as VercelConfig;
 
     const result = normalizeConfig(config);
 

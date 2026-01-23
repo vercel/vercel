@@ -3,10 +3,11 @@ import { join, basename } from 'path';
 import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
 import output from '../output-manager';
-import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
+import { NowBuildError } from '@vercel/build-utils';
 import type { RouteWithSrc, Rewrite, Redirect } from '@vercel/routing-utils';
+import type { VercelConfig } from '@vercel/client';
 
 type RouteInput = RouteWithSrc | Rewrite | Redirect;
 
@@ -56,21 +57,22 @@ function normalizeArrayField(
  * If routes and rewrites/redirects are BOTH explicitly defined,
  * returns unchanged to let schema validation fail.
  */
-export function normalizeConfig(config: any): any {
+export function normalizeConfig(config: VercelConfig): VercelConfig {
   const normalized = { ...config };
-  let allRoutes: any[] = normalized.routes || [];
+  const { rewrites, redirects } = normalized;
+  let allRoutes: RouteInput[] = (normalized.routes as RouteInput[]) || [];
 
   const hasRoutes = allRoutes.length > 0;
-  const hasRewrites = normalized.rewrites?.length > 0;
-  const hasRedirects = normalized.redirects?.length > 0;
+  const hasRewrites = (rewrites?.length ?? 0) > 0;
+  const hasRedirects = (redirects?.length ?? 0) > 0;
 
   // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
   if (hasRoutes && (hasRewrites || hasRedirects)) {
     return normalized;
   }
 
-  const convertedRewrites = normalizeArrayField(normalized.rewrites);
-  const convertedRedirects = normalizeArrayField(normalized.redirects);
+  const convertedRewrites = normalizeArrayField(rewrites);
+  const convertedRedirects = normalizeArrayField(redirects);
 
   if (convertedRewrites) {
     allRoutes = [...allRoutes, ...convertedRewrites];
@@ -334,7 +336,7 @@ export async function compileVercelConfig(
       });
     });
 
-    const normalizedConfig = normalizeConfig(config);
+    const normalizedConfig = normalizeConfig(config as VercelConfig);
     await writeFile(
       compiledConfigPath,
       JSON.stringify(normalizedConfig, null, 2),
