@@ -417,9 +417,9 @@ export async function promptAndGenerateAgentFiles(
   // Mark as handled for this session (regardless of user's choice)
   sessionAlreadyHandled = true;
 
-  // Prompt user with explicit Y/n choice
+  // Prompt the agent to explicitly approve writing to AGENTS.md
   const shouldGenerate = await client.input.confirm(
-    'Would you like to update AGENTS.md with Vercel deployment instructions?',
+    'May I write Vercel deployment instructions to AGENTS.md? (The AI agent must approve this)',
     true
   );
 
