@@ -975,7 +975,6 @@ export class Router {
       const route: Route = {
         src: source,
         dest: destination,
-        redirect: true,
         status: statusCode || (permanent ? 308 : 307),
         transforms,
       };
@@ -1000,7 +999,6 @@ export class Router {
       const route: Route = {
         src: source,
         dest: destination,
-        redirect: true,
         status: statusCode || (permanent ? 308 : 307),
         env: destEnvVars,
       };
@@ -1176,7 +1174,6 @@ export class Router {
           const route: Route = {
             src: redirectRule.source,
             dest: redirectRule.destination,
-            redirect: true,
             status:
               redirectRule.statusCode || (redirectRule.permanent ? 308 : 307),
           };
