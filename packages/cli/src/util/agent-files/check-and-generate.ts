@@ -454,8 +454,8 @@ export async function promptAndGenerateAgentFiles(
   // Get the content to preview (use first file's content)
   const previewContent = dryRunResult.files[0].content || '';
 
-  // Show 6-line preview
-  const preview = getPreviewLines(previewContent, 6);
+  // Show 20-line preview
+  const preview = getPreviewLines(previewContent, 20);
   print('\nChanges to be added to AGENTS.md:\n');
   print('─'.repeat(40) + '\n');
   print(preview + '\n');
@@ -463,7 +463,7 @@ export async function promptAndGenerateAgentFiles(
 
   // Use expand prompt with Y/N/E options
   let action = await client.input.expand({
-    message: 'Update AGENTS.md with Vercel instructions?',
+    message: 'Update AGENTS.md with Vercel instructions? (Y/n/e)',
     choices: [
       { key: 'y', name: 'Yes', value: 'yes' },
       { key: 'n', name: 'No', value: 'no' },
