@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "17.2.27",
+  "version": "17.2.29",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -30,7 +30,7 @@
     "@types/jest": "27.4.1",
     "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
-    "@types/node": "16.18.119",
+    "@types/node": "20.11.0",
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",

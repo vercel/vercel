@@ -1,5 +1,13 @@
 # @vercel/introspection
 
+## 0.0.10
+
+### Patch Changes
+
+- Fix issue where introspection result could sometimes be split across stdout chunks ([#14638](https://github.com/vercel/vercel/pull/14638))
+
+- Disable network blocking logic during introspection while it's opt-in ([#14674](https://github.com/vercel/vercel/pull/14674))
+
 ## 0.0.9
 
 ### Patch Changes

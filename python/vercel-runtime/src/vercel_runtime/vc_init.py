@@ -16,32 +16,37 @@ import socket
 import functools
 import logging
 import builtins
-from typing import Callable, Literal, TextIO
+from typing import Callable, Literal, TextIO, Never
 import contextvars
 import contextlib
 import atexit
 
 
+_original_stderr = sys.stderr
+
+
+def _stderr(message: str):
+    with contextlib.suppress(Exception):
+        _original_stderr.write(message + "\n")
+        _original_stderr.flush()
+
+
+def _fatal(message: str) -> Never:
+    _stderr(message)
+    sys.exit(1)
+
+
+def _must_getenv(varname: str) -> str:
+    value = os.environ.get(varname)
+    if not value:
+        _fatal(f"{varname} is not set")
+    return value
+
+
 _here = os.path.dirname(__file__)
-_vendor_rel = '__VC_HANDLER_VENDOR_DIR'
-_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
-
-if os.path.isdir(_vendor):
-    # Process .pth files like a real site-packages dir
-    site.addsitedir(_vendor)
-
-    # Move _vendor to the front (after script dir if present)
-    try:
-        while _vendor in sys.path:
-            sys.path.remove(_vendor)
-    except ValueError:
-        pass
-
-    # Put vendored deps ahead of site-packages but after the script dir
-    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
-    sys.path.insert(idx, _vendor)
-
-    importlib.invalidate_caches()
+_entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
+_entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
+_entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
 
 
 def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
@@ -159,18 +164,11 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
     builtins.print = print_wrapper(builtins.print)
 
 
-def _stderr(message: str):
-    with contextlib.suppress(Exception):
-        _original_stderr.write(message + "\n")
-        _original_stderr.flush()
-
-
 # If running in the platform (IPC present), logging must be setup before importing user code so that
 # logs happening outside the request context are emitted correctly.
 ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 storage: contextvars.ContextVar[dict | None] = contextvars.ContextVar('storage', default=None)
 send_message = lambda m: None
-_original_stderr = sys.stderr
 
 
 # Buffer for pre-handshake logs (to avoid blocking IPC on startup)
@@ -236,14 +234,13 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:
-    user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
-    __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
+    __vc_spec = util.spec_from_file_location(_entrypoint_modname, _entrypoint_abs)
     __vc_module = util.module_from_spec(__vc_spec)
-    sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
+    sys.modules[_entrypoint_modname] = __vc_module
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
 except Exception:
-    _stderr(f'Error importing __VC_HANDLER_ENTRYPOINT:')
+    _stderr(f'Error importing {_entrypoint_rel}:')
     _stderr(traceback.format_exc())
     exit(1)
 
@@ -607,7 +604,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
         _init_log_buf.clear()
         server.serve_forever()
 
-    _stderr('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    _stderr(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
     _stderr('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
 
@@ -911,6 +908,6 @@ elif 'app' in __vc_variables:
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    print(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
     print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)

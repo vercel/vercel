@@ -1,5 +1,75 @@
 # vercel
 
+## 50.4.11
+
+### Patch Changes
+
+- Add hidden `logsv2` command with request-logs API support ([#14656](https://github.com/vercel/vercel/pull/14656))
+
+## 50.4.10
+
+### Patch Changes
+
+- Add warning when adding/updating env vars ([#14696](https://github.com/vercel/vercel/pull/14696))
+
+  1. When keys have prefixes that expose values to the client
+  2. The value has whitespace
+  3. The values are exposed and the key matches a pattern for a sensitive value like a password
+
+- removing error ([#14704](https://github.com/vercel/vercel/pull/14704))
+
+- Updated dependencies [[`ee4463453cfe0711bf46491c080f97b196bdaa5a`](https://github.com/vercel/vercel/commit/ee4463453cfe0711bf46491c080f97b196bdaa5a), [`583c0521046dde3574afa506eb4fa7b9c150394f`](https://github.com/vercel/vercel/commit/583c0521046dde3574afa506eb4fa7b9c150394f), [`3eff9995d2f7703475bf67f99f15f08f1f693dd5`](https://github.com/vercel/vercel/commit/3eff9995d2f7703475bf67f99f15f08f1f693dd5)]:
+  - @vercel/build-utils@13.2.15
+  - @vercel/next@4.15.16
+  - @vercel/backends@0.0.23
+  - @vercel/elysia@0.1.26
+  - @vercel/express@0.1.33
+  - @vercel/fastify@0.1.29
+  - @vercel/go@3.3.4
+  - @vercel/h3@0.1.35
+  - @vercel/hono@0.2.29
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.9
+  - @vercel/nestjs@0.2.30
+  - @vercel/node@5.5.27
+  - @vercel/python@6.3.0
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.27
+
+## 50.4.9
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
+- Updated dependencies [[`62219fc149835b98a98e03272fd8c965489ee43f`](https://github.com/vercel/vercel/commit/62219fc149835b98a98e03272fd8c965489ee43f), [`c8dbba4d310cbdd0733e6552aa969dc706b1076e`](https://github.com/vercel/vercel/commit/c8dbba4d310cbdd0733e6552aa969dc706b1076e), [`c762e424822819ba1bd8dd0f1fe6496741f7b586`](https://github.com/vercel/vercel/commit/c762e424822819ba1bd8dd0f1fe6496741f7b586), [`8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4`](https://github.com/vercel/vercel/commit/8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4), [`7719d28c3ec368a236d149118025a049b110d9f4`](https://github.com/vercel/vercel/commit/7719d28c3ec368a236d149118025a049b110d9f4)]:
+  - @vercel/python@6.3.0
+  - @vercel/static-build@2.8.26
+  - @vercel/build-utils@13.2.14
+  - @vercel/go@3.3.4
+  - @vercel/backends@0.0.23
+  - @vercel/elysia@0.1.25
+  - @vercel/express@0.1.32
+  - @vercel/fastify@0.1.28
+  - @vercel/h3@0.1.34
+  - @vercel/hono@0.2.28
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.8
+  - @vercel/nestjs@0.2.29
+  - @vercel/next@4.15.15
+  - @vercel/node@5.5.26
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+
 ## 50.4.8
 
 ### Patch Changes
