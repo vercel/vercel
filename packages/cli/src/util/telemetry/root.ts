@@ -96,6 +96,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandFlags(actual: string) {
+    this.trackCliCommand({
+      command: 'flags',
+      value: actual,
+    });
+  }
+
   trackCliCommandGit(actual: string) {
     this.trackCliCommand({
       command: 'git',
