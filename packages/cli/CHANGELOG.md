@@ -1,5 +1,27 @@
 # vercel
 
+## 50.5.0
+
+### Minor Changes
+
+- New, consistent --format command for machine readable output ([#14609](https://github.com/vercel/vercel/pull/14609))
+
+- api command ([#14715](https://github.com/vercel/vercel/pull/14715))
+
+- Detect Augment and OpenCode agents ([#14635](https://github.com/vercel/vercel/pull/14635))
+
+### Patch Changes
+
+- Track CLI as source for marketplace integration installations ([#14713](https://github.com/vercel/vercel/pull/14713))
+
+- Do not show default project settings when framework is detected ([#14608](https://github.com/vercel/vercel/pull/14608))
+
+- Fix flakey link tests caused by Inquirer type-ahead search ([#14716](https://github.com/vercel/vercel/pull/14716))
+
+- Updated dependencies [[`64b4577b6d702335478af47c8395bf36daf4f311`](https://github.com/vercel/vercel/commit/64b4577b6d702335478af47c8395bf36daf4f311), [`1ba97e3af1c1240703df3297fbbf7af0f809dd56`](https://github.com/vercel/vercel/commit/1ba97e3af1c1240703df3297fbbf7af0f809dd56)]:
+  - @vercel/python@6.3.1
+  - @vercel/detect-agent@1.1.0
+
 ## 50.4.11
 
 ### Patch Changes
