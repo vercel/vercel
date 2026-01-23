@@ -28,7 +28,6 @@ function toRouteFormat(item: any, isRedirect: boolean): any {
   };
 
   if (isRedirect) {
-    route.redirect = true;
     route.status = statusCode || (permanent ? 308 : 307);
   } else {
     if (respectOriginCacheControl !== undefined) {
