@@ -26,6 +26,8 @@ import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/int
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { getTeamWithFlags } from '../../util/teams/get-team-with-flags';
+import { AUTO_PROVISION_FLAG } from '../../util/integration/auto-provision-resource';
 
 export async function add(client: Client, args: string[]) {
   const telemetry = new IntegrationAddTelemetryClient({
@@ -50,6 +52,19 @@ export async function add(client: Client, args: string[]) {
 
   if (!team) {
     output.error('Team not found');
+    return 1;
+  }
+
+  let useAutoProvision = false;
+  try {
+    const teamWithFlags = await getTeamWithFlags(client, team.id);
+    useAutoProvision = teamWithFlags.flags?.[AUTO_PROVISION_FLAG] === true;
+  } catch {
+    useAutoProvision = false;
+  }
+
+  if (useAutoProvision) {
+    output.error('Auto-provision flow is not yet implemented');
     return 1;
   }
 
