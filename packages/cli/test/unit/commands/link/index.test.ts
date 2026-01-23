@@ -576,7 +576,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to it?');
     client.stdin.write('y\n');
@@ -615,7 +615,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
@@ -737,7 +737,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -782,7 +782,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -827,7 +827,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -879,7 +879,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -928,7 +928,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -975,7 +975,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -1022,7 +1022,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         'Which scope should contain your project?'
       );
-      client.stdin.write('y\n');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
