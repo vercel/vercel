@@ -16,5 +16,9 @@
     "api",
     "examples",
     "@vercel-internals/*"
-  ]
+  ],
+  "privatePackages": {
+    "version": true,
+    "tag": true
+  }
 }

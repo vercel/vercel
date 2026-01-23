@@ -58,6 +58,11 @@ export const addSubcommand = {
       shorthand: null,
     },
     {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when adding an Environment Variable',
+    },
+    {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
       shorthand: null,

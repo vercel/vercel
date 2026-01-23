@@ -1,5 +1,13 @@
 # @vercel/go
 
+## 3.3.4
+
+### Patch Changes
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
 ## 3.3.3
 
 ### Patch Changes
