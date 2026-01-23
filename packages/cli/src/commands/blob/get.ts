@@ -1,4 +1,5 @@
 import type Client from '../../util/client';
+import type { ReadableStream as WebReadableStream } from 'stream/web';
 import output from '../../output-manager';
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import * as blob from '@vercel/blob';
@@ -8,7 +9,9 @@ import { getSubcommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { BlobGetTelemetryClient } from '../../util/telemetry/commands/blob/get';
 import { printError } from '../../util/error';
-import { writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
 import bytes from 'bytes';
 
 function isAccess(access: string): access is 'private' | 'public' {
@@ -16,11 +19,13 @@ function isAccess(access: string): access is 'private' | 'public' {
 }
 
 interface GetBlobResult {
-  blob: Blob;
-  url: string;
-  pathname: string;
-  contentType: string;
-  size: number;
+  stream: ReadableStream;
+  blob: {
+    url: string;
+    pathname: string;
+    contentType: string;
+    size: number;
+  };
 }
 
 export default async function get(
@@ -107,21 +112,22 @@ export default async function get(
 
   if (outputPath) {
     try {
-      const arrayBuffer = await result.blob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      await writeFile(outputPath, uint8Array);
+      // Convert web ReadableStream to Node.js Readable stream and pipe to file
+      const nodeStream = Readable.fromWeb(result.stream as WebReadableStream);
+      const writeStream = createWriteStream(outputPath);
+      await pipeline(nodeStream, writeStream);
       output.success(
-        `Blob saved to ${outputPath} (${bytes(result.size)}, ${result.contentType})`
+        `Blob saved to ${outputPath} (${bytes(result.blob.size)}, ${result.blob.contentType})`
       );
     } catch (err) {
       output.error(`Error writing to file: ${err}`);
       return 1;
     }
   } else {
-    output.print(`URL: ${result.url}
-Pathname: ${result.pathname}
-Content-Type: ${result.contentType}
-Size: ${bytes(result.size)}
+    output.print(`URL: ${result.blob.url}
+Pathname: ${result.blob.pathname}
+Content-Type: ${result.blob.contentType}
+Size: ${bytes(result.blob.size)}
 `);
   }
 

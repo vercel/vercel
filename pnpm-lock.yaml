@@ -423,8 +423,8 @@ importers:
         specifier: workspace:*
         version: link:../backends
       '@vercel/blob':
-        specifier: 2.1.0-06d6754-20260122183144
-        version: 2.1.0-06d6754-20260122183144
+        specifier: 2.1.0-704ff70-20260123180156
+        version: 2.1.0-704ff70-20260123180156
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
@@ -9398,15 +9398,15 @@ packages:
     dev: true
     optional: true
 
-  /@vercel/blob@2.1.0-06d6754-20260122183144:
-    resolution: {integrity: sha512-6nzRqhqPWM5mm7g/yY2b/27BNemlg8iwz2UMXhY1I4uVGguo+cees3Ux+iLG4SH2a1ZeKTS6uB21di29KIYmGQ==}
+  /@vercel/blob@2.1.0-704ff70-20260123180156:
+    resolution: {integrity: sha512-77qVBX7EyO6X0uIL29/kBEQk8h1bW1z7AK4hLNUd64MvxqseVRJTz4xGW5ScgDPZg9qyqQYaM1bwoM2j5w0oXA==}
     engines: {node: '>=20.0.0'}
     dependencies:
       async-retry: 1.3.3
       is-buffer: 2.0.5
       is-node-process: 1.2.0
       throttleit: 2.1.0
-      undici: 5.28.4
+      undici: 6.23.0
     dev: false
 
   /@vercel/fun@1.2.1:
@@ -19389,6 +19389,11 @@ packages:
     resolution: {integrity: sha512-uROZWze0R0itiAKVPsYhFov9LxrPMHLMEQFszeI2gCN6bnIIZ8twzBCJcN2LJrBBLfrP0t1FW0g+JmKVl8Vk1g==}
     engines: {node: '>=18.17'}
     dev: true
+
+  /undici@6.23.0:
+    resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
+    engines: {node: '>=18.17'}
+    dev: false
 
   /unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}

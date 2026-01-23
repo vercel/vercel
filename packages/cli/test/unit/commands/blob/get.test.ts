@@ -1,21 +1,45 @@
+import type {
+  ReadableStream as WebReadableStream,
+  ReadableStreamDefaultController,
+} from 'stream/web';
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import get from '../../../../src/commands/blob/get';
 import * as blobModule from '@vercel/blob';
 import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
-import * as fsPromises from 'node:fs/promises';
+import * as fs from 'node:fs';
+import * as streamPromises from 'node:stream/promises';
+import { PassThrough } from 'node:stream';
 
 // Mock the external dependencies
 vi.mock('@vercel/blob');
 vi.mock('../../../../src/util/blob/token');
 vi.mock('../../../../src/output-manager');
-vi.mock('node:fs/promises');
+vi.mock('node:fs');
+vi.mock('node:stream/promises');
 
 const mockedBlob = vi.mocked(blobModule);
 const mockedGetBlobRWToken = vi.mocked(getBlobRWTokenModule.getBlobRWToken);
 const mockedOutput = vi.mocked(output);
-const mockedWriteFile = vi.mocked(fsPromises.writeFile);
+const mockedCreateWriteStream = vi.mocked(fs.createWriteStream);
+const mockedPipeline = vi.mocked(streamPromises.pipeline);
+
+// Helper to create a mock ReadableStream
+function createMockReadableStream(
+  content: string
+): WebReadableStream<Uint8Array> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { ReadableStream } = require('stream/web');
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  return new ReadableStream({
+    start(controller: ReadableStreamDefaultController) {
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+}
 
 describe('blob get', () => {
   const testToken = 'vercel_blob_rw_test_token_123';
@@ -30,12 +54,18 @@ describe('blob get', () => {
       success: true,
     });
     mockedBlob.get.mockResolvedValue({
-      blob: new Blob(['test content'], { type: 'text/plain' }),
-      url: 'https://example.com/test-file.txt',
-      pathname: 'test-file.txt',
-      contentType: 'text/plain',
-      size: 12,
+      stream: createMockReadableStream('test content'),
+      blob: {
+        url: 'https://example.com/test-file.txt',
+        pathname: 'test-file.txt',
+        contentType: 'text/plain',
+        size: 12,
+      },
     });
+    // Mock createWriteStream to return a PassThrough stream
+    mockedCreateWriteStream.mockReturnValue(new PassThrough() as never);
+    // Mock pipeline to resolve successfully
+    mockedPipeline.mockResolvedValue(undefined);
   });
 
   describe('successful get', () => {
@@ -112,8 +142,6 @@ describe('blob get', () => {
     });
 
     it('should save blob to output file when --output is provided', async () => {
-      mockedWriteFile.mockResolvedValue(undefined);
-
       const exitCode = await get(
         client,
         ['--access', 'public', '--output', './downloaded.txt', 'test-file.txt'],
@@ -121,10 +149,8 @@ describe('blob get', () => {
       );
 
       expect(exitCode).toBe(0);
-      expect(mockedWriteFile).toHaveBeenCalledWith(
-        './downloaded.txt',
-        expect.any(Uint8Array)
-      );
+      expect(mockedCreateWriteStream).toHaveBeenCalledWith('./downloaded.txt');
+      expect(mockedPipeline).toHaveBeenCalled();
       expect(mockedOutput.success).toHaveBeenCalledWith(
         expect.stringContaining('Blob saved to ./downloaded.txt')
       );
@@ -209,7 +235,7 @@ describe('blob get', () => {
     });
 
     it('should return 1 when writing to output file fails', async () => {
-      mockedWriteFile.mockRejectedValue(new Error('Write failed'));
+      mockedPipeline.mockRejectedValue(new Error('Write failed'));
 
       const exitCode = await get(
         client,
@@ -246,8 +272,6 @@ describe('blob get', () => {
     });
 
     it('should track output option when provided', async () => {
-      mockedWriteFile.mockResolvedValue(undefined);
-
       const exitCode = await get(
         client,
         ['--access', 'private', '--output', './out.txt', 'file.txt'],
