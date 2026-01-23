@@ -6,12 +6,20 @@ import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
+import type { RouteWithSrc, Rewrite, Redirect } from '@vercel/routing-utils';
 
-function isRouteFormat(item: any): boolean {
-  return item && typeof item === 'object' && 'src' in item;
+type RouteItemType = 'route' | 'rewrite' | 'redirect';
+type RouteInput = RouteWithSrc | Rewrite | Redirect;
+
+function detectRouteType(item: RouteInput): RouteItemType {
+  if ('src' in item) return 'route';
+  if ('permanent' in item) return 'redirect';
+  return 'rewrite';
 }
 
-function toRouteFormat(item: any, isRedirect: boolean): any {
+function toRouteFormat(item: RouteInput, type: RouteItemType): RouteWithSrc {
+  if (type === 'route') return item as RouteWithSrc;
+
   const {
     source,
     destination,
@@ -19,16 +27,15 @@ function toRouteFormat(item: any, isRedirect: boolean): any {
     permanent,
     respectOriginCacheControl,
     ...rest
-  } = item;
+  } = item as Rewrite & Redirect;
 
-  const route: any = {
+  const route: RouteWithSrc = {
     src: source,
     dest: destination,
     ...rest,
   };
 
-  if (isRedirect) {
-    route.redirect = true;
+  if (type === 'redirect') {
     route.status = statusCode || (permanent ? 308 : 307);
   } else {
     if (respectOriginCacheControl !== undefined) {
@@ -43,21 +50,22 @@ function toRouteFormat(item: any, isRedirect: boolean): any {
 }
 
 function normalizeArrayField(
-  items: any[] | undefined,
-  isRedirect: boolean
-): any[] | null {
+  items: RouteInput[] | undefined,
+  defaultType: 'rewrite' | 'redirect'
+): RouteWithSrc[] | null {
   if (!items || !Array.isArray(items) || items.length === 0) {
     return null;
   }
 
-  const hasRouteFormat = items.some(isRouteFormat);
+  const hasRouteFormat = items.some(item => detectRouteType(item) === 'route');
   if (!hasRouteFormat) {
     return null;
   }
 
-  return items.map(item =>
-    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
-  );
+  return items.map(item => {
+    const type = detectRouteType(item);
+    return toRouteFormat(item, type === 'route' ? type : defaultType);
+  });
 }
 
 /**
@@ -83,8 +91,11 @@ export function normalizeConfig(config: any): any {
     return normalized;
   }
 
-  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
-  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
+  const convertedRewrites = normalizeArrayField(normalized.rewrites, 'rewrite');
+  const convertedRedirects = normalizeArrayField(
+    normalized.redirects,
+    'redirect'
+  );
 
   if (convertedRewrites) {
     allRoutes = [...allRoutes, ...convertedRewrites];
@@ -98,11 +109,8 @@ export function normalizeConfig(config: any): any {
 
   if (allRoutes.length > 0) {
     normalized.routes = allRoutes.map(item => {
-      if (isRouteFormat(item)) {
-        return item;
-      }
-      const isRedirect = 'permanent' in item;
-      return toRouteFormat(item, isRedirect);
+      const type = detectRouteType(item);
+      return toRouteFormat(item, type);
     });
   }
 
