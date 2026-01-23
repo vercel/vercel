@@ -79,6 +79,14 @@ export const logsv2Command = {
       description: 'Output logs as JSON Lines for piping to other tools',
     },
     {
+      name: 'follow',
+      shorthand: 'f',
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Stream live runtime logs (requires --deployment, no other filters allowed)',
+    },
+    {
       name: 'query',
       shorthand: 'q',
       type: String,
@@ -121,6 +129,10 @@ export const logsv2Command = {
     {
       name: 'Display logs for a specific request',
       value: `${packageName} logsv2 --request-id req_xxxxx`,
+    },
+    {
+      name: 'Stream live logs for a deployment',
+      value: `${packageName} logsv2 --deployment dpl_xxxxx --follow`,
     },
   ],
 } as const;

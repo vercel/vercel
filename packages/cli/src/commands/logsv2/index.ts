@@ -13,6 +13,7 @@ import {
   InvalidDeploymentId,
   ProjectNotFound,
 } from '../../util/errors-ts';
+import { displayRuntimeLogs } from '../../util/logs';
 import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
 import { getCommandName } from '../../util/pkg-name';
@@ -68,6 +69,7 @@ export default async function logsv2(client: Client) {
   const untilOption = parsedArguments.flags['--until'];
   const limitOption = parsedArguments.flags['--limit'];
   const jsonOption = parsedArguments.flags['--json'];
+  const followOption = parsedArguments.flags['--follow'];
   const queryOption = parsedArguments.flags['--query'];
   const requestIdOption = parsedArguments.flags['--request-id'];
 
@@ -81,8 +83,41 @@ export default async function logsv2(client: Client) {
   telemetry.trackCliOptionUntil(untilOption);
   telemetry.trackCliOptionLimit(limitOption);
   telemetry.trackCliFlagJson(jsonOption);
+  telemetry.trackCliFlagFollow(followOption);
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
+
+  if (followOption) {
+    if (!deploymentOption) {
+      output.error(
+        `The ${chalk.bold('--follow')} flag requires ${chalk.bold('--deployment')} to be specified.`
+      );
+      return 1;
+    }
+
+    const incompatibleFlags = [
+      { flag: '--environment', value: environmentOption },
+      { flag: '--level', value: levelOption },
+      { flag: '--status-code', value: statusCodeOption },
+      { flag: '--source', value: sourceOption },
+      { flag: '--since', value: sinceOption },
+      { flag: '--until', value: untilOption },
+      { flag: '--limit', value: limitOption },
+      { flag: '--query', value: queryOption },
+      { flag: '--request-id', value: requestIdOption },
+    ];
+
+    const usedIncompatible = incompatibleFlags
+      .filter(f => f.value !== undefined && f.value !== null)
+      .map(f => chalk.bold(f.flag));
+
+    if (usedIncompatible.length > 0) {
+      output.error(
+        `The ${chalk.bold('--follow')} flag does not support filtering. Remove: ${usedIncompatible.join(', ')}`
+      );
+      return 1;
+    }
+  }
 
   let contextName: string | null = null;
 
@@ -158,6 +193,24 @@ export default async function logsv2(client: Client) {
       }
       throw err;
     }
+  }
+
+  if (followOption) {
+    if (!jsonOption) {
+      output.print(
+        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), DATE_TIME_FORMAT))}\n\n`
+      );
+    }
+    const abortController = new AbortController();
+    return await displayRuntimeLogs(
+      client,
+      {
+        deploymentId: deploymentId!,
+        projectId,
+        parse: !jsonOption,
+      },
+      abortController
+    );
   }
 
   if (

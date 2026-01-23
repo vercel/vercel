@@ -109,6 +109,12 @@ export class Logsv2TelemetryClient
     }
   }
 
+  trackCliFlagFollow(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('follow');
+    }
+  }
+
   trackCliOptionQuery(v: string | undefined) {
     if (v) {
       this.trackCliOption({

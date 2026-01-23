@@ -666,4 +666,106 @@ describe('logsv2', () => {
       await expect(client.stderr).toOutput("isn't linked to a project");
     });
   });
+
+  describe('--follow option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logsv2test',
+        name: 'logsv2-test-project',
+      });
+    });
+
+    it('should error when --follow is used without --deployment', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logsv2', '--follow');
+      const exitCode = await logsv2(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        '--follow flag requires --deployment'
+      );
+    });
+
+    it('should error when --follow is used with --level', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logsv2',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--level',
+        'error'
+      );
+      const exitCode = await logsv2(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --level');
+    });
+
+    it('should error when --follow is used with --environment', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logsv2',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--environment',
+        'production'
+      );
+      const exitCode = await logsv2(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --environment');
+    });
+
+    it('should error when --follow is used with --query', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logsv2',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--query',
+        'error'
+      );
+      const exitCode = await logsv2(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --query');
+    });
+
+    it('should error when --follow is used with multiple incompatible flags', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logsv2',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--level',
+        'error',
+        '--since',
+        '1h'
+      );
+      const exitCode = await logsv2(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --level, --since');
+    });
+
+    it('should track telemetry for --follow flag', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logsv2', '--follow');
+      await logsv2(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:follow',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
 });
