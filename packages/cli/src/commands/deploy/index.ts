@@ -722,21 +722,22 @@ export default async (client: Client): Promise<number> => {
   const { isAgent } = await determineAgent();
   const guidanceMode = parsedArguments.flags['--guidance'] ?? isAgent;
 
-  // Auto-generate agent files if agent is detected
-  if (isAgent) {
-    const { autoGenerateAgentFiles } = await import('../../util/agent-files');
-    const agentResult = await autoGenerateAgentFiles(
-      cwd,
-      project?.name,
-      org?.slug
+  // Prompt to generate agent files if running from an AI agent
+  const { promptAndGenerateAgentFiles } = await import(
+    '../../util/agent-files'
+  );
+  const agentResult = await promptAndGenerateAgentFiles({
+    cwd,
+    projectName: project?.name,
+    orgSlug: org?.slug,
+    client,
+  });
+  if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
+    output.print(
+      chalk.dim(
+        `\n${prependEmoji('Generated agent configuration files', emoji('success'))}\n`
+      )
     );
-    if (agentResult.status === 'generated' && agentResult.files.length > 0) {
-      output.print(
-        chalk.dim(
-          `\n${prependEmoji('Generated agent configuration files', emoji('success'))}\n`
-        )
-      );
-    }
   }
 
   return printDeploymentStatus(deployment, deployStamp, noWait, guidanceMode);

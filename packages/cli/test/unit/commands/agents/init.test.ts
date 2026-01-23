@@ -336,4 +336,76 @@ More custom stuff.
       expect(formats).toEqual(['markdown']);
     });
   });
+
+  describe('promptAndGenerateAgentFiles', () => {
+    it('should skip when not in agent context', async () => {
+      const { promptAndGenerateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const mockClient = {
+        input: {
+          confirm: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      const result = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        client: mockClient,
+      });
+
+      expect(result).toBeNull();
+      expect(mockClient.input.confirm).not.toHaveBeenCalled();
+    });
+
+    it('should prompt and generate when agent is detected and user confirms', async () => {
+      vi.stubEnv('CLAUDE_CODE', '1');
+
+      const { promptAndGenerateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const mockClient = {
+        input: {
+          confirm: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      const result = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        projectName: 'test-project',
+        client: mockClient,
+      });
+
+      expect(mockClient.input.confirm).toHaveBeenCalledWith(
+        'Update AGENTS.md with Vercel deployment instructions?',
+        true
+      );
+      expect(result?.status).toBe('generated');
+      expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(true);
+    });
+
+    it('should not generate when user declines', async () => {
+      vi.stubEnv('CLAUDE_CODE', '1');
+
+      const { promptAndGenerateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const mockClient = {
+        input: {
+          confirm: vi.fn().mockResolvedValue(false),
+        },
+      };
+
+      const result = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        client: mockClient,
+      });
+
+      expect(mockClient.input.confirm).toHaveBeenCalled();
+      expect(result).toBeNull();
+      expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(false);
+    });
+  });
 });

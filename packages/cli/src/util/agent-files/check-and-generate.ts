@@ -14,6 +14,7 @@ import {
   getFormatConfig,
   type AgentFileFormat,
 } from './detect-format';
+import { readFileSync } from 'node:fs';
 import {
   renderMarkdownContent,
   renderCursorrulesContent,
@@ -331,6 +332,92 @@ export async function autoGenerateAgentFiles(
   return generateAgentFiles({
     cwd,
     silent: true,
+    projectName,
+    orgSlug,
+  });
+}
+
+/**
+ * Check if agent files need updating (have Vercel markers that could be refreshed)
+ */
+function agentFilesNeedUpdate(cwd: string): boolean {
+  const formats = ['markdown', 'cursorrules', 'copilot'] as const;
+
+  for (const format of formats) {
+    const formatConfig = getFormatConfig(format);
+    const filePath = formatConfig.filePath(cwd);
+
+    if (existsSync(filePath)) {
+      try {
+        const content = readFileSync(filePath, 'utf-8');
+        // File exists with our markers - can be updated
+        if (
+          content.includes(VERCEL_SECTION_START) &&
+          content.includes(VERCEL_SECTION_END)
+        ) {
+          return true;
+        }
+        // File exists without markers - could add our section
+        return true;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  // No agent files exist yet - should create
+  return true;
+}
+
+export interface PromptAgentFilesOptions {
+  cwd: string;
+  projectName?: string;
+  orgSlug?: string;
+  client: {
+    input: {
+      confirm: (message: string, defaultValue: boolean) => Promise<boolean>;
+    };
+  };
+}
+
+/**
+ * Prompt user to generate/update agent files when running from an AI agent
+ * Returns the result if files were generated, or null if skipped/declined
+ */
+export async function promptAndGenerateAgentFiles(
+  options: PromptAgentFilesOptions
+): Promise<GenerateResult | null> {
+  const { cwd, projectName, orgSlug, client } = options;
+
+  // Check if disabled
+  if (isDisabled()) {
+    return null;
+  }
+
+  // Only prompt if running from an agent
+  const { isAgent } = await determineAgent();
+  if (!isAgent) {
+    return null;
+  }
+
+  // Check if there's anything to update
+  if (!agentFilesNeedUpdate(cwd)) {
+    return null;
+  }
+
+  // Prompt user
+  const shouldGenerate = await client.input.confirm(
+    'Update AGENTS.md with Vercel deployment instructions?',
+    true
+  );
+
+  if (!shouldGenerate) {
+    return null;
+  }
+
+  // Generate files
+  return generateAgentFiles({
+    cwd,
     projectName,
     orgSlug,
   });

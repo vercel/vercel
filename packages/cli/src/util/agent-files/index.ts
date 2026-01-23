@@ -1,6 +1,7 @@
 export {
   generateAgentFiles,
   autoGenerateAgentFiles,
+  promptAndGenerateAgentFiles,
 } from './check-and-generate';
 export {
   detectFormatsForAgent,

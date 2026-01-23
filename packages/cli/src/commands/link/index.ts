@@ -10,7 +10,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
-import { determineAgent } from '@vercel/detect-agent';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -88,18 +87,22 @@ export default async function link(client: Client) {
     orgSlug = link.org?.slug;
   }
 
-  // Auto-generate agent files if agent is detected
-  const { isAgent } = await determineAgent();
-  if (isAgent) {
-    const { autoGenerateAgentFiles } = await import('../../util/agent-files');
-    const agentResult = await autoGenerateAgentFiles(cwd, projectName, orgSlug);
-    if (agentResult.status === 'generated' && agentResult.files.length > 0) {
-      output.print(
-        chalk.dim(
-          `Generated agent configuration files with Vercel best practices\n`
-        )
-      );
-    }
+  // Prompt to generate agent files if running from an AI agent
+  const { promptAndGenerateAgentFiles } = await import(
+    '../../util/agent-files'
+  );
+  const agentResult = await promptAndGenerateAgentFiles({
+    cwd,
+    projectName,
+    orgSlug,
+    client,
+  });
+  if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
+    output.print(
+      chalk.dim(
+        `Generated agent configuration files with Vercel best practices\n`
+      )
+    );
   }
 
   return 0;
