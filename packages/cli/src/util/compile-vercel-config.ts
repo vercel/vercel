@@ -6,22 +6,30 @@ import output from '../output-manager';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 import { NowBuildError } from '@vercel/build-utils';
-import type { RouteWithSrc, Rewrite, Redirect } from '@vercel/routing-utils';
+import type {
+  RouteWithSrc,
+  Rewrite,
+  Redirect,
+  Header,
+} from '@vercel/routing-utils';
 import type { VercelConfig } from '@vercel/client';
 
-type RouteInput = RouteWithSrc | Rewrite | Redirect;
+type RouteInput = RouteWithSrc | Rewrite | Redirect | Header;
 
 function toRouteFormat(item: RouteInput): RouteWithSrc {
   if ('src' in item) return item;
 
-  const { source, destination, statusCode, permanent, ...rest } =
-    item as Rewrite & Redirect;
+  const { source, destination, headers, statusCode, permanent, ...rest } =
+    item as Rewrite & Redirect & Header;
 
   const route: RouteWithSrc = {
     src: source,
-    dest: destination,
     ...rest,
   };
+
+  if (destination) route.dest = destination;
+  if (headers)
+    route.headers = Object.fromEntries(headers.map(h => [h.key, h.value]));
 
   if (statusCode !== undefined) {
     route.status = statusCode;
@@ -59,20 +67,22 @@ function normalizeArrayField(
  */
 export function normalizeConfig(config: VercelConfig): VercelConfig {
   const normalized = { ...config };
-  const { rewrites, redirects } = normalized;
+  const { rewrites, redirects, headers } = normalized;
   let allRoutes: RouteInput[] = (normalized.routes as RouteInput[]) || [];
 
   const hasRoutes = allRoutes.length > 0;
   const hasRewrites = (rewrites?.length ?? 0) > 0;
   const hasRedirects = (redirects?.length ?? 0) > 0;
+  const hasHeaders = (headers?.length ?? 0) > 0;
 
-  // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
-  if (hasRoutes && (hasRewrites || hasRedirects)) {
+  // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
     return normalized;
   }
 
   const convertedRewrites = normalizeArrayField(rewrites);
   const convertedRedirects = normalizeArrayField(redirects);
+  const convertedHeaders = normalizeArrayField(headers as RouteInput[]);
 
   if (convertedRewrites) {
     allRoutes = [...allRoutes, ...convertedRewrites];
@@ -82,6 +92,11 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
   if (convertedRedirects) {
     allRoutes = [...allRoutes, ...convertedRedirects];
     delete normalized.redirects;
+  }
+
+  if (convertedHeaders) {
+    allRoutes = [...allRoutes, ...convertedHeaders];
+    delete normalized.headers;
   }
 
   if (allRoutes.length > 0) {
