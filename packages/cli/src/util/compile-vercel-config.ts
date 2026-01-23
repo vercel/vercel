@@ -6,58 +6,44 @@ import output from '../output-manager';
 import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
+import type { RouteWithSrc, Rewrite, Redirect } from '@vercel/routing-utils';
 
-function isRouteFormat(item: any): boolean {
-  return item && typeof item === 'object' && 'src' in item;
-}
+type RouteInput = RouteWithSrc | Rewrite | Redirect;
 
-function toRouteFormat(item: any, isRedirect: boolean): any {
-  const {
-    source,
-    destination,
-    statusCode,
-    permanent,
-    respectOriginCacheControl,
-    ...rest
-  } = item;
+function toRouteFormat(item: RouteInput): RouteWithSrc {
+  if ('src' in item) return item;
 
-  const route: any = {
+  const { source, destination, statusCode, permanent, ...rest } =
+    item as Rewrite & Redirect;
+
+  const route: RouteWithSrc = {
     src: source,
     dest: destination,
     ...rest,
   };
 
-  if (isRedirect) {
-    route.redirect = true;
-    route.status = statusCode || (permanent ? 308 : 307);
-  } else {
-    if (respectOriginCacheControl !== undefined) {
-      route.respectOriginCacheControl = respectOriginCacheControl;
-    }
-    if (statusCode !== undefined) {
-      route.status = statusCode;
-    }
+  if (statusCode !== undefined) {
+    route.status = statusCode;
+  } else if (permanent !== undefined) {
+    route.status = permanent ? 308 : 307;
   }
 
   return route;
 }
 
 function normalizeArrayField(
-  items: any[] | undefined,
-  isRedirect: boolean
-): any[] | null {
+  items: RouteInput[] | undefined
+): RouteWithSrc[] | null {
   if (!items || !Array.isArray(items) || items.length === 0) {
     return null;
   }
 
-  const hasRouteFormat = items.some(isRouteFormat);
+  const hasRouteFormat = items.some(item => 'src' in item);
   if (!hasRouteFormat) {
     return null;
   }
 
-  return items.map(item =>
-    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
-  );
+  return items.map(toRouteFormat);
 }
 
 /**
@@ -83,8 +69,8 @@ export function normalizeConfig(config: any): any {
     return normalized;
   }
 
-  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
-  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
+  const convertedRewrites = normalizeArrayField(normalized.rewrites);
+  const convertedRedirects = normalizeArrayField(normalized.redirects);
 
   if (convertedRewrites) {
     allRoutes = [...allRoutes, ...convertedRewrites];
@@ -97,13 +83,7 @@ export function normalizeConfig(config: any): any {
   }
 
   if (allRoutes.length > 0) {
-    normalized.routes = allRoutes.map(item => {
-      if (isRouteFormat(item)) {
-        return item;
-      }
-      const isRedirect = 'permanent' in item;
-      return toRouteFormat(item, isRedirect);
-    });
+    normalized.routes = allRoutes.map(toRouteFormat);
   }
 
   return normalized;
