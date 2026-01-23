@@ -80,7 +80,7 @@ export const logsv2Command = {
     },
     {
       name: 'follow',
-      shorthand: 'f',
+      shorthand: null,
       type: Boolean,
       deprecated: false,
       description:
