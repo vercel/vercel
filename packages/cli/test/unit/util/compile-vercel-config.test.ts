@@ -151,6 +151,17 @@ describe('normalizeConfig', () => {
     expect(result.rewrites).toEqual([{ source: '/c', destination: '/d' }]);
   });
 
+  it('should throw helpful error when rewrites with transforms conflict with redirects', () => {
+    const config = {
+      rewrites: [{ src: '/with-transform', dest: '/dest', transforms: [] }],
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+    } as unknown as VercelConfig;
+
+    expect(() => normalizeConfig(config)).toThrow(
+      /Move all your rewrites and redirects into the `routes` array/
+    );
+  });
+
   it('should handle empty config', () => {
     expect(normalizeConfig({})).toEqual({});
   });

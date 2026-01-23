@@ -74,6 +74,23 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
   const convertedRewrites = normalizeArrayField(rewrites);
   const convertedRedirects = normalizeArrayField(redirects);
 
+  if (
+    hasRewrites &&
+    hasRedirects &&
+    Boolean(convertedRewrites) !== Boolean(convertedRedirects) // one of them was converted to routes
+  ) {
+    const withTransforms = convertedRewrites ? 'rewrites' : 'redirects';
+    const other = convertedRewrites ? 'redirects' : 'rewrites';
+    throw new NowBuildError({
+      code: 'INVALID_VERCEL_CONFIG',
+      message:
+        `Your \`${withTransforms}\` array contains transforms (e.g., requestHeaders) which requires the \`routes\` format, ` +
+        `but \`${other}\` cannot be used alongside \`routes\`. ` +
+        'Move all your rewrites and redirects into the `routes` array instead.',
+      link: 'https://vercel.com/docs/projects/project-configuration#routes',
+    });
+  }
+
   if (convertedRewrites) {
     allRoutes = [...allRoutes, ...convertedRewrites];
     delete normalized.rewrites;
