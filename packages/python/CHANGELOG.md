@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.3.1
+
+### Patch Changes
+
+- isInstalled check only needs to check for python on the path. ([#14712](https://github.com/vercel/vercel/pull/14712))
+
 ## 6.3.0
 
 ### Minor Changes

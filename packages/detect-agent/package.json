@@ -1,6 +1,6 @@
 {
   "name": "@vercel/detect-agent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Detect if code is running in an AI agent or automated development environment",
   "keywords": [
     "ai",
