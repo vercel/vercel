@@ -32,8 +32,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@vercel/nft": "1.1.1",
     "execa": "3.2.0",
     "nf3": "0.3.5",
+    "resolve.exports": "2.0.3",
     "rolldown": "1.0.0-beta.59",
     "srvx": "0.8.9",
     "tsx": "4.21.0"

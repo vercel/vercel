@@ -5,6 +5,15 @@ import { build as rolldownBuild } from 'rolldown';
 import { externals } from 'nf3/plugin';
 import { plugin } from './plugin.js';
 
+const __dirname__filenameShim = `
+import { createRequire as __createRequire } from 'node:module';
+import { fileURLToPath as __fileURLToPath } from 'node:url';
+import { dirname as __dirname_ } from 'node:path';
+const require = __createRequire(import.meta.url);
+const __filename = __fileURLToPath(import.meta.url);
+const __dirname = __dirname_(__filename);
+`.trim();
+
 export const rolldown = async (args: {
   entrypoint: string;
   workPath: string;
@@ -81,11 +90,14 @@ export const rolldown = async (args: {
         exclude: [/^@repo\//],
         trace: {
           outDir: '.vercel',
+          // The other plugin will also find the package.json
+          // so not sure if this package.json is needed, omiting for now
+          writePackageJson: false,
         },
       }),
       plugin({
         rootDir: args.repoRootPath,
-        outDir: '.vercel',
+        outDir: outputDir,
         shimBareImports: true, // Enable CJS shim generation
       }),
     ],
@@ -97,6 +109,7 @@ export const rolldown = async (args: {
       preserveModules: true,
       preserveModulesRoot: args.repoRootPath,
       sourcemap: false,
+      banner: resolvedFormat === 'esm' ? __dirname__filenameShim : undefined,
     },
   });
   let handler: string | null = null;
