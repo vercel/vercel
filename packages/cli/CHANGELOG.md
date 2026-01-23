@@ -1,5 +1,38 @@
 # vercel
 
+## 50.4.10
+
+### Patch Changes
+
+- Add warning when adding/updating env vars ([#14696](https://github.com/vercel/vercel/pull/14696))
+
+  1. When keys have prefixes that expose values to the client
+  2. The value has whitespace
+  3. The values are exposed and the key matches a pattern for a sensitive value like a password
+
+- removing error ([#14704](https://github.com/vercel/vercel/pull/14704))
+
+- Updated dependencies [[`ee4463453cfe0711bf46491c080f97b196bdaa5a`](https://github.com/vercel/vercel/commit/ee4463453cfe0711bf46491c080f97b196bdaa5a), [`583c0521046dde3574afa506eb4fa7b9c150394f`](https://github.com/vercel/vercel/commit/583c0521046dde3574afa506eb4fa7b9c150394f), [`3eff9995d2f7703475bf67f99f15f08f1f693dd5`](https://github.com/vercel/vercel/commit/3eff9995d2f7703475bf67f99f15f08f1f693dd5)]:
+  - @vercel/build-utils@13.2.15
+  - @vercel/next@4.15.16
+  - @vercel/backends@0.0.23
+  - @vercel/elysia@0.1.26
+  - @vercel/express@0.1.33
+  - @vercel/fastify@0.1.29
+  - @vercel/go@3.3.4
+  - @vercel/h3@0.1.35
+  - @vercel/hono@0.2.29
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.9
+  - @vercel/nestjs@0.2.30
+  - @vercel/node@5.5.27
+  - @vercel/python@6.3.0
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.4
+  - @vercel/static-build@2.8.27
+
 ## 50.4.9
 
 ### Patch Changes

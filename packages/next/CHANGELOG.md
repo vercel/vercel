@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.16
+
+### Patch Changes
+
+- Add Next.js adapter opt-in behind flag ([#14574](https://github.com/vercel/vercel/pull/14574))
+
+- attach segment fallbacks when client param parsing is enabled ([#14689](https://github.com/vercel/vercel/pull/14689))
+
 ## 4.15.15
 
 ### Patch Changes
