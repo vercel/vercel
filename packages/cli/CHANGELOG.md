@@ -1,5 +1,11 @@
 # vercel
 
+## 50.4.11
+
+### Patch Changes
+
+- Add hidden `logsv2` command with request-logs API support ([#14656](https://github.com/vercel/vercel/pull/14656))
+
 ## 50.4.10
 
 ### Patch Changes
