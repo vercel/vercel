@@ -105,7 +105,7 @@ export async function editProjectSettings(
   };
 
   // A missing framework slug implies the "Other" framework was selected
-  output.print(
+  output.log(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
       : `Auto-detected Project Settings for ${styledFramework(framework.name)}\n`
