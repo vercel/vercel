@@ -24,6 +24,10 @@ import {
 const VERCEL_SECTION_START = '<!-- VERCEL DEPLOYMENT GUIDE START -->';
 const VERCEL_SECTION_END = '<!-- VERCEL DEPLOYMENT GUIDE END -->';
 
+// Track if we've already prompted/generated in this CLI session
+// This prevents duplicate prompts when commands chain (e.g., link -> env pull)
+let sessionAlreadyHandled = false;
+
 /**
  * Check if agent file generation is disabled
  */
@@ -389,6 +393,11 @@ export async function promptAndGenerateAgentFiles(
 ): Promise<GenerateResult | null> {
   const { cwd, projectName, orgSlug, client } = options;
 
+  // Skip if already handled in this CLI session (e.g., link -> env pull chain)
+  if (sessionAlreadyHandled) {
+    return null;
+  }
+
   // Check if disabled
   if (isDisabled()) {
     return null;
@@ -405,9 +414,12 @@ export async function promptAndGenerateAgentFiles(
     return null;
   }
 
-  // Prompt user
+  // Mark as handled for this session (regardless of user's choice)
+  sessionAlreadyHandled = true;
+
+  // Prompt user with explicit Y/n choice
   const shouldGenerate = await client.input.confirm(
-    'Update AGENTS.md with Vercel deployment instructions?',
+    'Would you like to update AGENTS.md with Vercel deployment instructions?',
     true
   );
 
@@ -421,4 +433,11 @@ export async function promptAndGenerateAgentFiles(
     projectName,
     orgSlug,
   });
+}
+
+/**
+ * Reset session tracking (for testing purposes)
+ */
+export function resetAgentFilesSession(): void {
+  sessionAlreadyHandled = false;
 }

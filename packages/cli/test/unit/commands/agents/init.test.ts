@@ -13,6 +13,11 @@ describe('vercel agents init', () => {
   afterEach(async () => {
     await fs.remove(tempDir);
     vi.unstubAllEnvs();
+    // Reset session tracking between tests
+    const { resetAgentFilesSession } = await import(
+      '../../../../src/util/agent-files'
+    );
+    resetAgentFilesSession();
   });
 
   describe('generateAgentFiles', () => {
@@ -378,7 +383,7 @@ More custom stuff.
       });
 
       expect(mockClient.input.confirm).toHaveBeenCalledWith(
-        'Update AGENTS.md with Vercel deployment instructions?',
+        'Would you like to update AGENTS.md with Vercel deployment instructions?',
         true
       );
       expect(result?.status).toBe('generated');
@@ -406,6 +411,43 @@ More custom stuff.
       expect(mockClient.input.confirm).toHaveBeenCalled();
       expect(result).toBeNull();
       expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(false);
+    });
+
+    it('should only prompt once per session (prevent duplicates)', async () => {
+      vi.stubEnv('CLAUDE_CODE', '1');
+
+      const { promptAndGenerateAgentFiles, resetAgentFilesSession } =
+        await import('../../../../src/util/agent-files');
+
+      // Reset to ensure clean state
+      resetAgentFilesSession();
+
+      const mockClient = {
+        input: {
+          confirm: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      // First call - should prompt and generate
+      const result1 = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        projectName: 'test-project',
+        client: mockClient,
+      });
+
+      expect(mockClient.input.confirm).toHaveBeenCalledTimes(1);
+      expect(result1?.status).toBe('generated');
+
+      // Second call - should skip without prompting
+      const result2 = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        projectName: 'test-project',
+        client: mockClient,
+      });
+
+      // Should still only have been called once
+      expect(mockClient.input.confirm).toHaveBeenCalledTimes(1);
+      expect(result2).toBeNull();
     });
   });
 });
