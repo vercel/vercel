@@ -21,6 +21,7 @@ import type {
   BodyField,
   SelectedEndpoint,
   PromptResult,
+  RequestConfig,
 } from './types';
 
 export default async function api(client: Client): Promise<number> {

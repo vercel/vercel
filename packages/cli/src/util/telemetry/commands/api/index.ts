@@ -31,6 +31,18 @@ export class ApiTelemetryClient
     }
   }
 
+  // We deliberately don't track field values for privacy - just satisfy the interface
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  trackCliOptionField(value: string[] | undefined) {
+    // Not tracked
+  }
+
+  // We deliberately don't track raw-field values for privacy - just satisfy the interface
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  trackCliOptionRawField(value: string[] | undefined) {
+    // Not tracked
+  }
+
   trackCliOptionHeader(headers: string[] | undefined) {
     if (headers && headers.length > 0) {
       this.trackCliOption({
@@ -98,7 +110,7 @@ export class ApiTelemetryClient
   }
 
   trackCliSubcommandList() {
-    this.trackCliSubcommand('list');
+    this.trackCliSubcommand({ subcommand: 'list', value: 'list' });
   }
 
   trackCliOptionFormat(format: string | undefined) {

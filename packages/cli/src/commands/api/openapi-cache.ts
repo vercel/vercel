@@ -113,7 +113,10 @@ export class OpenApiCache {
     const requiredFields = new Set(schema.required || []);
     const fields: BodyField[] = [];
 
-    for (const [name, propSchema] of Object.entries(schema.properties)) {
+    for (const [name, propSchema] of Object.entries(schema.properties) as [
+      string,
+      Schema,
+    ][]) {
       const resolvedProp = this.resolveSchemaRef(propSchema);
 
       fields.push({
@@ -143,7 +146,7 @@ export class OpenApiCache {
   /**
    * Ensure the spec is loaded before accessing it
    */
-  private ensureLoaded(): asserts this is this & { spec: OpenApiSpec } {
+  private ensureLoaded(): void {
     if (!this.spec) {
       throw new Error(
         'OpenAPI spec not loaded. Call load() or loadWithSpinner() first.'
