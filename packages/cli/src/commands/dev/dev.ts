@@ -16,10 +16,12 @@ import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import { connect as connectTunnel } from '../../util/dev/tunnel';
 
 type Options = {
   '--listen': string;
   '--yes': boolean;
+  '--tunnel': string;
 };
 
 export default async function dev(
@@ -136,6 +138,22 @@ export default async function dev(
 
   try {
     await devServer.start(...listen);
+
+    // Start tunnel if --tunnel flag is provided
+    if (opts['--tunnel']) {
+      const tunnelName = opts['--tunnel'];
+      const oidcToken = envValues[VERCEL_OIDC_TOKEN];
+
+      if (!oidcToken) {
+        output.error(
+          'Tunnel requires a linked project with OIDC token. Run `vercel link` first.'
+        );
+        return 1;
+      }
+
+      const localPort = parseInt(devServer.address.port, 10);
+      connectTunnel(tunnelName, oidcToken, '127.0.0.1', localPort);
+    }
   } finally {
     clearTimeout(timeout);
     controller.abort();

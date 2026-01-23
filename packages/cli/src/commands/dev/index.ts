@@ -65,6 +65,7 @@ export default async function main(client: Client) {
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionPort(parsedArgs.flags['--port']);
   telemetry.trackCliOptionListen(parsedArgs.flags['--listen']);
+  telemetry.trackCliOptionTunnel(parsedArgs.flags['--tunnel']);
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('dev');

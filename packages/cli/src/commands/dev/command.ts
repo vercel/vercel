@@ -20,6 +20,14 @@ export const devCommand = {
       type: String,
       deprecated: false,
     },
+    {
+      name: 'tunnel',
+      description: 'Expose dev server via tunnel with the specified name',
+      argument: 'NAME',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     confirmOption,
@@ -31,7 +39,11 @@ export const devCommand = {
     },
     {
       name: 'Make the `vercel dev` server bind to localhost on port 5000',
-      value: `${packageName} dev --listen 127.0.0.1:5000 `,
+      value: `${packageName} dev --listen 127.0.0.1:5000`,
+    },
+    {
+      name: 'Start dev server with tunnel exposed',
+      value: `${packageName} dev --tunnel mytunnel`,
     },
   ],
 } as const;

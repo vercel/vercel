@@ -172,13 +172,12 @@ function forwardToLocalServer(
  * Handle system requests (denoted by vc-tunnel-system: true header)
  * The /system endpoint is a bidirectional JSON-RPC channel:
  * 1. tunneld sends POST /system and keeps the stream open
- * 2. CLI sends JSON-RPC "init" request with deployment_id and oidc_token
+ * 2. CLI sends JSON-RPC "init" request with tunnel_name and oidc_token
  * 3. tunneld responds with acknowledgement
  */
 function handleSystemRequest(
-  dplId: string,
+  tunnelName: string,
   oidcToken: string,
-  tunnelUrl: string,
   localIp: string,
   localPort: number,
   stream: http2.ServerHttp2Stream,
@@ -214,14 +213,14 @@ function handleSystemRequest(
     method: 'init',
     id: 1,
     params: {
-      deployment_id: dplId,
+      tunnel_name: tunnelName,
       oidc_token: oidcToken,
     },
   };
 
   // Send with newline delimiter (NDJSON format)
   stream.write(JSON.stringify(initRequest) + '\n');
-  output.debug(`Sent init request with deployment ID: ${dplId}`);
+  output.debug(`Sent init request with tunnel name: ${tunnelName}`);
 
   // Read tunneld's response - newline delimited JSON
   let buffer = '';
@@ -249,7 +248,9 @@ function handleSystemRequest(
           reconnectAttempts = 0;
           if (!isConnected) {
             isConnected = true;
-            output.log(`Tunnel ready: ${tunnelUrl}`);
+            output.log(
+              `Tunnel connected - send requests with x-vercel-tunnel: ${tunnelName}`
+            );
             output.log(`Forwarding to http://${localIp}:${localPort}\n`);
           }
         } else {
@@ -275,9 +276,8 @@ function handleSystemRequest(
  * Handle incoming HTTP/2 requests from tunneld
  */
 function handleRequest(
-  dplId: string,
+  tunnelName: string,
   oidcToken: string,
-  tunnelUrl: string,
   localIp: string,
   localPort: number,
   stream: http2.ServerHttp2Stream,
@@ -288,9 +288,8 @@ function handleRequest(
   // System requests are handled separately (bidirectional JSON-RPC channel)
   if (isSystemRequest) {
     handleSystemRequest(
-      dplId,
+      tunnelName,
       oidcToken,
-      tunnelUrl,
       localIp,
       localPort,
       stream,
@@ -307,9 +306,8 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_DELAY = 30000;
 
 function reconnect(
-  dplId: string,
+  tunnelName: string,
   oidcToken: string,
-  tunnelUrl: string,
   localIp: string,
   localPort: number
 ) {
@@ -323,7 +321,7 @@ function reconnect(
   );
 
   setTimeout(() => {
-    connect(dplId, oidcToken, tunnelUrl, localIp, localPort);
+    connect(tunnelName, oidcToken, localIp, localPort);
   }, delay);
 }
 
@@ -331,13 +329,12 @@ function reconnect(
  * Establish tunnel connection
  */
 export async function connect(
-  dplId: string,
+  tunnelName: string,
   oidcToken: string,
-  tunnelUrl: string,
   localIp: string,
   localPort: number
 ) {
-  output.log(`Instantiating tunnel for deployment ID: ${dplId}`);
+  output.log(`Establishing tunnel: ${tunnelName}`);
   output.debug(`Forwarding to http://${localIp}:${localPort}`);
   output.debug(`Connecting to ${TARGET_HOST}:${TARGET_PORT}`);
 
@@ -349,7 +346,7 @@ export async function connect(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     output.error(`DNS resolution failed: ${message}`);
-    reconnect(dplId, oidcToken, tunnelUrl, localIp, localPort);
+    reconnect(tunnelName, oidcToken, localIp, localPort);
     return;
   }
 
@@ -379,20 +376,12 @@ export async function connect(
     output.debug('HTTP/2 server session established');
 
     session.on('stream', (stream, headers) =>
-      handleRequest(
-        dplId,
-        oidcToken,
-        tunnelUrl,
-        localIp,
-        localPort,
-        stream,
-        headers
-      )
+      handleRequest(tunnelName, oidcToken, localIp, localPort, stream, headers)
     );
 
     session.on('close', () => {
       output.debug('Session closed');
-      reconnect(dplId, oidcToken, tunnelUrl, localIp, localPort);
+      reconnect(tunnelName, oidcToken, localIp, localPort);
     });
 
     session.on('error', err => {
@@ -416,7 +405,7 @@ export async function connect(
 
   socket.on('error', err => {
     output.error(`Connection failed: ${err.message}`);
-    reconnect(dplId, oidcToken, tunnelUrl, localIp, localPort);
+    reconnect(tunnelName, oidcToken, localIp, localPort);
   });
 
   return socket;

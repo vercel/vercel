@@ -48,4 +48,13 @@ export class DevTelemetryClient
   trackOidcTokenRefresh(count: number) {
     super.trackOidcTokenRefresh(count);
   }
+
+  trackCliOptionTunnel(tunnel: string | undefined) {
+    if (tunnel) {
+      this.trackCliOption({
+        option: 'tunnel',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

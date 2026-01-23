@@ -285,13 +285,6 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandTunnel(actual: string) {
-    this.trackCliCommand({
-      command: 'tunnel',
-      value: actual,
-    });
-  }
-
   trackCliCommandWhoami(actual: string) {
     this.trackCliCommand({
       command: 'whoami',
