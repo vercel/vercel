@@ -92,4 +92,55 @@ describe('alias ls', () => {
       ]);
     });
   });
+
+  describe('--format', () => {
+    it('tracks telemetry for --format json', async () => {
+      useAlias();
+      client.setArgv('alias', 'ls', '--format', 'json');
+      const exitCode = await alias(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+      ]);
+    });
+
+    it('outputs aliases as valid JSON that can be piped to jq', async () => {
+      useAlias();
+      client.setArgv('alias', 'ls', '--format', 'json');
+      const exitCode = await alias(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      // Should be valid JSON - this will throw if not parseable
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('aliases');
+      expect(jsonOutput).toHaveProperty('pagination');
+      expect(Array.isArray(jsonOutput.aliases)).toBe(true);
+    });
+
+    it('outputs correct alias structure in JSON', async () => {
+      useAlias();
+      client.setArgv('alias', 'ls', '--format', 'json');
+      const exitCode = await alias(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput.aliases.length).toBeGreaterThan(0);
+      const firstAlias = jsonOutput.aliases[0];
+      expect(firstAlias).toHaveProperty('alias');
+      expect(firstAlias).toHaveProperty('deploymentId');
+      expect(firstAlias).toHaveProperty('createdAt');
+    });
+  });
 });

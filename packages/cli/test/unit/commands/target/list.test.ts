@@ -186,4 +186,62 @@ describe('target ls', () => {
       String(ms(Date.now() - project.customEnvironments![0].updatedAt)),
     ]);
   });
+
+  describe('--format', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+      client.cwd = setupUnitFixture('commands/deploy/static');
+    });
+
+    it('tracks telemetry for --format json', async () => {
+      client.setArgv('target', 'ls', '--format', 'json');
+      const exitCode = await target(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+      ]);
+    });
+
+    it('outputs targets as valid JSON that can be piped to jq', async () => {
+      client.setArgv('target', 'ls', '--format', 'json');
+      const exitCode = await target(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      // Should be valid JSON - this will throw if not parseable
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('targets');
+      expect(Array.isArray(jsonOutput.targets)).toBe(true);
+    });
+
+    it('outputs correct target structure in JSON', async () => {
+      client.setArgv('target', 'ls', '--format', 'json');
+      const exitCode = await target(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput.targets.length).toBeGreaterThan(0);
+      const firstTarget = jsonOutput.targets[0];
+      expect(firstTarget).toHaveProperty('id');
+      expect(firstTarget).toHaveProperty('slug');
+      expect(firstTarget).toHaveProperty('type');
+    });
+  });
 });

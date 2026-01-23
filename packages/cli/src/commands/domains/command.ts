@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
+  formatOption,
   limitOption,
   nextOption,
   yesOption,
@@ -12,7 +13,7 @@ export const listSubcommand = {
   description: 'Show all domains in a list',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption],
+  options: [limitOption, nextOption, formatOption],
   examples: [
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',

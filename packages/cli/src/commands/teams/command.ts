@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption } from '../../util/arg-common';
+import { formatOption, nextOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -17,6 +17,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    formatOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
     { name: 'count', shorthand: 'C', type: Number, deprecated: true },

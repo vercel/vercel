@@ -8,6 +8,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
+import { validateJsonOutput } from '../../util/output-format';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -34,9 +35,24 @@ export default async function whoami(client: Client): Promise<number> {
     return 0;
   }
 
-  const { contextName } = await getScope(client, { getTeam: false });
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  if (client.stdout.isTTY) {
+  const { contextName, user } = await getScope(client, { getTeam: false });
+
+  if (asJson) {
+    const jsonOutput = {
+      username: user.username,
+      email: user.email,
+      name: user.name,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  } else if (client.stdout.isTTY) {
     output.log(contextName);
   } else {
     // If stdout is not a TTY, then only print the username

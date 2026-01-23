@@ -201,6 +201,22 @@ export class TelemetryClient {
       value: subcommand ? `${command}:${subcommand}` : command,
     });
   }
+
+  /**
+   * Tracks the --format option for JSON output.
+   * This is a common option across many commands, so it's defined in the base class.
+   */
+  trackCliOptionFormat(format: string | undefined) {
+    if (format) {
+      const allowedFormat = ['json'].includes(format)
+        ? format
+        : this.redactedValue;
+      this.trackCliOption({
+        option: 'format',
+        value: allowedFormat,
+      });
+    }
+  }
 }
 
 export class TelemetryEventStore {

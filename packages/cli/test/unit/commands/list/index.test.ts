@@ -502,4 +502,103 @@ describe('list', () => {
       ]);
     });
   });
+
+  describe('--format', () => {
+    it('should track telemetry for --format json', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--format', 'json');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+        {
+          key: 'argument:app',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('should output deployments as JSON', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--format', 'json');
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('deployments');
+      expect(Array.isArray(jsonOutput.deployments)).toBe(true);
+      expect(jsonOutput.deployments.length).toBeGreaterThan(0);
+
+      const dep = jsonOutput.deployments[0];
+      expect(dep).toMatchObject({
+        id: deployment.id,
+        url: deployment.url,
+        name: deployment.name,
+        state: deployment.readyState,
+        createdAt: deployment.createdAt,
+      });
+    });
+
+    it('should output empty deployments array as JSON when no deployments', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      // Don't create any deployments
+      client.scenario.get('/v6/deployments', (_req, res) => {
+        res.json({ deployments: [] });
+      });
+
+      client.setArgv('list', 'with-team', '--format', 'json');
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toEqual({
+        deployments: [],
+        pagination: undefined,
+      });
+    });
+
+    it('should include pagination in JSON output', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--format', 'json');
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('pagination');
+    });
+  });
 });

@@ -116,3 +116,20 @@ export const forceOption = {
   type: Boolean,
   deprecated: false,
 } as const;
+
+export const formatOption = {
+  name: 'format',
+  shorthand: 'F',
+  type: String,
+  argument: 'FORMAT',
+  description: 'Specify the output format (json)',
+  deprecated: false,
+} as const;
+
+export const jsonOption = {
+  name: 'json',
+  shorthand: null,
+  type: Boolean,
+  deprecated: true,
+  description: 'DEPRECATED: Use --format=json instead',
+} as const;

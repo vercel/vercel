@@ -11,6 +11,7 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
+import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
@@ -46,7 +47,15 @@ export default async function list(
   }
 
   const next = parsedArgs.flags['--next'];
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
   telemetry.trackCliOptionUntil(parsedArgs.flags['--until']);
   telemetry.trackCliOptionSince(parsedArgs.flags['--since']);
@@ -76,7 +85,7 @@ export default async function list(
     id,
     name,
     value: slug,
-    prefix: id === currentTeam ? chars.tick : ' ',
+    isCurrent: id === currentTeam,
   }));
 
   if (user.version !== 'northstar') {
@@ -84,7 +93,7 @@ export default async function list(
       id: user.id,
       name: user.email,
       value: user.username || user.email,
-      prefix: accountIsCurrent ? chars.tick : ' ',
+      isCurrent: accountIsCurrent,
     });
   }
 
@@ -95,32 +104,54 @@ export default async function list(
     teamList.unshift(choice);
   }
 
-  // Printing
   output.stopSpinner();
-  client.stdout.write('\n'); // empty line
 
-  const teamTable = table(
-    [
-      ['id', 'Team name'].map(str => gray(str)),
-      ...teamList.map(team => [team.value, team.name]),
-    ],
-    { hsep: 5 }
-  );
-  client.stderr.write(
-    currentTeam
-      ? teamTable
-          .split('\n')
-          .map((line, i) => `${i > 0 ? teamList[i - 1].prefix : ' '} ${line}`)
-          .join('\n')
-      : teamTable
-  );
-  client.stderr.write('\n');
-
-  if (pagination?.count === 20) {
-    const flags = getCommandFlags(parsedArgs.flags, ['--next', '-N', '-d']);
-    const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
+  if (asJson) {
+    const jsonOutput = {
+      teams: teamList.map(team => ({
+        id: team.id,
+        slug: team.value,
+        name: team.name,
+        current: team.isCurrent,
+      })),
+      pagination,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  } else {
     client.stdout.write('\n'); // empty line
-    output.log(`To display the next page run ${cmd(nextCmd)}`);
+
+    const teamTable = table(
+      [
+        ['id', 'Team name'].map(str => gray(str)),
+        ...teamList.map(team => [team.value, team.name]),
+      ],
+      { hsep: 5 }
+    );
+    client.stderr.write(
+      currentTeam
+        ? teamTable
+            .split('\n')
+            .map((line, i) => {
+              const prefix =
+                i > 0 ? (teamList[i - 1].isCurrent ? chars.tick : ' ') : ' ';
+              return `${prefix} ${line}`;
+            })
+            .join('\n')
+        : teamTable
+    );
+    client.stderr.write('\n');
+
+    if (pagination?.count === 20) {
+      const flags = getCommandFlags(parsedArgs.flags, [
+        '--next',
+        '-N',
+        '-d',
+        '--format',
+      ]);
+      const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
+      client.stdout.write('\n'); // empty line
+      output.log(`To display the next page run ${cmd(nextCmd)}`);
+    }
   }
 
   return 0;
