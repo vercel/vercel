@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import confirm from '@inquirer/confirm';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -67,10 +66,10 @@ export default async function rm(
 
     // Confirm deletion
     if (!skipConfirmation) {
-      const confirmed = await confirm({
-        message: `Are you sure you want to delete ${chalk.bold(flag.slug)}? This action cannot be undone.`,
-        default: false,
-      });
+      const confirmed = await client.input.confirm(
+        `Are you sure you want to delete ${chalk.bold(flag.slug)}? This action cannot be undone.`,
+        false
+      );
 
       if (!confirmed) {
         output.log('Aborted');

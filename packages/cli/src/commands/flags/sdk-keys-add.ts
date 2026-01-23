@@ -1,6 +1,4 @@
 import chalk from 'chalk';
-import select from '@inquirer/select';
-import input from '@inquirer/input';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -63,7 +61,7 @@ export default async function sdkKeysAdd(
 
   // Prompt for type if not provided
   if (!sdkKeyType) {
-    sdkKeyType = await select({
+    sdkKeyType = await client.input.select({
       message: 'Select the SDK key type:',
       choices: [
         {
@@ -88,7 +86,7 @@ export default async function sdkKeysAdd(
 
   // Prompt for environment if not provided
   if (!environment) {
-    environment = await select({
+    environment = await client.input.select({
       message: 'Select the environment:',
       choices: VALID_ENVIRONMENTS.map(env => ({
         name: env,
@@ -107,7 +105,7 @@ export default async function sdkKeysAdd(
   // Optionally prompt for label
   let finalLabel = label;
   if (!finalLabel && client.stdin.isTTY) {
-    finalLabel = await input({
+    finalLabel = await client.input.text({
       message:
         'Enter an optional label for this SDK key (press Enter to skip):',
     });

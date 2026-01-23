@@ -1,6 +1,4 @@
 import chalk from 'chalk';
-import confirm from '@inquirer/confirm';
-import select from '@inquirer/select';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -67,7 +65,7 @@ export default async function sdkKeysRm(
         return 0;
       }
 
-      hashKey = await select({
+      hashKey = await client.input.select({
         message: 'Select an SDK key to delete:',
         choices: keys.map(key => ({
           name: `${key.hashKey.slice(0, 12)}... (${key.type}, ${key.environment}${key.label ? `, ${key.label}` : ''})`,
@@ -78,10 +76,10 @@ export default async function sdkKeysRm(
 
     // Confirm deletion
     if (!skipConfirmation) {
-      const confirmed = await confirm({
-        message: `Are you sure you want to delete SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')}?`,
-        default: false,
-      });
+      const confirmed = await client.input.confirm(
+        `Are you sure you want to delete SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')}?`,
+        false
+      );
 
       if (!confirmed) {
         output.log('Aborted');
