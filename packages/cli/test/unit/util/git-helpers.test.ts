@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   getGitDirectory,
@@ -140,7 +140,14 @@ origin\thttps://github.com/user/repo.git (push)`;
 
     it('getGitRootDirectory() should return the worktree path', async () => {
       const result = await getGitRootDirectory({ cwd: worktreePath });
-      expect(result).toEqual(worktreePath);
+      // On Windows, paths may have 8.3 short names (e.g., RUNNER~1) vs full names (runneradmin).
+      // Use realpathSync on the result to normalize, since worktreePath is already normalized.
+      // If result is still different, compare case-insensitively for Windows compatibility.
+      const normalizedResult = result ? realpathSync(result) : result;
+      const normalizedExpected = realpathSync(worktreePath);
+      expect(normalizedResult?.toLowerCase()).toEqual(
+        normalizedExpected.toLowerCase()
+      );
     });
 
     it('getGitRemoteUrls() should return remotes from the bare repo', async () => {
