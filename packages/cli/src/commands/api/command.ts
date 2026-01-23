@@ -144,6 +144,10 @@ export const apiCommand = {
       value: `${packageName} api /v2/user -H "X-Custom-Header: value"`,
     },
     {
+      name: 'List all available API endpoints',
+      value: `${packageName} api --ls`,
+    },
+    {
       name: 'Interactive mode (select endpoint)',
       value: `${packageName} api`,
     },
