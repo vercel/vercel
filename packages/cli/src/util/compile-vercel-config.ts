@@ -369,12 +369,10 @@ export async function compileVercelConfig(
     };
   } catch (error: any) {
     throw new NowBuildError({
-      code: 'vercel_ts_compilation_failed',
+      code: error.code ?? 'vercel_ts_compilation_failed',
       message: `Failed to compile ${basename(vercelConfigPath)}: ${error.message}`,
       link:
-        error instanceof NowBuildError
-          ? error.link
-          : 'https://vercel.com/docs/projects/project-configuration',
+        error.link ?? 'https://vercel.com/docs/projects/project-configuration',
     });
   } finally {
     await Promise.all([
