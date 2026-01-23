@@ -419,7 +419,7 @@ export async function promptAndGenerateAgentFiles(
 
   // Prompt the agent to explicitly approve writing to AGENTS.md
   const shouldGenerate = await client.input.confirm(
-    'May I write Vercel deployment instructions to AGENTS.md? (The AI agent must approve this)',
+    'Update AGENTS.md with Vercel instructions?',
     true
   );
 
