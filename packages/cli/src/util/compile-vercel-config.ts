@@ -368,9 +368,12 @@ export async function compileVercelConfig(
       sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
     };
   } catch (error: any) {
+    if (error instanceof NowBuildError) {
+      throw error;
+    }
     throw new NowBuildError({
       code: 'vercel_ts_compilation_failed',
-      message: `Failed to compile ${vercelConfigPath}: ${error.message}`,
+      message: `Failed to compile ${basename(vercelConfigPath)}: ${error.message}`,
       link: 'https://vercel.com/docs/projects/project-configuration',
     });
   } finally {
