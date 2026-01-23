@@ -8,13 +8,26 @@ import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 import type { RouteWithSrc, Rewrite, Redirect } from '@vercel/routing-utils';
 
+type RouteItemType = 'route' | 'rewrite' | 'redirect';
 type RouteInput = RouteWithSrc | Rewrite | Redirect;
 
-function toRouteFormat(item: RouteInput): RouteWithSrc {
-  if ('src' in item) return item;
+function detectRouteType(item: RouteInput): RouteItemType {
+  if ('src' in item) return 'route';
+  if ('permanent' in item) return 'redirect';
+  return 'rewrite';
+}
 
-  const { source, destination, statusCode, permanent, ...rest } =
-    item as Rewrite & Redirect;
+function toRouteFormat(item: RouteInput, type: RouteItemType): RouteWithSrc {
+  if (type === 'route') return item as RouteWithSrc;
+
+  const {
+    source,
+    destination,
+    statusCode,
+    permanent,
+    respectOriginCacheControl,
+    ...rest
+  } = item as Rewrite & Redirect;
 
   const route: RouteWithSrc = {
     src: source,
@@ -22,28 +35,37 @@ function toRouteFormat(item: RouteInput): RouteWithSrc {
     ...rest,
   };
 
-  if (statusCode !== undefined) {
-    route.status = statusCode;
-  } else if (permanent !== undefined) {
-    route.status = permanent ? 308 : 307;
+  if (type === 'redirect') {
+    route.status = statusCode || (permanent ? 308 : 307);
+  } else {
+    if (respectOriginCacheControl !== undefined) {
+      route.respectOriginCacheControl = respectOriginCacheControl;
+    }
+    if (statusCode !== undefined) {
+      route.status = statusCode;
+    }
   }
 
   return route;
 }
 
 function normalizeArrayField(
-  items: RouteInput[] | undefined
+  items: RouteInput[] | undefined,
+  defaultType: 'rewrite' | 'redirect'
 ): RouteWithSrc[] | null {
   if (!items || !Array.isArray(items) || items.length === 0) {
     return null;
   }
 
-  const hasRouteFormat = items.some(item => 'src' in item);
+  const hasRouteFormat = items.some(item => detectRouteType(item) === 'route');
   if (!hasRouteFormat) {
     return null;
   }
 
-  return items.map(toRouteFormat);
+  return items.map(item => {
+    const type = detectRouteType(item);
+    return toRouteFormat(item, type === 'route' ? type : defaultType);
+  });
 }
 
 /**
@@ -69,8 +91,11 @@ export function normalizeConfig(config: any): any {
     return normalized;
   }
 
-  const convertedRewrites = normalizeArrayField(normalized.rewrites);
-  const convertedRedirects = normalizeArrayField(normalized.redirects);
+  const convertedRewrites = normalizeArrayField(normalized.rewrites, 'rewrite');
+  const convertedRedirects = normalizeArrayField(
+    normalized.redirects,
+    'redirect'
+  );
 
   if (convertedRewrites) {
     allRoutes = [...allRoutes, ...convertedRewrites];
@@ -83,7 +108,10 @@ export function normalizeConfig(config: any): any {
   }
 
   if (allRoutes.length > 0) {
-    normalized.routes = allRoutes.map(toRouteFormat);
+    normalized.routes = allRoutes.map(item => {
+      const type = detectRouteType(item);
+      return toRouteFormat(item, type);
+    });
   }
 
   return normalized;
