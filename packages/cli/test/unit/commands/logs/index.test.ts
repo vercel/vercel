@@ -396,7 +396,7 @@ describe('logs', () => {
       { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
       {
         title: 'as json',
-        flag: '-j',
+        flag: '--format=json',
         getOutput: () => client.stdout.getFullOutput(),
       },
     ])(
@@ -440,7 +440,7 @@ describe('logs', () => {
       { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
       {
         title: 'as json',
-        flag: '-j',
+        flag: '--format=json',
         getOutput: () => client.stdout.getFullOutput(),
       },
     ])(
@@ -631,5 +631,58 @@ describe('logs', () => {
       });
     });
 
+    describe('--output', () => {
+      it('should track usage of `--output` flag with known value', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--output', 'raw');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:output',
+            value: 'raw',
+          },
+        ]);
+      });
+
+      it('should track redacted usage of `--output` flag with unknown value', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--output', 'other');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:output',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
   });
 });

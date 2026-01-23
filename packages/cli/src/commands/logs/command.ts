@@ -42,6 +42,12 @@ export const logsCommand = {
       type: String,
       deprecated: true,
     },
+    {
+      name: 'output',
+      shorthand: 'o',
+      type: String,
+      deprecated: true,
+    },
   ],
   examples: [
     {

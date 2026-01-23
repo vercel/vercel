@@ -20,7 +20,14 @@ import { stateString } from '../list';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
-const deprecatedFlags = ['--follow', '--limit', '--since', '--until', '--json'];
+const deprecatedFlags = [
+  '--follow',
+  '--limit',
+  '--since',
+  '--until',
+  '--output',
+  '--json',
+];
 
 const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
 
@@ -90,6 +97,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);
   telemetry.trackCliOptionSince(parsedArguments.flags['--since']);
   telemetry.trackCliOptionUntil(parsedArguments.flags['--until']);
+  telemetry.trackCliOptionOutput(parsedArguments.flags['--output']);
 
   let contextName: string | null = null;
 
