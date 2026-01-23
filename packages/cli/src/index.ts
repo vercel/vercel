@@ -195,7 +195,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['curl'];
+  const betaCommands: string[] = ['api', 'curl'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
@@ -639,6 +639,10 @@ const main = async () => {
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = require('./commands/alias').default;
+          break;
+        case 'api':
+          telemetry.trackCliCommandApi(userSuppliedSubCommand);
+          func = require('./commands/api').default;
           break;
         case 'bisect':
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);

@@ -4,6 +4,7 @@ import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
 import input from '@inquirer/input';
 import password from '@inquirer/password';
+import search from '@inquirer/search';
 import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -142,6 +143,11 @@ export default class Client extends EventEmitter implements Stdio {
         ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
         select<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
+      search: <T>(opts: Parameters<typeof search<T>>[0]) =>
+        search<T>(
           { theme, ...opts },
           { input: this.stdin, output: this.stderr }
         ),

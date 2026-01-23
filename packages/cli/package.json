@@ -70,6 +70,7 @@
     "@inquirer/expand": "2.1.2",
     "@inquirer/input": "2.1.2",
     "@inquirer/password": "2.1.2",
+    "@inquirer/search": "2.0.1",
     "@inquirer/select": "2.2.2",
     "@next/env": "11.1.2",
     "@sentry/node": "7.120.1",
