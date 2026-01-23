@@ -96,6 +96,7 @@ export default async function link(client: Client) {
     projectName,
     orgSlug,
     client,
+    output,
   });
   if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
     output.print(

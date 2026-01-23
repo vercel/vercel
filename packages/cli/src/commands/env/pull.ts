@@ -138,6 +138,7 @@ export default async function pull(
     projectName: link.project.name,
     orgSlug: link.org.slug,
     client,
+    output,
   });
   if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
     output.print(

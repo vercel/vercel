@@ -1,32 +1,17 @@
-import { renderCronSection } from './cron';
-import { renderWorkflowSection } from './workflow';
-import { renderAIGatewaySection } from './ai-gateway';
-import { renderBlobSection } from './blob';
-import { renderKVSection } from './kv';
-import { renderPostgresSection } from './postgres';
-import { renderEdgeSection } from './edge';
-import { renderMarketplaceSection } from './marketplace';
+import { renderStorageSection } from './storage';
+import { renderComputeSection } from './compute';
+import { renderAIIntegrationsSection } from './ai-integrations';
 
 export function renderServicesSection(): string {
   return [
-    renderCronSection(),
-    renderWorkflowSection(),
-    renderAIGatewaySection(),
-    renderBlobSection(),
-    renderKVSection(),
-    renderPostgresSection(),
-    renderEdgeSection(),
-    renderMarketplaceSection(),
+    renderStorageSection(),
+    renderComputeSection(),
+    renderAIIntegrationsSection(),
   ].join('');
 }
 
 export {
-  renderCronSection,
-  renderWorkflowSection,
-  renderAIGatewaySection,
-  renderBlobSection,
-  renderKVSection,
-  renderPostgresSection,
-  renderEdgeSection,
-  renderMarketplaceSection,
+  renderStorageSection,
+  renderComputeSection,
+  renderAIIntegrationsSection,
 };

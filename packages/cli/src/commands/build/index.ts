@@ -366,6 +366,7 @@ export default async function main(client: Client): Promise<number> {
       cwd,
       projectName: project.projectName,
       client,
+      output,
     });
     if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
       output.print(

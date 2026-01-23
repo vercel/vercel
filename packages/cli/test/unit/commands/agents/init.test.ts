@@ -343,49 +343,100 @@ More custom stuff.
   });
 
   describe('promptAndGenerateAgentFiles', () => {
+    const createMockClient = (
+      expandValue: string = 'yes',
+      confirmValue: boolean = true
+    ) => ({
+      client: {
+        input: {
+          confirm: vi.fn().mockResolvedValue(confirmValue),
+          expand: vi.fn().mockResolvedValue(expandValue),
+        },
+      },
+      output: {
+        print: vi.fn(),
+      },
+    });
+
     it('should skip when not in agent context', async () => {
       const { promptAndGenerateAgentFiles } = await import(
         '../../../../src/util/agent-files'
       );
 
-      const mockClient = {
-        input: {
-          confirm: vi.fn().mockResolvedValue(true),
-        },
-      };
+      const mock = createMockClient();
 
       const result = await promptAndGenerateAgentFiles({
         cwd: tempDir,
-        client: mockClient,
+        client: mock.client,
+        output: mock.output,
       });
 
       expect(result).toBeNull();
-      expect(mockClient.input.confirm).not.toHaveBeenCalled();
+      expect(mock.client.input.expand).not.toHaveBeenCalled();
     });
 
-    it('should prompt and generate when agent is detected and user confirms', async () => {
+    it('should show preview and generate when agent is detected and user confirms', async () => {
       vi.stubEnv('CLAUDE_CODE', '1');
 
       const { promptAndGenerateAgentFiles } = await import(
         '../../../../src/util/agent-files'
       );
 
-      const mockClient = {
-        input: {
-          confirm: vi.fn().mockResolvedValue(true),
-        },
-      };
+      const mock = createMockClient('yes');
 
       const result = await promptAndGenerateAgentFiles({
         cwd: tempDir,
         projectName: 'test-project',
-        client: mockClient,
+        client: mock.client,
+        output: mock.output,
       });
 
-      expect(mockClient.input.confirm).toHaveBeenCalledWith(
-        'Would you like to update AGENTS.md with Vercel deployment instructions?',
+      // Should show preview output
+      expect(mock.output.print).toHaveBeenCalled();
+
+      // Should use expand prompt
+      expect(mock.client.input.expand).toHaveBeenCalledWith({
+        message: 'Update AGENTS.md with Vercel instructions?',
+        choices: [
+          { key: 'y', name: 'Yes', value: 'yes' },
+          { key: 'n', name: 'No', value: 'no' },
+          { key: 'e', name: 'Expand (view full content)', value: 'expand' },
+        ],
+      });
+
+      expect(result?.status).toBe('generated');
+      expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(true);
+    });
+
+    it('should show full content when user selects expand, then confirm', async () => {
+      vi.stubEnv('CLAUDE_CODE', '1');
+
+      const { promptAndGenerateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const mock = createMockClient('expand', true);
+
+      const result = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        projectName: 'test-project',
+        client: mock.client,
+        output: mock.output,
+      });
+
+      // Should use expand prompt first
+      expect(mock.client.input.expand).toHaveBeenCalled();
+
+      // Should show full content (multiple print calls including full content)
+      const printCalls = mock.output.print.mock.calls;
+      expect(printCalls.length).toBeGreaterThan(4); // Preview + full content
+
+      // Should re-prompt with confirm after expand
+      expect(mock.client.input.confirm).toHaveBeenCalledWith(
+        'Apply these changes?',
         true
       );
+
       expect(result?.status).toBe('generated');
       expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(true);
     });
@@ -397,18 +448,36 @@ More custom stuff.
         '../../../../src/util/agent-files'
       );
 
-      const mockClient = {
-        input: {
-          confirm: vi.fn().mockResolvedValue(false),
-        },
-      };
+      const mock = createMockClient('no');
 
       const result = await promptAndGenerateAgentFiles({
         cwd: tempDir,
-        client: mockClient,
+        client: mock.client,
+        output: mock.output,
       });
 
-      expect(mockClient.input.confirm).toHaveBeenCalled();
+      expect(mock.client.input.expand).toHaveBeenCalled();
+      expect(result).toBeNull();
+      expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(false);
+    });
+
+    it('should not generate when user expands then declines', async () => {
+      vi.stubEnv('CLAUDE_CODE', '1');
+
+      const { promptAndGenerateAgentFiles } = await import(
+        '../../../../src/util/agent-files'
+      );
+
+      const mock = createMockClient('expand', false);
+
+      const result = await promptAndGenerateAgentFiles({
+        cwd: tempDir,
+        client: mock.client,
+        output: mock.output,
+      });
+
+      expect(mock.client.input.expand).toHaveBeenCalled();
+      expect(mock.client.input.confirm).toHaveBeenCalled();
       expect(result).toBeNull();
       expect(await fs.pathExists(join(tempDir, 'AGENTS.md'))).toBe(false);
     });
@@ -422,31 +491,29 @@ More custom stuff.
       // Reset to ensure clean state
       resetAgentFilesSession();
 
-      const mockClient = {
-        input: {
-          confirm: vi.fn().mockResolvedValue(true),
-        },
-      };
+      const mock = createMockClient('yes');
 
       // First call - should prompt and generate
       const result1 = await promptAndGenerateAgentFiles({
         cwd: tempDir,
         projectName: 'test-project',
-        client: mockClient,
+        client: mock.client,
+        output: mock.output,
       });
 
-      expect(mockClient.input.confirm).toHaveBeenCalledTimes(1);
+      expect(mock.client.input.expand).toHaveBeenCalledTimes(1);
       expect(result1?.status).toBe('generated');
 
       // Second call - should skip without prompting
       const result2 = await promptAndGenerateAgentFiles({
         cwd: tempDir,
         projectName: 'test-project',
-        client: mockClient,
+        client: mock.client,
+        output: mock.output,
       });
 
       // Should still only have been called once
-      expect(mockClient.input.confirm).toHaveBeenCalledTimes(1);
+      expect(mock.client.input.expand).toHaveBeenCalledTimes(1);
       expect(result2).toBeNull();
     });
   });

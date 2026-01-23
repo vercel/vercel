@@ -731,6 +731,7 @@ export default async (client: Client): Promise<number> => {
     projectName: project?.name,
     orgSlug: org?.slug,
     client,
+    output,
   });
   if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
     output.print(

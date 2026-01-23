@@ -380,8 +380,29 @@ export interface PromptAgentFilesOptions {
   client: {
     input: {
       confirm: (message: string, defaultValue: boolean) => Promise<boolean>;
+      expand: (opts: {
+        message: string;
+        choices: Array<{ key: string; name: string; value: string }>;
+      }) => Promise<string>;
     };
   };
+  /** Output interface for printing */
+  output: {
+    print: (message: string) => void;
+  };
+}
+
+/**
+ * Extract first N lines from content for preview
+ */
+function getPreviewLines(content: string, lineCount: number): string {
+  const lines = content.split('\n');
+  const preview = lines.slice(0, lineCount).join('\n');
+  const remaining = lines.length - lineCount;
+  if (remaining > 0) {
+    return `${preview}\n... (${remaining} more lines)`;
+  }
+  return preview;
 }
 
 /**
@@ -391,7 +412,8 @@ export interface PromptAgentFilesOptions {
 export async function promptAndGenerateAgentFiles(
   options: PromptAgentFilesOptions
 ): Promise<GenerateResult | null> {
-  const { cwd, projectName, orgSlug, client } = options;
+  const { cwd, projectName, orgSlug, client, output } = options;
+  const print = output.print.bind(output);
 
   // Skip if already handled in this CLI session (e.g., link -> env pull chain)
   if (sessionAlreadyHandled) {
@@ -417,17 +439,58 @@ export async function promptAndGenerateAgentFiles(
   // Mark as handled for this session (regardless of user's choice)
   sessionAlreadyHandled = true;
 
-  // Prompt the agent to explicitly approve writing to AGENTS.md
-  const shouldGenerate = await client.input.confirm(
-    'Update AGENTS.md with Vercel instructions?',
-    true
-  );
+  // Generate a dry-run to get the content preview
+  const dryRunResult = await generateAgentFiles({
+    cwd,
+    projectName,
+    orgSlug,
+    dryRun: true,
+  });
 
-  if (!shouldGenerate) {
+  if (dryRunResult.status !== 'generated' || dryRunResult.files.length === 0) {
     return null;
   }
 
-  // Generate files
+  // Get the content to preview (use first file's content)
+  const previewContent = dryRunResult.files[0].content || '';
+
+  // Show 6-line preview
+  const preview = getPreviewLines(previewContent, 6);
+  print('\nChanges to be added to AGENTS.md:\n');
+  print('─'.repeat(40) + '\n');
+  print(preview + '\n');
+  print('─'.repeat(40) + '\n');
+
+  // Use expand prompt with Y/N/E options
+  let action = await client.input.expand({
+    message: 'Update AGENTS.md with Vercel instructions?',
+    choices: [
+      { key: 'y', name: 'Yes', value: 'yes' },
+      { key: 'n', name: 'No', value: 'no' },
+      { key: 'e', name: 'Expand (view full content)', value: 'expand' },
+    ],
+  });
+
+  // If user wants to expand, show full content and re-prompt
+  if (action === 'expand') {
+    print('\nFull content:\n');
+    print('─'.repeat(40) + '\n');
+    print(previewContent + '\n');
+    print('─'.repeat(40) + '\n');
+
+    // Re-prompt with simple Y/N
+    const shouldGenerate = await client.input.confirm(
+      'Apply these changes?',
+      true
+    );
+    action = shouldGenerate ? 'yes' : 'no';
+  }
+
+  if (action !== 'yes') {
+    return null;
+  }
+
+  // Generate files for real this time
   return generateAgentFiles({
     cwd,
     projectName,
