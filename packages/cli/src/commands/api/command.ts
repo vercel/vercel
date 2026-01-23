@@ -145,7 +145,7 @@ export const apiCommand = {
     },
     {
       name: 'List all available API endpoints',
-      value: `${packageName} api --ls`,
+      value: `${packageName} api ls`,
     },
     {
       name: 'Interactive mode (select endpoint)',

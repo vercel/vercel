@@ -31,16 +31,22 @@ export class ApiTelemetryClient
     }
   }
 
-  // We deliberately don't track field values for privacy - just satisfy the interface
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  trackCliOptionField(value: string[] | undefined) {
-    // Not tracked
+  trackCliOptionField(fields: string[] | undefined) {
+    if (fields && fields.length > 0) {
+      this.trackCliOption({
+        option: 'field',
+        value: this.redactedArgumentsLength(fields),
+      });
+    }
   }
 
-  // We deliberately don't track raw-field values for privacy - just satisfy the interface
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  trackCliOptionRawField(value: string[] | undefined) {
-    // Not tracked
+  trackCliOptionRawField(fields: string[] | undefined) {
+    if (fields && fields.length > 0) {
+      this.trackCliOption({
+        option: 'raw-field',
+        value: this.redactedArgumentsLength(fields),
+      });
+    }
   }
 
   trackCliOptionHeader(headers: string[] | undefined) {
