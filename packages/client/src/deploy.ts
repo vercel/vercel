@@ -1,14 +1,14 @@
-import { FilesMap } from './utils/hashes';
 import { generateQueryString } from './utils/query-string';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { checkDeploymentStatus } from './check-deployment-status';
 import {
   fetch,
-  prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
+  type InlineFile,
+  type PreUploadedFile,
 } from './utils';
-import {
+import type {
   Deployment,
   DeploymentOptions,
   VercelClientOptions,
@@ -16,9 +16,12 @@ import {
 } from './types';
 
 async function* postDeployment(
-  files: FilesMap,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
+  files: {
+    inline: InlineFile[];
+    preUploaded: PreUploadedFile[];
+  }
 ): AsyncIterableIterator<{
   type: DeploymentEventType;
   payload: any;
@@ -26,7 +29,6 @@ async function* postDeployment(
   link?: string;
 }> {
   const debug = createDebug(clientOptions.debug);
-  const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl();
 
   if (deploymentOptions?.builds && !deploymentOptions.functions) {
@@ -58,7 +60,7 @@ async function* postDeployment(
         },
         body: JSON.stringify({
           ...deploymentOptions,
-          files: preparedFiles,
+          files: [...files.inline, ...files.preUploaded],
         }),
         apiUrl: clientOptions.apiUrl,
         userAgent: clientOptions.userAgent,
@@ -111,37 +113,22 @@ async function* postDeployment(
   }
 }
 
-function getDefaultName(
-  files: FilesMap,
-  clientOptions: VercelClientOptions
-): string {
-  const debug = createDebug(clientOptions.debug);
-  const { isDirectory, path } = clientOptions;
-
-  if (isDirectory && typeof path === 'string') {
-    debug('Provided path is a directory. Using last segment as default name');
-    return path.split('/').pop() || path;
-  } else {
-    debug(
-      'Provided path is not a directory. Using last segment of the first file as default name'
-    );
-    const filePath = Array.from(files.values())[0].names[0];
-    return filePath.split('/').pop() || filePath;
-  }
-}
-
 export async function* deploy(
-  files: FilesMap,
+  deploymentName: string,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
+  files: {
+    inline: InlineFile[];
+    preUploaded: PreUploadedFile[];
+  }
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(clientOptions.debug);
 
   // Check if we should default to a static deployment
   if (!deploymentOptions.name) {
     deploymentOptions.version = 2;
-    deploymentOptions.name =
-      files.size === 1 ? 'file' : getDefaultName(files, clientOptions);
+    const fileCount = files.inline.length + files.preUploaded.length;
+    deploymentOptions.name = fileCount === 1 ? 'file' : deploymentName;
 
     if (deploymentOptions.name === 'file') {
       debug('Setting deployment name to "file" for single-file deployment');
@@ -149,8 +136,7 @@ export async function* deploy(
   }
 
   if (!deploymentOptions.name) {
-    deploymentOptions.name =
-      clientOptions.defaultName || getDefaultName(files, clientOptions);
+    deploymentOptions.name = clientOptions.defaultName || deploymentName;
     debug('No name provided. Defaulting to', deploymentOptions.name);
   }
 
@@ -165,9 +151,9 @@ export async function* deploy(
   try {
     debug('Creating deployment');
     for await (const event of postDeployment(
-      files,
       clientOptions,
-      deploymentOptions
+      deploymentOptions,
+      files
     )) {
       if (event.type === 'created') {
         debug('Deployment created');
