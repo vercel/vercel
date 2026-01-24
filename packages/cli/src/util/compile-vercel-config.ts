@@ -79,8 +79,8 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
     delete normalized.redirects;
   }
 
-  if (headers && hasRouteFormat(headers as RouteInput[])) {
-    allRoutes = [...allRoutes, ...(headers as RouteInput[]).map(toRouteFormat)];
+  if (headers && hasRouteFormat(headers)) {
+    allRoutes = [...allRoutes, ...headers.map(toRouteFormat)];
     delete normalized.headers;
   }
 
