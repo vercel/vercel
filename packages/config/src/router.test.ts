@@ -289,7 +289,6 @@ describe('Router', () => {
       expect(route).toMatchObject({
         src: '/old',
         dest: '/new',
-        redirect: true,
         status: 308,
         transforms: [
           {
