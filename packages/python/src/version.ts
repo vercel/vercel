@@ -287,9 +287,6 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
-function isInstalled({ pipPath, pythonPath }: PythonVersion): boolean {
-  return (
-    Boolean(which.sync(pipPath, { nothrow: true })) &&
-    Boolean(which.sync(pythonPath, { nothrow: true }))
-  );
+function isInstalled({ pythonPath }: PythonVersion): boolean {
+  return Boolean(which.sync(pythonPath, { nothrow: true }));
 }

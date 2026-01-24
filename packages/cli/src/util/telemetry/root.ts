@@ -19,6 +19,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandApi(actual: string) {
+    this.trackCliCommand({
+      command: 'api',
+      value: actual,
+    });
+  }
+
   trackCliCommandBisect(actual: string) {
     this.trackCliCommand({
       command: 'bisect',
@@ -190,6 +197,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandLogs(actual: string) {
     this.trackCliCommand({
       command: 'logs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogsv2(actual: string) {
+    this.trackCliCommand({
+      command: 'logsv2',
       value: actual,
     });
   }
