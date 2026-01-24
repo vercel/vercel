@@ -64,16 +64,16 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
     return items?.some(item => 'src' in item) ?? false;
   }
 
-  const shouldConvertRewrites = hasRewrites && hasRouteFormat(rewrites);
-  const shouldConvertRedirects = hasRedirects && hasRouteFormat(redirects);
-  const shouldConvertHeaders = hasHeaders && hasRouteFormat(headers);
-
   // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
   if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
     return normalized;
   }
 
   // If some arrays will convert to routes but others won't, throw a more specific & helpful error
+  const shouldConvertRewrites = hasRewrites && hasRouteFormat(rewrites);
+  const shouldConvertRedirects = hasRedirects && hasRouteFormat(redirects);
+  const shouldConvertHeaders = hasHeaders && hasRouteFormat(headers);
+
   const someWillConvert =
     shouldConvertRewrites || shouldConvertRedirects || shouldConvertHeaders;
   const someWontConvert =
