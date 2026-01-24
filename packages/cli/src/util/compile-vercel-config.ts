@@ -64,39 +64,45 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
     return items?.some(item => 'src' in item) ?? false;
   }
 
+  const shouldConvertRewrites = hasRewrites && hasRouteFormat(rewrites);
+  const shouldConvertRedirects = hasRedirects && hasRouteFormat(redirects);
+  const shouldConvertHeaders = hasHeaders && hasRouteFormat(headers);
+
   // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
   if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
     return normalized;
   }
 
-  if (
-    hasRewrites &&
-    hasRedirects &&
-    Boolean(convertedRewrites) !== Boolean(convertedRedirects) // one of them was converted to routes
-  ) {
-    const withTransforms = convertedRewrites ? 'rewrites' : 'redirects';
-    const other = convertedRewrites ? 'redirects' : 'rewrites';
+  // If some arrays will convert to routes but others won't, throw a more specific & helpful error
+  const someWillConvert =
+    shouldConvertRewrites || shouldConvertRedirects || shouldConvertHeaders;
+  const someWontConvert =
+    (hasRewrites && !shouldConvertRewrites) ||
+    (hasRedirects && !shouldConvertRedirects) ||
+    (hasHeaders && !shouldConvertHeaders);
+
+  if (someWillConvert && someWontConvert) {
     throw new NowBuildError({
       code: 'INVALID_VERCEL_CONFIG',
       message:
-        `Your \`${withTransforms}\` array contains transforms (e.g., requestHeaders) which requires the \`routes\` format, ` +
-        `but \`${other}\` cannot be used alongside \`routes\`. ` +
-        'Move all your rewrites and redirects into the `routes` array instead.',
+        'Transforms (e.g., requestHeaders) require the `routes` format, ' +
+        'which cannot be used alongside `rewrites`, `redirects`, or `headers`. ' +
+        'Move everything into the `routes` array instead.',
       link: 'https://vercel.com/docs/projects/project-configuration#routes',
     });
   }
 
-  if (rewrites && hasRouteFormat(rewrites)) {
+  if (rewrites && shouldConvertRewrites) {
     allRoutes = [...allRoutes, ...rewrites.map(toRouteFormat)];
     delete normalized.rewrites;
   }
 
-  if (redirects && hasRouteFormat(redirects)) {
+  if (redirects && shouldConvertRedirects) {
     allRoutes = [...allRoutes, ...redirects.map(toRouteFormat)];
     delete normalized.redirects;
   }
 
-  if (headers && hasRouteFormat(headers)) {
+  if (headers && shouldConvertHeaders) {
     allRoutes = [...allRoutes, ...headers.map(toRouteFormat)];
     delete normalized.headers;
   }
