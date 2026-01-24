@@ -1,4 +1,32 @@
 import { packageName } from '../../util/pkg-name';
+import { formatOption } from '../../util/arg-common';
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all available API endpoints',
+  arguments: [],
+  options: [
+    formatOption,
+    {
+      name: 'refresh',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Force refresh the cached OpenAPI spec',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all endpoints in table format',
+      value: `${packageName} api ls`,
+    },
+    {
+      name: 'List all endpoints as JSON',
+      value: `${packageName} api ls --format json`,
+    },
+  ],
+} as const;
 
 export const apiCommand = {
   name: 'api',
@@ -10,6 +38,7 @@ export const apiCommand = {
       required: false,
     },
   ],
+  subcommands: [listSubcommand],
   options: [
     {
       name: 'method',
@@ -104,15 +133,6 @@ export const apiCommand = {
       description:
         'Generate output instead of executing (e.g., --generate=curl)',
     },
-    {
-      name: 'format',
-      shorthand: null,
-      type: String,
-      argument: 'FORMAT',
-      deprecated: false,
-      description:
-        'Output format for ls command (table, json). Defaults to table',
-    },
   ],
   examples: [
     {
@@ -142,10 +162,6 @@ export const apiCommand = {
     {
       name: 'Add custom header',
       value: `${packageName} api /v2/user -H "X-Custom-Header: value"`,
-    },
-    {
-      name: 'List all available API endpoints',
-      value: `${packageName} api ls`,
     },
     {
       name: 'Interactive mode (select endpoint)',
