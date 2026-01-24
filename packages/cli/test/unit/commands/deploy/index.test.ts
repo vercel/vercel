@@ -1018,9 +1018,29 @@ describe('deploy', () => {
         { key: 'flag:no-wait', value: 'TRUE' },
       ]);
     });
-    it('--skip-domain', async () => {
+    it('--skip-domain without --prod should error', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--skip-domain');
+      const exitCodePromise = deploy(client);
+      await expect(client.stderr).toOutput(
+        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+    it('--skip-domain with --target=custom-env should error', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--skip-domain', '--target', 'my-custom-env');
+      const exitCodePromise = deploy(client);
+      await expect(client.stderr).toOutput(
+        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+    it('--skip-domain with --prod', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--skip-domain', '--prod');
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(0);
 
@@ -1029,10 +1049,32 @@ describe('deploy', () => {
           ...baseCreateDeployArgs,
           createArgs: expect.objectContaining({
             autoAssignCustomDomains: false,
+            target: 'production',
           }),
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:prod', value: 'TRUE' },
+        { key: 'flag:skip-domain', value: 'TRUE' },
+      ]);
+    });
+    it('--skip-domain with --target=production', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--skip-domain', '--target', 'production');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            autoAssignCustomDomains: false,
+            target: 'production',
+          }),
+        })
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:target', value: 'production' },
         { key: 'flag:skip-domain', value: 'TRUE' },
       ]);
     });
