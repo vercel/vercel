@@ -108,13 +108,7 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
   }
 
   if (allRoutes.length > 0) {
-    normalized.routes = allRoutes.map(item => {
-      if (isRouteFormat(item)) {
-        return item;
-      }
-      const isRedirect = 'permanent' in item;
-      return toRouteFormat(item, isRedirect);
-    });
+    normalized.routes = allRoutes.map(toRouteFormat);
   }
 
   return normalized;
