@@ -591,3 +591,38 @@ test('dev server should remove transfer encoding header', async () => {
     child.kill(9);
   }
 });
+
+test('forkDevServer should quote paths with spaces in NODE_OPTIONS', async () => {
+  const mockRequire = {
+    resolve: (moduleName: string) => {
+      // Simulate ts-node being in a path with spaces
+      if (moduleName === 'ts-node') {
+        return '/path/with spaces/node_modules/ts-node/dist/index.js';
+      }
+      return require.resolve(moduleName);
+    },
+  } as NodeRequire;
+
+  const child = await forkDevServer({
+    maybeTranspile: true,
+    config: {},
+    isEsm: false,
+    isTypeScript: true,
+    meta: {},
+    require_: mockRequire,
+    tsConfig: undefined,
+    workPath: resolve(__dirname, '../dev-fixtures'),
+    entrypoint: './web-handlers-node.js',
+    devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
+  });
+
+  try {
+    // The server should start successfully even with spaces in the path
+    // If the paths weren't quoted, Node would fail with "Cannot find module"
+    const result = await readMessage(child);
+    expect(result.state).toBe('message');
+    expect(result.value.port).toBeGreaterThan(0);
+  } finally {
+    child.kill(9);
+  }
+});
