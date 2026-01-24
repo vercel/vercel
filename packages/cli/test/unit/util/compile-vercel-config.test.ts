@@ -151,6 +151,17 @@ describe('normalizeConfig', () => {
     expect(result.rewrites).toEqual([{ source: '/c', destination: '/d' }]);
   });
 
+  it('should throw helpful error when rewrites with transforms conflict with redirects', () => {
+    const config = {
+      rewrites: [{ src: '/with-transform', dest: '/dest', transforms: [] }],
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+    } as unknown as VercelConfig;
+
+    expect(() => normalizeConfig(config)).toThrow(
+      /Move everything into the `routes` array/
+    );
+  });
+
   it('should handle empty config', () => {
     expect(normalizeConfig({})).toEqual({});
   });
@@ -161,23 +172,6 @@ describe('normalizeConfig', () => {
 
     expect(result.rewrites).toEqual([]);
     expect(result.redirects).toEqual([]);
-  });
-
-  it('should produce invalid config when rewrites have transforms but redirects do not', () => {
-    const config = {
-      rewrites: [{ src: '/with-transform', dest: '/dest', transforms: [] }],
-      redirects: [{ source: '/old', destination: '/new', permanent: true }],
-    } as unknown as VercelConfig;
-
-    const result = normalizeConfig(config);
-
-    expect(result.routes).toEqual([
-      { src: '/with-transform', dest: '/dest', transforms: [] },
-    ]);
-    expect(result.rewrites).toBeUndefined();
-    expect(result.redirects).toEqual([
-      { source: '/old', destination: '/new', permanent: true },
-    ]);
   });
 
   it('should preserve other config fields during normalization', () => {

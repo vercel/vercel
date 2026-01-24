@@ -69,17 +69,40 @@ export function normalizeConfig(config: VercelConfig): VercelConfig {
     return normalized;
   }
 
-  if (rewrites && hasRouteFormat(rewrites)) {
+  // If some arrays will convert to routes but others won't, throw a more specific & helpful error
+  const shouldConvertRewrites = hasRewrites && hasRouteFormat(rewrites);
+  const shouldConvertRedirects = hasRedirects && hasRouteFormat(redirects);
+  const shouldConvertHeaders = hasHeaders && hasRouteFormat(headers);
+
+  const someWillConvert =
+    shouldConvertRewrites || shouldConvertRedirects || shouldConvertHeaders;
+  const someWontConvert =
+    (hasRewrites && !shouldConvertRewrites) ||
+    (hasRedirects && !shouldConvertRedirects) ||
+    (hasHeaders && !shouldConvertHeaders);
+
+  if (someWillConvert && someWontConvert) {
+    throw new NowBuildError({
+      code: 'INVALID_VERCEL_CONFIG',
+      message:
+        'Transforms (e.g., requestHeaders) require the `routes` format, ' +
+        'which cannot be used alongside `rewrites`, `redirects`, or `headers`. ' +
+        'Move everything into the `routes` array instead.',
+      link: 'https://vercel.com/docs/projects/project-configuration#routes',
+    });
+  }
+
+  if (rewrites && shouldConvertRewrites) {
     allRoutes = [...allRoutes, ...rewrites.map(toRouteFormat)];
     delete normalized.rewrites;
   }
 
-  if (redirects && hasRouteFormat(redirects)) {
+  if (redirects && shouldConvertRedirects) {
     allRoutes = [...allRoutes, ...redirects.map(toRouteFormat)];
     delete normalized.redirects;
   }
 
-  if (headers && hasRouteFormat(headers)) {
+  if (headers && shouldConvertHeaders) {
     allRoutes = [...allRoutes, ...headers.map(toRouteFormat)];
     delete normalized.headers;
   }
@@ -352,9 +375,10 @@ export async function compileVercelConfig(
     };
   } catch (error: any) {
     throw new NowBuildError({
-      code: 'vercel_ts_compilation_failed',
-      message: `Failed to compile ${vercelConfigPath}: ${error.message}`,
-      link: 'https://vercel.com/docs/projects/project-configuration',
+      code: error.code ?? 'vercel_ts_compilation_failed',
+      message: `Failed to compile ${basename(vercelConfigPath)}: ${error.message}`,
+      link:
+        error.link ?? 'https://vercel.com/docs/projects/project-configuration',
     });
   } finally {
     await Promise.all([
