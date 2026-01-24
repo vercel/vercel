@@ -26,6 +26,7 @@ import { logsCommand } from './logs/command';
 import { logsv2Command } from './logsv2/command';
 import { mcpCommand } from './mcp/command';
 import { microfrontendsCommand } from './microfrontends/command';
+import { oidcCommand } from './oidc/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
@@ -73,6 +74,7 @@ const commandsStructs = [
   logsv2Command,
   mcpCommand,
   microfrontendsCommand,
+  oidcCommand,
   openCommand,
   projectCommand,
   promoteCommand,
