@@ -1,0 +1,179 @@
+name: Nightly Tests
+
+on:
+  schedule:
+    # Run at 10pm PST (6am UTC) every day
+    # PST is UTC-8, so 10pm PST = 6am UTC next day
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  # Disable turbo remote cache for nightly - we want fresh runs
+  TURBO_REMOTE_ONLY: 'false'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    name: Setup Full Test Suite
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      - id: set-tests
+        run: |
+          # Don't set TURBO_BASE_SHA to run ALL tests (no affected package filtering)
+          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          echo "Files to test:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
+        id: waitForTarball
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
+
+  test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
+    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['tests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - run: pnpm install
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --force --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Test ${{matrix.packageName}}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --force --summarize --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        shell: bash
+        env:
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          FORCE_COLOR: '1'
+      - name: 'Upload Test Report to Datadog'
+        if: ${{ !cancelled() }}
+        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
+        env:
+          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          DD_ENV: ci
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - test
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    if: failure()
+    needs:
+      - summary
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+      - name: Create Failure Notice PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          BRANCH_NAME="nightly-test-failure-${DATE}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create branch and add notice file
+          git checkout -B "$BRANCH_NAME"
+
+          cat > NIGHTLY_TEST_FAILURE.md << EOF
+          # 🚨 Nightly Test Failure Notice
+
+          **Date**: ${DATE}
+          **Failed Run**: ${RUN_URL}
+
+          ## Action Required
+
+          The nightly test suite has detected failing tests. Please investigate and fix the issues.
+
+          Once the issues are resolved, close this PR without merging.
+
+          ---
+          *This PR was automatically created by the nightly test workflow.*
+          EOF
+
+          git add NIGHTLY_TEST_FAILURE.md
+          git commit -m "🚨 Nightly test failure notice - ${DATE}"
+          git push origin "$BRANCH_NAME"
+
+          # Create PR
+          gh pr create \
+            --title "🚨 Nightly Test Failure Notice - ${DATE}" \
+            --body "## Nightly Test Suite Failed
+
+          **Date**: ${DATE}
+          **Failed Run**: ${RUN_URL}
+
+          Please investigate the failing tests and fix any regressions.
+
+          **Close this PR without merging once the issues are resolved.**
+
+          ---
+          *This PR was automatically created by the nightly test workflow.*" \
+            --label "nightly-test-failure" \
+            --base main
