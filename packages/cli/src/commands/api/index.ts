@@ -1,10 +1,11 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
-import { apiCommand } from './command';
+import { apiCommand, listSubcommand } from './command';
 import { ApiTelemetryClient } from '../../util/telemetry/commands/api';
 import {
   buildRequest,
@@ -29,37 +30,63 @@ export default async function api(client: Client): Promise<number> {
     opts: { store: client.telemetryEventStore },
   });
 
-  // Parse arguments
+  // Parse arguments with permissive mode to handle subcommand flags
   let parsedArgs;
   const flagsSpec = getFlagsSpecification(apiCommand.options);
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpec);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpec, {
+      permissive: true,
+    });
   } catch (err) {
     printError(err);
     return 1;
   }
 
   const { args, flags } = parsedArgs;
+  const needHelp = flags['--help'];
 
-  // Handle --help
-  if (flags['--help']) {
+  // Check for 'ls' or 'list' subcommand first (before general --help)
+  const firstArg = args[1];
+  if (firstArg === 'ls' || firstArg === 'list') {
+    // Re-parse with listSubcommand options to capture --format
+    const lsFlagsSpec = getFlagsSpecification(listSubcommand.options);
+    let lsParsedArgs;
+    try {
+      lsParsedArgs = parseArguments(client.argv.slice(2), lsFlagsSpec);
+    } catch (err) {
+      printError(err);
+      return 1;
+    }
+    const lsFlags = lsParsedArgs.flags;
+
+    // Handle 'api ls --help'
+    if (lsFlags['--help']) {
+      telemetryClient.trackCliFlagHelp('api', firstArg);
+      output.print(
+        help(listSubcommand, {
+          parent: apiCommand,
+          columns: client.stderr.columns,
+        })
+      );
+      return 2;
+    }
+
+    telemetryClient.trackCliSubcommandList();
+    if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+    if (lsFlags['--format'])
+      telemetryClient.trackCliOptionFormat(lsFlags['--format']);
+    return listEndpoints(
+      client,
+      lsFlags['--refresh'] ?? false,
+      lsFlags['--format'] ?? 'table'
+    );
+  }
+
+  // Handle 'api --help' (no subcommand)
+  if (needHelp) {
     telemetryClient.trackCliFlagHelp('api');
     output.print(help(apiCommand, { columns: client.stderr.columns }));
     return 2;
-  }
-
-  // Handle 'ls' or 'list' subcommand
-  const firstArg = args[1];
-  if (firstArg === 'ls' || firstArg === 'list') {
-    telemetryClient.trackCliSubcommandList();
-    if (flags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
-    if (flags['--format'])
-      telemetryClient.trackCliOptionFormat(flags['--format']);
-    return listEndpoints(
-      client,
-      flags['--refresh'] ?? false,
-      flags['--format'] ?? 'table'
-    );
   }
 
   // Get endpoint from args (args[0] is 'api', args[1] is the endpoint)
@@ -435,30 +462,81 @@ function outputEndpointsAsJson(
   return 0;
 }
 
-function outputEndpointsAsTable(endpoints: EndpointInfo[]): number {
-  const methodWidth = 7;
-  const pathWidth = Math.min(
-    60,
-    Math.max(...endpoints.map(ep => ep.path.length))
-  );
+/**
+ * Colorize HTTP method for terminal output
+ */
+function colorizeMethod(method: string): string {
+  switch (method) {
+    case 'GET':
+      return chalk.cyan(method);
+    case 'POST':
+      return chalk.green(method);
+    case 'PUT':
+      return chalk.yellow(method);
+    case 'PATCH':
+      return chalk.blue(method);
+    case 'DELETE':
+      return chalk.red(method);
+    default:
+      return method;
+  }
+}
 
-  output.log('');
-  output.log(
-    `${'METHOD'.padEnd(methodWidth)}  ${'PATH'.padEnd(pathWidth)}  SUMMARY`
-  );
-  output.log('-'.repeat(methodWidth + pathWidth + 50));
+/**
+ * Group endpoints by path
+ */
+interface GroupedEndpoint {
+  method: string;
+  summary?: string;
+}
+
+function groupEndpointsByPath(
+  endpoints: EndpointInfo[]
+): Map<string, GroupedEndpoint[]> {
+  const grouped = new Map<string, GroupedEndpoint[]>();
 
   for (const ep of endpoints) {
-    const method = ep.method.padEnd(methodWidth);
-    const path =
-      ep.path.length > pathWidth
-        ? ep.path.substring(0, pathWidth - 3) + '...'
-        : ep.path.padEnd(pathWidth);
-    output.log(`${method}  ${path}  ${ep.summary || ''}`);
+    const existing = grouped.get(ep.path) || [];
+    existing.push({ method: ep.method, summary: ep.summary });
+    grouped.set(ep.path, existing);
   }
 
+  // Sort methods within each group for consistent display
+  const methodOrder = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+  for (const [path, methods] of grouped) {
+    methods.sort(
+      (a, b) => methodOrder.indexOf(a.method) - methodOrder.indexOf(b.method)
+    );
+    grouped.set(path, methods);
+  }
+
+  return grouped;
+}
+
+function outputEndpointsAsTable(endpoints: EndpointInfo[]): number {
+  const grouped = groupEndpointsByPath(endpoints);
+  const methodWidth = 7;
+
   output.log('');
-  output.log(`Total: ${endpoints.length} endpoints`);
+
+  for (const [path, methods] of grouped) {
+    // Print path as header
+    output.log(chalk.bold(path));
+
+    // Print each method underneath with indentation
+    for (const { method, summary } of methods) {
+      const coloredMethod = colorizeMethod(method);
+      const paddedMethod = method.padEnd(methodWidth);
+      const methodDisplay = coloredMethod + paddedMethod.slice(method.length);
+      output.log(`  ${methodDisplay}  ${chalk.gray(summary || '')}`);
+    }
+
+    output.log(''); // Blank line between paths
+  }
+
+  output.log(
+    `${chalk.bold(grouped.size.toString())} routes, ${chalk.bold(endpoints.length.toString())} endpoints`
+  );
   return 0;
 }
 
