@@ -30,7 +30,15 @@ export async function ensureLink(
 ): Promise<ProjectLinked | number> {
   let { link } = opts;
   if (!link) {
-    link = await getLinkedProject(client, cwd);
+    try {
+      link = await getLinkedProject(client, cwd, {
+        projectName: opts.projectName,
+        autoConfirm: opts.autoConfirm,
+      });
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
     opts.link = link;
   }
 
