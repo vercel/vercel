@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   getGitDirectory,
@@ -140,14 +140,15 @@ origin\thttps://github.com/user/repo.git (push)`;
 
     it('getGitRootDirectory() should return the worktree path', async () => {
       const result = await getGitRootDirectory({ cwd: worktreePath });
-      // On Windows, paths may have 8.3 short names (e.g., RUNNER~1) vs full names (runneradmin).
-      // Use realpathSync on the result to normalize, since worktreePath is already normalized.
-      // If result is still different, compare case-insensitively for Windows compatibility.
-      const normalizedResult = result ? realpathSync(result) : result;
-      const normalizedExpected = realpathSync(worktreePath);
-      expect(normalizedResult?.toLowerCase()).toEqual(
-        normalizedExpected.toLowerCase()
-      );
+      expect(result).not.toBeNull();
+
+      // On Windows, temp paths may use 8.3 short names (e.g., RUNNER~1 vs runneradmin)
+      // that fs.realpathSync doesn't expand. Compare only the path suffix we control.
+      const expectedSuffix = join('bare-worktree-test', 'worktree');
+      const resultNormalized = result!.replace(/\\/g, '/').toLowerCase();
+      const suffixNormalized = expectedSuffix.replace(/\\/g, '/').toLowerCase();
+
+      expect(resultNormalized.endsWith(suffixNormalized)).toBe(true);
     });
 
     it('getGitRemoteUrls() should return remotes from the bare repo', async () => {
