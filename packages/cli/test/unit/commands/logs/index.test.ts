@@ -92,7 +92,7 @@ describe('logs', () => {
 
           Options:
 
-          -j,  --json  Print each log line as a JSON object (compatible with JQ)        
+          -F,  --format <FORMAT>  Specify the output format (json)                      
 
 
           Global Options:
@@ -117,11 +117,11 @@ describe('logs', () => {
 
           - Print all runtime logs for the deployment DEPLOYMENT_ID as json objects
 
-            $ vercel logs DEPLOYMENT_ID --json
+            $ vercel logs DEPLOYMENT_ID --format=json
 
           - Filter runtime logs for warning with JQ third party tool
 
-            $ vercel logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'
+            $ vercel logs DEPLOYMENT_ID --format=json | jq 'select(.level == "warning")'
 
         "
       `);
@@ -200,7 +200,7 @@ describe('logs', () => {
         '--since=forever',
         '--until=tomorrow',
         '--limit=1000',
-        '--output=short'
+        '--json'
       );
       const exitCode = await logs(client);
       expect(exitCode).toEqual(0);
@@ -218,7 +218,7 @@ describe('logs', () => {
         `The "--until" option was ignored because it is now deprecated. Please remove it`
       );
       expect(output).toContain(
-        `The "--output" option was ignored because it is now deprecated. Please remove it`
+        `The "--json" option was ignored because it is now deprecated. Please remove it`
       );
     });
 
@@ -396,7 +396,7 @@ describe('logs', () => {
       { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
       {
         title: 'as json',
-        flag: '-j',
+        flag: '--format=json',
         getOutput: () => client.stdout.getFullOutput(),
       },
     ])(
@@ -440,7 +440,7 @@ describe('logs', () => {
       { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
       {
         title: 'as json',
-        flag: '-j',
+        flag: '--format=json',
         getOutput: () => client.stdout.getFullOutput(),
       },
     ])(

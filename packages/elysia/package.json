@@ -1,6 +1,6 @@
 {
   "name": "@vercel/elysia",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
