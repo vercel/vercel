@@ -1,58 +1,59 @@
+import { join, normalize, relative, resolve, sep } from 'path';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
 
 import {
-  download,
-  FileFsRef,
-  getDiscontinuedNodeVersions,
-  getInstalledPackageVersion,
-  normalizePath,
-  NowBuildError,
-  runNpmInstall,
-  runCustomInstallCommand,
-  resetCustomInstallCommandSet,
-  type Reporter,
-  Span,
-  type TraceEvent,
-  validateNpmrc,
-  type Builder,
   type BuildOptions,
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type Builder,
   type Config,
   type Cron,
+  FileFsRef,
   type Files,
   type FlagDefinitions,
-  type Meta,
-  type PackageJson,
-  shouldUseExperimentalBackends,
-  isBackendBuilder,
   type Lambda,
+  type Meta,
+  NowBuildError,
+  type PackageJson,
+  type Reporter,
+  Span,
+  type TraceEvent,
+  download,
+  getDiscontinuedNodeVersions,
+  getInstalledPackageVersion,
+  isBackendBuilder,
+  normalizePath,
+  resetCustomInstallCommandSet,
+  runCustomInstallCommand,
+  runNpmInstall,
+  shouldUseExperimentalBackends,
+  validateNpmrc,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import { type Framework, frameworkList } from '@vercel/frameworks';
 import {
+  LocalFileSystemDetector,
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
+  type MergeRoutesProps,
+  type Route,
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
   sourceToRegex,
-  type MergeRoutesProps,
-  type Route,
 } from '@vercel/routing-utils';
 
+import { mkdir, writeFile } from 'fs/promises';
 import output from '../../output-manager';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
@@ -61,10 +62,15 @@ import { scrubArgv } from '../../util/build/scrub-argv';
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
-  writeBuildResult,
   type PathOverride,
+  writeBuildResult,
 } from '../../util/build/write-build-result';
 import type Client from '../../util/client';
+import {
+  DEFAULT_VERCEL_CONFIG_FILENAME,
+  compileVercelConfig,
+  findSourceVercelConfigFile,
+} from '../../util/compile-vercel-config';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { printError, toEnumerableError } from '../../util/error';
 import { CantParseJSONFile } from '../../util/errors-ts';
@@ -76,26 +82,20 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import { VERCEL_DIR, getProjectLink } from '../../util/projects/link';
 import {
+  type ProjectLinkAndSettings,
   pickOverrides,
   readProjectSettings,
-  type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
 import { validateCronSecret } from '../../util/validate-cron-secret';
-import {
-  compileVercelConfig,
-  findSourceVercelConfigFile,
-  DEFAULT_VERCEL_CONFIG_FILENAME,
-} from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
-import { mkdir, writeFile } from 'fs/promises';
-import { emitEdgeConfigFiles } from './emit-edge-config-files';
+import { emitFlagsDefinitions } from './emit-flags-definitions';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -541,11 +541,11 @@ async function doBuild(
   // 5. upload vercel-50.1.3.tgz to blob store https://vercel.com/vercel-labs/~/stores/blob/store_PDmwsooLejOIaEWs/browser
   // 6. set VERCEL_CLI_VERSION env var on project https://vercel.com/vercel-labs/flags-sdk-vercel if not present or version changed
   // 7. redeploy
-  if (process.env.VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG === '1') {
-    await emitEdgeConfigFiles(cwd, process.env);
+  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAGS_DEFINITIONS === '1') {
+    await emitFlagsDefinitions(cwd, process.env);
   } else {
     output.debug(
-      'Skipped embedding Edge Config due to VERCEL_EXPERIMENTAL_EMBED_EDGE_CONFIG'
+      'Skipped embedding flags definitions due to VERCEL_EXPERIMENTAL_EMBED_FLAGS_DEFINITIONS'
     );
   }
 
