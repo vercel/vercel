@@ -80,7 +80,7 @@ export async function pullEnvRecords(
 
   if (target) {
     url += `/${encodeURIComponent(target)}`;
-    if (gitBranch) {
+    if (target === 'preview' && gitBranch) {
       url += `/${encodeURIComponent(gitBranch)}`;
     }
   }
