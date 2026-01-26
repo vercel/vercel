@@ -1,0 +1,67 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/_next/data/testing-build-id/pages-gsp.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-nextjs-deployment-id": "testing-deployment-id"
+      },
+      "mustContain": "pages get static props"
+    },
+    {
+      "path": "/_next/data/testing-build-id/pages-gssp.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-nextjs-deployment-id": "testing-deployment-id"
+      },
+      "mustContain": "pages get server side props"
+    },
+    {
+      "path": "/_next/data/testing-build-id/pages-gsp-revalidate.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-nextjs-deployment-id": "testing-deployment-id",
+        "x-vercel-cache": "PRERENDER"
+      },
+      "mustContain": "pages get static props revalidate"
+    },
+    {
+      "path": "/_next/data/testing-build-id/pages-gsp-revalidate.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-nextjs-deployment-id": "testing-deployment-id",
+        "x-vercel-cache": "HIT"
+      },
+      "mustContain": "pages get static props revalidate"
+    },
+    {
+      "path": "/app-dynamic?_rsc=",
+      "status": 200,
+      "headers": {
+        "rsc": 1
+      },
+      "responseHeaders": {
+        "x-nextjs-deployment-id": "testing-deployment-id"
+      },
+      "mustContain": "app get dynamic"
+    },
+    {
+      "path": "/app-static?_rsc=",
+      "status": 200,
+      "headers": {
+        "rsc": 1
+      },
+      "responseHeaders": {
+        "x-nextjs-deployment-id": "testing-deployment-id"
+      },
+      "mustContain": "app get static"
+    }
+  ]
+}
