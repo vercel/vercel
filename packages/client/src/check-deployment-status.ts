@@ -23,8 +23,13 @@ interface DeploymentStatus {
 
 // If an error occurs, how should our retries behave?
 const RETRY_COUNT = 3;
+// Maximum value to cap `Retry-After` to in order to avoid hanging if we get a
+// `Retry-After` value in the far future. This limit is applied before
+// `RETRY_DELAY_SKEW_MS`, so the total duration can exceed this.
 const RETRY_DELAY_MAX_MS = 60_000;
 const RETRY_DELAY_MIN_MS = 5_000;
+// We add between 0 and RETRY_DELAY_SKEW_MS of skew to the retry duration.
+const RETRY_DELAY_SKEW_MS = 30_000;
 const RETRY_DELAY_DEFAULT_MS = 5_000;
 
 export function parseRetryAfterMs(response: any): number | null {
@@ -102,12 +107,18 @@ export async function* checkDeploymentStatus(
 
       const retryAfterMs = parseRetryAfterMs(deploymentResponse);
       if (retryAfterMs != null) {
+        // The `Retry-After` header from the api tells us when the next rate
+        // limit token is available. There may only be a single rate limit token
+        // available at that time. Add a random skew to prevent creating a
+        // thundering herd.
+        const randomSkewMs = Math.floor(RETRY_DELAY_SKEW_MS * Math.random());
         debug(
           'Received a transient error or rate limit ' +
             `(HTTP ${deploymentResponse.status}) while querying deployment ` +
-            `status, retrying after ${retryAfterMs}ms`
+            `status, retrying after ${retryAfterMs + randomSkewMs}ms ` +
+            `(${retryAfterMs} + ${randomSkewMs}ms of random skew)`
         );
-        await sleep(retryAfterMs);
+        await sleep(retryAfterMs + randomSkewMs);
         continue;
       }
 
