@@ -40,4 +40,11 @@ export class IntegrationTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandProducts(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'products',
+      value: actual,
+    });
+  }
 }

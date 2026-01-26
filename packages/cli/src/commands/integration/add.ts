@@ -39,10 +39,21 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const arg = args[0];
 
-  if (!integrationSlug) {
+  if (!arg) {
     output.error('You must pass an integration slug');
+    return 1;
+  }
+
+  const slashIndex = arg.indexOf('/');
+  const integrationSlug = slashIndex === -1 ? arg : arg.slice(0, slashIndex);
+  const productSlug = slashIndex === -1 ? undefined : arg.slice(slashIndex + 1);
+
+  if (productSlug === '') {
+    output.error(
+      'Product slug cannot be empty. Use "integration/product" format.'
+    );
     return 1;
   }
 
@@ -75,7 +86,7 @@ export async function add(client: Client, args: string[]) {
   }
 
   const [productResult, installationsResult] = await Promise.allSettled([
-    selectProduct(client, integration),
+    selectProduct(client, integration, productSlug),
     fetchInstallations(client, integration),
   ]);
 
@@ -305,11 +316,28 @@ async function provisionResourceViaCLI(
   }
 }
 
-async function selectProduct(client: Client, integration: Integration) {
+async function selectProduct(
+  client: Client,
+  integration: Integration,
+  productSlug?: string
+) {
   const products = integration.products;
 
   if (!products?.length) {
     return;
+  }
+
+  // If a product slug was provided, find it directly
+  if (productSlug) {
+    const product = products.find(p => p.slug === productSlug);
+    if (!product) {
+      const availableSlugs = products.map(p => p.slug).join(', ');
+      output.error(
+        `Product "${productSlug}" not found for integration "${integration.slug}". Available products: ${availableSlugs}`
+      );
+      return;
+    }
+    return product;
   }
 
   if (products.length === 1) {
