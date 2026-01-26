@@ -13,141 +13,21 @@ import { UsageTelemetryClient } from '../../util/telemetry/commands/usage';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { isErrnoException } from '@vercel/error-utils';
+import type { FocusCharge } from '../../util/billing/focus-charge';
+import {
+  parseBillingDate,
+  getDefaultFromDate,
+  getDefaultToDate,
+  formatCurrency,
+  formatQuantity,
+  extractDatePortion,
+} from '../../util/billing/format';
 
-interface Charge {
-  ServiceName?: string;
-  PricingQuantity?: number;
-  EffectiveCost?: number;
-  BilledCost?: number;
-  ChargePeriodStart?: string;
-  BillingPeriodStartDate?: string;
-  ChargeDate?: string;
-  Date?: string;
-}
-
-interface ServiceUsage {
-  mius: number;
-  effective: number;
-  billed: number;
-}
-
-// LA timezone identifier
-const LA_TIMEZONE = 'America/Los_Angeles';
-
-/**
- * Get the UTC offset in hours for LA timezone at a specific date.
- * Returns 8 for PST (winter) or 7 for PDT (summer/daylight saving).
- */
-function getLAOffsetHours(date: Date): number {
-  // Create a formatter that outputs the timezone offset
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: LA_TIMEZONE,
-    timeZoneName: 'shortOffset',
-  });
-
-  const parts = formatter.formatToParts(date);
-  const tzPart = parts.find(p => p.type === 'timeZoneName');
-
-  if (tzPart?.value) {
-    // Value will be like "GMT-8" or "GMT-7"
-    const match = tzPart.value.match(/GMT([+-]\d+)/);
-    if (match) {
-      return -parseInt(match[1], 10); // Convert to positive offset from UTC
-    }
-  }
-
-  // Default to PST (UTC-8) if parsing fails
-  return 8;
-}
-
-/**
- * Convert a date string (YYYY-MM-DD) to UTC ISO string at midnight LA time.
- * For example, "2025-12-01" becomes "2025-12-01T08:00:00.000Z" (PST)
- * or "2025-06-01" becomes "2025-06-01T07:00:00.000Z" (PDT)
- */
-function dateToLAMidnightUTC(dateStr: string): string {
-  // Parse the date components
-  const [year, month, day] = dateStr.split('-').map(Number);
-
-  // Create a date at midnight UTC for this calendar date
-  // We'll use this to determine if DST is active in LA
-  const tempDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0)); // noon UTC to be safe
-
-  // Get the LA offset for this date
-  const offsetHours = getLAOffsetHours(tempDate);
-
-  // Midnight LA = offsetHours:00 UTC
-  const utcHour = offsetHours;
-
-  return new Date(
-    Date.UTC(year, month - 1, day, utcHour, 0, 0, 0)
-  ).toISOString();
-}
-
-/**
- * Get the start of the current month at midnight LA time, in UTC ISO format.
- */
-function getDefaultFromDate(): string {
-  // Get current date in LA timezone
-  const now = new Date();
-  const laFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: LA_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const laDate = laFormatter.format(now); // Format: YYYY-MM-DD
-
-  // Extract year and month
-  const [year, month] = laDate.split('-').map(Number);
-
-  // Return first of month at midnight LA time
-  return dateToLAMidnightUTC(`${year}-${String(month).padStart(2, '0')}-01`);
-}
-
-/**
- * Get the current date/time in ISO format (actual current time, not LA midnight)
- */
-function getDefaultToDate(): string {
-  return new Date().toISOString();
-}
-
-/**
- * Parse a date string and convert to UTC ISO format at midnight LA time.
- * Accepts YYYY-MM-DD or full ISO 8601 format.
- */
-function parseDate(dateStr: string, isEndDate: boolean = false): string {
-  // If it's already a full ISO string with time component, return as-is
-  if (dateStr.includes('T')) {
-    return dateStr;
-  }
-
-  // For end dates like "2025-12-31", we want to query up to the END of that day,
-  // which means midnight LA time on the NEXT day (2026-01-01T08:00:00.000Z)
-  if (isEndDate) {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    date.setUTCDate(date.getUTCDate() + 1);
-    const nextDay = date.toISOString().split('T')[0];
-    return dateToLAMidnightUTC(nextDay);
-  }
-
-  // For start dates, convert to midnight LA time
-  return dateToLAMidnightUTC(dateStr);
-}
-
-/**
- * Format a number as currency
- */
-function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(4)}`;
-}
-
-/**
- * Format MIUs with appropriate precision
- */
-function formatMius(mius: number): string {
-  return mius.toFixed(4);
+interface ServiceAggregation {
+  pricingQuantity: number;
+  effectiveCost: number;
+  billedCost: number;
+  pricingUnit: string;
 }
 
 export default async function usage(client: Client): Promise<number> {
@@ -182,20 +62,18 @@ export default async function usage(client: Client): Promise<number> {
   }
   const asJson = formatResult.jsonOutput;
 
-  // Get date range from flags or use defaults
-  // Dates are interpreted as LA timezone (America/Los_Angeles)
+  // Get month-so-far or custom date range in LA time
   const fromDate = parsedArgs.flags['--from']
-    ? parseDate(parsedArgs.flags['--from'], false)
+    ? parseBillingDate(parsedArgs.flags['--from'], false)
     : getDefaultFromDate();
   const toDate = parsedArgs.flags['--to']
-    ? parseDate(parsedArgs.flags['--to'], true)
+    ? parseBillingDate(parsedArgs.flags['--to'], true)
     : getDefaultToDate();
 
   telemetry.trackCliOptionFrom(parsedArgs.flags['--from']);
   telemetry.trackCliOptionTo(parsedArgs.flags['--to']);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  // Debug: show date conversion
   if (parsedArgs.flags['--from']) {
     debug(`Date conversion: ${parsedArgs.flags['--from']} -> ${fromDate}`);
   }
@@ -205,7 +83,6 @@ export default async function usage(client: Client): Promise<number> {
     );
   }
 
-  // Get the current scope (user/team context)
   let contextName: string;
   let teamId: string | undefined;
 
@@ -231,7 +108,6 @@ export default async function usage(client: Client): Promise<number> {
 
   debug(`Fetching charges from ${fromDate} to ${toDate}`);
 
-  // Build the API URL
   const query = new URLSearchParams({
     from: fromDate,
     to: toDate,
@@ -252,40 +128,47 @@ export default async function usage(client: Client): Promise<number> {
       return 1;
     }
 
-    // Aggregate data from the streaming response
-    const services = new Map<string, ServiceUsage>();
-    let grandMius = 0;
+    const services = new Map<string, ServiceAggregation>();
+    let grandPricingQuantity = 0;
     let grandEffective = 0;
     let grandBilled = 0;
     let chargeCount = 0;
+    let pricingUnit = 'MIUs'; // Default, will be updated from first charge
 
     await new Promise<void>((resolve, reject) => {
       // gzip compression is assumed
       const stream = response.body.pipe(jsonlines.parse());
 
-      stream.on('data', (charge: Charge) => {
+      stream.on('data', (charge: FocusCharge) => {
         chargeCount++;
 
+        // Capture pricing unit from the first charge
+        if (chargeCount === 1 && charge.PricingUnit) {
+          pricingUnit = charge.PricingUnit;
+        }
+
         const serviceName = charge.ServiceName || 'Unknown';
-        const mius = charge.PricingQuantity || 0;
+        const quantity = charge.PricingQuantity || 0;
         const effective = charge.EffectiveCost || 0;
         const billed = charge.BilledCost || 0;
 
         // Accumulate grand totals
-        grandMius += mius;
+        grandPricingQuantity += quantity;
         grandEffective += effective;
         grandBilled += billed;
 
         // Accumulate per service
         const existing = services.get(serviceName) || {
-          mius: 0,
-          effective: 0,
-          billed: 0,
+          pricingQuantity: 0,
+          effectiveCost: 0,
+          billedCost: 0,
+          pricingUnit: charge.PricingUnit || pricingUnit,
         };
         services.set(serviceName, {
-          mius: existing.mius + mius,
-          effective: existing.effective + effective,
-          billed: existing.billed + billed,
+          pricingQuantity: existing.pricingQuantity + quantity,
+          effectiveCost: existing.effectiveCost + effective,
+          billedCost: existing.billedCost + billed,
+          pricingUnit: existing.pricingUnit,
         });
       });
 
@@ -294,9 +177,8 @@ export default async function usage(client: Client): Promise<number> {
       response.body.on('error', reject);
     });
 
-    // Sort services by MIUs descending
     const sortedServices = [...services.entries()].sort(
-      (a, b) => b[1].mius - a[1].mius
+      (a, b) => b[1].billedCost - a[1].billedCost
     );
 
     if (asJson) {
@@ -306,14 +188,16 @@ export default async function usage(client: Client): Promise<number> {
           to: toDate,
         },
         context: contextName,
+        pricingUnit,
         services: sortedServices.map(([name, data]) => ({
           name,
-          mius: data.mius,
-          effectiveCost: data.effective,
-          billedCost: data.billed,
+          pricingQuantity: data.pricingQuantity,
+          pricingUnit: data.pricingUnit,
+          effectiveCost: data.effectiveCost,
+          billedCost: data.billedCost,
         })),
         totals: {
-          mius: grandMius,
+          pricingQuantity: grandPricingQuantity,
           effectiveCost: grandEffective,
           billedCost: grandBilled,
         },
@@ -323,13 +207,13 @@ export default async function usage(client: Client): Promise<number> {
       return 0;
     }
 
-    // Human-readable output
     log(`Usage for ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`);
     log('');
     log(
-      `${chalk.gray('Period:')} ${fromDate.substring(0, 10)} to ${toDate.substring(0, 10)}`
+      `${chalk.gray('Period:')} ${extractDatePortion(fromDate)} to ${extractDatePortion(toDate)}`
     );
     log(`${chalk.gray('Charges processed:')} ${chargeCount}`);
+    log(`${chalk.gray('Pricing unit:')} ${pricingUnit}`);
     log('');
 
     if (sortedServices.length === 0) {
@@ -337,19 +221,23 @@ export default async function usage(client: Client): Promise<number> {
       return 0;
     }
 
-    // Build table
-    const headers = ['Service', 'MIUs', 'Effective Cost', 'Billed Cost'];
+    const quantityHeader = pricingUnit === 'USD' ? 'Usage (USD)' : pricingUnit;
+    const headers = [
+      'Service',
+      quantityHeader,
+      'Effective Cost',
+      'Billed Cost',
+    ];
     const rows = sortedServices.map(([name, data]) => [
       name,
-      formatMius(data.mius),
-      formatCurrency(data.effective),
-      formatCurrency(data.billed),
+      formatQuantity(data.pricingQuantity, data.pricingUnit),
+      formatCurrency(data.effectiveCost),
+      formatCurrency(data.billedCost),
     ]);
 
-    // Add totals row
     rows.push([
       chalk.bold('Total'),
-      chalk.bold(formatMius(grandMius)),
+      chalk.bold(formatQuantity(grandPricingQuantity, pricingUnit)),
       chalk.bold(formatCurrency(grandEffective)),
       chalk.bold(formatCurrency(grandBilled)),
     ]);
