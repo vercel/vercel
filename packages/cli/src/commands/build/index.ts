@@ -425,7 +425,25 @@ async function doBuild(
   if (sourceConfigFile) {
     corepackShimDir = await initCorepack({ repoRootPath: cwd });
 
-    const installCommand = project.settings.installCommand;
+    // For vercel.ts, try to get installCommand from cached compiled config first.
+    // This handles the case where installCommand is defined in vercel.ts but not
+    // in project settings (dashboard). The compiled config from a previous build
+    // (restored from build cache) will have the correct installCommand.
+    let installCommand = project.settings.installCommand;
+    const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
+    if (existsSync(compiledConfigPath)) {
+      const cachedConfig = await readJSONFile<VercelConfig>(compiledConfigPath);
+      if (
+        !(cachedConfig instanceof CantParseJSONFile) &&
+        cachedConfig?.installCommand
+      ) {
+        output.debug(
+          `Using installCommand from cached compiled config: ${cachedConfig.installCommand}`
+        );
+        installCommand = cachedConfig.installCommand;
+      }
+    }
+
     if (typeof installCommand === 'string') {
       if (installCommand.trim()) {
         output.log(`Running install command before config compilation...`);
