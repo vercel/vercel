@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.3.2
+
+### Patch Changes
+
+- Revert removing pip from the isInstalled check ([#14728](https://github.com/vercel/vercel/pull/14728))
+
 ## 6.3.1
 
 ### Patch Changes
