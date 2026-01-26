@@ -6,9 +6,13 @@ import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 
 let spawnMock: ReturnType<typeof vi.fn>;
-vi.mock('child_process', () => ({
-  spawn: vi.fn(),
-}));
+vi.mock('child_process', async importOriginal => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    spawn: vi.fn(),
+  };
+});
 
 describe('httpstat', () => {
   let originalProcessArgv: string[];

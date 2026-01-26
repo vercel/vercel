@@ -16,7 +16,7 @@ import {
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
-import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
+import { getGitRemoteUrls } from '../git-helpers';
 import {
   selectAndParseRemoteUrl,
   checkExistsAndConnect,
@@ -271,13 +271,7 @@ export async function connectGitRepository(
   org: Org
 ): Promise<void> {
   try {
-    const gitConfig = await parseGitConfig(join(path, '.git/config'));
-
-    if (!gitConfig) {
-      return;
-    }
-
-    const remoteUrls = pluckRemoteUrls(gitConfig);
+    const remoteUrls = await getGitRemoteUrls({ cwd: path });
     if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
       return;
     }
