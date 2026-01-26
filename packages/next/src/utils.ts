@@ -3286,7 +3286,9 @@ export const onPrerenderRoute =
             let segmentInitialHeaders = initialHeaders;
             if (
               !segmentInitialHeaders &&
-              isBlocking &&
+              // Blocking/fallback routes don't emit per-segment headers from Next,
+              // so inherit the route meta headers to carry cache tags
+              (isBlocking || isFallback) &&
               'headers' in meta &&
               typeof meta.headers === 'object' &&
               meta.headers !== null
