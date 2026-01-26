@@ -77,6 +77,7 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import open from 'open';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -916,7 +917,7 @@ const main = async () => {
 main()
   .then(async exitCode => {
     // Print update information, if available
-    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+    if (!process.env.NO_UPDATE_NOTIFIER) {
       // Check if an update is available. If so, `latest` will contain a string
       // of the latest version, otherwise `undefined`.
       const latest = getLatestVersion({
@@ -924,30 +925,61 @@ main()
       });
       if (latest) {
         const changelog = 'https://github.com/vercel/vercel/releases';
-        const errorMsg =
-          exitCode && exitCode !== 2
-            ? chalk.magenta(
-                `\n\nThe latest update ${chalk.italic(
-                  'may'
-                )} fix any errors that occurred.`
-              )
-            : '';
-        output.print(
-          box(
-            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
-              `v${latest}`
-            )}
+
+        if (isTTY) {
+          // Interactive mode: show condensed prompt
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  ` The latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+
+          output.print(
+            `\nUpdate available for Vercel CLI (${chalk.gray(
+              `v${pkg.version}`
+            )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
+          );
+
+          const action = await client.input.expand({
+            message: 'What would you like to do?',
+            default: 'u',
+            choices: [
+              { key: 'u', name: 'Upgrade now', value: 'upgrade' },
+              { key: 'c', name: 'View changelog', value: 'changelog' },
+              { key: 's', name: 'Skip', value: 'skip' },
+            ],
+          });
+
+          if (action === 'upgrade') {
+            const upgradeExitCode = await executeUpgrade();
+            process.exitCode = upgradeExitCode;
+            return;
+          } else if (action === 'changelog') {
+            await open(changelog);
+          }
+        } else {
+          // Non-interactive mode: show full update box
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  `\n\nThe latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+          output.print(
+            box(
+              `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+                `v${latest}`
+              )}
 Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
-          )
-        );
-        output.print('\n');
-
-        // Prompt user to upgrade now
-        if (await client.input.confirm('Upgrade now?', true)) {
-          const upgradeExitCode = await executeUpgrade();
-          process.exitCode = upgradeExitCode;
-          return;
+            )
+          );
+          output.print('\n');
         }
       }
     }
