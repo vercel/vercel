@@ -59,6 +59,8 @@ describe('refreshToken', () => {
       sub: 'test-sub',
       name: 'test-name',
       exp: Date.now() + 100000,
+      project_id: projectId,
+      owner_id: 'test-owner-id',
     });
   });
 
@@ -77,5 +79,44 @@ describe('refreshToken', () => {
     const tokenPath = path.join(tokenDataDir, `${projectId}.json`);
     const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
     expect(token).toEqual({ token: 'test-token' });
+  });
+
+  test('should extract project info from existing token instead of filesystem', async () => {
+    const tokenProjectId = 'token-project-id';
+    const tokenOwnerId = 'token-owner-id';
+
+    // Mock getTokenPayload to return project info from token
+    vi.spyOn(tokenUtil, 'getTokenPayload').mockReturnValue({
+      sub: 'test-sub',
+      name: 'test-name',
+      exp: Date.now() - 100000, // expired token
+      project_id: tokenProjectId,
+      owner_id: tokenOwnerId,
+    });
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    // Pass an existing token to refreshToken
+    await refreshToken('existing-expired-token');
+
+    // Verify that getVercelOidcToken was called with project info from the token, not filesystem
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      tokenProjectId,
+      tokenOwnerId
+    );
+
+    // Verify token was saved with the correct project ID from the token
+    const tokenPath = path.join(tokenDataDir, `${tokenProjectId}.json`);
+    expect(fs.existsSync(tokenPath)).toBe(true);
+  });
+
+  test('should fall back to filesystem when no existing token provided', async () => {
+    const findProjectInfoSpy = vi.spyOn(tokenUtil, 'findProjectInfo');
+
+    await refreshToken();
+
+    // Verify that findProjectInfo was called (filesystem lookup)
+    expect(findProjectInfoSpy).toHaveBeenCalled();
   });
 });
