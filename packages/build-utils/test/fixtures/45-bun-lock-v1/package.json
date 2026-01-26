@@ -1,0 +1,7 @@
+{
+  "name": "45-bun-lock-v1",
+  "private": true,
+  "dependencies": {
+    "cowsay": "1.5.0"
+  }
+}
