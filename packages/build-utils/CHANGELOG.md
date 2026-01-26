@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 13.2.16
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+- Add maxConcurrency trigger field ([#14725](https://github.com/vercel/vercel/pull/14725))
+
 ## 13.2.15
 
 ### Patch Changes

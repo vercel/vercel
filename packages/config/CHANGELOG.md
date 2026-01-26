@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.28
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
 ## 0.0.27
 
 ### Patch Changes

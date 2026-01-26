@@ -1,5 +1,32 @@
 # vercel
 
+## 50.5.2
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+- Updated dependencies [[`556d9b418d411e74bd59f682264a31dc71163026`](https://github.com/vercel/vercel/commit/556d9b418d411e74bd59f682264a31dc71163026), [`c213ff76bbce37a0e933078e9a07d2c8c73952c4`](https://github.com/vercel/vercel/commit/c213ff76bbce37a0e933078e9a07d2c8c73952c4), [`556d9b418d411e74bd59f682264a31dc71163026`](https://github.com/vercel/vercel/commit/556d9b418d411e74bd59f682264a31dc71163026)]:
+  - @vercel/build-utils@13.2.16
+  - @vercel/python@6.3.2
+  - @vercel/backends@0.0.23
+  - @vercel/elysia@0.1.27
+  - @vercel/express@0.1.34
+  - @vercel/fastify@0.1.30
+  - @vercel/go@3.3.4
+  - @vercel/h3@0.1.36
+  - @vercel/hono@0.2.30
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.10
+  - @vercel/nestjs@0.2.31
+  - @vercel/next@4.15.16
+  - @vercel/node@5.5.28
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.9
+  - @vercel/ruby@2.2.4
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.28
+
 ## 50.5.1
 
 ### Patch Changes
