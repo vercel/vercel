@@ -34,10 +34,14 @@ const originalConsoleWarn = console.warn;
 const realDateNow = Date.now.bind(global.Date);
 const origPath = process.env.PATH;
 
+/** Tracks mock Python versions for uv python list output */
+let mockInstalledVersions: string[] = [];
+
 jest.setTimeout(30 * 1000);
 
 beforeEach(() => {
   warningMessages = [];
+  mockInstalledVersions = [];
   console.warn = m => {
     warningMessages.push(m);
   };
@@ -53,6 +57,10 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
+  // Reset the installed Python versions cache between tests
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const versionModule = require('../src/version');
+  versionModule.installedPythonsCache = null;
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
@@ -263,8 +271,29 @@ it('should select latest supported installed version and warn when invalid Piplo
   ]);
 });
 
-it('should throw if python not found', () => {
+it('should throw if uv not found', () => {
   process.env.PATH = '.';
+  expect(() =>
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    })
+  ).toThrow('uv is required but was not found in PATH.');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should throw if no python versions installed', () => {
+  // Create a mock uv binary that returns an empty list
+  fs.mkdirSync(tmpPythonDir, { recursive: true });
+  const isWin = process.platform === 'win32';
+  const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
+  if (isWin) {
+    fs.writeFileSync(uvBin, '@echo off\r\necho []\r\n', 'utf8');
+  } else {
+    fs.writeFileSync(uvBin, '#!/bin/sh\necho "[]"\n', 'utf8');
+    fs.chmodSync(uvBin, 0o755);
+  }
+  process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
+
   expect(() =>
     getSupportedPythonVersion({
       declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
@@ -301,7 +330,36 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
   ]);
 });
 
+/**
+ * Generates the JSON output for `uv python list --only-installed --output-format json`
+ * based on the mock installed versions.
+ */
+function generateUvPythonListJson(versions: string[]): string {
+  const entries = versions.map(version => {
+    const [major, minor] = version.split('.').map(Number);
+    return {
+      key: `cpython-${major}.${minor}.0-linux-x86_64-gnu`,
+      version: `${major}.${minor}.0`,
+      version_parts: { major, minor, patch: 0 },
+      path: `/uv/python/bin/python${version}`,
+      symlink: `/uv/python/versions/cpython-${major}.${minor}.0-linux-x86_64-gnu/bin/python${version}`,
+      url: null,
+      os: 'linux',
+      variant: 'default',
+      implementation: 'cpython',
+      arch: 'x86_64',
+      libc: 'gnu',
+    };
+  });
+  return JSON.stringify(entries);
+}
+
 function makeMockPython(version: string) {
+  // Track this version for uv python list output
+  if (!mockInstalledVersions.includes(version)) {
+    mockInstalledVersions.push(version);
+  }
+
   fs.mkdirSync(tmpPythonDir, { recursive: true });
   const isWin = process.platform === 'win32';
   const posixScript = '#!/bin/sh\n# mock binary\nexit 0\n';
@@ -333,12 +391,24 @@ function makeMockPython(version: string) {
     if (!isWin) fs.chmodSync(unversionedShim, 0o755);
   }
 
-  // mock uv: ensure a uv.lock file exists whenever the binary is invoked.
+  // Write the uv python list JSON to a file that the mock uv binary will read
+  const uvPythonListFile = path.join(tmpPythonDir, 'uv-python-list.json');
+  fs.writeFileSync(
+    uvPythonListFile,
+    generateUvPythonListJson(mockInstalledVersions),
+    'utf8'
+  );
+
+  // mock uv: handle `python list` command and also ensure uv.lock exists for other commands
   const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
   if (isWin) {
     const uvWinScript = [
       '@echo off',
       'rem mock uv binary',
+      'if "%1"=="python" if "%2"=="list" (',
+      `  type "${uvPythonListFile}"`,
+      '  exit /b 0',
+      ')',
       'if not exist "uv.lock" (',
       '  echo [mock]>uv.lock',
       ')',
@@ -351,6 +421,10 @@ function makeMockPython(version: string) {
     const uvPosixScript = [
       '#!/bin/sh',
       '# mock uv binary',
+      'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
+      `  cat "${uvPythonListFile}"`,
+      '  exit 0',
+      'fi',
       'if [ ! -f "uv.lock" ]; then',
       '  echo "[mock]" > uv.lock',
       'fi',
@@ -589,12 +663,18 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
 
     // Override the mock uv binary to emulate workspace behavior: write the lockfile
     // at the workspace root (two levels up from apps/python-app2).
+    // Also handle `python list` command for version detection.
     const isWin = process.platform === 'win32';
     const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
+    const uvPythonListFile = path.join(tmpPythonDir, 'uv-python-list.json');
     if (isWin) {
       const uvWinScript = [
         '@echo off',
         'rem mock uv binary (workspace): write uv.lock at workspace root',
+        'if "%1"=="python" if "%2"=="list" (',
+        `  type "${uvPythonListFile}"`,
+        '  exit /b 0',
+        ')',
         'set LOCK=..\\..\\uv.lock',
         'if not exist "%LOCK%" (',
         '  echo [mock]>"%LOCK%"',
@@ -607,6 +687,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       const uvPosixScript = [
         '#!/bin/sh',
         '# mock uv binary (workspace): write uv.lock at workspace root',
+        'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
+        `  cat "${uvPythonListFile}"`,
+        '  exit 0',
+        'fi',
         'if [ ! -f "../../uv.lock" ]; then',
         '  echo "[mock]" > ../../uv.lock',
         'fi',
@@ -1014,6 +1098,23 @@ describe('uv install path', () => {
 });
 
 describe('custom install hooks', () => {
+  // Helper to generate mock uv python list JSON for isolated module tests
+  const mockUvPythonListJson = JSON.stringify([
+    {
+      key: 'cpython-3.12.0-linux-x86_64-gnu',
+      version: '3.12.0',
+      version_parts: { major: 3, minor: 12, patch: 0 },
+      path: '/uv/python/bin/python3.12',
+      symlink: null,
+      url: null,
+      os: 'linux',
+      variant: 'default',
+      implementation: 'cpython',
+      arch: 'x86_64',
+      libc: 'gnu',
+    },
+  ]);
+
   it('uses projectSettings.installCommand instead of uv install for FastAPI', async () => {
     jest.resetModules();
 
@@ -1049,6 +1150,26 @@ describe('custom install hooks', () => {
         };
       });
 
+      // Mock child_process to return mock uv python list output
+      jest.doMock('child_process', () => {
+        const real = jest.requireActual('child_process');
+        return {
+          ...real,
+          execSync: jest.fn((cmd: string) => {
+            if (cmd.includes('uv python list')) {
+              return mockUvPythonListJson;
+            }
+            return real.execSync(cmd);
+          }),
+        };
+      });
+
+      // Mock which to return a path for uv
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
+
       // Import after mocks are configured
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('../src/index');
@@ -1057,7 +1178,6 @@ describe('custom install hooks', () => {
 
     const workPath = path.join(tmpdir(), `python-custom-install-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
@@ -1128,6 +1248,26 @@ describe('custom install hooks', () => {
         };
       });
 
+      // Mock child_process to return mock uv python list output
+      jest.doMock('child_process', () => {
+        const real = jest.requireActual('child_process');
+        return {
+          ...real,
+          execSync: jest.fn((cmd: string) => {
+            if (cmd.includes('uv python list')) {
+              return mockUvPythonListJson;
+            }
+            return real.execSync(cmd);
+          }),
+        };
+      });
+
+      // Mock which to return a path for uv
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
+
       // Import after mocks are configured
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('../src/index');
@@ -1139,7 +1279,6 @@ describe('custom install hooks', () => {
       `python-custom-install-pyproject-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
@@ -1218,6 +1357,26 @@ describe('custom install hooks', () => {
         };
       });
 
+      // Mock child_process to return mock uv python list output
+      jest.doMock('child_process', () => {
+        const real = jest.requireActual('child_process');
+        return {
+          ...real,
+          execSync: jest.fn((cmd: string) => {
+            if (cmd.includes('uv python list')) {
+              return mockUvPythonListJson;
+            }
+            return real.execSync(cmd);
+          }),
+        };
+      });
+
+      // Mock which to return a path for uv
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
+
       // Import after mocks are configured
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('../src/index');
@@ -1229,7 +1388,6 @@ describe('custom install hooks', () => {
       `python-custom-install-default-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),

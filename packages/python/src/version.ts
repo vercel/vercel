@@ -1,5 +1,15 @@
+import { execSync } from 'child_process';
 import { NowBuildError } from '@vercel/build-utils';
 import which from 'which';
+
+interface UvPythonEntry {
+  version_parts: {
+    major: number;
+    minor: number;
+  };
+  path: string | null;
+  implementation: string;
+}
 
 interface PythonVersion {
   version: string;
@@ -68,7 +78,12 @@ function getDevPythonVersion(): PythonVersion {
   };
 }
 
-export function getLatestPythonVersion({
+/**
+ * Select the appropriate Python version for production builds when no version is specified
+ * or an unsupported version is requested.
+ */
+
+export function getDefaultPythonVersion({
   isDev,
 }: {
   isDev?: boolean;
@@ -79,9 +94,9 @@ export function getLatestPythonVersion({
 
   // When no version is explicitly specified use default version
   const defaultOption = allOptions.find(
-    opt => opt.version === DEFAULT_PYTHON_VERSION
+    opt => opt.version === DEFAULT_PYTHON_VERSION && isInstalled(opt)
   );
-  if (defaultOption && isInstalled(defaultOption)) {
+  if (defaultOption) {
     return defaultOption;
   }
 
@@ -216,7 +231,7 @@ export function getSupportedPythonVersion({
     return getDevPythonVersion();
   }
 
-  let selection = getLatestPythonVersion({ isDev: false });
+  let selection = getDefaultPythonVersion({ isDev: false });
 
   if (declaredPythonVersion) {
     const { version, source } = declaredPythonVersion;
@@ -243,21 +258,17 @@ export function getSupportedPythonVersion({
         console.warn(
           `Warning: Python version "${version}" detected in ${source} is not installed and will be ignored. https://vercel.link/python-version`
         );
-        console.log(
-          `Falling back to latest installed version: ${selection.version}`
-        );
+        console.log(`Using python version: ${selection.version}`);
       }
     } else {
       console.warn(
         `Warning: Python version "${version}" detected in ${source} is invalid and will be ignored. https://vercel.link/python-version`
       );
-      console.log(
-        `Falling back to latest installed version: ${selection.version}`
-      );
+      console.log(`Using python version: ${selection.version}`);
     }
   } else {
     console.log(
-      `No Python version specified in pyproject.toml or Pipfile.lock. Using latest installed version: ${selection.version}`
+      `No Python version specified in pyproject.toml or Pipfile.lock. Using python version: ${selection.version}`
     );
   }
 
@@ -287,9 +298,77 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
-function isInstalled({ pipPath, pythonPath }: PythonVersion): boolean {
-  return (
-    Boolean(which.sync(pipPath, { nothrow: true })) &&
-    Boolean(which.sync(pythonPath, { nothrow: true }))
+// This matches the configured path prefix for uv-managed Python installations in the build-container
+const UV_PYTHON_PATH_PREFIX = '/uv/python/';
+
+export let installedPythonsCache: Set<string> | null = null;
+
+// We use caching to avoid repeated calls to `uv python list` during a build
+function getInstalledPythons(): Set<string> {
+  if (installedPythonsCache !== null) {
+    return installedPythonsCache;
+  }
+
+  const uvPath = which.sync('uv', { nothrow: true });
+  if (!uvPath) {
+    throw new NowBuildError({
+      code: 'UV_NOT_FOUND',
+      link: 'https://vercel.com/help',
+      message: 'uv is required but was not found in PATH.',
+    });
+  }
+
+  let output: string;
+  try {
+    output = execSync(
+      `${uvPath} python list --only-installed --output-format json`,
+      {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'UV_PYTHON_LIST_FAILED',
+      link: 'https://vercel.com/help',
+      message: `Failed to run 'uv python list': ${err instanceof Error ? err.message : String(err)}`,
+    });
+  }
+
+  // Handle empty output (no Python versions installed)
+  if (!output || output.trim() === '' || output.trim() === '[]') {
+    installedPythonsCache = new Set();
+    return installedPythonsCache;
+  }
+
+  let pyList: UvPythonEntry[];
+  try {
+    pyList = JSON.parse(output);
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'UV_PYTHON_LIST_PARSE_ERROR',
+      link: 'https://vercel.com/help',
+      message: `Failed to parse 'uv python list' output: ${err instanceof Error ? err.message : String(err)}`,
+    });
+  }
+
+  // Filter to only uv-managed cpython installations (under /uv/python/)
+  // This excludes system Python (e.g., /usr/bin/python3.9)
+  installedPythonsCache = new Set(
+    pyList
+      .filter(
+        entry =>
+          entry.path !== null &&
+          entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
+          entry.implementation === 'cpython'
+      )
+      .map(entry => `${entry.version_parts.major}.${entry.version_parts.minor}`)
   );
+
+  return installedPythonsCache;
+}
+
+function isInstalled({ version }: PythonVersion): boolean {
+  const installed = getInstalledPythons();
+  return installed.has(version);
 }

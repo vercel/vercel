@@ -8,7 +8,7 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
-import { getLatestPythonVersion } from './version';
+import { getDefaultPythonVersion } from './version';
 import { isInVirtualEnv, useVirtualEnv } from './utils';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
@@ -238,7 +238,7 @@ export const startDevServer: StartDevServer = async opts => {
     // Now spawn the actual server process
     await new Promise<void>((resolve, reject) => {
       let resolved = false;
-      const { pythonPath: systemPython } = getLatestPythonVersion(meta);
+      const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
       let pythonCmd = systemPython;
       const venv = isInVirtualEnv();
 
