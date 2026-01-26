@@ -1,5 +1,16 @@
 # vercel
 
+## 50.6.0
+
+### Minor Changes
+
+- Use condensed prompt for upgrade when on TTY ([#14736](https://github.com/vercel/vercel/pull/14736))
+
+### Patch Changes
+
+- Updated dependencies [[`ca38c18d1c442d193560620d4b15e73b7b6ea753`](https://github.com/vercel/vercel/commit/ca38c18d1c442d193560620d4b15e73b7b6ea753)]:
+  - @vercel/next@4.15.17
+
 ## 50.5.2
 
 ### Patch Changes
