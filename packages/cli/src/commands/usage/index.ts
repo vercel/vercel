@@ -18,9 +18,10 @@ import {
   parseBillingDate,
   getDefaultFromDate,
   getDefaultToDate,
+  getDefaultFromDateDisplay,
+  getDefaultToDateDisplay,
   formatCurrency,
   formatQuantity,
-  extractDatePortion,
 } from '../../util/billing/format';
 
 interface ServiceAggregation {
@@ -62,25 +63,41 @@ export default async function usage(client: Client): Promise<number> {
   }
   const asJson = formatResult.jsonOutput;
 
-  // Get month-so-far or custom date range in LA time
-  const fromDate = parsedArgs.flags['--from']
-    ? parseBillingDate(parsedArgs.flags['--from'], false)
-    : getDefaultFromDate();
-  const toDate = parsedArgs.flags['--to']
-    ? parseBillingDate(parsedArgs.flags['--to'], true)
-    : getDefaultToDate();
+  const fromFlag = parsedArgs.flags['--from'];
+  const toFlag = parsedArgs.flags['--to'];
 
-  telemetry.trackCliOptionFrom(parsedArgs.flags['--from']);
-  telemetry.trackCliOptionTo(parsedArgs.flags['--to']);
+  if (Boolean(fromFlag) !== Boolean(toFlag)) {
+    error(
+      'Both --from and --to must be specified or neither for the current month'
+    );
+    return 1;
+  }
+  const usingDefaults = !fromFlag && !toFlag;
+
+  let fromDate: string;
+  let toDate: string;
+  try {
+    fromDate = fromFlag
+      ? parseBillingDate(fromFlag, false)
+      : getDefaultFromDate();
+    toDate = toFlag ? parseBillingDate(toFlag, true) : getDefaultToDate();
+  } catch (err) {
+    error((err as Error).message);
+    return 1;
+  }
+
+  const fromDisplay = fromFlag ?? getDefaultFromDateDisplay();
+  const toDisplay = toFlag ?? getDefaultToDateDisplay();
+
+  telemetry.trackCliOptionFrom(fromFlag);
+  telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  if (parsedArgs.flags['--from']) {
-    debug(`Date conversion: ${parsedArgs.flags['--from']} -> ${fromDate}`);
+  if (fromFlag) {
+    debug(`Date conversion: ${fromFlag} -> ${fromDate}`);
   }
-  if (parsedArgs.flags['--to']) {
-    debug(
-      `Date conversion: ${parsedArgs.flags['--to']} (end of day) -> ${toDate}`
-    );
+  if (toFlag) {
+    debug(`Date conversion: ${toFlag} (end of day) -> ${toDate}`);
   }
 
   let contextName: string;
@@ -119,7 +136,7 @@ export default async function usage(client: Client): Promise<number> {
   try {
     const response = await client.fetch(`/v1/billing/charges?${query}`, {
       json: false,
-      useCurrentTeam: false, // We're manually setting teamId
+      useCurrentTeam: false,
     });
 
     if (!response.ok) {
@@ -133,7 +150,7 @@ export default async function usage(client: Client): Promise<number> {
     let grandEffective = 0;
     let grandBilled = 0;
     let chargeCount = 0;
-    let pricingUnit = 'MIUs'; // Default, will be updated from first charge
+    let pricingUnit = 'MIUs';
 
     await new Promise<void>((resolve, reject) => {
       // gzip compression is assumed
@@ -209,8 +226,9 @@ export default async function usage(client: Client): Promise<number> {
 
     log(`Usage for ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`);
     log('');
+    const periodSuffix = usingDefaults ? ' (current month)' : '';
     log(
-      `${chalk.gray('Period:')} ${extractDatePortion(fromDate)} to ${extractDatePortion(toDate)}`
+      `${chalk.gray('Period:')} ${fromDisplay} to ${toDisplay}${periodSuffix}`
     );
     log(`${chalk.gray('Charges processed:')} ${chargeCount}`);
     log(`${chalk.gray('Pricing unit:')} ${pricingUnit}`);
