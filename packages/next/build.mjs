@@ -1,6 +1,7 @@
+import { copy } from 'fs-extra';
 import { readFileSync, promises as fsPromises } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';
@@ -44,6 +45,14 @@ await Promise.all([
 await copyFile(
   require.resolve('source-map/lib/mappings.wasm'),
   join(process.cwd(), 'dist/mappings.wasm')
+);
+
+await copy(
+  join(
+    dirname(require.resolve('@next-community/adapter-vercel/package.json')),
+    'dist'
+  ),
+  join(process.cwd(), 'dist/adapter')
 );
 
 await esbuild({

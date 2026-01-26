@@ -1,5 +1,55 @@
 # @vercel/build-utils
 
+## 13.2.15
+
+### Patch Changes
+
+- Optimize `getAvailableNodeVersions` to skip discontinued versions and use non-throwing `statSync` ([#14686](https://github.com/vercel/vercel/pull/14686))
+
+## 13.2.14
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
+## 13.2.13
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+## 13.2.12
+
+### Patch Changes
+
+- Add `findPackageJson` function for optimized package.json lookup without lockfile scanning. This improves `getNodeVersion` performance by avoiding unnecessary lockfile parsing. ([#14658](https://github.com/vercel/vercel/pull/14658))
+
+## 13.2.10
+
+### Patch Changes
+
+- Add 'go' as a valid runtimeLanguage option for Lambda functions ([#14624](https://github.com/vercel/vercel/pull/14624))
+
+## 13.2.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+## 13.2.8
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+## 13.2.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Add zero-config support for Koa.js ([#14567](https://github.com/vercel/vercel/pull/14567))
+
 ## 13.2.6
 
 ### Patch Changes

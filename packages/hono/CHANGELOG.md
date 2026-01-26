@@ -1,5 +1,68 @@
 # @vercel/hono
 
+## 0.2.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.27
+
+## 0.2.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.26
+
+## 0.2.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.25
+
+## 0.2.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.24
+
+## 0.2.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.23
+
+## 0.2.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.22
+
+## 0.2.23
+
+### Patch Changes
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/node@5.5.21
+
+## 0.2.22
+
+### Patch Changes
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/node@5.5.20
+
+## 0.2.21
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4)]:
+  - @vercel/node@5.5.19
+
 ## 0.2.20
 
 ### Patch Changes

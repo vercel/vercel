@@ -1,5 +1,36 @@
 # @vercel/fs-detectors
 
+## 5.7.16
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
+## 5.7.15
+
+### Patch Changes
+
+- [frameworks] experimental framework flagging ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- Updated dependencies [[`9de063fe733651c295d39f956930a34d88b01e37`](https://github.com/vercel/vercel/commit/9de063fe733651c295d39f956930a34d88b01e37), [`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02), [`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02)]:
+  - @vercel/frameworks@3.15.7
+
+## 5.7.14
+
+### Patch Changes
+
+- [frameworks] experimental framework flagging ([#14637](https://github.com/vercel/vercel/pull/14637))
+
+- Updated dependencies [[`cb2163d94a96059c481cb23cab25459f012c3a86`](https://github.com/vercel/vercel/commit/cb2163d94a96059c481cb23cab25459f012c3a86)]:
+  - @vercel/frameworks@3.15.6
+
+## 5.7.13
+
+### Patch Changes
+
+- Updated dependencies [[`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/frameworks@3.15.5
+
 ## 5.7.12
 
 ### Patch Changes

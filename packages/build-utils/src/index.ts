@@ -35,7 +35,9 @@ import {
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
+  findPackageJson,
   traverseUpDirectories,
+  PipInstallResult,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -84,6 +86,7 @@ export {
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
+  PipInstallResult,
   runShellScript,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
@@ -102,6 +105,7 @@ export {
   isDirectory,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  findPackageJson,
   getIgnoreFilter,
   cloneEnv,
   hardLinkDir,
@@ -137,6 +141,9 @@ export {
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
+  PYTHON_FRAMEWORKS,
+  PythonFramework,
+  isPythonFramework,
 } from './framework-helpers';
 
 export * from './python';

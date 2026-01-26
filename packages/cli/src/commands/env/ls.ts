@@ -16,6 +16,7 @@ import { getCustomEnvironments } from '../../util/target/get-custom-environments
 import formatEnvironments from '../../util/env/format-environments';
 import { formatProject } from '../../util/projects/format-project';
 import output from '../../output-manager';
+import { validateJsonOutput } from '../../util/output-format';
 import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
@@ -57,9 +58,17 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const [envTarget, envGitBranch] = args;
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   telemetryClient.trackCliArgumentEnvironment(envTarget);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
+  telemetryClient.trackCliOptionFormat(flags['--format']);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -90,7 +99,22 @@ export default async function ls(client: Client, argv: string[]) {
 
   const projectSlugLink = formatProject(org.slug, project.name);
 
-  if (envs.length === 0) {
+  if (asJson) {
+    output.stopSpinner();
+    const jsonOutput = {
+      envs: envs.map(env => ({
+        key: env.key,
+        value: env.type === 'plain' ? env.value : undefined,
+        type: env.type,
+        target: env.target,
+        gitBranch: env.gitBranch,
+        configurationId: env.configurationId,
+        createdAt: env.createdAt,
+        updatedAt: env.updatedAt,
+      })),
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  } else if (envs.length === 0) {
     output.log(
       `No Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
@@ -101,14 +125,16 @@ export default async function ls(client: Client, argv: string[]) {
     client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
   }
 
-  const { isAgent } = await determineAgent();
-  const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
-  if (guidanceMode) {
-    suggestNextCommands([
-      getCommandName(`env add`),
-      getCommandName('env rm'),
-      getCommandName(`env pull`),
-    ]);
+  if (!asJson) {
+    const { isAgent } = await determineAgent();
+    const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
+    if (guidanceMode) {
+      suggestNextCommands([
+        getCommandName(`env add`),
+        getCommandName('env rm'),
+        getCommandName(`env pull`),
+      ]);
+    }
   }
 
   return 0;
