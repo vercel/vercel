@@ -9,34 +9,31 @@ use std::task::{Context, Poll};
 use tokio::net::TcpListener;
 use tower::Service;
 
+pub use hyper::Response;
+pub use types::{Error, ResponseBody};
+pub type Request = hyper::Request<hyper::body::Incoming>;
+
+#[cfg(feature = "axum")]
+pub mod axum;
+
+#[cfg(unix)]
+mod ipc;
+#[cfg(unix)]
+mod ipc_utils;
+mod types;
+
+use crate::types::IntoFunctionResponse;
+
 #[cfg(unix)]
 use {
+    crate::ipc::core::{EndMessage, StartMessage},
+    crate::ipc::log::{Level, LogMessage},
+    crate::ipc_utils::{IPC_READY, enqueue_or_send_message, flush_init_log_buffer, send_message},
     std::env,
     std::os::unix::net::UnixStream,
     std::sync::atomic::Ordering,
     std::sync::{Arc, Mutex},
 };
-
-pub use hyper::Response;
-pub use types::{Error, ResponseBody};
-pub type Request = hyper::Request<hyper::body::Incoming>;
-
-#[cfg(unix)]
-use {
-  crate::ipc::core::{EndMessage, StartMessage},
-  crate::ipc::log::{Level, LogMessage},
-  crate::ipc_utils::{
-      enqueue_or_send_message, flush_init_log_buffer, send_message, IPC_READY,
-  },
-};
-
-#[cfg(feature = "axum")]
-pub mod axum;
-
-mod types;
-
-use crate::types::IntoFunctionResponse;
-
 
 #[cfg(unix)]
 #[derive(Clone)]
