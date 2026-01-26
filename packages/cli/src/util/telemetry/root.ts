@@ -313,6 +313,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandUsage(actual: string) {
+    this.trackCliCommand({
+      command: 'usage',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
