@@ -1,5 +1,20 @@
 # vercel
 
+## 50.5.1
+
+### Patch Changes
+
+- Mild refactor of compile-vercel-config ([#14707](https://github.com/vercel/vercel/pull/14707))
+
+- Throw explicit error when vercel.ts routes compilation creates a conflict ([#14709](https://github.com/vercel/vercel/pull/14709))
+
+- vercel.ts: normalize items in `routes` array to routes format ([#14705](https://github.com/vercel/vercel/pull/14705))
+
+- Improvements to vercel api command. Better ls, and help output ([#14720](https://github.com/vercel/vercel/pull/14720))
+
+- Updated dependencies [[`e0e7e3cdd180eb1e07e2ebaba809a2486b546b5d`](https://github.com/vercel/vercel/commit/e0e7e3cdd180eb1e07e2ebaba809a2486b546b5d)]:
+  - @vercel/rust@1.0.5
+
 ## 50.5.0
 
 ### Minor Changes
