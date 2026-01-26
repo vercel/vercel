@@ -64,6 +64,7 @@ describe('index', () => {
         ['upgrade', 'upgrade'],
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
+        ['usage', 'usage'],
         ['whoami', 'whoami'],
       ])
     );
