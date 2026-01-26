@@ -3285,15 +3285,25 @@ export const onPrerenderRoute =
             // then therefore unexpirable.
             let segmentInitialHeaders = initialHeaders;
             if (
-              !segmentInitialHeaders &&
-              // Blocking/fallback routes don't emit per-segment headers from Next,
-              // so inherit the route meta headers to carry cache tags
               (isBlocking || isFallback) &&
               'headers' in meta &&
               typeof meta.headers === 'object' &&
               meta.headers !== null
             ) {
-              segmentInitialHeaders = meta.headers as Record<string, string>;
+              const metaHeaders = meta.headers as Record<string, string>;
+              const hasMissingMetaHeader =
+                !segmentInitialHeaders ||
+                Object.keys(metaHeaders).some(
+                  key => segmentInitialHeaders?.[key] == null
+                );
+              if (hasMissingMetaHeader) {
+                // Merge to fill any missing meta headers without overriding
+                // segment-specific values.
+                segmentInitialHeaders = {
+                  ...metaHeaders,
+                  ...segmentInitialHeaders,
+                };
+              }
             }
 
             for (const segmentPath of meta.segmentPaths) {
