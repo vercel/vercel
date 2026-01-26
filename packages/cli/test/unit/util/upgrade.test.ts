@@ -47,11 +47,17 @@ describe('executeUpgrade', () => {
     return proc;
   }
 
+  // Helper to wait for async operations to complete
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+
   it('should show success message and hide output on successful upgrade', async () => {
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+
+    // Wait for getUpdateCommand to resolve and spawn to be called
+    await tick();
 
     // Simulate some output
     mockProcess.stdout.emit('data', Buffer.from('Installing packages...'));
@@ -75,6 +81,7 @@ describe('executeUpgrade', () => {
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+    await tick();
 
     // Simulate some output
     mockProcess.stdout.emit('data', Buffer.from('Installing packages...'));
@@ -103,6 +110,7 @@ describe('executeUpgrade', () => {
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+    await tick();
 
     // Simulate spawn error
     mockProcess.emit('error', new Error('Command not found'));
@@ -123,6 +131,7 @@ describe('executeUpgrade', () => {
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+    await tick();
 
     // Simulate close with null exit code (e.g., killed by signal)
     mockProcess.emit('close', null);
@@ -140,6 +149,7 @@ describe('executeUpgrade', () => {
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+    await tick();
 
     // Simulate failed exit with no output
     mockProcess.emit('close', 1);
@@ -159,6 +169,7 @@ describe('executeUpgrade', () => {
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+    await tick();
 
     mockProcess.emit('close', 0);
     await exitCodePromise;
@@ -178,6 +189,7 @@ describe('executeUpgrade', () => {
     spawnMock.mockReturnValue(mockProcess as any);
 
     const exitCodePromise = executeUpgrade();
+    await tick();
 
     mockProcess.emit('close', 0);
     await exitCodePromise;
