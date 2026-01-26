@@ -1888,6 +1888,9 @@ export async function serverBuild({
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+  // TODO remove default again
+  const navDeploymentIdHeader =
+    routesManifest?.navDeploymentIdHeader ?? 'x-nextjs-deployment-id';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
   if (isAppPPREnabled && !rscPrefetchHeader) {
@@ -2030,6 +2033,34 @@ export async function serverBuild({
                 },
               ],
               continue: true,
+            },
+          ]
+        : []),
+
+      ...(process.env.VERCEL_DEPLOYMENT_ID
+        ? [
+            {
+              src: '.*',
+              has: [
+                {
+                  type: 'header',
+                  key: 'rsc',
+                  value: '1',
+                },
+              ],
+              headers: {
+                [navDeploymentIdHeader]: process.env.VERCEL_DEPLOYMENT_ID,
+              },
+              continue: true,
+              override: true,
+            },
+            {
+              src: '/_next/data/(.*)',
+              headers: {
+                [navDeploymentIdHeader]: process.env.VERCEL_DEPLOYMENT_ID,
+              },
+              continue: true,
+              override: true,
             },
           ]
         : []),
