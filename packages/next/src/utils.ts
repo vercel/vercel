@@ -3277,6 +3277,35 @@ export const onPrerenderRoute =
               ? htmlAllowQuery
               : allowQuery;
 
+            // No initial headers here means that the fallback is being served
+            // and it should infer the initial headers from the base metadata
+            // file which will be the ones which include the cache tags for
+            // the fallback render. Failing to do this will result in
+            // producing build output entries without any cache tags which are
+            // then therefore unexpirable.
+            let segmentInitialHeaders = initialHeaders;
+            if (
+              (isBlocking || isFallback) &&
+              'headers' in meta &&
+              typeof meta.headers === 'object' &&
+              meta.headers !== null
+            ) {
+              const metaHeaders = meta.headers as Record<string, string>;
+              const hasMissingMetaHeader =
+                !segmentInitialHeaders ||
+                Object.keys(metaHeaders).some(
+                  key => segmentInitialHeaders?.[key] == null
+                );
+              if (hasMissingMetaHeader) {
+                // Merge to fill any missing meta headers without overriding
+                // segment-specific values.
+                segmentInitialHeaders = {
+                  ...metaHeaders,
+                  ...segmentInitialHeaders,
+                };
+              }
+            }
+
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
                 path.join(
@@ -3319,7 +3348,7 @@ export const onPrerenderRoute =
                 experimentalBypassFor: undefined,
 
                 initialHeaders: {
-                  ...initialHeaders,
+                  ...segmentInitialHeaders,
                   vary: rscVaryHeader,
                   'content-type': rscContentTypeHeader,
                   [rscDidPostponeHeader]: '2',
