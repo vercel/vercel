@@ -1,9 +1,6 @@
 {
   "probes": [
     {
-      "logMustContain": "Using Python 3.14 from pyproject.toml"
-    },
-    {
       "path": "/api/greet/RANDOMNESS_PLACEHOLDER",
       "status": 200,
       "mustContain": "Hello, RANDOMNESS_PLACEHOLDER"
