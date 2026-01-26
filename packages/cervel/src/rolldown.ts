@@ -2,7 +2,6 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { build as rolldownBuild } from 'rolldown';
-import { externals } from 'nf3/plugin';
 import { plugin } from './plugin.js';
 
 const __dirname__filenameShim = `
@@ -82,19 +81,7 @@ export const rolldown = async (args: {
     cwd: baseDir,
     platform: 'node',
     tsconfig: true,
-    external: [/node_modules/],
     plugins: [
-      // this needs to go first to not break the shim plugin
-      externals({
-        rootDir: args.repoRootPath,
-        exclude: [/^@repo\//],
-        trace: {
-          outDir: '.vercel',
-          // The other plugin will also find the package.json
-          // so not sure if this package.json is needed, omiting for now
-          writePackageJson: false,
-        },
-      }),
       plugin({
         rootDir: args.repoRootPath,
         outDir: outputDir,

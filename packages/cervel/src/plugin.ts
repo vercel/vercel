@@ -215,8 +215,11 @@ export const plugin = (args: {
             }
           }
 
-          // Not a CJS external, resolve normally
-          return resolved;
+          return {
+            external: true,
+            // leave the import bare for runtime to resolve (eg. import from 'hono')
+            id: id,
+          };
         }
 
         // Mark everything else as external

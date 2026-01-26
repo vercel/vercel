@@ -33,14 +33,12 @@ const meta = { skipDownload: true };
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('12-hono-index-ts-esm-cjs-interop')
+    fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
-    it.only(`builds ${fixtureName}`, async () => {
+    it(`builds ${fixtureName}`, async () => {
       await clearOutputs(fixtureName);
-      // const workPath = join(__dirname, 'fixtures', fixtureName);
-      const workPath = '/Users/jeffsee/code/turborepo-hono-monorepo/apps/api'
-
+      const workPath = join(__dirname, 'fixtures', fixtureName);
 
       const result = (await build({
         files: {},
@@ -51,14 +49,15 @@ describe('successful builds', async () => {
         repoRootPath: workPath,
       })) as BuildResultV2Typical;
 
-      // const lambda = result.output.index as unknown as NodejsLambda;
-      // // const lambdaPath = join(__dirname, 'debug');
-      // const lambdaPath = undefined;
+      // console.log(result);
 
-      // // Runs without errors
-      // await expect(
-      //   extractAndExecuteCode(lambda, lambdaPath, fixtureName)
-      // ).resolves.toBeUndefined();
+      const lambda = result.output.index as unknown as NodejsLambda;
+      const lambdaPath = undefined;
+
+      // Runs without errors
+      await expect(
+        extractAndExecuteCode(lambda, lambdaPath, fixtureName)
+      ).resolves.toBeUndefined();
     }, 10000);
   }
 
@@ -125,19 +124,27 @@ const extractAndExecuteCode = async (
 ) => {
   const out = await lambda.createZip();
   const prefix = fixtureName ? `lambda-test-${fixtureName}-` : 'lambda-test-';
-  // const tempDir = await mkdtemp(join(tmpdir(), prefix));
-  const tempDir = join(`/Users/jeffsee/code/vercel-2/packages/backends/test/fixtures/tmp`, prefix);
+  const tempDir = await mkdtemp(join(tmpdir(), prefix));
   await mkdir(tempDir, { recursive: true });
   if (lambdaDir && lambdaDir !== '') {
     await rm(lambdaDir, { recursive: true, force: true });
     await mkdir(lambdaDir, { recursive: true });
   }
   const lambdaPath = join(lambdaDir || tempDir, 'lambda.zip');
-  await writeFile(lambdaPath, out);
-  await execa('unzip', ['-o', lambdaPath], {
+  await writeFile(lambdaPath, new Uint8Array(out));
+  const unzipResult = await execa('unzip', ['-o', lambdaPath], {
     cwd: tempDir,
-    stdio: 'ignore', // use inherit to debug
+    stdio: 'pipe',
+    reject: false,
   });
+
+  if (unzipResult.exitCode !== 0) {
+    console.error('Unzip failed:');
+    console.error('stdout:', unzipResult.stdout);
+    console.error('stderr:', unzipResult.stderr);
+    console.error('exitCode:', unzipResult.exitCode);
+    throw new Error(`Unzip failed with exit code ${unzipResult.exitCode}`);
+  }
 
   const handlerPath = join(tempDir, lambda.handler);
 

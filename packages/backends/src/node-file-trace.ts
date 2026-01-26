@@ -8,7 +8,9 @@ import {
 } from '@vercel/build-utils';
 import { nodeFileTrace as nft } from '@vercel/nft';
 import { existsSync, lstatSync, readFileSync } from 'fs';
+import { readFile as fsReadFile } from 'fs/promises';
 import { join, relative } from 'path';
+import { resolve as nftResolveDependency } from '@vercel/nft';
 
 export const nodeFileTrace = async (
   args: BuildOptions,
@@ -28,6 +30,24 @@ export const nodeFileTrace = async (
     ignore: args.config.excludeFiles,
     conditions,
     mixedModules: true,
+    resolve(id, parent, job, cjsResolve) {
+      return nftResolveDependency(id, parent, job, cjsResolve);
+    },
+    async readFile(path) {
+      const content = await fsReadFile(path).catch(() => null);
+      if (!content) return content;
+
+      const code = content.toString('utf8');
+
+      // Transform rolldown's __require calls to regular require calls
+      // so that node-file-trace can properly analyze them
+      if (code.includes('__require(')) {
+        const transformed = code.replace(/__require\(/g, 'require(');
+        return Buffer.from(transformed, 'utf8');
+      }
+
+      return content;
+    },
   });
 
   const packageJsonPath = join(args.workPath, 'package.json');
