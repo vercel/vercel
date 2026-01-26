@@ -650,6 +650,13 @@ export interface TriggerEvent {
    * Behavior when not specified depends on the server's default configuration.
    */
   initialDelaySeconds?: number;
+
+  /**
+   * Maximum number of concurrent executions for this consumer (OPTIONAL)
+   * Must be at least 1 if specified.
+   * Behavior when not specified depends on the server's default configuration.
+   */
+  maxConcurrency?: number;
 }
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
