@@ -39,6 +39,7 @@ import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
+import { usageCommand } from './usage/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import type { Command } from './help';
@@ -86,6 +87,7 @@ const commandsStructs = [
   teamsCommand,
   telemetryCommand,
   upgradeCommand,
+  usageCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

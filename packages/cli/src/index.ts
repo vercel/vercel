@@ -812,6 +812,10 @@ const main = async () => {
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = require('./commands/upgrade').default;
           break;
+        case 'usage':
+          telemetry.trackCliCommandUsage(userSuppliedSubCommand);
+          func = require('./commands/usage').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
