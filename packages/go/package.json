@@ -1,6 +1,6 @@
 {
   "name": "@vercel/go",
-  "version": "3.3.0",
+  "version": "3.3.4",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
@@ -25,7 +25,7 @@
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "^5.0.5",
     "@types/jest": "28.1.6",
-    "@types/node": "14.18.33",
+    "@types/node": "20.11.0",
     "@types/node-fetch": "^2.3.0",
     "@types/tar": "6.1.5",
     "@types/yauzl-promise": "2.1.0",

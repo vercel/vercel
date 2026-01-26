@@ -5,6 +5,8 @@ import type {
   Images,
   ProjectSettings,
   Cron,
+  ExperimentalServices,
+  ExperimentalServiceGroups,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -180,6 +182,13 @@ export interface VercelConfig {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalServices?: ExperimentalServices;
+  /**
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalServiceGroups?: ExperimentalServiceGroups;
 }
 
 export interface GitMetadata {

@@ -6,6 +6,7 @@ describe('index', () => {
       new Map([
         ['alias', 'alias'],
         ['aliases', 'alias'],
+        ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
         ['build', 'build'],
@@ -37,6 +38,7 @@ describe('index', () => {
         ['login', 'login'],
         ['logout', 'logout'],
         ['logs', 'logs'],
+        ['logsv2', 'logsv2'],
         ['ls', 'list'],
         ['mcp', 'mcp'],
         ['mf', 'microfrontends'],
@@ -60,6 +62,7 @@ describe('index', () => {
         ['team', 'teams'],
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
+        ['upgrade', 'upgrade'],
         ['whoami', 'whoami'],
       ])
     );

@@ -172,8 +172,9 @@ exports[`help command > alias help output snapshots > alias list subcommand > al
 
   Options:
 
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
-  -N,  --next <MS>       Show next page of results                                                                           
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
+  -N,  --next <MS>        Show next page of results                                                                     
 
 
   Global Options:
@@ -1685,8 +1686,9 @@ exports[`help command > domains help output snapshots > domains list help output
 
   Options:
 
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
-  -N,  --next <MS>       Show next page of results                                                                           
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of results to return per page (default: 20, max: 100)                                  
+  -N,  --next <MS>        Show next page of results                                                                     
 
 
   Global Options:
@@ -1795,9 +1797,10 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   Options:
 
-   --force      Force overwrites when a command would normally fail                                                      
-   --guidance   Receive command suggestions once command is complete                                                     
-   --sensitive  Add a sensitive Environment Variable                                                                     
+       --force      Force overwrites when a command would normally fail                                                      
+       --guidance   Receive command suggestions once command is complete                                                     
+       --sensitive  Add a sensitive Environment Variable                                                                     
+  -y,  --yes        Skip the confirmation prompt when adding an Environment Variable                                         
 
 
   Global Options:
@@ -1891,6 +1894,17 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                                       …
                                       …
                                       …
+  run     command                     …
+                                      a
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
   update  name [environment]          …
                                       …
                                       …
@@ -1962,6 +1976,9 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
                                       to a file [.env.local]              
   remove  name [environment]          Remove an Environment Variable (see 
                                       examples below)                     
+  run     command                     Run a command with environment      
+                                      variables from the linked Vercel    
+                                      project                             
   update  name [environment]          Update the value of an existing     
                                       Environment Variable (see examples  
                                       below)                              
@@ -1997,6 +2014,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
                                       file [.env.local]                                                           
   remove  name [environment]          Remove an Environment Variable (see examples below)                         
+  run     command                     Run a command with environment variables from the linked Vercel project     
   update  name [environment]          Update the value of an existing Environment Variable (see examples below)   
 
 
@@ -2024,7 +2042,8 @@ exports[`help command > env help output snapshots > env list help output snapsho
 
   Options:
 
-   --guidance  Receive command suggestions once command is complete                                                      
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --guidance         Receive command suggestions once command is complete                                          
 
 
   Global Options:
@@ -2493,17 +2512,21 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   Options:
 
-       --json            Output the          
-                         deployment          
-                         information as JSON 
-  -l,  --logs            Prints the build    
-                         logs instead of the 
-                         deployment summary  
-       --timeout <TIME>  Time to wait for    
-                         deployment          
-                         completion [3m]     
-       --wait            Blocks until        
-                         deployment completes
+  -F,  --format <FORMAT>  Specify the   
+                          output format 
+                          (json)        
+  -l,  --logs             Prints the    
+                          build logs    
+                          instead of the
+                          deployment    
+                          summary       
+       --timeout <TIME>   Time to wait  
+                          for deployment
+                          completion    
+                          [3m]          
+       --wait             Blocks until  
+                          deployment    
+                          completes     
 
 
   Global Options:
@@ -2568,7 +2591,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   - Get deployment information as JSON
 
-    $ vercel inspect my-deployment.vercel.app --json
+    $ vercel inspect my-deployment.vercel.app --format=json
 
 "
 `;
@@ -2581,10 +2604,11 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   Options:
 
-       --json            Output the deployment information as JSON                   
-  -l,  --logs            Prints the build logs instead of the deployment summary     
-       --timeout <TIME>  Time to wait for deployment completion [3m]                 
-       --wait            Blocks until deployment completes                           
+  -F,  --format <FORMAT>  Specify the output format (json)                      
+  -l,  --logs             Prints the build logs instead of the deployment       
+                          summary                                               
+       --timeout <TIME>   Time to wait for deployment completion [3m]           
+       --wait             Blocks until deployment completes                     
 
 
   Global Options:
@@ -2625,7 +2649,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   - Get deployment information as JSON
 
-    $ vercel inspect my-deployment.vercel.app --json
+    $ vercel inspect my-deployment.vercel.app --format=json
 
 "
 `;
@@ -2638,10 +2662,10 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   Options:
 
-       --json            Output the deployment information as JSON                                                           
-  -l,  --logs            Prints the build logs instead of the deployment summary                                             
-       --timeout <TIME>  Time to wait for deployment completion [3m]                                                         
-       --wait            Blocks until deployment completes                                                                   
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -l,  --logs             Prints the build logs instead of the deployment summary                                       
+       --timeout <TIME>   Time to wait for deployment completion [3m]                                                   
+       --wait             Blocks until deployment completes                                                             
 
 
   Global Options:
@@ -2681,7 +2705,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
   - Get deployment information as JSON
 
-    $ vercel inspect my-deployment.vercel.app --json
+    $ vercel inspect my-deployment.vercel.app --format=json
 
 "
 `;
@@ -3259,6 +3283,10 @@ exports[`help command > list help output snapshots > list help column width 40 1
   Options:
 
        --environment <TARGET>             
+  -F,  --format <FORMAT>       Specify the
+                               output     
+                               format     
+                               (json)     
   -m,  --meta <KEY=VALUE>      Filter     
                                deployments
                                by metadata
@@ -3374,6 +3402,7 @@ exports[`help command > list help output snapshots > list help column width 80 1
   Options:
 
        --environment <TARGET>                                                     
+  -F,  --format <FORMAT>       Specify the output format (json)                   
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
                                KEY=value\`). Can appear many times.                
   -N,  --next <MS>             Show next page of results                          
@@ -3438,6 +3467,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   Options:
 
        --environment <TARGET>                                                                                             
+  -F,  --format <FORMAT>       Specify the output format (json)                                                           
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
   -N,  --next <MS>             Show next page of results                                                                  
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
@@ -3796,9 +3826,9 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
-       --json             Output in JSON format                                                                              
-  -N,  --next <MS>        Show next page of results                                                                          
-       --update-required  A list of projects affected by an upcoming deprecation                                             
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -N,  --next <MS>        Show next page of results                                                                     
+       --update-required  A list of projects affected by an upcoming deprecation                                        
 
 
   Global Options:
@@ -3822,7 +3852,7 @@ exports[`help command > project help output snapshots > project list help output
 
   - List projects using a deprecated Node.js version in JSON format
 
-    $ vercel project ls --update-required --json
+    $ vercel project ls --update-required --format=json
 
 "
 `;
@@ -4842,9 +4872,14 @@ exports[`help command > target help output snapshots > target help column width 
 
 exports[`help command > target help output snapshots > target list help output snapshots > target list help column width 120 1`] = `
 "
-  ▲ vercel target list
+  ▲ vercel target list [options]
 
   List targets defined for the current Project                                                                          
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
 
   Global Options:
 
@@ -5053,7 +5088,8 @@ exports[`help command > teams help output snapshots > teams list help output sna
 
   Options:
 
-  -N,  --next <MS>  Show next page of results                                                                           
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -N,  --next <MS>        Show next page of results                                                                     
 
 
   Global Options:
@@ -5293,10 +5329,17 @@ exports[`help command > telemetry help output snapshots > telemetry status help 
 
 exports[`help command > whoami help output snapshots > whoami help column width 40 1`] = `
 "
-  ▲ vercel whoami
+  ▲ vercel whoami [options]
 
   Shows the username of the currently   
   logged in user.                       
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the   
+                          output format 
+                          (json)        
+
 
   Global Options:
 
@@ -5347,9 +5390,14 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
 exports[`help command > whoami help output snapshots > whoami help column width 80 1`] = `
 "
-  ▲ vercel whoami
+  ▲ vercel whoami [options]
 
   Shows the username of the currently logged in user.                           
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                      
+
 
   Global Options:
 
@@ -5376,9 +5424,14 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
 exports[`help command > whoami help output snapshots > whoami help column width 120 1`] = `
 "
-  ▲ vercel whoami
+  ▲ vercel whoami [options]
 
   Shows the username of the currently logged in user.                                                                   
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
 
   Global Options:
 

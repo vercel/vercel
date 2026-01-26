@@ -1114,12 +1114,25 @@ export async function createLambdaFromPseudoLayers({
   });
 }
 
+// This should be a subset of Next.js's full NextConfigRuntime
+// https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
+export type NextConfigRuntime = {
+  pageExtensions: string[];
+  experimental?: {
+    cacheComponents?: boolean;
+    clientParamParsingOrigins?: string[];
+    clientSegmentCache?: boolean;
+    ppr?: boolean | 'incremental';
+    serverActions?: Record<string, never>;
+  };
+};
+
 export type NextRequiredServerFilesManifest = {
   appDir?: string;
   relativeAppDir?: string;
   files: string[];
   ignore: string[];
-  config: Record<string, any>;
+  config: NextConfigRuntime;
 };
 
 /**
@@ -1305,21 +1318,15 @@ export async function getRequiredServerFilesManifest(
     await fs.readFile(pathRequiredServerFilesManifest, 'utf8')
   );
 
-  const requiredServerFiles = {
-    files: [],
-    ignore: [],
-    config: {},
-    appDir: manifestData.appDir,
-    relativeAppDir: manifestData.relativeAppDir,
-  };
-
   switch (manifestData.version) {
     case 1: {
-      requiredServerFiles.files = manifestData.files;
-      requiredServerFiles.ignore = manifestData.ignore;
-      requiredServerFiles.config = manifestData.config;
-      requiredServerFiles.appDir = manifestData.appDir;
-      break;
+      return {
+        files: manifestData.files,
+        ignore: manifestData.ignore,
+        config: manifestData.config,
+        appDir: manifestData.appDir,
+        relativeAppDir: manifestData.relativeAppDir,
+      };
     }
     default: {
       throw new Error(
@@ -1327,7 +1334,6 @@ export async function getRequiredServerFilesManifest(
       );
     }
   }
-  return requiredServerFiles;
 }
 
 export async function getPrerenderManifest(
@@ -3279,13 +3285,15 @@ export const onPrerenderRoute =
                 ) + prefetchSegmentSuffix;
 
               // Only use the fallback value when the allowQuery is defined and
-              // is empty, which means that the segments do not vary based on
-              // the route parameters. This is safer than ensuring that we only
-              // use the fallback when this is not a fallback because we know in
-              // this new logic that it doesn't vary based on the route
-              // parameters and therefore can be used for all requests instead.
+              // either: (1) it is empty, meaning segments do not vary by params,
+              // or (2) client param parsing is enabled, meaning the segment
+              // payloads are safe to reuse across params.
               let fallback: FileFsRef | null = null;
-              if (segmentAllowQuery && segmentAllowQuery.length === 0) {
+              const shouldAttachSegmentFallback =
+                segmentAllowQuery &&
+                (segmentAllowQuery.length === 0 ||
+                  isAppClientParamParsingEnabled);
+              if (shouldAttachSegmentFallback) {
                 const fsPath = path.join(
                   segmentsDir,
                   segmentPath + prefetchSegmentSuffix

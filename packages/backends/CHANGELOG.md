@@ -1,5 +1,57 @@
 # @vercel/backends
 
+## 0.0.23
+
+### Patch Changes
+
+- Add tracing for backends builder usage ([#14671](https://github.com/vercel/vercel/pull/14671))
+
+- Updated dependencies [[`6782a7a16c33dd56873a78a687f0ab4870466fc7`](https://github.com/vercel/vercel/commit/6782a7a16c33dd56873a78a687f0ab4870466fc7), [`31a5321f0914f09236d1100c962dfeb201885302`](https://github.com/vercel/vercel/commit/31a5321f0914f09236d1100c962dfeb201885302), [`8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4`](https://github.com/vercel/vercel/commit/8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4)]:
+  - @vercel/introspection@0.0.10
+  - @vercel/cervel@0.0.10
+
+## 0.0.22
+
+### Patch Changes
+
+- - Parrallelize NFT and introspection steps ([#14619](https://github.com/vercel/vercel/pull/14619))
+  - Increase timeout to 8 seconds. It's taking up to 5 seconds for a large app we have been testing with
+  - Add more debug logs to introspection process
+- Updated dependencies [[`2763c6ce1c5e0181eb97817bb79d793c7ad13a19`](https://github.com/vercel/vercel/commit/2763c6ce1c5e0181eb97817bb79d793c7ad13a19)]:
+  - @vercel/introspection@0.0.9
+
+## 0.0.21
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+- Updated dependencies []:
+  - @vercel/introspection@0.0.8
+
+## 0.0.20
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Updated dependencies []:
+  - @vercel/introspection@0.0.8
+
+## 0.0.19
+
+### Patch Changes
+
+- Remove unnecessary dependency ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Updated dependencies [[`239b4181e311b43cdd705376c27e83466295be2f`](https://github.com/vercel/vercel/commit/239b4181e311b43cdd705376c27e83466295be2f), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/cervel@0.0.9
+  - @vercel/introspection@0.0.8
+
 ## 0.0.18
 
 ### Patch Changes

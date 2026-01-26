@@ -1,4 +1,5 @@
 import { aliasCommand } from './alias/command';
+import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
@@ -22,6 +23,7 @@ import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
+import { logsv2Command } from './logsv2/command';
 import { mcpCommand } from './mcp/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
@@ -36,6 +38,7 @@ import { rollingReleaseCommand } from './rolling-release/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
+import { upgradeCommand } from './upgrade/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import type { Command } from './help';
@@ -43,6 +46,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   aliasCommand,
+  apiCommand,
   blobCommand,
   bisectCommand,
   buildCommand,
@@ -66,6 +70,7 @@ const commandsStructs = [
   loginCommand,
   logoutCommand,
   logsCommand,
+  logsv2Command,
   mcpCommand,
   microfrontendsCommand,
   openCommand,
@@ -80,6 +85,7 @@ const commandsStructs = [
   targetCommand,
   teamsCommand,
   telemetryCommand,
+  upgradeCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
@@ -108,3 +114,5 @@ for (const command of commandsStructs) {
 output.debug(
   `All registered commands: ${JSON.stringify(Array.from(commands.entries()))}`
 );
+
+export const commandNames = Array.from(commands.keys());
