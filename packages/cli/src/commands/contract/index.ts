@@ -82,18 +82,19 @@ export default async function contract(client: Client): Promise<number> {
   }
 
   try {
-    const queryString = query.toString();
-    const url = queryString
-      ? `/v1/billing/contract-commitments?${queryString}`
-      : '/v1/billing/contract-commitments';
-
-    const response = await client.fetch(url, {
-      json: false,
-      useCurrentTeam: false,
-    });
+    const response = await client.fetch(
+      `/v1/billing/contract-commitments?${query}`,
+      {
+        json: false,
+        useCurrentTeam: false,
+      }
+    );
 
     if (!response.ok) {
-      error(`Failed to fetch contract commitments: ${response.status}`);
+      const errorText = await response.text();
+      error(
+        `Failed to fetch contract commitments: ${response.status} ${errorText}`
+      );
       return 1;
     }
 
@@ -138,7 +139,6 @@ export default async function contract(client: Client): Promise<number> {
       return 0;
     }
 
-    // Group commitments by contract
     const contractGroups = new Map<string, FocusContractCommitment[]>();
     for (const commitment of commitments) {
       const existing = contractGroups.get(commitment.ContractId) || [];
