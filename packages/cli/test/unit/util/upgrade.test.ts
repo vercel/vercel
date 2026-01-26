@@ -140,7 +140,7 @@ describe('executeUpgrade', () => {
 
     expect(exitCode).toBe(1);
     expect(outputMock.error).toHaveBeenCalledWith(
-      'Upgrade failed with exit code 1'
+      'Upgrade failed with exit code unknown'
     );
   });
 

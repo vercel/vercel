@@ -49,7 +49,7 @@ export async function executeUpgrade(): Promise<number> {
         if (stderrStr) {
           output.print(stderrStr);
         }
-        output.error(`Upgrade failed with exit code ${code ?? 1}`);
+        output.error(`Upgrade failed with exit code ${code ?? 'unknown'}`);
         output.log(
           `You can try running the command manually: ${updateCommand}`
         );

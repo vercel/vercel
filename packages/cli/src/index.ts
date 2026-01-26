@@ -949,7 +949,7 @@ main()
             choices: [
               { key: 'u', name: 'Upgrade now', value: 'upgrade' },
               { key: 'c', name: 'View changelog', value: 'changelog' },
-              { key: 'n', name: 'Skip', value: 'skip' },
+              { key: 's', name: 'Skip', value: 'skip' },
             ],
           });
 
