@@ -5,7 +5,12 @@ export const logsv2Command = {
   aliases: [],
   description: 'Display request logs for a project using the new logs API.',
   hidden: true,
-  arguments: [],
+  arguments: [
+    {
+      name: 'url|deploymentId',
+      required: false,
+    },
+  ],
   options: [
     {
       name: 'project',
@@ -19,7 +24,8 @@ export const logsv2Command = {
       shorthand: 'd',
       type: String,
       deprecated: false,
-      description: 'Filter logs to a specific deployment ID or URL',
+      description:
+        'Filter logs to a specific deployment ID or URL (alternative to positional argument)',
     },
     {
       name: 'environment',
@@ -84,7 +90,7 @@ export const logsv2Command = {
       type: Boolean,
       deprecated: false,
       description:
-        'Stream live runtime logs (requires --deployment, no other filters allowed)',
+        'Stream live runtime logs (requires deployment URL/ID, no other filters allowed)',
     },
     {
       name: 'query',
@@ -103,6 +109,14 @@ export const logsv2Command = {
   ],
   examples: [
     {
+      name: 'Stream live logs for a deployment URL',
+      value: `${packageName} logsv2 https://my-app-xxxxx.vercel.app --follow`,
+    },
+    {
+      name: 'Stream live logs for a deployment ID',
+      value: `${packageName} logsv2 dpl_xxxxx --follow`,
+    },
+    {
       name: 'Display recent logs for the linked project',
       value: `${packageName} logsv2`,
     },
@@ -112,7 +126,7 @@ export const logsv2Command = {
     },
     {
       name: 'Display logs for a specific deployment',
-      value: `${packageName} logsv2 --deployment dpl_xxxxx`,
+      value: `${packageName} logsv2 dpl_xxxxx`,
     },
     {
       name: 'Filter logs by status code and output as JSON',
@@ -129,10 +143,6 @@ export const logsv2Command = {
     {
       name: 'Display logs for a specific request',
       value: `${packageName} logsv2 --request-id req_xxxxx`,
-    },
-    {
-      name: 'Stream live logs for a deployment',
-      value: `${packageName} logsv2 --deployment dpl_xxxxx --follow`,
     },
   ],
 } as const;

@@ -59,9 +59,21 @@ export default async function logsv2(client: Client) {
     return 2;
   }
 
+  const subArgs = parsedArguments.args.slice(1);
+  const [deploymentArgument] = subArgs;
+
   const projectOption = parsedArguments.flags['--project'];
-  const deploymentOption = parsedArguments.flags['--deployment'];
+  const deploymentFlag = parsedArguments.flags['--deployment'];
   const environmentOption = parsedArguments.flags['--environment'];
+
+  let deploymentOption: string | undefined = deploymentFlag;
+  if (deploymentArgument) {
+    let deploymentIdOrHost = deploymentArgument;
+    try {
+      deploymentIdOrHost = new URL(deploymentArgument).hostname;
+    } catch {}
+    deploymentOption = deploymentIdOrHost;
+  }
   const levelOption = parsedArguments.flags['--level'];
   const statusCodeOption = parsedArguments.flags['--status-code'];
   const sourceOption = parsedArguments.flags['--source'];
@@ -73,8 +85,9 @@ export default async function logsv2(client: Client) {
   const queryOption = parsedArguments.flags['--query'];
   const requestIdOption = parsedArguments.flags['--request-id'];
 
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
-  telemetry.trackCliOptionDeployment(deploymentOption);
+  telemetry.trackCliOptionDeployment(deploymentFlag);
   telemetry.trackCliOptionEnvironment(environmentOption);
   telemetry.trackCliOptionLevel(levelOption);
   telemetry.trackCliOptionStatusCode(statusCodeOption);
@@ -90,7 +103,7 @@ export default async function logsv2(client: Client) {
   if (followOption) {
     if (!deploymentOption) {
       output.error(
-        `The ${chalk.bold('--follow')} flag requires ${chalk.bold('--deployment')} to be specified.`
+        `The ${chalk.bold('--follow')} flag requires a deployment URL or ID to be specified.`
       );
       return 1;
     }
