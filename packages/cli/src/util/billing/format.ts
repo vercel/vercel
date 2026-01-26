@@ -3,22 +3,43 @@ import { DateTime } from 'luxon';
 // Vercel billing periods are aligned to LA (Pacific) time
 export const LA_TIMEZONE = 'America/Los_Angeles';
 
-export function dateToLAMidnightUTC(dateStr: string): string {
-  const laDateTime = DateTime.fromISO(dateStr, { zone: LA_TIMEZONE }).startOf(
-    'day'
-  );
+function toISOOrThrow(dt: DateTime): string {
+  if (!dt.isValid) {
+    throw new Error(`Invalid DateTime: ${dt.invalidReason}`);
+  }
+  const iso = dt.toISO();
+  if (!iso) {
+    throw new Error(`Failed to convert DateTime to ISO`);
+  }
+  return iso;
+}
 
-  return laDateTime.toUTC().toISO() ?? '';
+function getDefaultFromDateTime(): DateTime {
+  return DateTime.now().setZone(LA_TIMEZONE).startOf('month');
+}
+
+function getDefaultToDateTime(): DateTime {
+  return DateTime.utc();
 }
 
 export function getDefaultFromDate(): string {
-  const nowLA = DateTime.now().setZone(LA_TIMEZONE);
-  const startOfMonth = nowLA.startOf('month');
-  return startOfMonth.toUTC().toISO() ?? '';
+  const dt = getDefaultFromDateTime();
+  return toISOOrThrow(dt.toUTC());
 }
 
 export function getDefaultToDate(): string {
-  return DateTime.utc().toISO() ?? '';
+  const dt = getDefaultToDateTime();
+  return toISOOrThrow(dt.toUTC());
+}
+
+export function getDefaultFromDateDisplay(): string {
+  const dt = getDefaultFromDateTime();
+  return dt.toFormat('yyyy-MM-dd');
+}
+
+export function getDefaultToDateDisplay(): string {
+  const dt = getDefaultToDateTime();
+  return dt.toFormat('yyyy-MM-dd');
 }
 
 export function parseBillingDate(
@@ -26,18 +47,28 @@ export function parseBillingDate(
   isEndDate: boolean = false
 ): string {
   if (dateStr.includes('T')) {
+    const dt = DateTime.fromISO(dateStr);
+    if (!dt.isValid) {
+      throw new Error(
+        `Invalid date: "${dateStr}". Expected ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)`
+      );
+    }
     return dateStr;
   }
 
-  let laDateTime = DateTime.fromISO(dateStr, { zone: LA_TIMEZONE }).startOf(
+  // Validate YYYY-MM-DD format
+  const laDateTime = DateTime.fromISO(dateStr, { zone: LA_TIMEZONE }).startOf(
     'day'
   );
 
-  if (isEndDate) {
-    laDateTime = laDateTime.plus({ days: 1 });
+  if (!laDateTime.isValid) {
+    throw new Error(
+      `Invalid date: "${dateStr}". Expected ISO 8601 format (YYYY-MM-DD)`
+    );
   }
 
-  return laDateTime.toUTC().toISO() ?? '';
+  const finalDateTime = isEndDate ? laDateTime.plus({ days: 1 }) : laDateTime;
+  return toISOOrThrow(finalDateTime.toUTC());
 }
 
 export function formatCurrency(amount: number): string {
