@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.17
+
+### Patch Changes
+
+- fix segment fallback initial headers to properly include cache tags for expiration ([#14695](https://github.com/vercel/vercel/pull/14695))
+
 ## 4.15.16
 
 ### Patch Changes
