@@ -69,11 +69,10 @@ describe('detectServices', () => {
               entrypoint: 'src/server.ts',
               routePrefix: '/api',
             },
-            worker: {
-              type: 'worker',
-              entrypoint: 'worker.py',
-              topic: 'tasks',
-              consumer: 'processor',
+            admin: {
+              workspace: 'apps/admin',
+              entrypoint: 'src/index.ts',
+              routePrefix: '/admin',
             },
           },
         }),
@@ -101,14 +100,18 @@ describe('detectServices', () => {
         routePrefix: '/api',
       });
 
-      const worker = result.services.find(s => s.name === 'worker');
-      expect(worker).toMatchObject({
-        name: 'worker',
-        type: 'worker',
-        entrypoint: 'worker.py',
-        topic: 'tasks',
-        consumer: 'processor',
+      const admin = result.services.find(s => s.name === 'admin');
+      expect(admin).toMatchObject({
+        name: 'admin',
+        type: 'web',
+        workspace: 'apps/admin',
+        entrypoint: 'src/index.ts',
+        routePrefix: '/admin',
       });
+
+      // Non-root services generate rewrites, root service generates default
+      expect(result.routes.rewrites).toHaveLength(2);
+      expect(result.routes.defaults).toHaveLength(1);
     });
 
     it('should default type to web', async () => {
