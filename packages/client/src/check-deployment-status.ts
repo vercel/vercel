@@ -22,7 +22,7 @@ interface DeploymentStatus {
 }
 
 // If an error occurs, how should our retries behave?
-const RETRY_COUNT = 3;
+const RETRY_COUNT = 5;
 // Maximum value to cap `Retry-After` to in order to avoid hanging if we get a
 // `Retry-After` value in the far future. This limit is applied before
 // `RETRY_DELAY_SKEW_MS`, so the total duration can exceed this.
