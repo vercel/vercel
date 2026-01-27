@@ -130,12 +130,3 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
   '.rs': 'rust',
   '.rb': 'ruby',
 };
-
-/**
- * Builders that produce static output (SPAs, static sites).
- * These don't have a "runtime" - they just build to static files.
- */
-export const STATIC_BUILDERS = new Set([
-  '@vercel/static-build',
-  '@vercel/static',
-]);
