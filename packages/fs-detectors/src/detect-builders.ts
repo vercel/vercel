@@ -48,6 +48,7 @@ export interface Options {
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
   bunVersion?: string;
+  outputDirectory?: string | null;
   workPath?: string;
 }
 
@@ -756,6 +757,7 @@ function checkUnusedFunctions(
       isOfficialRuntime('hono', frontendBuilder.use))
   ) {
     // Copied from builder entrypoint detection
+    const dir = options?.outputDirectory?.replace(/^\/+|\/+$/g, '');
     const validFilenames = [
       'app',
       'index',
@@ -763,7 +765,7 @@ function checkUnusedFunctions(
       'src/app',
       'src/index',
       'src/server',
-    ];
+    ].map(name => (dir ? `${dir}/${name}` : name));
     const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
     const validEntrypoints = validFilenames.flatMap(filename =>
       validExtensions.map(extension => `${filename}.${extension}`)
