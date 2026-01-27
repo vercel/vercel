@@ -87,7 +87,6 @@ import {
   normalizePackageJson,
   normalizePage,
   onPrerenderRoute,
-  onPrerenderRouteInitial,
   PseudoFile,
   PseudoLayer,
   PseudoLayerResult,
@@ -1184,9 +1183,9 @@ export const build: BuildV2 = async buildOptions => {
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   let staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  let static404Page: string | undefined;
+  const static404Page = undefined;
   let page404Path = '';
-  let hasStatic500: undefined | boolean;
+  const hasStatic500: false = false as const;
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -1336,33 +1335,33 @@ export const build: BuildV2 = async buildOptions => {
       nextVersion,
       routesManifest
     );
-    hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
+    // hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
-    // this can be either 404.html in latest versions
-    // or _errors/404.html versions while this was experimental
-    static404Page =
-      staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
-        ? path.posix.join(entryDirectory, '404')
-        : staticPages[path.posix.join(entryDirectory, '_errors/404')]
-          ? path.posix.join(entryDirectory, '_errors/404')
-          : undefined;
+    // // this can be either 404.html in latest versions
+    // // or _errors/404.html versions while this was experimental
+    // static404Page =
+    //   staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
+    //     ? path.posix.join(entryDirectory, '404')
+    //     : staticPages[path.posix.join(entryDirectory, '_errors/404')]
+    //       ? path.posix.join(entryDirectory, '_errors/404')
+    //       : undefined;
 
-    const { i18n } = routesManifest || {};
+    // const { i18n } = routesManifest || {};
 
-    if (!static404Page && i18n) {
-      static404Page = staticPages[
-        path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-      ]
-        ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-        : undefined;
-    }
+    // if (!static404Page && i18n) {
+    //   static404Page = staticPages[
+    //     path.posix.join(entryDirectory, i18n.defaultLocale, '404')
+    //   ]
+    //     ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
+    //     : undefined;
+    // }
 
-    if (!hasStatic500 && i18n) {
-      hasStatic500 =
-        !!staticPages[
-          path.posix.join(entryDirectory, i18n.defaultLocale, '500')
-        ];
-    }
+    // if (!hasStatic500 && i18n) {
+    //   hasStatic500 =
+    //     !!staticPages[
+    //       path.posix.join(entryDirectory, i18n.defaultLocale, '500')
+    //     ];
+    // }
 
     if (routesManifest) {
       switch (routesManifest.version) {
@@ -1655,25 +1654,25 @@ export const build: BuildV2 = async buildOptions => {
 
     const nonLambdaSsgPages = new Set<string>();
 
-    Object.keys(prerenderManifest.staticRoutes).forEach(route => {
-      const result = onPrerenderRouteInitial(
-        prerenderManifest,
-        canUsePreviewMode,
-        entryDirectory,
-        nonLambdaSsgPages,
-        route,
-        hasPages404,
-        routesManifest
-      );
+    // Object.keys(prerenderManifest.staticRoutes).forEach(route => {
+    //   const result = onPrerenderRouteInitial(
+    //     prerenderManifest,
+    //     canUsePreviewMode,
+    //     entryDirectory,
+    //     nonLambdaSsgPages,
+    //     route,
+    //     hasPages404,
+    //     routesManifest
+    //   );
 
-      if (result && result.static404Page) {
-        static404Page = result.static404Page;
-      }
+    //   if (result && result.static404Page) {
+    //     static404Page = result.static404Page;
+    //   }
 
-      if (result && result.static500Page) {
-        hasStatic500 = true;
-      }
-    });
+    //   if (result && result.static500Page) {
+    //     hasStatic500 = true;
+    //   }
+    // });
     const pageTraces: {
       [page: string]: {
         [key: string]: FileFsRef;
