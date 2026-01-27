@@ -5,7 +5,11 @@ import type {
   ExperimentalServices,
   ServiceDetectionError,
 } from './types';
-import { ENTRYPOINT_EXTENSIONS, RUNTIME_BUILDERS } from './types';
+import {
+  ENTRYPOINT_EXTENSIONS,
+  RUNTIME_BUILDERS,
+  STATIC_BUILDERS,
+} from './types';
 import { getBuilderForRuntime, inferServiceRuntime } from './utils';
 import frameworkList from '@vercel/frameworks';
 
@@ -146,6 +150,9 @@ export function resolveConfiguredService(
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;
   if (config.excludeFiles) builderConfig.excludeFiles = config.excludeFiles;
 
+  const isStaticBuild = STATIC_BUILDERS.has(builderUse);
+  const runtime = isStaticBuild ? undefined : inferredRuntime;
+
   return {
     name,
     type,
@@ -159,7 +166,7 @@ export function resolveConfiguredService(
       use: builderUse,
       config: Object.keys(builderConfig).length > 0 ? builderConfig : undefined,
     },
-    runtime: inferredRuntime,
+    runtime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
