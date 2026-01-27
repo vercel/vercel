@@ -1,9 +1,7 @@
 import chalk from 'chalk';
 import jsonlines from 'jsonlines';
-import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
-import elapsed from '../../util/output/elapsed';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { help } from '../help';
@@ -14,25 +12,28 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { isErrnoException } from '@vercel/error-utils';
 import type { FocusCharge } from '../../util/billing/focus-charge';
+import type {
+  BreakdownPeriod,
+  ServiceAggregation,
+  PeriodAggregation,
+  UsageData,
+} from './types';
 import {
   parseBillingDate,
   getDefaultFromDate,
   getDefaultToDate,
   getDefaultFromDateDisplay,
   getDefaultToDateDisplay,
-  formatCurrency,
-  formatQuantity,
-} from '../../util/billing/format';
-
-interface ServiceAggregation {
-  pricingQuantity: number;
-  effectiveCost: number;
-  billedCost: number;
-  pricingUnit: string;
-}
+  getPeriodKey,
+  isValidBreakdownPeriod,
+  VALID_BREAKDOWN_PERIODS,
+} from '../../util/billing/period-utils';
+import { outputAggregated } from './output-aggregated';
+import { outputBreakdown } from './output-breakdown';
+import { outputJson } from './output-json';
 
 export default async function usage(client: Client): Promise<number> {
-  const { print, log, error, debug, spinner } = output;
+  const { print, error, debug, spinner } = output;
 
   let parsedArgs = null;
   const flagsSpecification = getFlagsSpecification(usageCommand.options);
@@ -89,9 +90,23 @@ export default async function usage(client: Client): Promise<number> {
   const fromDisplay = fromFlag ?? getDefaultFromDateDisplay();
   const toDisplay = toFlag ?? getDefaultToDateDisplay();
 
+  const breakdownFlag = parsedArgs.flags['--breakdown'];
+  let breakdownPeriod: BreakdownPeriod | undefined;
+
+  if (breakdownFlag) {
+    if (!isValidBreakdownPeriod(breakdownFlag)) {
+      error(
+        `Invalid breakdown period: "${breakdownFlag}". Valid options are: ${VALID_BREAKDOWN_PERIODS.join(', ')}`
+      );
+      return 1;
+    }
+    breakdownPeriod = breakdownFlag;
+  }
+
   telemetry.trackCliOptionFrom(fromFlag);
   telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  telemetry.trackCliOptionBreakdown(breakdownFlag);
 
   if (fromFlag) {
     debug(`Date conversion: ${fromFlag} -> ${fromDate}`);
@@ -145,135 +160,150 @@ export default async function usage(client: Client): Promise<number> {
       return 1;
     }
 
-    const services = new Map<string, ServiceAggregation>();
-    let grandPricingQuantity = 0;
-    let grandEffective = 0;
-    let grandBilled = 0;
-    let chargeCount = 0;
-    let pricingUnit = 'MIUs';
-
-    await new Promise<void>((resolve, reject) => {
-      // gzip compression is assumed
-      const stream = response.body.pipe(jsonlines.parse());
-
-      stream.on('data', (charge: FocusCharge) => {
-        chargeCount++;
-
-        // Capture pricing unit from the first charge
-        if (chargeCount === 1 && charge.PricingUnit) {
-          pricingUnit = charge.PricingUnit;
-        }
-
-        const serviceName = charge.ServiceName || 'Unknown';
-        const quantity = charge.PricingQuantity || 0;
-        const effective = charge.EffectiveCost || 0;
-        const billed = charge.BilledCost || 0;
-
-        // Accumulate grand totals
-        grandPricingQuantity += quantity;
-        grandEffective += effective;
-        grandBilled += billed;
-
-        // Accumulate per service
-        const existing = services.get(serviceName) || {
-          pricingQuantity: 0,
-          effectiveCost: 0,
-          billedCost: 0,
-          pricingUnit: charge.PricingUnit || pricingUnit,
-        };
-        services.set(serviceName, {
-          pricingQuantity: existing.pricingQuantity + quantity,
-          effectiveCost: existing.effectiveCost + effective,
-          billedCost: existing.billedCost + billed,
-          pricingUnit: existing.pricingUnit,
-        });
-      });
-
-      stream.on('end', resolve);
-      stream.on('error', reject);
-      response.body.on('error', reject);
-    });
-
-    const sortedServices = [...services.entries()].sort(
-      (a, b) => b[1].billedCost - a[1].billedCost
+    const usageData = await processCharges(
+      response,
+      breakdownPeriod,
+      contextName,
+      fromDisplay,
+      toDisplay,
+      usingDefaults
     );
 
     if (asJson) {
-      const jsonOutput = {
-        period: {
-          from: fromDate,
-          to: toDate,
-        },
-        context: contextName,
-        pricingUnit,
-        services: sortedServices.map(([name, data]) => ({
-          name,
-          pricingQuantity: data.pricingQuantity,
-          pricingUnit: data.pricingUnit,
-          effectiveCost: data.effectiveCost,
-          billedCost: data.billedCost,
-        })),
-        totals: {
-          pricingQuantity: grandPricingQuantity,
-          effectiveCost: grandEffective,
-          billedCost: grandBilled,
-        },
-        chargeCount,
-      };
-      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      outputJson(client, {
+        data: usageData,
+        fromDate,
+        toDate,
+        breakdownPeriod,
+      });
       return 0;
     }
 
-    log(`Usage for ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`);
-    log('');
-    const periodSuffix = usingDefaults ? ' (current month)' : '';
-    log(
-      `${chalk.gray('Period:')} ${fromDisplay} to ${toDisplay}${periodSuffix}`
-    );
-    log(`${chalk.gray('Charges processed:')} ${chargeCount}`);
-    log(`${chalk.gray('Pricing unit:')} ${pricingUnit}`);
-    log('');
-
-    if (sortedServices.length === 0) {
-      log('No usage data found for this period.');
-      return 0;
+    if (breakdownPeriod) {
+      outputBreakdown({
+        data: usageData,
+        breakdownPeriod,
+        startTime: start,
+      });
+    } else {
+      outputAggregated({
+        data: usageData,
+        startTime: start,
+      });
     }
-
-    const quantityHeader = pricingUnit === 'USD' ? 'Usage (USD)' : pricingUnit;
-    const headers = [
-      'Service',
-      quantityHeader,
-      'Effective Cost',
-      'Billed Cost',
-    ];
-    const rows = sortedServices.map(([name, data]) => [
-      name,
-      formatQuantity(data.pricingQuantity, data.pricingUnit),
-      formatCurrency(data.effectiveCost),
-      formatCurrency(data.billedCost),
-    ]);
-
-    rows.push([
-      chalk.bold('Total'),
-      chalk.bold(formatQuantity(grandPricingQuantity, pricingUnit)),
-      chalk.bold(formatCurrency(grandEffective)),
-      chalk.bold(formatCurrency(grandBilled)),
-    ]);
-
-    const tablePrint = table(
-      [headers.map(h => chalk.bold(chalk.cyan(h))), ...rows],
-      { hsep: 4, align: ['l', 'r', 'r', 'r'] }
-    ).replace(/^/gm, '  ');
-
-    print(`\n${tablePrint}\n\n`);
-
-    log(
-      `${chalk.gray('Amount due:')} ${chalk.bold(formatCurrency(grandBilled))}`
-    );
 
     return 0;
   } catch (err) {
     output.prettyError(err);
     return 1;
   }
+}
+
+async function processCharges(
+  response: Response,
+  breakdownPeriod: BreakdownPeriod | undefined,
+  contextName: string,
+  fromDisplay: string,
+  toDisplay: string,
+  usingDefaults: boolean
+): Promise<UsageData> {
+  const services = new Map<string, ServiceAggregation>();
+  const periodUsage = new Map<string, PeriodAggregation>();
+  let grandPricingQuantity = 0;
+  let grandEffective = 0;
+  let grandBilled = 0;
+  let chargeCount = 0;
+  let pricingUnit = 'MIUs';
+
+  await new Promise<void>((resolve, reject) => {
+    // gzip compression is assumed
+    const stream = response.body!.pipe(jsonlines.parse());
+
+    stream.on('data', (charge: FocusCharge) => {
+      chargeCount++;
+
+      // Capture pricing unit from the first charge
+      if (chargeCount === 1 && charge.PricingUnit) {
+        pricingUnit = charge.PricingUnit;
+      }
+
+      const serviceName = charge.ServiceName || 'Unknown';
+      const quantity = charge.PricingQuantity || 0;
+      const effective = charge.EffectiveCost || 0;
+      const billed = charge.BilledCost || 0;
+
+      // Accumulate grand totals
+      grandPricingQuantity += quantity;
+      grandEffective += effective;
+      grandBilled += billed;
+
+      // Accumulate per service
+      const existing = services.get(serviceName) || {
+        pricingQuantity: 0,
+        effectiveCost: 0,
+        billedCost: 0,
+        pricingUnit: charge.PricingUnit || pricingUnit,
+      };
+      services.set(serviceName, {
+        pricingQuantity: existing.pricingQuantity + quantity,
+        effectiveCost: existing.effectiveCost + effective,
+        billedCost: existing.billedCost + billed,
+        pricingUnit: existing.pricingUnit,
+      });
+
+      // Accumulate per period per service (for breakdown view)
+      if (breakdownPeriod) {
+        const periodKey = getPeriodKey(
+          charge.ChargePeriodStart,
+          breakdownPeriod
+        );
+
+        if (!periodUsage.has(periodKey)) {
+          periodUsage.set(periodKey, {
+            services: new Map(),
+            totalPricingQuantity: 0,
+            totalEffectiveCost: 0,
+            totalBilledCost: 0,
+          });
+        }
+        const periodData = periodUsage.get(periodKey)!;
+        periodData.totalPricingQuantity += quantity;
+        periodData.totalEffectiveCost += effective;
+        periodData.totalBilledCost += billed;
+
+        const periodService = periodData.services.get(serviceName) || {
+          pricingQuantity: 0,
+          effectiveCost: 0,
+          billedCost: 0,
+          pricingUnit: charge.PricingUnit || pricingUnit,
+        };
+        periodData.services.set(serviceName, {
+          pricingQuantity: periodService.pricingQuantity + quantity,
+          effectiveCost: periodService.effectiveCost + effective,
+          billedCost: periodService.billedCost + billed,
+          pricingUnit: periodService.pricingUnit,
+        });
+      }
+    });
+
+    stream.on('end', resolve);
+    stream.on('error', reject);
+    response.body!.on('error', reject);
+  });
+
+  return {
+    contextName,
+    fromDisplay,
+    toDisplay,
+    usingDefaults,
+    pricingUnit,
+    chargeCount,
+    services,
+    periodUsage,
+    grandTotals: {
+      pricingQuantity: grandPricingQuantity,
+      effectiveCost: grandEffective,
+      billedCost: grandBilled,
+    },
+  };
 }
