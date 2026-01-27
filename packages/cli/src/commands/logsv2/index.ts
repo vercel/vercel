@@ -13,6 +13,7 @@ import {
   InvalidDeploymentId,
   ProjectNotFound,
 } from '../../util/errors-ts';
+import { displayRuntimeLogs } from '../../util/logs';
 import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
 import { getCommandName } from '../../util/pkg-name';
@@ -58,9 +59,21 @@ export default async function logsv2(client: Client) {
     return 2;
   }
 
+  const subArgs = parsedArguments.args.slice(1);
+  const [deploymentArgument] = subArgs;
+
   const projectOption = parsedArguments.flags['--project'];
-  const deploymentOption = parsedArguments.flags['--deployment'];
+  const deploymentFlag = parsedArguments.flags['--deployment'];
   const environmentOption = parsedArguments.flags['--environment'];
+
+  let deploymentOption: string | undefined = deploymentFlag;
+  if (deploymentArgument) {
+    let deploymentIdOrHost = deploymentArgument;
+    try {
+      deploymentIdOrHost = new URL(deploymentArgument).hostname;
+    } catch {}
+    deploymentOption = deploymentIdOrHost;
+  }
   const levelOption = parsedArguments.flags['--level'];
   const statusCodeOption = parsedArguments.flags['--status-code'];
   const sourceOption = parsedArguments.flags['--source'];
@@ -68,11 +81,13 @@ export default async function logsv2(client: Client) {
   const untilOption = parsedArguments.flags['--until'];
   const limitOption = parsedArguments.flags['--limit'];
   const jsonOption = parsedArguments.flags['--json'];
+  const followOption = parsedArguments.flags['--follow'];
   const queryOption = parsedArguments.flags['--query'];
   const requestIdOption = parsedArguments.flags['--request-id'];
 
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
-  telemetry.trackCliOptionDeployment(deploymentOption);
+  telemetry.trackCliOptionDeployment(deploymentFlag);
   telemetry.trackCliOptionEnvironment(environmentOption);
   telemetry.trackCliOptionLevel(levelOption);
   telemetry.trackCliOptionStatusCode(statusCodeOption);
@@ -81,8 +96,41 @@ export default async function logsv2(client: Client) {
   telemetry.trackCliOptionUntil(untilOption);
   telemetry.trackCliOptionLimit(limitOption);
   telemetry.trackCliFlagJson(jsonOption);
+  telemetry.trackCliFlagFollow(followOption);
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
+
+  if (followOption) {
+    if (!deploymentOption) {
+      output.error(
+        `The ${chalk.bold('--follow')} flag requires a deployment URL or ID to be specified.`
+      );
+      return 1;
+    }
+
+    const incompatibleFlags = [
+      { flag: '--environment', value: environmentOption },
+      { flag: '--level', value: levelOption },
+      { flag: '--status-code', value: statusCodeOption },
+      { flag: '--source', value: sourceOption },
+      { flag: '--since', value: sinceOption },
+      { flag: '--until', value: untilOption },
+      { flag: '--limit', value: limitOption },
+      { flag: '--query', value: queryOption },
+      { flag: '--request-id', value: requestIdOption },
+    ];
+
+    const usedIncompatible = incompatibleFlags
+      .filter(f => f.value !== undefined && f.value !== null)
+      .map(f => chalk.bold(f.flag));
+
+    if (usedIncompatible.length > 0) {
+      output.error(
+        `The ${chalk.bold('--follow')} flag does not support filtering. Remove: ${usedIncompatible.join(', ')}`
+      );
+      return 1;
+    }
+  }
 
   let contextName: string | null = null;
 
@@ -158,6 +206,24 @@ export default async function logsv2(client: Client) {
       }
       throw err;
     }
+  }
+
+  if (followOption) {
+    if (!jsonOption) {
+      output.print(
+        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), DATE_TIME_FORMAT))}\n\n`
+      );
+    }
+    const abortController = new AbortController();
+    return await displayRuntimeLogs(
+      client,
+      {
+        deploymentId: deploymentId!,
+        projectId,
+        parse: !jsonOption,
+      },
+      abortController
+    );
   }
 
   if (

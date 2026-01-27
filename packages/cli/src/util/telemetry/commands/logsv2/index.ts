@@ -6,6 +6,15 @@ export class Logsv2TelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof logsv2Command>
 {
+  trackCliArgumentUrlOrDeploymentId(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'urlOrDeploymentId',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionProject(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -106,6 +115,12 @@ export class Logsv2TelemetryClient
   trackCliFlagJson(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('json');
+    }
+  }
+
+  trackCliFlagFollow(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('follow');
     }
   }
 
