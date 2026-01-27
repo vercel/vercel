@@ -88,7 +88,7 @@ describe('checkDeploymentStatus()', () => {
       expect(sleep).toHaveBeenCalledWith(10_000);
     });
 
-    it('should retry up to 3 times on consecutive failures', async () => {
+    it('should retry up to 5 times on consecutive failures', async () => {
       mockFetch.mockResolvedValue(mockResponse(500, { error: 'mock error' }));
 
       const iterator = checkDeploymentStatus(
@@ -103,7 +103,7 @@ describe('checkDeploymentStatus()', () => {
       });
       // 5_000 + 3_000 skew (RETRY_DELAY_SKEW_MS * 0.1)
       expect(sleep).toHaveBeenCalledWith(8_000);
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockFetch).toHaveBeenCalledTimes(5);
     });
   });
 });
