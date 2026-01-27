@@ -1,6 +1,7 @@
 import {
   getSupportedPythonVersion,
   DEFAULT_PYTHON_VERSION,
+  resetInstalledPythonsCache,
 } from '../src/version';
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
@@ -38,6 +39,8 @@ jest.setTimeout(30 * 1000);
 beforeEach(() => {
   warningMessages = [];
   mockInstalledVersions = [];
+  // Reset the installed Python versions cache before each test
+  resetInstalledPythonsCache();
   console.warn = m => {
     warningMessages.push(m);
   };

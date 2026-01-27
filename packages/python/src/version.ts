@@ -288,14 +288,34 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
+// Cache for installed Python versions to avoid repeated execSync calls
+let installedPythonsCache: Set<string> | null = null;
+
+function getInstalledPythons(): Set<string> {
+  if (installedPythonsCache !== null) {
+    return installedPythonsCache;
+  }
+  const uvPath = findUvInPath();
+  if (!uvPath) {
+    throw new Error('uv is required but was not found in PATH.');
+  }
+  const uv = new UvRunner(uvPath);
+  installedPythonsCache = uv.listInstalledPythons();
+  return installedPythonsCache;
+}
+
+/**
+ * Reset the installed Python versions cache.
+ * Exported for testing purposes only.
+ * @internal
+ */
+export function resetInstalledPythonsCache(): void {
+  installedPythonsCache = null;
+}
+
 function isInstalled({ version }: PythonVersion): boolean {
   try {
-    const uvPath = findUvInPath();
-    if (!uvPath) {
-      throw new Error('uv is required but was not found in PATH.');
-    }
-    const uv = new UvRunner(uvPath);
-    const installed = uv.listInstalledPythons();
+    const installed = getInstalledPythons();
     return installed.has(version);
   } catch (err) {
     throw new NowBuildError({
