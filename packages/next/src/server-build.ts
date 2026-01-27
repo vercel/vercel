@@ -30,7 +30,6 @@ import {
   isDynamicRoute,
   normalizePage,
   getStaticFiles,
-  onPrerenderRouteInitial,
   onPrerenderRoute,
   normalizeLocalePath,
   PseudoFile,
@@ -432,7 +431,7 @@ export async function serverBuild({
     !experimentalAllowBundling &&
     semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
 
-  let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
+  const hasStatic500 = false; //!!staticPages[path.posix.join(entryDirectory, '500')];
 
   if (lambdaPageKeys.length === 0) {
     throw new NowBuildError({
@@ -451,60 +450,62 @@ export async function serverBuild({
   };
 
   const { i18n } = routesManifest;
-  const hasPages404 = routesManifest.pages404;
+  // const hasPages404 = routesManifest.pages404;
 
-  let static404Page =
-    staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
-      ? path.posix.join(entryDirectory, '404')
-      : staticPages[path.posix.join(entryDirectory, '_errors/404')]
-        ? path.posix.join(entryDirectory, '_errors/404')
-        : undefined;
+  const static404Page = undefined;
+  // staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
+  //   ? path.posix.join(entryDirectory, '404')
+  //   : staticPages[path.posix.join(entryDirectory, '_errors/404')]
+  //     ? path.posix.join(entryDirectory, '_errors/404')
+  //     : undefined;
 
-  if (
-    !static404Page &&
-    i18n &&
-    staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
-  ) {
-    static404Page = path.posix.join(entryDirectory, i18n.defaultLocale, '404');
-  }
+  // if (
+  //   !static404Page &&
+  //   i18n &&
+  //   staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
+  // ) {
+  //   static404Page = path.posix.join(entryDirectory, i18n.defaultLocale, '404');
+  // }
 
-  if (!hasStatic500 && i18n) {
-    hasStatic500 =
-      !!staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '500')];
-  }
+  // if (!hasStatic500 && i18n) {
+  //   hasStatic500 =
+  //     !!staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '500')];
+  // }
 
   const lstatSema = new Sema(25);
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
-  const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
+  const static404Pages = new Set<string>(
+    /* static404Page ? [static404Page] : */ []
+  );
 
   // Only include internal pages that are actually existed
   const internalPages = [...INTERNAL_PAGES].filter(page => {
     return lambdaPages[page];
   });
 
-  Object.keys(prerenderManifest.staticRoutes).forEach(route => {
-    const result = onPrerenderRouteInitial(
-      prerenderManifest,
-      canUsePreviewMode,
-      entryDirectory,
-      nonLambdaSsgPages,
-      route,
-      routesManifest.pages404,
-      routesManifest,
-      appDir
-    );
+  // Object.keys(prerenderManifest.staticRoutes).forEach(route => {
+  //   const result = onPrerenderRouteInitial(
+  //     prerenderManifest,
+  //     canUsePreviewMode,
+  //     entryDirectory,
+  //     nonLambdaSsgPages,
+  //     route,
+  //     routesManifest.pages404,
+  //     routesManifest,
+  //     appDir
+  //   );
 
-    if (result && result.static404Page) {
-      // there can be multiple 404 pages (eg i18n) so we want to keep track of all of them
-      static404Pages.add(result.static404Page);
-      static404Page = result.static404Page;
-    }
+  //   if (result && result.static404Page) {
+  //     // there can be multiple 404 pages (eg i18n) so we want to keep track of all of them
+  //     // static404Pages.add(result.static404Page);
+  //     // static404Page = result.static404Page;
+  //   }
 
-    if (result && result.static500Page) {
-      hasStatic500 = true;
-    }
-  });
+  //   if (result && result.static500Page) {
+  //     hasStatic500 = true;
+  //   }
+  // });
   const hasLambdas =
     !static404Page ||
     lambdaPageKeys.some(
@@ -714,12 +715,12 @@ export async function serverBuild({
     if (static404Pages.size > 0) {
       // If we've generated a static 404 page, it's possible that we also
       // have a static 404 page for each locale.
-      if (i18n) {
-        for (const locale of i18n.locales) {
-          const static404Page = path.posix.join(entryDirectory, locale, '404');
-          static404Pages.add(static404Page);
-        }
-      }
+      // if (i18n) {
+      //   for (const locale of i18n.locales) {
+      //     const static404Page = path.posix.join(entryDirectory, locale, '404');
+      //     static404Pages.add(static404Page);
+      //   }
+      // }
 
       for (const static404Page of static404Pages) {
         let static404File = staticPages[static404Page];
