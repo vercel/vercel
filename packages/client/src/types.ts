@@ -182,6 +182,7 @@ export interface VercelConfig {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
+  /**
    * @experimental This feature is experimental and may change.
    */
   experimentalServices?: ExperimentalServices;
