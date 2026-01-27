@@ -12,7 +12,7 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
-import { getServicesBuilders } from './services';
+import { getServicesBuilders } from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.

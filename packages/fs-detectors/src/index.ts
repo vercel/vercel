@@ -7,13 +7,15 @@ export {
 } from './detect-builders';
 export {
   detectServices,
-  getServicesBuilders,
   generateServicesRoutes,
-  type DetectServicesOptions,
-  type DetectServicesResult,
-  type ResolvedService,
-  type ServicesRoutes,
-} from './services';
+} from './services/detect-services';
+export { getServicesBuilders } from './services/get-services-builders';
+export type {
+  DetectServicesOptions,
+  DetectServicesResult,
+  ResolvedService,
+  ServicesRoutes,
+} from './services/types';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
   detectFramework,
