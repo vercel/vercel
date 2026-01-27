@@ -81,6 +81,7 @@ describe('alias set', () => {
   describe('[deployment url] [custom domain]', () => {
     it('tracks arguments', async () => {
       const user = useUser();
+      useProject();
       const { url } = useDeployment({ creator: user });
       client.scenario.post(
         '/:version/deployments/:id/aliases',
@@ -178,7 +179,7 @@ describe('alias set', () => {
     it('uses regular alias flow when alias target is not a production alias', async () => {
       const user = useUser();
       const productionAlias = 'my-app.vercel.app';
-      const customAlias = 'custom-alias.example.com';
+      const customAlias = 'custom-alias.vercel.app';
       const { project } = useProject({
         ...defaultProject,
         id: 'test-project',
