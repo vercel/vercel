@@ -8,7 +8,6 @@ import type {
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
-import type { Framework } from '@vercel/frameworks';
 
 export type {
   ExperimentalServiceConfig,
@@ -52,8 +51,6 @@ export interface DetectServicesOptions {
    * If provided, vercel.json is read from this path.
    */
   workPath?: string;
-  /** Framework list for auto-detection */
-  frameworkList?: readonly Framework[];
 }
 
 export interface ServicesRoutes {
@@ -65,8 +62,6 @@ export interface ServicesRoutes {
 
 export interface DetectServicesResult {
   services: ResolvedService[];
-  /** How these services were discovered */
-  source: 'configured' | 'detected';
   /** Routing rules derived from services */
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
@@ -83,17 +78,6 @@ export interface ServiceDetectionError {
   code: string;
   message: string;
   serviceName?: string;
-}
-
-export interface DetectedManifest {
-  /** Full path to the manifest file (relative to project root) */
-  path: string;
-  /** Directory containing the manifest */
-  directory: string;
-  /** Runtime associated with this manifest */
-  runtime: ServiceRuntime;
-  /** The manifest filename */
-  file: string;
 }
 
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {

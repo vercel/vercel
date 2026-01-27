@@ -1,11 +1,10 @@
 import type { DetectorFilesystem } from '../detectors/filesystem';
-import {
-  RUNTIME_BUILDERS,
+import type {
   ServiceRuntime,
-  ENTRYPOINT_EXTENSIONS,
   ExperimentalServices,
   ServiceDetectionError,
 } from './types';
+import { RUNTIME_BUILDERS, ENTRYPOINT_EXTENSIONS } from './types';
 
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return RUNTIME_BUILDERS[runtime];

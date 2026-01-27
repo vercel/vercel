@@ -1,10 +1,8 @@
 import type { Route } from '@vercel/routing-utils';
 import type { Builder } from '@vercel/build-utils';
-import type { Framework } from '@vercel/frameworks';
 import type { ResolvedService } from './types';
 import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
-import frameworkList from '@vercel/frameworks';
 
 export interface ErrorResponse {
   code: string;
@@ -15,7 +13,6 @@ export interface ErrorResponse {
 
 export interface GetServicesBuildersOptions {
   workPath?: string;
-  frameworkList?: readonly Framework[];
 }
 
 export interface ServicesBuildersResult {
@@ -39,7 +36,6 @@ export async function getServicesBuilders(
   options: GetServicesBuildersOptions
 ): Promise<ServicesBuildersResult> {
   const { workPath } = options;
-  const frameworks = options.frameworkList || frameworkList;
 
   if (!workPath) {
     return {
@@ -59,10 +55,7 @@ export async function getServicesBuilders(
   }
 
   const fs = new LocalFileSystemDetector(workPath);
-  const result = await detectServices({
-    fs,
-    frameworkList: frameworks,
-  });
+  const result = await detectServices({ fs });
 
   // Transform warnings to ErrorResponse format
   const warningResponses: ErrorResponse[] = result.warnings.map(w => ({
@@ -91,9 +84,9 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'NO_SERVICES_DETECTED',
+          code: 'NO_SERVICES_CONFIGURED',
           message:
-            'No services detected. Please configure `experimentalServices` in vercel.json.',
+            'No services configured. Add `experimentalServices` to vercel.json.',
         },
       ],
       warnings: warningResponses,
