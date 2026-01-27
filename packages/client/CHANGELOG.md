@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.31
+
+### Patch Changes
+
+- Add up to 30 seconds of random skew to APIs returning `Retry-After` headers to prevent thundering herds fighting over a single rate limit token. ([#14737](https://github.com/vercel/vercel/pull/14737))
+
 ## 17.2.30
 
 ### Patch Changes
