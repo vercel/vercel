@@ -26,10 +26,15 @@ export interface ResolvedService {
   /* build config */
   workspace: string;
   entrypoint?: string;
+  /** Framework slug (e.g., "nextjs", "fastapi") */
   framework?: string;
   builder: Builder;
   buildCommand?: string;
   installCommand?: string;
+  /**
+   * Computed effective runtime (e.g., "node", "python").
+   * Only set for serverless function services, not for static builds.
+   */
   runtime?: string;
   /**
    * URL path prefix for routing requests to this service.
@@ -42,6 +47,11 @@ export interface ResolvedService {
   /* Worker service config */
   topic?: string;
   consumer?: string;
+  /**
+   * Whether this service produces static output (SPAs, static sites).
+   * Static services use @vercel/static-build or @vercel/static.
+   */
+  isStaticBuild: boolean;
 }
 
 export interface DetectServicesOptions {
@@ -87,6 +97,15 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
 };
+
+/**
+ * Builders that produce static output (SPAs, static sites).
+ * These don't have a "runtime" - they just build to static files.
+ */
+export const STATIC_BUILDERS = new Set([
+  '@vercel/static-build',
+  '@vercel/static',
+]);
 
 export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
   '.ts': 'node',

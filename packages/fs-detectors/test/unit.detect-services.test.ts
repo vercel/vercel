@@ -1,4 +1,5 @@
 import { detectServices } from '../src';
+import { generateServicesRoutes } from '../src/services/detect-services';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('detectServices', () => {
@@ -276,5 +277,210 @@ describe('detectServices', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('INVALID_VERCEL_JSON');
     });
+  });
+
+  describe('framework with entrypoint', () => {
+    it('should use user entrypoint when both framework and entrypoint are specified', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'express-api': {
+              framework: 'express',
+              entrypoint: 'services/express/app.js',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].builder.src).toBe('services/express/app.js');
+      expect(result.services[0].builder.use).toBe('@vercel/express');
+    });
+
+    it('should use framework default src when entrypoint is not specified', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'nextjs',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].builder.src).toBe('package.json');
+      expect(result.services[0].builder.use).toBe('@vercel/next');
+    });
+
+    it('should use user entrypoint for Python framework', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'fastapi-api': {
+              framework: 'fastapi',
+              entrypoint: 'backend/main.py',
+              routePrefix: '/fastapi',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].builder.src).toBe('backend/main.py');
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+    });
+  });
+});
+
+describe('generateServicesRoutes', () => {
+  it('should generate route with dest pointing to builder.src', () => {
+    const services = [
+      {
+        name: 'api',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/api',
+        entrypoint: 'api/index.ts',
+        builder: { src: 'api/index.ts', use: '@vercel/node' },
+        isStaticBuild: false,
+      },
+    ];
+    const routes = generateServicesRoutes(services);
+
+    expect(routes.rewrites).toHaveLength(1);
+    expect(routes.rewrites[0]).toMatchObject({
+      src: '^/api(?:/.*)?$',
+      dest: '/api/index.ts',
+      check: true,
+    });
+  });
+
+  it('should generate route for root service with dest pointing to builder.src', () => {
+    const services = [
+      {
+        name: 'frontend',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/',
+        entrypoint: 'src/index.ts',
+        builder: { src: 'src/index.ts', use: '@vercel/node' },
+        isStaticBuild: false,
+      },
+    ];
+    const routes = generateServicesRoutes(services);
+
+    expect(routes.defaults).toHaveLength(1);
+    expect(routes.defaults[0]).toMatchObject({
+      src: '^/(.*)$',
+      dest: '/src/index.ts',
+      check: true,
+    });
+  });
+
+  it('should handle multiple services with correct dest paths', () => {
+    const services = [
+      {
+        name: 'express-api',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/express',
+        entrypoint: 'express-api/index.js',
+        builder: { src: 'express-api/index.js', use: '@vercel/node' },
+        isStaticBuild: false,
+      },
+      {
+        name: 'fastapi-api',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/fastapi',
+        entrypoint: 'fastapi-api/main.py',
+        builder: { src: 'fastapi-api/main.py', use: '@vercel/python' },
+        isStaticBuild: false,
+      },
+    ];
+    const routes = generateServicesRoutes(services);
+
+    expect(routes.rewrites).toHaveLength(2);
+    const expressRoute = routes.rewrites.find(
+      r => r.dest === '/express-api/index.js'
+    );
+    const fastapiRoute = routes.rewrites.find(
+      r => r.dest === '/fastapi-api/main.py'
+    );
+
+    expect(expressRoute).toBeDefined();
+    expect(fastapiRoute).toBeDefined();
+  });
+
+  it('should skip worker and cron services in routing', () => {
+    const services = [
+      {
+        name: 'worker',
+        type: 'worker' as const,
+        workspace: '.',
+        routePrefix: '/',
+        entrypoint: 'worker.py',
+        builder: { src: 'worker.py', use: '@vercel/python' },
+        topic: 'tasks',
+        consumer: 'processor',
+        isStaticBuild: false,
+      },
+      {
+        name: 'cron',
+        type: 'cron' as const,
+        workspace: '.',
+        routePrefix: '/',
+        entrypoint: 'cron.ts',
+        builder: { src: 'cron.ts', use: '@vercel/node' },
+        schedule: '0 * * * *',
+        isStaticBuild: false,
+      },
+    ];
+    const routes = generateServicesRoutes(services);
+
+    expect(routes.rewrites).toHaveLength(0);
+    expect(routes.defaults).toHaveLength(0);
+  });
+
+  it('should sort routes by prefix length (longest first)', () => {
+    const services = [
+      {
+        name: 'short',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/api',
+        builder: { src: 'short/index.ts', use: '@vercel/node' },
+        isStaticBuild: false,
+      },
+      {
+        name: 'long',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/api/v1/users',
+        builder: { src: 'long/index.ts', use: '@vercel/node' },
+        isStaticBuild: false,
+      },
+      {
+        name: 'root',
+        type: 'web' as const,
+        workspace: '.',
+        routePrefix: '/',
+        builder: { src: 'root/index.ts', use: '@vercel/node' },
+        isStaticBuild: false,
+      },
+    ];
+    const routes = generateServicesRoutes(services);
+
+    // Longest prefix should come first in rewrites
+    expect(routes.rewrites[0].dest).toBe('/long/index.ts');
+    expect(routes.rewrites[1].dest).toBe('/short/index.ts');
+    // Root should be in defaults, not rewrites
+    expect(routes.defaults[0].dest).toBe('/root/index.ts');
   });
 });

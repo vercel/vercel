@@ -32,10 +32,16 @@ import {
   editProjectSettings,
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
+import {
+  displayDetectedServices,
+  displayServiceErrors,
+  displayServicesConfigNote,
+} from '../input/display-services';
 import type { EmojiLabel } from '../emoji';
 import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
+import { detectProjectServices } from '../projects/detect-services';
 import readConfig from '../config/read-config';
 import { frameworkList } from '@vercel/frameworks';
 import {
@@ -189,24 +195,43 @@ export default async function setupAndLink(
         outputDirectory: localConfig?.outputDirectory,
       };
 
-      // Run the framework detection logic against the local filesystem.
-      const detectedProjectsForWorkspace = await detectProjects(
-        pathWithRootDirectory
-      );
+      // Check for experimental services first (gated by env var)
+      const servicesResult = await detectProjectServices(pathWithRootDirectory);
 
-      // Select the first framework detected, or use
-      // the "Other" preset if none was detected.
-      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
-      const framework =
-        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+      if (servicesResult && servicesResult.services.length > 0) {
+        // Display detected services
+        displayDetectedServices(servicesResult.services);
+        // Display any validation errors (e.g., invalid framework slug)
+        if (servicesResult.errors.length > 0) {
+          displayServiceErrors(servicesResult.errors);
+        }
+        displayServicesConfigNote();
 
-      settings = await editProjectSettings(
-        client,
-        {},
-        framework,
-        autoConfirm,
-        localConfigurationOverrides
-      );
+        // Use the "services" framework preset
+        const servicesFramework = frameworkList.find(
+          f => f.slug === 'services'
+        );
+        settings.framework = servicesFramework?.slug ?? null;
+      } else {
+        // Run the framework detection logic against the local filesystem.
+        const detectedProjectsForWorkspace = await detectProjects(
+          pathWithRootDirectory
+        );
+
+        // Select the first framework detected, or use
+        // the "Other" preset if none was detected.
+        const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+        const framework =
+          detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+
+        settings = await editProjectSettings(
+          client,
+          {},
+          framework,
+          autoConfirm,
+          localConfigurationOverrides
+        );
+      }
     }
 
     // Support for changing additional, less frequently used project settings.

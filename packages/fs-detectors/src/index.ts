@@ -9,6 +9,7 @@ export {
   detectServices,
   getServicesBuilders,
   generateServicesRoutes,
+  inferRuntimeFromExtension,
   type DetectServicesOptions,
   type DetectServicesResult,
   type ResolvedService,

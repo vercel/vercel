@@ -5,9 +5,35 @@ import type {
   ServiceDetectionError,
 } from './types';
 import { RUNTIME_BUILDERS, ENTRYPOINT_EXTENSIONS } from './types';
+import { isBackendFramework, isPythonFramework } from '@vercel/build-utils';
 
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return RUNTIME_BUILDERS[runtime];
+}
+
+/**
+ * Infer runtime from builder and/or framework.
+ * - Backend frameworks (express, hono) → "node"
+ * - Python frameworks (fastapi, flask) → "python"
+ * - Known runtime builders (@vercel/python, @vercel/ruby, etc.) → that runtime
+ */
+export function inferRuntime(
+  framework: string | undefined,
+  builder: string | undefined
+): ServiceRuntime | undefined {
+  if (isBackendFramework(framework)) {
+    return 'node';
+  }
+  if (isPythonFramework(framework)) {
+    return 'python';
+  }
+  for (const [runtime, builderName] of Object.entries(RUNTIME_BUILDERS)) {
+    if (builder === builderName) {
+      return runtime as ServiceRuntime;
+    }
+  }
+
+  return undefined;
 }
 
 export function inferRuntimeFromExtension(
