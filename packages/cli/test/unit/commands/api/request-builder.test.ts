@@ -306,6 +306,16 @@ describe('request-builder', () => {
       expect(result).not.toContain('-X');
     });
 
+    it('includes Authorization header with placeholder', () => {
+      const config: RequestConfig = {
+        url: '/v2/user',
+        method: 'GET',
+        headers: {},
+      };
+      const result = generateCurlCommand(config, baseUrl);
+      expect(result).toContain("-H 'Authorization: Bearer <TOKEN>'");
+    });
+
     it('joins parts with line continuation', () => {
       const config: RequestConfig = {
         url: '/api',
