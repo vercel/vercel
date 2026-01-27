@@ -407,9 +407,7 @@ function isProductionAlias(project: Project, alias: string): boolean {
     return false;
   }
   const normalizedAlias = toHost(alias);
-  return productionAliases.some(
-    prodAlias => prodAlias === normalizedAlias || prodAlias.endsWith(normalizedAlias)
-  );
+  return productionAliases.includes(normalizedAlias);
 }
 
 async function tryPromoteForProductionAlias(
