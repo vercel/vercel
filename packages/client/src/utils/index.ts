@@ -180,7 +180,7 @@ export async function buildFileTree(
           rootDirectory || '',
           bulkRedirectsPath
         );
-        
+
         // Validate that the resolved path stays within the project root
         const relativeFromRoot = relative(projectRoot, bulkRedirectsFullPath);
         if (relativeFromRoot.startsWith('..')) {
