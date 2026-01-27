@@ -6,8 +6,7 @@ import type {
   ServiceDetectionError,
 } from './types';
 import { ENTRYPOINT_EXTENSIONS, RUNTIME_BUILDERS } from './types';
-import { getBuilderForRuntime, inferRuntimeFromExtension } from './utils';
-import type { ServiceRuntime } from '@vercel/build-utils';
+import { getBuilderForRuntime, inferServiceRuntime } from './utils';
 import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
@@ -85,7 +84,7 @@ export function validateServiceConfig(
     };
   }
   if (hasEntrypoint && !hasBuilderOrRuntime && !hasFramework) {
-    const runtime = inferRuntimeFromExtension(config.entrypoint!);
+    const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
@@ -113,6 +112,8 @@ export function resolveConfiguredService(
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
+  const inferredRuntime = inferServiceRuntime(config);
+
   let builderUse: string;
   let builderSrc: string;
 
@@ -125,13 +126,8 @@ export function resolveConfiguredService(
   } else if (config.builder) {
     builderUse = config.builder;
     builderSrc = config.entrypoint!;
-  } else if (config.runtime) {
-    const runtime = config.runtime as ServiceRuntime;
-    builderUse = RUNTIME_BUILDERS[runtime];
-    builderSrc = config.entrypoint!;
   } else {
-    const runtime = inferRuntimeFromExtension(config.entrypoint!);
-    builderUse = getBuilderForRuntime(runtime!);
+    builderUse = getBuilderForRuntime(inferredRuntime!);
     builderSrc = config.entrypoint!;
   }
 
@@ -163,7 +159,7 @@ export function resolveConfiguredService(
       use: builderUse,
       config: Object.keys(builderConfig).length > 0 ? builderConfig : undefined,
     },
-    runtime: config.runtime,
+    runtime: inferredRuntime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
