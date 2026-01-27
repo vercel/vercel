@@ -1,13 +1,15 @@
-import { describe, it, beforeEach, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
+import * as ls from '../../../../src/commands/flags/ls';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
-import { useFlags } from '../../../mocks/flags';
 
 describe('flags', () => {
+  const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
+
+  afterEach(() => {
+    lsSpy.mockClear();
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'flags';
@@ -25,32 +27,21 @@ describe('flags', () => {
     });
   });
 
-  it('errors when invoked without subcommand', async () => {
-    client.setArgv('flags');
-    const exitCodePromise = flags(client);
-    await expect(exitCodePromise).resolves.toBe(2);
+  it('routes to ls subcommand', async () => {
+    const args: string[] = [];
+
+    client.setArgv('flags', ...args);
+    await flags(client);
+    expect(lsSpy).toHaveBeenCalledWith(client, args);
   });
 
   describe('unrecognized subcommand', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'vercel-flags-test',
-        name: 'vercel-flags-test',
-      });
-      useFlags();
-      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
-      client.cwd = cwd;
-    });
-
-    it('shows help', async () => {
+    it('routes to ls', async () => {
       const args: string[] = ['not-a-command'];
 
       client.setArgv('flags', ...args);
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(2);
+      await flags(client);
+      expect(lsSpy).toHaveBeenCalledWith(client, args);
     });
   });
 });
