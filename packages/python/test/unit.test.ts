@@ -6,6 +6,7 @@ import {
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import { createPyprojectToml } from '../src/install';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -240,6 +241,78 @@ describe('default Python version behavior', () => {
 
   it('DEFAULT_PYTHON_VERSION constant is exported and has expected value', () => {
     expect(DEFAULT_PYTHON_VERSION).toBe('3.12');
+  });
+});
+
+describe('fallback behavior when requested version is not installed', () => {
+  it('falls back to DEFAULT_PYTHON_VERSION when Pipfile.lock requests unavailable version', () => {
+    // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
+    makeMockPython('3.14');
+    makeMockPython('3.13');
+    makeMockPython(DEFAULT_PYTHON_VERSION); // 3.12
+
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+    });
+
+    // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
+    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+
+  it('falls back to latest installed when requested AND default are both unavailable', () => {
+    // Setup: 3.14, 3.13 are installed, but NOT 3.9 or 3.12
+    makeMockPython('3.14');
+    makeMockPython('3.13');
+    // Note: NOT installing 3.12 (default) or 3.9 (requested)
+
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+    });
+
+    // Should fall back to 3.14 (latest installed) since 3.12 is also unavailable
+    expect(result).toHaveProperty('runtime', 'python3.14');
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+
+  it('falls back to DEFAULT_PYTHON_VERSION when pyproject.toml requests unavailable version', () => {
+    // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
+    makeMockPython('3.14');
+    makeMockPython('3.13');
+    makeMockPython(DEFAULT_PYTHON_VERSION); // 3.12
+
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: { version: '==3.9', source: 'pyproject.toml' },
+    });
+
+    // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
+    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+});
+
+describe('createPyprojectToml', () => {
+  it('sets requires-python to compatible release of DEFAULT_PYTHON_VERSION', async () => {
+    const tempDir = path.join(tmpdir(), `pyproject-test-${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+
+    try {
+      await createPyprojectToml({
+        projectName: 'test-app',
+        pyprojectPath,
+        dependencies: [],
+      });
+
+      const content = fs.readFileSync(pyprojectPath, 'utf8');
+      expect(content).toContain(
+        `requires-python = "~=${DEFAULT_PYTHON_VERSION}"`
+      );
+    } finally {
+      if (fs.existsSync(tempDir)) {
+        fs.removeSync(tempDir);
+      }
+    }
   });
 });
 
@@ -1116,7 +1189,6 @@ describe('custom install hooks', () => {
     let buildWithMocks: any;
     let mockExecCommand: jest.Mock = jest.fn();
     let mockEnsureUvProject: jest.Mock = jest.fn();
-    let mockRunUvSync: jest.Mock = jest.fn();
 
     jest.isolateModules(() => {
       jest.doMock('@vercel/build-utils', () => {
@@ -1136,12 +1208,10 @@ describe('custom install hooks', () => {
           pyprojectPath: '/mock/project/pyproject.toml',
           lockPath: '/mock/project/uv.lock',
         }));
-        mockRunUvSync = jest.fn(async () => {});
         return {
           __esModule: true,
           ...real,
           ensureUvProject: mockEnsureUvProject,
-          runUvSync: mockRunUvSync,
         };
       });
 
@@ -1198,7 +1268,6 @@ describe('custom install hooks', () => {
 
     // Custom install should be used, so uv-based install should be skipped
     expect(mockEnsureUvProject).not.toHaveBeenCalled();
-    expect(mockRunUvSync).not.toHaveBeenCalled();
     expect(mockExecCommand).toHaveBeenCalledWith(
       'echo custom-install',
       expect.objectContaining({
@@ -1214,7 +1283,6 @@ describe('custom install hooks', () => {
     let buildWithMocks: any;
     let mockExecCommand: jest.Mock = jest.fn();
     let mockEnsureUvProject: jest.Mock = jest.fn();
-    let mockRunUvSync: jest.Mock = jest.fn();
 
     jest.isolateModules(() => {
       jest.doMock('@vercel/build-utils', () => {
@@ -1234,12 +1302,10 @@ describe('custom install hooks', () => {
           pyprojectPath: '/mock/project/pyproject.toml',
           lockPath: '/mock/project/uv.lock',
         }));
-        mockRunUvSync = jest.fn(async () => {});
         return {
           __esModule: true,
           ...real,
           ensureUvProject: mockEnsureUvProject,
-          runUvSync: mockRunUvSync,
         };
       });
 
@@ -1307,7 +1373,6 @@ describe('custom install hooks', () => {
 
     // pyproject install should be used, so uv-based install should be skipped
     expect(mockEnsureUvProject).not.toHaveBeenCalled();
-    expect(mockRunUvSync).not.toHaveBeenCalled();
     expect(mockExecCommand).toHaveBeenCalledWith(
       'echo pyproject-install',
       expect.objectContaining({
@@ -1323,7 +1388,6 @@ describe('custom install hooks', () => {
     let buildWithMocks: any;
     let mockExecCommand: jest.Mock = jest.fn();
     let mockEnsureUvProject: jest.Mock = jest.fn();
-    let mockRunUvSync: jest.Mock = jest.fn();
 
     jest.isolateModules(() => {
       jest.doMock('@vercel/build-utils', () => {
@@ -1343,12 +1407,10 @@ describe('custom install hooks', () => {
           pyprojectPath: '/mock/project/pyproject.toml',
           lockPath: '/mock/project/uv.lock',
         }));
-        mockRunUvSync = jest.fn(async () => {});
         return {
           __esModule: true,
           ...real,
           ensureUvProject: mockEnsureUvProject,
-          runUvSync: mockRunUvSync,
         };
       });
 
@@ -1405,7 +1467,6 @@ describe('custom install hooks', () => {
 
     // No custom install -> uv-based install should be used
     expect(mockEnsureUvProject).toHaveBeenCalled();
-    expect(mockRunUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
   });

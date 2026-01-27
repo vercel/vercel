@@ -13,6 +13,7 @@ import {
 } from '@vercel/build-utils';
 import { getVenvPythonBin, findDir } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
+import { DEFAULT_PYTHON_VERSION } from './version';
 
 const isWin = process.platform === 'win32';
 
@@ -209,7 +210,7 @@ export async function createPyprojectToml({
   pyprojectPath: string;
   dependencies: string[];
 }) {
-  const requiresPython = '>=3.12';
+  const requiresPython = `~=${DEFAULT_PYTHON_VERSION}`;
 
   const depsToml =
     dependencies.length > 0
