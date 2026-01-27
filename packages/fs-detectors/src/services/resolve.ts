@@ -172,6 +172,7 @@ export function resolveConfiguredService(
     schedule: config.schedule,
     topic,
     consumer,
+    isStaticBuild,
   };
 }
 
