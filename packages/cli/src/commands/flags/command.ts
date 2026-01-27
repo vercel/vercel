@@ -5,12 +5,8 @@ export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description: 'List all feature flags for the current project',
-  arguments: [
-    {
-      name: 'flag',
-      required: false,
-    },
-  ],
+  default: true,
+  arguments: [],
   options: [
     {
       name: 'state',
@@ -30,9 +26,24 @@ export const listSubcommand = {
       name: 'List archived flags',
       value: `${packageName} flags ls --state archived`,
     },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Display information about a feature flag',
+  arguments: [
     {
-      name: 'Show details of a specific flag',
-      value: `${packageName} flags ls my-feature-flag`,
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Show details of a feature flag',
+      value: `${packageName} flags inspect my-feature-flag`,
     },
   ],
 } as const;
@@ -307,6 +318,7 @@ export const flagsCommand = {
   arguments: [],
   subcommands: [
     listSubcommand,
+    inspectSubcommand,
     addSubcommand,
     removeSubcommand,
     archiveSubcommand,

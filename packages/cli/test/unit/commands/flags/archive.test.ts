@@ -70,4 +70,25 @@ describe('flags archive', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
   });
+
+  it('errors when flag is not found', async () => {
+    client.setArgv('flags', 'archive', 'nonexistent-flag', '--yes');
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain('Flag not found');
+  });
+
+  it('warns when flag is already archived', async () => {
+    // Set flag to archived (mock uses defaultFlags reference)
+    const originalState = defaultFlags[0].state;
+    defaultFlags[0].state = 'archived';
+
+    client.setArgv('flags', 'archive', defaultFlags[0].slug, '--yes');
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain('already archived');
+
+    // Restore original state for other tests
+    defaultFlags[0].state = originalState;
+  });
 });

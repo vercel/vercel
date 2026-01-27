@@ -1,6 +1,5 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import { printError } from '../../util/error';
@@ -9,6 +8,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
+import inspect from './inspect';
 import add from './add';
 import rm from './rm';
 import archive from './archive';
@@ -18,6 +18,7 @@ import { sdkKeys } from './sdk-keys';
 import {
   flagsCommand,
   listSubcommand,
+  inspectSubcommand,
   addSubcommand,
   removeSubcommand,
   archiveSubcommand,
@@ -28,6 +29,7 @@ import {
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
@@ -83,6 +85,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(inspectSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -127,8 +137,12 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandSdkKeys(subcommandOriginal);
       return sdkKeys(client);
     default:
-      output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(flagsCommand, { columns: client.stderr.columns }));
-      return 2;
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(listSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return ls(client, args);
   }
 }

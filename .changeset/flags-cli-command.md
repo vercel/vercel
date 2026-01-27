@@ -2,12 +2,13 @@
 'vercel': minor
 ---
 
-Add `vercel flags` command to manage feature flags from the CLI. This includes subcommands for listing, creating, deleting, archiving, enabling, and disabling feature flags, as well as managing SDK keys for flag evaluation.
+Add `vercel flags` command to manage feature flags from the CLI. This includes subcommands for listing, inspecting, creating, deleting, archiving, enabling, and disabling feature flags, as well as managing SDK keys for flag evaluation.
 
 New commands:
-- `vercel flags ls [flag]` - List all flags or show details of a specific flag
+- `vercel flags ls` - List all feature flags
+- `vercel flags inspect <flag>` - Display detailed information about a feature flag, including its variants
 - `vercel flags add <slug>` - Create a new feature flag
-- `vercel flags rm <flag>` - Delete a feature flag (permanent)
+- `vercel flags rm <flag>` - Delete a feature flag (must be archived first)
 - `vercel flags archive <flag>` - Archive a feature flag
 - `vercel flags disable <flag>` - Disable a flag in an environment
 - `vercel flags enable <flag>` - Enable a flag in an environment

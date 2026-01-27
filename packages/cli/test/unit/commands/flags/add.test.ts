@@ -124,4 +124,11 @@ describe('flags add', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
   });
+
+  it('errors with invalid kind', async () => {
+    client.setArgv('flags', 'add', 'new-feature', '--kind', 'invalid');
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain('Invalid kind');
+  });
 });

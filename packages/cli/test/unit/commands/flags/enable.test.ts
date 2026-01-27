@@ -174,4 +174,20 @@ describe('flags enable', () => {
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('Invalid environment');
   });
+
+  it('errors when flag is archived', async () => {
+    // Set flag to archived (mock uses testFlags reference)
+    testFlags[0].state = 'archived';
+
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain('archived');
+  });
 });

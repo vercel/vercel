@@ -64,6 +64,14 @@ export default async function rm(
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
+    // Flag must be archived before it can be deleted
+    if (flag.state !== 'archived') {
+      output.error(
+        `Flag ${chalk.bold(flag.slug)} must be archived before it can be deleted. Run ${getCommandName(`flags archive ${flag.slug}`)} first.`
+      );
+      return 1;
+    }
+
     // Confirm deletion
     if (!skipConfirmation) {
       const confirmed = await client.input.confirm(

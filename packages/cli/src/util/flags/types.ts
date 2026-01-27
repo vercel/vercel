@@ -136,3 +136,29 @@ export interface CreateSdkKeyRequest {
   environment: string;
   label?: string;
 }
+
+// Flag Settings types
+export interface FlagSettingsAttributeLabel {
+  value: string;
+  label: string;
+}
+
+export interface FlagSettingsAttribute {
+  key: string;
+  type: string;
+  labels?: FlagSettingsAttributeLabel[];
+}
+
+export interface FlagSettingsEntity {
+  kind: string;
+  label: string;
+  attributes: FlagSettingsAttribute[];
+}
+
+export interface FlagSettings {
+  typeName: 'settings';
+  projectId: string;
+  enabled: boolean;
+  environments: string[];
+  entities: FlagSettingsEntity[];
+}

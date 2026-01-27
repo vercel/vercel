@@ -117,6 +117,36 @@ describe('flags sdk-keys', () => {
       const exitCode = await flags(client);
       expect(exitCode).toEqual(0);
     });
+
+    it('errors with invalid type', async () => {
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'add',
+        '--type',
+        'invalid',
+        '--environment',
+        'production'
+      );
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain('Invalid type');
+    });
+
+    it('errors with invalid environment', async () => {
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'add',
+        '--type',
+        'server',
+        '--environment',
+        'invalid'
+      );
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain('Invalid environment');
+    });
   });
 
   describe('rm', () => {
@@ -160,6 +190,13 @@ describe('flags sdk-keys', () => {
       );
       const exitCode = await flags(client);
       expect(exitCode).toEqual(0);
+    });
+
+    it('errors when SDK key is not found', async () => {
+      client.setArgv('flags', 'sdk-keys', 'rm', 'nonexistent-key', '--yes');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain('SDK key not found');
     });
   });
 });

@@ -6,7 +6,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
-import { getFlags, getFlag } from '../../util/flags/get-flags';
+import { getFlags } from '../../util/flags/get-flags';
 import formatTable from '../../util/format-table';
 import output from '../../output-manager';
 import { FlagsLsTelemetryClient } from '../../util/telemetry/commands/flags/ls';
@@ -14,10 +14,7 @@ import { listSubcommand } from './command';
 import type { Flag } from '../../util/flags/types';
 import { formatProject } from '../../util/projects/format-project';
 
-export default async function ls(
-  client: Client,
-  argv: string[]
-): Promise<number> {
+export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new FlagsLsTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -33,11 +30,9 @@ export default async function ls(
     return 1;
   }
 
-  const { args, flags } = parsedArgs;
-  const [flagArg] = args;
+  const { flags } = parsedArgs;
   const state = (flags['--state'] as 'active' | 'archived') || 'active';
 
-  telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionState(state);
 
   const link = await getLinkedProject(client);
@@ -57,21 +52,14 @@ export default async function ls(
   const projectSlugLink = formatProject(org.slug, project.name);
 
   try {
-    if (flagArg) {
-      // Show details of a specific flag
-      const flag = await getFlag(client, project.id, flagArg);
-      printFlagDetails(flag, projectSlugLink);
+    const flagsList = await getFlags(client, project.id, state);
+    if (flagsList.length === 0) {
+      output.log(`No ${state} feature flags found for ${projectSlugLink}`);
     } else {
-      // List all flags
-      const flagsList = await getFlags(client, project.id, state);
-      if (flagsList.length === 0) {
-        output.log(`No ${state} feature flags found for ${projectSlugLink}`);
-      } else {
-        output.log(
-          `${chalk.bold(flagsList.length)} feature flag${flagsList.length === 1 ? '' : 's'} found for ${projectSlugLink}`
-        );
-        printFlagsTable(flagsList);
-      }
+      output.log(
+        `${chalk.bold(flagsList.length)} feature flag${flagsList.length === 1 ? '' : 's'} found for ${projectSlugLink}`
+      );
+      printFlagsTable(flagsList);
     }
   } catch (err) {
     printError(err);
@@ -99,76 +87,4 @@ function printFlagsTable(flags: Flag[]) {
     [{ name: '', rows }]
   );
   output.print(`\n${table}\n`);
-}
-
-function printFlagDetails(flag: Flag, projectSlugLink: string) {
-  output.log(
-    `\nFeature flag ${chalk.bold(flag.slug)} for ${projectSlugLink}\n`
-  );
-
-  output.print(`  ${chalk.dim('ID:')}           ${flag.id}\n`);
-  output.print(`  ${chalk.dim('Kind:')}         ${flag.kind}\n`);
-  output.print(
-    `  ${chalk.dim('State:')}        ${flag.state === 'active' ? chalk.green(flag.state) : chalk.gray(flag.state)}\n`
-  );
-
-  if (flag.description) {
-    output.print(`  ${chalk.dim('Description:')}  ${flag.description}\n`);
-  }
-
-  output.print(
-    `  ${chalk.dim('Created:')}      ${ms(Date.now() - flag.createdAt)} ago\n`
-  );
-  output.print(
-    `  ${chalk.dim('Updated:')}      ${ms(Date.now() - flag.updatedAt)} ago\n`
-  );
-
-  // Print variants
-  output.print(`\n  ${chalk.dim('Variants:')}\n`);
-  for (const variant of flag.variants) {
-    const label = variant.label ? ` (${variant.label})` : '';
-    output.print(
-      `    ${chalk.cyan(variant.id)}${label}: ${chalk.yellow(JSON.stringify(variant.value))}\n`
-    );
-  }
-
-  // Print environment configurations
-  output.print(`\n  ${chalk.dim('Environments:')}\n`);
-  for (const [envName, envConfig] of Object.entries(flag.environments)) {
-    const status = envConfig.active
-      ? chalk.green('active')
-      : chalk.yellow('paused');
-    output.print(`    ${chalk.bold(envName)}: ${status}\n`);
-
-    if (envConfig.reuse?.active) {
-      output.print(
-        `      ${chalk.dim('Reuses:')} ${envConfig.reuse.environment}\n`
-      );
-    }
-
-    if (envConfig.pausedOutcome) {
-      output.print(
-        `      ${chalk.dim('Paused variant:')} ${envConfig.pausedOutcome.variantId}\n`
-      );
-    }
-
-    if (envConfig.fallthrough) {
-      if (envConfig.fallthrough.type === 'variant') {
-        output.print(
-          `      ${chalk.dim('Default:')} ${envConfig.fallthrough.variantId}\n`
-        );
-      } else if (envConfig.fallthrough.type === 'split') {
-        const weights = Object.entries(envConfig.fallthrough.weights)
-          .map(([id, weight]) => `${id}: ${weight}%`)
-          .join(', ');
-        output.print(`      ${chalk.dim('Split:')} ${weights}\n`);
-      }
-    }
-
-    if (envConfig.rules && envConfig.rules.length > 0) {
-      output.print(`      ${chalk.dim('Rules:')} ${envConfig.rules.length}\n`);
-    }
-  }
-
-  output.print('\n');
 }

@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Flag, FlagsListResponse } from './types';
+import type { Flag, FlagsListResponse, FlagSettings } from './types';
 import output from '../../output-manager';
 
 export async function getFlags(
@@ -26,6 +26,18 @@ export async function getFlag(
 
   const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/flags/${encodeURIComponent(flagIdOrSlug)}`;
   const response = await client.fetch<Flag>(url);
+
+  return response;
+}
+
+export async function getFlagSettings(
+  client: Client,
+  projectId: string
+): Promise<FlagSettings> {
+  output.debug(`Fetching feature flag settings for project ${projectId}`);
+
+  const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/settings`;
+  const response = await client.fetch<FlagSettings>(url);
 
   return response;
 }

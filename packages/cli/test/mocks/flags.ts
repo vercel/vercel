@@ -1,5 +1,32 @@
 import { client } from './client';
-import type { Flag, SdkKey } from '../../src/util/flags/types';
+import type { Flag, SdkKey, FlagSettings } from '../../src/util/flags/types';
+
+export const defaultFlagSettings: FlagSettings = {
+  typeName: 'settings',
+  projectId: 'vercel-flags-test',
+  enabled: true,
+  environments: ['production', 'preview', 'development'],
+  entities: [
+    {
+      kind: 'user',
+      label: 'User',
+      attributes: [
+        {
+          key: 'plan',
+          type: 'string',
+          labels: [
+            { value: 'pro', label: 'Pro Plan' },
+            { value: 'enterprise', label: 'Enterprise Plan' },
+          ],
+        },
+        {
+          key: 'userId',
+          type: 'string',
+        },
+      ],
+    },
+  ],
+};
 
 export const defaultFlags: Flag[] = [
   {
@@ -17,7 +44,33 @@ export const defaultFlags: Flag[] = [
         active: true,
         fallthrough: { type: 'variant', variantId: 'off' },
         pausedOutcome: { type: 'variant', variantId: 'off' },
-        rules: [],
+        rules: [
+          {
+            id: 'rule_1',
+            conditions: [
+              {
+                lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+                cmp: 'eq',
+                rhs: 'pro',
+              },
+            ],
+            outcome: { type: 'variant', variantId: 'on' },
+          },
+          {
+            id: 'rule_2',
+            conditions: [
+              {
+                lhs: { type: 'entity', kind: 'user', attribute: 'userId' },
+                cmp: 'in',
+                rhs: {
+                  type: 'list',
+                  items: [{ value: 'user_001' }, { value: 'user_002' }],
+                },
+              },
+            ],
+            outcome: { type: 'variant', variantId: 'on' },
+          },
+        ],
       },
       preview: {
         active: true,
@@ -106,8 +159,17 @@ export const defaultSdkKeys: SdkKey[] = [
 
 export function useFlags(
   flagsList: Flag[] = defaultFlags,
-  sdkKeysList: SdkKey[] = defaultSdkKeys
+  sdkKeysList: SdkKey[] = defaultSdkKeys,
+  settings: FlagSettings = defaultFlagSettings
 ) {
+  // Get flag settings
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/settings',
+    (_req, res) => {
+      res.json(settings);
+    }
+  );
+
   // List flags
   client.scenario.get(
     '/v1/projects/:projectId/feature-flags/flags',
