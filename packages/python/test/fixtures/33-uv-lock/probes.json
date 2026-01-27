@@ -2,7 +2,7 @@
   "probes": [
     {
       "path": "/api/version",
-      "mustContain": "\"fastapi_version\":\"0.116.2\""
+      "mustContain": "\"fastapi_version\":\"0.128.0\""
     },
     {
       "path": "/api/dev-dependencies",
