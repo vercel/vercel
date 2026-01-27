@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import jsonlines from 'jsonlines';
+import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
