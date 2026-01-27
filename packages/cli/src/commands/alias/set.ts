@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import type { SetDifference } from 'utility-types';
 import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
+import { ProjectNotFound } from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import type Client from '../../util/client';
 import getDeployment from '../../util/get-deployment';
@@ -21,8 +22,10 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { listSubcommand } from './command';
-import type { Domain } from '@vercel-internals/types';
+import type { Domain, Project, Deployment } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import requestPromote from '../promote/request-promote';
 
 export default async function set(client: Client, argv: string[]) {
   let parsedArguments;
@@ -120,6 +123,15 @@ export default async function set(client: Client, argv: string[]) {
     }
 
     for (const target of targets) {
+      const promoteResult = await tryPromoteForProductionAlias(
+        client,
+        deployment,
+        target
+      );
+      if (promoteResult !== null) {
+        return promoteResult;
+      }
+
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
       const record = await assignAlias(client, deployment, target, contextName);
@@ -158,6 +170,15 @@ export default async function set(client: Client, argv: string[]) {
       `Couldn't find a deployment to alias. Please provide one as an argument.`
     );
     return 1;
+  }
+
+  const promoteResult = await tryPromoteForProductionAlias(
+    client,
+    deployment,
+    aliasTarget
+  );
+  if (promoteResult !== null) {
+    return promoteResult;
   }
 
   output.log(`Assigning alias ${aliasTarget} to deployment ${deployment.url}`);
@@ -378,4 +399,45 @@ function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
   }
 
   return typeof alias === 'string' ? [alias] : alias;
+}
+
+function isProductionAlias(project: Project, alias: string): boolean {
+  const productionAliases = project.targets?.production?.alias;
+  if (!productionAliases || productionAliases.length === 0) {
+    return false;
+  }
+  const normalizedAlias = toHost(alias);
+  return productionAliases.some(
+    prodAlias => prodAlias === normalizedAlias || prodAlias.endsWith(normalizedAlias)
+  );
+}
+
+async function tryPromoteForProductionAlias(
+  client: Client,
+  deployment: Deployment,
+  aliasTarget: string
+): Promise<number | null> {
+  if (!deployment.projectId) {
+    return null;
+  }
+
+  const project = await getProjectByNameOrId(client, deployment.projectId);
+  if (project instanceof ProjectNotFound) {
+    return null;
+  }
+
+  if (!isProductionAlias(project, aliasTarget)) {
+    return null;
+  }
+
+  output.log(
+    `Alias ${chalk.bold(aliasTarget)} is a production alias. Using promote flow.`
+  );
+
+  return requestPromote({
+    client,
+    deployId: deployment.id,
+    timeout: undefined,
+    yes: true,
+  });
 }
