@@ -26,7 +26,15 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (config.type === 'cron' && !config.schedule) {
+  const serviceType = config.type || 'web';
+  if (serviceType === 'web' && !config.routePrefix) {
+    return {
+      code: 'MISSING_ROUTE_PREFIX',
+      message: `Web service "${name}" must specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
+  if (serviceType === 'cron' && !config.schedule) {
     return {
       code: 'MISSING_CRON_SCHEDULE',
       message: `Cron service "${name}" is missing required "schedule" field.`,
@@ -76,16 +84,6 @@ export function validateServiceConfig(
         serviceName: name,
       };
     }
-  }
-
-  // Web services must have routePrefix
-  const serviceType = config.type || 'web';
-  if (serviceType === 'web' && !config.routePrefix) {
-    return {
-      code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify "routePrefix".`,
-      serviceName: name,
-    };
   }
 
   return null;
