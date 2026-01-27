@@ -14,6 +14,13 @@ import {
 } from './request-builder';
 import { OpenApiCache } from './openapi-cache';
 import { API_BASE_URL } from './constants';
+import {
+  colorizeMethod,
+  colorizeMethodPadded,
+  formatPathParam,
+  formatTypeHint,
+  formatDescription,
+} from './format-utils';
 import output from '../../output-manager';
 import type {
   ParsedFlags,
@@ -388,7 +395,7 @@ async function promptForEndpoint(
   endpoints: EndpointInfo[]
 ): Promise<EndpointInfo> {
   const allChoices = endpoints.map(ep => ({
-    name: `${ep.method.padEnd(7)} ${ep.path}`,
+    name: `${colorizeMethodPadded(ep.method)} ${ep.path}`,
     value: ep,
     // Show full description if available, otherwise show summary
     description: ep.description || ep.summary || undefined,
@@ -463,26 +470,6 @@ function outputEndpointsAsJson(
 }
 
 /**
- * Colorize HTTP method for terminal output
- */
-function colorizeMethod(method: string): string {
-  switch (method) {
-    case 'GET':
-      return chalk.cyan(method);
-    case 'POST':
-      return chalk.green(method);
-    case 'PUT':
-      return chalk.yellow(method);
-    case 'PATCH':
-      return chalk.blue(method);
-    case 'DELETE':
-      return chalk.red(method);
-    default:
-      return method;
-  }
-}
-
-/**
  * Group endpoints by path
  */
 interface GroupedEndpoint {
@@ -553,13 +540,6 @@ function createRequiredValidator(fieldName: string) {
 }
 
 /**
- * Format description hint for prompt messages
- */
-function formatDescription(description?: string): string {
-  return description ? ` (${description})` : '';
-}
-
-/**
  * Build URL query string from params object
  */
 function buildQueryString(params: Record<string, string>): string {
@@ -594,7 +574,7 @@ async function promptForParameters(
   let finalPath = path;
   for (const param of pathParams) {
     const value = await client.input.text({
-      message: `Enter value for {${param.name}}${formatDescription(param.description)}:`,
+      message: `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`,
       validate: createRequiredValidator(param.name),
     });
     finalPath = finalPath.replace(`{${param.name}}`, encodeURIComponent(value));
@@ -604,7 +584,7 @@ async function promptForParameters(
   const queryValues: Record<string, string> = {};
   for (const param of requiredQueryParams) {
     queryValues[param.name] = await client.input.text({
-      message: `Enter value for ${param.name}${formatDescription(param.description)}:`,
+      message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
       validate: createRequiredValidator(param.name),
     });
   }
@@ -615,7 +595,7 @@ async function promptForParameters(
       message: 'Select optional query parameters to include:',
       pageSize: 20,
       choices: optionalQueryParams.map(p => ({
-        name: `${p.name}${formatDescription(p.description)}`,
+        name: `${chalk.cyan(p.name)}${formatDescription(p.description)}`,
         value: p.name,
       })),
     });
@@ -624,7 +604,7 @@ async function promptForParameters(
     for (const paramName of selectedOptionalParams) {
       const param = optionalQueryParams.find(p => p.name === paramName)!;
       queryValues[param.name] = await client.input.text({
-        message: `Enter value for ${param.name}${formatDescription(param.description)}:`,
+        message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
         validate: createRequiredValidator(param.name),
       });
     }
@@ -643,7 +623,7 @@ async function promptForParameters(
       message: 'Select optional body fields to include:',
       pageSize: 20,
       choices: optionalBodyFields.map(f => ({
-        name: `${f.name}${f.type ? ` [${f.type}]` : ''}${formatDescription(f.description)}`,
+        name: `${chalk.cyan(f.name)}${f.type ? ` ${formatTypeHint(f.type)}` : ''}${formatDescription(f.description)}`,
         value: f.name,
       })),
     });
@@ -674,7 +654,7 @@ async function promptForBodyField(
   required: boolean
 ): Promise<string> {
   const description = formatDescription(field.description);
-  const optionalHint = required ? '' : ' (optional)';
+  const optionalHint = required ? '' : chalk.dim(' (optional)');
 
   // Use select for enum fields
   if (field.enumValues && field.enumValues.length > 0) {
@@ -685,19 +665,19 @@ async function promptForBodyField(
 
     // Add empty option for optional enum fields
     if (!required) {
-      choices.unshift({ name: '(skip)', value: '' });
+      choices.unshift({ name: chalk.dim('(skip)'), value: '' });
     }
 
     return client.input.select({
-      message: `Select value for ${field.name}${optionalHint}${description}:`,
+      message: `Select value for ${chalk.cyan(field.name)}${optionalHint}${description}:`,
       choices,
     });
   }
 
   // Use text input for other fields
-  const typeHint = field.type ? ` [${field.type}]` : '';
+  const typeHint = field.type ? ` ${formatTypeHint(field.type)}` : '';
   return client.input.text({
-    message: `Enter value for ${field.name}${optionalHint}${typeHint}${description}:`,
+    message: `Enter value for ${chalk.cyan(field.name)}${optionalHint}${typeHint}${description}:`,
     validate: required ? createRequiredValidator(field.name) : undefined,
   });
 }

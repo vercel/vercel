@@ -1,5 +1,21 @@
 # vercel
 
+## 50.7.0
+
+### Minor Changes
+
+- Add improved styling to vercel api interactive mode ([#14746](https://github.com/vercel/vercel/pull/14746))
+
+### Patch Changes
+
+- Update styling for beta commands ([#14750](https://github.com/vercel/vercel/pull/14750))
+
+## 50.6.2
+
+### Patch Changes
+
+- Add positional deployment argument to logsv2 command for backwards-compatible logs replacement ([#14717](https://github.com/vercel/vercel/pull/14717))
+
 ## 50.6.1
 
 ### Patch Changes
