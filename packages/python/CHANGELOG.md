@@ -1,5 +1,29 @@
 # @vercel/python
 
+## 6.3.2
+
+### Patch Changes
+
+- Revert removing pip from the isInstalled check ([#14728](https://github.com/vercel/vercel/pull/14728))
+
+## 6.3.1
+
+### Patch Changes
+
+- isInstalled check only needs to check for python on the path. ([#14712](https://github.com/vercel/vercel/pull/14712))
+
+## 6.3.0
+
+### Minor Changes
+
+- enable standalone python-runtime behind a feature flag ([#14673](https://github.com/vercel/vercel/pull/14673))
+
+### Patch Changes
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
 ## 6.2.1
 
 ### Patch Changes

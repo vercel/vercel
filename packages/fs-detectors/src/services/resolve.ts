@@ -10,12 +10,7 @@ import {
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
 } from './types';
-import {
-  getBuilderForRuntime,
-  inferRuntime,
-  inferRuntimeFromExtension,
-} from './utils';
-import type { ServiceRuntime } from '@vercel/build-utils';
+import { getBuilderForRuntime, inferServiceRuntime } from './utils';
 import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
@@ -39,6 +34,16 @@ export function validateServiceConfig(
     return {
       code: 'MISSING_ROUTE_PREFIX',
       message: `Web service "${name}" must specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
+  if (
+    (serviceType === 'worker' || serviceType === 'cron') &&
+    config.routePrefix
+  ) {
+    return {
+      code: 'INVALID_ROUTE_PREFIX',
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
       serviceName: name,
     };
   }
@@ -83,7 +88,7 @@ export function validateServiceConfig(
     };
   }
   if (hasEntrypoint && !hasBuilderOrRuntime && !hasFramework) {
-    const runtime = inferRuntimeFromExtension(config.entrypoint!);
+    const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
@@ -111,6 +116,8 @@ export function resolveConfiguredService(
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
+  const inferredRuntime = inferServiceRuntime(config);
+
   let builderUse: string;
   let builderSrc: string;
 
@@ -123,18 +130,13 @@ export function resolveConfiguredService(
   } else if (config.builder) {
     builderUse = config.builder;
     builderSrc = config.entrypoint!;
-  } else if (config.runtime) {
-    const runtime = config.runtime as ServiceRuntime;
-    builderUse = RUNTIME_BUILDERS[runtime];
-    builderSrc = config.entrypoint!;
   } else {
-    const runtime = inferRuntimeFromExtension(config.entrypoint!);
-    builderUse = getBuilderForRuntime(runtime!);
+    builderUse = getBuilderForRuntime(inferredRuntime!);
     builderSrc = config.entrypoint!;
   }
 
-  // routePrefix is required for web services (validated above), optional for others
-  const routePrefix = config.routePrefix || '/';
+  // routePrefix is required for web services
+  const routePrefix = type === 'web' ? config.routePrefix : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces
   const isRoot = workspace === '.';
@@ -150,15 +152,8 @@ export function resolveConfiguredService(
 
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
 
-  // Compute runtime: user-provided > inferred from framework/builder > inferred from entrypoint
-  let runtime: string | undefined = config.runtime;
-  if (!runtime && !isStaticBuild) {
-    runtime = inferRuntime(config.framework, builderUse);
-    // Fall back to inferring from entrypoint extension
-    if (!runtime && config.entrypoint) {
-      runtime = inferRuntimeFromExtension(config.entrypoint) ?? undefined;
-    }
-  }
+  // Don't set runtime for static builds
+  const runtime = isStaticBuild ? undefined : inferredRuntime;
 
   return {
     name,

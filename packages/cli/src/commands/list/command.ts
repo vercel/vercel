@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
+import {
+  confirmOption,
+  formatOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const listCommand = {
   name: 'list',
@@ -52,6 +57,7 @@ export const listCommand = {
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
     confirmOption,
+    formatOption,
   ],
   examples: [
     {

@@ -508,6 +508,17 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
+  if (
+    // integration tests expect outputs object
+    !process.env.NEXT_BUILDER_INTEGRATION &&
+    process.env.NEXT_ENABLE_ADAPTER
+    // TODO: replace above opt-in with Next.js version
+    // semver.gte(nextVersion, '16.1.1-canary.18', { includePrerelease: true })
+  ) {
+    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
+    env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
+  }
+
   const shouldRunCompileStep =
     Boolean(buildCommand) || Boolean(buildScriptName);
 
@@ -578,7 +589,7 @@ export const build: BuildV2 = async buildOptions => {
 
   if (buildOutputVersion) {
     return {
-      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }

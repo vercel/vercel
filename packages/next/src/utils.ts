@@ -3277,6 +3277,35 @@ export const onPrerenderRoute =
               ? htmlAllowQuery
               : allowQuery;
 
+            // No initial headers here means that the fallback is being served
+            // and it should infer the initial headers from the base metadata
+            // file which will be the ones which include the cache tags for
+            // the fallback render. Failing to do this will result in
+            // producing build output entries without any cache tags which are
+            // then therefore unexpirable.
+            let segmentInitialHeaders = initialHeaders;
+            if (
+              (isBlocking || isFallback) &&
+              'headers' in meta &&
+              typeof meta.headers === 'object' &&
+              meta.headers !== null
+            ) {
+              const metaHeaders = meta.headers as Record<string, string>;
+              const hasMissingMetaHeader =
+                !segmentInitialHeaders ||
+                Object.keys(metaHeaders).some(
+                  key => segmentInitialHeaders?.[key] == null
+                );
+              if (hasMissingMetaHeader) {
+                // Merge to fill any missing meta headers without overriding
+                // segment-specific values.
+                segmentInitialHeaders = {
+                  ...metaHeaders,
+                  ...segmentInitialHeaders,
+                };
+              }
+            }
+
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
                 path.join(
@@ -3285,13 +3314,15 @@ export const onPrerenderRoute =
                 ) + prefetchSegmentSuffix;
 
               // Only use the fallback value when the allowQuery is defined and
-              // is empty, which means that the segments do not vary based on
-              // the route parameters. This is safer than ensuring that we only
-              // use the fallback when this is not a fallback because we know in
-              // this new logic that it doesn't vary based on the route
-              // parameters and therefore can be used for all requests instead.
+              // either: (1) it is empty, meaning segments do not vary by params,
+              // or (2) client param parsing is enabled, meaning the segment
+              // payloads are safe to reuse across params.
               let fallback: FileFsRef | null = null;
-              if (segmentAllowQuery && segmentAllowQuery.length === 0) {
+              const shouldAttachSegmentFallback =
+                segmentAllowQuery &&
+                (segmentAllowQuery.length === 0 ||
+                  isAppClientParamParsingEnabled);
+              if (shouldAttachSegmentFallback) {
                 const fsPath = path.join(
                   segmentsDir,
                   segmentPath + prefetchSegmentSuffix
@@ -3317,7 +3348,7 @@ export const onPrerenderRoute =
                 experimentalBypassFor: undefined,
 
                 initialHeaders: {
-                  ...initialHeaders,
+                  ...segmentInitialHeaders,
                   vary: rscVaryHeader,
                   'content-type': rscContentTypeHeader,
                   [rscDidPostponeHeader]: '2',
