@@ -1,6 +1,8 @@
 import type { Plugin } from 'rolldown';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, cp } from 'node:fs/promises';
+import { builtinModules } from 'node:module';
 import { extname, dirname, join } from 'node:path';
+import { traceNodeModules } from 'nf3';
 import {
   exports as resolveExports,
   legacy as resolveLegacy,
@@ -10,7 +12,7 @@ import { nodeFileTrace as nft } from '@vercel/nft';
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
 
 export const plugin = (args: {
-  rootDir: string;
+  repoRootPath: string;
   outDir: string;
   cjsFiles?: string[]; // Files to treat as CommonJS
   shimBareImports?: boolean; // Whether to shim bare imports with CJS re-exports
@@ -186,6 +188,13 @@ export const plugin = (args: {
 
         const resolved = await this.resolve(id, importer, rOpts);
 
+        if (builtinModules.includes(id)) {
+          return {
+            id: `node:${id}`,
+            external: true,
+          };
+        }
+
         if (resolved?.id && isLocalImport(resolved.id)) {
           tracedPaths.add(resolved.id);
         }
@@ -215,11 +224,15 @@ export const plugin = (args: {
             }
           }
 
-          return {
-            external: true,
-            // leave the import bare for runtime to resolve (eg. import from 'hono')
-            id: id,
-          };
+          // Allow bare imports like @/lib that may be actually in the project dir
+          if (resolved?.id?.includes('node_modules')) {
+            return {
+              external: true,
+              // leave the import bare for runtime to resolve (eg. import from 'hono')
+              id: id,
+            };
+          }
+          return resolved;
         }
 
         // Mark everything else as external
@@ -247,21 +260,18 @@ export const plugin = (args: {
         return null;
       },
     },
-    // buildEnd is too early, seems to get clobbered
-    // by rolldown, even if the files don't overlap
     writeBundle: {
       order: 'post',
-      // the goal for this is to ensure fs reads and other patterns like that
-      // are successful, we are not going to be including other relative files
-      // like .js/.ts, because those are handled by rolldown already. The result
-      // is you could technically do `fs.readFile("./my-ts-file.ts") and it
-      // would fail at runtime, because that file was intentionally not captured
-      // in this trace, and it was transformed to .js in the rolldown build.
-      // However .txt, .json, .md, etc. files are still captured and will be
-      // available at runtime.
       async handler() {
+        // nf3 to trace node_modules
+        await traceNodeModules(Array.from(tracedPaths), {
+          outDir: args.outDir,
+          rootDir: args.repoRootPath,
+          nft: {},
+        });
+        // nft to to trace non-js files like .md, .json, etc.
         const result = await nft(Array.from(tracedPaths), {
-          base: args.rootDir,
+          base: args.repoRootPath,
           ignore: path => {
             if (path.includes('node_modules')) {
               return true;
@@ -280,11 +290,11 @@ export const plugin = (args: {
             '.jsx',
             '.tsx',
           ];
+          // rolldown and nf3 already handle js files, so we only need to copy other files
           if (!jsExtensions.some(ext => file.endsWith(ext))) {
-            const inputPath = join(args.rootDir, file);
+            const inputPath = join(args.repoRootPath, file);
             const outputPath = join(args.outDir, file);
-            const content = await readFile(inputPath, 'utf-8');
-            await writeFile(outputPath, content);
+            await cp(inputPath, outputPath);
           }
         }
       },

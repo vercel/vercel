@@ -24,6 +24,7 @@ export const build = async (args: {
   entrypoint?: string;
   cwd: string;
   out: string;
+  repoRootPath: string;
 }) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
   const tsPromise = typescript({
@@ -35,7 +36,7 @@ export const build = async (args: {
     ...args,
     entrypoint,
     workPath: args.cwd,
-    repoRootPath: args.cwd,
+    repoRootPath: args.repoRootPath,
     out: args.out,
   });
   await writeFile(

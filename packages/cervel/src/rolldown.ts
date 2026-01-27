@@ -76,6 +76,7 @@ export const rolldown = async (args: {
   const outputDir = join(baseDir, relativeOutputDir);
 
   const input = entrypointPath;
+  console.log({ input, baseDir, outputDir, resolvedFormat, resolvedExtension });
   const out = await rolldownBuild({
     input,
     cwd: baseDir,
@@ -83,7 +84,7 @@ export const rolldown = async (args: {
     tsconfig: true,
     plugins: [
       plugin({
-        rootDir: args.repoRootPath,
+        repoRootPath: args.repoRootPath,
         outDir: outputDir,
         shimBareImports: true, // Enable CJS shim generation
       }),

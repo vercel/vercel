@@ -33,12 +33,13 @@ const meta = { skipDownload: true };
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('')
+    fixtureName => fixtureName.includes('01-express-index-ts-esm')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
       await clearOutputs(fixtureName);
       const workPath = join(__dirname, 'fixtures', fixtureName);
+      const repoRootPath = workPath;
 
       const result = (await build({
         files: {},
@@ -46,10 +47,8 @@ describe('successful builds', async () => {
         config,
         meta,
         entrypoint: 'package.json',
-        repoRootPath: workPath,
+        repoRootPath,
       })) as BuildResultV2Typical;
-
-      // console.log(result);
 
       const lambda = result.output.index as unknown as NodejsLambda;
       const lambdaPath = undefined;

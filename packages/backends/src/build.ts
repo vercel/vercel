@@ -57,7 +57,7 @@ export const doBuild = async (
       // Cervel command ran but didn't produce expected output
       throw new Error(
         `Build command "${buildCommand}" completed, but no output was found at ${cervelOutputDir}. ` +
-        'Make sure your cervel command is configured correctly.'
+          'Make sure your cervel command is configured correctly.'
       );
     }
 
@@ -100,6 +100,7 @@ export const doBuild = async (
     // Otherwise, we need to build ourselves
     const buildResult = await cervelBuild({
       cwd: args.workPath,
+      repoRootPath: args.repoRootPath,
       out: defaultOutputDirectory,
     });
     tsPromise = buildResult.tsPromise ?? undefined;
@@ -126,6 +127,7 @@ export const doBuild = async (
   if (!buildCommandResult || monorepoWithoutBuildScript) {
     const buildResult = await cervelBuild({
       cwd: args.workPath,
+      repoRootPath: args.repoRootPath,
       out: outputDir,
     });
     tsPromise = buildResult.tsPromise ?? undefined;
