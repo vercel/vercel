@@ -1,5 +1,14 @@
 # vercel
 
+## 50.7.1
+
+### Patch Changes
+
+- Prebuilt Bulk Redirects ([#14627](https://github.com/vercel/vercel/pull/14627))
+
+- Updated dependencies []:
+  - @vercel/node@5.5.28
+
 ## 50.7.0
 
 ### Minor Changes
