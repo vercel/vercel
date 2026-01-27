@@ -428,9 +428,7 @@ async function tryPromoteForProductionAlias(
     return null;
   }
 
-  output.log(
-    `${chalk.bold(aliasTarget)} is a production alias - promoting.`
-  );
+  output.log(`${chalk.bold(aliasTarget)} is a production alias - promoting.`);
 
   return requestPromote({
     client,
