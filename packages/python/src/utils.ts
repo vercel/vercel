@@ -2,10 +2,7 @@ import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
 import execa from 'execa';
-import { UV_PYTHON_DOWNLOADS_MODE } from './uv';
-
-// Re-export for backward compatibility
-export { UV_PYTHON_DOWNLOADS_MODE };
+import { getProtectedUvEnv } from './uv';
 
 const isWin = process.platform === 'win32';
 
@@ -43,15 +40,6 @@ export function useVirtualEnv(
     }
   }
   return { pythonCmd };
-}
-
-export function getProtectedUvEnv(
-  baseEnv: NodeJS.ProcessEnv = process.env
-): NodeJS.ProcessEnv {
-  return {
-    ...baseEnv,
-    UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
-  };
 }
 
 export function createVenvEnv(

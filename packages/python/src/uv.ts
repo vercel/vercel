@@ -7,12 +7,8 @@ import os from 'os';
 import which from 'which';
 import { debug } from '@vercel/build-utils';
 
-/** This doesn't belong here, it should be inside the build container dockerfile only */
 export const UV_VERSION = '0.9.22';
-
-/** This is where we install uv-managed Python versions in the build container */
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
-
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 
 const isWin = process.platform === 'win32';
@@ -27,7 +23,6 @@ interface UvPythonEntry {
   implementation: string;
 }
 
-/** Find uv binary in PATH. Returns null if not found. */
 export function findUvInPath(): string | null {
   return which.sync('uv', { nothrow: true });
 }
@@ -45,7 +40,7 @@ export class UvRunner {
 
   /**
    * List installed Python versions managed by uv.
-   * Only returns cpython installations under /uv/python/ (excludes system Python).
+   * Excludes system Python.
    */
   listInstalledPythons(): Set<string> {
     let output: string;
@@ -98,7 +93,7 @@ export class UvRunner {
       args.push('--locked');
     }
     args.push('--no-editable');
-    await this.runCommand(args, projectDir, venvPath);
+    await this.runUvCmd(args, projectDir, venvPath);
   }
 
   async lock(projectDir: string): Promise<void> {
@@ -108,7 +103,7 @@ export class UvRunner {
     try {
       await execa(this.uvPath, args, {
         cwd: projectDir,
-        env: this.getProtectedEnv(),
+        env: getProtectedUvEnv(process.env),
       });
     } catch (err) {
       throw new Error(
@@ -128,7 +123,7 @@ export class UvRunner {
 
     const args = ['add', '--active', ...toAdd];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
-    await this.runCommand(args, projectDir, venvPath);
+    await this.runUvCmd(args, projectDir, venvPath);
   }
 
   async addFromFile(options: {
@@ -139,10 +134,10 @@ export class UvRunner {
     const { venvPath, projectDir, requirementsPath } = options;
     const args = ['add', '--active', '-r', requirementsPath];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
-    await this.runCommand(args, projectDir, venvPath);
+    await this.runUvCmd(args, projectDir, venvPath);
   }
 
-  private async runCommand(
+  private async runUvCmd(
     args: string[],
     cwd: string,
     venvPath: string
@@ -162,18 +157,12 @@ export class UvRunner {
     }
   }
 
-  private getProtectedEnv(): NodeJS.ProcessEnv {
-    return {
-      ...process.env,
-      UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
-    };
-  }
-
   private getVenvEnv(venvPath: string): NodeJS.ProcessEnv {
     const binDir = isWin ? join(venvPath, 'Scripts') : join(venvPath, 'bin');
     const existingPath = process.env.PATH || '';
+
     return {
-      ...this.getProtectedEnv(),
+      ...getProtectedUvEnv(process.env),
       VIRTUAL_ENV: venvPath,
       PATH: existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir,
     };
@@ -294,4 +283,13 @@ export function filterUnsafeUvPipArgs(args: string[]): string[] {
   // `--no-warn-script-location` is not supported/safe with `uv pip install`,
   // so strip it out when using uv while still allowing it for plain pip.
   return args.filter(arg => arg !== '--no-warn-script-location');
+}
+
+export function getProtectedUvEnv(
+  baseEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv,
+    UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
+  };
 }

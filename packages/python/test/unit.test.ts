@@ -3,12 +3,8 @@ import {
   DEFAULT_PYTHON_VERSION,
 } from '../src/version';
 import { build } from '../src/index';
-import {
-  getProtectedUvEnv,
-  createVenvEnv,
-  getVenvBinDir,
-  UV_PYTHON_DOWNLOADS_MODE,
-} from '../src/utils';
+import { createVenvEnv, getVenvBinDir } from '../src/utils';
+import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
