@@ -35,12 +35,12 @@ export function inferServiceRuntime(config: {
   builder?: string;
   entrypoint?: string;
 }): ServiceRuntime | undefined {
-  // 1. Explicit runtime takes priority
+  // Explicit runtime takes priority
   if (config.runtime && config.runtime in RUNTIME_BUILDERS) {
     return config.runtime as ServiceRuntime;
   }
 
-  // 2. Infer from framework
+  // Infer from framework
   if (isPythonFramework(config.framework)) {
     return 'python';
   }
@@ -48,7 +48,7 @@ export function inferServiceRuntime(config: {
     return 'node';
   }
 
-  // 3. Infer from builder
+  // Infer from builder
   if (config.builder) {
     for (const [runtime, builderName] of Object.entries(RUNTIME_BUILDERS)) {
       if (config.builder === builderName) {
@@ -57,7 +57,7 @@ export function inferServiceRuntime(config: {
     }
   }
 
-  // 4. Infer from entrypoint extension
+  // Infer from entrypoint extension
   if (config.entrypoint) {
     for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
       if (config.entrypoint.endsWith(ext)) {
