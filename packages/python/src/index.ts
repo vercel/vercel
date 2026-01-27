@@ -21,7 +21,6 @@ import {
   PythonFramework,
 } from '@vercel/build-utils';
 import {
-  runUvSync,
   ensureUvProject,
   resolveVendorDir,
   mirrorSitePackagesIntoVendor,
@@ -345,8 +344,7 @@ export const build: BuildV3 = async ({
       // Use the generated/normalized uv.lock as the canonical source of truth and
       // sync it into the venv. Re-running this with the same lockfile is idempotent
       // and prunes any unused dependencies from the virtualenv.
-      await runUvSync({
-        uv,
+      await uv.sync({
         venvPath,
         projectDir,
         locked: true,

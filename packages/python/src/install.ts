@@ -11,8 +11,8 @@ import {
   readConfigFile,
   traverseUpDirectories,
 } from '@vercel/build-utils';
-import { getVenvPythonBin, findDir, getProtectedUvEnv } from './utils';
-import { UvRunner, filterUnsafeUvPipArgs } from './uv';
+import { getVenvPythonBin, findDir } from './utils';
+import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 
 const isWin = process.platform === 'win32';
 
@@ -71,20 +71,6 @@ async function areRequirementsInstalled(
   } catch (err) {
     return false;
   }
-}
-
-export async function runUvSync({
-  uv,
-  venvPath,
-  projectDir,
-  locked,
-}: {
-  uv: UvRunner;
-  venvPath: string;
-  projectDir: string;
-  locked: boolean;
-}) {
-  await uv.sync({ venvPath, projectDir, locked });
 }
 
 async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
