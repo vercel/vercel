@@ -165,7 +165,7 @@ describe('alias set', () => {
       const exitCodePromise = alias(client);
 
       await expect(client.stderr).toOutput(
-        `Alias ${chalk.bold(productionAlias)} is a production alias. Using promote flow.`
+        `${chalk.bold(productionAlias)} is a production alias - promoting.`
       );
       await expect(client.stderr).toOutput(
         `Success! ${chalk.bold(project.name)} was promoted to`
