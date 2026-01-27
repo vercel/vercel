@@ -1,5 +1,90 @@
 # @vercel/client
 
+## 17.2.31
+
+### Patch Changes
+
+- Add up to 30 seconds of random skew to APIs returning `Retry-After` headers to prevent thundering herds fighting over a single rate limit token. ([#14737](https://github.com/vercel/vercel/pull/14737))
+
+## 17.2.30
+
+### Patch Changes
+
+- Updated dependencies [[`556d9b418d411e74bd59f682264a31dc71163026`](https://github.com/vercel/vercel/commit/556d9b418d411e74bd59f682264a31dc71163026), [`556d9b418d411e74bd59f682264a31dc71163026`](https://github.com/vercel/vercel/commit/556d9b418d411e74bd59f682264a31dc71163026)]:
+  - @vercel/build-utils@13.2.16
+
+## 17.2.29
+
+### Patch Changes
+
+- Updated dependencies [[`ee4463453cfe0711bf46491c080f97b196bdaa5a`](https://github.com/vercel/vercel/commit/ee4463453cfe0711bf46491c080f97b196bdaa5a)]:
+  - @vercel/build-utils@13.2.15
+
+## 17.2.28
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
+- Updated dependencies [[`c762e424822819ba1bd8dd0f1fe6496741f7b586`](https://github.com/vercel/vercel/commit/c762e424822819ba1bd8dd0f1fe6496741f7b586)]:
+  - @vercel/build-utils@13.2.14
+
+## 17.2.27
+
+### Patch Changes
+
+- Updated dependencies [[`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02)]:
+  - @vercel/build-utils@13.2.13
+
+## 17.2.26
+
+### Patch Changes
+
+- Updated dependencies [[`186967277069593406948c0e3099477ba43e181a`](https://github.com/vercel/vercel/commit/186967277069593406948c0e3099477ba43e181a)]:
+  - @vercel/build-utils@13.2.12
+
+## 17.2.25
+
+### Patch Changes
+
+- Updated dependencies [[`06bf941478bf7bfe479193ca77cfe3b00ff1a85e`](https://github.com/vercel/vercel/commit/06bf941478bf7bfe479193ca77cfe3b00ff1a85e)]:
+  - @vercel/build-utils@13.2.11
+
+## 17.2.24
+
+### Patch Changes
+
+- Updated dependencies [[`f46cab88668c148f2ff9728dd8cafc4f4ea6dda6`](https://github.com/vercel/vercel/commit/f46cab88668c148f2ff9728dd8cafc4f4ea6dda6)]:
+  - @vercel/build-utils@13.2.10
+
+## 17.2.23
+
+### Patch Changes
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/build-utils@13.2.9
+
+## 17.2.22
+
+### Patch Changes
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/build-utils@13.2.8
+
+## 17.2.21
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4), [`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/build-utils@13.2.7
+
+## 17.2.20
+
+### Patch Changes
+
+- Updated dependencies [[`984164ff5f148fb6fd397902d16db780e9b98e6c`](https://github.com/vercel/vercel/commit/984164ff5f148fb6fd397902d16db780e9b98e6c), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/build-utils@13.2.6
+
 ## 17.2.19
 
 ### Patch Changes

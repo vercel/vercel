@@ -17,7 +17,7 @@ export type { TriggerEvent };
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
-export type LambdaExecutableRuntimeLanguages = 'rust';
+export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export interface LambdaOptionsBase {
@@ -202,7 +202,10 @@ export class Lambda {
     }
 
     if (runtimeLanguage !== undefined) {
-      assert(runtimeLanguage === 'rust', '"runtimeLanguage" must be "rust"');
+      assert(
+        runtimeLanguage === 'rust' || runtimeLanguage === 'go',
+        '"runtimeLanguage" is invalid. Valid options: "rust", "go"'
+      );
     }
 
     if (
@@ -336,6 +339,18 @@ export class Lambda {
           assert(
             trigger.initialDelaySeconds >= 0,
             `${prefix}.initialDelaySeconds must be a non-negative number`
+          );
+        }
+
+        if (trigger.maxConcurrency !== undefined) {
+          assert(
+            typeof trigger.maxConcurrency === 'number',
+            `${prefix}.maxConcurrency must be a number`
+          );
+          assert(
+            Number.isInteger(trigger.maxConcurrency) &&
+              trigger.maxConcurrency >= 1,
+            `${prefix}.maxConcurrency must be at least 1`
           );
         }
       }

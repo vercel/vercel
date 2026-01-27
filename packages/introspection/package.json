@@ -1,6 +1,6 @@
 {
   "name": "@vercel/introspection",
-  "version": "0.0.8",
+  "version": "0.0.10",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
   "type": "module",
@@ -41,7 +41,7 @@
     "@vercel/cervel": "workspace:*",
     "@vercel/static-config": "workspace:*",
     "@vercel/nft": "1.1.1",
-    "@types/node": "22",
+    "@types/node": "20.11.0",
     "fs-extra": "11.1.0",
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",

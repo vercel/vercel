@@ -27,8 +27,10 @@ describe('target', () => {
   });
 
   it('should reject invalid arguments', async () => {
+    // With permissive argument parsing (needed for subcommand flags to pass through),
+    // invalid flags are treated as invalid subcommands and return exit code 2
     client.setArgv('target', '--invalid');
     const exitCodePromise = target(client);
-    await expect(exitCodePromise).resolves.toBe(1);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 });

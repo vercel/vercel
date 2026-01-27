@@ -6,6 +6,12 @@ on:
     paths:
       - 'python/vercel-runtime/**'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force publish even if version has not changed'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   check-version:
@@ -26,10 +32,10 @@ jobs:
           CURRENT_VERSION=$(grep -Po '(?<=^version = ")[^"]+' python/vercel-runtime/pyproject.toml)
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
-          # For workflow_dispatch, always consider version as changed
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # For workflow_dispatch with force=true, skip version check
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
             echo "version_changed=true" >> $GITHUB_OUTPUT
-            echo "Manual trigger - proceeding with publish"
+            echo "Force publish requested - proceeding with publish"
             exit 0
           fi
 
@@ -90,4 +96,4 @@ jobs:
             python/vercel-runtime/tests/release_smoke_test.py
 
       - name: Publish
-        run: uv publish
+        run: uv publish --directory python/vercel-runtime/

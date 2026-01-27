@@ -38,7 +38,7 @@ import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
-import * as Sentry from '@sentry/node';
+import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
@@ -61,7 +61,6 @@ import {
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
-import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
@@ -78,6 +77,7 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import open from 'open';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -94,15 +94,42 @@ const GLOBAL_COMMANDS = new Set(['help']);
 */
 epipebomb();
 
-// Configure the error reporting system
-Sentry.init({
-  dsn: SENTRY_DSN,
-  release: `vercel-cli@${pkg.version}`,
-  environment: 'stable',
-  autoSessionTracking: false,
-});
-
 let client: Client;
+
+// Register global error handlers early to catch errors during initialization.
+// Sentry is lazily initialized only when an error actually occurs.
+const handleRejection = async (err: any) => {
+  if (err) {
+    if (err instanceof Error) {
+      await handleUnexpected(err);
+    } else {
+      output.error(`An unexpected rejection occurred\n  ${err}`);
+      await reportError(getSentry(), client, err);
+    }
+  } else {
+    output.error('An unexpected empty rejection occurred');
+  }
+
+  process.exit(1);
+};
+
+const handleUnexpected = async (err: Error) => {
+  const { message } = err;
+
+  // We do not want to render errors about Sentry not being reachable
+  if (message.includes('sentry') && message.includes('ENOTFOUND')) {
+    output.debug(`Sentry is not reachable: ${err}`);
+    return;
+  }
+
+  output.error(`An unexpected error occurred!\n${err.stack}`);
+  await reportError(getSentry(), client, err);
+
+  process.exit(1);
+};
+
+process.on('unhandledRejection', handleRejection);
+process.on('uncaughtException', handleUnexpected);
 
 let { isTTY } = process.stdout;
 
@@ -169,13 +196,11 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['curl'];
+  const betaCommands: string[] = ['api', 'curl'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
-        `${getTitleName()} CLI ${
-          pkg.version
-        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
+        `${getTitleName()} CLI ${pkg.version} | ${chalk.bold(targetOrSubcommand)} is in beta — https://vercel.com/feedback`
       )}\n`
     );
   } else {
@@ -614,6 +639,10 @@ const main = async () => {
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = require('./commands/alias').default;
           break;
+        case 'api':
+          telemetry.trackCliCommandApi(userSuppliedSubCommand);
+          func = require('./commands/api').default;
+          break;
         case 'bisect':
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = require('./commands/bisect').default;
@@ -707,6 +736,10 @@ const main = async () => {
         case 'logs':
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = require('./commands/logs').default;
+          break;
+        case 'logsv2':
+          telemetry.trackCliCommandLogsv2(userSuppliedSubCommand);
+          func = require('./commands/logsv2').default;
           break;
         case 'mcp':
           func = require('./commands/mcp').default;
@@ -863,7 +896,7 @@ const main = async () => {
       }
       output.prettyError(err);
     } else {
-      await reportError(Sentry, client, err);
+      await reportError(getSentry(), client, err);
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
@@ -879,43 +912,10 @@ const main = async () => {
   return exitCode;
 };
 
-const handleRejection = async (err: any) => {
-  if (err) {
-    if (err instanceof Error) {
-      await handleUnexpected(err);
-    } else {
-      output.error(`An unexpected rejection occurred\n  ${err}`);
-      await reportError(Sentry, client, err);
-    }
-  } else {
-    output.error('An unexpected empty rejection occurred');
-  }
-
-  process.exit(1);
-};
-
-const handleUnexpected = async (err: Error) => {
-  const { message } = err;
-
-  // We do not want to render errors about Sentry not being reachable
-  if (message.includes('sentry') && message.includes('ENOTFOUND')) {
-    output.debug(`Sentry is not reachable: ${err}`);
-    return;
-  }
-
-  output.error(`An unexpected error occurred!\n${err.stack}`);
-  await reportError(Sentry, client, err);
-
-  process.exit(1);
-};
-
-process.on('unhandledRejection', handleRejection);
-process.on('uncaughtException', handleUnexpected);
-
 main()
   .then(async exitCode => {
     // Print update information, if available
-    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+    if (!process.env.NO_UPDATE_NOTIFIER) {
       // Check if an update is available. If so, `latest` will contain a string
       // of the latest version, otherwise `undefined`.
       const latest = getLatestVersion({
@@ -923,30 +923,61 @@ main()
       });
       if (latest) {
         const changelog = 'https://github.com/vercel/vercel/releases';
-        const errorMsg =
-          exitCode && exitCode !== 2
-            ? chalk.magenta(
-                `\n\nThe latest update ${chalk.italic(
-                  'may'
-                )} fix any errors that occurred.`
-              )
-            : '';
-        output.print(
-          box(
-            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
-              `v${latest}`
-            )}
+
+        if (isTTY) {
+          // Interactive mode: show condensed prompt
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  ` The latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+
+          output.print(
+            `\nUpdate available for Vercel CLI (${chalk.gray(
+              `v${pkg.version}`
+            )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
+          );
+
+          const action = await client.input.expand({
+            message: 'What would you like to do?',
+            default: 'u',
+            choices: [
+              { key: 'u', name: 'Upgrade now', value: 'upgrade' },
+              { key: 'c', name: 'View changelog', value: 'changelog' },
+              { key: 's', name: 'Skip', value: 'skip' },
+            ],
+          });
+
+          if (action === 'upgrade') {
+            const upgradeExitCode = await executeUpgrade();
+            process.exitCode = upgradeExitCode;
+            return;
+          } else if (action === 'changelog') {
+            await open(changelog);
+          }
+        } else {
+          // Non-interactive mode: show full update box
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  `\n\nThe latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+          output.print(
+            box(
+              `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+                `v${latest}`
+              )}
 Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
-          )
-        );
-        output.print('\n');
-
-        // Prompt user to upgrade now
-        if (await client.input.confirm('Upgrade now?', true)) {
-          const upgradeExitCode = await executeUpgrade();
-          process.exitCode = upgradeExitCode;
-          return;
+            )
+          );
+          output.print('\n');
         }
       }
     }

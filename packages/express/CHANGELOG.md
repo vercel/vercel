@@ -1,5 +1,90 @@
 # @vercel/express
 
+## 0.1.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.28
+
+## 0.1.33
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.27
+
+## 0.1.32
+
+### Patch Changes
+
+- Updated dependencies [[`8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4`](https://github.com/vercel/vercel/commit/8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4)]:
+  - @vercel/cervel@0.0.10
+  - @vercel/node@5.5.26
+
+## 0.1.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.25
+
+## 0.1.30
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.24
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.23
+
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.22
+
+## 0.1.27
+
+### Patch Changes
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/node@5.5.21
+
+## 0.1.26
+
+### Patch Changes
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/node@5.5.20
+
+## 0.1.25
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4)]:
+  - @vercel/node@5.5.19
+
+## 0.1.24
+
+### Patch Changes
+
+- Remove unnecessary dependency ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+- Updated dependencies [[`239b4181e311b43cdd705376c27e83466295be2f`](https://github.com/vercel/vercel/commit/239b4181e311b43cdd705376c27e83466295be2f), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/cervel@0.0.9
+  - @vercel/node@5.5.18
+
 ## 0.1.23
 
 ### Patch Changes

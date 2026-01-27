@@ -1,5 +1,45 @@
 # @vercel/next
 
+## 4.15.17
+
+### Patch Changes
+
+- fix segment fallback initial headers to properly include cache tags for expiration ([#14695](https://github.com/vercel/vercel/pull/14695))
+
+## 4.15.16
+
+### Patch Changes
+
+- Add Next.js adapter opt-in behind flag ([#14574](https://github.com/vercel/vercel/pull/14574))
+
+- attach segment fallbacks when client param parsing is enabled ([#14689](https://github.com/vercel/vercel/pull/14689))
+
+## 4.15.15
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+## 4.15.14
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+## 4.15.13
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+## 4.15.12
+
+### Patch Changes
+
+- Add error status header for \_error rendering ([#14588](https://github.com/vercel/vercel/pull/14588))
+
+- Cleanup esbuild and rolldown dependencies ([#14577](https://github.com/vercel/vercel/pull/14577))
+
 ## 4.15.11
 
 ### Patch Changes

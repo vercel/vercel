@@ -116,6 +116,10 @@ export interface FunctionConfig {
      * Initial delay in seconds before first execution attempt
      */
     initialDelaySeconds?: number;
+    /**
+     * Maximum number of concurrent executions for this consumer
+     */
+    maxConcurrency?: number;
   }[];
 }
 

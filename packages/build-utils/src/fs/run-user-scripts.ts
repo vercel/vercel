@@ -38,11 +38,7 @@ const NO_OVERRIDE = {
 
 export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun' | 'vlt';
 
-export interface ScanParentDirsResult {
-  /**
-   * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
-   */
-  cliType: CliType;
+export interface FindPackageJsonResult {
   /**
    * The file path of found `package.json` file, or `undefined` if not found.
    */
@@ -52,6 +48,13 @@ export interface ScanParentDirsResult {
    * option is enabled.
    */
   packageJson?: PackageJson;
+}
+
+export interface ScanParentDirsResult extends FindPackageJsonResult {
+  /**
+   * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
+   */
+  cliType: CliType;
   /**
    * The file path of the lockfile (`yarn.lock`, `package-lock.json`, or `pnpm-lock.yaml`)
    * or `undefined` if not found.
@@ -259,6 +262,11 @@ export async function runShellScript(
   return true;
 }
 
+/**
+ * @deprecated Don't use this function directly.
+ *
+ * Use getEnvForPackageManager() instead when within a builder.
+ */
 export function getSpawnOptions(
   meta: Meta,
   nodeVersion: NodeVersion
@@ -311,7 +319,7 @@ export async function getNodeVersion(
     latestVersion.runtime = 'nodejs';
     return latestVersion;
   }
-  const { packageJson } = await scanParentDirs(destPath, true);
+  const { packageJson } = await findPackageJson(destPath, true);
   const configuredVersion = config.nodeVersion || fallbackVersion;
 
   const packageJsonVersion = packageJson?.engines?.node;
@@ -328,31 +336,36 @@ export async function getNodeVersion(
       !intersects(configuredVersion, supportedNodeVersion.range)
     ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: https://vercel.link/node-version`
       );
     }
 
     if (coerce(node)?.raw === node) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version`
       );
     } else if (
       validRange(node) &&
       intersects(`${latestVersion.major + 1}.x`, node)
     ) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version`
       );
     }
   }
   return supportedNodeVersion;
 }
 
-export async function scanParentDirs(
+/**
+ * Traverses up directories to find and optionally read package.json.
+ * This is a lightweight alternative to `scanParentDirs` when only
+ * package.json information is needed (without lockfile detection).
+ */
+export async function findPackageJson(
   destPath: string,
   readPackageJson = false,
   base = '/'
-): Promise<ScanParentDirsResult> {
+): Promise<FindPackageJsonResult> {
   assert(path.isAbsolute(destPath));
 
   const pkgJsonPath = await walkParentDirs({
@@ -371,6 +384,25 @@ export async function scanParentDirs(
       );
     }
   }
+
+  return {
+    packageJsonPath: pkgJsonPath || undefined,
+    packageJson,
+  };
+}
+
+export async function scanParentDirs(
+  destPath: string,
+  readPackageJson = false,
+  base = '/'
+): Promise<ScanParentDirsResult> {
+  assert(path.isAbsolute(destPath));
+
+  const { packageJsonPath: pkgJsonPath, packageJson } = await findPackageJson(
+    destPath,
+    readPackageJson,
+    base
+  );
   const {
     paths: [
       yarnLockPath,
@@ -1504,25 +1536,45 @@ export async function runBundleInstall(
   await spawnAsync('bundle', args.concat(['install']), opts);
 }
 
+export type PipInstallResult =
+  | { installed: false }
+  | {
+      installed: true;
+      /**
+       * The directory where packages were installed.
+       * Add this to PYTHONPATH when running Python commands.
+       */
+      targetDir: string;
+    };
+
 export async function runPipInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta
-) {
+): Promise<PipInstallResult> {
   if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
-    return;
+    return { installed: false };
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'pip3 install' };
 
+  // Install to a target directory so we can set PYTHONPATH to point to it
+  const targetDir = path.join(destPath, '.vercel_python_packages');
+
+  const opts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'uv pip install',
+  };
   await spawnAsync(
-    'pip3',
-    ['install', '--disable-pip-version-check', ...args],
+    'uv',
+    ['pip', 'install', '--target', targetDir, ...args],
     opts
   );
+
+  return { installed: true, targetDir };
 }
 
 export function getScriptName(
