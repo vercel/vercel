@@ -429,7 +429,7 @@ async function tryPromoteForProductionAlias(
   }
 
   output.log(
-    `Alias ${chalk.bold(aliasTarget)} is a production alias. Using promote flow.`
+    `${chalk.bold(aliasTarget)} is a production alias - promoting.`
   );
 
   return requestPromote({
