@@ -308,7 +308,20 @@ export default class Client extends EventEmitter implements Stdio {
         } else if (typeof error.retryAfterMs === 'number') {
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out
-          await sleep(error.retryAfterMs);
+          //
+          // The `Retry-After` header from the api tells us when the next rate
+          // limit token is available. There may only be a single rate limit
+          // token available at that time. Add a random skew to prevent creating
+          // a thundering herd.
+          //
+          // Many of our APIs use 1 minute rate limit buckets, so 30s of skew is
+          // likely more than enough.
+          //
+          // Note: The `async-retry` library already provides some random skew
+          // by default, but it provides much less skew, because it's not aware
+          // of rate limits.
+          const randomSkewMs = 30_000 * Math.random();
+          await sleep(error.retryAfterMs + randomSkewMs);
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);

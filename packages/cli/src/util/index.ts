@@ -307,7 +307,12 @@ export default class Now {
         const error = await responseError(res, 'Failed to remove deployment');
         // Always respect Retry-After headers and retry
         if (typeof error.retryAfterMs === 'number') {
-          await sleep(error.retryAfterMs);
+          // The `Retry-After` header from the api tells us when the next rate
+          // limit token is available. There may only be a single rate limit
+          // token available at that time. Add a random skew to prevent creating
+          // a thundering herd.
+          const randomSkewMs = 30_000 * Math.random();
+          await sleep(error.retryAfterMs + randomSkewMs);
           throw error;
         }
         if (res.status > 200 && res.status < 500) {
@@ -372,7 +377,7 @@ export default class Now {
   }
 
   // public fetch with built-in retrying that can be
-  // used from external utilities. it optioanlly
+  // used from external utilities. it optionally
   // receives a `retry` object in the opts that is
   // passed to the retry utility
   // it accepts a `json` option, which defaults to `true`
@@ -406,7 +411,12 @@ export default class Now {
       const err = await responseError(res);
       // Always respect Retry-After headers and retry
       if (typeof err.retryAfterMs === 'number') {
-        await sleep(err.retryAfterMs);
+        // The `Retry-After` header from the api tells us when the next rate
+        // limit token is available. There may only be a single rate limit
+        // token available at that time. Add a random skew to prevent creating
+        // a thundering herd.
+        const randomSkewMs = 30_000 * Math.random();
+        await sleep(err.retryAfterMs + randomSkewMs);
         throw err;
       }
       if (res.status >= 400 && res.status < 500) {
