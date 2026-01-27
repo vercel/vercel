@@ -12,7 +12,7 @@ import {
   traverseUpDirectories,
 } from '@vercel/build-utils';
 import { getVenvPythonBin, findDir, getProtectedUvEnv } from './utils';
-import { getUvRunner, filterUnsafeUvPipArgs } from './uv';
+import { UvRunner, filterUnsafeUvPipArgs } from './uv';
 
 const isWin = process.platform === 'win32';
 
@@ -74,17 +74,17 @@ async function areRequirementsInstalled(
 }
 
 export async function runUvSync({
+  uv,
   venvPath,
   projectDir,
   locked,
 }: {
+  uv: UvRunner;
   venvPath: string;
   projectDir: string;
   locked: boolean;
 }) {
-  const uv = getUvRunner();
-  uv.setVenvPath(venvPath);
-  await uv.sync({ projectDir, locked });
+  await uv.sync({ venvPath, projectDir, locked });
 }
 
 async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
@@ -262,7 +262,7 @@ interface EnsureUvProjectParams {
   repoRootPath?: string;
   pythonPath: string;
   pipPath: string;
-  uvPath: string;
+  uv: UvRunner;
   venvPath: string;
   meta: Meta;
   runtimeDependencies: string[];
@@ -323,14 +323,12 @@ export async function ensureUvProject({
   repoRootPath,
   pythonPath,
   pipPath,
-  uvPath,
+  uv,
   venvPath,
   meta,
   runtimeDependencies,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
-  // Get the UvRunner singleton and configure it with the venv path
-  const uv = getUvRunner();
-  uv.setVenvPath(venvPath);
+  const uvPath = uv.getPath();
 
   const installInfo = await detectInstallSource({
     workPath,
@@ -399,6 +397,7 @@ export async function ensureUvProject({
       });
     }
     await uv.addFromFile({
+      venvPath,
       projectDir,
       requirementsPath: exportedReq,
     });
@@ -421,6 +420,7 @@ export async function ensureUvProject({
       });
     }
     await uv.addFromFile({
+      venvPath,
       projectDir,
       requirementsPath: manifestPath,
     });
@@ -447,6 +447,7 @@ export async function ensureUvProject({
     });
     if (missingRuntimeDeps.length) {
       await uv.addDependencies({
+        venvPath,
         projectDir,
         dependencies: missingRuntimeDeps,
       });

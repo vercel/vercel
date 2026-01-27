@@ -9,7 +9,6 @@ import {
   getVenvBinDir,
   UV_PYTHON_DOWNLOADS_MODE,
 } from '../src/utils';
-import { resetUvRunner } from '../src/uv';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -58,8 +57,6 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
-  // Reset the installed Python versions cache between tests
-  resetUvRunner();
 });
 
 it('should only match supported versions, otherwise throw an error', () => {

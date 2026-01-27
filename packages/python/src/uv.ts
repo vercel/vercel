@@ -27,45 +27,27 @@ interface UvPythonEntry {
   implementation: string;
 }
 
+/** Find uv binary in PATH. Returns null if not found. */
+export function findUvInPath(): string | null {
+  return which.sync('uv', { nothrow: true });
+}
+
 export class UvRunner {
   private uvPath: string;
-  private venvPath: string | null = null;
-  private installedPythonsCache: Set<string> | null = null;
 
-  constructor(uvPath?: string) {
-    this.uvPath = uvPath ?? this.findUvBinaryOrThrow();
-  }
-
-  private findUvBinaryOrThrow(): string {
-    const path = which.sync('uv', { nothrow: true });
-    if (!path) {
-      throw new Error('uv is required but was not found in PATH.');
-    }
-    return path;
+  constructor(uvPath: string) {
+    this.uvPath = uvPath;
   }
 
   getPath(): string {
     return this.uvPath;
   }
 
-  setVenvPath(venvPath: string): void {
-    this.venvPath = venvPath;
-  }
-
-  resetCache(): void {
-    this.installedPythonsCache = null;
-  }
-
   /**
    * List installed Python versions managed by uv.
    * Only returns cpython installations under /uv/python/ (excludes system Python).
-   * Results are cached for the lifetime of this instance.
    */
   listInstalledPythons(): Set<string> {
-    if (this.installedPythonsCache !== null) {
-      return this.installedPythonsCache;
-    }
-
     let output: string;
     try {
       output = execSync(
@@ -79,8 +61,7 @@ export class UvRunner {
     }
 
     if (!output || output.trim() === '' || output.trim() === '[]') {
-      this.installedPythonsCache = new Set();
-      return this.installedPythonsCache;
+      return new Set();
     }
 
     let pyList: UvPythonEntry[];
@@ -92,7 +73,7 @@ export class UvRunner {
       );
     }
 
-    this.installedPythonsCache = new Set(
+    return new Set(
       pyList
         .filter(
           entry =>
@@ -104,18 +85,20 @@ export class UvRunner {
           entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
         )
     );
-
-    return this.installedPythonsCache;
   }
 
-  async sync(options: { projectDir: string; locked?: boolean }): Promise<void> {
-    const { projectDir, locked } = options;
+  async sync(options: {
+    venvPath: string;
+    projectDir: string;
+    locked?: boolean;
+  }): Promise<void> {
+    const { venvPath, projectDir, locked } = options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
     if (locked) {
       args.push('--locked');
     }
     args.push('--no-editable');
-    await this.runCommand(args, projectDir);
+    await this.runCommand(args, projectDir, venvPath);
   }
 
   async lock(projectDir: string): Promise<void> {
@@ -135,40 +118,42 @@ export class UvRunner {
   }
 
   async addDependencies(options: {
+    venvPath: string;
     projectDir: string;
     dependencies: string[];
   }): Promise<void> {
-    const { projectDir, dependencies } = options;
+    const { venvPath, projectDir, dependencies } = options;
     const toAdd = dependencies.filter(Boolean);
     if (!toAdd.length) return;
 
     const args = ['add', '--active', ...toAdd];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
-    await this.runCommand(args, projectDir);
+    await this.runCommand(args, projectDir, venvPath);
   }
 
   async addFromFile(options: {
+    venvPath: string;
     projectDir: string;
     requirementsPath: string;
   }): Promise<void> {
-    const { projectDir, requirementsPath } = options;
+    const { venvPath, projectDir, requirementsPath } = options;
     const args = ['add', '--active', '-r', requirementsPath];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
-    await this.runCommand(args, projectDir);
+    await this.runCommand(args, projectDir, venvPath);
   }
 
-  private async runCommand(args: string[], cwd: string): Promise<void> {
-    if (!this.venvPath) {
-      throw new Error('venvPath must be set before running uv commands');
-    }
-
+  private async runCommand(
+    args: string[],
+    cwd: string,
+    venvPath: string
+  ): Promise<void> {
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}"...`);
 
     try {
       await execa(this.uvPath, args, {
         cwd,
-        env: this.getVenvEnv(),
+        env: this.getVenvEnv(venvPath),
       });
     } catch (err) {
       throw new Error(
@@ -184,38 +169,15 @@ export class UvRunner {
     };
   }
 
-  private getVenvEnv(): NodeJS.ProcessEnv {
-    if (!this.venvPath) {
-      throw new Error('venvPath must be set');
-    }
-    const binDir = isWin
-      ? join(this.venvPath, 'Scripts')
-      : join(this.venvPath, 'bin');
+  private getVenvEnv(venvPath: string): NodeJS.ProcessEnv {
+    const binDir = isWin ? join(venvPath, 'Scripts') : join(venvPath, 'bin');
     const existingPath = process.env.PATH || '';
     return {
       ...this.getProtectedEnv(),
-      VIRTUAL_ENV: this.venvPath,
+      VIRTUAL_ENV: venvPath,
       PATH: existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir,
     };
   }
-}
-
-let uvRunnerInstance: UvRunner | null = null;
-
-/** Get or create the singleton UvRunner instance */
-export function getUvRunner(): UvRunner {
-  if (!uvRunnerInstance) {
-    uvRunnerInstance = new UvRunner();
-  }
-  return uvRunnerInstance;
-}
-
-/** Used for tests only */
-export function resetUvRunner(): void {
-  if (uvRunnerInstance) {
-    uvRunnerInstance.resetCache();
-  }
-  uvRunnerInstance = null;
 }
 
 async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {

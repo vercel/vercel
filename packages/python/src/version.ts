@@ -1,5 +1,5 @@
 import { NowBuildError } from '@vercel/build-utils';
-import { getUvRunner } from './uv';
+import { UvRunner, findUvInPath } from './uv';
 
 interface PythonVersion {
   version: string;
@@ -290,7 +290,11 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
 
 function isInstalled({ version }: PythonVersion): boolean {
   try {
-    const uv = getUvRunner();
+    const uvPath = findUvInPath();
+    if (!uvPath) {
+      throw new Error('uv is required but was not found in PATH.');
+    }
+    const uv = new UvRunner(uvPath);
     const installed = uv.listInstalledPythons();
     return installed.has(version);
   } catch (err) {

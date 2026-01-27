@@ -28,7 +28,7 @@ import {
   installRequirementsFile,
   installRequirement,
 } from './install';
-import { getUvBinaryOrInstall } from './uv';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
@@ -292,10 +292,11 @@ export const build: BuildV3 = async ({
     if (!ranPyprojectInstall) {
       // Default installation path: use uv to normalize manifests into a uv.lock and
       // sync dependencies into the virtualenv, including required runtime deps.
-      let uvPath: string;
+      let uv: UvRunner;
       try {
-        uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+        const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
         console.log(`Using uv at "${uvPath}"`);
+        uv = new UvRunner(uvPath);
       } catch (err) {
         console.log('Failed to install or locate uv');
         throw new Error(
@@ -335,7 +336,7 @@ export const build: BuildV3 = async ({
         repoRootPath,
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
-        uvPath,
+        uv,
         venvPath,
         meta,
         runtimeDependencies,
@@ -345,6 +346,7 @@ export const build: BuildV3 = async ({
       // sync it into the venv. Re-running this with the same lockfile is idempotent
       // and prunes any unused dependencies from the virtualenv.
       await runUvSync({
+        uv,
         venvPath,
         projectDir,
         locked: true,
