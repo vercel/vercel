@@ -109,7 +109,9 @@ export function resolveConfiguredService(
   if (config.framework) {
     const framework = frameworksBySlug.get(config.framework);
     builderUse = framework?.useRuntime?.use || '@vercel/static-build';
-    builderSrc = framework?.useRuntime?.src || 'package.json';
+    // Prefer user-provided entrypoint over framework default
+    builderSrc =
+      config.entrypoint || framework?.useRuntime?.src || 'package.json';
   } else if (config.builder) {
     builderUse = config.builder;
     builderSrc = config.entrypoint!;

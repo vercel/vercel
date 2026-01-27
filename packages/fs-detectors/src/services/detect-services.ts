@@ -92,19 +92,26 @@ export function generateServicesRoutes(
   });
 
   for (const service of sortedServices) {
-    const { routePrefix } = service;
+    const { routePrefix, builder } = service;
 
     // TODO: implement worker and cron routing next
     if (service.type === 'worker' || service.type === 'cron') {
       continue;
     }
 
+    // The dest must point to the actual function path (builder.src),
+    // not just the routePrefix, so Vercel can find the .func directory
+    const builderSrc = builder.src || routePrefix;
+    const functionPath = builderSrc.startsWith('/')
+      ? builderSrc
+      : `/${builderSrc}`;
+
     // Web services
     if (routePrefix === '/') {
       // Root service: catch-all route
       defaults.push({
         src: '^/(.*)$',
-        dest: '/',
+        dest: functionPath,
         check: true,
       });
     } else {
@@ -114,7 +121,7 @@ export function generateServicesRoutes(
         : routePrefix;
       rewrites.push({
         src: `^/${normalizedPrefix}(?:/.*)?$`,
-        dest: routePrefix,
+        dest: functionPath,
         check: true,
       });
     }
