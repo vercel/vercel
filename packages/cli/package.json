@@ -90,6 +90,9 @@
     "@vercel/hydrogen": {
       "optional": true
     },
+    "@vercel/koa": {
+      "optional": true
+    },
     "@vercel/nestjs": {
       "optional": true
     },
