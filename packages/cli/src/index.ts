@@ -200,9 +200,7 @@ const main = async () => {
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
-        `${getTitleName()} CLI ${
-          pkg.version
-        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
+        `${getTitleName()} CLI ${pkg.version} | ${chalk.bold(targetOrSubcommand)} is a beta command — https://vercel.com/feedback`
       )}\n`
     );
   } else {
