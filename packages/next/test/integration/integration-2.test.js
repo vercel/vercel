@@ -598,6 +598,27 @@ describe('PPR', () => {
       // cache posioning.
       expect(output['[lang]'].fallback).toEqual(null);
     });
+
+    it('should attach segment fallbacks when client param parsing is enabled', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-root-params'));
+
+      const segmentKeys = Object.keys(output).filter(
+        key =>
+          key.includes('[lang]/skills/[skill].segments/') &&
+          key.endsWith('.segment.rsc')
+      );
+
+      expect(segmentKeys.length).toBeGreaterThan(0);
+
+      for (const key of segmentKeys) {
+        expect(output[key].type).toBe('Prerender');
+        expect(output[key].fallback).toBeDefined();
+        expect(output[key].fallback).not.toBeNull();
+        expect(output[key].fallback.fsPath).toBeDefined();
+      }
+    });
   });
 });
 

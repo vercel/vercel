@@ -1,5 +1,25 @@
 # @vercel/build-utils
 
+## 13.2.16
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+- Add maxConcurrency trigger field ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+## 13.2.15
+
+### Patch Changes
+
+- Optimize `getAvailableNodeVersions` to skip discontinued versions and use non-throwing `statSync` ([#14686](https://github.com/vercel/vercel/pull/14686))
+
+## 13.2.14
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
 ## 13.2.13
 
 ### Patch Changes

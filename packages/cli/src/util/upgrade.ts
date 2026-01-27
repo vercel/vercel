@@ -14,9 +14,20 @@ export async function executeUpgrade(): Promise<number> {
   output.debug(`Executing: ${updateCommand}`);
 
   return new Promise<number>(resolve => {
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+
     const upgradeProcess = spawn(command, args, {
-      stdio: 'inherit',
+      stdio: ['inherit', 'pipe', 'pipe'],
       shell: false,
+    });
+
+    upgradeProcess.stdout?.on('data', (data: Buffer) => {
+      stdout.push(data);
+    });
+
+    upgradeProcess.stderr?.on('data', (data: Buffer) => {
+      stderr.push(data);
     });
 
     upgradeProcess.on('error', (err: Error) => {
@@ -28,6 +39,20 @@ export async function executeUpgrade(): Promise<number> {
     upgradeProcess.on('close', (code: number | null) => {
       if (code === 0) {
         output.success('Vercel CLI has been upgraded successfully!');
+      } else {
+        // Show output only on error
+        const stdoutStr = Buffer.concat(stdout).toString();
+        const stderrStr = Buffer.concat(stderr).toString();
+        if (stdoutStr) {
+          output.print(stdoutStr);
+        }
+        if (stderrStr) {
+          output.print(stderrStr);
+        }
+        output.error(`Upgrade failed with exit code ${code ?? 'unknown'}`);
+        output.log(
+          `You can try running the command manually: ${updateCommand}`
+        );
       }
       resolve(code ?? 1);
     });

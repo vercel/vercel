@@ -41,4 +41,36 @@ describe('whoami', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stdout).toOutput(`${user.username}\n`);
   });
+
+  describe('--format', () => {
+    it('tracks telemetry for --format json', async () => {
+      useUser();
+      client.setArgv('whoami', '--format', 'json');
+      const exitCode = await whoami(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+      ]);
+    });
+
+    it('outputs user information as JSON', async () => {
+      const user = useUser();
+      client.setArgv('whoami', '--format', 'json');
+      const exitCode = await whoami(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toMatchObject({
+        username: user.username,
+        email: user.email,
+        name: user.name,
+      });
+    });
+  });
 });
