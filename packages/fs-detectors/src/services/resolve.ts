@@ -151,8 +151,6 @@ export function resolveConfiguredService(
   if (config.excludeFiles) builderConfig.excludeFiles = config.excludeFiles;
 
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
-
-  // Don't set runtime for static builds
   const runtime = isStaticBuild ? undefined : inferredRuntime;
 
   return {
