@@ -78,6 +78,16 @@ export function validateServiceConfig(
     }
   }
 
+  // Web services must have routePrefix
+  const serviceType = config.type || 'web';
+  if (serviceType === 'web' && !config.routePrefix) {
+    return {
+      code: 'MISSING_ROUTE_PREFIX',
+      message: `Web service "${name}" must specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
+
   return null;
 }
 
@@ -115,7 +125,8 @@ export function resolveConfiguredService(
     builderSrc = config.entrypoint!;
   }
 
-  const routePrefix = config.routePrefix ?? '/';
+  // routePrefix is required for web services (validated above), optional for others
+  const routePrefix = config.routePrefix || '/';
 
   // Ensure builder.src is fully qualified for non-root workspaces
   const isRoot = workspace === '.';
@@ -153,7 +164,7 @@ export function resolveConfiguredService(
 
 /**
  * Resolve all services from vercel.json experimentalServices.
- * Validates each service and checks for routing conflicts.
+ * Validates each service configuration.
  */
 export function resolveAllConfiguredServices(services: ExperimentalServices): {
   services: ResolvedService[];
@@ -161,7 +172,6 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
 } {
   const resolved: ResolvedService[] = [];
   const errors: ServiceDetectionError[] = [];
-  const webServicesWithoutRoutePrefix: string[] = [];
 
   for (const name of Object.keys(services)) {
     const serviceConfig = services[name];
@@ -172,25 +182,8 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
       continue;
     }
 
-    // Only web services need routePrefix for routing
-    const serviceType = serviceConfig.type || 'web';
-    if (serviceType === 'web' && serviceConfig.routePrefix === undefined) {
-      webServicesWithoutRoutePrefix.push(name);
-    }
-
     const service = resolveConfiguredService(name, serviceConfig);
     resolved.push(service);
-  }
-
-  // Only one web service can omit routePrefix (defaults to "/")
-  // Workers and crons don't need routePrefix since they're not routed via HTTP
-  if (webServicesWithoutRoutePrefix.length > 1) {
-    errors.push({
-      code: 'MULTIPLE_ROOT_SERVICES',
-      message: `Only one web service can omit "routePrefix". Web services without routePrefix: ${webServicesWithoutRoutePrefix.join(', ')}`,
-    });
-    // Don't return ambiguous services - user must fix the config
-    return { services: [], errors };
   }
 
   return { services: resolved, errors };

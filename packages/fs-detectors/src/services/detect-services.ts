@@ -6,7 +6,7 @@ import type {
   ServicesRoutes,
 } from './types';
 import { readVercelConfig } from './utils';
-import { resolveAllConfiguredServices } from './resolve-configured';
+import { resolveAllConfiguredServices } from './resolve';
 
 /**
  * Detect and resolve services within a project.

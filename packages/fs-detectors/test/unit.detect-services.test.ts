@@ -35,6 +35,7 @@ describe('detectServices', () => {
           experimentalServices: {
             api: {
               entrypoint: 'src/index.ts',
+              routePrefix: '/',
             },
           },
         }),
@@ -47,6 +48,7 @@ describe('detectServices', () => {
         type: 'web',
         workspace: '.',
         entrypoint: 'src/index.ts',
+        routePrefix: '/',
       });
       expect(result.errors).toEqual([]);
       // Routes should be generated for configured services
@@ -60,6 +62,7 @@ describe('detectServices', () => {
             frontend: {
               workspace: 'apps/web',
               framework: 'nextjs',
+              routePrefix: '/',
             },
             api: {
               workspace: 'apps/api',
@@ -86,6 +89,7 @@ describe('detectServices', () => {
         type: 'web',
         workspace: 'apps/web',
         framework: 'nextjs',
+        routePrefix: '/',
       });
 
       const api = result.services.find(s => s.name === 'api');
@@ -94,6 +98,7 @@ describe('detectServices', () => {
         type: 'web',
         workspace: 'apps/api',
         entrypoint: 'src/server.ts',
+        routePrefix: '/api',
       });
 
       const worker = result.services.find(s => s.name === 'worker');
@@ -112,6 +117,7 @@ describe('detectServices', () => {
           experimentalServices: {
             app: {
               entrypoint: 'index.ts',
+              routePrefix: '/',
             },
           },
         }),
@@ -127,6 +133,7 @@ describe('detectServices', () => {
           experimentalServices: {
             app: {
               entrypoint: 'index.ts',
+              routePrefix: '/',
             },
           },
         }),
@@ -163,6 +170,7 @@ describe('detectServices', () => {
             web: {
               type: 'web',
               entrypoint: 'index.ts',
+              routePrefix: '/',
             },
           },
         }),
@@ -173,15 +181,12 @@ describe('detectServices', () => {
       expect(result.services[0].consumer).toBeUndefined();
     });
 
-    it('should error when multiple web services omit routePrefix', async () => {
+    it('should error when web service is missing routePrefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
-            frontend: {
-              entrypoint: 'web/index.ts',
-            },
             api: {
-              entrypoint: 'api/index.ts',
+              entrypoint: 'index.ts',
             },
           },
         }),
@@ -190,27 +195,8 @@ describe('detectServices', () => {
 
       expect(result.services).toEqual([]);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('MULTIPLE_ROOT_SERVICES');
-    });
-
-    it('should allow multiple web services when only one omits routePrefix', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            frontend: {
-              entrypoint: 'web/index.ts',
-            },
-            api: {
-              entrypoint: 'api/index.ts',
-              routePrefix: '/api',
-            },
-          },
-        }),
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toHaveLength(2);
-      expect(result.errors).toEqual([]);
+      expect(result.errors[0].code).toBe('MISSING_ROUTE_PREFIX');
+      expect(result.errors[0].serviceName).toBe('api');
     });
   });
 
@@ -267,6 +253,7 @@ describe('detectServices', () => {
           experimentalServices: {
             frontend: {
               entrypoint: 'src/index.ts',
+              routePrefix: '/',
             },
           },
         }),

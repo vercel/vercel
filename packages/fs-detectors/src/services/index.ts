@@ -6,7 +6,7 @@ export {
   validateServiceConfig,
   resolveConfiguredService,
   resolveAllConfiguredServices,
-} from './resolve-configured';
+} from './resolve';
 
 export { getBuilderForRuntime, inferRuntimeFromExtension } from './utils';
 
