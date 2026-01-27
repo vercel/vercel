@@ -72,15 +72,6 @@ export function parseBillingDate(
   return toISOOrThrow(finalDateTime.toUTC());
 }
 
-function getWeekStart(dateStr: string): string {
-  const date = new Date(dateStr);
-  const day = date.getUTCDay();
-  // Adjust to get Monday (ISO week start)
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setUTCDate(date.getUTCDate() + diff);
-  return date.toISOString().substring(0, 10);
-}
-
 function getISOWeekNumber(dateStr: string): number {
   const date = new Date(dateStr);
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -89,6 +80,12 @@ function getISOWeekNumber(dateStr: string): number {
     ((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
   );
   return weekNo;
+}
+
+function getISOWeekYear(dateStr: string): number {
+  const date = new Date(dateStr);
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  return date.getUTCFullYear();
 }
 
 export function getPeriodKey(
@@ -106,10 +103,9 @@ export function getPeriodKey(
 
     case 'weekly': {
       // Return YYYY-Www format (ISO week)
-      const weekStart = getWeekStart(chargePeriodStart);
-      const year = weekStart.substring(0, 4);
+      const weekYear = getISOWeekYear(chargePeriodStart);
       const weekNum = getISOWeekNumber(chargePeriodStart);
-      return `${year}-W${weekNum.toString().padStart(2, '0')}`;
+      return `${weekYear}-W${weekNum.toString().padStart(2, '0')}`;
     }
 
     case 'monthly':
