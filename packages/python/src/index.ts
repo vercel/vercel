@@ -21,7 +21,6 @@ import {
   PythonFramework,
 } from '@vercel/build-utils';
 import {
-  getUvBinaryOrInstall,
   runUvSync,
   ensureUvProject,
   resolveVendorDir,
@@ -29,6 +28,7 @@ import {
   installRequirementsFile,
   installRequirement,
 } from './install';
+import { getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
@@ -345,7 +345,6 @@ export const build: BuildV3 = async ({
       // sync it into the venv. Re-running this with the same lockfile is idempotent
       // and prunes any unused dependencies from the virtualenv.
       await runUvSync({
-        uvPath,
         venvPath,
         projectDir,
         locked: true,

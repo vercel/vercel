@@ -2,7 +2,6 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import { join, dirname, resolve } from 'path';
-import which from 'which';
 import {
   FileFsRef,
   Files,
@@ -12,15 +11,10 @@ import {
   readConfigFile,
   traverseUpDirectories,
 } from '@vercel/build-utils';
-import {
-  getVenvPythonBin,
-  runUvCommand,
-  findDir,
-  getProtectedUvEnv,
-} from './utils';
+import { getVenvPythonBin, findDir, getProtectedUvEnv } from './utils';
+import { getUvRunner, filterUnsafeUvPipArgs } from './uv';
 
 const isWin = process.platform === 'win32';
-const uvExec = isWin ? 'uv.exe' : 'uv';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -80,28 +74,17 @@ async function areRequirementsInstalled(
 }
 
 export async function runUvSync({
-  uvPath,
   venvPath,
   projectDir,
   locked,
 }: {
-  uvPath: string | null;
   venvPath: string;
   projectDir: string;
   locked: boolean;
 }) {
-  // Use copy mode so installed dependencies are real files in the venv.
-  const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
-  if (locked) {
-    args.push('--locked');
-  }
-  args.push('--no-editable');
-  await runUvCommand({
-    uvPath,
-    args,
-    cwd: projectDir,
-    venvPath,
-  });
+  const uv = getUvRunner();
+  uv.setVenvPath(venvPath);
+  await uv.sync({ projectDir, locked });
 }
 
 async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
@@ -285,64 +268,6 @@ interface EnsureUvProjectParams {
   runtimeDependencies: string[];
 }
 
-export async function uvLock({
-  projectDir,
-  uvPath,
-}: {
-  projectDir: string;
-  uvPath: string;
-}): Promise<void> {
-  const args = ['lock'];
-  const pretty = `${uvPath} ${args.join(' ')}`;
-  debug(`Running "${pretty}" in ${projectDir}...`);
-  try {
-    await execa(uvPath, args, { cwd: projectDir, env: getProtectedUvEnv() });
-  } catch (err) {
-    throw new Error(
-      `Failed to run "${pretty}": ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
-}
-
-export async function uvAddDependencies({
-  projectDir,
-  uvPath,
-  venvPath,
-  dependencies,
-}: {
-  projectDir: string;
-  uvPath: string;
-  venvPath: string;
-  dependencies: string[];
-}): Promise<void> {
-  const toAdd = dependencies.filter(Boolean);
-  if (!toAdd.length) return;
-
-  const args = ['add', '--active', ...toAdd];
-  const pretty = `${uvPath} ${args.join(' ')}`;
-  debug(`Running "${pretty}" in ${projectDir}...`);
-  await runUvCommand({ uvPath, args, cwd: projectDir, venvPath });
-}
-
-export async function uvAddFromFile({
-  projectDir,
-  uvPath,
-  venvPath,
-  requirementsPath,
-}: {
-  projectDir: string;
-  uvPath: string;
-  venvPath: string;
-  requirementsPath: string;
-}): Promise<void> {
-  const args = ['add', '--active', '-r', requirementsPath];
-  const pretty = `${uvPath} ${args.join(' ')}`;
-  debug(`Running "${pretty}" in ${projectDir}...`);
-  await runUvCommand({ uvPath, args, cwd: projectDir, venvPath });
-}
-
 function getDependencyName(spec: string): string {
   const match = spec.match(/^[A-Za-z0-9_.-]+/);
   return match ? match[0].toLowerCase() : spec.toLowerCase();
@@ -403,6 +328,10 @@ export async function ensureUvProject({
   meta,
   runtimeDependencies,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
+  // Get the UvRunner singleton and configure it with the venv path
+  const uv = getUvRunner();
+  uv.setVenvPath(venvPath);
+
   const installInfo = await detectInstallSource({
     workPath,
     entryDirectory,
@@ -444,7 +373,7 @@ export async function ensureUvProject({
     } else {
       // Otherwise, generate a lock. In uv workspaces, this may still write
       // the lockfile at the workspace root, not necessarily in projectDir.
-      await uvLock({ projectDir, uvPath });
+      await uv.lock(projectDir);
     }
   } else if (manifestType === 'Pipfile.lock' || manifestType === 'Pipfile') {
     if (!manifestPath) {
@@ -469,10 +398,8 @@ export async function ensureUvProject({
         dependencies: [],
       });
     }
-    await uvAddFromFile({
+    await uv.addFromFile({
       projectDir,
-      uvPath,
-      venvPath,
       requirementsPath: exportedReq,
     });
   } else if (manifestType === 'requirements.txt') {
@@ -493,10 +420,8 @@ export async function ensureUvProject({
         dependencies: [],
       });
     }
-    await uvAddFromFile({
+    await uv.addFromFile({
       projectDir,
-      uvPath,
-      venvPath,
       requirementsPath: manifestPath,
     });
   } else {
@@ -512,7 +437,7 @@ export async function ensureUvProject({
       pyprojectPath,
       dependencies: [],
     });
-    await uvLock({ projectDir, uvPath });
+    await uv.lock(projectDir);
   }
 
   if (runtimeDependencies.length) {
@@ -521,10 +446,8 @@ export async function ensureUvProject({
       runtimeDependencies,
     });
     if (missingRuntimeDeps.length) {
-      await uvAddDependencies({
+      await uv.addDependencies({
         projectDir,
-        uvPath,
-        venvPath,
         dependencies: missingRuntimeDeps,
       });
     }
@@ -539,34 +462,6 @@ export async function ensureUvProject({
         join(projectDir, 'uv.lock');
 
   return { projectDir, pyprojectPath, lockPath: resolvedLockPath };
-}
-
-async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
-  const code = `import sysconfig; print(sysconfig.get_path('scripts'))`;
-  try {
-    const { stdout } = await execa(pythonPath, ['-c', code]);
-    const out = stdout.trim();
-    return out || null;
-  } catch (err) {
-    debug('Failed to resolve Python global scripts directory', err);
-    return null;
-  }
-}
-
-async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
-  const code =
-    `import sys, sysconfig; print(sysconfig.get_path('scripts', scheme=('nt_user' if sys.platform == 'win32' else 'posix_user')))`.replace(
-      /\n/g,
-      ' '
-    );
-  try {
-    const { stdout } = await execa(pythonPath, ['-c', code]);
-    const out = stdout.trim();
-    return out || null;
-  } catch (err) {
-    debug('Failed to resolve Python user scripts directory', err);
-    return null;
-  }
 }
 
 async function pipInstall(
@@ -632,94 +527,6 @@ async function pipInstall(
     debug(`error: ${err}`);
     throw err;
   }
-}
-
-async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
-  // If on PATH already, use it
-  const found = which.sync('uv', { nothrow: true });
-  if (found) return found;
-
-  // Interprerer's global/venv scripts dir
-  try {
-    const globalScriptsDir = await getGlobalScriptsDir(pythonPath);
-    if (globalScriptsDir) {
-      const uvPath = join(globalScriptsDir, uvExec);
-      if (fs.existsSync(uvPath)) return uvPath;
-    }
-  } catch (err) {
-    debug('Failed to resolve Python global scripts directory', err);
-  }
-
-  // Interpreter's user scripts dir
-  try {
-    const userScriptsDir = await getUserScriptsDir(pythonPath);
-    if (userScriptsDir) {
-      const uvPath = join(userScriptsDir, uvExec);
-      if (fs.existsSync(uvPath)) return uvPath;
-    }
-  } catch (err) {
-    debug('Failed to resolve Python user scripts directory', err);
-  }
-
-  // Common fallbacks
-  try {
-    const candidates: string[] = [];
-    if (!isWin) {
-      candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
-      candidates.push('/usr/local/bin/uv');
-      candidates.push('/opt/homebrew/bin/uv');
-    } else {
-      candidates.push('C:\\Users\\Public\\uv\\uv.exe');
-    }
-    for (const p of candidates) {
-      if (fs.existsSync(p)) return p;
-    }
-  } catch (err) {
-    debug('Failed to resolve uv fallback paths', err);
-  }
-
-  return null;
-}
-
-export async function getUvBinaryOrInstall(
-  pythonPath: string
-): Promise<string> {
-  const uvBin = await maybeFindUvBin(pythonPath);
-  if (uvBin) return uvBin;
-
-  // Pip install uv
-  // Note we're using pip directly instead of pipPath because we want to make sure
-  // it is installed in the same environment as the Python interpreter
-  try {
-    console.log('Installing uv...');
-    await execa(
-      pythonPath,
-      [
-        '-m',
-        'pip',
-        'install',
-        '--disable-pip-version-check',
-        '--no-cache-dir',
-        '--user',
-        'uv==0.8.18',
-      ],
-      { env: { ...process.env, PIP_USER: '1' } }
-    );
-  } catch (err) {
-    throw new Error(
-      `Failed to install uv via pip: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
-
-  const resolvedUvBin = await maybeFindUvBin(pythonPath);
-  if (!resolvedUvBin) {
-    throw new Error('Unable to resolve uv binary after pip install');
-  }
-
-  console.log(`Installed uv at "${resolvedUvBin}"`);
-  return resolvedUvBin;
 }
 
 interface InstallRequirementArg {
@@ -804,12 +611,6 @@ export async function installRequirementsFile({
     ['--upgrade', '-r', filePath, ...args],
     targetDir
   );
-}
-
-function filterUnsafeUvPipArgs(args: string[]): string[] {
-  // `--no-warn-script-location` is not supported/safe with `uv pip install`,
-  // so strip it out when using uv while still allowing it for plain pip.
-  return args.filter(arg => arg !== '--no-warn-script-location');
 }
 
 export async function exportRequirementsFromPipfile({

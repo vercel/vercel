@@ -9,6 +9,7 @@ import {
   getVenvBinDir,
   UV_PYTHON_DOWNLOADS_MODE,
 } from '../src/utils';
+import { resetUvRunner } from '../src/uv';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -58,9 +59,7 @@ afterEach(() => {
     fs.removeSync(tmpPythonDir);
   }
   // Reset the installed Python versions cache between tests
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const versionModule = require('../src/version');
-  versionModule.installedPythonsCache = null;
+  resetUvRunner();
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
@@ -1009,14 +1008,14 @@ describe('python version fallback logging', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should log that it's falling back to latest installed
+    // Should log that it's falling back to default/latest installed
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining(
         'No Python version specified in pyproject.toml or Pipfile.lock'
       )
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using latest installed version')
+      expect.stringContaining('Using python version')
     );
   });
 

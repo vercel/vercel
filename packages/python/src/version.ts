@@ -1,15 +1,5 @@
-import { execSync } from 'child_process';
 import { NowBuildError } from '@vercel/build-utils';
-import which from 'which';
-
-interface UvPythonEntry {
-  version_parts: {
-    major: number;
-    minor: number;
-  };
-  path: string | null;
-  implementation: string;
-}
+import { getUvRunner } from './uv';
 
 interface PythonVersion {
   version: string;
@@ -298,77 +288,16 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
-// This matches the configured path prefix for uv-managed Python installations in the build-container
-const UV_PYTHON_PATH_PREFIX = '/uv/python/';
-
-export let installedPythonsCache: Set<string> | null = null;
-
-// We use caching to avoid repeated calls to `uv python list` during a build
-function getInstalledPythons(): Set<string> {
-  if (installedPythonsCache !== null) {
-    return installedPythonsCache;
-  }
-
-  const uvPath = which.sync('uv', { nothrow: true });
-  if (!uvPath) {
-    throw new NowBuildError({
-      code: 'UV_NOT_FOUND',
-      link: 'https://vercel.com/help',
-      message: 'uv is required but was not found in PATH.',
-    });
-  }
-
-  let output: string;
-  try {
-    output = execSync(
-      `${uvPath} python list --only-installed --output-format json`,
-      {
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }
-    );
-  } catch (err) {
-    throw new NowBuildError({
-      code: 'UV_PYTHON_LIST_FAILED',
-      link: 'https://vercel.com/help',
-      message: `Failed to run 'uv python list': ${err instanceof Error ? err.message : String(err)}`,
-    });
-  }
-
-  // Handle empty output (no Python versions installed)
-  if (!output || output.trim() === '' || output.trim() === '[]') {
-    installedPythonsCache = new Set();
-    return installedPythonsCache;
-  }
-
-  let pyList: UvPythonEntry[];
-  try {
-    pyList = JSON.parse(output);
-  } catch (err) {
-    throw new NowBuildError({
-      code: 'UV_PYTHON_LIST_PARSE_ERROR',
-      link: 'https://vercel.com/help',
-      message: `Failed to parse 'uv python list' output: ${err instanceof Error ? err.message : String(err)}`,
-    });
-  }
-
-  // Filter to only uv-managed cpython installations (under /uv/python/)
-  // This excludes system Python (e.g., /usr/bin/python3.9)
-  installedPythonsCache = new Set(
-    pyList
-      .filter(
-        entry =>
-          entry.path !== null &&
-          entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
-          entry.implementation === 'cpython'
-      )
-      .map(entry => `${entry.version_parts.major}.${entry.version_parts.minor}`)
-  );
-
-  return installedPythonsCache;
-}
-
 function isInstalled({ version }: PythonVersion): boolean {
-  const installed = getInstalledPythons();
-  return installed.has(version);
+  try {
+    const uv = getUvRunner();
+    const installed = uv.listInstalledPythons();
+    return installed.has(version);
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'UV_ERROR',
+      link: 'https://vercel.link/python-version',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
