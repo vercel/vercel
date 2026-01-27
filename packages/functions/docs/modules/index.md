@@ -261,7 +261,7 @@ An instance of the Vercel Runtime Cache.
 
 #### Defined in
 
-[packages/functions/src/cache/index.ts:33](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L33)
+[packages/functions/src/cache/index.ts:55](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L55)
 
 ---
 
