@@ -247,6 +247,54 @@ describe('detectServices', () => {
         serviceName: 'cleanup',
       });
     });
+
+    it('should error if cron service has routePrefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.ts',
+              schedule: '0 0 * * *',
+              routePrefix: '/cron',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_ROUTE_PREFIX',
+        serviceName: 'cleanup',
+      });
+    });
+  });
+
+  describe('worker services', () => {
+    it('should error if worker service has routePrefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            processor: {
+              type: 'worker',
+              entrypoint: 'worker/processor.ts',
+              topic: 'jobs',
+              routePrefix: '/worker',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_ROUTE_PREFIX',
+        serviceName: 'processor',
+      });
+    });
   });
 
   describe('with workPath', () => {

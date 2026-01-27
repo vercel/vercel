@@ -29,7 +29,7 @@ export async function detectServices(
   if (configError) {
     return {
       services: [],
-      routes: { rewrites: [], defaults: [] },
+      routes: { rewrites: [], defaults: [], crons: [], workers: [] },
       errors: [configError],
       warnings: [],
     };
@@ -42,7 +42,7 @@ export async function detectServices(
   if (!hasConfiguredServices) {
     return {
       services: [],
-      routes: { rewrites: [], defaults: [] },
+      routes: { rewrites: [], defaults: [], crons: [], workers: [] },
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
@@ -71,33 +71,36 @@ export async function detectServices(
 /**
  * Generate routing rules for services.
  *
- * Routes are ordered by prefix length (longest first) to ensure more specific
- * routes match before broader ones. For example, `/api/users` must be checked
- * before `/api`, which must be checked before the catch-all `/`.
+ * Web services: Routes are ordered by prefix length (longest first) to ensure
+ * more specific routes match before broader ones. For example, `/api/users`
+ * must be checked before `/api`, which must be checked before the catch-all `/`.
+ *
+ * Cron/Worker services: TODO
+ * Use internal routes under `/_svc/crons` and `/_svc/workers`
  */
 export function generateServicesRoutes(
   services: ResolvedService[]
 ): ServicesRoutes {
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
+  const crons: Route[] = [];
+  const workers: Route[] = [];
+
+  const webServices = services.filter(
+    (s): s is ResolvedService & { routePrefix: string } =>
+      s.type === 'web' && typeof s.routePrefix === 'string'
+  );
 
   // Sort by prefix length (longest first) so specific routes match before broad ones.
   // Root services ("/") go last as the catch-all fallback.
-  const sortedServices = [...services].sort((a, b) => {
-    // Root prefix should come last
+  const sortedWebServices = [...webServices].sort((a, b) => {
     if (a.routePrefix === '/') return 1;
     if (b.routePrefix === '/') return -1;
-    // Otherwise sort by length (longest first)
     return b.routePrefix.length - a.routePrefix.length;
   });
 
-  for (const service of sortedServices) {
+  for (const service of sortedWebServices) {
     const { routePrefix, builder } = service;
-
-    // TODO: implement worker and cron routing next
-    if (service.type === 'worker' || service.type === 'cron') {
-      continue;
-    }
 
     // The dest must point to the actual function path (builder.src),
     // not just the routePrefix, so Vercel can find the .func directory
@@ -106,7 +109,10 @@ export function generateServicesRoutes(
       ? builderSrc
       : `/${builderSrc}`;
 
-    // Web services
+    // `check: true` tells the router to verify the destination exists on the
+    // filesystem before applying the route. If it doesn't exist, the route is
+    // skipped and routing continues. This ensures requests only route to
+    // functions that were successfully built.
     if (routePrefix === '/') {
       // Root service: catch-all route
       defaults.push({
@@ -127,5 +133,5 @@ export function generateServicesRoutes(
     }
   }
 
-  return { rewrites, defaults };
+  return { rewrites, defaults, crons, workers };
 }

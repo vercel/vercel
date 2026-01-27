@@ -33,10 +33,10 @@ export interface ResolvedService {
   runtime?: string;
   /**
    * URL path prefix for routing requests to this service.
-   * For web services, requests matching this prefix are routed to this service.
+   * Required for web services; requests matching this prefix are routed to this service.
    * Root services use "/" as the catch-all.
    */
-  routePrefix: string;
+  routePrefix?: string;
   /* Cron service config */
   schedule?: string;
   /* Worker service config */
@@ -54,10 +54,22 @@ export interface DetectServicesOptions {
 }
 
 export interface ServicesRoutes {
-  /** Rewrite routes for non-root services */
+  /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
-  /** Default routes (catch-all for root service) */
+  /** Default routes (catch-all for root web service) */
   defaults: Route[];
+  /**
+   * Internal routes for cron services.
+   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
+   * TODO: Implement
+   */
+  crons: Route[];
+  /**
+   * Internal routes for worker services.
+   * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
+   * TODO: Implement
+   */
+  workers: Route[];
 }
 
 export interface DetectServicesResult {

@@ -34,6 +34,16 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (
+    (serviceType === 'worker' || serviceType === 'cron') &&
+    config.routePrefix
+  ) {
+    return {
+      code: 'INVALID_ROUTE_PREFIX',
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
   if (serviceType === 'cron' && !config.schedule) {
     return {
       code: 'MISSING_CRON_SCHEDULE',
@@ -125,8 +135,8 @@ export function resolveConfiguredService(
     builderSrc = config.entrypoint!;
   }
 
-  // routePrefix is required for web services (validated above), optional for others
-  const routePrefix = config.routePrefix || '/';
+  // routePrefix is required for web services
+  const routePrefix = type === 'web' ? config.routePrefix : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces
   const isRoot = workspace === '.';
