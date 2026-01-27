@@ -320,6 +320,7 @@ type RoutesManifestOld = {
     pathHeader: string;
     queryHeader: string;
   };
+
   /**
    * Header for navigation data responses (both App and Pages, respecitively RSC and _next/data)
    */
@@ -2951,8 +2952,6 @@ export const onPrerenderRoute =
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
       const rscDidPostponeHeader = routesManifest?.rsc?.didPostponeHeader;
-      const navDeploymentIdHeader = routesManifest?.navDeploymentIdHeader;
-      const deploymentId = routesManifest?.deploymentId;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
@@ -3088,11 +3087,6 @@ export const onPrerenderRoute =
                 initialHeaders: {
                   ...initialHeaders,
                   vary: rscVaryHeader,
-                  ...(navDeploymentIdHeader && deploymentId
-                    ? {
-                        [navDeploymentIdHeader]: deploymentId,
-                      }
-                    : {}),
                 },
               }
             : {}),
@@ -3156,11 +3150,6 @@ export const onPrerenderRoute =
                     : {}),
                   ...(didPostpone && rscDidPostponeHeader && !isFallback
                     ? { [rscDidPostponeHeader]: '1' }
-                    : {}),
-                  ...(navDeploymentIdHeader && deploymentId
-                    ? {
-                        [navDeploymentIdHeader]: deploymentId,
-                      }
                     : {}),
                 },
               }
@@ -3245,11 +3234,6 @@ export const onPrerenderRoute =
               'cache-control':
                 'private, no-store, no-cache, max-age=0, must-revalidate',
               vary: rscVaryHeader,
-              ...(navDeploymentIdHeader && deploymentId
-                ? {
-                    [navDeploymentIdHeader]: deploymentId,
-                  }
-                : {}),
             },
           });
         }
@@ -3345,11 +3329,6 @@ export const onPrerenderRoute =
                   vary: rscVaryHeader,
                   'content-type': rscContentTypeHeader,
                   [rscDidPostponeHeader]: '2',
-                  ...(navDeploymentIdHeader && deploymentId
-                    ? {
-                        [navDeploymentIdHeader]: deploymentId,
-                      }
-                    : {}),
                 },
               });
             }
