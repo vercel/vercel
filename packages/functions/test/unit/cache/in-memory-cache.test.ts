@@ -44,6 +44,12 @@ describe('InMemoryCache', () => {
       const result = await cache.get('key');
       expect(result).toBeNull();
     });
+
+    it('should coerce undefined to null', async () => {
+      await cache.set('key', undefined);
+      const result = await cache.get('key');
+      expect(result).toBeNull();
+    });
   });
 
   describe('JSON serialization consistency with BuildCache', () => {

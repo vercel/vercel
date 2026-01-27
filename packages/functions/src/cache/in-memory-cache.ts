@@ -28,8 +28,10 @@ export class InMemoryCache implements RuntimeCache {
     value: unknown,
     options?: { ttl?: number; tags?: string[] }
   ): Promise<void> {
+    // JSON.stringify(undefined) returns undefined (not a string), so coerce to null
+    const serialized = JSON.stringify(value ?? null);
     this.cache[key] = {
-      value: JSON.stringify(value),
+      value: serialized,
       lastModified: Date.now(),
       ttl: options?.ttl,
       tags: new Set(options?.tags || []),
