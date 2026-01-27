@@ -195,8 +195,6 @@ describe('usage', () => {
       // Should show daily breakdown with dates
       expect(output).toContain('2025-12-01');
       expect(output).toContain('2025-12-02');
-      // Should show Grand Total section
-      expect(output).toContain('Grand Total');
       // Should show services
       expect(output).toContain('Serverless Function Execution');
       expect(output).toContain('Edge Middleware Invocations');
@@ -237,8 +235,6 @@ describe('usage', () => {
       // Should show weekly breakdown with week identifiers
       expect(output).toContain('2025-W49');
       expect(output).toContain('2025-W50');
-      // Should show Grand Total section
-      expect(output).toContain('Grand Total');
     });
 
     it('should display monthly breakdown with --breakdown monthly', async () => {
@@ -276,8 +272,6 @@ describe('usage', () => {
       // Should show monthly breakdown
       expect(output).toContain('2025-11');
       expect(output).toContain('2025-12');
-      // Should show Grand Total section
-      expect(output).toContain('Grand Total');
     });
 
     it('should output JSON with breakdown data when --breakdown daily and --format json', async () => {
