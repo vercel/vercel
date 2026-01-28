@@ -280,12 +280,6 @@ export default async function logsv2(client: Client) {
 
   const limit = limitOption ?? 100;
 
-  if (!jsonOption) {
-    output.print(
-      `Fetching logs for project ${chalk.bold(projectId)} in ${chalk.bold(contextName)}...\n\n`
-    );
-  }
-
   output.spinner('Fetching logs...', 1000);
 
   const terminalWidth = client.stderr.isTTY
@@ -343,7 +337,11 @@ export default async function logsv2(client: Client) {
       for (const log of logs) {
         prettyPrintLogEntry(log, printOpts);
       }
-      output.print(chalk.gray(`\nDisplayed ${logs.length} log entries.\n`));
+      output.print(
+        chalk.gray(
+          `\nFetched ${logs.length} logs for project ${projectId} in ${contextName}\n`
+        )
+      );
     }
   }
 
