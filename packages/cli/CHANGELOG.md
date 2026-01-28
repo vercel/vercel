@@ -1,5 +1,30 @@
 # vercel
 
+## 50.9.1
+
+### Patch Changes
+
+- Updated dependencies [[`cce5b52a24a5ca0471334d13482d2a6b3bfc7910`](https://github.com/vercel/vercel/commit/cce5b52a24a5ca0471334d13482d2a6b3bfc7910)]:
+  - @vercel/next@4.15.18
+
+## 50.9.0
+
+### Minor Changes
+
+- Add confirmation prompt for DELETE API operations and agent mode warning ([#14769](https://github.com/vercel/vercel/pull/14769))
+
+  - DELETE operations now require user confirmation before proceeding
+  - When running under an AI agent with `--dangerously-skip-permissions`, a warning is displayed to stderr
+  - In non-TTY mode, DELETE operations fail unless `--dangerously-skip-permissions` is used
+
+### Patch Changes
+
+- Add auto-provision flow for integration resources (behind feature flag) ([#14734](https://github.com/vercel/vercel/pull/14734))
+
+- Revert "[cli] Use promote flow when targeting production alias" ([#14771](https://github.com/vercel/vercel/pull/14771))
+
+- Improved curl generation with auth header placeholder ([#14752](https://github.com/vercel/vercel/pull/14752))
+
 ## 50.8.1
 
 ### Patch Changes
