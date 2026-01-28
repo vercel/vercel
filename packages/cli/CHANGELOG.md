@@ -1,5 +1,18 @@
 # vercel
 
+## 50.8.0
+
+### Minor Changes
+
+- Updated `vercel alias` command to use the promote flow when aliasing to a production alias. When the target alias matches one of the project's configured production domains, the command now calls the promote API instead of directly assigning the alias, ensuring proper production deployment handling. ([#14755](https://github.com/vercel/vercel/pull/14755))
+
+### Patch Changes
+
+- [experimental] Adds support for building multiple services when framework mode is set to "services" ([#14739](https://github.com/vercel/vercel/pull/14739))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.8.28
+
 ## 50.7.1
 
 ### Patch Changes
