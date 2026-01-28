@@ -57,7 +57,9 @@ export default async function sdkKeysLs(
       output.log(
         `${chalk.bold(keys.length)} SDK key${keys.length === 1 ? '' : 's'} found for ${projectSlugLink}`
       );
-      printSdkKeysTable(keys);
+      // Sort by createdAt descending (most recently created first)
+      const sortedKeys = keys.sort((a, b) => b.createdAt - a.createdAt);
+      printSdkKeysTable(sortedKeys);
     }
   } catch (err) {
     output.stopSpinner();
