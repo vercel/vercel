@@ -44,6 +44,11 @@ import {
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
 import { tryDetectServices } from '../projects/detect-services';
+import {
+  displayDetectedServices,
+  displayServiceErrors,
+  displayServicesConfigNote,
+} from '../input/display-services';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -178,13 +183,18 @@ export default async function setupAndLink(
     !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
   // Check for experimental services (gated by VERCEL_USE_EXPERIMENTAL_SERVICES env var)
-  const servicesFramework = await tryDetectServices(pathWithRootDirectory);
+  const servicesResult = await tryDetectServices(pathWithRootDirectory);
 
   try {
     let settings: ProjectSettings = {};
 
-    if (servicesFramework) {
-      settings.framework = servicesFramework;
+    if (servicesResult) {
+      displayDetectedServices(servicesResult.services);
+      if (servicesResult.errors.length > 0) {
+        displayServiceErrors(servicesResult.errors);
+      }
+      displayServicesConfigNote();
+      settings.framework = 'services';
     } else if (isZeroConfig) {
       const localConfigurationOverrides: PartialProjectSettings = {
         buildCommand: localConfig?.buildCommand,

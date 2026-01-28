@@ -1,23 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
-
-// Mock the display functions
-vi.mock('../../../../src/util/input/display-services', () => ({
-  displayDetectedServices: vi.fn(),
-  displayServiceErrors: vi.fn(),
-  displayServicesConfigNote: vi.fn(),
-}));
-
 import {
   tryDetectServices,
   isExperimentalServicesEnabled,
 } from '../../../../src/util/projects/detect-services';
-import {
-  displayDetectedServices,
-  displayServicesConfigNote,
-} from '../../../../src/util/input/display-services';
 
 describe('isExperimentalServicesEnabled()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
@@ -66,7 +54,6 @@ describe('tryDetectServices()', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    vi.clearAllMocks();
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -93,7 +80,6 @@ describe('tryDetectServices()', () => {
 
     const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
-    expect(displayDetectedServices).not.toHaveBeenCalled();
   });
 
   it('should return null when no vercel.json exists', async () => {
@@ -101,7 +87,6 @@ describe('tryDetectServices()', () => {
 
     const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
-    expect(displayDetectedServices).not.toHaveBeenCalled();
   });
 
   it('should return null when vercel.json has no experimentalServices', async () => {
@@ -113,10 +98,9 @@ describe('tryDetectServices()', () => {
 
     const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
-    expect(displayDetectedServices).not.toHaveBeenCalled();
   });
 
-  it('should return "services" and display when services are detected', async () => {
+  it('should return result with services when detected', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
@@ -129,27 +113,18 @@ describe('tryDetectServices()', () => {
     );
 
     const result = await tryDetectServices(tempDir);
-    expect(result).toBe('services');
-    expect(displayDetectedServices).toHaveBeenCalledTimes(1);
-    expect(displayServicesConfigNote).toHaveBeenCalledTimes(1);
-  });
-
-  it('should display errors when service config has validation issues', async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-    await writeFile(
-      join(tempDir, 'vercel.json'),
-      JSON.stringify({
-        experimentalServices: {
-          // Valid service
-          valid: { entrypoint: 'index.ts', routePrefix: '/' },
-          // Invalid service (missing routePrefix) - will cause error but valid one still works
-        },
-      })
-    );
-
-    const result = await tryDetectServices(tempDir);
-    expect(result).toBe('services');
-    expect(displayDetectedServices).toHaveBeenCalled();
+    expect(result).not.toBeNull();
+    expect(result?.services).toHaveLength(2);
+    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+      name: 'frontend',
+      framework: 'nextjs',
+      routePrefix: '/',
+    });
+    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+      name: 'backend',
+      entrypoint: 'api/index.py',
+      routePrefix: '/api',
+    });
   });
 
   it('should return null when all services have validation errors', async () => {

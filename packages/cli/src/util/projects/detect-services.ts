@@ -1,9 +1,8 @@
-import { detectServices, LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
-  displayDetectedServices,
-  displayServiceErrors,
-  displayServicesConfigNote,
-} from '../input/display-services';
+  detectServices,
+  LocalFileSystemDetector,
+  type DetectServicesResult,
+} from '@vercel/fs-detectors';
 
 export function isExperimentalServicesEnabled(): boolean {
   return (
@@ -13,15 +12,17 @@ export function isExperimentalServicesEnabled(): boolean {
 }
 
 /**
- * Detect and display services if experimental services are enabled.
+ * Detect services if experimental services are enabled.
  *
- * Returns 'services' framework string if:
+ * Returns the detection result if:
  * - VERCEL_USE_EXPERIMENTAL_SERVICES=1 env var is set
  * - vercel.json contains experimentalServices with valid services
  *
  * Returns null otherwise.
  */
-export async function tryDetectServices(cwd: string): Promise<string | null> {
+export async function tryDetectServices(
+  cwd: string
+): Promise<DetectServicesResult | null> {
   if (!isExperimentalServicesEnabled()) {
     return null;
   }
@@ -37,12 +38,5 @@ export async function tryDetectServices(cwd: string): Promise<string | null> {
     return null;
   }
 
-  // Display detected services
-  displayDetectedServices(result.services);
-  if (result.errors.length > 0) {
-    displayServiceErrors(result.errors);
-  }
-  displayServicesConfigNote();
-
-  return 'services';
+  return result;
 }
