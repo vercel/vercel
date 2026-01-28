@@ -3,7 +3,19 @@ export {
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  type Options as DetectBuildersOptions,
 } from './detect-builders';
+export {
+  detectServices,
+  generateServicesRoutes,
+} from './services/detect-services';
+export { getServicesBuilders } from './services/get-services-builders';
+export type {
+  DetectServicesOptions,
+  DetectServicesResult,
+  ResolvedService,
+  ServicesRoutes,
+} from './services/types';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
   detectFramework,

@@ -1,5 +1,12 @@
 # @vercel/functions
 
+## 3.4.0
+
+### Minor Changes
+
+- Fix cache tags to be URL encoded before being sent to the cache API. Tags containing special characters (spaces, commas, ampersands, etc.) are now properly encoded using `encodeURIComponent`. This ([#14749](https://github.com/vercel/vercel/pull/14749))
+  ensures tags like `"my tag"` or `"category,item"` are correctly handled when setting cache entries or expiring tags.
+
 ## 3.3.6
 
 ### Patch Changes

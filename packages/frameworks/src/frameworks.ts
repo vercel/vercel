@@ -4072,6 +4072,7 @@ export const frameworks = [
     name: 'Python',
     slug: 'python',
     experimental: true,
+    runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
       'Python is a programming language that lets you work quickly and integrate systems more effectively.',
@@ -4119,6 +4120,85 @@ export const frameworks = [
         dest: '/',
       },
     ],
+  },
+  {
+    name: 'Ruby',
+    slug: 'ruby',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/ruby.svg',
+    tagline:
+      'A dynamic, open source programming language with a focus on simplicity and productivity.',
+    description:
+      'A generic Ruby application deployed as a serverless function.',
+    website: 'https://www.ruby-lang.org',
+    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
+    ignoreRuntimes: ['@vercel/ruby'],
+    detectors: {
+      every: [
+        {
+          path: 'config.ru',
+        },
+        {
+          path: 'Gemfile',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`bundle install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/config',
+      },
+    ],
+  },
+  {
+    name: 'Services',
+    slug: 'services',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
+    tagline:
+      'Multiple services deployed as serverless functions within your project.',
+    description:
+      'Multiple services deployed as serverless functions within your project.',
+    website: 'https://vercel.com',
+    detectors: {},
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Other',
