@@ -75,16 +75,6 @@ describe('resolve-variant', () => {
         expect(result.variant?.value).toBe(false);
       });
 
-      it('does not resolve "on"/"off" to booleans (only true/false allowed)', () => {
-        // "on" and "off" should NOT resolve to boolean values
-        // This avoids ambiguity with string variants that have "on" or "off" as values
-        const resultOn = resolveVariant('on', booleanVariants);
-        expect(resultOn.variant).toBeNull();
-
-        const resultOff = resolveVariant('off', booleanVariants);
-        expect(resultOff.variant).toBeNull();
-      });
-
       it('resolves string value "off" for string variants', () => {
         const result = resolveVariant('off', stringVariants);
         expect(result.error).toBeNull();

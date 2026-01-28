@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
+import plural from 'pluralize';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -8,13 +9,17 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlags } from '../../util/flags/get-flags';
 import formatTable from '../../util/format-table';
+import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { FlagsLsTelemetryClient } from '../../util/telemetry/commands/flags/ls';
 import { listSubcommand } from './command';
 import type { Flag } from '../../util/flags/types';
 import { formatProject } from '../../util/projects/format-project';
 
-export default async function ls(client: Client, argv: string[]) {
+export default async function ls(
+  client: Client,
+  argv: string[]
+): Promise<number> {
   const telemetryClient = new FlagsLsTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -50,20 +55,28 @@ export default async function ls(client: Client, argv: string[]) {
 
   const { project, org } = link;
   const projectSlugLink = formatProject(org.slug, project.name);
+  const lsStamp = stamp();
+
+  output.spinner(`Fetching ${state} feature flags for ${projectSlugLink}`);
 
   try {
     const flagsList = await getFlags(client, project.id, state);
+    output.stopSpinner();
+
     if (flagsList.length === 0) {
-      output.log(`No ${state} feature flags found for ${projectSlugLink}`);
+      output.log(
+        `No ${state} feature flags found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
+      );
     } else {
       output.log(
-        `${chalk.bold(flagsList.length)} feature flag${flagsList.length === 1 ? '' : 's'} found for ${projectSlugLink}`
+        `${plural('feature flag', flagsList.length, true)} found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
       // Sort by updatedAt descending (most recently updated first)
       const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
       printFlagsTable(sortedFlags);
     }
   } catch (err) {
+    output.stopSpinner();
     printError(err);
     return 1;
   }

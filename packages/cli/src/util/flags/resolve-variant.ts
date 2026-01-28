@@ -35,7 +35,7 @@ export function formatAvailableVariants(variants: FlagVariant[]): string {
  *
  * Resolution order:
  * 1. Exact match on variant ID
- * 2. Match on variant value (supports true/false, "on"/"off", string values, etc.)
+ * 2. Match on variant value (supports true/false, string values, numbers, etc.)
  * 3. Case-insensitive match on variant label
  *
  * @param input - The user-provided variant identifier (ID, value, or label)
@@ -59,7 +59,7 @@ export function resolveVariant(
     return { variant: byExactValue, error: null };
   }
 
-  // Then try parsed value (handles "true"/"false"/"on"/"off" for boolean flags)
+  // Then try parsed value (handles "true"/"false" for boolean flags)
   const parsedInput = parseVariantValue(input);
   const byValue = variants.find(v => valuesMatch(v.value, parsedInput));
   if (byValue) {
@@ -85,7 +85,7 @@ export function resolveVariant(
  * Handles booleans, numbers, and strings.
  */
 function parseVariantValue(input: string): string | number | boolean {
-  // Handle boolean values (only true/false, not on/off to avoid ambiguity with string values)
+  // Handle boolean values (only true/false)
   const lowerInput = input.toLowerCase();
   if (lowerInput === 'true') {
     return true;

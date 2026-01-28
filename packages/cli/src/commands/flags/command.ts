@@ -268,7 +268,7 @@ export const sdkKeysAddSubcommand = {
     },
     {
       name: 'Create a client SDK key with a label',
-      value: `${packageName} flags sdk-keys add -t client -e preview --label "Preview App"`,
+      value: `${packageName} flags sdk-keys add --type client -e preview --label "Preview App"`,
     },
   ],
 } as const;

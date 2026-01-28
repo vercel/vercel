@@ -21,7 +21,10 @@ import type {
 import { formatProject } from '../../util/projects/format-project';
 import formatDate from '../../util/format-date';
 
-export default async function inspect(client: Client, argv: string[]) {
+export default async function inspect(
+  client: Client,
+  argv: string[]
+): Promise<number> {
   const telemetryClient = new FlagsInspectTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
