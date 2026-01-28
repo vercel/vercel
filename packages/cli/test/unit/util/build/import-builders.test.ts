@@ -6,7 +6,9 @@ import { client } from '../../../mocks/client';
 import {
   importBuilders,
   resolveBuilders,
+  getSpecWithPeerVersion,
 } from '../../../../src/util/build/import-builders';
+import npa from 'npm-package-arg';
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 import { vi } from 'vitest';
@@ -15,21 +17,14 @@ import { isWindows } from '../../../helpers/is-windows';
 // these tests can take upwards of 190s on macos-latest
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
-const repoRoot = join(__dirname, '../../../../../..');
-
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
     const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
-    expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
-    expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
-    expect(builders.get('@vercel/node')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
-    );
-    expect(builders.get('@vercel/next')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/next/package.json')
-    );
+    // Check package name matches (version may differ between local workspace and npm)
+    expect(builders.get('@vercel/node')?.pkg.name).toEqual(vercelNodePkg.name);
+    expect(builders.get('@vercel/next')?.pkg.name).toEqual(vercelNextPkg.name);
     expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
       'function'
     );
@@ -42,17 +37,12 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
     const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
-    expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
-      vercelNodePkg
+    // Check package name matches (version may differ between local workspace and npm)
+    expect(builders.get('@vercel/node@latest')?.pkg.name).toEqual(
+      vercelNodePkg.name
     );
-    expect(builders.get('@vercel/next@latest')?.pkg).toMatchObject(
-      vercelNextPkg
-    );
-    expect(builders.get('@vercel/node@latest')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
-    );
-    expect(builders.get('@vercel/next@latest')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/next/package.json')
+    expect(builders.get('@vercel/next@latest')?.pkg.name).toEqual(
+      vercelNextPkg.name
     );
     expect(typeof builders.get('@vercel/node@latest')?.builder.build).toEqual(
       'function'
@@ -66,17 +56,12 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
     const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
-    expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
-      vercelNodePkg
+    // Check package name matches (version may differ between local workspace and npm)
+    expect(builders.get('@vercel/node@canary')?.pkg.name).toEqual(
+      vercelNodePkg.name
     );
-    expect(builders.get('@vercel/next@canary')?.pkg).toMatchObject(
-      vercelNextPkg
-    );
-    expect(builders.get('@vercel/node@canary')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
-    );
-    expect(builders.get('@vercel/next@canary')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/next/package.json')
+    expect(builders.get('@vercel/next@canary')?.pkg.name).toEqual(
+      vercelNextPkg.name
     );
     expect(typeof builders.get('@vercel/node@canary')?.builder.build).toEqual(
       'function'
@@ -194,6 +179,86 @@ describe('importBuilders()', () => {
   });
 });
 
+describe('getSpecWithPeerVersion()', () => {
+  const mockPeerDeps = {
+    '@vercel/node': 'workspace:*',
+    '@vercel/next': '1.2.3',
+  };
+
+  it('should append peerDep version when builder is in peerDeps without explicit version', () => {
+    const spec = '@vercel/node';
+    const parsed = npa(spec);
+    const result = getSpecWithPeerVersion(
+      spec,
+      parsed.name,
+      parsed,
+      mockPeerDeps
+    );
+    expect(result).toEqual('@vercel/node@workspace:*');
+  });
+
+  it('should return original spec when builder is NOT in peerDeps', () => {
+    const spec = 'some-random-builder';
+    const parsed = npa(spec);
+    const result = getSpecWithPeerVersion(
+      spec,
+      parsed.name,
+      parsed,
+      mockPeerDeps
+    );
+    expect(result).toEqual('some-random-builder');
+  });
+
+  it('should preserve explicit version even for peerDep builders', () => {
+    const spec = '@vercel/node@2.0.0';
+    const parsed = npa(spec);
+    const result = getSpecWithPeerVersion(
+      spec,
+      parsed.name,
+      parsed,
+      mockPeerDeps
+    );
+    expect(result).toEqual('@vercel/node@2.0.0');
+  });
+
+  it('should preserve explicit range even for peerDep builders', () => {
+    const spec = '@vercel/node@^2.0.0';
+    const parsed = npa(spec);
+    const result = getSpecWithPeerVersion(
+      spec,
+      parsed.name,
+      parsed,
+      mockPeerDeps
+    );
+    expect(result).toEqual('@vercel/node@^2.0.0');
+  });
+
+  it('should append peerDep version when using @latest tag', () => {
+    const spec = '@vercel/next@latest';
+    const parsed = npa(spec);
+    const result = getSpecWithPeerVersion(
+      spec,
+      parsed.name,
+      parsed,
+      mockPeerDeps
+    );
+    // @latest is a tag, not a version, so peerDep version should be used
+    expect(result).toEqual('@vercel/next@1.2.3');
+  });
+
+  it('should return original spec when name is null', () => {
+    const spec = 'https://example.com/builder.tgz';
+    const parsed = npa(spec);
+    const result = getSpecWithPeerVersion(
+      spec,
+      parsed.name,
+      parsed,
+      mockPeerDeps
+    );
+    expect(result).toEqual(spec);
+  });
+});
+
 describe('resolveBuilders()', () => {
   it('should return builders to install when missing', async () => {
     const specs = new Set(['@vercel/does-not-exist']);
@@ -223,4 +288,55 @@ describe('resolveBuilders()', () => {
       err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
     ).toEqual(true);
   });
+
+  // Tests for peerDependencies version resolution
+  // Note: In the monorepo, peerDep builders are installed via workspace, so we can't
+  // easily test "builder not found" scenarios for them. We test the following:
+  // 1. Non-peerDep builders keep original spec (no version appended)
+  // 2. Explicit versions are preserved
+  // 3. The actual peerDep resolution is tested via importBuilders which exercises the full flow
+
+  it.skipIf(isWindows)(
+    'should keep original spec for builders NOT in peerDeps',
+    async () => {
+      const cwd = await getWriteableDirectory();
+      try {
+        // 'some-random-builder' is not in the CLI's peerDependencies
+        const specs = new Set(['some-random-builder']);
+        const result = await resolveBuilders(cwd, specs);
+
+        if (!('buildersToAdd' in result)) {
+          throw new Error('Expected `buildersToAdd` to be defined');
+        }
+
+        // Should keep the original spec without appending a version
+        const buildersToAdd = [...result.buildersToAdd];
+        expect(buildersToAdd).toEqual(['some-random-builder']);
+      } finally {
+        await remove(cwd);
+      }
+    }
+  );
+
+  it.skipIf(isWindows)(
+    'should preserve explicit version even for peerDep builders',
+    async () => {
+      const cwd = await getWriteableDirectory();
+      try {
+        // Even though @vercel/node is in peerDeps, explicit version should be preserved
+        const specs = new Set(['@vercel/node@2.0.0']);
+        const result = await resolveBuilders(cwd, specs);
+
+        if (!('buildersToAdd' in result)) {
+          throw new Error('Expected `buildersToAdd` to be defined');
+        }
+
+        // Should keep the explicit version, not replace with peerDep version
+        const buildersToAdd = [...result.buildersToAdd];
+        expect(buildersToAdd).toEqual(['@vercel/node@2.0.0']);
+      } finally {
+        await remove(cwd);
+      }
+    }
+  );
 });

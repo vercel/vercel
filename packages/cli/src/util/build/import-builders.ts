@@ -87,8 +87,9 @@ function getPeerDependencies(): Record<string, string> {
 /**
  * Returns the spec with version from peerDependencies if no explicit version
  * was specified and the package is listed in peerDependencies.
+ * @internal Exported for testing
  */
-function getSpecWithPeerVersion(
+export function getSpecWithPeerVersion(
   spec: string,
   name: string | null,
   parsed: npa.Result,
