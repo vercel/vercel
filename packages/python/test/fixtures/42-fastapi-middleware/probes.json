@@ -8,7 +8,8 @@
     { "path": "/test.txt", "status": 200, "mustContain": "This is a static file" },
     { "path": "/safe.txt", "status": 200, "mustContain": "Safe content" },
     { "path": "/logo.svg", "status": 200, "mustContain": "<svg" },
-    { "path": "/nonexistent.txt", "status": 404 }
+    { "path": "/nonexistent.txt", "status": 404 },
+    { "logMustContain": "Using python version: 3.12" }
   ]
 }
 
