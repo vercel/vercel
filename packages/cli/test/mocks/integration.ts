@@ -1,4 +1,6 @@
 import type {
+  AutoProvisionedResponse,
+  AutoProvisionFallback,
   Configuration,
   InstallationBalancesAndThresholds,
   Integration,
@@ -798,6 +800,72 @@ const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
   },
 };
 
+// Auto-provision mock responses
+const autoProvisionIntegration = {
+  id: 'acme',
+  slug: 'acme',
+  name: 'Acme Integration',
+  icon: 'https://example.com/icon.png',
+  policies: {
+    privacy: 'https://example.com/privacy',
+    eula: 'https://example.com/eula',
+  },
+};
+
+const autoProvisionProduct = {
+  id: 'acme-product',
+  slug: 'acme',
+  name: 'Acme Product',
+  icon: 'https://example.com/product-icon.png',
+  metadataSchema: metadataSchema1,
+};
+
+const autoProvisionResponses: Record<
+  string,
+  AutoProvisionedResponse | AutoProvisionFallback
+> = {
+  provisioned: {
+    kind: 'provisioned',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'install_123' },
+    resource: {
+      id: 'resource_123',
+      externalResourceId: 'ext_resource_123',
+      name: 'test-resource',
+      status: 'available',
+    },
+    billingPlan: null,
+  },
+  install: {
+    kind: 'install',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  'install-no-policies': {
+    kind: 'install',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: {
+      ...autoProvisionIntegration,
+      policies: {},
+    },
+    product: autoProvisionProduct,
+  },
+  metadata: {
+    kind: 'metadata',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  unknown: {
+    kind: 'unknown',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+};
+
 export function useResources(returnError?: number) {
   client.scenario.get('/:version/storage/stores', (req, res) => {
     if (returnError) {
@@ -955,6 +1023,76 @@ export function useIntegration({
     });
   });
 
+  client.scenario.post(
+    '/v1/storage/stores/:storeId/connections',
+    (req, res) => {
+      if (req.params.storeId !== storeId) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.status(200);
+      res.end();
+    }
+  );
+}
+
+export function useAutoProvision(opts?: {
+  responseKey?: keyof typeof autoProvisionResponses;
+  secondResponseKey?: keyof typeof autoProvisionResponses;
+}) {
+  let callCount = 0;
+  const storeId = 'resource_123';
+
+  // Integration fetch endpoint (needed for auto-provision flow)
+  client.scenario.get(
+    '/:version/integrations/integration/:slug',
+    (req, res) => {
+      const { slug } = req.params;
+      const integration = integrations[slug];
+
+      if (!integration) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(integration);
+    }
+  );
+
+  // Auto-provision endpoint
+  client.scenario.post(
+    '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
+    (_req, res) => {
+      callCount++;
+
+      // First call returns the first response, subsequent calls return second response
+      const responseKey =
+        callCount === 1
+          ? (opts?.responseKey ?? 'provisioned')
+          : (opts?.secondResponseKey ?? opts?.responseKey ?? 'provisioned');
+
+      const response = autoProvisionResponses[responseKey];
+
+      if (
+        response.kind === 'install' ||
+        response.kind === 'metadata' ||
+        response.kind === 'unknown'
+      ) {
+        // 422 responses for fallback cases
+        res.status(422);
+        res.json(response);
+      } else {
+        // 201 for successful provisioning
+        res.status(201);
+        res.json(response);
+      }
+    }
+  );
+
+  // Connection endpoint for linking to projects
   client.scenario.post(
     '/v1/storage/stores/:storeId/connections',
     (req, res) => {
