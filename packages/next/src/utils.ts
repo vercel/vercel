@@ -3170,66 +3170,74 @@ export const onPrerenderRoute =
           routesManifest?.rsc?.dynamicRSCPrerender &&
           routesManifest?.ppr?.chain?.headers
         ) {
-          let contentType = rscContentTypeHeader;
-          if (postponedState) {
-            contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
-              rscContentTypeHeader
-            )}`;
-          }
+          const shouldSkipDynamicRsc =
+            Boolean(prefetchDataRoute) && !postponedState;
+          if (shouldSkipDynamicRsc) {
+            // Ensure the data route is still registered using the static
+            // prerender (with fallback) so the .rsc build output is uploaded.
+            prerenders[normalizePathData(outputPathData)] = prerender;
+          } else {
+            let contentType = rscContentTypeHeader;
+            if (postponedState) {
+              contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+                rscContentTypeHeader
+              )}`;
+            }
 
-          // If client param parsing is enabled, we follow the same logic as the
-          // HTML allowQuery as it's already going to vary based on if there's a
-          // static shell generated or if there's fallback root params. If there
-          // are fallback root params, and we can serve a fallback, then we
-          // should follow the same logic for the dynamic RSC routes.
-          //
-          // If client param parsing is not enabled, we have to use the
-          // allowQuery because the RSC payloads will contain dynamic segment
-          // values.
-          const rdcRSCAllowQuery = isAppClientParamParsingEnabled
-            ? htmlAllowQuery
-            : allowQuery;
+            // If client param parsing is enabled, we follow the same logic as the
+            // HTML allowQuery as it's already going to vary based on if there's a
+            // static shell generated or if there's fallback root params. If there
+            // are fallback root params, and we can serve a fallback, then we
+            // should follow the same logic for the dynamic RSC routes.
+            //
+            // If client param parsing is not enabled, we have to use the
+            // allowQuery because the RSC payloads will contain dynamic segment
+            // values.
+            const rdcRSCAllowQuery = isAppClientParamParsingEnabled
+              ? htmlAllowQuery
+              : allowQuery;
 
-          // Use the fallback value for the RSC route if the route doesn't
-          // vary based on the route parameters and there's an actual postponed
-          // state to fallback to.
-          let fallback: FileBlob | null = null;
-          if (
-            rdcRSCAllowQuery &&
-            rdcRSCAllowQuery.length === 0 &&
-            postponedState
-          ) {
-            fallback = new FileBlob({
-              data: postponedState,
-              contentType,
+            // Use the fallback value for the RSC route if the route doesn't
+            // vary based on the route parameters and there's an actual postponed
+            // state to fallback to.
+            let fallback: FileBlob | null = null;
+            if (
+              rdcRSCAllowQuery &&
+              rdcRSCAllowQuery.length === 0 &&
+              postponedState
+            ) {
+              fallback = new FileBlob({
+                data: postponedState,
+                contentType,
+              });
+            }
+
+            prerenders[normalizePathData(outputPathData)] = new Prerender({
+              expiration: initialRevalidate,
+              staleExpiration: initialExpire,
+              lambda,
+              allowQuery: rdcRSCAllowQuery,
+              fallback,
+              group: prerenderGroup,
+              bypassToken: prerenderManifest.bypassToken,
+              experimentalBypassFor,
+              allowHeader,
+              chain: {
+                outputPath: normalizePathData(outputPathData),
+                headers: routesManifest.ppr.chain.headers,
+              },
+              ...(isNotFound ? { initialStatus: 404 } : {}),
+              initialHeaders: {
+                ...initialHeaders,
+                'content-type': contentType,
+                // Dynamic RSC requests cannot be cached, so we explicity set it
+                // here to ensure that the response is not cached by the browser.
+                'cache-control':
+                  'private, no-store, no-cache, max-age=0, must-revalidate',
+                vary: rscVaryHeader,
+              },
             });
           }
-
-          prerenders[normalizePathData(outputPathData)] = new Prerender({
-            expiration: initialRevalidate,
-            staleExpiration: initialExpire,
-            lambda,
-            allowQuery: rdcRSCAllowQuery,
-            fallback,
-            group: prerenderGroup,
-            bypassToken: prerenderManifest.bypassToken,
-            experimentalBypassFor,
-            allowHeader,
-            chain: {
-              outputPath: normalizePathData(outputPathData),
-              headers: routesManifest.ppr.chain.headers,
-            },
-            ...(isNotFound ? { initialStatus: 404 } : {}),
-            initialHeaders: {
-              ...initialHeaders,
-              'content-type': contentType,
-              // Dynamic RSC requests cannot be cached, so we explicity set it
-              // here to ensure that the response is not cached by the browser.
-              'cache-control':
-                'private, no-store, no-cache, max-age=0, must-revalidate',
-              vary: rscVaryHeader,
-            },
-          });
         }
       }
 
