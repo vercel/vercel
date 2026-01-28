@@ -352,8 +352,6 @@ const main = async () => {
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
-    dangerouslySkipPermissions:
-      parsedArgs.flags['--dangerously-skip-permissions'] ?? false,
   });
 
   // The `--cwd` flag is respected for all sub-commands

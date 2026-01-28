@@ -71,13 +71,6 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
-  {
-    name: 'dangerously-skip-permissions',
-    shorthand: null,
-    type: Boolean,
-    description: 'Skip all permission prompts (use with caution)',
-    deprecated: false,
-  },
 ] as const;
 
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);

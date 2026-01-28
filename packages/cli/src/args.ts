@@ -68,7 +68,6 @@ export const help = () => `
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
       'TOKEN'
     )}        Login token
-    --dangerously-skip-permissions Skip all permission prompts (use with caution)
 
   ${chalk.dim('Examples:')}
 
