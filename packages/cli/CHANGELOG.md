@@ -1,5 +1,12 @@
 # vercel
 
+## 50.9.1
+
+### Patch Changes
+
+- Updated dependencies [[`cce5b52a24a5ca0471334d13482d2a6b3bfc7910`](https://github.com/vercel/vercel/commit/cce5b52a24a5ca0471334d13482d2a6b3bfc7910)]:
+  - @vercel/next@4.15.18
+
 ## 50.9.0
 
 ### Minor Changes
