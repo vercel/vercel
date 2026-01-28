@@ -59,7 +59,9 @@ export default async function ls(client: Client, argv: string[]) {
       output.log(
         `${chalk.bold(flagsList.length)} feature flag${flagsList.length === 1 ? '' : 's'} found for ${projectSlugLink}`
       );
-      printFlagsTable(flagsList);
+      // Sort by updatedAt descending (most recently updated first)
+      const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
+      printFlagsTable(sortedFlags);
     }
   } catch (err) {
     printError(err);
