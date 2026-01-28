@@ -226,7 +226,7 @@ export default async function logsv2(client: Client) {
   if (followOption) {
     if (!jsonOption) {
       output.print(
-        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_FORMAT))}\n\n`
+        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
       );
     }
     const abortController = new AbortController();
