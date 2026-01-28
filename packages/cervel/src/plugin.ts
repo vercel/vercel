@@ -12,10 +12,10 @@ export const plugin = (args: PluginOptions): Plugin => {
   // Cache for package.json contents, keyed by absolute path
   const packageJsonCache = new Map<string, any>();
 
-  const tracedPaths = new Set<string>();
+  // Track shim metadata: shimId -> { pkgDir, pkgName }
+  const shimMeta = new Map<string, { pkgDir: string; pkgName: string }>();
 
-  // Map of package names to their importers (for createRequire context)
-  const shimImporters = new Map<string, Set<string>>();
+  const tracedPaths = new Set<string>();
 
   const isBareImport = (id: string) => {
     // Bare imports don't start with '.', '/', or protocol
@@ -193,22 +193,27 @@ export const plugin = (args: PluginOptions): Plugin => {
             const isCjs = await isCommonJS(id, resolved.id, resolved);
 
             if (isCjs) {
-              // Track this importer for the shim
-              const importerRepoRelative = relative(
-                args.repoRootPath,
-                importer
-              );
-              if (!shimImporters.has(id)) {
-                shimImporters.set(id, new Set());
-              }
-              shimImporters.get(id)!.add(importerRepoRelative);
+              // Get the importer's package.json path for proper require context
+              const importerResolved = await this.resolve(importer);
+              const importerPkgJsonPath = importerResolved?.packageJsonPath;
 
-              // Create a shim for this CJS external import
+              if (importerPkgJsonPath) {
+                const importerPkgDir = relative(
+                  args.repoRootPath,
+                  dirname(importerPkgJsonPath)
+                );
+
+                // Create a namespaced shim: apps/api + jsonwebtoken -> apps_api_jsonwebtoken
+                const namespace = importerPkgDir.replace(/\//g, '_');
+                const shimId = `${CJS_SHIM_PREFIX}${namespace}_${id}`;
+                shimMeta.set(shimId, { pkgDir: importerPkgDir, pkgName: id });
+                return { id: shimId, external: false };
+              }
+
+              // Fallback: create a shim without package scoping
               const shimId = `${CJS_SHIM_PREFIX}${id}`;
-              return {
-                id: shimId,
-                external: false,
-              };
+              shimMeta.set(shimId, { pkgDir: '', pkgName: id });
+              return { id: shimId, external: false };
             }
           }
 
@@ -236,46 +241,35 @@ export const plugin = (args: PluginOptions): Plugin => {
       async handler(id) {
         // If this is a CJS shim, generate the re-export code
         if (id.startsWith(CJS_SHIM_PREFIX)) {
-          const pkgName = id.slice(CJS_SHIM_PREFIX.length);
+          const meta = shimMeta.get(id);
+          if (!meta) {
+            // Shouldn't happen, but fallback
+            const pkgName = id.slice(CJS_SHIM_PREFIX.length);
+            return { code: `module.exports = require('${pkgName}');` };
+          }
 
-          // Get one of the importers to use as the require context
-          const importers = shimImporters.get(pkgName);
-          if (importers && importers.size > 0) {
-            // Use the first importer's directory as the reference point
-            const importerPath = Array.from(importers)[0];
-            const importerDir = dirname(importerPath);
+          const { pkgDir, pkgName } = meta;
 
-            // Calculate relative path from _virtual/ to the importer's package.json
-            // _virtual/ is at the repo root level in the output
-            const relativePathToPackageJson = join(
-              '..',
-              importerDir,
-              'package.json'
-            );
+          if (pkgDir) {
+            // Shim is at _virtual/_cjs-shim_namespace_pkgname.js (flat)
+            // Package.json is at {pkgDir}/package.json
+            // Relative path: ../{pkgDir}/package.json
+            const relativePathToPkgJson = join('..', pkgDir, 'package.json');
 
-            // Generate CJS code that uses createRequire from the importer's package.json
             const code = `
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const requireFromContext = createRequire(join(__dirname, '${relativePathToPackageJson}'));
+const requireFromContext = createRequire(join(dirname(fileURLToPath(import.meta.url)), '${relativePathToPkgJson}'));
 module.exports = requireFromContext('${pkgName}');
 `.trim();
 
-            return {
-              code,
-            };
+            return { code };
           }
 
           // Fallback to simple require (may not resolve correctly)
-          const code = `module.exports = require('${pkgName}');`;
-
-          return {
-            code,
-          };
+          return { code: `module.exports = require('${pkgName}');` };
         }
 
         return null;

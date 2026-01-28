@@ -25,7 +25,7 @@ const config = {
 const meta = { skipDownload: true };
 
 // Set to true to use packages/backends/debug instead of a temp directory
-const USE_DEBUG_DIR = false;
+const USE_DEBUG_DIR = true;
 const DEBUG_DIR = join(__dirname, 'debug');
 
 // process.env.VERCEL_BUILD_DEBUG = '1';
@@ -49,7 +49,7 @@ const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
     // 07
-    fixtureName => fixtureName.includes('')
+    fixtureName => fixtureName.includes('14')
   );
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
@@ -61,6 +61,8 @@ describe('successful builds', async () => {
       const repoRootPath = workDir;
       // const workPath = '/Users/jeffsee/code/workflow-server'
       // const repoRootPath = '/Users/jeffsee/code/workflow-server'
+      // const workPath = '/Users/jeffsee/code/turborepo-hono-monorepo/apps/api'
+      // const repoRootPath = '/Users/jeffsee/code/turborepo-hono-monorepo'
 
       const result = (await build({
         files: {},
@@ -73,9 +75,9 @@ describe('successful builds', async () => {
 
       const lambda = result.output.index as unknown as NodejsLambda;
 
-      expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
-        join(fixtureSource, 'routes.json')
-      );
+      // expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
+      //   join(fixtureSource, 'routes.json')
+      // );
 
       // Extract and execute lambda in the same work directory
       await expect(

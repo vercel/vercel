@@ -6,6 +6,7 @@ import {
   type Files,
   type File,
   FileBlob,
+  debug,
 } from '@vercel/build-utils';
 import {
   nodeFileTrace as nft,
@@ -89,7 +90,7 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
   // Process nft results - keep node_modules unchanged from filesystem
   const { lstat } = await import('node:fs/promises');
 
-  console.log('NFT traced files count:', result.fileList.size);
+  debug('NFT traced files count:', result.fileList.size);
 
   for (const file of result.fileList) {
     const absolutePath = join(args.repoRootPath, file);
@@ -106,10 +107,10 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
       }
       // Skip directories
     } catch (err) {
-      console.warn(`Warning: Could not stat file ${absolutePath}:`, err);
+      debug(`Warning: Could not stat file ${absolutePath}:`, err);
     }
   }
 
-  console.log('Total files in context:', Object.keys(files).length);
+  debug('Total files in context:', Object.keys(files).length);
   return files;
 };
