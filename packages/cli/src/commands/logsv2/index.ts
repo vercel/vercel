@@ -24,6 +24,14 @@ import output from '../../output-manager';
 
 const TIME_FORMAT = 'HH:mm:ss.SS';
 
+const COL_TIME = 11;
+const COL_LEVEL = 3;
+const COL_METHOD = 7;
+const COL_STATUS = 3;
+const COL_SOURCE = 1;
+const COL_FIXED_WIDTH =
+  COL_TIME + COL_LEVEL + COL_METHOD + COL_STATUS + COL_SOURCE + 10; // +10 for spacing
+
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
   if (typeof levels === 'string') return [levels];
@@ -275,6 +283,11 @@ export default async function logsv2(client: Client) {
 
   output.spinner('Fetching logs...', 1000);
 
+  const terminalWidth = client.stderr.isTTY
+    ? client.stderr.columns || 120
+    : 120;
+  let headerPrinted = false;
+
   let count = 0;
   try {
     for await (const log of fetchAllRequestLogs(client, {
@@ -295,7 +308,11 @@ export default async function logsv2(client: Client) {
       if (jsonOption) {
         client.stdout.write(JSON.stringify(log) + '\n');
       } else {
-        prettyPrintLogEntry(log, { expand: expandOption });
+        if (!headerPrinted) {
+          printHeader(terminalWidth, expandOption);
+          headerPrinted = true;
+        }
+        prettyPrintLogEntry(log, { expand: expandOption, terminalWidth });
       }
       count++;
     }
@@ -322,22 +339,47 @@ export default async function logsv2(client: Client) {
 
 interface PrintOptions {
   expand?: boolean;
+  terminalWidth?: number;
+}
+
+function printHeader(terminalWidth: number, expand?: boolean) {
+  const time = 'TIME'.padEnd(COL_TIME);
+  const level = 'LVL';
+  const method = 'METHOD'.padEnd(COL_METHOD);
+  const status = 'STS'.padStart(COL_STATUS);
+  const source = 'S';
+
+  if (expand) {
+    output.print(
+      chalk.dim(`${time}  ${level}  ${method} ${status}  ${source}  PATH\n`)
+    );
+  } else {
+    const pathMsgWidth = Math.max(terminalWidth - COL_FIXED_WIDTH, 40);
+    const pathWidth = Math.floor(pathMsgWidth * 0.4);
+    const path = 'PATH'.padEnd(pathWidth);
+    output.print(
+      chalk.dim(
+        `${time}  ${level}  ${method} ${status}  ${source}  ${path}  MESSAGE\n`
+      )
+    );
+  }
 }
 
 function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
-  const { expand } = options;
+  const { expand, terminalWidth = 120 } = options;
   const time = format(log.timestamp, TIME_FORMAT);
   const level = getLevelLabel(log.level);
-  const method = log.requestMethod.padEnd(4);
+  const method = log.requestMethod.padEnd(COL_METHOD);
+  const statusCode = log.responseStatusCode;
+  const statusStr = !statusCode || statusCode <= 0 ? '---' : String(statusCode);
   const status =
-    !log.responseStatusCode || log.responseStatusCode <= 0
-      ? chalk.gray('---')
-      : getStatusColor(log.responseStatusCode);
+    !statusCode || statusCode <= 0
+      ? chalk.gray(statusStr.padStart(COL_STATUS))
+      : getStatusColor(statusCode, COL_STATUS);
   const source = getSourceIcon(log.source);
-  const path = log.requestPath;
 
   if (expand) {
-    const requestLine = `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}`;
+    const requestLine = `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${log.requestPath}`;
     output.print(`${requestLine}\n`);
     if (log.message) {
       const message = log.message.replace(/\n$/, '');
@@ -348,9 +390,18 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       output.print('\n');
     }
   } else {
+    const pathMsgWidth = Math.max(terminalWidth - COL_FIXED_WIDTH, 40);
+    const pathWidth = Math.floor(pathMsgWidth * 0.4);
+    const msgWidth = pathMsgWidth - pathWidth - 2;
+
+    const path = truncatePath(log.requestPath, pathWidth).padEnd(pathWidth);
     const msg = log.message
-      ? colorizeMessage(`"${truncateMessage(log.message)}"`, log.level)
+      ? colorizeMessage(
+          `"${truncateMessage(log.message, msgWidth - 2)}"`,
+          log.level
+        )
       : chalk.dim('(no message)');
+
     output.print(
       `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}  ${msg}\n`
     );
@@ -384,8 +435,9 @@ function getSourceIcon(source: string): string {
   }
 }
 
-function getStatusColor(status: number): string {
-  const statusStr = String(status);
+function getStatusColor(status: number, padWidth = 0): string {
+  const statusStr =
+    padWidth > 0 ? String(status).padStart(padWidth) : String(status);
   if (status >= 500) {
     return chalk.red(statusStr);
   } else if (status >= 400) {
@@ -402,6 +454,11 @@ function truncateMessage(msg: string, maxLen = 60): string {
   const oneLine = msg.replace(/\n/g, ' ').trim();
   if (oneLine.length <= maxLen) return oneLine;
   return oneLine.slice(0, maxLen - 1) + '…';
+}
+
+function truncatePath(path: string, maxLen: number): string {
+  if (path.length <= maxLen) return path;
+  return '…' + path.slice(-(maxLen - 1));
 }
 
 function colorizeMessage(message: string, level: string): string {
