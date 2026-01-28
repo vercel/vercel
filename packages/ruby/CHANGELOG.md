@@ -1,5 +1,13 @@
 # @vercel/ruby
 
+## 2.2.5
+
+### Patch Changes
+
+- [ruby] Add experimental Ruby runtime framework preset ([#14762](https://github.com/vercel/vercel/pull/14762))
+
+  Also fixed a bug in the Ruby version parsing where `ruby "~> 3.3.x"` in Gemfile would fail due to a trailing space not being trimmed after removing the `~>` prefix.
+
 ## 2.2.4
 
 ### Patch Changes
