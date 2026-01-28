@@ -176,10 +176,6 @@ function satisfies(
   }
 }
 
-/**
- * Select a Python version from a `requires-python` expression in pyproject.toml.
- * example: ">=3.10,<3.12" -> PythonVersion | undefined
- */
 function selectFromRequiresPython(expr: string): PythonVersion | undefined {
   const raw = expr.trim();
   if (!raw) return undefined;
@@ -202,7 +198,18 @@ function selectFromRequiresPython(expr: string): PythonVersion | undefined {
     return specifiers.every(sp => satisfies(vt, sp));
   });
   if (matches.length === 0) return undefined;
-  // Prefer the latest installed that matches; otherwise the latest supported
+
+  // Prefer DEFAULT_PYTHON_VERSION (3.12) if it satisfies the constraints.
+  // This makes Python 3.13+ opt-in only - users must explicitly require
+  const defaultMatch = matches.find(
+    opt => opt.version === DEFAULT_PYTHON_VERSION && isInstalled(opt)
+  );
+  if (defaultMatch) {
+    return defaultMatch;
+  }
+
+  // If DEFAULT_PYTHON_VERSION doesn't match constraints, fall back to
+  // the latest installed version that matches
   const installedMatch = matches.find(isInstalled);
   return installedMatch ?? matches[0];
 }

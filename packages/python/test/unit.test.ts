@@ -152,7 +152,9 @@ describe('Python 3.13 and 3.14 support', () => {
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
 
-  it('selects Python 3.14 as highest when range allows multiple versions', () => {
+  it('prefers DEFAULT_PYTHON_VERSION (3.12) when range allows it', () => {
+    // Even though 3.13 and 3.14 are installed and match >=3.12,
+    // we prefer 3.12 to make 3.13+ opt-in only
     makeMockPython('3.12');
     makeMockPython('3.13');
     makeMockPython('3.14');
@@ -162,10 +164,11 @@ describe('Python 3.13 and 3.14 support', () => {
         source: 'pyproject.toml',
       },
     });
-    expect(result).toHaveProperty('runtime', 'python3.14');
+    expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
-  it('selects Python 3.13 when upper bound excludes 3.14', () => {
+  it('prefers 3.12 when upper bound excludes 3.14 but includes 3.12', () => {
+    // >=3.12,<3.14 allows 3.12 and 3.13, but we prefer 3.12
     makeMockPython('3.12');
     makeMockPython('3.13');
     makeMockPython('3.14');
@@ -175,7 +178,7 @@ describe('Python 3.13 and 3.14 support', () => {
         source: 'pyproject.toml',
       },
     });
-    expect(result).toHaveProperty('runtime', 'python3.13');
+    expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
   it('respects compatible release "~=3.13" (>=3.13,<3.14)', () => {
@@ -199,6 +202,51 @@ describe('Python 3.13 and 3.14 support', () => {
         source: 'pyproject.toml',
       },
     });
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('prefers 3.12 for broad range like >=3.9', () => {
+    // >=3.9 allows many versions, but we prefer 3.12 to make 3.13+ opt-in
+    makeMockPython('3.9');
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.9',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('prefers 3.12 for range >=3.11,<=3.13', () => {
+    // This range includes 3.11, 3.12, and 3.13, but we prefer 3.12
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.11,<=3.13',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('falls back to latest when 3.12 is not installed but matches', () => {
+    // If 3.12 matches but is not installed, fall back to latest installed
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    // Note: NOT installing 3.12
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    // Should fall back to 3.14 (latest installed that matches)
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
 });
@@ -1352,6 +1400,148 @@ describe('.python-version file priority', () => {
     // Should fall back to pyproject.toml since .python-version is invalid
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining('Using Python 3.12 from pyproject.toml')
+    );
+  });
+});
+
+describe('.python-version file auto-creation', () => {
+  let mockWorkPath: string;
+  let consoleLogSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-version-file-create-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('writes .python-version file when pyproject.toml selects version <= 3.12', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should log that it's writing .python-version file
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file with version 3.12')
+    );
+
+    // Verify the file was created
+    const pythonVersionPath = path.join(mockWorkPath, '.python-version');
+    expect(fs.existsSync(pythonVersionPath)).toBe(true);
+    const content = fs.readFileSync(pythonVersionPath, 'utf8');
+    expect(content.trim()).toBe('3.12');
+  });
+
+  it('does NOT write .python-version file when one already exists', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: '3.11\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should NOT log about writing .python-version file
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file')
+    );
+
+    // Should use existing .python-version
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from .python-version')
+    );
+  });
+
+  it('does NOT write .python-version file when selecting 3.13+', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.13"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should NOT log about writing .python-version file
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file')
+    );
+
+    // Should use 3.13 from pyproject.toml
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.13 from pyproject.toml')
+    );
+  });
+
+  it('does NOT write .python-version file for Pipfile.lock projects', async () => {
+    // Include pyproject.toml to avoid triggering pipfile2req
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'Pipfile.lock': new FileBlob({
+        data: JSON.stringify({
+          _meta: { requires: { python_version: '3.11' } },
+          default: {},
+          develop: {},
+        }),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should NOT log about writing .python-version file (no requires-python in pyproject.toml)
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file')
     );
   });
 });
