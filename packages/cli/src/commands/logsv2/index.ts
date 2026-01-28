@@ -359,7 +359,7 @@ interface PrintOptions {
 function printHeader(options: PrintOptions) {
   const { expand, showDate, methodWidth = 4, pathWidth = 10 } = options;
   const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
-  const pathColWidth = COL_SOURCE + 1 + methodWidth + 1 + pathWidth; // source + space + method + space + path
+  const pathColWidth = COL_SOURCE + 1 + methodWidth + 1 + pathWidth + 3; // source + space + method + space + path + padding
   const cols: string[] = [];
 
   cols.push('TIME'.padEnd(colTime));
