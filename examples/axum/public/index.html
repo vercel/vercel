@@ -63,17 +63,20 @@
             <h1>Vercel + Axum</h1>
             <div class="hero-code">
                 <pre><code><span class="keyword">use</span> <span class="type">axum</span>::{<span class="type">Router</span>, routing::get, <span class="type">Json</span>};
-<span class="keyword">use</span> <span class="type">serde</span>::<span class="type">Serialize</span>;
+<span class="keyword">use</span> <span class="type">tower</span>::<span class="type">ServiceBuilder</span>;
+<span class="keyword">use</span> <span class="type">vercel_runtime</span>::axum::<span class="type">VercelLayer</span>;
 
-<span class="macro">#[derive(Serialize)]</span>
-<span class="keyword">struct</span> <span class="type">Response</span> { rust: <span class="type">String</span> }
-
-<span class="keyword">async fn</span> <span class="function">hello</span>() -&gt; <span class="type">Json</span>&lt;<span class="type">Response</span>&gt; {
-    <span class="type">Json</span>(<span class="type">Response</span> { rust: <span class="string">"on Vercel"</span>.into() })
+<span class="keyword">async fn</span> <span class="function">hello</span>() -&gt; <span class="type">Json</span>&lt;&amp;<span class="lifetime">'static</span> <span class="type">str</span>&gt; {
+    <span class="type">Json</span>(<span class="string">"Rust on Vercel!"</span>)
 }
 
-<span class="keyword">fn</span> <span class="function">main</span>() {
-    <span class="keyword">let</span> app = <span class="type">Router</span>::new().route(<span class="string">"/"</span>, get(hello));
+<span class="macro">#[tokio::main]</span>
+<span class="keyword">async fn</span> <span class="function">main</span>() {
+    <span class="keyword">let</span> router = <span class="type">Router</span>::new().route(<span class="string">"/"</span>, get(hello));
+    <span class="keyword">let</span> app = <span class="type">ServiceBuilder</span>::new()
+        .layer(<span class="type">VercelLayer</span>::new())
+        .service(router);
+    <span class="type">vercel_runtime</span>::run(app).<span class="keyword">await</span>.unwrap();
 }</code></pre>
             </div>
         </div>
