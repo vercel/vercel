@@ -23,10 +23,10 @@ import { logsv2Command } from './command';
 import output from '../../output-manager';
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
-const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss';
+const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
 
 const COL_TIME_ONLY = 11;
-const COL_TIME_WITH_DATE = 15;
+const COL_TIME_WITH_DATE = 18;
 const COL_LEVEL = 5;
 const COL_SOURCE = 1;
 const COL_STATUS = 6;
@@ -362,7 +362,7 @@ function printHeader(options: PrintOptions) {
 
   cols.push((showDate ? 'DATE/TIME' : 'TIME').padEnd(colTime));
   cols.push('LEVEL'.padEnd(COL_LEVEL));
-  cols.push('PATH');
+  cols.push('  PATH'); // 2-char indent to align with method (after source icon + space)
 
   if (expand) {
     output.print(chalk.dim(cols.join('  ') + '\n'));
