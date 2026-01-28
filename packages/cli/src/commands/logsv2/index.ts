@@ -410,10 +410,7 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       20
     );
     const msg = log.message
-      ? colorizeMessage(
-          `"${truncateMessage(log.message, msgWidth - 2)}"`,
-          log.level
-        )
+      ? colorizeMessage(truncateMessage(log.message, msgWidth), log.level)
       : chalk.dim('(no message)');
 
     const cols = [chalk.dim(time), level, pathPart, status, msg];
