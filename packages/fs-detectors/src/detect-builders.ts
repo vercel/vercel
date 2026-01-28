@@ -12,6 +12,7 @@ import type {
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
+import { getServicesBuilders } from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -114,6 +115,15 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
 }> {
+  const { projectSettings = {} } = options;
+  const { framework } = projectSettings;
+
+  if (framework === 'services') {
+    return getServicesBuilders({
+      workPath: options.workPath,
+    });
+  }
+
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
@@ -147,8 +157,7 @@ export async function detectBuilders(
 
   const absolutePathCache = new Map<string, string>();
 
-  const { projectSettings = {} } = options;
-  const { buildCommand, outputDirectory, framework } = projectSettings;
+  const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
