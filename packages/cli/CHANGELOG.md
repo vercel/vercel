@@ -1,5 +1,13 @@
 # vercel
 
+## 50.8.1
+
+### Patch Changes
+
+- Updated dependencies [[`31afeb2546b316a2e9553ee937d9771b86898e0e`](https://github.com/vercel/vercel/commit/31afeb2546b316a2e9553ee937d9771b86898e0e)]:
+  - @vercel/ruby@2.2.5
+  - @vercel/static-build@2.8.28
+
 ## 50.8.0
 
 ### Minor Changes
