@@ -25,12 +25,12 @@ import output from '../../output-manager';
 const TIME_FORMAT = 'HH:mm:ss.SS';
 
 const COL_TIME = 11;
-const COL_LEVEL = 3;
-const COL_METHOD = 7;
-const COL_STATUS = 3;
+const COL_LEVEL = 4;
 const COL_SOURCE = 1;
+const COL_METHOD = 7;
+const COL_STATUS = 6;
 const COL_FIXED_WIDTH =
-  COL_TIME + COL_LEVEL + COL_METHOD + COL_STATUS + COL_SOURCE + 10; // +10 for spacing
+  COL_TIME + COL_LEVEL + COL_SOURCE + COL_METHOD + COL_STATUS + 12; // +12 for spacing
 
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
@@ -344,22 +344,20 @@ interface PrintOptions {
 
 function printHeader(terminalWidth: number, expand?: boolean) {
   const time = 'TIME'.padEnd(COL_TIME);
-  const level = 'LVL';
-  const method = 'METHOD'.padEnd(COL_METHOD);
-  const status = 'STS'.padStart(COL_STATUS);
+  const level = 'LEVEL'.padEnd(COL_LEVEL);
   const source = 'S';
+  const method = 'METHOD'.padEnd(COL_METHOD);
 
   if (expand) {
-    output.print(
-      chalk.dim(`${time}  ${level}  ${method} ${status}  ${source}  PATH\n`)
-    );
+    output.print(chalk.dim(`${time}  ${level}  ${source}  ${method} PATH\n`));
   } else {
     const pathMsgWidth = Math.max(terminalWidth - COL_FIXED_WIDTH, 40);
     const pathWidth = Math.floor(pathMsgWidth * 0.4);
     const path = 'PATH'.padEnd(pathWidth);
+    const status = 'STATUS'.padEnd(COL_STATUS);
     output.print(
       chalk.dim(
-        `${time}  ${level}  ${method} ${status}  ${source}  ${path}  MESSAGE\n`
+        `${time}  ${level}  ${source}  ${method} ${path}  ${status}  MESSAGE\n`
       )
     );
   }
@@ -369,17 +367,17 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
   const { expand, terminalWidth = 120 } = options;
   const time = format(log.timestamp, TIME_FORMAT);
   const level = getLevelLabel(log.level);
+  const source = getSourceIcon(log.source);
   const method = log.requestMethod.padEnd(COL_METHOD);
   const statusCode = log.responseStatusCode;
   const statusStr = !statusCode || statusCode <= 0 ? '---' : String(statusCode);
   const status =
     !statusCode || statusCode <= 0
-      ? chalk.gray(statusStr.padStart(COL_STATUS))
+      ? chalk.gray(statusStr.padEnd(COL_STATUS))
       : getStatusColor(statusCode, COL_STATUS);
-  const source = getSourceIcon(log.source);
 
   if (expand) {
-    const requestLine = `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${log.requestPath}`;
+    const requestLine = `${chalk.dim(time)}  ${level}  ${source}  ${method} ${log.requestPath}`;
     output.print(`${requestLine}\n`);
     if (log.message) {
       const message = log.message.replace(/\n$/, '');
@@ -403,7 +401,7 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       : chalk.dim('(no message)');
 
     output.print(
-      `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}  ${msg}\n`
+      `${chalk.dim(time)}  ${level}  ${source}  ${method} ${path}  ${status}  ${msg}\n`
     );
   }
 }
@@ -411,13 +409,13 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
 function getLevelLabel(level: string): string {
   switch (level) {
     case 'fatal':
-      return chalk.red.bold('FTL');
+      return chalk.red.bold('fatl');
     case 'error':
-      return chalk.red('ERR');
+      return chalk.red('err ');
     case 'warning':
-      return chalk.yellow('WRN');
+      return chalk.yellow('warn');
     default:
-      return chalk.dim('INF');
+      return chalk.dim('info');
   }
 }
 
@@ -437,7 +435,7 @@ function getSourceIcon(source: string): string {
 
 function getStatusColor(status: number, padWidth = 0): string {
   const statusStr =
-    padWidth > 0 ? String(status).padStart(padWidth) : String(status);
+    padWidth > 0 ? String(status).padEnd(padWidth) : String(status);
   if (status >= 500) {
     return chalk.red(statusStr);
   } else if (status >= 400) {
