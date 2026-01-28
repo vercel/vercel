@@ -141,4 +141,10 @@ export class Logsv2TelemetryClient
       });
     }
   }
+
+  trackCliFlagExpand(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('expand');
+    }
+  }
 }
