@@ -22,12 +22,20 @@ import { help } from '../help';
 import { logsv2Command } from './command';
 import output from '../../output-manager';
 
-const TIME_FORMAT = 'HH:mm:ss.SS';
+const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
+const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss';
 
-const COL_TIME = 11;
+const COL_TIME_ONLY = 11;
+const COL_TIME_WITH_DATE = 15;
 const COL_LEVEL = 5;
 const COL_SOURCE = 1;
 const COL_STATUS = 6;
+
+function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
+  if (logs.length === 0) return false;
+  const firstDay = new Date(logs[0].timestamp).toDateString();
+  return logs.some(log => new Date(log.timestamp).toDateString() !== firstDay);
+}
 
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
@@ -322,10 +330,12 @@ export default async function logsv2(client: Client) {
       );
     } else {
       const maxMethodWidth = Math.max(...logs.map(l => l.requestMethod.length));
+      const showDate = logsSpanMultipleDays(logs);
       const printOpts: PrintOptions = {
         expand: expandOption,
         terminalWidth,
         methodWidth: maxMethodWidth,
+        showDate,
       };
       printHeader(printOpts);
       for (const log of logs) {
@@ -342,13 +352,15 @@ interface PrintOptions {
   expand?: boolean;
   terminalWidth?: number;
   methodWidth?: number;
+  showDate?: boolean;
 }
 
 function printHeader(options: PrintOptions) {
-  const { expand } = options;
+  const { expand, showDate } = options;
+  const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
   const cols: string[] = [];
 
-  cols.push('TIME'.padEnd(COL_TIME));
+  cols.push((showDate ? 'DATE/TIME' : 'TIME').padEnd(colTime));
   cols.push('LEVEL'.padEnd(COL_LEVEL));
   cols.push('PATH');
 
@@ -362,9 +374,11 @@ function printHeader(options: PrintOptions) {
 }
 
 function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
-  const { expand, terminalWidth = 120, methodWidth = 4 } = options;
+  const { expand, terminalWidth = 120, methodWidth = 4, showDate } = options;
 
-  const time = format(log.timestamp, TIME_FORMAT);
+  const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
+  const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
+  const time = format(log.timestamp, timeFormat);
   const level = getLevelLabel(log.level);
   const source = getSourceIcon(log.source);
   const method = log.requestMethod.padEnd(methodWidth);
@@ -390,7 +404,7 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
     }
   } else {
     const fixedWidth =
-      COL_TIME + COL_LEVEL + COL_SOURCE + methodWidth + COL_STATUS + 10;
+      colTime + COL_LEVEL + COL_SOURCE + methodWidth + COL_STATUS + 10;
     const msgWidth = Math.max(
       terminalWidth - fixedWidth - log.requestPath.length,
       20
