@@ -330,11 +330,13 @@ export default async function logsv2(client: Client) {
       );
     } else {
       const maxMethodWidth = Math.max(...logs.map(l => l.requestMethod.length));
+      const maxPathWidth = Math.max(...logs.map(l => l.requestPath.length));
       const showDate = logsSpanMultipleDays(logs);
       const printOpts: PrintOptions = {
         expand: expandOption,
         terminalWidth,
         methodWidth: maxMethodWidth,
+        pathWidth: maxPathWidth,
         showDate,
       };
       printHeader(printOpts);
@@ -352,17 +354,19 @@ interface PrintOptions {
   expand?: boolean;
   terminalWidth?: number;
   methodWidth?: number;
+  pathWidth?: number;
   showDate?: boolean;
 }
 
 function printHeader(options: PrintOptions) {
-  const { expand, showDate } = options;
+  const { expand, showDate, methodWidth = 4, pathWidth = 10 } = options;
   const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
+  const pathColWidth = COL_SOURCE + 1 + methodWidth + 1 + pathWidth; // source + space + method + space + path
   const cols: string[] = [];
 
   cols.push('TIME'.padEnd(colTime));
   cols.push('LEVEL'.padEnd(COL_LEVEL));
-  cols.push('  PATH'); // 2-char indent to align with method (after source icon + space)
+  cols.push('  PATH'.padEnd(pathColWidth)); // 2-char indent to align with method
 
   if (expand) {
     output.print(chalk.dim(cols.join('  ') + '\n'));
@@ -374,15 +378,22 @@ function printHeader(options: PrintOptions) {
 }
 
 function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
-  const { expand, terminalWidth = 120, methodWidth = 4, showDate } = options;
+  const {
+    expand,
+    terminalWidth = 120,
+    methodWidth = 4,
+    pathWidth = 10,
+    showDate,
+  } = options;
 
   const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
   const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
+  const pathColWidth = COL_SOURCE + 1 + methodWidth + 1 + pathWidth;
   const time = format(log.timestamp, timeFormat);
   const level = getLevelLabel(log.level);
   const source = getSourceIcon(log.source);
   const method = log.requestMethod.padEnd(methodWidth);
-  const pathPart = `${source} ${method} ${log.requestPath}`;
+  const pathPart = `${source} ${method} ${log.requestPath.padEnd(pathWidth)}`;
 
   const statusCode = log.responseStatusCode;
   const statusStr = !statusCode || statusCode <= 0 ? '---' : String(statusCode);
@@ -403,12 +414,8 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       output.print('\n');
     }
   } else {
-    const fixedWidth =
-      colTime + COL_LEVEL + COL_SOURCE + methodWidth + COL_STATUS + 10;
-    const msgWidth = Math.max(
-      terminalWidth - fixedWidth - log.requestPath.length,
-      20
-    );
+    const fixedWidth = colTime + COL_LEVEL + pathColWidth + COL_STATUS + 10;
+    const msgWidth = Math.max(terminalWidth - fixedWidth, 20);
     const msg = log.message
       ? colorizeMessage(truncateMessage(log.message, msgWidth), log.level)
       : chalk.dim('(no message)');
