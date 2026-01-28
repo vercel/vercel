@@ -99,7 +99,7 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
       const outputPath = file;
 
       if (stats.isSymbolicLink() || stats.isFile()) {
-        args.context.files[outputPath] = new FileFsRef({
+        files[outputPath] = new FileFsRef({
           fsPath: absolutePath,
           mode: stats.mode,
         });
@@ -110,9 +110,6 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
     }
   }
 
-  console.log(
-    'Total files in context:',
-    Object.keys(args.context.files).length
-  );
+  console.log('Total files in context:', Object.keys(files).length);
   return files;
 };

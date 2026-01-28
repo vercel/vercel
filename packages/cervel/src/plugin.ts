@@ -2,10 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
 import { extname, dirname, relative, join } from 'node:path';
 import type { Plugin } from 'rolldown';
-import {
-  exports as resolveExports,
-  legacy as resolveLegacy,
-} from 'resolve.exports';
+import { exports as resolveExports } from 'resolve.exports';
 import { nodeFileTrace } from './node-file-trace.js';
 import type { PluginOptions } from './types.js';
 
@@ -131,29 +128,9 @@ export const plugin = (args: PluginOptions): Plugin => {
       }
 
       // Fall back to legacy resolution (main/module fields)
-      try {
-        const legacyResult = resolveLegacy(pkgJson, {
-          fields: ['module', 'main'],
-        });
-        if (legacyResult) {
-          if (
-            legacyResult === relativePath ||
-            legacyResult === `./${relativePath}`
-          ) {
-            // If it matched "module" field, it's ESM
-            if (
-              pkgJson.module &&
-              (legacyResult === pkgJson.module ||
-                legacyResult === `./${pkgJson.module}`)
-            ) {
-              return false;
-            }
-            // If it matched "main" field, check type
-            return pkgJson.type !== 'module';
-          }
-        }
-      } catch {
-        // Legacy resolution failed
+      // If package has a "module" field, bundlers will use it, so treat as ESM
+      if (pkgJson.module) {
+        return false;
       }
 
       // Final fallback to type field
