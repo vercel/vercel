@@ -59,6 +59,8 @@ describe('successful builds', async () => {
 
       const workPath = workDir;
       const repoRootPath = workDir;
+      // const workPath = '/Users/jeffsee/code/workflow-server'
+      // const repoRootPath = '/Users/jeffsee/code/workflow-server'
 
       const result = (await build({
         files: {},
@@ -70,6 +72,10 @@ describe('successful builds', async () => {
       })) as BuildResultV2Typical;
 
       const lambda = result.output.index as unknown as NodejsLambda;
+
+      expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
+        join(fixtureSource, 'routes.json')
+      );
 
       // Extract and execute lambda in the same work directory
       await expect(
