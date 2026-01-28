@@ -339,7 +339,7 @@ export default async function logsv2(client: Client) {
       }
       output.print(
         chalk.gray(
-          `\nFetched ${logs.length} logs for project ${projectId} in ${contextName}\n`
+          `Fetched ${logs.length} logs for project ${projectId} in ${contextName}\n`
         )
       );
     }
