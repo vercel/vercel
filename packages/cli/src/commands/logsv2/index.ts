@@ -320,7 +320,7 @@ export default async function logsv2(client: Client) {
   if (!jsonOption) {
     if (logs.length === 0) {
       output.print(
-        chalk.gray('No logs found matching the specified filters.\n')
+        chalk.dim(`No logs found for project ${projectId} in ${contextName}\n`)
       );
     } else {
       const maxMethodWidth = Math.max(...logs.map(l => l.requestMethod.length));
