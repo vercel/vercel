@@ -99,6 +99,8 @@ describe('feature', () => {
 });
 ```
 
+**Verify tests fail without the code change**: When writing a test alongside a code change, always verify the test fails without the accompanying code. This confirms the test actually validates the new behavior rather than passing trivially. Temporarily revert or comment out the code change, run the test to see it fail, then restore the code.
+
 ## Package Development
 
 Each package follows this structure:
