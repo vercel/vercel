@@ -55,11 +55,19 @@ describe('blob get', () => {
     });
     mockedBlob.get.mockResolvedValue({
       stream: createMockReadableStream('test content'),
+      headers: new Headers({
+        'content-type': 'text/plain',
+        'content-length': '12',
+      }),
       blob: {
         url: 'https://example.com/test-file.txt',
         pathname: 'test-file.txt',
         contentType: 'text/plain',
         size: 12,
+        uploadedAt: new Date('2024-01-01T00:00:00.000Z'),
+        contentDisposition: 'inline; filename="test-file.txt"',
+        downloadUrl: 'https://example.com/test-file.txt?download=1',
+        cacheControl: 'public, max-age=31536000',
       },
     });
     // Mock createWriteStream to return a PassThrough stream
