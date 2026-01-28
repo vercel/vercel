@@ -36,19 +36,14 @@ import type { EmojiLabel } from '../emoji';
 import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
-import { detectProjectServices } from '../projects/detect-services';
 import readConfig from '../config/read-config';
 import { frameworkList } from '@vercel/frameworks';
-import {
-  displayDetectedServices,
-  displayServiceErrors,
-  displayServicesConfigNote,
-} from '../input/display-services';
 import {
   vercelAuth,
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import { tryDetectServices } from '../projects/detect-services';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -182,10 +177,15 @@ export default async function setupAndLink(
   const isZeroConfig =
     !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
+  // Check for experimental services (gated by VERCEL_USE_EXPERIMENTAL_SERVICES env var)
+  const servicesFramework = await tryDetectServices(pathWithRootDirectory);
+
   try {
     let settings: ProjectSettings = {};
 
-    if (isZeroConfig) {
+    if (servicesFramework) {
+      settings.framework = servicesFramework;
+    } else if (isZeroConfig) {
       const localConfigurationOverrides: PartialProjectSettings = {
         buildCommand: localConfig?.buildCommand,
         devCommand: localConfig?.devCommand,
@@ -195,35 +195,24 @@ export default async function setupAndLink(
         outputDirectory: localConfig?.outputDirectory,
       };
 
-      // Check for experimental services first (gated by env var)
-      const servicesResult = await detectProjectServices(pathWithRootDirectory);
+      // Run the framework detection logic against the local filesystem.
+      const detectedProjectsForWorkspace = await detectProjects(
+        pathWithRootDirectory
+      );
 
-      if (servicesResult && servicesResult.services.length > 0) {
-        displayDetectedServices(servicesResult.services);
-        if (servicesResult.errors.length > 0) {
-          displayServiceErrors(servicesResult.errors);
-        }
-        displayServicesConfigNote();
-        settings.framework = 'services';
-      }
+      // Select the first framework detected, or use
+      // the "Other" preset if none was detected.
+      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+      const framework =
+        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
 
-      // Standard framework detection (skipped if services were detected)
-      if (!settings.framework) {
-        const detectedProjectsForWorkspace = await detectProjects(
-          pathWithRootDirectory
-        );
-        const detectedProjects = detectedProjectsForWorkspace.get('') || [];
-        const framework =
-          detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
-
-        settings = await editProjectSettings(
-          client,
-          {},
-          framework,
-          autoConfirm,
-          localConfigurationOverrides
-        );
-      }
+      settings = await editProjectSettings(
+        client,
+        {},
+        framework,
+        autoConfirm,
+        localConfigurationOverrides
+      );
     }
 
     // Support for changing additional, less frequently used project settings.

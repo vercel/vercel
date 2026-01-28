@@ -1,8 +1,9 @@
+import { detectServices, LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
-  detectServices,
-  LocalFileSystemDetector,
-  type DetectServicesResult,
-} from '@vercel/fs-detectors';
+  displayDetectedServices,
+  displayServiceErrors,
+  displayServicesConfigNote,
+} from '../input/display-services';
 
 export function isExperimentalServicesEnabled(): boolean {
   return (
@@ -12,17 +13,15 @@ export function isExperimentalServicesEnabled(): boolean {
 }
 
 /**
- * Detect services in a project if experimental services are enabled.
+ * Detect and display services if experimental services are enabled.
  *
- * Returns the services detection result if:
+ * Returns 'services' framework string if:
  * - VERCEL_USE_EXPERIMENTAL_SERVICES=1 env var is set
- * - vercel.json contains experimentalServices
+ * - vercel.json contains experimentalServices with valid services
  *
  * Returns null otherwise.
  */
-export async function detectProjectServices(
-  cwd: string
-): Promise<DetectServicesResult | null> {
+export async function tryDetectServices(cwd: string): Promise<string | null> {
   if (!isExperimentalServicesEnabled()) {
     return null;
   }
@@ -30,15 +29,20 @@ export async function detectProjectServices(
   const fs = new LocalFileSystemDetector(cwd);
   const result = await detectServices({ fs });
 
-  // If no services configured (error NO_SERVICES_CONFIGURED), return null
-  // This means vercel.json doesn't have experimentalServices
+  // No services configured - return null silently
   const hasNoServicesError = result.errors.some(
     e => e.code === 'NO_SERVICES_CONFIGURED'
   );
-
-  if (hasNoServicesError) {
+  if (hasNoServicesError || result.services.length === 0) {
     return null;
   }
 
-  return result;
+  // Display detected services
+  displayDetectedServices(result.services);
+  if (result.errors.length > 0) {
+    displayServiceErrors(result.errors);
+  }
+  displayServicesConfigNote();
+
+  return 'services';
 }

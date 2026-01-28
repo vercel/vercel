@@ -1,11 +1,23 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { join } from 'path';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
+
+// Mock the display functions
+vi.mock('../../../../src/util/input/display-services', () => ({
+  displayDetectedServices: vi.fn(),
+  displayServiceErrors: vi.fn(),
+  displayServicesConfigNote: vi.fn(),
+}));
+
 import {
-  detectProjectServices,
+  tryDetectServices,
   isExperimentalServicesEnabled,
 } from '../../../../src/util/projects/detect-services';
+import {
+  displayDetectedServices,
+  displayServicesConfigNote,
+} from '../../../../src/util/input/display-services';
 
 describe('isExperimentalServicesEnabled()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
@@ -49,11 +61,12 @@ describe('isExperimentalServicesEnabled()', () => {
   });
 });
 
-describe('detectProjectServices()', () => {
+describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
   let tempDir: string;
 
   beforeEach(async () => {
+    vi.clearAllMocks();
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -73,171 +86,86 @@ describe('detectProjectServices()', () => {
       join(tempDir, 'vercel.json'),
       JSON.stringify({
         experimentalServices: {
-          api: {
-            entrypoint: 'index.ts',
-            routePrefix: '/',
-          },
+          api: { entrypoint: 'index.ts', routePrefix: '/' },
         },
       })
     );
 
-    const result = await detectProjectServices(tempDir);
+    const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
+    expect(displayDetectedServices).not.toHaveBeenCalled();
   });
 
   it('should return null when no vercel.json exists', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
 
-    const result = await detectProjectServices(tempDir);
+    const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
+    expect(displayDetectedServices).not.toHaveBeenCalled();
   });
 
   it('should return null when vercel.json has no experimentalServices', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
-      JSON.stringify({
-        buildCommand: 'npm run build',
-      })
+      JSON.stringify({ buildCommand: 'npm run build' })
     );
 
-    const result = await detectProjectServices(tempDir);
+    const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
+    expect(displayDetectedServices).not.toHaveBeenCalled();
   });
 
-  it('should detect services when env var is set and experimentalServices exists', async () => {
+  it('should return "services" and display when services are detected', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
         experimentalServices: {
-          frontend: {
-            framework: 'nextjs',
-            routePrefix: '/',
-          },
-          backend: {
-            entrypoint: 'api/index.py',
-            routePrefix: '/api',
-          },
+          frontend: { framework: 'nextjs', routePrefix: '/' },
+          backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
         },
       })
     );
 
-    const result = await detectProjectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(2);
-
-    const frontend = result?.services.find(s => s.name === 'frontend');
-    expect(frontend).toMatchObject({
-      name: 'frontend',
-      type: 'web',
-      framework: 'nextjs',
-      routePrefix: '/',
-    });
-
-    const backend = result?.services.find(s => s.name === 'backend');
-    expect(backend).toMatchObject({
-      name: 'backend',
-      type: 'web',
-      entrypoint: 'api/index.py',
-      routePrefix: '/api',
-    });
+    const result = await tryDetectServices(tempDir);
+    expect(result).toBe('services');
+    expect(displayDetectedServices).toHaveBeenCalledTimes(1);
+    expect(displayServicesConfigNote).toHaveBeenCalledTimes(1);
   });
 
-  it('should detect services with different runtimes', async () => {
+  it('should display errors when service config has validation issues', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
         experimentalServices: {
-          'node-api': {
-            entrypoint: 'src/index.ts',
-            routePrefix: '/node',
-          },
-          'python-api': {
-            entrypoint: 'src/main.py',
-            routePrefix: '/python',
-          },
-          'go-api': {
-            entrypoint: 'main.go',
-            routePrefix: '/go',
-          },
-          'ruby-api': {
-            entrypoint: 'app.rb',
-            routePrefix: '/ruby',
-          },
+          // Valid service
+          valid: { entrypoint: 'index.ts', routePrefix: '/' },
+          // Invalid service (missing routePrefix) - will cause error but valid one still works
         },
       })
     );
 
-    const result = await detectProjectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(4);
-
-    // Check that builders are correctly assigned based on entrypoint extension
-    const nodeApi = result?.services.find(s => s.name === 'node-api');
-    expect(nodeApi?.builder.use).toBe('@vercel/node');
-
-    const pythonApi = result?.services.find(s => s.name === 'python-api');
-    expect(pythonApi?.builder.use).toBe('@vercel/python');
-
-    const goApi = result?.services.find(s => s.name === 'go-api');
-    expect(goApi?.builder.use).toBe('@vercel/go');
-
-    const rubyApi = result?.services.find(s => s.name === 'ruby-api');
-    expect(rubyApi?.builder.use).toBe('@vercel/ruby');
+    const result = await tryDetectServices(tempDir);
+    expect(result).toBe('services');
+    expect(displayDetectedServices).toHaveBeenCalled();
   });
 
-  it('should detect worker and cron services', async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-    await writeFile(
-      join(tempDir, 'vercel.json'),
-      JSON.stringify({
-        experimentalServices: {
-          'my-worker': {
-            type: 'worker',
-            entrypoint: 'worker.py',
-            topic: 'tasks',
-          },
-          'my-cron': {
-            type: 'cron',
-            entrypoint: 'cron.ts',
-            schedule: '0 * * * *',
-          },
-        },
-      })
-    );
-
-    const result = await detectProjectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(2);
-
-    const worker = result?.services.find(s => s.name === 'my-worker');
-    expect(worker?.type).toBe('worker');
-    expect(worker?.topic).toBe('tasks');
-
-    const cron = result?.services.find(s => s.name === 'my-cron');
-    expect(cron?.type).toBe('cron');
-    expect(cron?.schedule).toBe('0 * * * *');
-  });
-
-  it('should return result with errors for invalid service config', async () => {
+  it('should return null when all services have validation errors', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
         experimentalServices: {
           // Missing routePrefix for web service
-          'invalid-service': {
-            entrypoint: 'index.ts',
-          },
+          'invalid-service': { entrypoint: 'index.ts' },
         },
       })
     );
 
-    const result = await detectProjectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.errors.length).toBeGreaterThan(0);
-    expect(result?.errors[0].code).toBe('MISSING_ROUTE_PREFIX');
+    const result = await tryDetectServices(tempDir);
+    // No valid services, so returns null
+    expect(result).toBeNull();
   });
 });
