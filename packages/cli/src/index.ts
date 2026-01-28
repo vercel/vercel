@@ -307,8 +307,8 @@ const main = async () => {
     },
   });
 
-  const { agent } = await determineAgent();
-  telemetry.trackAgenticUse(agent?.name);
+  const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
@@ -350,6 +350,10 @@ const main = async () => {
     localConfigPath,
     argv: process.argv,
     telemetryEventStore,
+    isAgent,
+    agentName: detectedAgent?.name,
+    dangerouslySkipPermissions:
+      parsedArgs.flags['--dangerously-skip-permissions'] ?? false,
   });
 
   // The `--cwd` flag is respected for all sub-commands
