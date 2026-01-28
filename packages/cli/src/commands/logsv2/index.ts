@@ -330,7 +330,7 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
   const level = getLevelLabel(log.level);
   const method = log.requestMethod.padEnd(4);
   const status =
-    log.responseStatusCode <= 0
+    !log.responseStatusCode || log.responseStatusCode <= 0
       ? chalk.gray('---')
       : getStatusColor(log.responseStatusCode);
   const source = getSourceIcon(log.source);
