@@ -31,7 +31,10 @@ await compileDevTemplates();
 
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-const externals = Object.keys(pkg.dependencies || {});
+const externals = [
+  ...Object.keys(pkg.dependencies || {}),
+  ...Object.keys(pkg.peerDependencies || {}),
+];
 const require = createRequire(import.meta.url);
 await esbuild({
   bundle: true,

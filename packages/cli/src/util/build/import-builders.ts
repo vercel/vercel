@@ -64,6 +64,49 @@ export async function importBuilders(
   return importResult.builders;
 }
 
+// Cache for CLI package.json peerDependencies
+let peerDependencies: Record<string, string> | undefined;
+
+function getPeerDependencies(): Record<string, string> {
+  if (!peerDependencies) {
+    try {
+      const cliPkgPath = require_.resolve('vercel/package.json', {
+        paths: [__dirname],
+      });
+      const cliPkg = require_(cliPkgPath) as PackageJson;
+      peerDependencies =
+        (cliPkg.peerDependencies as Record<string, string>) || {};
+    } catch {
+      peerDependencies = {};
+    }
+  }
+
+  return peerDependencies;
+}
+
+/**
+ * Returns the spec with version from peerDependencies if no explicit version
+ * was specified and the package is listed in peerDependencies.
+ */
+function getSpecWithPeerVersion(
+  spec: string,
+  name: string | null,
+  parsed: npa.Result,
+  peerDeps: Record<string, string>
+): string {
+  // If no name or explicit version/range specified, return original spec
+  if (!name || parsed.type === 'version' || parsed.type === 'range') {
+    return spec;
+  }
+  // Check if this builder is in peerDependencies
+  const peerVersion = peerDeps[name];
+  if (peerVersion) {
+    output.debug(`Using peerDependency version for "${name}": ${peerVersion}`);
+    return `${name}@${peerVersion}`;
+  }
+  return spec;
+}
+
 export async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
@@ -71,6 +114,7 @@ export async function resolveBuilders(
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
+  const peerDeps = getPeerDependencies();
 
   for (const spec of builderSpecs) {
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
@@ -137,7 +181,7 @@ export async function resolveBuilders(
         output.debug(
           `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
         );
-        buildersToAdd.add(spec);
+        buildersToAdd.add(getSpecWithPeerVersion(spec, name, parsed, peerDeps));
         continue;
       }
 
@@ -150,12 +194,11 @@ export async function resolveBuilders(
         output.debug(
           `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
         );
-        buildersToAdd.add(spec);
+        buildersToAdd.add(getSpecWithPeerVersion(spec, name, parsed, peerDeps));
         continue;
       }
 
       // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
-
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
       const builder = require_(path);
@@ -176,7 +219,8 @@ export async function resolveBuilders(
       // try to install again. Instead just pass through the error to the user
       if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
         output.debug(`Failed to import "${name}": ${err}`);
-        buildersToAdd.add(spec);
+        const toAdd = getSpecWithPeerVersion(spec, name, parsed, peerDeps);
+        buildersToAdd.add(toAdd);
       } else {
         err.message = `Importing "${name}": ${err.message}`;
         throw err;
