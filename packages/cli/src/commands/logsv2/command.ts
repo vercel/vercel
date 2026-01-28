@@ -3,7 +3,9 @@ import { packageName } from '../../util/pkg-name';
 export const logsv2Command = {
   name: 'logsv2',
   aliases: [],
-  description: 'Display request logs for a project using the new logs API.',
+  description:
+    'Display request logs for a project using the new logs API.\n\n' +
+    'Source types: λ = serverless, ε = edge, ◇ = static',
   hidden: true,
   arguments: [
     {

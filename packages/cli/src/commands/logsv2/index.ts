@@ -25,7 +25,7 @@ import output from '../../output-manager';
 const TIME_FORMAT = 'HH:mm:ss.SS';
 
 const COL_TIME = 11;
-const COL_LEVEL = 4;
+const COL_LEVEL = 5;
 const COL_SOURCE = 1;
 const COL_METHOD = 7;
 const COL_STATUS = 6;
@@ -345,21 +345,15 @@ interface PrintOptions {
 function printHeader(terminalWidth: number, expand?: boolean) {
   const time = 'TIME'.padEnd(COL_TIME);
   const level = 'LEVEL'.padEnd(COL_LEVEL);
-  const source = 'S';
-  const method = 'METHOD'.padEnd(COL_METHOD);
 
   if (expand) {
-    output.print(chalk.dim(`${time}  ${level}  ${source}  ${method} PATH\n`));
+    output.print(chalk.dim(`${time}  ${level}  PATH\n`));
   } else {
     const pathMsgWidth = Math.max(terminalWidth - COL_FIXED_WIDTH, 40);
     const pathWidth = Math.floor(pathMsgWidth * 0.4);
-    const path = 'PATH'.padEnd(pathWidth);
+    const path = 'PATH'.padEnd(pathWidth + COL_SOURCE + COL_METHOD + 3);
     const status = 'STATUS'.padEnd(COL_STATUS);
-    output.print(
-      chalk.dim(
-        `${time}  ${level}  ${source}  ${method} ${path}  ${status}  MESSAGE\n`
-      )
-    );
+    output.print(chalk.dim(`${time}  ${level}  ${path}  ${status}  MESSAGE\n`));
   }
 }
 
@@ -376,8 +370,10 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       ? chalk.gray(statusStr.padEnd(COL_STATUS))
       : getStatusColor(statusCode, COL_STATUS);
 
+  const path = `${source}  ${method} ${log.requestPath}`;
+
   if (expand) {
-    const requestLine = `${chalk.dim(time)}  ${level}  ${source}  ${method} ${log.requestPath}`;
+    const requestLine = `${chalk.dim(time)}  ${level}  ${path}`;
     output.print(`${requestLine}\n`);
     if (log.message) {
       const message = log.message.replace(/\n$/, '');
@@ -388,11 +384,10 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       output.print('\n');
     }
   } else {
-    const pathMsgWidth = Math.max(terminalWidth - COL_FIXED_WIDTH, 40);
-    const pathWidth = Math.floor(pathMsgWidth * 0.4);
-    const msgWidth = pathMsgWidth - pathWidth - 2;
-
-    const path = truncatePath(log.requestPath, pathWidth).padEnd(pathWidth);
+    const msgWidth = Math.max(
+      terminalWidth - COL_FIXED_WIDTH - log.requestPath.length,
+      20
+    );
     const msg = log.message
       ? colorizeMessage(
           `"${truncateMessage(log.message, msgWidth - 2)}"`,
@@ -400,22 +395,20 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
         )
       : chalk.dim('(no message)');
 
-    output.print(
-      `${chalk.dim(time)}  ${level}  ${source}  ${method} ${path}  ${status}  ${msg}\n`
-    );
+    output.print(`${chalk.dim(time)}  ${level}  ${path}  ${status}  ${msg}\n`);
   }
 }
 
 function getLevelLabel(level: string): string {
   switch (level) {
     case 'fatal':
-      return chalk.red.bold('fatl');
+      return chalk.red.bold('fatal');
     case 'error':
-      return chalk.red('err ');
+      return chalk.red('error');
     case 'warning':
-      return chalk.yellow('warn');
+      return chalk.yellow('warn ');
     default:
-      return chalk.dim('info');
+      return chalk.dim('info ');
   }
 }
 
@@ -452,11 +445,6 @@ function truncateMessage(msg: string, maxLen = 60): string {
   const oneLine = msg.replace(/\n/g, ' ').trim();
   if (oneLine.length <= maxLen) return oneLine;
   return oneLine.slice(0, maxLen - 1) + '…';
-}
-
-function truncatePath(path: string, maxLen: number): string {
-  if (path.length <= maxLen) return path;
-  return '…' + path.slice(-(maxLen - 1));
 }
 
 function colorizeMessage(message: string, level: string): string {
