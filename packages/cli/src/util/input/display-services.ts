@@ -76,9 +76,6 @@ export function displayServicesConfigNote(): void {
   );
 }
 
-/**
- * Display service validation errors.
- */
 export function displayServiceErrors(errors: ServiceDetectionError[]): void {
   for (const error of errors) {
     output.warn(error.message);

@@ -199,29 +199,19 @@ export default async function setupAndLink(
       const servicesResult = await detectProjectServices(pathWithRootDirectory);
 
       if (servicesResult && servicesResult.services.length > 0) {
-        // Display detected services
         displayDetectedServices(servicesResult.services);
-
-        // Display any validation errors (e.g., invalid framework slug)
         if (servicesResult.errors.length > 0) {
           displayServiceErrors(servicesResult.errors);
         }
-
         displayServicesConfigNote();
+        settings.framework = 'services';
+      }
 
-        // Use the "services" framework preset
-        const servicesFramework = frameworkList.find(
-          f => f.slug === 'services'
-        );
-        settings.framework = servicesFramework?.slug ?? null;
-      } else {
-        // Run the framework detection logic against the local filesystem.
+      // Standard framework detection (skipped if services were detected)
+      if (!settings.framework) {
         const detectedProjectsForWorkspace = await detectProjects(
           pathWithRootDirectory
         );
-
-        // Select the first framework detected, or use
-        // the "Other" preset if none was detected.
         const detectedProjects = detectedProjectsForWorkspace.get('') || [];
         const framework =
           detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
