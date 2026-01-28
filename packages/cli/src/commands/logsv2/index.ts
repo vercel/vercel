@@ -360,7 +360,7 @@ function printHeader(options: PrintOptions) {
   const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
   const cols: string[] = [];
 
-  cols.push((showDate ? 'DATE/TIME' : 'TIME').padEnd(colTime));
+  cols.push('TIME'.padEnd(colTime));
   cols.push('LEVEL'.padEnd(COL_LEVEL));
   cols.push('  PATH'); // 2-char indent to align with method (after source icon + space)
 
