@@ -1,5 +1,16 @@
 # @vercel/fs-detectors
 
+## 5.7.18
+
+### Patch Changes
+
+- [ruby] Add experimental Ruby runtime framework preset ([#14762](https://github.com/vercel/vercel/pull/14762))
+
+  Also fixed a bug in the Ruby version parsing where `ruby "~> 3.3.x"` in Gemfile would fail due to a trailing space not being trimmed after removing the `~>` prefix.
+
+- Updated dependencies [[`31afeb2546b316a2e9553ee937d9771b86898e0e`](https://github.com/vercel/vercel/commit/31afeb2546b316a2e9553ee937d9771b86898e0e)]:
+  - @vercel/frameworks@3.16.0
+
 ## 5.7.17
 
 ### Patch Changes
