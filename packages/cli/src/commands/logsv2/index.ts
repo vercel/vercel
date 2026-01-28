@@ -84,6 +84,7 @@ export default async function logsv2(client: Client) {
   const followOption = parsedArguments.flags['--follow'];
   const queryOption = parsedArguments.flags['--query'];
   const requestIdOption = parsedArguments.flags['--request-id'];
+  const expandOption = parsedArguments.flags['--expand'];
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
@@ -99,6 +100,7 @@ export default async function logsv2(client: Client) {
   telemetry.trackCliFlagFollow(followOption);
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
+  telemetry.trackCliFlagExpand(expandOption);
 
   if (followOption) {
     if (!deploymentOption) {
@@ -293,7 +295,7 @@ export default async function logsv2(client: Client) {
       if (jsonOption) {
         client.stdout.write(JSON.stringify(log) + '\n');
       } else {
-        prettyPrintLogEntry(log);
+        prettyPrintLogEntry(log, { expand: expandOption });
       }
       count++;
     }
@@ -318,7 +320,12 @@ export default async function logsv2(client: Client) {
   return 0;
 }
 
-function prettyPrintLogEntry(log: RequestLogEntry) {
+interface PrintOptions {
+  expand?: boolean;
+}
+
+function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
+  const { expand } = options;
   const time = format(log.timestamp, TIME_FORMAT);
   const level = getLevelLabel(log.level);
   const method = log.requestMethod.padEnd(4);
@@ -328,13 +335,26 @@ function prettyPrintLogEntry(log: RequestLogEntry) {
       : getStatusColor(log.responseStatusCode);
   const source = getSourceIcon(log.source);
   const path = log.requestPath;
-  const msg = log.message
-    ? chalk.dim(`"${truncateMessage(log.message)}"`)
-    : chalk.dim('(no message)');
 
-  output.print(
-    `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}  ${msg}\n`
-  );
+  if (expand) {
+    const requestLine = `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}`;
+    output.print(`${requestLine}\n`);
+    if (log.message) {
+      const message = log.message.replace(/\n$/, '');
+      const coloredMessage = colorizeMessage(message, log.level);
+      const truncatedIndicator = log.messageTruncated ? chalk.gray('…') : '';
+      output.print(`${coloredMessage}${truncatedIndicator}\n\n`);
+    } else {
+      output.print('\n');
+    }
+  } else {
+    const msg = log.message
+      ? colorizeMessage(`"${truncateMessage(log.message)}"`, log.level)
+      : chalk.dim('(no message)');
+    output.print(
+      `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}  ${msg}\n`
+    );
+  }
 }
 
 function getLevelLabel(level: string): string {
@@ -382,4 +402,16 @@ function truncateMessage(msg: string, maxLen = 60): string {
   const oneLine = msg.replace(/\n/g, ' ').trim();
   if (oneLine.length <= maxLen) return oneLine;
   return oneLine.slice(0, maxLen - 1) + '…';
+}
+
+function colorizeMessage(message: string, level: string): string {
+  switch (level) {
+    case 'fatal':
+    case 'error':
+      return chalk.red(message);
+    case 'warning':
+      return chalk.yellow(message);
+    default:
+      return chalk.dim(message);
+  }
 }

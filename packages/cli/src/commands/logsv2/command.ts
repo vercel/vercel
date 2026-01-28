@@ -106,6 +106,13 @@ export const logsv2Command = {
       deprecated: false,
       description: 'Filter by request ID',
     },
+    {
+      name: 'expand',
+      shorthand: 'x',
+      type: Boolean,
+      deprecated: false,
+      description: 'Show full log message below each request line',
+    },
   ],
   examples: [
     {
@@ -143,6 +150,10 @@ export const logsv2Command = {
     {
       name: 'Display logs for a specific request',
       value: `${packageName} logsv2 --request-id req_xxxxx`,
+    },
+    {
+      name: 'Display logs with full message details',
+      value: `${packageName} logsv2 --expand`,
     },
   ],
 } as const;
