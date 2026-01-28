@@ -26,6 +26,8 @@ describe('Client confirmation prompts', () => {
 
   describe('DELETE operations', () => {
     it('should prompt for confirmation on DELETE', async () => {
+      // Disable skip to test confirmation prompt
+      client.dangerouslySkipPermissions = false;
       // Mock confirm to return true
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
@@ -40,6 +42,8 @@ describe('Client confirmation prompts', () => {
     });
 
     it('should cancel DELETE when user says no', async () => {
+      // Disable skip to test confirmation prompt
+      client.dangerouslySkipPermissions = false;
       // Mock confirm to return false
       client.input.confirm = vi.fn().mockResolvedValue(false);
 
@@ -62,6 +66,8 @@ describe('Client confirmation prompts', () => {
     });
 
     it('should show error in non-TTY mode without --dangerously-skip-permissions', async () => {
+      // Disable skip to test non-TTY error behavior
+      client.dangerouslySkipPermissions = false;
       client.stdin.isTTY = false;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
@@ -195,6 +201,8 @@ describe('Client confirmation prompts', () => {
     });
 
     it('should include URL in confirmation message', async () => {
+      // Disable skip to test confirmation message content
+      client.dangerouslySkipPermissions = false;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
       await client.fetch('/v9/test', { method: 'DELETE' });
