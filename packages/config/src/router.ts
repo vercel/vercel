@@ -338,8 +338,6 @@ export interface Route {
   has?: Condition[];
   /** Optional conditions that must be absent */
   missing?: Condition[];
-  /** If true, this is a redirect (status defaults to 308 or specified) */
-  redirect?: boolean;
   /** Status code for the response */
   status?: number;
   /** Headers to set (alternative to using transforms) */
@@ -975,7 +973,6 @@ export class Router {
       const route: Route = {
         src: source,
         dest: destination,
-        redirect: true,
         status: statusCode || (permanent ? 308 : 307),
         transforms,
       };
@@ -1000,7 +997,6 @@ export class Router {
       const route: Route = {
         src: source,
         dest: destination,
-        redirect: true,
         status: statusCode || (permanent ? 308 : 307),
         env: destEnvVars,
       };
@@ -1176,7 +1172,6 @@ export class Router {
           const route: Route = {
             src: redirectRule.source,
             dest: redirectRule.destination,
-            redirect: true,
             status:
               redirectRule.statusCode || (redirectRule.permanent ? 308 : 307),
           };

@@ -6,6 +6,7 @@ describe('index', () => {
       new Map([
         ['alias', 'alias'],
         ['aliases', 'alias'],
+        ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
         ['build', 'build'],

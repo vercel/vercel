@@ -1,5 +1,17 @@
 # @vercel/router-sdk
 
+## 0.0.28
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+## 0.0.27
+
+### Patch Changes
+
+- Remove references to nonexistent `redirects` property ([#14708](https://github.com/vercel/vercel/pull/14708))
+
 ## 0.0.26
 
 ### Patch Changes

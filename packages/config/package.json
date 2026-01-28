@@ -1,6 +1,6 @@
 {
   "name": "@vercel/config",
-  "version": "0.0.26",
+  "version": "0.0.28",
   "description": "A TypeScript SDK for programmatically configuring Vercel projects",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/projects/project-configuration",

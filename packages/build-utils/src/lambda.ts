@@ -341,6 +341,18 @@ export class Lambda {
             `${prefix}.initialDelaySeconds must be a non-negative number`
           );
         }
+
+        if (trigger.maxConcurrency !== undefined) {
+          assert(
+            typeof trigger.maxConcurrency === 'number',
+            `${prefix}.maxConcurrency must be a number`
+          );
+          assert(
+            Number.isInteger(trigger.maxConcurrency) &&
+              trigger.maxConcurrency >= 1,
+            `${prefix}.maxConcurrency must be at least 1`
+          );
+        }
       }
     }
 
