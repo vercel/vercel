@@ -45,7 +45,7 @@ This project is configured in a monorepo, where one repository contains multiple
 
 To get started, execute the following:
 
-```
+```bash
 git clone https://github.com/vercel/vercel
 cd vercel
 corepack enable
@@ -61,7 +61,7 @@ Make sure all the tests pass before making changes.
 
 You can use `pnpm vercel` from the `cli` package to invoke Vercel CLI with local changes:
 
-```
+```bash
 cd ./packages/cli
 pnpm vercel <cli-commands...>
 ```
@@ -72,7 +72,7 @@ See [CLI Local Development](../packages/cli#local-development) for more details.
 
 Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:
 
-```
+```bash
 pnpm test-unit
 ```
 
@@ -96,7 +96,7 @@ Unit tests are run locally with `jest` and execute quickly because they are test
 
 Integration tests create deployments to your Vercel account using the `test` project name. After each test is deployed, the `probes` key is used to check if the response is the expected value. If the value doesn't match, you'll see a message explaining the difference. If the deployment failed to build, you'll see a more generic message like the following:
 
-```
+```log
 [Error: Fetched page https://test-8ashcdlew.vercel.app/root.js does not contain hello Root!. Instead it contains An error occurred with this application.
 
     NO_STATUS_CODE_FRO Response headers:
@@ -127,13 +127,13 @@ While running the full integration suite locally is not recommended, it's someti
 From there, you should be able to trigger an integration test. Choose one
 that's already isolated to check that things work:
 
-```
+```bash
 cd packages/next
 ```
 
 Run the test:
 
-```
+```bash
 pnpm test test/fixtures/00-server-build/index.test.js
 ```
 
