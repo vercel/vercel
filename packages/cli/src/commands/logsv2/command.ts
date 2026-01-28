@@ -5,7 +5,7 @@ export const logsv2Command = {
   aliases: [],
   description:
     'Display request logs for a project using the new logs API.\n\n' +
-    'Source types: λ = serverless, ε = edge, ◇ = static',
+    'Source types: λ = serverless, ε = edge/middleware, ◇ = static/external',
   hidden: true,
   arguments: [
     {
