@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.7.17
+
+### Patch Changes
+
+- [experimental] Adds support for building multiple services when framework mode is set to "services" ([#14739](https://github.com/vercel/vercel/pull/14739))
+
 ## 5.7.16
 
 ### Patch Changes
