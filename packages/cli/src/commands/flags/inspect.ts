@@ -6,6 +6,7 @@ import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
+import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsInspectTelemetryClient } from '../../util/telemetry/commands/flags/inspect';
 import { inspectSubcommand } from './command';
@@ -70,7 +71,7 @@ export default async function inspect(client: Client, argv: string[]) {
       getFlag(client, project.id, flagArg),
       getFlagSettings(client, project.id),
     ]);
-    printFlagDetails(flag, settings, projectSlugLink);
+    printFlagDetails(flag, settings, projectSlugLink, org.slug, project.name);
   } catch (err) {
     printError(err);
     return 1;
@@ -214,11 +215,16 @@ function formatComparison(cmp: string): string {
 function printFlagDetails(
   flag: Flag,
   settings: FlagSettings,
-  projectSlugLink: string
+  projectSlugLink: string,
+  orgSlug: string,
+  projectName: string
 ) {
+  const dashboardUrl = getFlagDashboardUrl(orgSlug, projectName, flag.slug);
+
   output.log(
     `\nFeature flag ${chalk.bold(flag.slug)} for ${projectSlugLink}\n`
   );
+  output.print(`  ${chalk.cyan(dashboardUrl)}\n\n`);
 
   output.print(`  ${chalk.dim('ID:')}           ${flag.id}\n`);
   output.print(`  ${chalk.dim('Kind:')}         ${flag.kind}\n`);
