@@ -1,26 +1,13 @@
-import type { Plugin } from 'rolldown';
 import { readFile } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
 import { extname, dirname, relative, join } from 'node:path';
-import {
-  FileFsRef,
-  glob,
-  isSymbolicLink,
-  type Files,
-  type File,
-  FileBlob,
-} from '@vercel/build-utils';
+import type { Plugin } from 'rolldown';
+import type { Files } from '@vercel/build-utils';
 import {
   exports as resolveExports,
   legacy as resolveLegacy,
 } from 'resolve.exports';
-import {
-  nodeFileTrace as nft,
-  resolve as nftResolveDependency,
-} from '@vercel/nft';
-import { transform } from 'oxc-transform';
-import { lstatSync, readFileSync } from 'node:fs';
-import { isNativeError } from 'node:util/types';
+import { nodeFileTrace } from './node-file-trace.js';
 
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
 
@@ -113,13 +100,26 @@ export const plugin = (args: {
         return pkgJson.type !== 'module';
       }
 
-      // Extract the subpath from the bare import (e.g., 'hono' or 'hono/middleware')
+      // Extract the subpath from the bare import (e.g., 'hono' -> '.', 'hono/middleware' -> './middleware')
       const pkgName = pkgJson.name || '';
       const subpath = bareImport.startsWith(pkgName)
-        ? bareImport.slice(pkgName.length) || '.'
+        ? `.${bareImport.slice(pkgName.length)}` || '.'
         : '.';
 
       try {
+        // Try to resolve with "import" condition (ESM) first
+        const importResult = resolveExports(pkgJson, subpath, {
+          require: false,
+          conditions: ['node', 'import'],
+        });
+        if (
+          importResult?.some(
+            p => p === relativePath || p === `./${relativePath}`
+          )
+        ) {
+          return false; // Matched the import condition, treat as ESM
+        }
+
         // Try to resolve with "require" condition (CJS)
         const requireResult = resolveExports(pkgJson, subpath, {
           require: true,
@@ -130,24 +130,11 @@ export const plugin = (args: {
             p => p === relativePath || p === `./${relativePath}`
           )
         ) {
-          return true; // Matched the require condition
-        }
-
-        // Try to resolve with "import" condition (ESM)
-        const importResult = resolveExports(pkgJson, subpath, {
-          require: false,
-          conditions: ['node', 'import'],
-        });
-        if (
-          importResult?.some(
-            p => p === relativePath || p === `./${relativePath}`
-          )
-        ) {
-          return false; // Matched the import condition
+          return true; // Matched the require condition, treat as CJS
         }
       } catch (err) {
         // If exports resolution fails, fall back to legacy resolution
-        console.warn('Export resolution failed:', err);
+        console.warn('Export resolution failed::', err);
       }
 
       // Fall back to legacy resolution (main/module fields)
@@ -225,11 +212,14 @@ export const plugin = (args: {
           };
         }
 
-        // If shimming is enabled and this is a bare import from source code
-        if (args.shimBareImports && importer && isBareImport(id)) {
-          // Only shim if it resolves to node_modules (external package)
-          if (resolved?.id?.includes('node_modules')) {
-            // Check if it's a CJS package
+        // Handle bare imports from node_modules
+        if (
+          importer &&
+          isBareImport(id) &&
+          resolved?.id?.includes('node_modules')
+        ) {
+          // If shimming is enabled, check if we need to shim CJS packages
+          if (args.shimBareImports) {
             const isCjs = await isCommonJS(id, resolved.id, resolved);
 
             if (isCjs) {
@@ -252,14 +242,15 @@ export const plugin = (args: {
             }
           }
 
-          // Allow bare imports like @/lib that may be actually in the project dir
-          if (resolved?.id?.includes('node_modules')) {
-            return {
-              external: true,
-              // leave the import bare for runtime to resolve (eg. import from 'hono')
-              id: id,
-            };
-          }
+          // Keep bare import for runtime resolution (don't use resolved path)
+          return {
+            external: true,
+            id: id,
+          };
+        }
+
+        // Allow bare imports like @/lib that may be in the project dir
+        if (importer && isBareImport(id)) {
           return resolved;
         }
 
@@ -323,99 +314,15 @@ module.exports = requireFromContext('${pkgName}');
     writeBundle: {
       order: 'post',
       async handler() {
-        // For compiled output files: use paths directly from glob (top-level, no .vercel/node prefix)
-        const compiledSourceFiles = await glob('**/*', {
-          cwd: args.outDir,
-          follow: true,
-          includeDirectories: true,
+        const files = await nodeFileTrace({
+          outDir: args.outDir,
+          tracedPaths: Array.from(tracedPaths),
+          repoRootPath: args.repoRootPath,
+          workPath: args.workPath,
+          context: args.context,
+          keepTracedPaths: false,
         });
-        for (const file of Object.keys(compiledSourceFiles)) {
-          args.context.files[file] = compiledSourceFiles[file];
-        }
-
-        /**
-         * While we're not using NFT to process source code, we are using it
-         * to tree shake node deps, and include an fs reads for files that are
-         * not part of the traced paths.
-         */
-        const result = await nft(Array.from(tracedPaths), {
-          base: args.repoRootPath,
-          processCwd: args.workPath,
-          ts: true,
-          mixedModules: true,
-          async resolve(id, parent, job, cjsResolve) {
-            return nftResolveDependency(id, parent, job, cjsResolve);
-          },
-          async readFile(fsPath) {
-            try {
-              let entry: File | undefined;
-              let source: string | Buffer = readFileSync(fsPath);
-
-              const { mode } = lstatSync(fsPath);
-              if (isSymbolicLink(mode)) {
-                entry = new FileFsRef({ fsPath, mode });
-              }
-
-              if (
-                (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-                fsPath.endsWith('.tsx') ||
-                fsPath.endsWith('.mts') ||
-                fsPath.endsWith('.cts')
-              ) {
-                const result = await transform(fsPath, source.toString());
-                source = result.code;
-              }
-
-              if (!entry) {
-                entry = new FileBlob({ data: source, mode });
-              }
-              return source;
-            } catch (error: unknown) {
-              if (
-                isNativeError(error) &&
-                'code' in error &&
-                (error.code === 'ENOENT' || error.code === 'EISDIR')
-              ) {
-                return null;
-              }
-              throw error;
-            }
-          },
-        });
-
-        for (const file of tracedPaths) {
-          const relativeFile = relative(args.repoRootPath, file);
-          result.fileList.delete(relativeFile);
-        }
-
-        // Process nft results - keep node_modules unchanged from filesystem
-        const { lstat } = await import('node:fs/promises');
-
-        console.log('NFT traced files count:', result.fileList.size);
-
-        for (const file of result.fileList) {
-          const absolutePath = join(args.repoRootPath, file);
-          try {
-            const stats = await lstat(absolutePath);
-            // Keep the file path exactly as it is in the filesystem (repo-relative)
-            const outputPath = file;
-
-            if (stats.isSymbolicLink() || stats.isFile()) {
-              args.context.files[outputPath] = new FileFsRef({
-                fsPath: absolutePath,
-                mode: stats.mode,
-              });
-            }
-            // Skip directories
-          } catch (err) {
-            console.warn(`Warning: Could not stat file ${absolutePath}:`, err);
-          }
-        }
-
-        console.log(
-          'Total files in context:',
-          Object.keys(args.context.files).length
-        );
+        args.context.files = files;
       },
     },
   };

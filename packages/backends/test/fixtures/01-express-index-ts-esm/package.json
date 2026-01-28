@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "main": "server.js",
   "type": "module",
-  "scripts": {
-    "build": "cervel build index.ts",
-    "dev": "cervel"
-  },
   "dependencies": {
     "@types/express": "5.0.3",
     "@types/node": "^22.10.0",

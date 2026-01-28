@@ -6,6 +6,7 @@ import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
 import type { ParseArgsConfig } from 'util';
+export { nodeFileTrace } from './node-file-trace.js';
 
 type ParseArgsOptionsConfig = NonNullable<ParseArgsConfig['options']>;
 import { readFile, writeFile } from 'fs/promises';

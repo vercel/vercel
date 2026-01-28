@@ -9,6 +9,7 @@ import {
 } from '@vercel/build-utils';
 import {
   build as cervelBuild,
+  nodeFileTrace,
   findEntrypoint,
   getBuildSummary,
 } from '@vercel/cervel';
@@ -83,20 +84,54 @@ export const doBuild = async (
         debug('Finding entrypoint in dist directory');
         handler = await findEntrypoint(distDir);
       } catch (error) {
-        debug('Finding entrypoint in dist directory with ignoreRegex');
-        handler = await findEntrypoint(distDir, { ignoreRegex: true });
+        try {
+          debug('Finding entrypoint in dist directory with ignoreRegex');
+          handler = await findEntrypoint(distDir, { ignoreRegex: true });
+          debug('Found entrypoint in dist directory with ignoreRegex', handler);
+        } catch (error) {
+          debug('Unable to detect entrypoint, building ourselves');
+          // Otherwise, we need to build ourselves
+          const buildResult = await cervelBuild({
+            cwd: args.workPath,
+            repoRootPath: args.repoRootPath,
+            out: defaultOutputDirectory,
+          });
+          tsPromise = buildResult.tsPromise ?? undefined;
+          const { handler } = await getBuildSummary(
+            buildResult.rolldownResult.outputDir
+          );
+          return {
+            dir: buildResult.rolldownResult.outputDir,
+            handler,
+            tsPromise,
+            files: buildResult.rolldownResult.outputFiles,
+          };
+        }
       }
 
       await writeFile(cervelJsonPath, JSON.stringify({ handler }, null, 2));
+      // TODO: need to run nft here
+
+      const files = await nodeFileTrace({
+        keepTracedPaths: true,
+        tracedPaths: [join(distDir, handler)],
+        repoRootPath: args.repoRootPath,
+        workPath: args.workPath,
+        context: { files: {} },
+        outDir: distDir,
+      });
 
       return {
         dir: distDir,
         handler,
         tsPromise,
+        files,
       };
     }
 
-    debug('No dist directory found, building ourselves');
+    debug(
+      'No dist directory found, or unable to detect entrypoint, building ourselves'
+    );
     // Otherwise, we need to build ourselves
     const buildResult = await cervelBuild({
       cwd: args.workPath,

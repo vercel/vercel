@@ -88,7 +88,8 @@ export const rolldown = async (args: {
         repoRootPath: args.repoRootPath,
         outDir: outputDir,
         workPath: args.workPath,
-        shimBareImports: true, // Enable CJS shim generation
+        // Only shim CJS imports when output is ESM (CJS can require CJS natively)
+        shimBareImports: resolvedFormat === 'esm',
         context,
       }),
     ],

@@ -11,6 +11,7 @@ export const main = async () => {
       cwd,
       out,
       entrypoint,
+      repoRootPath: cwd,
     });
     await tsPromise;
   } else {
