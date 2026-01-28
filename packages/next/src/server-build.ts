@@ -1951,6 +1951,13 @@ export async function serverBuild({
       !shouldSkipPrefetchRSCHandling
   );
 
+  const shouldRouteRscToFullSegment = Boolean(
+    isAppClientSegmentCacheEnabled &&
+      isAppClientParamParsingEnabled &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+  );
+
   const serverActionMetaRoutes = await getServerActionMetaRoutes(
     path.join(entryPath, outputDirectory)
   );
@@ -2393,7 +2400,13 @@ export async function serverBuild({
                   value: '1',
                 },
               ],
-              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              dest: shouldRouteRscToFullSegment
+                ? path.posix.join(
+                    '/',
+                    entryDirectory,
+                    `/index${prefetchSegmentDirSuffix}/_full${prefetchSegmentSuffix}`
+                  )
+                : path.posix.join('/', entryDirectory, '/index.rsc'),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
@@ -2411,7 +2424,13 @@ export async function serverBuild({
                   value: '1',
                 },
               ],
-              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              dest: shouldRouteRscToFullSegment
+                ? path.posix.join(
+                    '/',
+                    entryDirectory,
+                    `/$1${prefetchSegmentDirSuffix}/_full${prefetchSegmentSuffix}`
+                  )
+                : path.posix.join('/', entryDirectory, '/$1.rsc'),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
@@ -2505,12 +2524,24 @@ export async function serverBuild({
                 ]),
             {
               src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
-              dest: path.posix.join('/', entryDirectory, `/index.rsc`),
+              dest: shouldRouteRscToFullSegment
+                ? path.posix.join(
+                    '/',
+                    entryDirectory,
+                    `/index${prefetchSegmentDirSuffix}/_full${prefetchSegmentSuffix}`
+                  )
+                : path.posix.join('/', entryDirectory, `/index.rsc`),
               check: true,
             },
             {
               src: path.posix.join('/', entryDirectory, '(.+)/\\.rsc$'),
-              dest: path.posix.join('/', entryDirectory, '$1.rsc'),
+              dest: shouldRouteRscToFullSegment
+                ? path.posix.join(
+                    '/',
+                    entryDirectory,
+                    `$1${prefetchSegmentDirSuffix}/_full${prefetchSegmentSuffix}`
+                  )
+                : path.posix.join('/', entryDirectory, '$1.rsc'),
               check: true,
             },
           ]
