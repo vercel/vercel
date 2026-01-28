@@ -71,7 +71,7 @@ up dependencies. To test the full user experience of downloading the CLI from th
 ```bash
 # build the dist
 monorepo_dir=$(pwd)
-cd packages/cli && pnpm build
+cd packages/cli && turbo build
 # use pnpm pack to create the same tarball that is uploaded to the npm registry
 # and store the tarball name in a variable
 dist=$(pnpm pack)
