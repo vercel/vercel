@@ -194,12 +194,39 @@ export const build: BuildV3 = async ({
     fsFiles,
   });
 
-  // Determine Python version from pyproject.toml or Pipfile.lock if present.
+  const pythonVersionFileDir = findDir({
+    file: '.python-version',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+
+  // Determine Python version from .python-version, pyproject.toml, or Pipfile.lock if present.
   let declaredPythonVersion:
-    | { version: string; source: 'Pipfile.lock' | 'pyproject.toml' }
+    | {
+        version: string;
+        source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
+      }
     | undefined;
 
-  if (pyprojectDir) {
+  // .python-version is the highest priority because its what uv will use to select dependencies
+  if (pythonVersionFileDir) {
+    try {
+      const content = await readFile(
+        join(pythonVersionFileDir, '.python-version'),
+        'utf8'
+      );
+      const version = parsePythonVersionFile(content);
+      if (version) {
+        declaredPythonVersion = { version, source: '.python-version' };
+        debug(`Found Python version ${version} in .python-version`);
+      }
+    } catch (err) {
+      debug('Failed to read .python-version file', err);
+    }
+  }
+
+  if (!declaredPythonVersion && pyprojectDir) {
     let requiresPython: string | undefined;
     try {
       const pyproject = await readConfigFile<{
@@ -216,7 +243,9 @@ export const build: BuildV3 = async ({
       };
       debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
     }
-  } else if (pipfileLockDir) {
+  }
+
+  if (!declaredPythonVersion && pipfileLockDir) {
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
@@ -518,6 +547,20 @@ export const defaultShouldServe: ShouldServe = ({
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
+}
+
+// Parses a .python-version file and extracts the Major.Minor version, ignoring comments.
+function parsePythonVersionFile(content: string): string | undefined {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const match = trimmed.match(/^(\d+)\.(\d+)/);
+    if (match) {
+      return `${match[1]}.${match[2]}`;
+    }
+  }
+  return undefined;
 }
 
 // internal only - expect breaking changes if other packages depend on these exports

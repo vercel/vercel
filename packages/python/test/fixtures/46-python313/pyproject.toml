@@ -1,7 +1,7 @@
 [project]
 name = "fixture-python313"
 version = "0.0.1"
-requires-python = "==3.13.*"
+requires-python = ">=3.12"
 dependencies = [
   "fastapi",
 ]

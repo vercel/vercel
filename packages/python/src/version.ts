@@ -214,7 +214,7 @@ export function getSupportedPythonVersion({
   isDev?: boolean;
   declaredPythonVersion?: {
     version: string;
-    source: 'Pipfile.lock' | 'pyproject.toml';
+    source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
   };
 }): PythonVersion {
   if (isDev) {
@@ -229,6 +229,7 @@ export function getSupportedPythonVersion({
     if (source === 'pyproject.toml') {
       requested = selectFromRequiresPython(version);
     } else {
+      // For .python-version and Pipfile.lock, do exact match
       requested = allOptions.find(o => o.version === version);
     }
     if (requested) {
@@ -258,7 +259,7 @@ export function getSupportedPythonVersion({
     }
   } else {
     console.log(
-      `No Python version specified in pyproject.toml or Pipfile.lock. Using python version: ${selection.version}`
+      `No Python version specified in .python-version, pyproject.toml, or Pipfile.lock. Using python version: ${selection.version}`
     );
   }
 

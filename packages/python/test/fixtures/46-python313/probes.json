@@ -1,7 +1,7 @@
 {
   "probes": [
     {
-      "logMustContain": "Using Python 3.13 from pyproject.toml"
+      "logMustContain": "Using Python 3.13 from .python-version"
     },
     {
       "path": "/api/version",
