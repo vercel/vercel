@@ -7,6 +7,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
+import { getFlagsDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsArchiveTelemetryClient } from '../../util/telemetry/commands/flags/archive';
 import { archiveSubcommand } from './command';
@@ -92,7 +93,7 @@ export default async function archive(
 
     output.success(`Feature flag ${chalk.bold(flag.slug)} has been archived`);
     output.log(
-      `\nTo restore this flag, visit the dashboard: ${chalk.cyan(`https://vercel.com/${link.org.slug}/${project.name}/flags`)}`
+      `\nTo restore this flag, visit the dashboard: ${chalk.cyan(getFlagsDashboardUrl(link.org.slug, project.name) + '/archive')}`
     );
   } catch (err) {
     output.stopSpinner();

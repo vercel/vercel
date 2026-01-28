@@ -50,6 +50,45 @@ function createTestFlags(): Flag[] {
       seed: 12345,
       typeName: 'flag',
     },
+    {
+      id: 'flag_def456',
+      slug: 'string-feature',
+      description: 'A string feature flag',
+      kind: 'string',
+      state: 'active',
+      variants: [
+        { id: 'default', value: 'control', label: 'Control' },
+        { id: 'variant-a', value: 'variant-a', label: 'Variant A' },
+      ],
+      environments: {
+        production: {
+          active: false,
+          fallthrough: { type: 'variant', variantId: 'default' },
+          pausedOutcome: { type: 'variant', variantId: 'default' },
+          rules: [],
+        },
+        preview: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'default' },
+          pausedOutcome: { type: 'variant', variantId: 'default' },
+          rules: [],
+        },
+        development: {
+          active: false,
+          fallthrough: { type: 'variant', variantId: 'default' },
+          pausedOutcome: { type: 'variant', variantId: 'default' },
+          rules: [],
+        },
+      },
+      createdAt: Date.now() - 172800000,
+      updatedAt: Date.now() - 7200000,
+      createdBy: 'user_123',
+      projectId: 'vercel-flags-test',
+      ownerId: 'team_dummy',
+      revision: 2,
+      seed: 67890,
+      typeName: 'flag',
+    },
   ];
 }
 
@@ -189,5 +228,26 @@ describe('flags enable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('archived');
+  });
+
+  it('warns for non-boolean flags with helpful message', async () => {
+    // testFlags[1] is a string flag
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[1].slug,
+      '--environment',
+      'production'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    const output = client.stderr.getFullOutput();
+    // Should show warning about boolean-only
+    expect(output).toContain('only works with boolean flags');
+    // Should identify the flag type
+    expect(output).toContain('string');
+    // Should show dashboard link
+    expect(output).toContain('https://vercel.com/');
+    expect(output).toContain(testFlags[1].slug);
   });
 });

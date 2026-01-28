@@ -225,6 +225,98 @@ describe('flags disable', () => {
     );
   });
 
+  it('resolves variant by value (true/false)', async () => {
+    // Change variant IDs to random strings (like real API)
+    testFlags[0].variants = [
+      { id: 'abc123xyz', value: false, label: 'Off' },
+      { id: 'def456uvw', value: true, label: 'On' },
+    ];
+
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--variant',
+      'false'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    // Should show the resolved variant ID in output
+    expect(client.stderr.getFullOutput()).toContain('abc123xyz');
+  });
+
+  it('resolves variant by "true"/"false" keywords', async () => {
+    // Change variant IDs to random strings (like real API)
+    testFlags[0].variants = [
+      { id: 'random_id_1', value: false, label: 'Disabled' },
+      { id: 'random_id_2', value: true, label: 'Enabled' },
+    ];
+
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--variant',
+      'false'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    // Should resolve "false" to the false variant
+    expect(client.stderr.getFullOutput()).toContain('random_id_1');
+  });
+
+  it('resolves variant by label', async () => {
+    // Change variant IDs to random strings (like real API)
+    testFlags[0].variants = [
+      { id: 'uuid_style_id_1', value: false, label: 'Disabled' },
+      { id: 'uuid_style_id_2', value: true, label: 'Enabled' },
+    ];
+
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--variant',
+      'Disabled'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    // Should resolve "Disabled" label to the correct variant
+    expect(client.stderr.getFullOutput()).toContain('uuid_style_id_1');
+  });
+
+  it('shows helpful error with available variants when not found', async () => {
+    // Change variant IDs to random strings (like real API)
+    testFlags[0].variants = [
+      { id: 'abcdef123', value: false, label: 'Off' },
+      { id: 'ghijkl456', value: true, label: 'On' },
+    ];
+
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--variant',
+      'invalid-variant'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Variant "invalid-variant" not found');
+    expect(output).toContain('Available variants:');
+    // Should show values, not just IDs
+    expect(output).toContain('false');
+    expect(output).toContain('true');
+  });
+
   it('auto-selects false variant for boolean flags without prompting', async () => {
     // testFlags[0] is a boolean flag with variants: off (false), on (true)
     client.setArgv(
@@ -246,9 +338,8 @@ describe('flags disable', () => {
     expect(client.stderr.getFullOutput()).toContain('off');
   });
 
-  it('prompts for variant selection on non-boolean flags', async () => {
-    // testFlags[1] is a string flag with variants: default, variant-a
-    selectMock.mockResolvedValueOnce('variant-a');
+  it('warns for non-boolean flags with helpful message', async () => {
+    // testFlags[1] is a string flag
     client.setArgv(
       'flags',
       'disable',
@@ -258,14 +349,14 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    // Should prompt for variant selection
-    expect(selectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'Select which variant to serve while the flag is disabled:',
-      })
-    );
-    // Should show the selected variant
-    expect(client.stderr.getFullOutput()).toContain('variant-a');
+    const output = client.stderr.getFullOutput();
+    // Should show warning about boolean-only
+    expect(output).toContain('only works with boolean flags');
+    // Should identify the flag type
+    expect(output).toContain('string');
+    // Should show dashboard link
+    expect(output).toContain('https://vercel.com/');
+    expect(output).toContain(testFlags[1].slug);
   });
 
   it('prompts for environment when not specified', async () => {

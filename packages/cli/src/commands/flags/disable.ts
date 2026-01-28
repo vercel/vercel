@@ -7,10 +7,11 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
+import { resolveVariant } from '../../util/flags/resolve-variant';
+import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsDisableTelemetryClient } from '../../util/telemetry/commands/flags/disable';
 import { disableSubcommand } from './command';
-import type { FlagEnvironmentConfig } from '../../util/flags/types';
 
 const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
 
@@ -78,6 +79,23 @@ export default async function disable(
       return 1;
     }
 
+    // Only boolean flags can be enabled/disabled via CLI
+    if (flag.kind !== 'boolean') {
+      const dashboardUrl = getFlagDashboardUrl(
+        link.org.slug,
+        project.name,
+        flag.slug
+      );
+      output.warn(
+        `The ${getCommandName('flags disable')} command only works with boolean flags.`
+      );
+      output.log(
+        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
+      );
+      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      return 0;
+    }
+
     // If environment not specified, prompt for it
     if (!environment) {
       const availableEnvs = Object.keys(flag.environments).filter(env =>
@@ -127,15 +145,13 @@ export default async function disable(
     // Determine which variant to serve while disabled
     let selectedVariantId = variantId;
     if (selectedVariantId) {
-      // Validate provided variant exists
-      const variantExists = flag.variants.some(v => v.id === selectedVariantId);
-      if (!variantExists) {
-        const availableVariants = flag.variants.map(v => v.id).join(', ');
-        output.error(
-          `Variant "${selectedVariantId}" not found. Available variants: ${availableVariants}`
-        );
+      // Resolve the variant from user input (can be ID, value, or label)
+      const result = resolveVariant(selectedVariantId, flag.variants);
+      if (result.error) {
+        output.error(result.error);
         return 1;
       }
+      selectedVariantId = result.variant!.id;
     } else if (flag.variants.length === 1) {
       // Only one variant available, use it
       selectedVariantId = flag.variants[0].id;
@@ -154,11 +170,12 @@ export default async function disable(
       });
     }
 
-    // Build the update request
-    const updatedEnvConfig: Partial<FlagEnvironmentConfig> = {
+    const updatedEnvConfig = {
       active: false,
+      fallthrough: envConfig.fallthrough,
+      rules: envConfig.rules,
       pausedOutcome: {
-        type: 'variant',
+        type: 'variant' as const,
         variantId: selectedVariantId,
       },
     };

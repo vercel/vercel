@@ -7,6 +7,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
+import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
@@ -76,6 +77,23 @@ export default async function enable(
       return 1;
     }
 
+    // Only boolean flags can be enabled/disabled via CLI
+    if (flag.kind !== 'boolean') {
+      const dashboardUrl = getFlagDashboardUrl(
+        link.org.slug,
+        project.name,
+        flag.slug
+      );
+      output.warn(
+        `The ${getCommandName('flags enable')} command only works with boolean flags.`
+      );
+      output.log(
+        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
+      );
+      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      return 0;
+    }
+
     // If environment not specified, prompt for it
     if (!environment) {
       const availableEnvs = Object.keys(flag.environments).filter(env =>
@@ -122,8 +140,9 @@ export default async function enable(
       return 0;
     }
 
-    // Build the update request
-    const updatedEnvConfig: Partial<FlagEnvironmentConfig> = {
+    // Build the update request - merge with existing config to preserve required fields
+    const updatedEnvConfig: FlagEnvironmentConfig = {
+      ...envConfig,
       active: true,
     };
 

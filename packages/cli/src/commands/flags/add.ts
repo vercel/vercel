@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -6,13 +7,27 @@ import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { createFlag } from '../../util/flags/create-flag';
+import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsAddTelemetryClient } from '../../util/telemetry/commands/flags/add';
 import { addSubcommand } from './command';
 import type {
   CreateFlagRequest,
   FlagEnvironmentConfig,
+  FlagVariant,
 } from '../../util/flags/types';
+
+// Generate a variant ID (21 chars, alphanumeric)
+function variantId(size = 21): string {
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = randomBytes(size);
+  let id = '';
+  for (let i = 0; i < size; i++) {
+    id += alphabet[bytes[i] % alphabet.length];
+  }
+  return id;
+}
 
 export default async function add(
   client: Client,
@@ -75,24 +90,28 @@ export default async function add(
   // Create default variants based on kind
   const defaultVariants = getDefaultVariants(kind);
 
-  // Create default environment configuration
   const defaultEnvConfig: FlagEnvironmentConfig = {
-    active: true,
-    fallthrough: {
-      type: 'variant',
-      variantId: defaultVariants[0].id,
-    },
+    revision: 0,
+    active: false,
     pausedOutcome: {
       type: 'variant',
       variantId: defaultVariants[0].id,
     },
+    fallthrough: {
+      type: 'variant',
+      variantId: defaultVariants[0].id,
+    },
     rules: [],
+    reuse: {
+      active: false,
+      environment: '',
+    },
   };
 
   const request: CreateFlagRequest = {
     slug,
     kind,
-    description,
+    description: description || '',
     variants: defaultVariants,
     environments: {
       production: defaultEnvConfig,
@@ -114,7 +133,7 @@ export default async function add(
     output.log(`  ${chalk.dim('Slug:')}  ${flag.slug}\n`);
 
     output.log(
-      `View in dashboard: ${chalk.cyan(`https://vercel.com/${link.org.slug}/${project.name}/flags/${flag.slug}`)}`
+      `View in dashboard: ${chalk.cyan(getFlagDashboardUrl(link.org.slug, project.name, flag.slug))}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -125,16 +144,34 @@ export default async function add(
   return 0;
 }
 
-function getDefaultVariants(kind: 'boolean' | 'string' | 'number') {
+function getDefaultVariants(
+  kind: 'boolean' | 'string' | 'number'
+): FlagVariant[] {
   switch (kind) {
     case 'boolean':
       return [
-        { id: 'off', value: false, label: 'Off' },
-        { id: 'on', value: true, label: 'On' },
+        { id: variantId(), value: false, label: 'Off', description: '' },
+        { id: variantId(), value: true, label: 'On', description: '' },
       ];
     case 'string':
-      return [{ id: 'default', value: '', label: 'Default' }];
+      return [
+        {
+          id: variantId(),
+          value: 'value-1',
+          label: 'Value 1',
+          description: '',
+        },
+        {
+          id: variantId(),
+          value: 'value-2',
+          label: 'Value 2',
+          description: '',
+        },
+      ];
     case 'number':
-      return [{ id: 'default', value: 0, label: 'Default' }];
+      return [
+        { id: variantId(), value: 0, label: 'Off', description: '' },
+        { id: variantId(), value: 1, label: 'On', description: '' },
+      ];
   }
 }

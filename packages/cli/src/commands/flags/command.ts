@@ -147,7 +147,7 @@ export const archiveSubcommand = {
 export const disableSubcommand = {
   name: 'disable',
   aliases: [],
-  description: 'Disable (pause) a feature flag in an environment',
+  description: 'Disable a boolean feature flag in an environment',
   arguments: [
     {
       name: 'flag',
@@ -188,7 +188,7 @@ export const disableSubcommand = {
 export const enableSubcommand = {
   name: 'enable',
   aliases: [],
-  description: 'Enable (unpause) a feature flag in an environment',
+  description: 'Enable a boolean feature flag in an environment',
   arguments: [
     {
       name: 'flag',
@@ -237,7 +237,8 @@ export const sdkKeysAddSubcommand = {
   options: [
     {
       name: 'type',
-      shorthand: 't',
+      // No shorthand: `-t` is already used globally for `--token`
+      shorthand: null,
       type: String,
       deprecated: false,
       description: 'The type of SDK key (server, client, or mobile)',

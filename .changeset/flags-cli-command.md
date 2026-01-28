@@ -15,8 +15,3 @@ New commands:
 - `vercel flags sdk-keys ls` - List SDK keys
 - `vercel flags sdk-keys add` - Create a new SDK key
 - `vercel flags sdk-keys rm <key>` - Delete an SDK key
-
-The `flags disable` command includes smart variant selection:
-- Use `--variant <id>` to specify which value to serve (validates the variant exists)
-- Boolean flags automatically select the `false` variant
-- String/number flags with multiple variants prompt the user to choose
