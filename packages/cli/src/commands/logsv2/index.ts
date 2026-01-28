@@ -22,7 +22,7 @@ import { help } from '../help';
 import { logsv2Command } from './command';
 import output from '../../output-manager';
 
-const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
+const TIME_FORMAT = 'HH:mm:ss.SS';
 
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
@@ -211,7 +211,7 @@ export default async function logsv2(client: Client) {
   if (followOption) {
     if (!jsonOption) {
       output.print(
-        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), DATE_TIME_FORMAT))}\n\n`
+        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_FORMAT))}\n\n`
       );
     }
     const abortController = new AbortController();
@@ -319,51 +319,46 @@ export default async function logsv2(client: Client) {
 }
 
 function prettyPrintLogEntry(log: RequestLogEntry) {
-  const date = format(log.timestamp, DATE_TIME_FORMAT);
-  const levelIcon = getLevelIcon(log.level);
-  const sourceIcon = getSourceIcon(log.source);
+  const time = format(log.timestamp, TIME_FORMAT);
+  const level = getLevelLabel(log.level);
+  const method = log.requestMethod.padEnd(4);
   const status =
     log.responseStatusCode <= 0
       ? chalk.gray('---')
       : getStatusColor(log.responseStatusCode);
+  const source = getSourceIcon(log.source);
+  const path = log.requestPath;
+  const msg = log.message
+    ? chalk.dim(`"${truncateMessage(log.message)}"`)
+    : chalk.dim('(no message)');
 
-  const headerLine = `${chalk.dim(date)}  ${levelIcon}  ${chalk.bold(
-    log.requestMethod.padEnd(6)
-  )}  ${status}  ${chalk.dim(log.domain)}  ${sourceIcon}  ${log.requestPath}`;
-
-  output.print(`${headerLine}\n`);
-
-  if (log.message) {
-    const message = log.message.replace(/\n$/, '');
-    const truncatedIndicator = log.messageTruncated ? chalk.gray('…') : '';
-    output.print(
-      `${colorizeMessage(message, log.level)}${truncatedIndicator}\n\n`
-    );
-  } else {
-    output.print('\n');
-  }
+  output.print(
+    `${chalk.dim(time)}  ${level}  ${method} ${status}  ${source}  ${path}  ${msg}\n`
+  );
 }
 
-function getLevelIcon(level: string): string {
+function getLevelLabel(level: string): string {
   switch (level) {
     case 'fatal':
+      return chalk.red.bold('FTL');
     case 'error':
-      return '🚫';
+      return chalk.red('ERR');
     case 'warning':
-      return '⚠️';
+      return chalk.yellow('WRN');
     default:
-      return 'ℹ️';
+      return chalk.dim('INF');
   }
 }
 
 function getSourceIcon(source: string): string {
   switch (source) {
-    case 'edge-function':
-      return 'ന';
-    case 'edge-middleware':
-      return 'ɛ';
     case 'serverless':
-      return 'ƒ';
+      return 'λ';
+    case 'edge-function':
+    case 'edge-middleware':
+      return 'ε';
+    case 'static':
+      return '◇';
     default:
       return ' ';
   }
@@ -383,14 +378,8 @@ function getStatusColor(status: number): string {
   return chalk.gray(statusStr);
 }
 
-function colorizeMessage(message: string, level: string): string {
-  switch (level) {
-    case 'fatal':
-    case 'error':
-      return chalk.red(message);
-    case 'warning':
-      return chalk.yellow(message);
-    default:
-      return message;
-  }
+function truncateMessage(msg: string, maxLen = 60): string {
+  const oneLine = msg.replace(/\n/g, ' ').trim();
+  if (oneLine.length <= maxLen) return oneLine;
+  return oneLine.slice(0, maxLen - 1) + '…';
 }
