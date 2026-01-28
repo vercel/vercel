@@ -174,6 +174,7 @@ export const doBuild = async (
       dir: buildResult.rolldownResult.outputDir,
       handler,
       tsPromise,
+      files: buildResult.rolldownResult.outputFiles,
     };
   }
 
