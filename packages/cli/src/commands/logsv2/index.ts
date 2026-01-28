@@ -445,7 +445,7 @@ function getSourceIcon(source: string): string {
     case 'redirect':
       return '◇';
     default:
-      return '○';
+      return ' ';
   }
 }
 
