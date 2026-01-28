@@ -17,6 +17,7 @@ import type {
 } from '../../util/integration/types';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
+import { addAutoProvision } from './add-auto-provision';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
@@ -44,6 +45,11 @@ export async function add(client: Client, args: string[]) {
   if (!integrationSlug) {
     output.error('You must pass an integration slug');
     return 1;
+  }
+
+  // Auto-provision: completely separate code path
+  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+    return await addAutoProvision(client, integrationSlug);
   }
 
   const { contextName, team } = await getScope(client);

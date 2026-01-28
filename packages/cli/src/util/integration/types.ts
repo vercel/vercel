@@ -149,3 +149,58 @@ export interface MarketplaceBillingAuthorizationState {
   createdAt: number;
   updatedAt: number;
 }
+
+// Auto-provision types
+
+// AcceptedPolicies: key = policy name ('privacy' | 'eula'), value = ISO timestamp
+export type AcceptedPolicies = Record<string, string>;
+
+export interface AutoProvisionIntegration {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  policies: {
+    eula?: string; // URL to EULA doc
+    privacy?: string; // URL to privacy doc
+  };
+}
+
+export interface AutoProvisionProduct {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  iconBackgroundColor?: string;
+  metadataSchema: MetadataSchema;
+}
+
+export interface AutoProvisionResource {
+  id: string;
+  externalResourceId: string;
+  name: string;
+  status: string;
+  ownership?: unknown;
+  secretKeys?: string[];
+}
+
+export interface AutoProvisionedResponse {
+  kind: 'provisioned';
+  integration: AutoProvisionIntegration;
+  product: AutoProvisionProduct;
+  installation: { id: string };
+  resource: AutoProvisionResource;
+  billingPlan: BillingPlan | null;
+}
+
+export interface AutoProvisionFallback {
+  kind: 'install' | 'metadata' | 'unknown';
+  url: string;
+  integration: AutoProvisionIntegration;
+  product: AutoProvisionProduct;
+  installation?: { id: string };
+}
+
+export type AutoProvisionResult =
+  | AutoProvisionedResponse
+  | AutoProvisionFallback;
