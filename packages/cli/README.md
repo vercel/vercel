@@ -61,3 +61,23 @@ pnpm vercel switch --debug
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!
+
+### Full Testing
+
+`pnpm vercel` executes a locally built dist. Because this dist lives locally in this monorepo,
+the existence of node_modules can sometimes affect the behavior of how `vercel` CLI picking
+up dependencies. To test the full user experience of downloading the CLI from the npm registry:
+
+```bash
+# build the dist
+monorepo_dir=$(pwd)
+cd packages/cli && turbo build
+# use pnpm pack to create the same tarball that is uploaded to the npm registry
+# and store the tarball name in a variable
+dist=$(pnpm pack)
+
+# In your test project
+cd ~/dev/test-nextjs-proj
+
+npx -p $monorepo_dir/packages/cli/$dist vercel build
+```
