@@ -110,6 +110,7 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
   '.go': 'go',
   '.rs': 'rust',
   '.rb': 'ruby',
+  '.ru': 'ruby',
 };
 
 /**

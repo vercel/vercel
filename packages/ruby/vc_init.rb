@@ -7,6 +7,7 @@ require 'json'
 $entrypoint = '__VC_HANDLER_FILENAME'
 
 ENV['RAILS_ENV'] ||= 'production'
+ENV['RACK_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
 
 def rack_handler(httpMethod, path, body, headers)

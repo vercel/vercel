@@ -10,11 +10,13 @@ const overrides = new Map([
   ['hydrogen-2', 'remix'],
   // Starlette is a Python framework without a dedicated framework preset
   ['starlette', 'python'],
+  // Sinatra is a Ruby framework without a dedicated framework preset
+  ['sinatra', 'ruby'],
 ]);
 
 // Examples that use experimental frameworks and should
 // be tested with useExperimentalFrameworks enabled
-const experimentalExamples = new Set(['starlette']);
+const experimentalExamples = new Set(['starlette', 'sinatra']);
 
 describe('examples should be detected', () => {
   it.each(getExamples())(
