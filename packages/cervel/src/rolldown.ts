@@ -4,6 +4,7 @@ import { extname, join } from 'node:path';
 import { build as rolldownBuild } from 'rolldown';
 import { plugin } from './plugin.js';
 import type { Files } from '@vercel/build-utils';
+import type { RolldownOptions } from './types.js';
 
 const __dirname__filenameShim = `
 import { createRequire as __createRequire } from 'node:module';
@@ -14,14 +15,9 @@ const __filename = __fileURLToPath(import.meta.url);
 const __dirname = __dirname_(__filename);
 `.trim();
 
-export const rolldown = async (args: {
-  entrypoint: string;
-  workPath: string;
-  repoRootPath: string;
-  out: string;
-}) => {
-  const baseDir = args.workPath;
+export const rolldown = async (args: RolldownOptions) => {
   const entrypointPath = join(args.workPath, args.entrypoint);
+  const outputDir = join(args.workPath, args.out);
 
   const extension = extname(args.entrypoint);
   const extensionMap: Record<
@@ -41,7 +37,7 @@ export const rolldown = async (args: {
     extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
 
   const resolvedExtension = extensionInfo.extension;
-  // Always include package.json from the entrypoint directory
+  // Always include package.json from the workPath
   const packageJsonPath = join(args.workPath, 'package.json');
   const external: string[] = [];
   let pkg: Record<string, unknown> = {};
@@ -73,14 +69,10 @@ export const rolldown = async (args: {
     }
   }
 
-  const relativeOutputDir = args.out;
-  const outputDir = join(baseDir, relativeOutputDir);
-
   const context: { files: Files } = { files: {} };
-  const input = entrypointPath;
   const out = await rolldownBuild({
-    input,
-    cwd: baseDir,
+    input: entrypointPath,
+    cwd: args.workPath, // rolldown's cwd option
     platform: 'node',
     tsconfig: true,
     plugins: [

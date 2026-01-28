@@ -3,10 +3,11 @@ import { spawn } from 'child_process';
 import { extname, join } from 'path';
 import { Colors as c } from './utils.js';
 import { existsSync } from 'fs';
+import type { TypescriptOptions } from './types.js';
 
 const require_ = createRequire(import.meta.url);
 
-export const typescript = (args: { entrypoint: string; workPath: string }) => {
+export const typescript = (args: TypescriptOptions) => {
   const extension = extname(args.entrypoint);
   const isTypeScript = ['.ts', '.mts', '.cts'].includes(extension);
 
@@ -30,7 +31,7 @@ export const typescript = (args: { entrypoint: string; workPath: string }) => {
 };
 
 async function doTypeCheck(
-  args: { entrypoint: string; workPath: string },
+  args: TypescriptOptions,
   tscPath: string
 ): Promise<void> {
   let stdout = '';
@@ -91,7 +92,7 @@ async function doTypeCheck(
   });
 }
 
-const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
+const resolveTscPath = (args: TypescriptOptions) => {
   try {
     const pkgPath = require_.resolve('typescript/bin/tsc', {
       paths: [args.workPath],

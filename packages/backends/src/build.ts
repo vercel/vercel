@@ -92,7 +92,7 @@ export const doBuild = async (
           debug('Unable to detect entrypoint, building ourselves');
           // Otherwise, we need to build ourselves
           const buildResult = await cervelBuild({
-            cwd: args.workPath,
+            workPath: args.workPath,
             repoRootPath: args.repoRootPath,
             out: defaultOutputDirectory,
           });
@@ -134,7 +134,7 @@ export const doBuild = async (
     );
     // Otherwise, we need to build ourselves
     const buildResult = await cervelBuild({
-      cwd: args.workPath,
+      workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: defaultOutputDirectory,
     });
@@ -162,7 +162,7 @@ export const doBuild = async (
 
   if (!buildCommandResult || monorepoWithoutBuildScript) {
     const buildResult = await cervelBuild({
-      cwd: args.workPath,
+      workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: outputDir,
     });

@@ -14,15 +14,9 @@ import {
 import { transform } from 'oxc-transform';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isNativeError } from 'node:util/types';
+import type { NodeFileTraceOptions } from './types.js';
 
-export const nodeFileTrace = async (args: {
-  keepTracedPaths: boolean;
-  outDir: string;
-  tracedPaths: string[];
-  repoRootPath: string;
-  workPath: string;
-  context: { files: Files };
-}) => {
+export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
   const files: Files = {};
   const { tracedPaths } = args;
   // For compiled output files: use paths directly from glob (top-level, no .vercel/node prefix)

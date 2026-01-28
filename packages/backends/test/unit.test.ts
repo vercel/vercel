@@ -52,7 +52,7 @@ describe('successful builds', async () => {
     fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
-    it.only(`builds ${fixtureName}`, async () => {
+    it(`builds ${fixtureName}`, async () => {
       // Copy entire fixture to work dir so no parent node_modules can interfere
       const fixtureSource = join(__dirname, 'fixtures', fixtureName);
       const workDir = await getWorkDir(fixtureName, fixtureSource);

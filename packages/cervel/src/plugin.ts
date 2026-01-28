@@ -2,23 +2,16 @@ import { readFile } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
 import { extname, dirname, relative, join } from 'node:path';
 import type { Plugin } from 'rolldown';
-import type { Files } from '@vercel/build-utils';
 import {
   exports as resolveExports,
   legacy as resolveLegacy,
 } from 'resolve.exports';
 import { nodeFileTrace } from './node-file-trace.js';
+import type { PluginOptions } from './types.js';
 
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
 
-export const plugin = (args: {
-  repoRootPath: string;
-  outDir: string;
-  cjsFiles?: string[]; // Files to treat as CommonJS
-  workPath: string;
-  shimBareImports?: boolean; // Whether to shim bare imports with CJS re-exports
-  context: { files: Files };
-}): Plugin => {
+export const plugin = (args: PluginOptions): Plugin => {
   // Cache for package.json contents, keyed by absolute path
   const packageJsonCache = new Map<string, any>();
 

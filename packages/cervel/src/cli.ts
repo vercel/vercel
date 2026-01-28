@@ -6,16 +6,21 @@ export const main = async () => {
   const options = parseArgs(args);
   const { cwd, out, ...rest } = options.values;
   const [command, entrypoint] = options.positionals;
+
+  // CLI uses `cwd` flag, internally we use `workPath` terminology
+  const workPath = cwd;
+  const repoRootPath = cwd;
+
   if (command === 'build') {
     const { tsPromise } = await build({
-      cwd,
+      workPath,
+      repoRootPath,
       out,
       entrypoint,
-      repoRootPath: cwd,
     });
     await tsPromise;
   } else {
-    await serve({ cwd, rest });
+    await serve({ workPath, rest });
   }
 };
 

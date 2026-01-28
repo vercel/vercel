@@ -6,7 +6,13 @@ import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
 import type { ParseArgsConfig } from 'util';
+import type { CervelBuildOptions, CervelServeOptions } from './types.js';
 export { nodeFileTrace } from './node-file-trace.js';
+export type {
+  CervelBuildOptions,
+  CervelServeOptions,
+  PathOptions,
+} from './types.js';
 
 type ParseArgsOptionsConfig = NonNullable<ParseArgsConfig['options']>;
 import { readFile, writeFile } from 'fs/promises';
@@ -21,27 +27,20 @@ export const getBuildSummary = async (outputDir: string) => {
   return JSON.parse(buildSummary);
 };
 
-export const build = async (args: {
-  entrypoint?: string;
-  cwd: string;
-  out: string;
-  repoRootPath: string;
-}) => {
-  const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
+export const build = async (args: CervelBuildOptions) => {
+  const entrypoint = args.entrypoint || (await findEntrypoint(args.workPath));
   const tsPromise = typescript({
-    ...args,
     entrypoint,
-    workPath: args.cwd,
+    workPath: args.workPath,
   });
   const rolldownResult = await rolldown({
-    ...args,
     entrypoint,
-    workPath: args.cwd,
+    workPath: args.workPath,
     repoRootPath: args.repoRootPath,
     out: args.out,
   });
   await writeFile(
-    join(args.cwd, args.out, '.cervel.json'),
+    join(args.workPath, args.out, '.cervel.json'),
     JSON.stringify({ handler: rolldownResult.result.handler }, null, 2)
   );
 
@@ -63,11 +62,8 @@ export const build = async (args: {
   return { rolldownResult: rolldownResult.result, tsPromise };
 };
 
-export const serve = async (args: {
-  cwd: string;
-  rest: Record<string, string | boolean | undefined>;
-}) => {
-  const entrypoint = await findEntrypoint(args.cwd);
+export const serve = async (args: CervelServeOptions) => {
+  const entrypoint = await findEntrypoint(args.workPath);
   const srvxPath = require.resolve('srvx');
   const srvxBin = join(srvxPath, '..', '..', '..', 'bin', 'srvx.mjs');
   const tsxBin = require.resolve('tsx');
@@ -82,7 +78,7 @@ export const serve = async (args: {
   }
   const srvxArgs = [srvxBin, ...restArgs, entrypoint];
   await execa('npx', srvxArgs, {
-    cwd: args.cwd,
+    cwd: args.workPath, // execa's cwd option
     stdio: 'inherit',
   });
 };
