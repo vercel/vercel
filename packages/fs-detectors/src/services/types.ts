@@ -32,6 +32,11 @@ export interface ResolvedService {
   installCommand?: string;
   runtime?: string;
   /**
+   * Whether this service produces static output (SPAs, static sites).
+   * True when using @vercel/static-build or @vercel/static builders.
+   */
+  isStaticBuild: boolean;
+  /**
    * URL path prefix for routing requests to this service.
    * Required for web services; requests matching this prefix are routed to this service.
    * Root services use "/" as the catch-all.
@@ -110,6 +115,7 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
   '.go': 'go',
   '.rs': 'rust',
   '.rb': 'ruby',
+  '.ru': 'ruby',
 };
 
 /**
