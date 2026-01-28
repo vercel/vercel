@@ -10,6 +10,10 @@ import { addStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
 
+function isAccess(access: string): access is 'private' | 'public' {
+  return access === 'private' || access === 'public';
+}
+
 export default async function addStore(
   client: Client,
   argv: string[]
@@ -36,6 +40,23 @@ export default async function addStore(
   } = parsedArgs;
 
   const region = flags['--region'] || 'iad1';
+  const accessFlag = flags['--access'];
+
+  if (!accessFlag) {
+    output.error(
+      `Missing access level. Must specify --access with either 'private' or 'public'`
+    );
+    return 1;
+  }
+
+  if (!isAccess(accessFlag)) {
+    output.error(
+      `Invalid access level: ${accessFlag}. Must be either 'private' or 'public'`
+    );
+    return 1;
+  }
+
+  const access = accessFlag;
 
   let name = nameArg;
   if (!name) {
@@ -52,6 +73,7 @@ export default async function addStore(
 
   telemetryClient.trackCliArgumentName(name);
   telemetryClient.trackCliOptionRegion(flags['--region']);
+  telemetryClient.trackCliOptionAccess(flags['--access']);
 
   const link = await getLinkedProject(client);
 
@@ -62,9 +84,10 @@ export default async function addStore(
 
     output.spinner('Creating new blob store');
 
-    const requestBody: { name: string; region: string } = {
+    const requestBody: { name: string; region: string; access: string } = {
       name,
       region,
+      access,
     };
 
     const res = await client.fetch<{ store: { id: string; region?: string } }>(

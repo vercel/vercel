@@ -47,4 +47,13 @@ export class BlobCopyTelemetryClient
       });
     }
   }
+
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
 }
