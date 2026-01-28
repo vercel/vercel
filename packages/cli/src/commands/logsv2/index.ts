@@ -434,14 +434,18 @@ function getLevelLabel(level: string): string {
 function getSourceIcon(source: string): string {
   switch (source) {
     case 'serverless':
+    case 'lambda':
       return 'λ';
     case 'edge-function':
     case 'edge-middleware':
+    case 'middleware':
       return 'ε';
     case 'static':
+    case 'external':
+    case 'redirect':
       return '◇';
     default:
-      return ' ';
+      return '○';
   }
 }
 
