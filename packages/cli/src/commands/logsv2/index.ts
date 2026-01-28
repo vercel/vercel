@@ -27,10 +27,7 @@ const TIME_FORMAT = 'HH:mm:ss.SS';
 const COL_TIME = 11;
 const COL_LEVEL = 5;
 const COL_SOURCE = 1;
-const COL_METHOD = 7;
 const COL_STATUS = 6;
-const COL_FIXED_WIDTH =
-  COL_TIME + COL_LEVEL + COL_SOURCE + COL_METHOD + COL_STATUS + 12; // +12 for spacing
 
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
@@ -286,9 +283,8 @@ export default async function logsv2(client: Client) {
   const terminalWidth = client.stderr.isTTY
     ? client.stderr.columns || 120
     : 120;
-  let headerPrinted = false;
 
-  let count = 0;
+  const logs: RequestLogEntry[] = [];
   try {
     for await (const log of fetchAllRequestLogs(client, {
       projectId,
@@ -308,13 +304,8 @@ export default async function logsv2(client: Client) {
       if (jsonOption) {
         client.stdout.write(JSON.stringify(log) + '\n');
       } else {
-        if (!headerPrinted) {
-          printHeader(terminalWidth, expandOption);
-          headerPrinted = true;
-        }
-        prettyPrintLogEntry(log, { expand: expandOption, terminalWidth });
+        logs.push(log);
       }
-      count++;
     }
   } catch (err) {
     output.stopSpinner();
@@ -325,12 +316,22 @@ export default async function logsv2(client: Client) {
   output.stopSpinner();
 
   if (!jsonOption) {
-    if (count === 0) {
+    if (logs.length === 0) {
       output.print(
         chalk.gray('No logs found matching the specified filters.\n')
       );
     } else {
-      output.print(chalk.gray(`\nDisplayed ${count} log entries.\n`));
+      const maxMethodWidth = Math.max(...logs.map(l => l.requestMethod.length));
+      const printOpts: PrintOptions = {
+        expand: expandOption,
+        terminalWidth,
+        methodWidth: maxMethodWidth,
+      };
+      printHeader(printOpts);
+      for (const log of logs) {
+        prettyPrintLogEntry(log, printOpts);
+      }
+      output.print(chalk.gray(`\nDisplayed ${logs.length} log entries.\n`));
     }
   }
 
@@ -340,29 +341,35 @@ export default async function logsv2(client: Client) {
 interface PrintOptions {
   expand?: boolean;
   terminalWidth?: number;
+  methodWidth?: number;
 }
 
-function printHeader(terminalWidth: number, expand?: boolean) {
-  const time = 'TIME'.padEnd(COL_TIME);
-  const level = 'LEVEL'.padEnd(COL_LEVEL);
+function printHeader(options: PrintOptions) {
+  const { expand } = options;
+  const cols: string[] = [];
+
+  cols.push('TIME'.padEnd(COL_TIME));
+  cols.push('LEVEL'.padEnd(COL_LEVEL));
+  cols.push('PATH');
 
   if (expand) {
-    output.print(chalk.dim(`${time}  ${level}  PATH\n`));
+    output.print(chalk.dim(cols.join('  ') + '\n'));
   } else {
-    const pathMsgWidth = Math.max(terminalWidth - COL_FIXED_WIDTH, 40);
-    const pathWidth = Math.floor(pathMsgWidth * 0.4);
-    const path = 'PATH'.padEnd(pathWidth + COL_SOURCE + COL_METHOD + 3);
-    const status = 'STATUS'.padEnd(COL_STATUS);
-    output.print(chalk.dim(`${time}  ${level}  ${path}  ${status}  MESSAGE\n`));
+    cols.push('STATUS'.padEnd(COL_STATUS));
+    cols.push('MESSAGE');
+    output.print(chalk.dim(cols.join('  ') + '\n'));
   }
 }
 
 function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
-  const { expand, terminalWidth = 120 } = options;
+  const { expand, terminalWidth = 120, methodWidth = 4 } = options;
+
   const time = format(log.timestamp, TIME_FORMAT);
   const level = getLevelLabel(log.level);
   const source = getSourceIcon(log.source);
-  const method = log.requestMethod.padEnd(COL_METHOD);
+  const method = log.requestMethod.padEnd(methodWidth);
+  const pathPart = `${source} ${method} ${log.requestPath}`;
+
   const statusCode = log.responseStatusCode;
   const statusStr = !statusCode || statusCode <= 0 ? '---' : String(statusCode);
   const status =
@@ -370,11 +377,9 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       ? chalk.gray(statusStr.padEnd(COL_STATUS))
       : getStatusColor(statusCode, COL_STATUS);
 
-  const path = `${source}  ${method} ${log.requestPath}`;
-
   if (expand) {
-    const requestLine = `${chalk.dim(time)}  ${level}  ${path}`;
-    output.print(`${requestLine}\n`);
+    const cols = [chalk.dim(time), level, pathPart];
+    output.print(cols.join('  ') + '\n');
     if (log.message) {
       const message = log.message.replace(/\n$/, '');
       const coloredMessage = colorizeMessage(message, log.level);
@@ -384,8 +389,10 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       output.print('\n');
     }
   } else {
+    const fixedWidth =
+      COL_TIME + COL_LEVEL + COL_SOURCE + methodWidth + COL_STATUS + 10;
     const msgWidth = Math.max(
-      terminalWidth - COL_FIXED_WIDTH - log.requestPath.length,
+      terminalWidth - fixedWidth - log.requestPath.length,
       20
     );
     const msg = log.message
@@ -395,7 +402,8 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
         )
       : chalk.dim('(no message)');
 
-    output.print(`${chalk.dim(time)}  ${level}  ${path}  ${status}  ${msg}\n`);
+    const cols = [chalk.dim(time), level, pathPart, status, msg];
+    output.print(cols.join('  ') + '\n');
   }
 }
 
