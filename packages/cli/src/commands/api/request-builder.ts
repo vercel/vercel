@@ -170,6 +170,9 @@ export function generateCurlCommand(
     parts.push(`-X ${config.method}`);
   }
 
+  // Authorization header with placeholder
+  parts.push(`-H 'Authorization: Bearer <TOKEN>'`);
+
   // Headers
   for (const [key, value] of Object.entries(config.headers)) {
     parts.push(`-H '${key}: ${escapeShellArg(value)}'`);

@@ -176,7 +176,7 @@ export default async function api(client: Client): Promise<number> {
         'https://api.vercel.com'
       );
       output.log('');
-      output.log('Add your authorization header to the curl command below:');
+      output.log('Replace <TOKEN> with your auth token:');
       output.log('');
       client.stdout.write(curlCmd + '\n');
       return 0;
