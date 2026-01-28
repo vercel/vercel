@@ -1,4 +1,4 @@
-import { bold, gray } from 'chalk';
+import { bold, gray, red, yellow, bgRed, white } from 'chalk';
 import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
@@ -64,6 +64,12 @@ export interface ClientOptions extends Stdio {
   localConfigPath?: string;
   agent?: Agent;
   telemetryEventStore: TelemetryEventStore;
+  /** Whether the CLI is being run by an AI agent */
+  isAgent?: boolean;
+  /** Name of the agent running the CLI (e.g., 'claude', 'cursor') */
+  agentName?: string;
+  /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
+  dangerouslySkipPermissions?: boolean;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -101,6 +107,12 @@ export default class Client extends EventEmitter implements Stdio {
   requestIdCounter: number;
   input;
   telemetryEventStore: TelemetryEventStore;
+  /** Whether the CLI is being run by an AI agent */
+  isAgent: boolean;
+  /** Name of the agent running the CLI */
+  agentName?: string;
+  /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
+  dangerouslySkipPermissions: boolean;
 
   constructor(opts: ClientOptions) {
     super();
@@ -116,6 +128,9 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
     this.telemetryEventStore = opts.telemetryEventStore;
+    this.isAgent = opts.isAgent ?? false;
+    this.agentName = opts.agentName;
+    this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
 
     const theme = {
       prefix: gray('?'),
@@ -236,6 +251,75 @@ export default class Client extends EventEmitter implements Stdio {
     writeToAuthConfigFile(this.authConfig);
   }
 
+  /**
+   * Confirms DELETE operations with the user.
+   *
+   * - DELETE operations always require confirmation (unless --dangerously-skip-permissions is used)
+   * - When running under an AI agent with --dangerously-skip-permissions,
+   *   a warning is displayed for visibility
+   *
+   * @returns true if the operation should proceed, false if canceled
+   */
+  private async confirmMutatingOperation(
+    url: string,
+    method: string | undefined
+  ): Promise<boolean> {
+    const normalizedMethod = (method || 'GET').toUpperCase();
+    const isDelete = normalizedMethod === 'DELETE';
+
+    // Only DELETE operations require confirmation
+    if (!isDelete) {
+      return true;
+    }
+
+    // Show agent mode warning when --dangerously-skip-permissions is used
+    if (this.isAgent && this.dangerouslySkipPermissions) {
+      const agentInfo = this.agentName ? ` (${this.agentName})` : '';
+      output.print('\n');
+      output.print(
+        bgRed(white(bold(' ⚠ WARNING '))) +
+          red(bold(' AGENT MODE - DELETE CONFIRMATION BYPASSED\n'))
+      );
+      output.print(
+        yellow(
+          `  An AI agent${agentInfo} is executing a ${bold('DELETE')} request with --dangerously-skip-permissions flag.\n`
+        )
+      );
+      output.print(yellow(`  This operation will delete data: ${bold(url)}\n`));
+      output.print(
+        yellow(
+          `  The --dangerously-skip-permissions flag has bypassed the confirmation prompt.\n\n`
+        )
+      );
+    }
+
+    // If --dangerously-skip-permissions flag is set, skip confirmation
+    if (this.dangerouslySkipPermissions) {
+      return true;
+    }
+
+    // Check if we have a TTY for interactive prompts
+    if (!this.stdin.isTTY) {
+      output.error(
+        `DELETE operations require confirmation. Use ${bold('--dangerously-skip-permissions')} to skip confirmation in non-interactive mode.`
+      );
+      return false;
+    }
+
+    // Prompt for DELETE confirmation
+    const message = `You are about to perform a ${red(bold('DELETE'))} operation on:\n  ${bold(url)}\n\nAre you sure you want to proceed?`;
+
+    output.print('\n');
+    const confirmed = await this.input.confirm(message, false);
+    output.print('\n');
+
+    if (!confirmed) {
+      output.log('Operation canceled by user.');
+    }
+
+    return confirmed;
+  }
+
   private async _fetch(_url: string, opts: FetchOptions = {}) {
     const url = new URL(_url, this.apiUrl);
 
@@ -285,7 +369,13 @@ export default class Client extends EventEmitter implements Stdio {
 
   fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
-  fetch(url: string, opts: FetchOptions = {}) {
+  async fetch(url: string, opts: FetchOptions = {}) {
+    // Check for confirmation before proceeding with mutating operations
+    const confirmed = await this.confirmMutatingOperation(url, opts.method);
+    if (!confirmed) {
+      throw new Error('Operation canceled by user');
+    }
+
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 

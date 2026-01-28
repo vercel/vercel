@@ -133,6 +133,14 @@ export const apiCommand = {
       description:
         'Generate output instead of executing (e.g., --generate=curl)',
     },
+    {
+      name: 'dangerously-skip-permissions',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Skip confirmation prompts for DELETE operations (use with caution)',
+    },
   ],
   examples: [
     {

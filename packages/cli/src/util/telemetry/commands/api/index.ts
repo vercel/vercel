@@ -115,6 +115,12 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliFlagDangerouslySkipPermissions(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('dangerously-skip-permissions');
+    }
+  }
+
   trackCliSubcommandList() {
     this.trackCliSubcommand({ subcommand: 'list', value: 'list' });
   }

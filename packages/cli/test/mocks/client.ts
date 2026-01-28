@@ -254,6 +254,14 @@ export class MockClient extends Client {
 
     this.cwd = originalCwd;
     this.telemetryEventStore.reset();
+
+    // Reset agent and confirmation flags
+    // Note: dangerouslySkipPermissions defaults to true in tests to prevent
+    // DELETE confirmation prompts from hanging tests. Tests that specifically
+    // test confirmation behavior should set this to false and mock input.confirm.
+    this.isAgent = false;
+    this.agentName = undefined;
+    this.dangerouslySkipPermissions = true;
   }
 
   events = {
