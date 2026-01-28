@@ -11,7 +11,6 @@ import {
   getNodeVersion,
   Span,
 } from '@vercel/build-utils';
-import { join, relative } from 'node:path';
 
 export const version = 2;
 
@@ -39,16 +38,8 @@ export const build: BuildV2 = async args => {
     });
     return result;
   });
-  const globPattern = join(
-    relative(args.repoRootPath, outputConfig.dir),
-    '**/*'
-  );
 
-  const files = await glob(globPattern, {
-    cwd: args.repoRootPath,
-    follow: true,
-    includeDirectories: true,
-  });
+  const files = outputConfig.files;
 
   debug('Introspection starting..');
   const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
@@ -73,10 +64,8 @@ export const build: BuildV2 = async args => {
     debug(`Introspection failed to detect routes`);
   }
 
-  const handler = relative(
-    args.repoRootPath,
-    join(outputConfig.dir, outputConfig.handler)
-  );
+  // The handler path is already repo-relative due to preserveModulesRoot in rolldown
+  const handler = outputConfig.handler;
 
   const lambda = new NodejsLambda({
     runtime: nodeVersion.runtime,

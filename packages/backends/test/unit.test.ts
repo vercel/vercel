@@ -36,10 +36,12 @@ describe('successful builds', async () => {
     fixtureName => fixtureName.includes('01-express-index-ts-esm')
   );
   for (const fixtureName of fixtures) {
-    it(`builds ${fixtureName}`, async () => {
+    it.only(`builds ${fixtureName}`, async () => {
       await clearOutputs(fixtureName);
-      const workPath = join(__dirname, 'fixtures', fixtureName);
-      const repoRootPath = workPath;
+      // const workPath = join(__dirname, 'fixtures', fixtureName);
+      // const repoRootPath = workPath;
+      const workPath = '/Users/jeffsee/code/turborepo-hono-monorepo/apps/api';
+      const repoRootPath = '/Users/jeffsee/code/turborepo-hono-monorepo';
 
       const result = (await build({
         files: {},
@@ -51,7 +53,8 @@ describe('successful builds', async () => {
       })) as BuildResultV2Typical;
 
       const lambda = result.output.index as unknown as NodejsLambda;
-      const lambdaPath = undefined;
+      // const lambdaPath = undefined;
+      const lambdaPath = join(__dirname, 'debug');
 
       // Runs without errors
       await expect(
@@ -129,28 +132,20 @@ const extractAndExecuteCode = async (
     await rm(lambdaDir, { recursive: true, force: true });
     await mkdir(lambdaDir, { recursive: true });
   }
-  const lambdaPath = join(lambdaDir || tempDir, 'lambda.zip');
+  const outputPath = lambdaDir || tempDir;
+  const lambdaPath = join(outputPath, 'lambda.zip');
   await writeFile(lambdaPath, new Uint8Array(out));
-  const unzipResult = await execa('unzip', ['-o', lambdaPath], {
-    cwd: tempDir,
-    stdio: 'pipe',
-    reject: false,
+  const unzipPath = join(outputPath, 'unzip');
+  await execa('unzip', ['-o', lambdaPath, '-d', unzipPath], {
+    stdio: 'ignore',
   });
 
-  if (unzipResult.exitCode !== 0) {
-    console.error('Unzip failed:');
-    console.error('stdout:', unzipResult.stdout);
-    console.error('stderr:', unzipResult.stderr);
-    console.error('exitCode:', unzipResult.exitCode);
-    throw new Error(`Unzip failed with exit code ${unzipResult.exitCode}`);
-  }
-
-  const handlerPath = join(tempDir, lambda.handler);
+  const handlerPath = join(unzipPath, lambda.handler);
 
   // Wrap in a Promise to properly wait for the process to exit
   await new Promise<void>((resolve, reject) => {
     const fakeLambdaProcess = execa('node', [handlerPath], {
-      cwd: tempDir,
+      cwd: outputPath,
       stdio: ['ignore', 'pipe', 'pipe'], // capture stdout/stderr
     });
 

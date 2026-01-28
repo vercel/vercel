@@ -1,8 +1,9 @@
-import { existsSync } from 'fs';
-import { rm, readFile } from 'fs/promises';
-import { extname, join } from 'path';
+import { existsSync } from 'node:fs';
+import { rm, readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { build as rolldownBuild } from 'rolldown';
 import { plugin } from './plugin.js';
+import type { Files } from '@vercel/build-utils';
 
 const __dirname__filenameShim = `
 import { createRequire as __createRequire } from 'node:module';
@@ -75,8 +76,8 @@ export const rolldown = async (args: {
   const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
 
+  const context: { files: Files } = { files: {} };
   const input = entrypointPath;
-  console.log({ input, baseDir, outputDir, resolvedFormat, resolvedExtension });
   const out = await rolldownBuild({
     input,
     cwd: baseDir,
@@ -86,7 +87,9 @@ export const rolldown = async (args: {
       plugin({
         repoRootPath: args.repoRootPath,
         outDir: outputDir,
+        workPath: args.workPath,
         shimBareImports: true, // Enable CJS shim generation
+        context,
       }),
     ],
     output: {
@@ -116,6 +119,7 @@ export const rolldown = async (args: {
     result: {
       handler,
       outputDir,
+      outputFiles: context.files,
     },
     cleanup: async () => {
       await rm(outputDir, { recursive: true, force: true });

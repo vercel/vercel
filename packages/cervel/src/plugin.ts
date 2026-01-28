@@ -1,13 +1,26 @@
 import type { Plugin } from 'rolldown';
-import { readFile, cp } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
-import { extname, dirname, join } from 'node:path';
-import { traceNodeModules } from 'nf3';
+import { extname, dirname, relative, join } from 'node:path';
+import {
+  FileFsRef,
+  glob,
+  isSymbolicLink,
+  type Files,
+  type File,
+  FileBlob,
+} from '@vercel/build-utils';
 import {
   exports as resolveExports,
   legacy as resolveLegacy,
 } from 'resolve.exports';
-import { nodeFileTrace as nft } from '@vercel/nft';
+import {
+  nodeFileTrace as nft,
+  resolve as nftResolveDependency,
+} from '@vercel/nft';
+import { transform } from 'oxc-transform';
+import { lstatSync, readFileSync } from 'node:fs';
+import { isNativeError } from 'node:util/types';
 
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
 
@@ -15,12 +28,17 @@ export const plugin = (args: {
   repoRootPath: string;
   outDir: string;
   cjsFiles?: string[]; // Files to treat as CommonJS
+  workPath: string;
   shimBareImports?: boolean; // Whether to shim bare imports with CJS re-exports
+  context: { files: Files };
 }): Plugin => {
   // Cache for package.json contents, keyed by absolute path
   const packageJsonCache = new Map<string, any>();
 
   const tracedPaths = new Set<string>();
+
+  // Map of package names to their importers (for createRequire context)
+  const shimImporters = new Map<string, Set<string>>();
 
   const isBareImport = (id: string) => {
     // Bare imports don't start with '.', '/', or protocol
@@ -215,6 +233,16 @@ export const plugin = (args: {
             const isCjs = await isCommonJS(id, resolved.id, resolved);
 
             if (isCjs) {
+              // Track this importer for the shim
+              const importerRepoRelative = relative(
+                args.repoRootPath,
+                importer
+              );
+              if (!shimImporters.has(id)) {
+                shimImporters.set(id, new Set());
+              }
+              shimImporters.get(id)!.add(importerRepoRelative);
+
               // Create a shim for this CJS external import
               const shimId = `${CJS_SHIM_PREFIX}${id}`;
               return {
@@ -249,7 +277,39 @@ export const plugin = (args: {
         if (id.startsWith(CJS_SHIM_PREFIX)) {
           const pkgName = id.slice(CJS_SHIM_PREFIX.length);
 
-          // Generate CJS code that re-exports the bare import
+          // Get one of the importers to use as the require context
+          const importers = shimImporters.get(pkgName);
+          if (importers && importers.size > 0) {
+            // Use the first importer's directory as the reference point
+            const importerPath = Array.from(importers)[0];
+            const importerDir = dirname(importerPath);
+
+            // Calculate relative path from _virtual/ to the importer's package.json
+            // _virtual/ is at the repo root level in the output
+            const relativePathToPackageJson = join(
+              '..',
+              importerDir,
+              'package.json'
+            );
+
+            // Generate CJS code that uses createRequire from the importer's package.json
+            const code = `
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const requireFromContext = createRequire(join(__dirname, '${relativePathToPackageJson}'));
+module.exports = requireFromContext('${pkgName}');
+`.trim();
+
+            return {
+              code,
+            };
+          }
+
+          // Fallback to simple require (may not resolve correctly)
           const code = `module.exports = require('${pkgName}');`;
 
           return {
@@ -263,40 +323,99 @@ export const plugin = (args: {
     writeBundle: {
       order: 'post',
       async handler() {
-        // nf3 to trace node_modules
-        await traceNodeModules(Array.from(tracedPaths), {
-          outDir: args.outDir,
-          rootDir: args.repoRootPath,
-          nft: {},
+        // For compiled output files: use paths directly from glob (top-level, no .vercel/node prefix)
+        const compiledSourceFiles = await glob('**/*', {
+          cwd: args.outDir,
+          follow: true,
+          includeDirectories: true,
         });
-        // nft to to trace non-js files like .md, .json, etc.
+        for (const file of Object.keys(compiledSourceFiles)) {
+          args.context.files[file] = compiledSourceFiles[file];
+        }
+
+        /**
+         * While we're not using NFT to process source code, we are using it
+         * to tree shake node deps, and include an fs reads for files that are
+         * not part of the traced paths.
+         */
         const result = await nft(Array.from(tracedPaths), {
           base: args.repoRootPath,
-          ignore: path => {
-            if (path.includes('node_modules')) {
-              return true;
+          processCwd: args.workPath,
+          ts: true,
+          mixedModules: true,
+          async resolve(id, parent, job, cjsResolve) {
+            return nftResolveDependency(id, parent, job, cjsResolve);
+          },
+          async readFile(fsPath) {
+            try {
+              let entry: File | undefined;
+              let source: string | Buffer = readFileSync(fsPath);
+
+              const { mode } = lstatSync(fsPath);
+              if (isSymbolicLink(mode)) {
+                entry = new FileFsRef({ fsPath, mode });
+              }
+
+              if (
+                (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+                fsPath.endsWith('.tsx') ||
+                fsPath.endsWith('.mts') ||
+                fsPath.endsWith('.cts')
+              ) {
+                const result = await transform(fsPath, source.toString());
+                source = result.code;
+              }
+
+              if (!entry) {
+                entry = new FileBlob({ data: source, mode });
+              }
+              return source;
+            } catch (error: unknown) {
+              if (
+                isNativeError(error) &&
+                'code' in error &&
+                (error.code === 'ENOENT' || error.code === 'EISDIR')
+              ) {
+                return null;
+              }
+              throw error;
             }
-            return false;
           },
         });
+
+        for (const file of tracedPaths) {
+          const relativeFile = relative(args.repoRootPath, file);
+          result.fileList.delete(relativeFile);
+        }
+
+        // Process nft results - keep node_modules unchanged from filesystem
+        const { lstat } = await import('node:fs/promises');
+
+        console.log('NFT traced files count:', result.fileList.size);
+
         for (const file of result.fileList) {
-          const jsExtensions = [
-            '.js',
-            '.mjs',
-            '.cjs',
-            '.ts',
-            '.mts',
-            '.cts',
-            '.jsx',
-            '.tsx',
-          ];
-          // rolldown and nf3 already handle js files, so we only need to copy other files
-          if (!jsExtensions.some(ext => file.endsWith(ext))) {
-            const inputPath = join(args.repoRootPath, file);
-            const outputPath = join(args.outDir, file);
-            await cp(inputPath, outputPath);
+          const absolutePath = join(args.repoRootPath, file);
+          try {
+            const stats = await lstat(absolutePath);
+            // Keep the file path exactly as it is in the filesystem (repo-relative)
+            const outputPath = file;
+
+            if (stats.isSymbolicLink() || stats.isFile()) {
+              args.context.files[outputPath] = new FileFsRef({
+                fsPath: absolutePath,
+                mode: stats.mode,
+              });
+            }
+            // Skip directories
+          } catch (err) {
+            console.warn(`Warning: Could not stat file ${absolutePath}:`, err);
           }
         }
+
+        console.log(
+          'Total files in context:',
+          Object.keys(args.context.files).length
+        );
       },
     },
   };
