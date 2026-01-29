@@ -124,7 +124,7 @@ export async function resolveBuilders(
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
 
-    console.log('parsed spec', {parsed, resolvedSpec});
+    console.log('parsed spec', { parsed, resolvedSpec });
     const { name } = parsed;
     if (!name) {
       // A URL was specified - will need to install it and resolve the
