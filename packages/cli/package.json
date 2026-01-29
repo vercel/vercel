@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "50.9.3",
+  "version": "50.9.4",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
