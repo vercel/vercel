@@ -478,7 +478,6 @@ export async function serverBuild({
   const lstatSema = new Sema(25);
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
-  const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
 
   // Only include internal pages that are actually existed
   const internalPages = [...INTERNAL_PAGES].filter(page => {
@@ -496,12 +495,6 @@ export async function serverBuild({
       routesManifest,
       appDir
     );
-
-    if (result && result.static404Page) {
-      // there can be multiple 404 pages (eg i18n) so we want to keep track of all of them
-      static404Pages.add(result.static404Page);
-      static404Page = result.static404Page;
-    }
 
     if (result && result.static500Page) {
       hasStatic500 = true;
@@ -712,43 +705,6 @@ export async function serverBuild({
       mode: (await fs.lstat(nextServerFile)).mode,
       fsPath: nextServerFile,
     });
-
-    if (static404Pages.size > 0) {
-      // If we've generated a static 404 page, it's possible that we also
-      // have a static 404 page for each locale.
-      if (i18n) {
-        for (const locale of i18n.locales) {
-          const static404Page = path.posix.join(entryDirectory, locale, '404');
-          static404Pages.add(static404Page);
-        }
-      }
-
-      for (const static404Page of static404Pages) {
-        let static404File = staticPages[static404Page];
-
-        if (!static404File) {
-          // if we have a file ref already, we can use it. Otherwise, we need
-          // to create a new one, but we need to ensure it exists on disk
-          const static404FilePath = path.join(
-            pagesDir,
-            `${static404Page}.html`
-          );
-
-          if (fs.existsSync(static404FilePath)) {
-            static404File = new FileFsRef({
-              fsPath: static404FilePath,
-            });
-          }
-        }
-
-        // ensure each static 404 page file is included in all lambdas
-        // for notFound GS(S)P support
-        if (static404File) {
-          requiredFiles[path.relative(baseDir, static404File.fsPath)] =
-            static404File;
-        }
-      }
-    }
 
     // TODO: move this into Next.js' required server files manifest
     const envFiles = [];

@@ -799,6 +799,16 @@ describe('determinism', () => {
     }
   });
 
+  it('should not include prerenders in functions lambdas', async () => {
+    for (const entry of Object.values(buildResult.output)) {
+      if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
+        expect(Object.keys(entry.files)).not.toContainEqual(
+          expect.stringMatching(/\.html$|.rsc$/)
+        );
+      }
+    }
+  });
+
   it('should strip routes-manifest', async () => {
     let originalManifest = JSON.parse(
       await fs.readFile(
