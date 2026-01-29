@@ -23,7 +23,7 @@ import { logsv2Command } from './command';
 import output from '../../output-manager';
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
-const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
+const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
 
 const COL_TIME_ONLY = 11;
 const COL_TIME_WITH_DATE = 18;
