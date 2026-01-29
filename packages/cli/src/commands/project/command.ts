@@ -92,6 +92,20 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const getOidcTokenSubcommand = {
+  name: 'get-oidc-token',
+  aliases: [],
+  description: 'Get a development OIDC token for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],

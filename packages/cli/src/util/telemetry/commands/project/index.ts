@@ -33,4 +33,11 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandGetOidcToken(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'get-oidc-token',
+      value: actual,
+    });
+  }
 }
