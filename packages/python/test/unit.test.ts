@@ -1,14 +1,12 @@
 import {
   getSupportedPythonVersion,
   DEFAULT_PYTHON_VERSION,
+  resetInstalledPythonsCache,
 } from '../src/version';
 import { build } from '../src/index';
-import {
-  getProtectedUvEnv,
-  createVenvEnv,
-  getVenvBinDir,
-  UV_PYTHON_DOWNLOADS_MODE,
-} from '../src/utils';
+import { createVenvEnv, getVenvBinDir } from '../src/utils';
+import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import { createPyprojectToml } from '../src/install';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -34,10 +32,16 @@ const originalConsoleWarn = console.warn;
 const realDateNow = Date.now.bind(global.Date);
 const origPath = process.env.PATH;
 
+/** Tracks mock Python versions for uv python list output */
+let mockInstalledVersions: string[] = [];
+
 jest.setTimeout(30 * 1000);
 
 beforeEach(() => {
   warningMessages = [];
+  mockInstalledVersions = [];
+  // Reset the installed Python versions cache before each test
+  resetInstalledPythonsCache();
   console.warn = m => {
     warningMessages.push(m);
   };
@@ -148,7 +152,9 @@ describe('Python 3.13 and 3.14 support', () => {
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
 
-  it('selects Python 3.14 as highest when range allows multiple versions', () => {
+  it('prefers DEFAULT_PYTHON_VERSION (3.12) when range allows it', () => {
+    // Even though 3.13 and 3.14 are installed and match >=3.12,
+    // we prefer 3.12 to make 3.13+ opt-in only
     makeMockPython('3.12');
     makeMockPython('3.13');
     makeMockPython('3.14');
@@ -158,10 +164,11 @@ describe('Python 3.13 and 3.14 support', () => {
         source: 'pyproject.toml',
       },
     });
-    expect(result).toHaveProperty('runtime', 'python3.14');
+    expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
-  it('selects Python 3.13 when upper bound excludes 3.14', () => {
+  it('prefers 3.12 when upper bound excludes 3.14 but includes 3.12', () => {
+    // >=3.12,<3.14 allows 3.12 and 3.13, but we prefer 3.12
     makeMockPython('3.12');
     makeMockPython('3.13');
     makeMockPython('3.14');
@@ -171,7 +178,7 @@ describe('Python 3.13 and 3.14 support', () => {
         source: 'pyproject.toml',
       },
     });
-    expect(result).toHaveProperty('runtime', 'python3.13');
+    expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
   it('respects compatible release "~=3.13" (>=3.13,<3.14)', () => {
@@ -196,6 +203,126 @@ describe('Python 3.13 and 3.14 support', () => {
       },
     });
     expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+
+  it('prefers 3.12 for broad range like >=3.9', () => {
+    // >=3.9 allows many versions, but we prefer 3.12 to make 3.13+ opt-in
+    makeMockPython('3.9');
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.9',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('prefers 3.12 for range >=3.11,<=3.13', () => {
+    // This range includes 3.11, 3.12, and 3.13, but we prefer 3.12
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.11,<=3.13',
+        source: 'pyproject.toml',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('falls back to latest when 3.12 is not installed but matches', () => {
+    // If 3.12 matches but is not installed, fall back to latest installed
+    makeMockPython('3.13');
+    makeMockPython('3.14');
+    // Note: NOT installing 3.12
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '>=3.12',
+        source: 'pyproject.toml',
+      },
+    });
+    // Should fall back to 3.14 (latest installed that matches)
+    expect(result).toHaveProperty('runtime', 'python3.14');
+  });
+});
+
+describe('.python-version file support', () => {
+  it('selects Python version from .python-version source', () => {
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '3.11',
+        source: '.python-version',
+      },
+    });
+    expect(result).toHaveProperty('runtime', 'python3.11');
+  });
+
+  it('uses exact match for .python-version (like Pipfile.lock)', () => {
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '3.10',
+        source: '.python-version',
+      },
+    });
+    // Should match exactly 3.10, not pick the latest
+    expect(result).toHaveProperty('runtime', 'python3.10');
+  });
+
+  it('warns and falls back when .python-version specifies unavailable version', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    // Request 3.9 which is not installed
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: '3.9',
+        source: '.python-version',
+      },
+    });
+    // Should fall back to default
+    expect(result).toHaveProperty('runtime', 'python3.12');
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+
+  it('warns and falls back when .python-version specifies invalid version', () => {
+    makeMockPython('3.12');
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: {
+        version: 'invalid',
+        source: '.python-version',
+      },
+    });
+    // Should fall back to default
+    expect(result).toHaveProperty('runtime', 'python3.12');
+    expect(warningMessages[0]).toContain('invalid and will be ignored');
+  });
+
+  it('logs correct source name when using .python-version', () => {
+    makeMockPython('3.11');
+    // Spy on console.log to verify the message
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      getSupportedPythonVersion({
+        declaredPythonVersion: {
+          version: '3.11',
+          source: '.python-version',
+        },
+      });
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Using Python 3.11 from .python-version')
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 });
 
@@ -240,6 +367,78 @@ describe('default Python version behavior', () => {
   });
 });
 
+describe('fallback behavior when requested version is not installed', () => {
+  it('falls back to DEFAULT_PYTHON_VERSION when Pipfile.lock requests unavailable version', () => {
+    // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
+    makeMockPython('3.14');
+    makeMockPython('3.13');
+    makeMockPython(DEFAULT_PYTHON_VERSION); // 3.12
+
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+    });
+
+    // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
+    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+
+  it('falls back to latest installed when requested AND default are both unavailable', () => {
+    // Setup: 3.14, 3.13 are installed, but NOT 3.9 or 3.12
+    makeMockPython('3.14');
+    makeMockPython('3.13');
+    // Note: NOT installing 3.12 (default) or 3.9 (requested)
+
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+    });
+
+    // Should fall back to 3.14 (latest installed) since 3.12 is also unavailable
+    expect(result).toHaveProperty('runtime', 'python3.14');
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+
+  it('falls back to DEFAULT_PYTHON_VERSION when pyproject.toml requests unavailable version', () => {
+    // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
+    makeMockPython('3.14');
+    makeMockPython('3.13');
+    makeMockPython(DEFAULT_PYTHON_VERSION); // 3.12
+
+    const result = getSupportedPythonVersion({
+      declaredPythonVersion: { version: '==3.9', source: 'pyproject.toml' },
+    });
+
+    // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
+    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+});
+
+describe('createPyprojectToml', () => {
+  it('sets requires-python to compatible release of DEFAULT_PYTHON_VERSION', async () => {
+    const tempDir = path.join(tmpdir(), `pyproject-test-${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+
+    try {
+      await createPyprojectToml({
+        projectName: 'test-app',
+        pyprojectPath,
+        dependencies: [],
+      });
+
+      const content = fs.readFileSync(pyprojectPath, 'utf8');
+      expect(content).toContain(
+        `requires-python = "~=${DEFAULT_PYTHON_VERSION}"`
+      );
+    } finally {
+      if (fs.existsSync(tempDir)) {
+        fs.removeSync(tempDir);
+      }
+    }
+  });
+});
+
 it('should select default or latest installed version when no Piplock detected', () => {
   makeMockPython('3.10');
   const result = getSupportedPythonVersion({
@@ -263,8 +462,29 @@ it('should select latest supported installed version and warn when invalid Piplo
   ]);
 });
 
-it('should throw if python not found', () => {
+it('should throw if uv not found', () => {
   process.env.PATH = '.';
+  expect(() =>
+    getSupportedPythonVersion({
+      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    })
+  ).toThrow('uv is required but was not found in PATH.');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should throw if no python versions installed', () => {
+  // Create a mock uv binary that returns an empty list
+  fs.mkdirSync(tmpPythonDir, { recursive: true });
+  const isWin = process.platform === 'win32';
+  const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
+  if (isWin) {
+    fs.writeFileSync(uvBin, '@echo off\r\necho []\r\n', 'utf8');
+  } else {
+    fs.writeFileSync(uvBin, '#!/bin/sh\necho "[]"\n', 'utf8');
+    fs.chmodSync(uvBin, 0o755);
+  }
+  process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
+
   expect(() =>
     getSupportedPythonVersion({
       declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
@@ -301,7 +521,36 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
   ]);
 });
 
+/**
+ * Generates the JSON output for `uv python list --only-installed --output-format json`
+ * based on the mock installed versions.
+ */
+function generateUvPythonListJson(versions: string[]): string {
+  const entries = versions.map(version => {
+    const [major, minor] = version.split('.').map(Number);
+    return {
+      key: `cpython-${major}.${minor}.0-linux-x86_64-gnu`,
+      version: `${major}.${minor}.0`,
+      version_parts: { major, minor, patch: 0 },
+      path: `/uv/python/bin/python${version}`,
+      symlink: `/uv/python/versions/cpython-${major}.${minor}.0-linux-x86_64-gnu/bin/python${version}`,
+      url: null,
+      os: 'linux',
+      variant: 'default',
+      implementation: 'cpython',
+      arch: 'x86_64',
+      libc: 'gnu',
+    };
+  });
+  return JSON.stringify(entries);
+}
+
 function makeMockPython(version: string) {
+  // Track this version for uv python list output
+  if (!mockInstalledVersions.includes(version)) {
+    mockInstalledVersions.push(version);
+  }
+
   fs.mkdirSync(tmpPythonDir, { recursive: true });
   const isWin = process.platform === 'win32';
   const posixScript = '#!/bin/sh\n# mock binary\nexit 0\n';
@@ -333,12 +582,24 @@ function makeMockPython(version: string) {
     if (!isWin) fs.chmodSync(unversionedShim, 0o755);
   }
 
-  // mock uv: ensure a uv.lock file exists whenever the binary is invoked.
+  // Write the uv python list JSON to a file that the mock uv binary will read
+  const uvPythonListFile = path.join(tmpPythonDir, 'uv-python-list.json');
+  fs.writeFileSync(
+    uvPythonListFile,
+    generateUvPythonListJson(mockInstalledVersions),
+    'utf8'
+  );
+
+  // mock uv: handle `python list` command and also ensure uv.lock exists for other commands
   const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
   if (isWin) {
     const uvWinScript = [
       '@echo off',
       'rem mock uv binary',
+      'if "%1"=="python" if "%2"=="list" (',
+      `  type "${uvPythonListFile}"`,
+      '  exit /b 0',
+      ')',
       'if not exist "uv.lock" (',
       '  echo [mock]>uv.lock',
       ')',
@@ -351,6 +612,10 @@ function makeMockPython(version: string) {
     const uvPosixScript = [
       '#!/bin/sh',
       '# mock uv binary',
+      'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
+      `  cat "${uvPythonListFile}"`,
+      '  exit 0',
+      'fi',
       'if [ ! -f "uv.lock" ]; then',
       '  echo "[mock]" > uv.lock',
       'fi',
@@ -589,12 +854,18 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
 
     // Override the mock uv binary to emulate workspace behavior: write the lockfile
     // at the workspace root (two levels up from apps/python-app2).
+    // Also handle `python list` command for version detection.
     const isWin = process.platform === 'win32';
     const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
+    const uvPythonListFile = path.join(tmpPythonDir, 'uv-python-list.json');
     if (isWin) {
       const uvWinScript = [
         '@echo off',
         'rem mock uv binary (workspace): write uv.lock at workspace root',
+        'if "%1"=="python" if "%2"=="list" (',
+        `  type "${uvPythonListFile}"`,
+        '  exit /b 0',
+        ')',
         'set LOCK=..\\..\\uv.lock',
         'if not exist "%LOCK%" (',
         '  echo [mock]>"%LOCK%"',
@@ -607,6 +878,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       const uvPosixScript = [
         '#!/bin/sh',
         '# mock uv binary (workspace): write uv.lock at workspace root',
+        'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
+        `  cat "${uvPythonListFile}"`,
+        '  exit 0',
+        'fi',
         'if [ ! -f "../../uv.lock" ]; then',
         '  echo "[mock]" > ../../uv.lock',
         'fi',
@@ -925,14 +1200,14 @@ describe('python version fallback logging', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should log that it's falling back to latest installed
+    // Should log that it's falling back to default/latest installed
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining(
-        'No Python version specified in pyproject.toml or Pipfile.lock'
+        'No Python version specified in .python-version, pyproject.toml, or Pipfile.lock'
       )
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using latest installed version')
+      expect.stringContaining('Using python version')
     );
   });
 
@@ -955,6 +1230,326 @@ describe('python version fallback logging', () => {
 
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining('Using Python 3.11 from pyproject.toml')
+    );
+  });
+
+  it('logs when Python version is found in .python-version', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: '3.11\n' }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from .python-version')
+    );
+  });
+});
+
+describe('.python-version file priority', () => {
+  let mockWorkPath: string;
+  let consoleLogSpy: jest.SpyInstance;
+  let consoleWarnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-version-file-priority-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('.python-version takes priority over pyproject.toml', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: '3.10\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should use 3.10 from .python-version, not 3.12 from pyproject.toml
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.10 from .python-version')
+    );
+  });
+
+  it('.python-version takes priority over Pipfile.lock', async () => {
+    // We also include a pyproject.toml to avoid triggering Pipfile.lock processing
+    // which requires pipfile2req. The important part is that .python-version
+    // takes priority over the python_version in Pipfile.lock.
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: '3.10\n' }),
+      'Pipfile.lock': new FileBlob({
+        data: JSON.stringify({
+          _meta: { requires: { python_version: '3.12' } },
+          default: {},
+          develop: {},
+        }),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should use 3.10 from .python-version, not 3.12 from Pipfile.lock
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.10 from .python-version')
+    );
+  });
+
+  it('parses .python-version with patch version (3.11.4 -> 3.11)', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: '3.11.4\n' }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should extract 3.11 from 3.11.4
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from .python-version')
+    );
+  });
+
+  it('parses .python-version with comments', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({
+        data: '# This is a comment\n3.11\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should skip comment and use 3.11
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from .python-version')
+    );
+  });
+
+  it('warns and falls back to default when .python-version has invalid content', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: 'invalid-version\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should warn about invalid .python-version and fall back to default
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Warning: Python version "invalid-version" detected in .python-version is invalid'
+      )
+    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using python version: 3.12')
+    );
+  });
+});
+
+describe('.python-version file auto-creation', () => {
+  let mockWorkPath: string;
+  let consoleLogSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-version-file-create-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.10');
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('writes .python-version file when pyproject.toml selects version <= 3.12', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should log that it's writing .python-version file
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file with version 3.12')
+    );
+
+    // Verify the file was created
+    const pythonVersionPath = path.join(mockWorkPath, '.python-version');
+    expect(fs.existsSync(pythonVersionPath)).toBe(true);
+    const content = fs.readFileSync(pythonVersionPath, 'utf8');
+    expect(content.trim()).toBe('3.12');
+  });
+
+  it('does NOT write .python-version file when one already exists', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      '.python-version': new FileBlob({ data: '3.11\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should NOT log about writing .python-version file
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file')
+    );
+
+    // Should use existing .python-version
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from .python-version')
+    );
+  });
+
+  it('does NOT write .python-version file when selecting 3.13+', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.13"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should NOT log about writing .python-version file
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file')
+    );
+
+    // Should use 3.13 from pyproject.toml
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.13 from pyproject.toml')
+    );
+  });
+
+  it('does NOT write .python-version file for Pipfile.lock projects', async () => {
+    // Include pyproject.toml to avoid triggering pipfile2req
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'Pipfile.lock': new FileBlob({
+        data: JSON.stringify({
+          _meta: { requires: { python_version: '3.11' } },
+          default: {},
+          develop: {},
+        }),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should NOT log about writing .python-version file (no requires-python in pyproject.toml)
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Writing .python-version file')
     );
   });
 });
@@ -1014,13 +1609,29 @@ describe('uv install path', () => {
 });
 
 describe('custom install hooks', () => {
+  // Helper to generate mock uv python list JSON for isolated module tests
+  const mockUvPythonListJson = JSON.stringify([
+    {
+      key: 'cpython-3.12.0-linux-x86_64-gnu',
+      version: '3.12.0',
+      version_parts: { major: 3, minor: 12, patch: 0 },
+      path: '/uv/python/bin/python3.12',
+      symlink: null,
+      url: null,
+      os: 'linux',
+      variant: 'default',
+      implementation: 'cpython',
+      arch: 'x86_64',
+      libc: 'gnu',
+    },
+  ]);
+
   it('uses projectSettings.installCommand instead of uv install for FastAPI', async () => {
     jest.resetModules();
 
     let buildWithMocks: any;
     let mockExecCommand: jest.Mock = jest.fn();
     let mockEnsureUvProject: jest.Mock = jest.fn();
-    let mockRunUvSync: jest.Mock = jest.fn();
 
     jest.isolateModules(() => {
       jest.doMock('@vercel/build-utils', () => {
@@ -1040,14 +1651,32 @@ describe('custom install hooks', () => {
           pyprojectPath: '/mock/project/pyproject.toml',
           lockPath: '/mock/project/uv.lock',
         }));
-        mockRunUvSync = jest.fn(async () => {});
         return {
           __esModule: true,
           ...real,
           ensureUvProject: mockEnsureUvProject,
-          runUvSync: mockRunUvSync,
         };
       });
+
+      // Mock child_process to return mock uv python list output
+      jest.doMock('child_process', () => {
+        const real = jest.requireActual('child_process');
+        return {
+          ...real,
+          execSync: jest.fn((cmd: string) => {
+            if (cmd.includes('uv python list')) {
+              return mockUvPythonListJson;
+            }
+            return real.execSync(cmd);
+          }),
+        };
+      });
+
+      // Mock which to return a path for uv
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
 
       // Import after mocks are configured
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -1057,7 +1686,6 @@ describe('custom install hooks', () => {
 
     const workPath = path.join(tmpdir(), `python-custom-install-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
@@ -1083,7 +1711,6 @@ describe('custom install hooks', () => {
 
     // Custom install should be used, so uv-based install should be skipped
     expect(mockEnsureUvProject).not.toHaveBeenCalled();
-    expect(mockRunUvSync).not.toHaveBeenCalled();
     expect(mockExecCommand).toHaveBeenCalledWith(
       'echo custom-install',
       expect.objectContaining({
@@ -1099,7 +1726,6 @@ describe('custom install hooks', () => {
     let buildWithMocks: any;
     let mockExecCommand: jest.Mock = jest.fn();
     let mockEnsureUvProject: jest.Mock = jest.fn();
-    let mockRunUvSync: jest.Mock = jest.fn();
 
     jest.isolateModules(() => {
       jest.doMock('@vercel/build-utils', () => {
@@ -1119,14 +1745,32 @@ describe('custom install hooks', () => {
           pyprojectPath: '/mock/project/pyproject.toml',
           lockPath: '/mock/project/uv.lock',
         }));
-        mockRunUvSync = jest.fn(async () => {});
         return {
           __esModule: true,
           ...real,
           ensureUvProject: mockEnsureUvProject,
-          runUvSync: mockRunUvSync,
         };
       });
+
+      // Mock child_process to return mock uv python list output
+      jest.doMock('child_process', () => {
+        const real = jest.requireActual('child_process');
+        return {
+          ...real,
+          execSync: jest.fn((cmd: string) => {
+            if (cmd.includes('uv python list')) {
+              return mockUvPythonListJson;
+            }
+            return real.execSync(cmd);
+          }),
+        };
+      });
+
+      // Mock which to return a path for uv
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
 
       // Import after mocks are configured
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -1139,7 +1783,6 @@ describe('custom install hooks', () => {
       `python-custom-install-pyproject-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
@@ -1173,7 +1816,6 @@ describe('custom install hooks', () => {
 
     // pyproject install should be used, so uv-based install should be skipped
     expect(mockEnsureUvProject).not.toHaveBeenCalled();
-    expect(mockRunUvSync).not.toHaveBeenCalled();
     expect(mockExecCommand).toHaveBeenCalledWith(
       'echo pyproject-install',
       expect.objectContaining({
@@ -1189,7 +1831,6 @@ describe('custom install hooks', () => {
     let buildWithMocks: any;
     let mockExecCommand: jest.Mock = jest.fn();
     let mockEnsureUvProject: jest.Mock = jest.fn();
-    let mockRunUvSync: jest.Mock = jest.fn();
 
     jest.isolateModules(() => {
       jest.doMock('@vercel/build-utils', () => {
@@ -1209,14 +1850,32 @@ describe('custom install hooks', () => {
           pyprojectPath: '/mock/project/pyproject.toml',
           lockPath: '/mock/project/uv.lock',
         }));
-        mockRunUvSync = jest.fn(async () => {});
         return {
           __esModule: true,
           ...real,
           ensureUvProject: mockEnsureUvProject,
-          runUvSync: mockRunUvSync,
         };
       });
+
+      // Mock child_process to return mock uv python list output
+      jest.doMock('child_process', () => {
+        const real = jest.requireActual('child_process');
+        return {
+          ...real,
+          execSync: jest.fn((cmd: string) => {
+            if (cmd.includes('uv python list')) {
+              return mockUvPythonListJson;
+            }
+            return real.execSync(cmd);
+          }),
+        };
+      });
+
+      // Mock which to return a path for uv
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
 
       // Import after mocks are configured
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -1229,7 +1888,6 @@ describe('custom install hooks', () => {
       `python-custom-install-default-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
@@ -1252,7 +1910,6 @@ describe('custom install hooks', () => {
 
     // No custom install -> uv-based install should be used
     expect(mockEnsureUvProject).toHaveBeenCalled();
-    expect(mockRunUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
   });

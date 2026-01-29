@@ -1,12 +1,10 @@
 import fs from 'fs';
 import { delimiter as pathDelimiter, join } from 'path';
-import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
-
+import { readConfigFile, execCommand } from '@vercel/build-utils';
 import execa from 'execa';
+import { getProtectedUvEnv } from './uv';
 
 const isWin = process.platform === 'win32';
-
-export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
@@ -42,15 +40,6 @@ export function useVirtualEnv(
     }
   }
   return { pythonCmd };
-}
-
-export function getProtectedUvEnv(
-  baseEnv: NodeJS.ProcessEnv = process.env
-): NodeJS.ProcessEnv {
-  return {
-    ...baseEnv,
-    UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
-  };
 }
 
 export function createVenvEnv(
@@ -140,43 +129,6 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
-}
-
-export async function runUvCommand(options: {
-  uvPath: string | null;
-  args: string[];
-  cwd: string;
-  venvPath: string;
-}) {
-  const { uvPath, args, cwd, venvPath } = options;
-
-  const pretty = `uv ${args.join(' ')}`;
-  debug(`Running "${pretty}"...`);
-
-  if (!uvPath) {
-    throw new Error(`uv is required to run "${pretty}" but is not available`);
-  }
-
-  try {
-    await execa(uvPath, args, {
-      cwd,
-      env: createVenvEnv(venvPath),
-    });
-    return true;
-  } catch (err) {
-    const error = new Error(
-      `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
-    ) as Error & { code?: number | string };
-    // retain code/signal to ensure it's treated as a build error
-    if (err && typeof err === 'object') {
-      if ('code' in err) {
-        error.code = (err as { code: number | string }).code;
-      } else if ('signal' in err) {
-        error.code = (err as { signal: string }).signal;
-      }
-    }
-    throw error;
-  }
 }
 
 export function findDir({

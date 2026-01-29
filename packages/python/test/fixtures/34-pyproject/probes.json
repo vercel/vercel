@@ -11,6 +11,9 @@
     {
       "path": "/api/optional-dependencies",
       "mustContain": "\"ok\":true"
+    },
+    {
+      "logMustContain": "Using Python 3.12 from pyproject.toml"
     }
   ]
 }

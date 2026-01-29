@@ -19,6 +19,9 @@
       "path": "/api/wheels",
       "status": 200,
       "mustContain": "2.0.0"
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }
