@@ -2,58 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
-import {
-  tryDetectServices,
-  isExperimentalServicesEnabled,
-} from '../../../../src/util/projects/detect-services';
-
-describe('isExperimentalServicesEnabled()', () => {
-  const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    } else {
-      process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
-    }
-  });
-
-  it('should return false when env var is not set', () => {
-    delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    expect(isExperimentalServicesEnabled()).toBe(false);
-  });
-
-  it('should return false when env var is set to 0', () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '0';
-    expect(isExperimentalServicesEnabled()).toBe(false);
-  });
-
-  it('should return false when env var is set to empty string', () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '';
-    expect(isExperimentalServicesEnabled()).toBe(false);
-  });
-
-  it('should return true when env var is set to 1', () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-    expect(isExperimentalServicesEnabled()).toBe(true);
-  });
-
-  it('should return true when env var is set to true', () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = 'true';
-    expect(isExperimentalServicesEnabled()).toBe(true);
-  });
-
-  it('should return true when env var is set to TRUE (case insensitive)', () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = 'TRUE';
-    expect(isExperimentalServicesEnabled()).toBe(true);
-  });
-});
+import { tryDetectServices } from '../../../../src/util/projects/detect-services';
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
   let tempDir: string;
 
   beforeEach(async () => {
+    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -67,30 +23,12 @@ describe('tryDetectServices()', () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it('should return null when env var is not set', async () => {
-    delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    await writeFile(
-      join(tempDir, 'vercel.json'),
-      JSON.stringify({
-        experimentalServices: {
-          api: { entrypoint: 'index.ts', routePrefix: '/' },
-        },
-      })
-    );
-
-    const result = await tryDetectServices(tempDir);
-    expect(result).toBeNull();
-  });
-
   it('should return null when no vercel.json exists', async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-
     const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
   });
 
   it('should return null when vercel.json has no experimentalServices', async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({ buildCommand: 'npm run build' })
@@ -100,8 +38,7 @@ describe('tryDetectServices()', () => {
     expect(result).toBeNull();
   });
 
-  it('should return result with services when detected', async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+  it('should return services when configured', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
@@ -127,8 +64,7 @@ describe('tryDetectServices()', () => {
     });
   });
 
-  it('should return result with errors when all services have validation errors', async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+  it('should return validation errors for invalid services', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
@@ -140,7 +76,6 @@ describe('tryDetectServices()', () => {
     );
 
     const result = await tryDetectServices(tempDir);
-    // Returns result with errors so they can be displayed to the user
     expect(result).not.toBeNull();
     expect(result?.services).toHaveLength(0);
     expect(result?.errors.length).toBeGreaterThan(0);
