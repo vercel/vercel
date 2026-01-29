@@ -288,6 +288,7 @@ module.exports = requireFromContext('${pkgName}');
           workPath: args.workPath,
           context: args.context,
           keepTracedPaths: false,
+          span: args.span,
         });
         args.context.files = files;
       },

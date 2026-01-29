@@ -38,6 +38,7 @@ export const build = async (args: CervelBuildOptions) => {
     workPath: args.workPath,
     repoRootPath: args.repoRootPath,
     out: args.out,
+    span: args.span,
   });
   await writeFile(
     join(args.workPath, args.out, '.cervel.json'),

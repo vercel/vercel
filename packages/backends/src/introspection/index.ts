@@ -14,6 +14,7 @@ import { z } from 'zod';
 import {
   debug,
   isExperimentalBackendsWithoutIntrospectionEnabled,
+  type Span,
 } from '@vercel/build-utils';
 import {
   BEGIN_INTROSPECTION_RESULT,
@@ -27,7 +28,10 @@ export const introspectApp = async (args: {
   handler: string;
   framework: string | null | undefined;
   env: Record<string, string | undefined>;
+  span?: Span;
 }) => {
+  const { span } = args;
+
   if (isExperimentalBackendsWithoutIntrospectionEnabled()) {
     return defaultResult(args);
   }
@@ -39,6 +43,8 @@ export const introspectApp = async (args: {
     '@vercel/backends/introspection/loaders/rolldown-esm'
   )}`;
   const handlerPath = join(args.dir, args.handler);
+
+  const introspectionSpan = span?.child('vc.builder.backends.introspection');
 
   const introspectionSchema = z.object({
     frameworkSlug: z.string().optional(),
@@ -196,6 +202,10 @@ export const introspectApp = async (args: {
   });
   const framework = getFramework(args);
   if (!introspectionData) {
+    introspectionSpan?.setAttributes({
+      'introspection.success': 'false',
+      'introspection.routes': '0',
+    });
     return defaultResult(args);
   }
 
@@ -210,6 +220,12 @@ export const introspectApp = async (args: {
       dest: '/',
     },
   ];
+
+  introspectionSpan?.setAttributes({
+    'introspection.success': 'true',
+    'introspection.routes': String(introspectionData.routes.length),
+    'introspection.framework': introspectionData.frameworkSlug ?? '',
+  });
 
   return {
     routes,

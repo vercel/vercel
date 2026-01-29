@@ -6,6 +6,7 @@ import {
   getPackageJson,
   getScriptName,
   type BuildOptions,
+  type Span,
 } from '@vercel/build-utils';
 import {
   build as cervelBuild,
@@ -24,7 +25,8 @@ const defaultOutputDirectory = join('.vercel', 'node');
 
 export const doBuild = async (
   args: BuildOptions,
-  downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>
+  downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>,
+  span?: Span
 ) => {
   const buildCommandResult = await maybeExecBuildCommand(args, downloadResult);
   const outputSetting = args.config.outputDirectory;
@@ -95,6 +97,7 @@ export const doBuild = async (
             workPath: args.workPath,
             repoRootPath: args.repoRootPath,
             out: defaultOutputDirectory,
+            span,
           });
           tsPromise = buildResult.tsPromise ?? undefined;
           const { handler } = await getBuildSummary(
@@ -118,6 +121,7 @@ export const doBuild = async (
         workPath: args.workPath,
         context: { files: {} },
         outDir: distDir,
+        span,
       });
 
       return {
@@ -136,6 +140,7 @@ export const doBuild = async (
       workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: defaultOutputDirectory,
+      span,
     });
     tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
@@ -164,6 +169,7 @@ export const doBuild = async (
       workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: outputDir,
+      span,
     });
     tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(

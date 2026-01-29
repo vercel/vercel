@@ -48,38 +48,31 @@ export const build: BuildV2 = async args => {
     'builder.name': builderName,
   });
 
-  const doBuildSpan = span.child('vc.builder.backends.doBuild');
-  const outputConfig = await doBuildSpan.trace(async span => {
-    const result = await doBuild(args, downloadResult);
-    span.setAttributes({
-      'outputConfig.dir': result.dir,
-      'outputConfig.handler': result.handler,
-    });
-    return result;
-  });
-
-  const files = outputConfig.files;
-
   const entrypoint = await findEntrypoint(args.workPath);
   debug('Entrypoint', entrypoint);
 
-  debug('Introspection starting..');
-  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
-  const { routes, framework } = await introspectAppSpan.trace(async span => {
-    const result = await introspectApp({
-      handler: entrypoint,
-      dir: args.workPath,
-      framework: args.config.framework,
-      env: {
-        ...(args.meta?.env ?? {}),
-        ...(args.meta?.buildEnv ?? {}),
-      },
-    });
-    span.setAttributes({
-      'introspectApp.routes': String(result.routes.length),
-    });
-    return result;
-  });
+  const buildSpan = span.child('vc.builder.backends.build');
+  const introspectionSpan = span.child('vc.builder.backends.introspectApp');
+
+  const [buildResult, introspectionResult] = await Promise.all([
+    buildSpan.trace(() => doBuild(args, downloadResult, buildSpan)),
+    introspectionSpan.trace(() =>
+      introspectApp({
+        handler: entrypoint,
+        dir: args.workPath,
+        framework: args.config.framework,
+        env: {
+          ...(args.meta?.env ?? {}),
+          ...(args.meta?.buildEnv ?? {}),
+        },
+        span: introspectionSpan,
+      })
+    ),
+  ]);
+
+  const files = buildResult.files;
+
+  const { routes, framework } = introspectionResult;
 
   if (routes.length > 2) {
     debug(`Introspection completed successfully with ${routes.length} routes`);
@@ -87,7 +80,7 @@ export const build: BuildV2 = async args => {
     debug(`Introspection failed to detect routes`);
   }
 
-  const handler = outputConfig.handler;
+  const handler = buildResult.handler;
   if (!files) {
     throw new Error('Unable to trace files for build');
   }
@@ -120,9 +113,9 @@ export const build: BuildV2 = async args => {
   }
 
   // Don't return until the TypeScript compilation is complete
-  if (outputConfig.tsPromise) {
+  if (buildResult.tsPromise) {
     const tsSpan = span.child('vc.builder.backends.tsCompile');
-    await tsSpan.trace(() => outputConfig.tsPromise);
+    await tsSpan.trace(() => buildResult.tsPromise);
   }
 
   return {

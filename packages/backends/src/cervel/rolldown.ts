@@ -70,32 +70,40 @@ export const rolldown = async (args: RolldownOptions) => {
   const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
 
   const context: { files: Files } = { files: {} };
-  const out = await rolldownBuild({
-    input: entrypointPath,
-    cwd: args.workPath, // rolldown's cwd option
-    platform: 'node',
-    tsconfig: true,
-    plugins: [
-      plugin({
-        repoRootPath: args.repoRootPath,
-        outDir: outputDir,
-        workPath: args.workPath,
-        // Only shim CJS imports when output is ESM (CJS can require CJS natively)
-        shimBareImports: resolvedFormat === 'esm',
-        context,
-      }),
-    ],
-    output: {
-      cleanDir: true,
-      dir: outputDir,
-      format: resolvedFormat,
-      entryFileNames: `[name].${resolvedExtension}`,
-      preserveModules: true,
-      preserveModulesRoot: args.repoRootPath,
-      sourcemap: false,
-      banner: resolvedFormat === 'esm' ? __dirname__filenameShim : undefined,
-    },
-  });
+
+  const runRolldown = () =>
+    rolldownBuild({
+      input: entrypointPath,
+      cwd: args.workPath, // rolldown's cwd option
+      platform: 'node',
+      tsconfig: true,
+      plugins: [
+        plugin({
+          repoRootPath: args.repoRootPath,
+          outDir: outputDir,
+          workPath: args.workPath,
+          // Only shim CJS imports when output is ESM (CJS can require CJS natively)
+          shimBareImports: resolvedFormat === 'esm',
+          context,
+          span: args.span,
+        }),
+      ],
+      output: {
+        cleanDir: true,
+        dir: outputDir,
+        format: resolvedFormat,
+        entryFileNames: `[name].${resolvedExtension}`,
+        preserveModules: true,
+        preserveModulesRoot: args.repoRootPath,
+        sourcemap: false,
+        banner: resolvedFormat === 'esm' ? __dirname__filenameShim : undefined,
+      },
+    });
+
+  const rolldownSpan = args.span?.child('vc.builder.backends.rolldown');
+  const out = rolldownSpan
+    ? await rolldownSpan.trace(runRolldown)
+    : await runRolldown();
   let handler: string | null = null;
   for (const entry of out.output) {
     if (entry.type === 'chunk') {
