@@ -30,7 +30,7 @@ export async function tryDetectServices(
   const fs = new LocalFileSystemDetector(cwd);
   const result = await detectServices({ fs });
 
-  // No services configured - return null silently
+  // No services configured
   const hasNoServicesError = result.errors.some(
     e => e.code === 'NO_SERVICES_CONFIGURED'
   );
