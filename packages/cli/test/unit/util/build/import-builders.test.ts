@@ -6,9 +6,7 @@ import { client } from '../../../mocks/client';
 import {
   importBuilders,
   resolveBuilders,
-  getSpecWithPeerVersion,
 } from '../../../../src/util/build/import-builders';
-import npa from 'npm-package-arg';
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 import { vi } from 'vitest';
@@ -179,90 +177,12 @@ describe('importBuilders()', () => {
   });
 });
 
-describe('getSpecWithPeerVersion()', () => {
-  const mockPeerDeps = {
-    '@vercel/node': 'workspace:*',
-    '@vercel/next': '1.2.3',
-  };
-
-  it('should append peerDep version when builder is in peerDeps without explicit version', () => {
-    const spec = '@vercel/node';
-    const parsed = npa(spec);
-    const result = getSpecWithPeerVersion(
-      spec,
-      parsed.name,
-      parsed,
-      mockPeerDeps
-    );
-    expect(result).toEqual('@vercel/node@workspace:*');
-  });
-
-  it('should return original spec when builder is NOT in peerDeps', () => {
-    const spec = 'some-random-builder';
-    const parsed = npa(spec);
-    const result = getSpecWithPeerVersion(
-      spec,
-      parsed.name,
-      parsed,
-      mockPeerDeps
-    );
-    expect(result).toEqual('some-random-builder');
-  });
-
-  it('should preserve explicit version even for peerDep builders', () => {
-    const spec = '@vercel/node@2.0.0';
-    const parsed = npa(spec);
-    const result = getSpecWithPeerVersion(
-      spec,
-      parsed.name,
-      parsed,
-      mockPeerDeps
-    );
-    expect(result).toEqual('@vercel/node@2.0.0');
-  });
-
-  it('should preserve explicit range even for peerDep builders', () => {
-    const spec = '@vercel/node@^2.0.0';
-    const parsed = npa(spec);
-    const result = getSpecWithPeerVersion(
-      spec,
-      parsed.name,
-      parsed,
-      mockPeerDeps
-    );
-    expect(result).toEqual('@vercel/node@^2.0.0');
-  });
-
-  it('should append peerDep version when using @latest tag', () => {
-    const spec = '@vercel/next@latest';
-    const parsed = npa(spec);
-    const result = getSpecWithPeerVersion(
-      spec,
-      parsed.name,
-      parsed,
-      mockPeerDeps
-    );
-    // @latest is a tag, not a version, so peerDep version should be used
-    expect(result).toEqual('@vercel/next@1.2.3');
-  });
-
-  it('should return original spec when name is null', () => {
-    const spec = 'https://example.com/builder.tgz';
-    const parsed = npa(spec);
-    const result = getSpecWithPeerVersion(
-      spec,
-      parsed.name,
-      parsed,
-      mockPeerDeps
-    );
-    expect(result).toEqual(spec);
-  });
-});
-
 describe('resolveBuilders()', () => {
   it('should return builders to install when missing', async () => {
+    const cwd = process.cwd();
+    const buildersDir = join(cwd, '.vercel', 'builders');
     const specs = new Set(['@vercel/does-not-exist']);
-    const result = await resolveBuilders(process.cwd(), specs);
+    const result = await resolveBuilders(cwd, buildersDir, specs);
     if (!('buildersToAdd' in result)) {
       throw new Error('Expected `buildersToAdd` to be defined');
     }
@@ -271,11 +191,13 @@ describe('resolveBuilders()', () => {
 
   it('should throw error when `MODULE_NOT_FOUND` on 2nd pass', async () => {
     let err: Error | undefined;
+    const cwd = process.cwd();
+    const buildersDir = join(cwd, '.vercel', 'builders');
     const specs = new Set(['@vercel/does-not-exist']);
 
     // The empty Map represents `resolveBuilders()` being invoked after the install step
     try {
-      await resolveBuilders(process.cwd(), specs, new Map());
+      await resolveBuilders(cwd, buildersDir, specs, new Map());
     } catch (_err: unknown) {
       err = _err as Error;
     }
@@ -284,9 +206,7 @@ describe('resolveBuilders()', () => {
       throw new Error('Expected `err` to be defined');
     }
 
-    expect(
-      err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
-    ).toEqual(true);
+    expect(err.message).toEqual('Builder "@vercel/does-not-exist" not found');
   });
 
   // Tests for peerDependencies version resolution
@@ -300,10 +220,11 @@ describe('resolveBuilders()', () => {
     'should keep original spec for builders NOT in peerDeps',
     async () => {
       const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
       try {
         // 'some-random-builder' is not in the CLI's peerDependencies
         const specs = new Set(['some-random-builder']);
-        const result = await resolveBuilders(cwd, specs);
+        const result = await resolveBuilders(cwd, buildersDir, specs);
 
         if (!('buildersToAdd' in result)) {
           throw new Error('Expected `buildersToAdd` to be defined');
@@ -322,10 +243,11 @@ describe('resolveBuilders()', () => {
     'should preserve explicit version even for peerDep builders',
     async () => {
       const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
       try {
         // Even though @vercel/node is in peerDeps, explicit version should be preserved
         const specs = new Set(['@vercel/node@2.0.0']);
-        const result = await resolveBuilders(cwd, specs);
+        const result = await resolveBuilders(cwd, buildersDir, specs);
 
         if (!('buildersToAdd' in result)) {
           throw new Error('Expected `buildersToAdd` to be defined');
