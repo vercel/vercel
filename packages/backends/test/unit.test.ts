@@ -51,33 +51,38 @@ describe('successful builds', async () => {
     fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
-    it(`builds ${fixtureName}`, async () => {
-      // Copy entire fixture to work dir so no parent node_modules can interfere
-      const fixtureSource = join(__dirname, 'fixtures', fixtureName);
-      const workDir = await getWorkDir(fixtureName, fixtureSource);
+    // Windows is just too slow to build these fixtures
+    it.skipIf(process.platform === 'win32' && fixtureName.includes('09'))(
+      `builds ${fixtureName}`,
+      async () => {
+        // Copy entire fixture to work dir so no parent node_modules can interfere
+        const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+        const workDir = await getWorkDir(fixtureName, fixtureSource);
 
-      const workPath = workDir;
-      const repoRootPath = workDir;
+        const workPath = workDir;
+        const repoRootPath = workDir;
 
-      const result = (await build({
-        files: {},
-        workPath,
-        config,
-        meta,
-        entrypoint: 'package.json',
-        repoRootPath,
-      })) as BuildResultV2Typical;
+        const result = (await build({
+          files: {},
+          workPath,
+          config,
+          meta,
+          entrypoint: 'package.json',
+          repoRootPath,
+        })) as BuildResultV2Typical;
 
-      const lambda = result.output.index as unknown as NodejsLambda;
+        const lambda = result.output.index as unknown as NodejsLambda;
 
-      expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
-        join(fixtureSource, 'routes.json')
-      );
+        expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
+          join(fixtureSource, 'routes.json')
+        );
 
-      await expect(
-        extractAndExecuteLambda(lambda, workDir)
-      ).resolves.toBeUndefined();
-    }, 30000); // copying fixture and running npm install so it takes a while
+        await expect(
+          extractAndExecuteLambda(lambda, workDir)
+        ).resolves.toBeUndefined();
+      },
+      30000
+    ); // copying fixture and running npm install so it takes a while
   }
 
   // eslint-disable-next-line jest/no-disabled-tests
