@@ -1,8 +1,13 @@
 import { join } from 'path';
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import getGlobalPathConfig from '../../util/config/global-path';
+import getGlobalPathConfig from '../config/global-path';
 import output from '../../output-manager';
-import { OPENAPI_URL, CACHE_FILE, CACHE_TTL_MS } from './constants';
+import {
+  OPENAPI_URL,
+  CACHE_FILE,
+  CACHE_TTL_MS,
+  FETCH_TIMEOUT_MS,
+} from './constants';
 import type {
   OpenApiSpec,
   CachedSpec,
@@ -119,12 +124,25 @@ export class OpenApiCache {
     ][]) {
       const resolvedProp = this.resolveSchemaRef(propSchema);
 
+      // Get enum values from the schema, handling array items
+      let enumValues = resolvedProp?.enum || propSchema.enum;
+      if (
+        !enumValues &&
+        (resolvedProp?.type === 'array' || propSchema.type === 'array')
+      ) {
+        const items = resolvedProp?.items || propSchema.items;
+        if (items) {
+          const resolvedItems = this.resolveSchemaRef(items);
+          enumValues = resolvedItems?.enum || items.enum;
+        }
+      }
+
       fields.push({
         name,
         required: requiredFields.has(name),
         description: resolvedProp?.description || propSchema.description,
         type: resolvedProp?.type || propSchema.type,
-        enumValues: resolvedProp?.enum || propSchema.enum,
+        enumValues,
       });
     }
 
@@ -184,14 +202,21 @@ export class OpenApiCache {
   }
 
   /**
-   * Fetch OpenAPI spec from remote
+   * Fetch OpenAPI spec from remote with timeout
    */
   private async fetchSpec(): Promise<OpenApiSpec> {
-    const response = await fetch(OPENAPI_URL);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch OpenAPI spec: ${response.status}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(OPENAPI_URL, { signal: controller.signal });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch OpenAPI spec: ${response.status}`);
+      }
+      return (await response.json()) as OpenApiSpec;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return (await response.json()) as OpenApiSpec;
   }
 
   /**
