@@ -4172,6 +4172,56 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Rust',
+    slug: 'rust',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/rust.svg',
+    tagline:
+      'A language empowering everyone to build reliable and efficient software.',
+    description:
+      'A generic Rust application deployed as a serverless function.',
+    website: 'https://www.rust-lang.org',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
