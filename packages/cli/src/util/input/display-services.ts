@@ -15,10 +15,6 @@ function getFrameworkName(slug: string | undefined): string | undefined {
   return frameworksBySlug.get(slug)?.name;
 }
 
-/**
- * Format the route prefix for display.
- * Converts "/" to "/" and other prefixes to "/prefix/*"
- */
 function formatRoutePrefix(routePrefix: string): string {
   if (routePrefix === '/') {
     return '/';
@@ -31,18 +27,11 @@ function formatRoutePrefix(routePrefix: string): string {
 }
 
 /**
- * Display services configured in vercel.json.
- *
- * Shows the most detailed info available in priority order:
- * 1. Framework name (if available): [Next.js], [FastAPI]
- * 2. Runtime (if no framework): [python], [node]
- * 3. Third-party builder (if no framework/runtime): [@vercel/php]
- *
  * Output format:
  * Multiple services detected. Project Settings:
  * - frontend [Next.js] → /
  * - api [python] → /api/*
- * - php-api [@vercel/php] → /php/*
+ * - php-api ["vercel-php@0.9.0"] → /php/*
  */
 export function displayDetectedServices(services: ResolvedService[]): void {
   output.print(`Multiple services detected. Project Settings:\n`);
