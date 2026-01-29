@@ -1,9 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import httpstat from '../../../../src/commands/httpstat';
+import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
+
+const MOCK_ACCOUNT_ID = 'team_test123';
 
 let spawnMock: ReturnType<typeof vi.fn>;
 vi.mock('child_process', () => ({
@@ -362,6 +365,92 @@ describe('httpstat', () => {
           value: '[REDACTED]',
         },
       ]);
+    });
+  });
+
+  describe('getDeploymentUrlById', () => {
+    it('should fetch deployment with accountId', async () => {
+      const mockClient = {
+        fetch: vi.fn().mockResolvedValue({
+          url: 'my-app-abc123.vercel.app',
+        }),
+      } as any;
+
+      await getDeploymentUrlById(
+        mockClient,
+        'ERiL45NJvP8ghWxgbvCM447bmxwV',
+        MOCK_ACCOUNT_ID
+      );
+
+      expect(mockClient.fetch).toHaveBeenCalledWith(
+        '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+        { accountId: MOCK_ACCOUNT_ID }
+      );
+    });
+
+    it('should fetch deployment with dpl_ prefix and accountId', async () => {
+      const mockClient = {
+        fetch: vi.fn().mockResolvedValue({
+          url: 'my-app-abc123.vercel.app',
+        }),
+      } as any;
+
+      await getDeploymentUrlById(
+        mockClient,
+        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+        MOCK_ACCOUNT_ID
+      );
+
+      expect(mockClient.fetch).toHaveBeenCalledWith(
+        '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+        { accountId: MOCK_ACCOUNT_ID }
+      );
+    });
+
+    it('should return null if deployment is not found', async () => {
+      const mockClient = {
+        fetch: vi.fn().mockResolvedValue(null),
+      } as any;
+
+      const result = await getDeploymentUrlById(
+        mockClient,
+        'ERiL45NJvP8ghWxgbvCM447bmxwV',
+        MOCK_ACCOUNT_ID
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null if deployment fetch fails', async () => {
+      const mockClient = {
+        fetch: vi.fn().mockRejectedValue(new Error('Not found')),
+      } as any;
+
+      const result = await getDeploymentUrlById(
+        mockClient,
+        'XYZ789ABC123',
+        MOCK_ACCOUNT_ID
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle URL input and return origin', async () => {
+      const mockClient = {
+        fetch: vi.fn().mockResolvedValue({
+          url: 'my-app-xyz789.vercel.app',
+        }),
+      } as any;
+
+      const result = await getDeploymentUrlById(
+        mockClient,
+        'https://my-app-xyz789.vercel.app/api/test',
+        MOCK_ACCOUNT_ID
+      );
+
+      expect(result).toBe('https://my-app-xyz789.vercel.app');
+      // Should not call fetch for URL input
+      expect(mockClient.fetch).not.toHaveBeenCalled();
     });
   });
 });
