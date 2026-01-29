@@ -110,7 +110,6 @@ export const doBuild = async (
       }
 
       await writeFile(cervelJsonPath, JSON.stringify({ handler }, null, 2));
-      // TODO: need to run nft here
 
       const files = await nodeFileTrace({
         keepTracedPaths: true,
