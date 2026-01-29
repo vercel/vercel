@@ -6,6 +6,7 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
+import { formatProject } from '../../util/projects/format-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
 import {
@@ -268,7 +269,8 @@ export default async function logsv2(client: Client) {
   }
 
   let projectId: string;
-  let projectName: string;
+  let projectSlug: string;
+  let orgSlug: string;
   let ownerId: string;
 
   if (projectOption) {
@@ -285,7 +287,8 @@ export default async function logsv2(client: Client) {
       return 1;
     }
     projectId = project.id;
-    projectName = project.name;
+    projectSlug = project.name;
+    orgSlug = contextName!;
     ownerId = project.accountId;
   } else {
     const link = await getLinkedProject(client);
@@ -302,7 +305,8 @@ export default async function logsv2(client: Client) {
     client.config.currentTeam =
       link.org.type === 'team' ? link.org.id : undefined;
     projectId = link.project.id;
-    projectName = link.project.name;
+    projectSlug = link.project.name;
+    orgSlug = link.org.slug;
     ownerId = link.org.id;
   }
 
@@ -427,7 +431,9 @@ export default async function logsv2(client: Client) {
 
   if (!jsonOption) {
     if (logs.length === 0) {
-      output.print(chalk.dim(`No logs found for ${projectName}\n`));
+      output.print(
+        chalk.dim(`No logs found for ${formatProject(orgSlug, projectSlug)}\n`)
+      );
     } else {
       const showDate = logsSpanMultipleDays(logs);
       const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
@@ -526,7 +532,9 @@ export default async function logsv2(client: Client) {
       }
 
       output.print(
-        chalk.gray(`Fetched ${logs.length} logs for ${projectName}\n`)
+        chalk.gray(
+          `Fetched ${logs.length} logs for ${formatProject(orgSlug, projectSlug)}\n`
+        )
       );
     }
   }
