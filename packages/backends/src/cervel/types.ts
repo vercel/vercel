@@ -1,4 +1,4 @@
-import type { BuildOptions, Files, Span } from '@vercel/build-utils';
+import type { BuildOptions, Span } from '@vercel/build-utils';
 
 /**
  * Core path options derived from BuildOptions.
@@ -33,13 +33,19 @@ export type RolldownOptions = PathOptions & {
 };
 
 /**
+ * Context shared between plugin and rolldown for collecting traced paths.
+ */
+export type PluginContext = {
+  tracedPaths: Set<string>;
+};
+
+/**
  * Options for the cervel plugin.
  */
 export type PluginOptions = PathOptions & {
   outDir: string;
   shimBareImports?: boolean;
-  context: { files: Files };
-  span?: Span;
+  context: PluginContext;
 };
 
 /**
@@ -49,6 +55,5 @@ export type NodeFileTraceOptions = PathOptions & {
   keepTracedPaths: boolean;
   outDir: string;
   tracedPaths: string[];
-  context: { files: Files };
   span?: Span;
 };

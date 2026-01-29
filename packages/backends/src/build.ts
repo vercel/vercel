@@ -31,7 +31,6 @@ export const doBuild = async (
   const buildCommandResult = await maybeExecBuildCommand(args, downloadResult);
   const outputSetting = args.config.outputDirectory;
   const buildCommand = args.config.projectSettings?.buildCommand;
-  let tsPromise: Promise<void> | undefined;
 
   // If a build command ran but no output directory was configured, that's an error
   // Exception: if the build command is a cervel command, it handles output internally
@@ -53,7 +52,6 @@ export const doBuild = async (
         return {
           dir: cervelOutputDir,
           handler,
-          tsPromise,
         };
       }
 
@@ -76,7 +74,6 @@ export const doBuild = async (
         return {
           dir: distDir,
           handler,
-          tsPromise,
         };
       }
 
@@ -99,14 +96,12 @@ export const doBuild = async (
             out: defaultOutputDirectory,
             span,
           });
-          tsPromise = buildResult.tsPromise ?? undefined;
           const { handler } = await getBuildSummary(
             buildResult.rolldownResult.outputDir
           );
           return {
             dir: buildResult.rolldownResult.outputDir,
             handler,
-            tsPromise,
             files: buildResult.rolldownResult.outputFiles,
           };
         }
@@ -119,7 +114,6 @@ export const doBuild = async (
         tracedPaths: [join(distDir, handler)],
         repoRootPath: args.repoRootPath,
         workPath: args.workPath,
-        context: { files: {} },
         outDir: distDir,
         span,
       });
@@ -127,7 +121,6 @@ export const doBuild = async (
       return {
         dir: distDir,
         handler,
-        tsPromise,
         files,
       };
     }
@@ -142,14 +135,12 @@ export const doBuild = async (
       out: defaultOutputDirectory,
       span,
     });
-    tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
     );
     return {
       dir: buildResult.rolldownResult.outputDir,
       handler,
-      tsPromise,
       files: buildResult.rolldownResult.outputFiles,
     };
   }
@@ -171,14 +162,12 @@ export const doBuild = async (
       out: outputDir,
       span,
     });
-    tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
     );
     return {
       dir: buildResult.rolldownResult.outputDir,
       handler,
-      tsPromise,
       files: buildResult.rolldownResult.outputFiles,
     };
   }
@@ -191,7 +180,6 @@ export const doBuild = async (
     return {
       dir: outputDir,
       handler,
-      tsPromise,
     };
   }
 
@@ -211,6 +199,5 @@ export const doBuild = async (
   return {
     dir: outputDir,
     handler,
-    tsPromise,
   };
 };

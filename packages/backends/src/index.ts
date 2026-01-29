@@ -112,12 +112,6 @@ export const build: BuildV2 = async args => {
     }
   }
 
-  // Don't return until the TypeScript compilation is complete
-  if (buildResult.tsPromise) {
-    const tsSpan = span.child('vc.builder.backends.tsCompile');
-    await tsSpan.trace(() => buildResult.tsPromise);
-  }
-
   return {
     routes,
     output,

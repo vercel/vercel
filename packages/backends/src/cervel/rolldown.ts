@@ -3,8 +3,8 @@ import { rm, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { build as rolldownBuild } from 'rolldown';
 import { plugin } from './plugin.js';
-import type { Files } from '@vercel/build-utils';
-import type { RolldownOptions } from './types.js';
+import { nodeFileTrace } from './node-file-trace.js';
+import type { PluginContext, RolldownOptions } from './types.js';
 
 const __dirname__filenameShim = `
 import { createRequire as __createRequire } from 'node:module';
@@ -69,7 +69,8 @@ export const rolldown = async (args: RolldownOptions) => {
   }
   const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
 
-  const context: { files: Files } = { files: {} };
+  // Context to collect traced paths from the plugin
+  const context: PluginContext = { tracedPaths: new Set<string>() };
 
   const runRolldown = () =>
     rolldownBuild({
@@ -85,7 +86,6 @@ export const rolldown = async (args: RolldownOptions) => {
           // Only shim CJS imports when output is ESM (CJS can require CJS natively)
           shimBareImports: resolvedFormat === 'esm',
           context,
-          span: args.span,
         }),
       ],
       output: {
@@ -100,10 +100,12 @@ export const rolldown = async (args: RolldownOptions) => {
       },
     });
 
+  // Run rolldown bundling
   const rolldownSpan = args.span?.child('vc.builder.backends.rolldown');
   const out = rolldownSpan
     ? await rolldownSpan.trace(runRolldown)
     : await runRolldown();
+
   let handler: string | null = null;
   for (const entry of out.output) {
     if (entry.type === 'chunk') {
@@ -116,6 +118,16 @@ export const rolldown = async (args: RolldownOptions) => {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
 
+  // Run NFT separately after rolldown completes
+  const outputFiles = await nodeFileTrace({
+    outDir: outputDir,
+    tracedPaths: Array.from(context.tracedPaths),
+    repoRootPath: args.repoRootPath,
+    workPath: args.workPath,
+    keepTracedPaths: false,
+    span: args.span,
+  });
+
   const cleanup = async () => {
     await rm(outputDir, { recursive: true, force: true });
   };
@@ -124,7 +136,7 @@ export const rolldown = async (args: RolldownOptions) => {
     result: {
       handler,
       outputDir,
-      outputFiles: context.files,
+      outputFiles,
     },
     cleanup,
   };
