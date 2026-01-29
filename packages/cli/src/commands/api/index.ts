@@ -237,6 +237,15 @@ async function executeSingleRequest(
   flags: ParsedFlags
 ): Promise<number> {
   try {
+    // Check for confirmation before proceeding with DELETE operations
+    const confirmed = await client.confirmMutatingOperation(
+      config.url,
+      config.method
+    );
+    if (!confirmed) {
+      return 1;
+    }
+
     const response: Response = await client.fetch(config.url, {
       method: config.method,
       body: config.body,
@@ -259,6 +268,15 @@ async function executePaginatedRequest(
   const results: unknown[] = [];
 
   try {
+    // Check for confirmation before proceeding with DELETE operations
+    const confirmed = await client.confirmMutatingOperation(
+      config.url,
+      config.method
+    );
+    if (!confirmed) {
+      return 1;
+    }
+
     for await (const page of client.fetchPaginated<Record<string, unknown>>(
       config.url,
       {
