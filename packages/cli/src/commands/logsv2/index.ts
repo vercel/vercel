@@ -268,6 +268,7 @@ export default async function logsv2(client: Client) {
   }
 
   let projectId: string;
+  let projectName: string;
   let ownerId: string;
 
   if (projectOption) {
@@ -284,6 +285,7 @@ export default async function logsv2(client: Client) {
       return 1;
     }
     projectId = project.id;
+    projectName = project.name;
     ownerId = project.accountId;
   } else {
     const link = await getLinkedProject(client);
@@ -300,6 +302,7 @@ export default async function logsv2(client: Client) {
     client.config.currentTeam =
       link.org.type === 'team' ? link.org.id : undefined;
     projectId = link.project.id;
+    projectName = link.project.name;
     ownerId = link.org.id;
   }
 
@@ -424,9 +427,7 @@ export default async function logsv2(client: Client) {
 
   if (!jsonOption) {
     if (logs.length === 0) {
-      output.print(
-        chalk.dim(`No logs found for project ${projectId} in ${contextName}\n`)
-      );
+      output.print(chalk.dim(`No logs found for ${projectName}\n`));
     } else {
       const showDate = logsSpanMultipleDays(logs);
       const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
@@ -525,9 +526,7 @@ export default async function logsv2(client: Client) {
       }
 
       output.print(
-        chalk.gray(
-          `Fetched ${logs.length} logs for project ${projectId} in ${contextName}\n`
-        )
+        chalk.gray(`Fetched ${logs.length} logs for ${projectName}\n`)
       );
     }
   }
