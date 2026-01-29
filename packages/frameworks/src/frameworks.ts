@@ -4222,6 +4222,57 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Node',
+    slug: 'node',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/node.svg',
+    tagline:
+      "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine.",
+    description:
+      'A generic Node.js application deployed as a serverless function.',
+    website: 'https://nodejs.org',
+    useRuntime: { src: 'server.ts', use: '@vercel/backends' },
+    ignoreRuntimes: ['@vercel/node'],
+    detectors: {
+      every: [
+        {
+          path: 'server.ts',
+        },
+        {
+          path: 'package.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`npm run dev` or `npx ts-node server.ts`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
