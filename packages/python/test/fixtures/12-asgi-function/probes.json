@@ -6,6 +6,9 @@
       "responseHeaders": {
         "content-type": "text/html"
       }
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }

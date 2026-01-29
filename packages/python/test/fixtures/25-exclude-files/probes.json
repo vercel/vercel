@@ -13,6 +13,9 @@
       "responseHeaders": {
         "content-type": "text/plain"
       }
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }
