@@ -77,7 +77,7 @@ describe('successful builds', async () => {
       await expect(
         extractAndExecuteLambda(lambda, workDir)
       ).resolves.toBeUndefined();
-    }, 20000); // introspection is up to 8 seconds for apps the do .listen();
+    }, 20000); // copying fixture and running npm install so it takes a while
   }
 
   // eslint-disable-next-line jest/no-disabled-tests
