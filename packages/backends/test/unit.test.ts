@@ -77,7 +77,7 @@ describe('successful builds', async () => {
       await expect(
         extractAndExecuteLambda(lambda, workDir)
       ).resolves.toBeUndefined();
-    }, 20000); // copying fixture and running npm install so it takes a while
+    }, 30000); // copying fixture and running npm install so it takes a while
   }
 
   // eslint-disable-next-line jest/no-disabled-tests
