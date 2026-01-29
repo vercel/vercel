@@ -1231,22 +1231,36 @@ export async function serverBuild({
 
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
 
-      if (isCorrectManifests) {
-        // filter dynamic routes to only the included dynamic routes
-        // in this specific serverless function so that we don't
-        // accidentally match a dynamic route while resolving that
-        // is not actually in this specific serverless function
-        for (const manifest of [
-          'routes-manifest.json',
-          'server/pages-manifest.json',
-          ...(appPathRoutesManifest ? ['server/app-paths-manifest.json'] : []),
-        ] as const) {
-          const fsPath = path.join(entryPath, outputDirectory, manifest);
+      for (const manifest of isCorrectManifests
+        ? [
+            'routes-manifest.json',
+            'server/pages-manifest.json',
+            ...(appPathRoutesManifest
+              ? ['server/app-paths-manifest.json']
+              : []),
+          ]
+        : ['routes-manifest.json']) {
+        const fsPath = path.join(entryPath, outputDirectory, manifest);
 
-          const relativePath = path.relative(baseDir, fsPath);
-          delete group.pseudoLayer[relativePath];
+        const relativePath = path.relative(baseDir, fsPath);
+        delete group.pseudoLayer[relativePath];
 
-          const manifestData = await fs.readJSON(fsPath);
+        const manifestData = await fs.readJSON(fsPath);
+
+        if (manifest === 'routes-manifest.json') {
+          // Filter `headers` and `deploymentId` out of the routes-manifest.json for deterministic
+          // functions. In Next.js minimal mode, they aren't used (the builder reads them and
+          // generates the config.json for Vercel)
+          manifestData.headers = [];
+          delete manifestData.deploymentId;
+        }
+
+        if (isCorrectManifests) {
+          // filter dynamic routes to only the included dynamic routes
+          // in this specific serverless function so that we don't
+          // accidentally match a dynamic route while resolving that
+          // is not actually in this specific serverless function
+
           const normalizedPages = new Set(
             group.pages.map(page => {
               page = `/${page.replace(/\.js$/, '')}`;
@@ -1259,7 +1273,6 @@ export async function serverBuild({
             case 'routes-manifest.json': {
               const filterItem = (item: { page: string }) =>
                 normalizedPages.has(item.page);
-
               manifestData.dynamicRoutes =
                 manifestData.dynamicRoutes?.filter(filterItem);
               manifestData.staticRoutes =
@@ -1299,12 +1312,12 @@ export async function serverBuild({
               });
             }
           }
-
-          updatedManifestFiles[relativePath] = new FileBlob({
-            contentType: 'application/json',
-            data: JSON.stringify(manifestData),
-          });
         }
+
+        updatedManifestFiles[relativePath] = new FileBlob({
+          contentType: 'application/json',
+          data: JSON.stringify(manifestData),
+        });
       }
 
       let launcherData = group.isAppRouter ? appLauncher : launcher;
