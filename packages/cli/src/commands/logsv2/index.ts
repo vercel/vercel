@@ -323,14 +323,19 @@ export default async function logsv2(client: Client) {
         chalk.dim(`No logs found for project ${projectId} in ${contextName}\n`)
       );
     } else {
-      const maxMethodWidth = Math.max(...logs.map(l => l.requestMethod.length));
-      const maxPathWidth = Math.max(...logs.map(l => l.requestPath.length));
       const showDate = logsSpanMultipleDays(logs);
+      const cols: ColumnWidths = {
+        time: showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY,
+        level: COL_LEVEL,
+        source: COL_SOURCE,
+        method: Math.max(...logs.map(l => l.requestMethod.length)),
+        path: Math.max(...logs.map(l => l.requestPath.length)),
+        status: COL_STATUS,
+      };
       const printOpts: PrintOptions = {
         expand: expandOption,
         terminalWidth,
-        methodWidth: maxMethodWidth,
-        pathWidth: maxPathWidth,
+        cols,
         showDate,
       };
       printHeader(printOpts);
@@ -348,61 +353,61 @@ export default async function logsv2(client: Client) {
   return 0;
 }
 
+interface ColumnWidths {
+  time: number;
+  level: number;
+  source: number;
+  method: number;
+  path: number;
+  status: number;
+}
+
 interface PrintOptions {
   expand?: boolean;
   terminalWidth?: number;
-  methodWidth?: number;
-  pathWidth?: number;
+  cols: ColumnWidths;
   showDate?: boolean;
 }
 
 function printHeader(options: PrintOptions) {
-  const { expand, showDate, methodWidth = 4, pathWidth = 10 } = options;
-  const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
-  const pathColWidth = COL_SOURCE + 1 + methodWidth + 1 + pathWidth + 3; // source + space + method + space + path + padding
-  const cols: string[] = [];
+  const { expand, cols } = options;
+  const row: string[] = [];
 
-  cols.push('TIME'.padEnd(colTime));
-  cols.push('LEVEL'.padEnd(COL_LEVEL));
-  cols.push('  PATH'.padEnd(pathColWidth)); // 2-char indent to align with method
+  row.push('TIME'.padEnd(cols.time));
+  row.push('LEVEL'.padEnd(cols.level));
+  // PATH header: 2 spaces indent + "PATH" padded to fill source + method + path columns
+  const pathHeaderWidth = cols.source + 1 + cols.method + 1 + cols.path;
+  row.push('  PATH'.padEnd(pathHeaderWidth));
 
-  if (expand) {
-    output.print(chalk.dim(cols.join('  ') + '\n'));
-  } else {
-    cols.push('STATUS'.padEnd(COL_STATUS));
-    cols.push('MESSAGE');
-    output.print(chalk.dim(cols.join('  ') + '\n'));
+  if (!expand) {
+    row.push('STATUS'.padEnd(cols.status));
+    row.push('MESSAGE');
   }
+
+  output.print(chalk.dim(row.join('  ') + '\n'));
 }
 
-function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
-  const {
-    expand,
-    terminalWidth = 120,
-    methodWidth = 4,
-    pathWidth = 10,
-    showDate,
-  } = options;
+function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions) {
+  const { expand, terminalWidth = 120, cols, showDate } = options;
 
   const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
-  const colTime = showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY;
-  const pathColWidth = COL_SOURCE + 1 + methodWidth + 1 + pathWidth;
-  const time = format(log.timestamp, timeFormat);
-  const level = getLevelLabel(log.level);
+  const time = format(log.timestamp, timeFormat).padEnd(cols.time);
+  const level = getLevelLabel(log.level).padEnd(cols.level);
   const source = getSourceIcon(log.source);
-  const method = log.requestMethod.padEnd(methodWidth);
-  const pathPart = `${source} ${method} ${log.requestPath.padEnd(pathWidth)}`;
+  const method = log.requestMethod.padEnd(cols.method);
+  const path = log.requestPath.padEnd(cols.path);
+  const pathCol = `${source} ${method} ${path}`;
 
   const statusCode = log.responseStatusCode;
   const statusStr = !statusCode || statusCode <= 0 ? '---' : String(statusCode);
   const status =
     !statusCode || statusCode <= 0
-      ? chalk.gray(statusStr.padEnd(COL_STATUS))
-      : getStatusColor(statusCode, COL_STATUS);
+      ? chalk.gray(statusStr.padEnd(cols.status))
+      : getStatusColor(statusCode, cols.status);
 
   if (expand) {
-    const cols = [chalk.dim(time), level, pathPart];
-    output.print(cols.join('  ') + '\n');
+    const row = [chalk.dim(time), level, pathCol];
+    output.print(row.join('  ') + '\n');
     if (log.message) {
       const message = log.message.replace(/\n$/, '');
       const coloredMessage = colorizeMessage(message, log.level);
@@ -412,14 +417,16 @@ function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions = {}) {
       output.print('\n');
     }
   } else {
-    const fixedWidth = colTime + COL_LEVEL + pathColWidth + COL_STATUS + 10;
+    const pathHeaderWidth = cols.source + 1 + cols.method + 1 + cols.path;
+    const fixedWidth =
+      cols.time + cols.level + pathHeaderWidth + cols.status + 10;
     const msgWidth = Math.max(terminalWidth - fixedWidth, 20);
     const msg = log.message
       ? colorizeMessage(truncateMessage(log.message, msgWidth), log.level)
       : chalk.dim('(no message)');
 
-    const cols = [chalk.dim(time), level, pathPart, status, msg];
-    output.print(cols.join('  ') + '\n');
+    const row = [chalk.dim(time), level, pathCol, status, msg];
+    output.print(row.join('  ') + '\n');
   }
 }
 
