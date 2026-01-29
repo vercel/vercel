@@ -1,5 +1,13 @@
 # @vercel/frameworks
 
+## 3.16.1
+
+### Patch Changes
+
+- Generic node framework preset ([#14779](https://github.com/vercel/vercel/pull/14779))
+
+- experimental rust runtime framework preset ([#14765](https://github.com/vercel/vercel/pull/14765))
+
 ## 3.16.0
 
 ### Minor Changes

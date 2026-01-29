@@ -1,5 +1,14 @@
 # vercel
 
+## 50.9.2
+
+### Patch Changes
+
+- experimental rust runtime framework preset ([#14765](https://github.com/vercel/vercel/pull/14765))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.8.28
+
 ## 50.9.1
 
 ### Patch Changes
