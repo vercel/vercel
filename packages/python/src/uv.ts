@@ -107,7 +107,9 @@ export class UvRunner {
       });
     } catch (err) {
       throw new Error(
-        `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+        `Failed to run "${pretty}": ${
+          err instanceof Error ? err.message : String(err)
+        }`
       );
     }
   }
@@ -151,9 +153,19 @@ export class UvRunner {
         env: this.getVenvEnv(venvPath),
       });
     } catch (err) {
-      throw new Error(
+      const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
+      // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+
+      throw error;
     }
   }
 
