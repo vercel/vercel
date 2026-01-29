@@ -42,7 +42,7 @@ export async function importBuilders(
 ): Promise<Map<string, BuilderWithPkg>> {
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
 
-  let importResult = await resolveBuilders(buildersDir, builderSpecs);
+  let importResult = await resolveBuilders(cwd, buildersDir, builderSpecs);
 
   if ('buildersToAdd' in importResult) {
     const installResult = await installBuilders(
@@ -53,6 +53,7 @@ export async function importBuilders(
     // resolve builders again, after they've been installed
     // with specs from the newly installed builders.
     importResult = await resolveBuilders(
+      cwd,
       buildersDir,
       builderSpecs,
       installResult.resolvedSpecs
@@ -87,31 +88,8 @@ function getPeerDependencies(): Record<string, string> {
   return peerDependencies;
 }
 
-/**
- * Returns the spec with version from peerDependencies if no explicit version
- * was specified and the package is listed in peerDependencies.
- * @internal Exported for testing
- */
-export function getSpecWithPeerVersion(
-  spec: string,
-  name: string | null,
-  parsed: npa.Result,
-  peerDeps: Record<string, string>
-): string {
-  // If no name or explicit version/range specified, return original spec
-  if (!name || parsed.type === 'version' || parsed.type === 'range') {
-    return spec;
-  }
-  // Check if this builder is in peerDependencies
-  const peerVersion = peerDeps[name];
-  if (peerVersion) {
-    output.debug(`Using peerDependency version for "${name}": ${peerVersion}`);
-    return `${name}@${peerVersion}`;
-  }
-  return spec;
-}
-
 export async function resolveBuilders(
+  cwd: string,
   buildersDir: string,
   builderSpecs: Set<string>,
   resolvedSpecs?: Map<string, string>
@@ -123,9 +101,8 @@ export async function resolveBuilders(
   for (const spec of builderSpecs) {
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
-
-    console.log('parsed spec', { parsed, resolvedSpec });
     const { name } = parsed;
+
     if (!name) {
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file
@@ -144,91 +121,146 @@ export async function resolveBuilders(
       continue;
     }
 
+    // Resolution priority:
+    // 1. Project's node_modules (cwd)
+    // 2. .vercel/builders (where we install builders)
+    // 3. peerDeps version (install if specified and not found)
+    // 4. CLI's node_modules (wherever CLI is installed - globally or as a project dep)
+
+    let pkgPath: string | undefined;
+    let builderPkg: PackageJson | undefined;
+    const peerVersion = peerDeps[name];
+
+    // 1. Try project's node_modules
     try {
-      let pkgPath: string | undefined;
-      let builderPkg: PackageJson | undefined;
+      pkgPath = join(cwd, 'node_modules', name, 'package.json');
+      const builderPkgJson: PackageJson = await readJSON(pkgPath);
+      output.debug(
+        `Found "${name}@${builderPkgJson.version}" in project's node_modules`
+      );
 
+      // Warn if version doesn't match peerDeps, but still use it
+      // Note: we could use satisfies() to see if project version
+      // satisfies peerVersion requirement, and do something different when it does and doesn't.
+      if (peerVersion && builderPkgJson.version !== peerVersion) {
+        output.warn(
+          `"${name}@${builderPkgJson.version}" does not match expected "${peerVersion}"`
+        );
+      }
+      builderPkg = builderPkgJson;
+    } catch (err: unknown) {
+      if (!isErrnoException(err) || err.code !== 'ENOENT') {
+        throw err;
+      }
+      output.debug(
+        `"${name}@${peerVersion}" not found in project's node_modules`
+      );
+    }
+
+    // 2. Try .vercel/builders (where we install builders)
+    if (!builderPkg) {
       try {
-        // First try `.vercel/builders`. The package name should always be available
-        // at the top-level of `node_modules` since CLI is installing those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
-        builderPkg = await readJSON(pkgPath);
-      } catch (error: unknown) {
-        if (!isErrnoException(error)) {
-          throw error;
-        }
-        if (error.code !== 'ENOENT') {
-          throw error;
-        }
+        const cachedPkg: PackageJson = await readJSON(pkgPath);
+        output.debug(
+          `Found "${name}@${cachedPkg.version}" in .vercel/builders`
+        );
 
-        // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
-        // dependency. `require.resolve()` will throw if the Builder is not a CLI
-        // dep, in which case we'll install it into `.vercel/builders`.
+        // Verify cached version matches peerDeps exactly
+        if (peerVersion && cachedPkg.version !== peerVersion) {
+          output.debug(
+            `Cached "${name}@${cachedPkg.version}" does not match peerDep "${peerVersion}", will reinstall`
+          );
+          buildersToAdd.add(`${name}@${peerVersion}`);
+          continue;
+        }
+        builderPkg = cachedPkg;
+      } catch (err: unknown) {
+        if (!isErrnoException(err) || err.code !== 'ENOENT') {
+          throw err;
+        }
+        output.debug(`"${name}@${peerVersion}" not found in .vercel/builders`);
+      }
+    }
+
+    // 3. If in peerDeps and not found yet, install it
+    if (!builderPkg && peerVersion) {
+      output.debug(
+        `"${name}@${peerVersion}" not found in project or .vercel/builders, will install`
+      );
+      buildersToAdd.add(`${name}@${peerVersion}`);
+      continue;
+    }
+
+    // 4. Try CLI's node_modules (wherever CLI is installed - globally or as a project dep)
+    if (!builderPkg) {
+      try {
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
         builderPkg = await readJSON(pkgPath);
-      }
-
-      if (!builderPkg || !pkgPath) {
-        throw new Error(`Failed to load \`package.json\` for "${name}"`);
-      }
-
-      if (typeof builderPkg.version !== 'string') {
-        throw new Error(
-          `\`package.json\` for "${name}" does not contain a "version" field`
-        );
-      }
-
-      if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
-        // An explicit Builder version was specified but it does
-        // not match the version that is currently installed
-        output.debug(
-          `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
-        );
-        buildersToAdd.add(getSpecWithPeerVersion(spec, name, parsed, peerDeps));
+        output.debug(`Found "${name}" in CLI's node_modules`);
+      } catch (err: unknown) {
+        if (
+          !isErrnoException(err) ||
+          (err as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND'
+        ) {
+          throw err;
+        }
+        // Not found anywhere and no peerDep - this is an error on second run
+        if (resolvedSpecs) {
+          throw new Error(`Builder "${name}" not found`);
+        }
+        output.debug(`"${name}" not found anywhere, will install`);
+        buildersToAdd.add(spec);
         continue;
-      }
-
-      if (
-        parsed.type === 'range' &&
-        !satisfies(builderPkg.version, parsed.rawSpec)
-      ) {
-        // An explicit Builder range was specified but it is not
-        // compatible with the version that is currently installed
-        output.debug(
-          `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
-        );
-        buildersToAdd.add(getSpecWithPeerVersion(spec, name, parsed, peerDeps));
-        continue;
-      }
-
-      // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
-      const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
-      const builder = require_(path);
-
-      builders.set(spec, {
-        builder,
-        pkg: {
-          name,
-          ...builderPkg,
-        },
-        path,
-        pkgPath,
-      });
-      output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
-    } catch (err: any) {
-      // `resolvedSpecs` is only passed into this function on the 2nd run,
-      // so if MODULE_NOT_FOUND happens in that case then we don't want to
-      // try to install again. Instead just pass through the error to the user
-      if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
-        output.debug(`Failed to import "${name}": ${err}`);
-        buildersToAdd.add(getSpecWithPeerVersion(spec, name, parsed, peerDeps));
-      } else {
-        err.message = `Importing "${name}": ${err.message}`;
-        throw err;
       }
     }
+
+    if (!builderPkg || !pkgPath) {
+      throw new Error(`Failed to load \`package.json\` for "${name}"`);
+    }
+
+    if (typeof builderPkg.version !== 'string') {
+      throw new Error(
+        `\`package.json\` for "${name}" does not contain a "version" field`
+      );
+    }
+
+    // Validate explicit version/range requirements from spec
+    if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
+      output.debug(
+        `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
+      );
+      buildersToAdd.add(spec);
+      continue;
+    }
+
+    if (
+      parsed.type === 'range' &&
+      !satisfies(builderPkg.version, parsed.rawSpec)
+    ) {
+      output.debug(
+        `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
+      );
+      buildersToAdd.add(spec);
+      continue;
+    }
+
+    // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
+    const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
+    const builder = require_(path);
+
+    builders.set(spec, {
+      builder,
+      pkg: {
+        name,
+        ...builderPkg,
+      },
+      path,
+      pkgPath,
+    });
+    output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
   }
 
   // Add any Builders that are not yet present into `.vercel/builders`
@@ -329,7 +361,6 @@ async function installBuilders(
     for (const [name, version] of Object.entries(
       buildersPkg.dependencies || {}
     )) {
-      console.log(`comparing ${spec} to ${name}@${version}`);
       if (version === spec) {
         output.debug(`Resolved Builder spec "${spec}" to name "${name}"`);
         resolvedSpecs.set(spec, name);
@@ -337,7 +368,6 @@ async function installBuilders(
     }
   }
 
-  console.log('resolvedspecs', resolvedSpecs);
   return { resolvedSpecs };
 }
 
