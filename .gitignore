@@ -34,3 +34,4 @@ __pycache__
 turbo-cache-key.json
 junit.xml
 **/target/
+.idea
