@@ -3457,6 +3457,29 @@ export async function getStaticFiles(
     '**',
     path.join(entryPath, outputDirectory, 'static')
   );
+
+  // Read IMMUTABLE manifest if it exists
+  const immutableManifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    'IMMUTABLE'
+  );
+  const immutableFileSet = new Set<string>();
+
+  if (await fs.pathExists(immutableManifestPath)) {
+    const immutableContent = await fs.readFile(immutableManifestPath, 'utf8');
+    const immutableLines = immutableContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    // Each line is a path relative to .next/static/ (e.g., "chunks/abc.js")
+    for (const line of immutableLines) {
+      immutableFileSet.add(line);
+    }
+    debug(`Found IMMUTABLE manifest with ${immutableFileSet.size} entries`);
+  }
+
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
 
   let publicFolderFiles: UnwrapPromise<ReturnType<typeof glob>> = {};
@@ -3478,12 +3501,26 @@ export async function getStaticFiles(
     debug('No public folder found');
   }
   const staticFiles: Record<string, FileFsRef> = {};
+  const immutableFiles: Record<string, FileFsRef> = {};
   const staticDirectoryFiles: Record<string, FileFsRef> = {};
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
     const outputPath = path.posix.join(entryDirectory, `_next/static/${file}`);
-    staticFiles[outputPath] = nextStaticFiles[file];
+    if (immutableFileSet.has(file)) {
+      nextStaticFiles[file].immutable = true;
+      immutableFiles[outputPath] = nextStaticFiles[file];
+      immutableFileSet.delete(file); // Track which entries were matched
+    } else {
+      staticFiles[outputPath] = nextStaticFiles[file];
+    }
+  }
+
+  // Warn about unmatched IMMUTABLE entries
+  for (const unmatchedFile of immutableFileSet) {
+    console.warn(
+      `Warning: IMMUTABLE entry "static/${unmatchedFile}" not found in .next/static/`
+    );
   }
 
   for (const file of Object.keys(staticFolderFiles)) {
@@ -3499,6 +3536,7 @@ export async function getStaticFiles(
   console.timeEnd(collectLabel);
   return {
     staticFiles,
+    immutableFiles,
     staticDirectoryFiles,
     publicDirectoryFiles,
   };

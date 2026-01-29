@@ -6,6 +6,7 @@ interface FileBlobOptions {
   mode?: number;
   contentType?: string;
   data: string | Buffer;
+  immutable?: boolean;
 }
 
 interface FromStreamOptions {
@@ -19,14 +20,25 @@ export default class FileBlob implements FileBase {
   public mode: number;
   public data: string | Buffer;
   public contentType: string | undefined;
+  /**
+   * When true, this file will be written to the `immutable` output directory
+   * instead of `static`, indicating it can be cached indefinitely.
+   */
+  public immutable: boolean;
 
-  constructor({ mode = 0o100644, contentType, data }: FileBlobOptions) {
+  constructor({
+    mode = 0o100644,
+    contentType,
+    data,
+    immutable = false,
+  }: FileBlobOptions) {
     assert(typeof mode === 'number');
     assert(typeof data === 'string' || Buffer.isBuffer(data));
     this.type = 'FileBlob';
     this.mode = mode;
     this.contentType = contentType;
     this.data = data;
+    this.immutable = immutable;
   }
 
   static async fromStream({
