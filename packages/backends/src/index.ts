@@ -11,6 +11,7 @@ import {
   getNodeVersion,
   Span,
 } from '@vercel/build-utils';
+import { findEntrypoint } from '@vercel/cervel';
 
 export const version = 2;
 
@@ -41,11 +42,15 @@ export const build: BuildV2 = async args => {
 
   const files = outputConfig.files;
 
+  const entrypoint = await findEntrypoint(args.workPath);
+  debug('Entrypoint', entrypoint);
+
   debug('Introspection starting..');
   const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
   const { routes, framework } = await introspectAppSpan.trace(async span => {
     const result = await introspectApp({
-      ...outputConfig,
+      handler: entrypoint,
+      dir: args.workPath,
       framework: args.config.framework,
       env: {
         ...(args.meta?.env ?? {}),

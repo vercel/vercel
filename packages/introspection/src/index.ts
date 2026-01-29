@@ -9,7 +9,6 @@ import {
 } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { z } from 'zod';
 import {
@@ -32,10 +31,11 @@ export const introspectApp = async (args: {
   if (isExperimentalBackendsWithoutIntrospectionEnabled()) {
     return defaultResult(args);
   }
-  const cjsLoaderPath = fileURLToPath(
-    new URL('loaders/cjs.cjs', import.meta.url)
-  );
-  const esmLoaderPath = new URL('loaders/esm.mjs', import.meta.url).href;
+  const cjsLoaderPath = new URL('loaders/cjs.cjs', import.meta.url).pathname;
+  const rolldownEsmLoaderPath = new URL(
+    'loaders/rolldown-esm.mjs',
+    import.meta.url
+  ).href;
   const handlerPath = join(args.dir, args.handler);
 
   const introspectionSchema = z.object({
@@ -70,7 +70,7 @@ export const introspectApp = async (args: {
       debug('Spawning introspection process');
       const child = spawn(
         'node',
-        ['-r', cjsLoaderPath, '--import', esmLoaderPath, handlerPath],
+        ['-r', cjsLoaderPath, '--import', rolldownEsmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
           cwd: args.dir,
@@ -90,6 +90,12 @@ export const introspectApp = async (args: {
 
       // Pipe stdout to the file stream
       child.stdout?.pipe(writeStream);
+
+      // Capture stderr
+      let stderrBuffer = '';
+      child.stderr?.on('data', (data: Buffer) => {
+        stderrBuffer += data.toString();
+      });
 
       writeStream.on('error', err => {
         debug(`Write stream error: ${err.message}`);
@@ -135,8 +141,9 @@ export const introspectApp = async (args: {
           writeStream.end(() => {
             streamClosed = true;
             // Read the file once the stream is closed
+            let stdoutBuffer: string | undefined;
             try {
-              const stdoutBuffer = readFileSync(tempFilePath, 'utf8');
+              stdoutBuffer = readFileSync(tempFilePath, 'utf8');
 
               // Check if we have a complete introspection result
               const beginIndex = stdoutBuffer.indexOf(
@@ -157,9 +164,15 @@ export const introspectApp = async (args: {
                   introspectionData = introspectionResult;
                   debug('Introspection data parsed successfully');
                 }
+              } else {
+                debug(
+                  `Introspection markers not found.\nstdout:\n${stdoutBuffer}\nstderr:\n${stderrBuffer}`
+                );
               }
             } catch (error) {
-              debug(`Error parsing introspection data: ${error}`);
+              debug(
+                `Error parsing introspection data: ${error}\nstdout:\n${stdoutBuffer}\nstderr:\n${stderrBuffer}`
+              );
             } finally {
               // Clean up the temporary directory and file
               try {

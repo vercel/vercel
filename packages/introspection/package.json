@@ -14,7 +14,9 @@
     },
     "./loaders/cjs": "./dist/loaders/cjs.js",
     "./loaders/esm": "./dist/loaders/esm.js",
-    "./loaders/hooks": "./dist/loaders/hooks.js"
+    "./loaders/hooks": "./dist/loaders/hooks.js",
+    "./loaders/rolldown-esm": "./dist/loaders/rolldown-esm.js",
+    "./loaders/rolldown-hooks": "./dist/loaders/rolldown-hooks.js"
   },
   "repository": {
     "type": "git",
@@ -32,19 +34,20 @@
   ],
   "dependencies": {
     "path-to-regexp": "8.3.0",
+    "rolldown": "1.0.0-rc.1",
     "zod": "3.22.4"
   },
   "devDependencies": {
     "@types/express": "5.0.3",
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
-    "@vercel/cervel": "workspace:*",
-    "@vercel/static-config": "workspace:*",
-    "@vercel/nft": "1.1.1",
     "@types/node": "20.11.0",
-    "fs-extra": "11.1.0",
     "@vercel/build-utils": "workspace:*",
+    "@vercel/cervel": "workspace:*",
+    "@vercel/nft": "1.1.1",
+    "@vercel/static-config": "workspace:*",
     "execa": "3.2.0",
+    "fs-extra": "11.1.0",
     "hono": "4.10.1",
     "jest-junit": "16.0.0",
     "tsdown": "0.16.3",
