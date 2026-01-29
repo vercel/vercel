@@ -210,7 +210,7 @@ export async function createPyprojectToml({
   pyprojectPath: string;
   dependencies: string[];
 }) {
-  const requiresPython = `~=${DEFAULT_PYTHON_VERSION}`;
+  const requiresPython = `~=${DEFAULT_PYTHON_VERSION}.0`;
 
   const depsToml =
     dependencies.length > 0

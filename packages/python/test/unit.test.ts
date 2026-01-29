@@ -429,7 +429,7 @@ describe('createPyprojectToml', () => {
 
       const content = fs.readFileSync(pyprojectPath, 'utf8');
       expect(content).toContain(
-        `requires-python = "~=${DEFAULT_PYTHON_VERSION}"`
+        `requires-python = "~=${DEFAULT_PYTHON_VERSION}.0"`
       );
     } finally {
       if (fs.existsSync(tempDir)) {
