@@ -106,9 +106,18 @@ export class UvRunner {
         env: getProtectedUvEnv(process.env),
       });
     } catch (err) {
-      throw new Error(
+      const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
+      // Preserve error code for proper error reporting
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = err.code;
+        } else if ('signal' in err) {
+          error.code = err.signal;
+        }
+      }
+      throw error;
     }
   }
 
@@ -151,9 +160,18 @@ export class UvRunner {
         env: this.getVenvEnv(venvPath),
       });
     } catch (err) {
-      throw new Error(
+      const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
+      // Preserve error code for proper error reporting
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = err.code;
+        } else if ('signal' in err) {
+          error.code = err.signal;
+        }
+      }
+      throw error;
     }
   }
 
