@@ -78,7 +78,7 @@ export const serve = async (args: CervelServeOptions) => {
   }
   const srvxArgs = [srvxBin, ...restArgs, entrypoint];
   await execa('npx', srvxArgs, {
-    cwd: args.workPath, // execa's cwd option
+    cwd: args.workPath,
     stdio: 'inherit',
   });
 };

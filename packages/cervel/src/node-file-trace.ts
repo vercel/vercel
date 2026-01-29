@@ -81,7 +81,10 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
     },
   });
 
+  // When running this against a built output (eg, the user-provided output directory the
+  // traced paths are the same as the compiled source files), so keep them in the result.
   if (!args.keepTracedPaths) {
+    // Don't include source files like `server.ts` in the result.
     for (const file of tracedPaths) {
       const relativeFile = relative(args.repoRootPath, file);
       result.fileList.delete(relativeFile);
@@ -92,20 +95,14 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
 
   for (const file of result.fileList) {
     const absolutePath = join(args.repoRootPath, file);
-    try {
-      const stats = await lstat(absolutePath);
-      // Keep the file path exactly as it is in the filesystem (repo-relative)
-      const outputPath = file;
+    const stats = await lstat(absolutePath);
+    const outputPath = file;
 
-      if (stats.isSymbolicLink() || stats.isFile()) {
-        files[outputPath] = new FileFsRef({
-          fsPath: absolutePath,
-          mode: stats.mode,
-        });
-      }
-      // Skip directories
-    } catch (err) {
-      debug(`Warning: Could not stat file ${absolutePath}:`, err);
+    if (stats.isSymbolicLink() || stats.isFile()) {
+      files[outputPath] = new FileFsRef({
+        fsPath: absolutePath,
+        mode: stats.mode,
+      });
     }
   }
 
