@@ -260,7 +260,7 @@ export default class Client extends EventEmitter implements Stdio {
    *
    * @returns true if the operation should proceed, false if canceled
    */
-  private async confirmMutatingOperation(
+  async confirmMutatingOperation(
     url: string,
     method: string | undefined
   ): Promise<boolean> {
@@ -370,12 +370,6 @@ export default class Client extends EventEmitter implements Stdio {
   fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   async fetch(url: string, opts: FetchOptions = {}) {
-    // Check for confirmation before proceeding with mutating operations
-    const confirmed = await this.confirmMutatingOperation(url, opts.method);
-    if (!confirmed) {
-      throw new Error('Operation canceled by user');
-    }
-
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 

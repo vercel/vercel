@@ -237,6 +237,15 @@ async function executeSingleRequest(
   flags: ParsedFlags
 ): Promise<number> {
   try {
+    // Confirm DELETE operations before proceeding
+    const confirmed = await client.confirmMutatingOperation(
+      config.url,
+      config.method
+    );
+    if (!confirmed) {
+      return 1;
+    }
+
     const response: Response = await client.fetch(config.url, {
       method: config.method,
       body: config.body,

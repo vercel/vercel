@@ -1,84 +1,69 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../mocks/client';
 
-describe('Client confirmation prompts', () => {
+describe('Client confirmMutatingOperation', () => {
   beforeEach(() => {
     // Reset client state
     client.reset();
-
-    // Mock a simple endpoint for testing
-    client.scenario.get('/v9/test', (_req, res) => {
-      res.json({ success: true });
-    });
-    client.scenario.post('/v9/test', (_req, res) => {
-      res.json({ created: true });
-    });
-    client.scenario.put('/v9/test', (_req, res) => {
-      res.json({ updated: true });
-    });
-    client.scenario.patch('/v9/test', (_req, res) => {
-      res.json({ patched: true });
-    });
-    client.scenario.delete('/v9/test', (_req, res) => {
-      res.json({ deleted: true });
-    });
   });
 
   describe('DELETE operations', () => {
     it('should prompt for confirmation on DELETE', async () => {
-      // Disable skip to test confirmation prompt
       client.dangerouslySkipPermissions = false;
-      // Mock confirm to return true
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'DELETE' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
       expect(client.input.confirm).toHaveBeenCalledTimes(1);
       expect(client.input.confirm).toHaveBeenCalledWith(
         expect.stringContaining('DELETE'),
         false
       );
-      expect(result).toEqual({ deleted: true });
+      expect(result).toBe(true);
     });
 
-    it('should cancel DELETE when user says no', async () => {
-      // Disable skip to test confirmation prompt
+    it('should return false when user cancels DELETE', async () => {
       client.dangerouslySkipPermissions = false;
-      // Mock confirm to return false
       client.input.confirm = vi.fn().mockResolvedValue(false);
 
-      await expect(
-        client.fetch('/v9/test', { method: 'DELETE' })
-      ).rejects.toThrow('Operation canceled by user');
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
       expect(client.input.confirm).toHaveBeenCalledTimes(1);
+      expect(result).toBe(false);
     });
 
     it('should skip confirmation with --dangerously-skip-permissions flag', async () => {
       client.dangerouslySkipPermissions = true;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'DELETE' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
-      // Confirm should NOT be called when dangerouslySkipPermissions is true
       expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toEqual({ deleted: true });
+      expect(result).toBe(true);
     });
 
-    it('should show error in non-TTY mode without --dangerously-skip-permissions', async () => {
-      // Disable skip to test non-TTY error behavior
+    it('should return false in non-TTY mode without --dangerously-skip-permissions', async () => {
       client.dangerouslySkipPermissions = false;
       client.stdin.isTTY = false;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      await expect(
-        client.fetch('/v9/test', { method: 'DELETE' })
-      ).rejects.toThrow('Operation canceled by user');
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
-      // Confirm should NOT be called in non-TTY mode
       expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(result).toBe(false);
 
-      // Should show error message
       const output = client.stderr.getFullOutput();
       expect(output).toContain('DELETE operations require confirmation');
       expect(output).toContain('--dangerously-skip-permissions');
@@ -89,10 +74,12 @@ describe('Client confirmation prompts', () => {
       client.dangerouslySkipPermissions = true;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'DELETE' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
-      expect(result).toEqual({ deleted: true });
-      // Confirm should NOT be called when dangerouslySkipPermissions is true
+      expect(result).toBe(true);
       expect(client.input.confirm).not.toHaveBeenCalled();
     });
   });
@@ -104,9 +91,12 @@ describe('Client confirmation prompts', () => {
       client.dangerouslySkipPermissions = true;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'DELETE' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
-      expect(result).toEqual({ deleted: true });
+      expect(result).toBe(true);
 
       const output = client.stderr.getFullOutput();
       expect(output).toContain('WARNING');
@@ -122,62 +112,67 @@ describe('Client confirmation prompts', () => {
       client.dangerouslySkipPermissions = true;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'DELETE' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'DELETE'
+      );
 
-      expect(result).toEqual({ deleted: true });
+      expect(result).toBe(true);
 
       const output = client.stderr.getFullOutput();
       expect(output).toContain('WARNING');
       expect(output).toContain('AGENT MODE');
-      // Should NOT contain the agent name info when not provided
       expect(output).not.toContain('(undefined)');
     });
   });
 
   describe('Non-DELETE operations', () => {
-    it('should not prompt for GET requests', async () => {
+    it('should return true for GET requests without prompting', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'GET' });
+      const result = await client.confirmMutatingOperation('/v9/test', 'GET');
 
       expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toEqual({ success: true });
+      expect(result).toBe(true);
     });
 
-    it('should not prompt for POST requests', async () => {
+    it('should return true for POST requests without prompting', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'POST' });
+      const result = await client.confirmMutatingOperation('/v9/test', 'POST');
 
       expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toEqual({ created: true });
+      expect(result).toBe(true);
     });
 
-    it('should not prompt for PUT requests', async () => {
+    it('should return true for PUT requests without prompting', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'PUT' });
+      const result = await client.confirmMutatingOperation('/v9/test', 'PUT');
 
       expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toEqual({ updated: true });
+      expect(result).toBe(true);
     });
 
-    it('should not prompt for PATCH requests', async () => {
+    it('should return true for PATCH requests without prompting', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'PATCH' });
+      const result = await client.confirmMutatingOperation('/v9/test', 'PATCH');
 
       expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toEqual({ patched: true });
+      expect(result).toBe(true);
     });
 
-    it('should not prompt for requests with no method specified (defaults to GET)', async () => {
+    it('should return true for undefined method (defaults to GET)', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test');
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        undefined
+      );
 
       expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toEqual({ success: true });
+      expect(result).toBe(true);
     });
   });
 
@@ -186,26 +181,31 @@ describe('Client confirmation prompts', () => {
       client.dangerouslySkipPermissions = true;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'delete' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'delete'
+      );
 
-      expect(result).toEqual({ deleted: true });
+      expect(result).toBe(true);
     });
 
     it('should handle mixed case DELETE method', async () => {
       client.dangerouslySkipPermissions = true;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      const result = await client.fetch('/v9/test', { method: 'Delete' });
+      const result = await client.confirmMutatingOperation(
+        '/v9/test',
+        'Delete'
+      );
 
-      expect(result).toEqual({ deleted: true });
+      expect(result).toBe(true);
     });
 
     it('should include URL in confirmation message', async () => {
-      // Disable skip to test confirmation message content
       client.dangerouslySkipPermissions = false;
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
-      await client.fetch('/v9/test', { method: 'DELETE' });
+      await client.confirmMutatingOperation('/v9/test', 'DELETE');
 
       expect(client.input.confirm).toHaveBeenCalledWith(
         expect.stringContaining('/v9/test'),
