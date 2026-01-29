@@ -3,11 +3,10 @@ import { spawn } from 'child_process';
 import { extname, join } from 'path';
 import { Colors as c } from './utils.js';
 import { existsSync } from 'fs';
-import type { TypescriptOptions } from './types.js';
 
 const require_ = createRequire(import.meta.url);
 
-export const typescript = (args: TypescriptOptions) => {
+export const typescript = (args: { entrypoint: string; workPath: string }) => {
   const extension = extname(args.entrypoint);
   const isTypeScript = ['.ts', '.mts', '.cts'].includes(extension);
 
@@ -31,7 +30,7 @@ export const typescript = (args: TypescriptOptions) => {
 };
 
 async function doTypeCheck(
-  args: TypescriptOptions,
+  args: { entrypoint: string; workPath: string },
   tscPath: string
 ): Promise<void> {
   let stdout = '';
@@ -78,18 +77,12 @@ async function doTypeCheck(
         resolve();
       } else {
         const output = stdout || stderr;
-        // Filter out TS2578 (unused @ts-expect-error) which we don't want to fail on
-        const filteredOutput = filterIgnoredErrors(output);
-
-        if (!filteredOutput.trim()) {
-          // All errors were filtered out, treat as success
-          console.log(c.gray(`${c.bold(c.cyan('✓'))} Typecheck complete`));
-          resolve();
-        } else {
+        if (output) {
+          // Print the TypeScript errors directly
           console.error('\nTypeScript type check failed:\n');
-          console.error(filteredOutput);
-          reject(new Error('TypeScript type check failed'));
+          console.error(output);
         }
+        reject(new Error('TypeScript type check failed'));
       }
     });
     child.on('error', err => {
@@ -98,42 +91,7 @@ async function doTypeCheck(
   });
 }
 
-// Errors to ignore (not fail on)
-const IGNORED_ERROR_CODES = [
-  // Since we provide the --esModuleInterop flag, ther user's IDE might show an error that we won't fail on
-  'TS2578', // Unused '@ts-expect-error' directive.
-];
-
-function filterIgnoredErrors(output: string): string {
-  if (!output) return '';
-
-  const lines = output.split('\n');
-  const filtered: string[] = [];
-  let skipUntilNextError = false;
-
-  for (const line of lines) {
-    const hasIgnoredError = IGNORED_ERROR_CODES.some(code =>
-      line.includes(code)
-    );
-
-    if (hasIgnoredError) {
-      skipUntilNextError = true;
-      continue;
-    }
-
-    if (line.includes(' - error TS')) {
-      skipUntilNextError = false;
-    }
-
-    if (!skipUntilNextError) {
-      filtered.push(line);
-    }
-  }
-
-  return filtered.join('\n');
-}
-
-const resolveTscPath = (args: TypescriptOptions) => {
+const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
   try {
     const pkgPath = require_.resolve('typescript/bin/tsc', {
       paths: [args.workPath],

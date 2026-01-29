@@ -48,10 +48,3 @@ export type NodeFileTraceOptions = PathOptions & {
   tracedPaths: string[];
   context: { files: Files };
 };
-
-/**
- * Options for TypeScript type checking.
- */
-export type TypescriptOptions = Pick<BuildOptions, 'workPath'> & {
-  entrypoint: string;
-};

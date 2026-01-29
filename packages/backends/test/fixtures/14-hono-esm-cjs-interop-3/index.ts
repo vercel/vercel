@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-// @ts-expect-error
+// @ts-ignore
 import { sign } from './lib/my-cjs-file'
 
 sign({ foo: 'bar' }, 'secret')

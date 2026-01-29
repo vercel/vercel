@@ -64,7 +64,6 @@ export const build: BuildV2 = async args => {
     debug(`Introspection failed to detect routes`);
   }
 
-  // The handler path is already repo-relative due to preserveModulesRoot in rolldown
   const handler = outputConfig.handler;
   if (!files) {
     throw new Error('Unable to trace files for build');

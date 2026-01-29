@@ -7,7 +7,6 @@ export const main = async () => {
   const { cwd, out, ...rest } = options.values;
   const [command, entrypoint] = options.positionals;
 
-  // CLI uses `cwd` flag, internally we use `workPath` terminology
   const workPath = cwd;
   const repoRootPath = cwd;
 
