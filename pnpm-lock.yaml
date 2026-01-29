@@ -228,12 +228,6 @@ importers:
       '@vercel/introspection':
         specifier: workspace:*
         version: link:../introspection
-      '@vercel/nft':
-        specifier: 1.1.1
-        version: 1.1.1
-      '@vercel/static-config':
-        specifier: workspace:*
-        version: link:../static-config
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
