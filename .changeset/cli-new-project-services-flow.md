@@ -1,5 +1,5 @@
 ---
-'@vercel/cli': minor
+'vercel': minor
 '@vercel/fs-detectors': patch
 ---
 
