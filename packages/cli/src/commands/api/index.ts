@@ -96,6 +96,11 @@ export default async function api(client: Client): Promise<number> {
     return 2;
   }
 
+  // Set dangerously-skip-permissions flag for DELETE confirmation handling
+  if (flags['--dangerously-skip-permissions']) {
+    client.dangerouslySkipPermissions = true;
+  }
+
   // Get endpoint from args (args[0] is 'api', args[1] is the endpoint)
   let endpoint = firstArg;
   let selectedMethod: string | undefined;
@@ -154,6 +159,8 @@ export default async function api(client: Client): Promise<number> {
   if (flags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
   if (flags['--generate'])
     telemetryClient.trackCliOptionGenerate(flags['--generate']);
+  if (flags['--dangerously-skip-permissions'])
+    telemetryClient.trackCliFlagDangerouslySkipPermissions(true);
 
   // Use method from interactive selection if not overridden by flag
   const finalFlags = { ...flags } as ParsedFlags;
@@ -176,7 +183,7 @@ export default async function api(client: Client): Promise<number> {
         'https://api.vercel.com'
       );
       output.log('');
-      output.log('Add your authorization header to the curl command below:');
+      output.log('Replace <TOKEN> with your auth token:');
       output.log('');
       client.stdout.write(curlCmd + '\n');
       return 0;

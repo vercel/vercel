@@ -12,11 +12,13 @@ const overrides = new Map([
   ['starlette', 'python'],
   // Sinatra is a Ruby framework without a dedicated framework preset
   ['sinatra', 'ruby'],
+  // Axum is a Rust framework without a dedicated framework preset
+  ['axum', 'rust'],
 ]);
 
 // Examples that use experimental frameworks and should
 // be tested with useExperimentalFrameworks enabled
-const experimentalExamples = new Set(['starlette', 'sinatra']);
+const experimentalExamples = new Set(['starlette', 'sinatra', 'axum']);
 
 describe('examples should be detected', () => {
   it.each(getExamples())(
