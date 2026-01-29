@@ -1,15 +1,7 @@
 import { relative, join } from 'node:path';
 import { readFile, lstat } from 'node:fs/promises';
 import { isNativeError } from 'node:util/types';
-import {
-  FileFsRef,
-  glob,
-  isSymbolicLink,
-  type Files,
-  type File,
-  FileBlob,
-  debug,
-} from '@vercel/build-utils';
+import { FileFsRef, glob, debug, type Files } from '@vercel/build-utils';
 import {
   nodeFileTrace as nft,
   resolve as nftResolveDependency,
@@ -35,6 +27,7 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
    * While we're not using NFT to process source code, we are using it
    * to tree shake node deps, and include any fs reads for files that are
    * not part of the traced paths or compiled source files.
+   * Most of this is identical to the `@vercel/node` implementation
    */
   const result = await nft(Array.from(tracedPaths), {
     base: args.repoRootPath,
@@ -46,14 +39,9 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
     },
     async readFile(fsPath) {
       try {
-        let entry: File | undefined;
         let source: string | Buffer = await readFile(fsPath);
 
-        const { mode } = await lstat(fsPath);
-        if (isSymbolicLink(mode)) {
-          entry = new FileFsRef({ fsPath, mode });
-        }
-
+        // NFT doesn't support TypeScript, so we need to transform the source code.
         if (
           (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
           fsPath.endsWith('.tsx') ||
@@ -64,9 +52,6 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
           source = result.code;
         }
 
-        if (!entry) {
-          entry = new FileBlob({ data: source, mode });
-        }
         return source;
       } catch (error: unknown) {
         if (

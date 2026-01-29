@@ -26,6 +26,9 @@ const meta = { skipDownload: true };
 
 // Set to true to use packages/backends/debug instead of a temp directory
 const USE_DEBUG_DIR = false;
+// Uncomment to enable debug logs
+// process.env.VERCEL_BUILDER_DEBUG = '1';
+
 const DEBUG_DIR = join(__dirname, 'debug');
 
 const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
@@ -74,7 +77,7 @@ describe('successful builds', async () => {
       await expect(
         extractAndExecuteLambda(lambda, workDir)
       ).resolves.toBeUndefined();
-    }, 20000);
+    }, 20000); // introspection is up to 8 seconds for apps the do .listen();
   }
 
   // eslint-disable-next-line jest/no-disabled-tests
