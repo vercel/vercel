@@ -34,7 +34,7 @@ export async function tryDetectServices(
   const hasNoServicesError = result.errors.some(
     e => e.code === 'NO_SERVICES_CONFIGURED'
   );
-  if (hasNoServicesError || result.services.length === 0) {
+  if (hasNoServicesError) {
     return null;
   }
 

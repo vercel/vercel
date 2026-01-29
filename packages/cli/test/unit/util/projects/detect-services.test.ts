@@ -127,7 +127,7 @@ describe('tryDetectServices()', () => {
     });
   });
 
-  it('should return null when all services have validation errors', async () => {
+  it('should return result with errors when all services have validation errors', async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
     await writeFile(
       join(tempDir, 'vercel.json'),
@@ -140,7 +140,9 @@ describe('tryDetectServices()', () => {
     );
 
     const result = await tryDetectServices(tempDir);
-    // No valid services, so returns null
-    expect(result).toBeNull();
+    // Returns result with errors so they can be displayed to the user
+    expect(result).not.toBeNull();
+    expect(result?.services).toHaveLength(0);
+    expect(result?.errors.length).toBeGreaterThan(0);
   });
 });
