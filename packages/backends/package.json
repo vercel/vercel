@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsdown",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts' 'test/unit.test.ts'",
+    "vitest-unit": "glob --absolute 'test/unit.*test.ts'",
     "type-check": "tsc --noEmit"
   },
   "files": [
