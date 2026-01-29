@@ -46,10 +46,10 @@ async function doTypeCheck(
   const tscArgs = [
     tscPath,
     '--noEmit', // Force no emit even if tsconfig says otherwise
-    // '--pretty',
-    // '--allowJs',
+    '--pretty',
+    '--allowJs',
     '--esModuleInterop',
-    // '--skipLibCheck',
+    '--skipLibCheck',
   ];
   const tsconfig = await findNearestTsconfig(args.workPath);
   if (tsconfig) {
@@ -112,18 +112,15 @@ function filterIgnoredErrors(output: string): string {
   let skipUntilNextError = false;
 
   for (const line of lines) {
-    // Check if this line contains an ignored error code
     const hasIgnoredError = IGNORED_ERROR_CODES.some(code =>
       line.includes(code)
     );
 
     if (hasIgnoredError) {
-      // Skip this error and subsequent lines until next error
       skipUntilNextError = true;
       continue;
     }
 
-    // Check if this is a new error line (contains " - error TS")
     if (line.includes(' - error TS')) {
       skipUntilNextError = false;
     }

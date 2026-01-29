@@ -108,14 +108,16 @@ export const rolldown = async (args: RolldownOptions) => {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
 
+  const cleanup = async () => {
+    await rm(outputDir, { recursive: true, force: true });
+  };
+
   return {
     result: {
       handler,
       outputDir,
       outputFiles: context.files,
     },
-    cleanup: async () => {
-      await rm(outputDir, { recursive: true, force: true });
-    },
+    cleanup,
   };
 };

@@ -1,13 +1,13 @@
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import { rolldown } from './rolldown.js';
 import { typescript } from './typescript.js';
-import { join } from 'path';
+import { join } from 'node:path';
 import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
-import type { ParseArgsConfig } from 'util';
-import type { CervelBuildOptions, CervelServeOptions } from './types.js';
 export { nodeFileTrace } from './node-file-trace.js';
+import type { ParseArgsConfig } from 'node:util';
+import type { CervelBuildOptions, CervelServeOptions } from './types.js';
 export type {
   CervelBuildOptions,
   CervelServeOptions,

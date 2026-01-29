@@ -1,4 +1,6 @@
 import { relative, join } from 'node:path';
+import { readFile, lstat } from 'node:fs/promises';
+import { isNativeError } from 'node:util/types';
 import {
   FileFsRef,
   glob,
@@ -13,14 +15,13 @@ import {
   resolve as nftResolveDependency,
 } from '@vercel/nft';
 import { transform } from 'oxc-transform';
-import { lstatSync, readFileSync } from 'node:fs';
-import { isNativeError } from 'node:util/types';
 import type { NodeFileTraceOptions } from './types.js';
 
 export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
   const files: Files = {};
   const { tracedPaths } = args;
-  // For compiled output files: use paths directly from glob (top-level, no .vercel/node prefix)
+
+  // Rolldown builds source files into the outDir, node_modules are not included.
   const compiledSourceFiles = await glob('**/*', {
     cwd: args.outDir,
     follow: true,
@@ -32,8 +33,8 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
 
   /**
    * While we're not using NFT to process source code, we are using it
-   * to tree shake node deps, and include an fs reads for files that are
-   * not part of the traced paths.
+   * to tree shake node deps, and include any fs reads for files that are
+   * not part of the traced paths or compiled source files.
    */
   const result = await nft(Array.from(tracedPaths), {
     base: args.repoRootPath,
@@ -46,9 +47,9 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
     async readFile(fsPath) {
       try {
         let entry: File | undefined;
-        let source: string | Buffer = readFileSync(fsPath);
+        let source: string | Buffer = await readFile(fsPath);
 
-        const { mode } = lstatSync(fsPath);
+        const { mode } = await lstat(fsPath);
         if (isSymbolicLink(mode)) {
           entry = new FileFsRef({ fsPath, mode });
         }
@@ -86,9 +87,6 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
       result.fileList.delete(relativeFile);
     }
   }
-
-  // Process nft results - keep node_modules unchanged from filesystem
-  const { lstat } = await import('node:fs/promises');
 
   debug('NFT traced files count:', result.fileList.size);
 
