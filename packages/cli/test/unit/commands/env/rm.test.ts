@@ -72,6 +72,14 @@ describe('env rm', () => {
           },
         ]);
       });
+
+      it('sets dangerouslySkipPermissions when --yes is used', async () => {
+        // Start with dangerouslySkipPermissions=false to verify --yes sets it
+        client.dangerouslySkipPermissions = false;
+        client.setArgv('env', 'rm', 'ENVIRONMENT_NAME', '--yes');
+        await env(client);
+        expect(client.dangerouslySkipPermissions).toBe(true);
+      });
     });
 
     describe('[environment]', () => {

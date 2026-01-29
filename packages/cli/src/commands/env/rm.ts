@@ -106,6 +106,13 @@ export default async function rm(client: Client, argv: string[]) {
   const env = envs[0];
 
   const skipConfirmation = opts['--yes'];
+
+  // When --yes is used, also skip the HTTP-level DELETE confirmation
+  // This ensures the flag works in non-TTY environments (e.g., CI)
+  if (skipConfirmation) {
+    client.dangerouslySkipPermissions = true;
+  }
+
   if (
     !skipConfirmation &&
     !(await client.input.confirm(
