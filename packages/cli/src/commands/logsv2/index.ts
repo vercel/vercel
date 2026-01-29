@@ -25,11 +25,116 @@ import output from '../../output-manager';
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
 const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
 
-const COL_TIME_ONLY = 11;
-const COL_TIME_WITH_DATE = 18;
-const COL_LEVEL = 5;
-const COL_SOURCE = 1;
-const COL_STATUS = 6;
+interface ColumnDef<T> {
+  label: string;
+  padding?: [number, number];
+  width?: number | 'stretch';
+  getValue: (row: T) => string;
+  format?: (paddedValue: string, row: T) => string;
+}
+
+interface TableOptions<T> {
+  columns: ColumnDef<T>[];
+  rows: T[];
+  tableWidth: number;
+  formatHeader?: (formattedHeader: string) => string;
+  formatRow?: (formattedRow: string, row: T) => string;
+}
+
+function table<T>({
+  columns,
+  rows,
+  tableWidth,
+  formatHeader,
+  formatRow,
+}: TableOptions<T>): { header: string; rows: string[] } {
+  const zeroPad: [number, number] = [0, 0];
+
+  // Calculate max content width for each column
+  const maxWidths = columns.map(col => {
+    const headerWidth = col.label.length;
+    const maxContent = Math.max(
+      headerWidth,
+      ...rows.map(row => col.getValue(row).length)
+    );
+    return maxContent;
+  });
+
+  // Calculate final widths
+  const colPaddings: [number, number][] = columns.map(
+    col => col.padding ?? zeroPad
+  );
+  const finalWidths: number[] = [];
+  let usedWidth = 0;
+  let stretchIndex = -1;
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
+    const padding = colPaddings[i][0] + colPaddings[i][1];
+
+    if (col.width === 'stretch') {
+      stretchIndex = i;
+      finalWidths.push(0);
+    } else if (typeof col.width === 'number') {
+      finalWidths.push(col.width);
+      usedWidth += col.width + padding;
+    } else {
+      finalWidths.push(maxWidths[i]);
+      usedWidth += maxWidths[i] + padding;
+    }
+  }
+
+  // Add separator space between columns (2 spaces)
+  usedWidth += (columns.length - 1) * 2;
+
+  // Fill stretch column
+  if (stretchIndex >= 0) {
+    const stretchPadding =
+      colPaddings[stretchIndex][0] + colPaddings[stretchIndex][1];
+    finalWidths[stretchIndex] = Math.max(
+      10,
+      tableWidth - usedWidth - stretchPadding
+    );
+  }
+
+  // Pad and truncate a value to fit width
+  const pad = (value: string, width: number): string => {
+    if (value.length > width) {
+      return value.slice(0, width - 1) + '…';
+    }
+    return value.padEnd(width);
+  };
+
+  // Build header
+  const headerStr = columns
+    .map((col, i) => {
+      const padded = pad(col.label, finalWidths[i]);
+      return (
+        ' '.repeat(colPaddings[i][0]) + padded + ' '.repeat(colPaddings[i][1])
+      );
+    })
+    .join('  ');
+  const header = formatHeader ? formatHeader(headerStr) : headerStr;
+
+  // Build rows
+  const formattedRows = rows.map(row => {
+    const rowStr = columns
+      .map((col, i) => {
+        const value = col.getValue(row);
+        const padded = pad(value, finalWidths[i]);
+        const formatted = col.format ? col.format(padded, row) : padded;
+        return (
+          ' '.repeat(colPaddings[i][0]) +
+          formatted +
+          ' '.repeat(colPaddings[i][1])
+        );
+      })
+      .join('  ');
+    return formatRow ? formatRow(rowStr, row) : rowStr;
+  });
+
+  return { header, rows: formattedRows };
+}
 
 function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
   if (logs.length === 0) return false;
@@ -324,24 +429,101 @@ export default async function logsv2(client: Client) {
       );
     } else {
       const showDate = logsSpanMultipleDays(logs);
-      const cols: ColumnWidths = {
-        time: showDate ? COL_TIME_WITH_DATE : COL_TIME_ONLY,
-        level: COL_LEVEL,
-        source: COL_SOURCE,
-        method: Math.max(...logs.map(l => l.requestMethod.length)),
-        path: Math.max(...logs.map(l => l.requestPath.length)),
-        status: COL_STATUS,
+      const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
+
+      // Build row data
+      type RowData = {
+        time: string;
+        level: string;
+        path: string;
+        status: string;
+        statusCode: number;
+        message: string;
+        messageTruncated?: boolean;
       };
-      const printOpts: PrintOptions = {
-        expand: expandOption,
-        terminalWidth,
-        cols,
-        showDate,
-      };
-      printHeader(printOpts);
-      for (const log of logs) {
-        prettyPrintLogEntry(log, printOpts);
+
+      const rowData: RowData[] = logs.map(log => {
+        const statusCode = log.responseStatusCode;
+        return {
+          time: format(log.timestamp, timeFormat),
+          level: log.level,
+          path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
+          status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
+          statusCode,
+          message: log.message?.replace(/\n/g, ' ').trim() || '',
+          messageTruncated: log.messageTruncated,
+        };
+      });
+
+      // Define columns with formatting
+      const baseColumns: ColumnDef<RowData>[] = [
+        {
+          label: 'TIME',
+          getValue: row => row.time,
+          format: padded => chalk.dim(padded),
+        },
+        {
+          label: 'LEVEL',
+          getValue: row => row.level,
+          format: (padded, row) => colorizeLevel(padded, row.level),
+        },
+        {
+          label: '',
+          padding: [0, 3],
+          getValue: row => row.path,
+        },
+      ];
+
+      const columns: ColumnDef<RowData>[] = expandOption
+        ? baseColumns
+        : [
+            ...baseColumns,
+            {
+              label: 'STATUS',
+              getValue: row => row.status,
+              format: (padded, row) =>
+                row.statusCode <= 0
+                  ? chalk.gray(padded)
+                  : colorizeStatus(padded, row.statusCode),
+            },
+            {
+              label: 'MESSAGE',
+              width: 'stretch',
+              getValue: row => row.message || '(no message)',
+              format: (padded, row) =>
+                row.message
+                  ? colorizeMessage(padded, row.level)
+                  : chalk.dim(padded),
+            },
+          ];
+
+      const formatted = table({
+        columns,
+        rows: rowData,
+        tableWidth: terminalWidth,
+        formatHeader: header => chalk.dim(header),
+        formatRow: expandOption
+          ? (rowStr, row) => {
+              if (row.message) {
+                const coloredMessage = colorizeMessage(row.message, row.level);
+                const truncatedIndicator = row.messageTruncated
+                  ? chalk.gray('…')
+                  : '';
+                return `${rowStr}\n${coloredMessage}${truncatedIndicator}\n`;
+              }
+              return rowStr + '\n';
+            }
+          : undefined,
+      });
+
+      // Print header
+      output.print(formatted.header + '\n');
+
+      // Print rows
+      for (const row of formatted.rows) {
+        output.print(row + '\n');
       }
+
       output.print(
         chalk.gray(
           `Fetched ${logs.length} logs for project ${projectId} in ${contextName}\n`
@@ -353,94 +535,30 @@ export default async function logsv2(client: Client) {
   return 0;
 }
 
-interface ColumnWidths {
-  time: number;
-  level: number;
-  source: number;
-  method: number;
-  path: number;
-  status: number;
-}
-
-interface PrintOptions {
-  expand?: boolean;
-  terminalWidth?: number;
-  cols: ColumnWidths;
-  showDate?: boolean;
-}
-
-function printHeader(options: PrintOptions) {
-  const { expand, cols } = options;
-  const row: string[] = [];
-
-  row.push('TIME'.padEnd(cols.time));
-  row.push('LEVEL'.padEnd(cols.level));
-  // PATH header: 2 spaces indent + "PATH" padded to fill source + method + path columns
-  const pathHeaderWidth = cols.source + 1 + cols.method + 1 + cols.path;
-  row.push('  PATH'.padEnd(pathHeaderWidth));
-
-  if (!expand) {
-    row.push('STATUS'.padEnd(cols.status));
-    row.push('MESSAGE');
-  }
-
-  output.print(chalk.dim(row.join('  ') + '\n'));
-}
-
-function prettyPrintLogEntry(log: RequestLogEntry, options: PrintOptions) {
-  const { expand, terminalWidth = 120, cols, showDate } = options;
-
-  const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
-  const time = format(log.timestamp, timeFormat).padEnd(cols.time);
-  const level = getLevelLabel(log.level).padEnd(cols.level);
-  const source = getSourceIcon(log.source);
-  const method = log.requestMethod.padEnd(cols.method);
-  const path = log.requestPath.padEnd(cols.path);
-  const pathCol = `${source} ${method} ${path}`;
-
-  const statusCode = log.responseStatusCode;
-  const statusStr = !statusCode || statusCode <= 0 ? '---' : String(statusCode);
-  const status =
-    !statusCode || statusCode <= 0
-      ? chalk.gray(statusStr.padEnd(cols.status))
-      : getStatusColor(statusCode, cols.status);
-
-  if (expand) {
-    const row = [chalk.dim(time), level, pathCol];
-    output.print(row.join('  ') + '\n');
-    if (log.message) {
-      const message = log.message.replace(/\n$/, '');
-      const coloredMessage = colorizeMessage(message, log.level);
-      const truncatedIndicator = log.messageTruncated ? chalk.gray('…') : '';
-      output.print(`${coloredMessage}${truncatedIndicator}\n\n`);
-    } else {
-      output.print('\n');
-    }
-  } else {
-    const pathHeaderWidth = cols.source + 1 + cols.method + 1 + cols.path;
-    const fixedWidth =
-      cols.time + cols.level + pathHeaderWidth + cols.status + 10;
-    const msgWidth = Math.max(terminalWidth - fixedWidth, 20);
-    const msg = log.message
-      ? colorizeMessage(truncateMessage(log.message, msgWidth), log.level)
-      : chalk.dim('(no message)');
-
-    const row = [chalk.dim(time), level, pathCol, status, msg];
-    output.print(row.join('  ') + '\n');
-  }
-}
-
-function getLevelLabel(level: string): string {
+function colorizeLevel(formatted: string, level: string): string {
   switch (level) {
     case 'fatal':
-      return chalk.red.bold('fatal');
+      return chalk.red.bold(formatted);
     case 'error':
-      return chalk.red('error');
+      return chalk.red(formatted);
     case 'warning':
-      return chalk.yellow('warn ');
+      return chalk.yellow(formatted);
     default:
-      return chalk.dim('info ');
+      return chalk.dim(formatted);
   }
+}
+
+function colorizeStatus(formatted: string, statusCode: number): string {
+  if (statusCode >= 500) {
+    return chalk.red(formatted);
+  } else if (statusCode >= 400) {
+    return chalk.yellow(formatted);
+  } else if (statusCode >= 300) {
+    return chalk.cyan(formatted);
+  } else if (statusCode >= 200) {
+    return chalk.green(formatted);
+  }
+  return chalk.gray(formatted);
 }
 
 function getSourceIcon(source: string): string {
@@ -459,27 +577,6 @@ function getSourceIcon(source: string): string {
     default:
       return ' ';
   }
-}
-
-function getStatusColor(status: number, padWidth = 0): string {
-  const statusStr =
-    padWidth > 0 ? String(status).padEnd(padWidth) : String(status);
-  if (status >= 500) {
-    return chalk.red(statusStr);
-  } else if (status >= 400) {
-    return chalk.yellow(statusStr);
-  } else if (status >= 300) {
-    return chalk.cyan(statusStr);
-  } else if (status >= 200) {
-    return chalk.green(statusStr);
-  }
-  return chalk.gray(statusStr);
-}
-
-function truncateMessage(msg: string, maxLen = 60): string {
-  const oneLine = msg.replace(/\n/g, ' ').trim();
-  if (oneLine.length <= maxLen) return oneLine;
-  return oneLine.slice(0, maxLen - 1) + '…';
 }
 
 function colorizeMessage(message: string, level: string): string {
