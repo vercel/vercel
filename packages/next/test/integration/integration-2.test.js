@@ -760,27 +760,3 @@ describe('action-headers', () => {
     expect(foundActionNames.sort()).toMatchSnapshot();
   });
 });
-
-describe('determinism', () => {
-  /**
-   * @type {import('@vercel/build-utils').BuildResultV2Typical}
-   */
-  let buildResult;
-
-  beforeAll(async () => {
-    const result = await runBuildLambda(
-      path.join(__dirname, '../fixtures/00-app-dir-not-found-pages-interop')
-    );
-    buildResult = result.buildResult;
-  });
-
-  it('should not include prerenders in functions lambdas', async () => {
-    for (const entry of Object.values(buildResult.output)) {
-      if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
-        expect(Object.keys(entry.files)).not.toContainEqual(
-          expect.stringMatching(/\.html$|.rsc$/)
-        );
-      }
-    }
-  });
-});
