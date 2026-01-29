@@ -26,7 +26,7 @@ const defaultOutputDirectory = join('.vercel', 'node');
 export const doBuild = async (
   args: BuildOptions,
   downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>,
-  span?: Span
+  span: Span
 ) => {
   const buildCommandResult = await maybeExecBuildCommand(args, downloadResult);
   const outputSetting = args.config.outputDirectory;

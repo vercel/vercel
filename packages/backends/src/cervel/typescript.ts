@@ -3,30 +3,36 @@ import { spawn } from 'child_process';
 import { extname, join } from 'path';
 import { Colors as c } from './utils.js';
 import { existsSync } from 'fs';
+import type { TypescriptOptions } from './types.js';
 
 const require_ = createRequire(import.meta.url);
 
-export const typescript = (args: { entrypoint: string; workPath: string }) => {
-  const extension = extname(args.entrypoint);
-  const isTypeScript = ['.ts', '.mts', '.cts'].includes(extension);
+export const typescript = (args: TypescriptOptions) => {
+  const { span } = args;
+  const tsSpan = span.child('vc.builder.backends.tsCompile');
 
-  if (!isTypeScript) {
-    return;
-  }
+  return tsSpan.trace(async () => {
+    const extension = extname(args.entrypoint);
+    const isTypeScript = ['.ts', '.mts', '.cts'].includes(extension);
 
-  const tscPath = resolveTscPath(args);
-  if (!tscPath) {
-    console.log(
-      c.gray(
-        `${c.bold(c.cyan('✓'))} Typecheck skipped ${c.gray(
-          '(TypeScript not found)'
-        )}`
-      )
-    );
-    return null;
-  }
+    if (!isTypeScript) {
+      return;
+    }
 
-  return doTypeCheck(args, tscPath);
+    const tscPath = resolveTscPath(args);
+    if (!tscPath) {
+      console.log(
+        c.gray(
+          `${c.bold(c.cyan('✓'))} Typecheck skipped ${c.gray(
+            '(TypeScript not found)'
+          )}`
+        )
+      );
+      return null;
+    }
+
+    return doTypeCheck(args, tscPath);
+  });
 };
 
 async function doTypeCheck(

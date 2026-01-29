@@ -30,47 +30,24 @@ export const getBuildSummary = async (outputDir: string) => {
 export const build = async (args: CervelBuildOptions) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.workPath));
 
-  // Start TypeScript compilation in parallel with rolldown
-  const tsPromise = typescript({
-    entrypoint,
-    workPath: args.workPath,
-  });
+  // Run TypeScript compilation and rolldown in parallel
+  const [, rolldownResult] = await Promise.all([
+    typescript({ entrypoint, workPath: args.workPath, span: args.span }),
+    rolldown({
+      entrypoint,
+      workPath: args.workPath,
+      repoRootPath: args.repoRootPath,
+      out: args.out,
+      span: args.span,
+    }),
+  ]);
 
-  const rolldownResult = await rolldown({
-    entrypoint,
-    workPath: args.workPath,
-    repoRootPath: args.repoRootPath,
-    out: args.out,
-    span: args.span,
-  });
   await writeFile(
     join(args.workPath, args.out, '.cervel.json'),
     JSON.stringify({ handler: rolldownResult.result.handler }, null, 2)
   );
 
   console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
-
-  // Wait for TypeScript compilation to complete
-  if (tsPromise) {
-    // Check if typecheck is still running
-    const typecheckComplete = await Promise.race([
-      tsPromise.then(() => true),
-      Promise.resolve(false),
-    ]);
-
-    if (!typecheckComplete) {
-      console.log(c.gray(`${c.bold(c.gray('*'))} Waiting for typecheck...`));
-    }
-
-    // Await with tracing
-    const tsSpan = args.span?.child('vc.builder.backends.tsCompile');
-    if (tsSpan) {
-      await tsSpan.trace(() => tsPromise);
-    } else {
-      await tsPromise;
-    }
-    console.log(c.gray(`${c.bold(c.cyan('✓'))} Typecheck complete`));
-  }
 
   return { rolldownResult: rolldownResult.result };
 };

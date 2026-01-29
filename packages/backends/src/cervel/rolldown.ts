@@ -101,10 +101,8 @@ export const rolldown = async (args: RolldownOptions) => {
     });
 
   // Run rolldown bundling
-  const rolldownSpan = args.span?.child('vc.builder.backends.rolldown');
-  const out = rolldownSpan
-    ? await rolldownSpan.trace(runRolldown)
-    : await runRolldown();
+  const rolldownSpan = args.span.child('vc.builder.backends.rolldown');
+  const out = await rolldownSpan.trace(runRolldown);
 
   let handler: string | null = null;
   for (const entry of out.output) {

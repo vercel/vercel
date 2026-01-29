@@ -13,7 +13,7 @@ export type PathOptions = Pick<BuildOptions, 'workPath' | 'repoRootPath'>;
 export type CervelBuildOptions = PathOptions & {
   entrypoint?: string;
   out: string;
-  span?: Span;
+  span: Span;
 };
 
 /**
@@ -24,12 +24,21 @@ export type CervelServeOptions = Pick<BuildOptions, 'workPath'> & {
 };
 
 /**
+ * Options for TypeScript compilation.
+ */
+export type TypescriptOptions = {
+  entrypoint: string;
+  workPath: string;
+  span: Span;
+};
+
+/**
  * Options for the rolldown bundler.
  */
 export type RolldownOptions = PathOptions & {
   entrypoint: string;
   out: string;
-  span?: Span;
+  span: Span;
 };
 
 /**
@@ -55,5 +64,5 @@ export type NodeFileTraceOptions = PathOptions & {
   keepTracedPaths: boolean;
   outDir: string;
   tracedPaths: string[];
-  span?: Span;
+  span: Span;
 };

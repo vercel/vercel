@@ -68,8 +68,8 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
       },
     });
 
-  const nftSpan = span?.child('vc.builder.backends.nft');
-  const result = nftSpan ? await nftSpan.trace(runNft) : await runNft();
+  const nftSpan = span.child('vc.builder.backends.nft');
+  const result = await nftSpan.trace(runNft);
 
   // When running this against a built output (eg, the user-provided output directory the
   // traced paths are the same as the compiled source files), so keep them in the result.
