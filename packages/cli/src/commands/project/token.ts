@@ -6,34 +6,39 @@ import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getOidcTokenSubcommand } from './command';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { tokenSubcommand } from './command';
 
 export default async function getOidcToken(client: Client, argv: string[]) {
-  let parsedArgs: { args: string[] } | null = null;
-  const flagsSpecification = getFlagsSpecification(
-    getOidcTokenSubcommand.options
-  );
+  const flagsSpecification = getFlagsSpecification(tokenSubcommand.options);
+  let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
 
-  if (args.length !== 1) {
+  if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('project get-oidc-token <name>')}`
+        `${getCommandName('project token <name>')}`
       )}`
     );
     return 1;
   }
+  const [name] = args;
+  const project = await getProjectByCwdOrLink({
+    autoConfirm: Boolean(flags['--yes']),
+    client,
+    commandName: 'project token',
+    projectNameOrId: name,
+  });
 
-  const name = args[0];
   try {
     const res = await client.fetch<{ token: string }>(
-      `/projects/${encodeURIComponent(name)}/token`,
+      `/projects/${project.id}/token`,
       {
         method: 'POST',
         body: JSON.stringify({

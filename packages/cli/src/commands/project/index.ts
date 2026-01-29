@@ -7,14 +7,14 @@ import add from './add';
 import inspect from './inspect';
 import list from './list';
 import rm from './rm';
-import getOidcToken from './get-oidc-token';
+import getOidcToken from './token';
 import {
   addSubcommand,
   inspectSubcommand,
   listSubcommand,
   projectCommand,
   removeSubcommand,
-  getOidcTokenSubcommand,
+  tokenSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
@@ -27,7 +27,7 @@ const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   add: getCommandAliases(addSubcommand),
   remove: getCommandAliases(removeSubcommand),
-  getOidcToken: getCommandAliases(getOidcTokenSubcommand),
+  token: getCommandAliases(tokenSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -37,8 +37,8 @@ export default async function main(client: Client) {
     },
   });
 
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(projectCommand.options);
+  let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
       permissive: true,
@@ -95,12 +95,12 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
-    case 'get-oidc-token':
+    case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
-        return printHelp(getOidcTokenSubcommand);
+        return printHelp(tokenSubcommand);
       }
-      telemetry.trackCliSubcommandGetOidcToken(subcommandOriginal);
+      telemetry.trackCliSubcommandToken(subcommandOriginal);
       return getOidcToken(client, args);
     case 'remove':
       if (needHelp) {
