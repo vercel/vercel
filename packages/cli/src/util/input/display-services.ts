@@ -26,35 +26,49 @@ function formatRoutePrefix(routePrefix: string): string {
   return `${normalized}/*`;
 }
 
+function getServiceDescription(service: ResolvedService): string {
+  const frameworkName = getFrameworkName(service.framework);
+
+  // Show the most detailed info: framework > runtime > builder
+  if (frameworkName) {
+    return chalk.cyan(`[${frameworkName}]`);
+  } else if (service.runtime) {
+    return chalk.yellow(`[${service.runtime}]`);
+  } else if (service.builder?.use) {
+    return chalk.magenta(`[${service.builder.use}]`);
+  }
+  return chalk.dim('[unknown]');
+}
+
+function getServiceTarget(service: ResolvedService): string {
+  switch (service.type) {
+    case 'cron':
+      return `schedule: ${service.schedule ?? 'none'}`;
+    case 'worker':
+      return `topic: ${service.topic ?? 'none'}`;
+    case 'web':
+    default:
+      return service.routePrefix
+        ? formatRoutePrefix(service.routePrefix)
+        : 'no route';
+  }
+}
+
 /**
  * Output format:
  * Multiple services detected. Project Settings:
  * - frontend [Next.js] → /
  * - api [python] → /api/*
- * - php-api ["vercel-php@0.9.0"] → /php/*
+ * - cleanup [node] → schedule: 0 0 * * *
+ * - processor [node] → topic: jobs
  */
 export function displayDetectedServices(services: ResolvedService[]): void {
   output.print(`Multiple services detected. Project Settings:\n`);
 
   for (const service of services) {
-    const routeDisplay = formatRoutePrefix(service.routePrefix!);
-    const frameworkName = getFrameworkName(service.framework);
-
-    let description: string;
-
-    // Show the most detailed info: framework > runtime > builder
-    if (frameworkName) {
-      description = chalk.cyan(`[${frameworkName}]`);
-    } else if (service.runtime) {
-      description = chalk.yellow(`[${service.runtime}]`);
-    } else if (service.builder?.use) {
-      description = chalk.magenta(`[${service.builder.use}]`);
-    } else {
-      description = chalk.dim('[unknown]');
-    }
-
-    const line = `- ${chalk.bold(service.name)} ${description} ${chalk.dim('→')} ${routeDisplay}`;
-
+    const description = getServiceDescription(service);
+    const target = getServiceTarget(service);
+    const line = `- ${chalk.bold(service.name)} ${description} ${chalk.dim('→')} ${target}`;
     output.print(`${line}\n`);
   }
 }
