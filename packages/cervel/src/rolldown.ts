@@ -36,7 +36,6 @@ export const rolldown = async (args: RolldownOptions) => {
   let resolvedFormat: 'esm' | 'cjs' | undefined =
     extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
 
-  const resolvedExtension = extensionInfo.extension;
   // Always include package.json from the workPath
   const packageJsonPath = join(args.workPath, 'package.json');
   const external: string[] = [];
@@ -68,6 +67,7 @@ export const rolldown = async (args: RolldownOptions) => {
       external.push(dependency);
     }
   }
+  const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
 
   const context: { files: Files } = { files: {} };
   const out = await rolldownBuild({
