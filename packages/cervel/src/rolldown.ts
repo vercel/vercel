@@ -1,24 +1,23 @@
-import { existsSync } from 'fs';
-import { rm, readFile } from 'fs/promises';
-import { extname, join } from 'path';
+import { existsSync } from 'node:fs';
+import { rm, readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { build as rolldownBuild } from 'rolldown';
+import { plugin } from './plugin.js';
+import type { Files } from '@vercel/build-utils';
+import type { RolldownOptions } from './types.js';
 
-/**
- * Escapes special regex characters in a string to treat it as a literal pattern.
- */
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+const __dirname__filenameShim = `
+import { createRequire as __createRequire } from 'node:module';
+import { fileURLToPath as __fileURLToPath } from 'node:url';
+import { dirname as __dirname_ } from 'node:path';
+const require = __createRequire(import.meta.url);
+const __filename = __fileURLToPath(import.meta.url);
+const __dirname = __dirname_(__filename);
+`.trim();
 
-export const rolldown = async (args: {
-  entrypoint: string;
-  workPath: string;
-  repoRootPath: string;
-  out: string;
-}) => {
-  const baseDir = args.repoRootPath || args.workPath;
+export const rolldown = async (args: RolldownOptions) => {
   const entrypointPath = join(args.workPath, args.entrypoint);
-  const shouldAddSourcemapSupport = false;
+  const outputDir = join(args.workPath, args.out);
 
   const extension = extname(args.entrypoint);
   const extensionMap: Record<
@@ -37,8 +36,7 @@ export const rolldown = async (args: {
   let resolvedFormat: 'esm' | 'cjs' | undefined =
     extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
 
-  const resolvedExtension = extensionInfo.extension;
-  // Always include package.json from the entrypoint directory
+  // Always include package.json from the workPath
   const packageJsonPath = join(args.workPath, 'package.json');
   const external: string[] = [];
   let pkg: Record<string, unknown> = {};
@@ -69,24 +67,33 @@ export const rolldown = async (args: {
       external.push(dependency);
     }
   }
+  const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
 
-  const relativeOutputDir = args.out;
-  const outputDir = join(baseDir, relativeOutputDir);
-
+  const context: { files: Files } = { files: {} };
   const out = await rolldownBuild({
-    // @ts-ignore tsconfig: true and cleanDir: true are not valid options
     input: entrypointPath,
-    cwd: baseDir,
+    cwd: args.workPath, // rolldown's cwd option
     platform: 'node',
     tsconfig: true,
-    external: external.map(pkg => new RegExp(`^${escapeRegExp(pkg)}`)),
+    plugins: [
+      plugin({
+        repoRootPath: args.repoRootPath,
+        outDir: outputDir,
+        workPath: args.workPath,
+        // Only shim CJS imports when output is ESM (CJS can require CJS natively)
+        shimBareImports: resolvedFormat === 'esm',
+        context,
+      }),
+    ],
     output: {
       cleanDir: true,
       dir: outputDir,
       format: resolvedFormat,
       entryFileNames: `[name].${resolvedExtension}`,
       preserveModules: true,
+      preserveModulesRoot: args.repoRootPath,
       sourcemap: false,
+      banner: resolvedFormat === 'esm' ? __dirname__filenameShim : undefined,
     },
   });
   let handler: string | null = null;
@@ -107,10 +114,9 @@ export const rolldown = async (args: {
 
   return {
     result: {
-      pkg,
-      shouldAddSourcemapSupport,
       handler,
       outputDir,
+      outputFiles: context.files,
     },
     cleanup,
   };

@@ -1,7 +1,5 @@
 import { downloadInstallAndBundle } from './utils.js';
 import { introspectApp } from '@vercel/introspection';
-import { nodeFileTrace } from './node-file-trace.js';
-import { relative, join } from 'node:path';
 import { doBuild } from './build.js';
 import {
   defaultCachePathGlob,
@@ -41,11 +39,8 @@ export const build: BuildV2 = async args => {
     return result;
   });
 
-  debug('Node file trace starting..');
-  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
-  const nftPromise = nftSpan.trace(() =>
-    nodeFileTrace(args, nodeVersion, outputConfig)
-  );
+  const files = outputConfig.files;
+
   debug('Introspection starting..');
   const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
   const { routes, framework } = await introspectAppSpan.trace(async span => {
@@ -69,13 +64,10 @@ export const build: BuildV2 = async args => {
     debug(`Introspection failed to detect routes`);
   }
 
-  const handler = relative(
-    args.repoRootPath,
-    join(outputConfig.dir, outputConfig.handler)
-  );
-
-  const { files } = await nftPromise;
-  debug('Node file trace complete');
+  const handler = outputConfig.handler;
+  if (!files) {
+    throw new Error('Unable to trace files for build');
+  }
 
   const lambda = new NodejsLambda({
     runtime: nodeVersion.runtime,
