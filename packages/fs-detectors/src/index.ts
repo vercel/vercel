@@ -15,6 +15,7 @@ export type {
   DetectServicesResult,
   ResolvedService,
   ServicesRoutes,
+  ServiceDetectionError,
 } from './services/types';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
