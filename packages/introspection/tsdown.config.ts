@@ -32,14 +32,4 @@ export default defineConfig([
     outDir: 'dist/loaders',
     format: 'esm',
   },
-  {
-    entry: 'src/express.ts',
-    outDir: 'dist',
-    format: 'esm',
-  },
-  {
-    entry: 'src/hono.ts',
-    outDir: 'dist',
-    format: 'esm',
-  },
 ]);

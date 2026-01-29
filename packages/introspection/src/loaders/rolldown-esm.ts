@@ -1,3 +1,3 @@
-import { register } from 'node:module';
-
-register(new URL('./rolldown-hooks.mjs', import.meta.url), import.meta.url);
+// Re-export from @vercel/backends
+// This file is kept for backwards compatibility
+import '@vercel/backends/introspection/loaders/rolldown-esm';

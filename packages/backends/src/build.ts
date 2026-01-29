@@ -12,7 +12,7 @@ import {
   nodeFileTrace,
   findEntrypoint,
   getBuildSummary,
-} from '@vercel/cervel';
+} from './cervel/index.js';
 import {
   maybeExecBuildCommand,
   type downloadInstallAndBundle,

@@ -1,5 +1,5 @@
 import { downloadInstallAndBundle } from './utils.js';
-import { introspectApp } from '@vercel/introspection';
+import { introspectApp } from './introspection/index.js';
 import { doBuild } from './build.js';
 import {
   defaultCachePathGlob,
@@ -11,7 +11,25 @@ import {
   getNodeVersion,
   Span,
 } from '@vercel/build-utils';
-import { findEntrypoint } from '@vercel/cervel';
+import { findEntrypoint } from './cervel/index.js';
+
+// Re-export cervel functions for use by other packages
+export {
+  build as cervelBuild,
+  serve as cervelServe,
+  findEntrypoint,
+  nodeFileTrace,
+  getBuildSummary,
+  srvxOptions,
+} from './cervel/index.js';
+export type {
+  CervelBuildOptions,
+  CervelServeOptions,
+  PathOptions,
+} from './cervel/index.js';
+
+// Re-export introspection functions
+export { introspectApp } from './introspection/index.js';
 
 export const version = 2;
 
