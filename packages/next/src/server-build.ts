@@ -75,6 +75,8 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+// Needs https://github.com/vercel/next.js/pull/89263
+const DYNAMICALLY_RENDER_404_VERSION = 'v16.2.0-canary.17';
 
 // Ideally this should be in a Next.js manifest so we can change it in
 // the future but this also allows us to improve existing versions
@@ -434,6 +436,12 @@ export async function serverBuild({
     CORRECTED_MANIFESTS_VERSION
   );
 
+  // When possible, don't embed the static 404 page in lambdas for determinism
+  const shouldStaticallyRender404 = semver.lt(
+    nextVersion,
+    DYNAMICALLY_RENDER_404_VERSION
+  );
+
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
   if (lambdaPageKeys.length === 0) {
@@ -478,6 +486,7 @@ export async function serverBuild({
   const lstatSema = new Sema(25);
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
+  const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
 
   // Only include internal pages that are actually existed
   const internalPages = [...INTERNAL_PAGES].filter(page => {
@@ -495,6 +504,12 @@ export async function serverBuild({
       routesManifest,
       appDir
     );
+
+    if (shouldStaticallyRender404 && result && result.static404Page) {
+      // there can be multiple 404 pages (eg i18n) so we want to keep track of all of them
+      static404Pages.add(result.static404Page);
+      static404Page = result.static404Page;
+    }
 
     if (result && result.static500Page) {
       hasStatic500 = true;
@@ -705,6 +720,43 @@ export async function serverBuild({
       mode: (await fs.lstat(nextServerFile)).mode,
       fsPath: nextServerFile,
     });
+
+    if (shouldStaticallyRender404 && static404Pages.size > 0) {
+      // If we've generated a static 404 page, it's possible that we also
+      // have a static 404 page for each locale.
+      if (i18n) {
+        for (const locale of i18n.locales) {
+          const static404Page = path.posix.join(entryDirectory, locale, '404');
+          static404Pages.add(static404Page);
+        }
+      }
+
+      for (const static404Page of static404Pages) {
+        let static404File = staticPages[static404Page];
+
+        if (!static404File) {
+          // if we have a file ref already, we can use it. Otherwise, we need
+          // to create a new one, but we need to ensure it exists on disk
+          const static404FilePath = path.join(
+            pagesDir,
+            `${static404Page}.html`
+          );
+
+          if (fs.existsSync(static404FilePath)) {
+            static404File = new FileFsRef({
+              fsPath: static404FilePath,
+            });
+          }
+        }
+
+        // ensure each static 404 page file is included in all lambdas
+        // for notFound GS(S)P support
+        if (static404File) {
+          requiredFiles[path.relative(baseDir, static404File.fsPath)] =
+            static404File;
+        }
+      }
+    }
 
     // TODO: move this into Next.js' required server files manifest
     const envFiles = [];
@@ -1212,6 +1264,16 @@ export async function serverBuild({
             // generates the config.json for Vercel)
             manifestData.headers = [];
             delete manifestData.deploymentId;
+          } else if (
+            manifest === 'server/pages-manifest.json' &&
+            !shouldStaticallyRender404
+          ) {
+            if (manifestData['/404'] === 'pages/404.html') {
+              manifestData['/404'] =
+                lambdaPages['404.js'] && !lambdaAppPaths['404.js']
+                  ? 'pages/404.js'
+                  : 'pages/_error.js';
+            }
           }
 
           if (mayFilterManifests) {
