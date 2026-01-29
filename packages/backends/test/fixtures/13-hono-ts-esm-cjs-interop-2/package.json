@@ -2,6 +2,7 @@
   "name": "hono",
   "type": "module",
   "dependencies": {
+    "@sinonjs/commons": "3.0.1",
     "hono": "4.8.9",
     "jsonwebtoken": "9.0.3"
   },

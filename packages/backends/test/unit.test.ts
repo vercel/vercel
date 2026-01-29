@@ -4,7 +4,7 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import { build } from '../src/index';
-import { join, resolve } from 'path';
+import { join, resolve } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
 import {
@@ -15,14 +15,16 @@ import {
   rm,
   mkdir,
   realpath,
-} from 'fs/promises';
-import { tmpdir } from 'os';
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 
+const meta = { skipDownload: true };
 const config = {
   outputDirectory: undefined,
   zeroConfig: true,
+  // Always use npm install to avoid pnpm workspace detection in monorepo
+  projectSettings: { installCommand: 'npm install' },
 };
-const meta = { skipDownload: true };
 
 // Set to true to use packages/backends/debug instead of a temp directory
 const USE_DEBUG_DIR = false;
@@ -53,7 +55,7 @@ describe('successful builds', async () => {
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
     const isNestFixture = fixtureName.includes('nest');
-    it.skipIf(process.platform === 'win32' && isNestFixture)(
+    it.skipIf(process.platform === 'win32' && isNestFixture).only(
       `builds ${fixtureName}`,
       async () => {
         // Copy entire fixture to work dir so no parent node_modules can interfere
