@@ -204,14 +204,17 @@ export const plugin = (args: PluginOptions): Plugin => {
                 );
 
                 // Create a namespaced shim: apps/api + jsonwebtoken -> apps_api_jsonwebtoken
+                // Also sanitize scoped package names: @vercel/cosmosdb -> @vercel_cosmosdb
                 const namespace = importerPkgDir.replace(/\//g, '_');
-                const shimId = `${CJS_SHIM_PREFIX}${namespace}_${id}`;
+                const safeId = id.replace(/\//g, '_');
+                const shimId = `${CJS_SHIM_PREFIX}${namespace}_${safeId}`;
                 shimMeta.set(shimId, { pkgDir: importerPkgDir, pkgName: id });
                 return { id: shimId, external: false };
               }
 
               // Fallback: create a shim without package scoping
-              const shimId = `${CJS_SHIM_PREFIX}${id}`;
+              const safeId = id.replace(/\//g, '_');
+              const shimId = `${CJS_SHIM_PREFIX}${safeId}`;
               shimMeta.set(shimId, { pkgDir: '', pkgName: id });
               return { id: shimId, external: false };
             }
