@@ -29,7 +29,12 @@ import {
 } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
-import { getSupportedPythonVersion, DEFAULT_PYTHON_VERSION } from './version';
+import {
+  getSupportedPythonVersion,
+  DEFAULT_PYTHON_VERSION,
+  parseVersionTuple,
+  compareTuples,
+} from './version';
 import { startDevServer } from './start-dev-server';
 import {
   runPyprojectScript,
@@ -273,11 +278,15 @@ export const build: BuildV3 = async ({
   // Write a .python-version file on behalf of the user when:
   // no .python-version file exists and the required version in pyproject.toml
   // is <= DEFAULT_PYTHON_VERSION
+  const selectedVersionTuple = parseVersionTuple(pythonVersion.version);
+  const defaultVersionTuple = parseVersionTuple(DEFAULT_PYTHON_VERSION);
   if (
     !pythonVersionFileDir &&
     pyprojectDir &&
     declaredPythonVersion?.source === 'pyproject.toml' &&
-    parseFloat(pythonVersion.version) <= parseFloat(DEFAULT_PYTHON_VERSION)
+    selectedVersionTuple &&
+    defaultVersionTuple &&
+    compareTuples(selectedVersionTuple, defaultVersionTuple) <= 0
   ) {
     const pythonVersionFilePath = join(pyprojectDir, '.python-version');
     await writeFile(pythonVersionFilePath, `${pythonVersion.version}\n`);
