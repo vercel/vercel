@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "dependencies": {
     "@types/express": "5.0.3",
-    "@types/node": "^22.10.0",
+    "@types/node": "22.10.0",
     "express": "5.1.0",
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   }
 }
