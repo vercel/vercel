@@ -446,8 +446,7 @@ export async function writeStaticFile(
   }
 
   // Determine output directory based on immutable flag
-  const outputSubdir =
-    'immutable' in file && file.immutable ? 'immutable' : 'static';
+  const outputSubdir = file.immutable ? 'immutable' : 'static';
   const dest = join(outputDir, outputSubdir, fsPath);
   await fs.mkdirp(dirname(dest));
 
