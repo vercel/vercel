@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.7.19
+
+### Patch Changes
+
+- experimental rust runtime framework preset ([#14765](https://github.com/vercel/vercel/pull/14765))
+
+- Updated dependencies [[`9d1e38e9ff6f0431dce8e421497e1ec4fc823291`](https://github.com/vercel/vercel/commit/9d1e38e9ff6f0431dce8e421497e1ec4fc823291), [`e800617a334377e11953df22ef40d03716daf692`](https://github.com/vercel/vercel/commit/e800617a334377e11953df22ef40d03716daf692)]:
+  - @vercel/frameworks@3.16.1
+
 ## 5.7.18
 
 ### Patch Changes
