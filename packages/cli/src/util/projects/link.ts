@@ -77,17 +77,19 @@ export function getVercelDirectory(cwd: string): string {
 
 export async function getProjectLink(
   client: Client,
-  path: string
+  path: string,
+  projectName?: string
 ): Promise<ProjectLink | null> {
   return (
-    (await getProjectLinkFromRepoLink(client, path)) ||
+    (await getProjectLinkFromRepoLink(client, path, projectName)) ||
     (await getLinkFromDir(getVercelDirectory(path)))
   );
 }
 
 async function getProjectLinkFromRepoLink(
   client: Client,
-  path: string
+  path: string,
+  projectName?: string
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -103,13 +105,22 @@ async function getProjectLinkFromRepoLink(
   } else {
     const selectableProjects =
       projects.length > 0 ? projects : repoLink.repoConfig.projects;
-    project = await client.input.select({
-      message: `Please select a Project:`,
-      choices: selectableProjects.map(p => ({
-        value: p,
-        name: p.name,
-      })),
-    });
+
+    // If --project flag was provided, try to find a matching project by name
+    if (projectName) {
+      project = selectableProjects.find(p => p.name === projectName);
+    }
+
+    // Fall back to interactive selection if no project was found
+    if (!project) {
+      project = await client.input.select({
+        message: `Please select a Project:`,
+        choices: selectableProjects.map(p => ({
+          value: p,
+          name: p.name,
+        })),
+      });
+    }
   }
   if (project) {
     return {
@@ -210,7 +221,8 @@ async function hasProjectLink(
 
 export async function getLinkedProject(
   client: Client,
-  path = client.cwd
+  path = client.cwd,
+  projectName?: string
 ): Promise<ProjectLinkResult> {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
@@ -230,7 +242,7 @@ export async function getLinkedProject(
   const link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path);
+      : await getProjectLink(client, path, projectName);
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };
