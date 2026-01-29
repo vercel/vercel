@@ -6,7 +6,7 @@
       "mustContain": "Hello, RANDOMNESS_PLACEHOLDER"
     },
     {
-      "logMustContain": "Using Python 3.12 from pyproject.toml"
+      "logMustContain": "Using Python 3.12 from .python-version"
     }
   ]
 }

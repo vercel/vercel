@@ -135,10 +135,13 @@ interface VersionSpecifier {
 function parseSpecifier(spec: string): VersionSpecifier | null {
   const s = spec.trim();
   // Support operators: <=, >=, ==, !=, ~=, <, >
+  // Allow optional patch version (e.g., 3.11.4) which will be ignored (only major.minor used)
   const m =
-    s.match(/^(<=|>=|==|!=|~=|<|>)\s*([0-9]+(?:\.[0-9]+)?)(?:\.\*)?$/) ||
-    // Bare version like "3.11" -> implied ==
-    s.match(/^()([0-9]+(?:\.[0-9]+)?)(?:\.\*)?$/);
+    s.match(
+      /^(<=|>=|==|!=|~=|<|>)\s*([0-9]+(?:\.[0-9]+)?)(?:\.[0-9]+)?(?:\.\*)?$/
+    ) ||
+    // Bare version like "3.11" or "3.11.4" -> implied ==
+    s.match(/^()([0-9]+(?:\.[0-9]+)?)(?:\.[0-9]+)?(?:\.\*)?$/);
   if (!m) return null;
   const op = (m[1] || '==') as SpecOp;
   const vt = parseVersionTuple(m[2]);
@@ -236,10 +239,11 @@ export function getSupportedPythonVersion({
   if (declaredPythonVersion) {
     const { version, source } = declaredPythonVersion;
     let requested: PythonVersion | undefined;
-    if (source === 'pyproject.toml') {
+    if (source === 'pyproject.toml' || source === '.python-version') {
+      // Support both exact versions and version specifiers (e.g. ">=3.12")
       requested = selectFromRequiresPython(version);
     } else {
-      // For .python-version and Pipfile.lock, do exact match
+      // For Pipfile.lock, do exact match
       requested = allOptions.find(o => o.version === version);
     }
     if (requested) {
@@ -308,7 +312,11 @@ function getInstalledPythons(): Set<string> {
   }
   const uvPath = findUvInPath();
   if (!uvPath) {
-    throw new Error('uv is required but was not found in PATH.');
+    throw new NowBuildError({
+      code: 'UV_ERROR',
+      link: 'https://vercel.link/python-version',
+      message: 'uv is required but was not found in PATH.',
+    });
   }
   const uv = new UvRunner(uvPath);
   installedPythonsCache = uv.listInstalledPythons();

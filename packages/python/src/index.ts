@@ -574,16 +574,14 @@ function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
 
-// Parses a .python-version file and extracts the Major.Minor version, ignoring comments.
+// Parses a .python-version file and returns the first non-empty, non-comment line.
+// Supports both exact versions (e.g. "3.12") and version specifiers (e.g. ">=3.12").
 function parsePythonVersionFile(content: string): string | undefined {
   const lines = content.split('\n');
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-    const match = trimmed.match(/^(\d+)\.(\d+)/);
-    if (match) {
-      return `${match[1]}.${match[2]}`;
-    }
+    return trimmed;
   }
   return undefined;
 }

@@ -1257,6 +1257,7 @@ describe('python version fallback logging', () => {
 describe('.python-version file priority', () => {
   let mockWorkPath: string;
   let consoleLogSpy: jest.SpyInstance;
+  let consoleWarnSpy: jest.SpyInstance;
 
   beforeEach(() => {
     mockWorkPath = path.join(
@@ -1268,10 +1269,12 @@ describe('.python-version file priority', () => {
     makeMockPython('3.11');
     makeMockPython('3.12');
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
   });
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
     }
@@ -1379,7 +1382,7 @@ describe('.python-version file priority', () => {
     );
   });
 
-  it('falls back to pyproject.toml when .python-version has invalid content', async () => {
+  it('warns and falls back to default when .python-version has invalid content', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       '.python-version': new FileBlob({ data: 'invalid-version\n' }),
@@ -1397,9 +1400,14 @@ describe('.python-version file priority', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should fall back to pyproject.toml since .python-version is invalid
+    // Should warn about invalid .python-version and fall back to default
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Warning: Python version "invalid-version" detected in .python-version is invalid'
+      )
+    );
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.12 from pyproject.toml')
+      expect.stringContaining('Using python version: 3.12')
     );
   });
 });
