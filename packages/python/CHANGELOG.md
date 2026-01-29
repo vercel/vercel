@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.4.1
+
+### Patch Changes
+
+- Preserve error code when re-throwing errors in UvRunner methods ([#14796](https://github.com/vercel/vercel/pull/14796))
+
 ## 6.4.0
 
 ### Minor Changes
