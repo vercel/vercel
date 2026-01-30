@@ -244,6 +244,87 @@ async function getFrameworkRoutes(
   return routes;
 }
 
+/**
+ * Transform routes to be prefix-aware for services mounted at a non-root path.
+ *
+ * For a service at `/admin`, this transforms:
+ * - `{ src: '/(.*)', dest: '/index.html' }` → `{ src: '^/admin(?:/(.*))?$', dest: '/admin/index.html' }`
+ * - `{ src: '^/assets/.*', dest: '/assets/$0' }` → `{ src: '^/admin/assets/.*', dest: '/admin/assets/$0' }`
+ * - `{ handle: 'filesystem' }` → unchanged (handlers are preserved)
+ *
+ * @param routes - The original routes from the framework
+ * @param routePrefix - The prefix path (e.g., '/admin')
+ * @returns Transformed routes with prefix applied
+ */
+function transformRoutesForPrefix(
+  routes: Route[],
+  routePrefix: string
+): Route[] {
+  // Normalize prefix: ensure it starts with / and doesn't end with /
+  const prefix = routePrefix.startsWith('/') ? routePrefix : `/${routePrefix}`;
+  const normalizedPrefix = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix;
+
+  // Escape special regex characters in the prefix for use in patterns
+  const escapedPrefix = normalizedPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  return routes.map(route => {
+    // Preserve handler routes (filesystem, miss, hit, error, etc.)
+    if ('handle' in route) {
+      return route;
+    }
+
+    // Skip routes without src (shouldn't happen, but be safe)
+    if (!('src' in route) || typeof route.src !== 'string') {
+      return route;
+    }
+
+    const transformed: Route = { ...route };
+
+    // Transform the src pattern to include the prefix
+    let newSrc = route.src;
+
+    // Handle common patterns:
+    // - `^/(.*)$` or `/(.*)` → catch-all
+    // - `^/specific-path` → specific path
+    // - `.*` → catch-all
+    if (newSrc === '/(.*)' || newSrc === '^/(.*)$') {
+      // Catch-all pattern: transform to prefix-scoped catch-all
+      newSrc = `^${escapedPrefix}(?:/(.*))?$`;
+    } else if (newSrc === '.*' || newSrc === '^.*$') {
+      // Universal catch-all: scope to prefix
+      newSrc = `^${escapedPrefix}(?:/.*)?$`;
+    } else if (newSrc.startsWith('^/')) {
+      // Absolute regex pattern: insert prefix after ^/
+      newSrc = `^${escapedPrefix}${newSrc.slice(2)}`;
+    } else if (newSrc.startsWith('/')) {
+      // Absolute non-regex pattern: prepend prefix
+      newSrc = `^${escapedPrefix}${newSrc}`;
+    } else if (newSrc.startsWith('^')) {
+      // Regex pattern without leading /: add prefix
+      newSrc = `^${escapedPrefix}/${newSrc.slice(1)}`;
+    } else {
+      // Relative pattern: prepend prefix with /
+      newSrc = `^${escapedPrefix}/${newSrc}`;
+    }
+
+    (transformed as RouteWithSrc).src = newSrc;
+
+    // Transform the dest if present
+    if ('dest' in route && typeof route.dest === 'string') {
+      let newDest = route.dest;
+
+      // Prepend prefix to absolute destinations
+      if (newDest.startsWith('/')) {
+        newDest = `${normalizedPrefix}${newDest}`;
+      }
+
+      transformed.dest = newDest;
+    }
+
+    return transformed;
+  });
+}
+
 function getPkg(entrypoint: string, workPath: string) {
   if (path.basename(entrypoint) !== 'package.json') {
     return null;
@@ -834,11 +915,25 @@ export const build: BuildV2 = async ({
           validateDistDir(distPath, workPath);
         }
 
-        if (framework && !extraOutputs.routes) {
-          const frameworkRoutes = await getFrameworkRoutes(
-            framework,
-            outputDirPrefix
-          );
+        if (!extraOutputs.routes) {
+          const routePrefix = config.routePrefix as string | undefined;
+          let frameworkRoutes = framework
+            ? await getFrameworkRoutes(framework, outputDirPrefix)
+            : [];
+
+          // Transform framework routes to be prefix-aware for services
+          // mounted at a non-root path (e.g., /admin)
+          if (
+            frameworkRoutes.length > 0 &&
+            routePrefix &&
+            routePrefix !== '/'
+          ) {
+            frameworkRoutes = transformRoutesForPrefix(
+              frameworkRoutes,
+              routePrefix
+            );
+          }
+
           routes.push(...frameworkRoutes);
         }
 

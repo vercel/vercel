@@ -330,7 +330,7 @@ describe('detectServices', () => {
   });
 
   describe('static/SPA service routing', () => {
-    it('should generate SPA fallback routes for static service at root', async () => {
+    it('should generate SPA fallback for static service at root', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -347,16 +347,16 @@ describe('detectServices', () => {
       expect(result.services[0].isStaticBuild).toBe(true);
       expect(result.errors).toEqual([]);
 
-      // Root static service should have filesystem handler and SPA fallback in defaults
+      // Root static service gets filesystem handler + SPA fallback in defaults
       expect(result.routes.defaults).toHaveLength(2);
-      expect(result.routes.defaults[0]).toMatchObject({ handle: 'filesystem' });
-      expect(result.routes.defaults[1]).toMatchObject({
+      expect(result.routes.defaults[0]).toEqual({ handle: 'filesystem' });
+      expect(result.routes.defaults[1]).toEqual({
         src: '/(.*)',
         dest: '/index.html',
       });
     });
 
-    it('should generate SPA fallback routes for static service at prefix', async () => {
+    it('should generate SPA fallback for static service at prefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -374,9 +374,9 @@ describe('detectServices', () => {
       expect(result.services[0].isStaticBuild).toBe(true);
       expect(result.errors).toEqual([]);
 
-      // Prefixed static service should have SPA fallback in rewrites
+      // Prefixed static service gets SPA fallback in rewrites
       expect(result.routes.rewrites).toHaveLength(1);
-      expect(result.routes.rewrites[0]).toMatchObject({
+      expect(result.routes.rewrites[0]).toEqual({
         src: '^/admin(?:/.*)?$',
         dest: '/admin/index.html',
       });
@@ -396,8 +396,9 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
+      // routePrefix is passed without leading slash for mountpoint
       expect(result.services[0].builder.config).toMatchObject({
-        routePrefix: '/admin',
+        routePrefix: 'admin',
         framework: 'vite',
       });
     });
@@ -437,24 +438,20 @@ describe('detectServices', () => {
       // Node entrypoint should be a function
       expect(expressApi?.isStaticBuild).toBe(false);
 
-      // Function service gets rewrite route
-      expect(result.routes.rewrites).toContainEqual(
-        expect.objectContaining({
-          src: '^/api(?:/.*)?$',
-          dest: '/api/index.js',
-          check: true,
-        })
-      );
+      // Function service and prefixed static service get rewrites
+      expect(result.routes.rewrites).toHaveLength(2);
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/api(?:/.*)?$',
+        dest: '/api/index.js',
+        check: true,
+      });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/admin(?:/.*)?$',
+        dest: '/admin/index.html',
+      });
 
-      // Prefixed SPA gets fallback route
-      expect(result.routes.rewrites).toContainEqual(
-        expect.objectContaining({
-          src: '^/admin(?:/.*)?$',
-          dest: '/admin/index.html',
-        })
-      );
-
-      // Root SPA gets filesystem and fallback in defaults
+      // Root static service gets filesystem + SPA fallback in defaults
+      expect(result.routes.defaults).toHaveLength(2);
       expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
       expect(result.routes.defaults).toContainEqual({
         src: '/(.*)',
