@@ -23,21 +23,6 @@ export const devCommand = {
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     confirmOption,
-    {
-      name: 'tunnel',
-      description:
-        'Start a devcontainer connected to Vercel infrastructure for local development',
-      type: Boolean,
-      shorthand: 't',
-      deprecated: false,
-    },
-    {
-      name: 'non-interactive',
-      description:
-        'Skip exec into the devcontainer, just set up files and exit',
-      type: Boolean,
-      deprecated: false,
-    },
   ],
   examples: [
     {

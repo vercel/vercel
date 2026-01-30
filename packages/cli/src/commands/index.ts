@@ -4,6 +4,7 @@ import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { connectCommand } from './connect/command';
 import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
@@ -52,6 +53,7 @@ const commandsStructs = [
   buildCommand,
   cacheCommand,
   certsCommand,
+  connectCommand,
   curlCommand,
   deployCommand,
   devCommand,
