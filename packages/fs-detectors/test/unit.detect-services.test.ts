@@ -328,4 +328,138 @@ describe('detectServices', () => {
       expect(result.errors[0].code).toBe('INVALID_VERCEL_JSON');
     });
   });
+
+  describe('static/SPA service routing', () => {
+    it('should generate SPA fallback routes for static service at root', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'vite',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].isStaticBuild).toBe(true);
+      expect(result.errors).toEqual([]);
+
+      // Root static service should have filesystem handler and SPA fallback in defaults
+      expect(result.routes.defaults).toHaveLength(2);
+      expect(result.routes.defaults[0]).toMatchObject({ handle: 'filesystem' });
+      expect(result.routes.defaults[1]).toMatchObject({
+        src: '/(.*)',
+        dest: '/index.html',
+      });
+    });
+
+    it('should generate SPA fallback routes for static service at prefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'vite',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].isStaticBuild).toBe(true);
+      expect(result.errors).toEqual([]);
+
+      // Prefixed static service should have SPA fallback in rewrites
+      expect(result.routes.rewrites).toHaveLength(1);
+      expect(result.routes.rewrites[0]).toMatchObject({
+        src: '^/admin(?:/.*)?$',
+        dest: '/admin/index.html',
+      });
+    });
+
+    it('should pass routePrefix in builder config for static services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'vite',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services[0].builder.config).toMatchObject({
+        routePrefix: '/admin',
+        framework: 'vite',
+      });
+    });
+
+    it('should handle mixed static and function services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'vite',
+              routePrefix: '/',
+            },
+            'admin-panel': {
+              workspace: 'apps/admin',
+              framework: 'vite',
+              routePrefix: '/admin',
+            },
+            'express-api': {
+              entrypoint: 'api/index.js',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(3);
+      expect(result.errors).toEqual([]);
+
+      const frontend = result.services.find(s => s.name === 'frontend');
+      const adminPanel = result.services.find(s => s.name === 'admin-panel');
+      const expressApi = result.services.find(s => s.name === 'express-api');
+
+      // Vite services should be static builds
+      expect(frontend?.isStaticBuild).toBe(true);
+      expect(adminPanel?.isStaticBuild).toBe(true);
+      // Node entrypoint should be a function
+      expect(expressApi?.isStaticBuild).toBe(false);
+
+      // Function service gets rewrite route
+      expect(result.routes.rewrites).toContainEqual(
+        expect.objectContaining({
+          src: '^/api(?:/.*)?$',
+          dest: '/api/index.js',
+          check: true,
+        })
+      );
+
+      // Prefixed SPA gets fallback route
+      expect(result.routes.rewrites).toContainEqual(
+        expect.objectContaining({
+          src: '^/admin(?:/.*)?$',
+          dest: '/admin/index.html',
+        })
+      );
+
+      // Root SPA gets filesystem and fallback in defaults
+      expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
+      expect(result.routes.defaults).toContainEqual({
+        src: '/(.*)',
+        dest: '/index.html',
+      });
+    });
+  });
 });

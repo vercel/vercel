@@ -75,6 +75,11 @@ export async function detectServices(
  * more specific routes match before broader ones. For example, `/api/users`
  * must be checked before `/api`, which must be checked before the catch-all `/`.
  *
+ * Static/SPA services: Use filesystem routing with SPA fallback to index.html.
+ * The assets are mounted at the routePrefix path.
+ *
+ * Serverless services: Route requests to the function path.
+ *
  * Cron/Worker services: TODO
  * Use internal routes under `/_svc/crons` and `/_svc/workers`
  */
@@ -99,7 +104,20 @@ export function generateServicesRoutes(
     return b.routePrefix.length - a.routePrefix.length;
   });
 
+  // Separate static/SPA services from serverless function services
+  const staticServices: typeof sortedWebServices = [];
+  const functionServices: typeof sortedWebServices = [];
+
   for (const service of sortedWebServices) {
+    if (service.isStaticBuild) {
+      staticServices.push(service);
+    } else {
+      functionServices.push(service);
+    }
+  }
+
+  // Generate routes for serverless function services
+  for (const service of functionServices) {
     const { routePrefix, builder } = service;
 
     // The dest must point to the actual function path (builder.src),
@@ -114,14 +132,14 @@ export function generateServicesRoutes(
     // skipped and routing continues. This ensures requests only route to
     // functions that were successfully built.
     if (routePrefix === '/') {
-      // Root service: catch-all route
+      // Root function service: catch-all route
       defaults.push({
         src: '^/(.*)$',
         dest: functionPath,
         check: true,
       });
     } else {
-      // Non-root service: prefix-based rewrite
+      // Non-root function service: prefix-based rewrite
       const normalizedPrefix = routePrefix.startsWith('/')
         ? routePrefix.slice(1)
         : routePrefix;
@@ -129,6 +147,41 @@ export function generateServicesRoutes(
         src: `^/${normalizedPrefix}(?:/.*)?$`,
         dest: functionPath,
         check: true,
+      });
+    }
+  }
+
+  // Generate routes for static/SPA services
+  // Static services need SPA fallback to index.html after filesystem routing.
+  // The rewriteRoutes are placed in the filesystem phase by detectBuilders,
+  // so they act as fallbacks after static files are checked.
+  for (const service of staticServices) {
+    const { routePrefix } = service;
+
+    if (routePrefix === '/') {
+      // Root static service: SPA fallback after filesystem routing
+      // Files are served from the root static directory
+      defaults.push({
+        handle: 'filesystem',
+      });
+      // SPA fallback: serve index.html for all unmatched routes
+      defaults.push({
+        src: '/(.*)',
+        dest: '/index.html',
+      });
+    } else {
+      // Prefixed static service: SPA fallback for the prefix
+      // Files are mounted at /{prefix}/* by the builder (e.g., admin/index.html)
+      // Filesystem routing serves static files first, then this fallback catches SPA routes
+      const normalizedPrefix = routePrefix.startsWith('/')
+        ? routePrefix.slice(1)
+        : routePrefix;
+
+      // SPA fallback: if no static file matches under this prefix, serve its index.html
+      // This enables client-side routing for SPAs mounted at a prefix
+      rewrites.push({
+        src: `^/${normalizedPrefix}(?:/.*)?$`,
+        dest: `/${normalizedPrefix}/index.html`,
       });
     }
   }

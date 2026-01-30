@@ -153,6 +153,15 @@ export function resolveConfiguredService(
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
   const runtime = isStaticBuild ? undefined : inferredRuntime;
 
+  // Pass routePrefix to builder config for proper asset mounting
+  // Static builds need this to mount files at the correct path prefix
+  if (routePrefix) {
+    builderConfig.routePrefix = routePrefix;
+  }
+  if (config.framework) {
+    builderConfig.framework = config.framework;
+  }
+
   return {
     name,
     type,
@@ -167,6 +176,7 @@ export function resolveConfiguredService(
       config: Object.keys(builderConfig).length > 0 ? builderConfig : undefined,
     },
     runtime,
+    isStaticBuild,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
