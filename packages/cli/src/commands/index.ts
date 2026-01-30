@@ -33,6 +33,7 @@ import { pullCommand } from './pull/command';
 import { redeployCommand } from './redeploy/command';
 import { redirectsCommand } from './redirects/command';
 import { removeCommand } from './remove/command';
+import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
 import { targetCommand } from './target/command';
@@ -81,6 +82,7 @@ const commandsStructs = [
   redeployCommand,
   redirectsCommand,
   removeCommand,
+  routesCommand,
   rollbackCommand,
   rollingReleaseCommand,
   targetCommand,
