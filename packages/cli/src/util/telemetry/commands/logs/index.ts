@@ -147,4 +147,15 @@ export class LogsTelemetryClient
       this.trackCliFlag('expand');
     }
   }
+
+  trackCliOptionBranch(v: string | boolean | undefined) {
+    if (typeof v === 'string') {
+      this.trackCliOption({
+        option: 'branch',
+        value: this.redactedValue,
+      });
+    } else if (v === false) {
+      this.trackCliFlag('no-branch');
+    }
+  }
 }

@@ -118,6 +118,14 @@ export const logsCommand = {
       deprecated: false,
       description: 'Show full log message below each request line',
     },
+    {
+      name: 'branch',
+      shorthand: 'b',
+      type: String,
+      deprecated: false,
+      description:
+        'Filter by git branch (defaults to current branch when in a git repo)',
+    },
   ],
   examples: [
     {
@@ -159,6 +167,14 @@ export const logsCommand = {
     {
       name: 'Display logs with full message details',
       value: `${packageName} logs --expand`,
+    },
+    {
+      name: 'Display logs for a specific branch',
+      value: `${packageName} logs --branch feature-x`,
+    },
+    {
+      name: 'Display logs for all branches (disable auto-detection)',
+      value: `${packageName} logs --no-branch`,
     },
   ],
 } as const;

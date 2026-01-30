@@ -2,6 +2,7 @@ import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import { format } from 'date-fns';
 import type Client from '../../util/client';
+import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -203,6 +204,7 @@ export default async function logs(client: Client) {
   const queryOption = parsedArguments.flags['--query'];
   const requestIdOption = parsedArguments.flags['--request-id'];
   const expandOption = parsedArguments.flags['--expand'];
+  const branchFlagValue = parsedArguments.flags['--branch'];
 
   // Implicit --follow when deployment is specified (for backwards compatibility)
   // unless --no-follow is explicitly set
@@ -225,6 +227,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
   telemetry.trackCliFlagExpand(expandOption);
+  telemetry.trackCliOptionBranch(branchFlagValue);
 
   if (followOption) {
     if (!deploymentOption) {
@@ -340,6 +343,25 @@ export default async function logs(client: Client) {
     }
   }
 
+  // Determine branch filter:
+  // - If --branch is explicitly set (string), use it
+  // - If --no-branch is set (false), don't filter by branch
+  // - Otherwise, auto-detect current git branch when no deployment is specified
+  let branchOption: string | undefined;
+  if (typeof branchFlagValue === 'string') {
+    branchOption = branchFlagValue;
+  } else if (branchFlagValue !== false && !deploymentId) {
+    try {
+      const gitMeta = await createGitMeta(client.cwd);
+      if (gitMeta?.commitRef) {
+        branchOption = gitMeta.commitRef;
+        output.debug(`Detected git branch: ${branchOption}`);
+      }
+    } catch {
+      // Not in a git repo or git not available, continue without branch filter
+    }
+  }
+
   if (followOption) {
     if (!jsonOption) {
       output.print(
@@ -418,6 +440,7 @@ export default async function logs(client: Client) {
       limit,
       search: queryOption,
       requestId: requestIdOption,
+      branch: branchOption,
     })) {
       output.stopSpinner();
       if (jsonOption) {
@@ -435,9 +458,14 @@ export default async function logs(client: Client) {
   output.stopSpinner();
 
   if (!jsonOption) {
+    const branchSuffix = branchOption
+      ? ` on branch ${chalk.cyan(branchOption)}`
+      : '';
     if (logs.length === 0) {
       output.print(
-        chalk.dim(`No logs found for ${formatProject(orgSlug, projectSlug)}\n`)
+        chalk.dim(
+          `No logs found for ${formatProject(orgSlug, projectSlug)}${branchSuffix}\n`
+        )
       );
     } else {
       const showDate = logsSpanMultipleDays(logs);
@@ -446,6 +474,7 @@ export default async function logs(client: Client) {
       // Build row data
       type RowData = {
         time: string;
+        host: string;
         level: string;
         path: string;
         status: string;
@@ -458,6 +487,7 @@ export default async function logs(client: Client) {
         const statusCode = log.responseStatusCode;
         return {
           time: format(log.timestamp, timeFormat),
+          host: log.domain || '',
           level: log.level,
           path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
           status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
@@ -472,6 +502,11 @@ export default async function logs(client: Client) {
         {
           label: 'TIME',
           getValue: row => row.time,
+          format: padded => chalk.dim(padded),
+        },
+        {
+          label: 'HOST',
+          getValue: row => row.host,
           format: padded => chalk.dim(padded),
         },
         {
@@ -538,7 +573,7 @@ export default async function logs(client: Client) {
 
       output.print(
         chalk.gray(
-          `Fetched ${logs.length} logs for ${formatProject(orgSlug, projectSlug)}\n`
+          `Fetched ${logs.length} logs for ${formatProject(orgSlug, projectSlug)}${branchSuffix}\n`
         )
       );
     }
