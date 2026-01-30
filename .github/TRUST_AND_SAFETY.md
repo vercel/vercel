@@ -26,4 +26,4 @@ To be determined - this page needs to be populated with appropriate trust and sa
 
 ---
 
-*This document is a placeholder for tracking trust and safety initiatives. It should be moved to the appropriate repository once the correct codebase is identified.*
+_This document is a placeholder for tracking trust and safety initiatives. It should be moved to the appropriate repository once the correct codebase is identified._
