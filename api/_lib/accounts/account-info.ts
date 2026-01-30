@@ -4,11 +4,13 @@ import { Account, AccountFilters } from './types';
  * Mock function to get account information
  * In production, this would query a database or call an internal API
  */
-export async function getAccountInfo(accountId: string): Promise<Account | null> {
+export async function getAccountInfo(
+  accountId: string
+): Promise<Account | null> {
   // This is a mock implementation
   // In a real scenario, this would fetch from a database
   const mockAccounts: Record<string, Account> = {
-    'acc_1': {
+    acc_1: {
       id: 'acc_1',
       name: 'John Doe',
       email: 'john.doe@example.com',
@@ -19,7 +21,7 @@ export async function getAccountInfo(accountId: string): Promise<Account | null>
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
       permissions: ['read', 'write', 'admin'],
     },
-    'acc_2': {
+    acc_2: {
       id: 'acc_2',
       name: 'Jane Smith',
       email: 'jane.smith@example.com',

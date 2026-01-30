@@ -11,6 +11,7 @@ This directory contains API endpoints for managing team accounts in the Vercel a
 Lists all accounts for a given team with filtering, sorting, and pagination.
 
 **Query Parameters:**
+
 - `teamId` (required): The team ID
 - `page` (optional): Page number (default: 1)
 - `perPage` (optional): Items per page (default: 20, max: 100)
@@ -21,11 +22,13 @@ Lists all accounts for a given team with filtering, sorting, and pagination.
 - `sortOrder` (optional): Sort order (`asc`, `desc`)
 
 **Example Request:**
+
 ```
 GET /api/accounts/list?teamId=team_nLlpyC6REAqxydlFKbrMDlud&page=1&perPage=20&role=admin&sortBy=name&sortOrder=asc
 ```
 
 **Example Response:**
+
 ```json
 {
   "accounts": [
@@ -69,14 +72,17 @@ GET /api/accounts/list?teamId=team_nLlpyC6REAqxydlFKbrMDlud&page=1&perPage=20&ro
 Get detailed information about a specific account.
 
 **Query Parameters:**
+
 - `accountId` (required): The account ID
 
 **Example Request:**
+
 ```
 GET /api/accounts/info?accountId=acc_1
 ```
 
 **Example Response:**
+
 ```json
 {
   "account": {
@@ -112,14 +118,17 @@ GET /api/accounts/info?accountId=acc_1
 Get statistics about accounts for a team.
 
 **Query Parameters:**
+
 - `teamId` (required): The team ID
 
 **Example Request:**
+
 ```
 GET /api/accounts/stats?teamId=team_nLlpyC6REAqxydlFKbrMDlud
 ```
 
 **Example Response:**
+
 ```json
 {
   "total": 5,
@@ -167,11 +176,13 @@ The current implementation uses mock data for demonstration purposes. In a produ
 ## Integration with Admin UI
 
 These endpoints are designed to be consumed by the admin UI at:
+
 ```
 https://admin.vercel.com/team/{team_id}/accounts
 ```
 
 The UI should:
+
 - Display a table of accounts with filtering and sorting
 - Show account statistics in a dashboard
 - Allow clicking on accounts to view detailed information

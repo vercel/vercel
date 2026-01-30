@@ -25,11 +25,18 @@ export default withApiHandler(async function (
   const page = parseInt((req.query.page as string) || '1', 10);
   const perPage = parseInt((req.query.perPage as string) || '20', 10);
 
-  if (Number.isNaN(page) || Number.isNaN(perPage) || page < 1 || perPage < 1 || perPage > 100) {
+  if (
+    Number.isNaN(page) ||
+    Number.isNaN(perPage) ||
+    page < 1 ||
+    perPage < 1 ||
+    perPage > 100
+  ) {
     return res.status(400).json({
       error: {
         code: 'invalid_pagination',
-        message: 'Invalid pagination parameters. Page must be >= 1 and perPage must be between 1 and 100.',
+        message:
+          'Invalid pagination parameters. Page must be >= 1 and perPage must be between 1 and 100.',
       },
     });
   }
