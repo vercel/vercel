@@ -222,15 +222,39 @@ importers:
 
   packages/backends:
     dependencies:
-      '@vercel/cervel':
+      '@vercel/build-utils':
         specifier: workspace:*
-        version: link:../cervel
-      '@vercel/introspection':
-        specifier: workspace:*
-        version: link:../introspection
+        version: link:../build-utils
+      '@vercel/nft':
+        specifier: 1.3.0
+        version: 1.3.0
+      execa:
+        specifier: 3.2.0
+        version: 3.2.0
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      oxc-transform:
+        specifier: 0.111.0
+        version: 0.111.0
+      path-to-regexp:
+        specifier: 8.3.0
+        version: 8.3.0
+      resolve.exports:
+        specifier: 2.0.3
+        version: 2.0.3
+      rolldown:
+        specifier: 1.0.0-rc.1
+        version: 1.0.0-rc.1
+      srvx:
+        specifier: 0.8.9
+        version: 0.8.9
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+      zod:
+        specifier: 3.22.4
+        version: 3.22.4
     devDependencies:
       '@types/express':
         specifier: 5.0.3
@@ -244,12 +268,6 @@ importers:
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
-      '@vercel/build-utils':
-        specifier: workspace:*
-        version: link:../build-utils
-      execa:
-        specifier: 3.2.0
-        version: 3.2.0
       hono:
         specifier: 4.10.1
         version: 4.10.1
@@ -259,6 +277,9 @@ importers:
       tsdown:
         specifier: 0.16.3
         version: 0.16.3(typescript@4.9.5)
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
       vite:
         specifier: ^5.1.6
         version: 5.1.8(@types/node@20.11.0)
@@ -385,33 +406,9 @@ importers:
 
   packages/cervel:
     dependencies:
-      '@vercel/build-utils':
+      '@vercel/backends':
         specifier: workspace:*
-        version: link:../build-utils
-      '@vercel/nft':
-        specifier: 1.3.0
-        version: 1.3.0
-      execa:
-        specifier: 3.2.0
-        version: 3.2.0
-      nf3:
-        specifier: 0.3.6
-        version: 0.3.6
-      oxc-transform:
-        specifier: 0.111.0
-        version: 0.111.0
-      resolve.exports:
-        specifier: 2.0.3
-        version: 2.0.3
-      rolldown:
-        specifier: 1.0.0-rc.1
-        version: 1.0.0-rc.1
-      srvx:
-        specifier: 0.8.9
-        version: 0.8.9
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
+        version: link:../backends
     devDependencies:
       '@types/node':
         specifier: 20.11.0
@@ -1622,55 +1619,16 @@ importers:
 
   packages/introspection:
     dependencies:
-      path-to-regexp:
-        specifier: 8.3.0
-        version: 8.3.0
-      zod:
-        specifier: 3.22.4
-        version: 3.22.4
+      '@vercel/backends':
+        specifier: workspace:*
+        version: link:../backends
     devDependencies:
-      '@types/express':
-        specifier: 5.0.3
-        version: 5.0.3
-      '@types/fs-extra':
-        specifier: '11'
-        version: 11.0.1
-      '@types/jest':
-        specifier: 27.5.1
-        version: 27.5.1
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
-      '@vercel/build-utils':
-        specifier: workspace:*
-        version: link:../build-utils
-      '@vercel/cervel':
-        specifier: workspace:*
-        version: link:../cervel
-      '@vercel/nft':
-        specifier: 1.1.1
-        version: 1.1.1
-      '@vercel/static-config':
-        specifier: workspace:*
-        version: link:../static-config
-      execa:
-        specifier: 3.2.0
-        version: 3.2.0
-      fs-extra:
-        specifier: 11.1.0
-        version: 11.1.0
-      hono:
-        specifier: 4.10.1
-        version: 4.10.1
-      jest-junit:
-        specifier: 16.0.0
-        version: 16.0.0
       tsdown:
         specifier: 0.16.3
         version: 0.16.3(typescript@4.9.5)
-      vite:
-        specifier: ^5.1.6
-        version: 5.1.8(@types/node@20.11.0)
       vitest:
         specifier: ^2.0.1
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
@@ -5913,6 +5871,7 @@ packages:
     engines: {node: '>=18.0.0'}
     dependencies:
       minipass: 7.1.2
+    dev: false
 
   /@istanbuljs/load-nyc-config@1.1.0:
     resolution: {integrity: sha512-VjeHSlIzpv/NyD3N0YuHfXOPDIixcA1q2ZV98wsMqcYlPmv2n3Yb2lYP9XMElnaFVXg5A7YLTeLu6V84uQDjmQ==}
@@ -6261,7 +6220,7 @@ packages:
     hasBin: true
     dependencies:
       consola: 3.4.2
-      detect-libc: 2.0.4
+      detect-libc: 2.1.2
       https-proxy-agent: 7.0.6
       node-fetch: 2.6.9
       nopt: 8.1.0
@@ -6270,6 +6229,7 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
+    dev: false
 
   /@microsoft/tsdoc-config@0.16.2:
     resolution: {integrity: sha512-OGiIzzoBLgWWR0UdRJX98oYO+XKGf7tiK4Zk6tQ/E4IJqGCe7dvkTvgDZV5cFJUzLGDOjeAXrnZoA6QkVySuxw==}
@@ -7194,6 +7154,7 @@ packages:
       '@types/estree': 1.0.8
       estree-walker: 2.0.2
       picomatch: 4.0.3
+    dev: false
 
   /@rollup/rollup-android-arm-eabi@4.52.5:
     resolution: {integrity: sha512-8c1vW4ocv3UOMp9K+gToY5zL2XiiVw3k7f1ksf4yO1FlDFQ1C2u72iACFnSOceJFsWskc2WZNqeRhFRPzv+wtQ==}
@@ -10058,6 +10019,7 @@ packages:
       - encoding
       - rollup
       - supports-color
+    dev: false
 
   /@vercel/nft@1.3.0:
     resolution: {integrity: sha512-i4EYGkCsIjzu4vorDUbqglZc5eFtQI2syHb++9ZUDm6TU4edVywGpVnYDein35x9sevONOn9/UabfQXuNXtuzQ==}
@@ -10475,6 +10437,7 @@ packages:
   /abbrev@3.0.1:
     resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
     engines: {node: ^18.17.0 || >=20.5.0}
+    dev: false
 
   /accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
@@ -10490,6 +10453,7 @@ packages:
       acorn: ^8
     dependencies:
       acorn: 8.14.1
+    dev: false
 
   /acorn-jsx@5.3.2(acorn@8.14.1):
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -10921,6 +10885,7 @@ packages:
 
   /async-sema@3.1.1:
     resolution: {integrity: sha512-tLRNUXati5MFePdAk8dw7Qt7DpxPB60ofAgn8WRhW6a2rcimZnYBP9oxHiv0OHy+Wz7kPMG+t4LGdt31+4EmGg==}
+    dev: false
 
   /async@3.2.6:
     resolution: {integrity: sha512-htCUDlxyyCLMgaM3xXg0C0LW2xqfuQ6p05pCEIsXuyQ+a1koYKTuBMzRNwmybfLgvJDMd0r1LTn4+E0Ti6C2AA==}
@@ -11073,6 +11038,7 @@ packages:
     resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
     dependencies:
       file-uri-to-path: 1.0.0
+    dev: false
 
   /birpc@2.8.0:
     resolution: {integrity: sha512-Bz2a4qD/5GRhiHSwj30c/8kC8QGj12nNDwz3D4ErQ4Xhy35dsSDvF+RA/tWpjyU0pdGtSDiEk6B5fBGE1qNVhw==}
@@ -11533,6 +11499,7 @@ packages:
   /chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
+    dev: false
 
   /ci-info@3.9.0:
     resolution: {integrity: sha512-NIxF55hv4nSqQswkAeiOi1r83xy8JldOFDTWiug55KBu9Jnblncd2U6ViHmYgHf01TPZS77NJBhBMKdWj9HQMQ==}
@@ -11746,6 +11713,7 @@ packages:
   /consola@3.4.2:
     resolution: {integrity: sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==}
     engines: {node: ^14.18.0 || >=16.10.0}
+    dev: false
 
   /content-disposition@0.5.2:
     resolution: {integrity: sha512-kRGRZw3bLlFISDBgwTSA1TMBFN6J6GWDeubmDE3AF+3+yXL8hTWv8r5rkLbqYXY4RjPk/EzHnClI3zQf1cFmHA==}
@@ -12185,15 +12153,9 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  /detect-libc@2.0.4:
-    resolution: {integrity: sha512-3UDv+G9CsCKO1WKMGw9fwq/SWJYbI0c5Y7LU1AXYoDdbhE2AHQ6N6Nb34sG8Fj7T5APy8qXDCKuuIHd1BR0tVA==}
-    engines: {node: '>=8'}
-
   /detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
-    dev: true
-    optional: true
 
   /detect-newline@3.1.0:
     resolution: {integrity: sha512-TLz+x/vEXm/Y7P7wn1EJFNLxYpUD4TgMosxY6fAVJUnJMbupHBOncxyWUG9OpTaH9EBD7uFI5LfEgmMOc54DsA==}
@@ -13476,6 +13438,7 @@ packages:
 
   /estree-walker@2.0.2:
     resolution: {integrity: sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==}
+    dev: false
 
   /estree-walker@3.0.3:
     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
@@ -13781,6 +13744,7 @@ packages:
 
   /file-uri-to-path@1.0.0:
     resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
+    dev: false
 
   /filelist@1.0.4:
     resolution: {integrity: sha512-w1cEuf3S+DrLCQL7ET6kz+gmlJdbq9J7yXCSjK/OZCPA+qEN1WyF4ZAf0YYJa4/shHJra2t/d/r8SV4Ji+x+8Q==}
@@ -14187,6 +14151,7 @@ packages:
       minimatch: 10.1.1
       minipass: 7.1.2
       path-scurry: 2.0.1
+    dev: false
 
   /glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
@@ -16151,6 +16116,7 @@ packages:
   /lru-cache@11.2.2:
     resolution: {integrity: sha512-F9ODfyqML2coTIsQpSkRHnLSZMtkU8Q+mSfcaIyKwy58u+8k5nvAYeiNhsyMARvzNcXJ9QfWVrcPsC9e9rAxtg==}
     engines: {node: 20 || >=22}
+    dev: false
 
   /lru-cache@4.1.5:
     resolution: {integrity: sha512-sWZlbEP2OsHNkXrMl5GYk/jKk70MBng6UU4YI/qGDYbgf6YbP4EvmqISbXCoJiRKs+1bSpFHVgQxvJ17F2li5g==}
@@ -16431,6 +16397,7 @@ packages:
     engines: {node: '>= 18'}
     dependencies:
       minipass: 7.1.2
+    dev: false
 
   /mkdirp@0.5.6:
     resolution: {integrity: sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==}
@@ -16447,6 +16414,7 @@ packages:
     resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
     engines: {node: '>=10'}
     hasBin: true
+    dev: false
 
   /mock-fs@5.5.0:
     resolution: {integrity: sha512-d/P1M/RacgM3dB0sJ8rjeRNXxtapkPCUnMGmIN0ixJ16F/E4GUZCvWcSGfWGz8eaXYvn1s9baUwNjI4LOPEjiA==}
@@ -16655,10 +16623,6 @@ packages:
       - babel-plugin-macros
     dev: true
 
-  /nf3@0.3.6:
-    resolution: {integrity: sha512-/XRUUILTAyuy1XunyVQuqGp8aEmZ2TfRTn8Rji+FA4xqv20qzL4jV7Reqbuey2XucKgPeRVcEYGScmJM0UnB6Q==}
-    dev: false
-
   /nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
     dev: true
@@ -16688,6 +16652,7 @@ packages:
   /node-gyp-build@4.8.4:
     resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
     hasBin: true
+    dev: false
 
   /node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
@@ -16703,6 +16668,7 @@ packages:
     hasBin: true
     dependencies:
       abbrev: 3.0.1
+    dev: false
 
   /normalize-package-data@2.5.0:
     resolution: {integrity: sha512-/5CMN3T0R4XTj4DcGaexo+roZSdSFW/0AOOTROrjxzCG1wrWXEsGbRKevjlIL+ZDE4sZlJr5ED4YW0yqmkK+eA==}
@@ -17295,6 +17261,7 @@ packages:
     dependencies:
       lru-cache: 11.2.2
       minipass: 7.1.2
+    dev: false
 
   /path-to-regexp@0.1.10:
     resolution: {integrity: sha512-7lf7qcQidTku0Gu3YDPc8DJ1q7OOucfa/BSsIwjuh56VU7katFvuM8hULfkwB3Fns/rsVF7PwPKVw1sl5KQS9w==}
@@ -19239,6 +19206,7 @@ packages:
       minizlib: 3.0.2
       mkdirp: 3.0.1
       yallist: 5.0.0
+    dev: false
 
   /teeny-request@7.0.1:
     resolution: {integrity: sha512-sasJmQ37klOlplL4Ia/786M5YlOcoLGQyq2TE4WHSRupbAuDaQW0PfVxV4MtdBtRJ4ngzS+1qim8zP6Zp35qCw==}
@@ -20882,6 +20850,7 @@ packages:
   /yallist@5.0.0:
     resolution: {integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==}
     engines: {node: '>=18'}
+    dev: false
 
   /yaml@2.7.1:
     resolution: {integrity: sha512-10ULxpnOCQXxJvBgxsn9ptjq6uviG/htZKk9veJGhlqn3w/DxQ631zFF+nlQXLwmImeS5amR2dl2U8sg6U9jsQ==}

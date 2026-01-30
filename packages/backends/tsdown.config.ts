@@ -4,6 +4,42 @@ export default defineConfig([
   {
     entry: 'src/index.ts',
     dts: true,
-    exports: true,
+  },
+  // Introspection loaders
+  {
+    entry: 'src/introspection/loaders/cjs.ts',
+    outDir: 'dist/introspection/loaders',
+    format: 'cjs',
+  },
+  {
+    entry: 'src/introspection/loaders/esm.ts',
+    outDir: 'dist/introspection/loaders',
+    format: 'esm',
+  },
+  {
+    entry: 'src/introspection/loaders/hooks.ts',
+    outDir: 'dist/introspection/loaders',
+    format: 'esm',
+  },
+  {
+    entry: 'src/introspection/loaders/rolldown-esm.ts',
+    outDir: 'dist/introspection/loaders',
+    format: 'esm',
+  },
+  {
+    entry: 'src/introspection/loaders/rolldown-hooks.ts',
+    outDir: 'dist/introspection/loaders',
+    format: 'esm',
+  },
+  // Introspection framework handlers (needed by loaders at runtime)
+  {
+    entry: 'src/introspection/express.ts',
+    outDir: 'dist/introspection',
+    format: 'esm',
+  },
+  {
+    entry: 'src/introspection/hono.ts',
+    outDir: 'dist/introspection',
+    format: 'esm',
   },
 ]);
