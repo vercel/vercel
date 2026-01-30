@@ -6,6 +6,20 @@ import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
 import output from '../../output-manager';
 
+function ensureSubPath(root: string, subPath: string): string {
+  const resolvedRoot = fs.realpathSync(root);
+  const resolvedSubPath = fs.realpathSync(subPath);
+  if (
+    resolvedSubPath !== resolvedRoot &&
+    !resolvedSubPath.startsWith(`${resolvedRoot}${delimiter === ';' ? '\\' : '/'}`)
+  ) {
+    throw new Error(
+      `Refusing to use path outside of repository root: "${resolvedSubPath}"`
+    );
+  }
+  return resolvedSubPath;
+}
+
 export async function initCorepack({
   repoRootPath,
 }: {
@@ -37,8 +51,9 @@ export async function initCorepack({
     const corepackShimDir = join(corepackRootDir, 'shim');
     await fs.mkdirp(corepackHomeDir);
     await fs.mkdirp(corepackShimDir);
+    const validatedShimDir = ensureSubPath(repoRootPath, corepackShimDir);
     process.env.COREPACK_HOME = corepackHomeDir;
-    process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
+    process.env.PATH = `${validatedShimDir}${delimiter}${process.env.PATH}`;
     const pkgManagerName = pkg.packageManager.split('@')[0];
     // We must explicitly call `corepack enable npm` since `corepack enable`
     // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
@@ -49,12 +64,12 @@ export async function initCorepack({
     // reuse for subsequent builds. See `@vercel/vc-build` for `prepareCache`.
     await spawnAsync(
       'corepack',
-      ['enable', pkgManagerName, '--install-directory', corepackShimDir],
+      ['enable', pkgManagerName, '--install-directory', validatedShimDir],
       {
         prettyCommand: `corepack enable ${pkgManagerName}`,
       }
     );
-    return corepackShimDir;
+    return validatedShimDir;
   }
   return null;
 }
