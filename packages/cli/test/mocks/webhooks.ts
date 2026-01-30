@@ -25,29 +25,9 @@ export function useWebhooks(count = 20) {
     createWebhook(`hook_${i}`)
   );
 
-  client.scenario.get('/v1/webhooks', (req, res) => {
-    const limit =
-      typeof req.query.limit === 'string' ? parseInt(req.query.limit) : 20;
-    const until =
-      typeof req.query.until === 'string' ? parseInt(req.query.until) : 0;
-
-    // Simulate cursor-based pagination
-    const startIndex =
-      until > 0 ? webhooks.findIndex(w => w.createdAt < until) : 0;
-    const sliced = webhooks.slice(
-      startIndex >= 0 ? startIndex : 0,
-      (startIndex >= 0 ? startIndex : 0) + limit
-    );
-    const hasMore = startIndex + limit < webhooks.length;
-
-    res.json({
-      webhooks: sliced,
-      pagination: {
-        count: sliced.length,
-        next: hasMore ? webhooks[startIndex + limit]?.createdAt : null,
-        prev: startIndex > 0 ? webhooks[startIndex - 1]?.createdAt : null,
-      },
-    });
+  client.scenario.get('/v1/webhooks', (_req, res) => {
+    // Return array directly like the real API does
+    res.json(webhooks);
   });
 
   return webhooks;

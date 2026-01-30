@@ -1,20 +1,18 @@
-import type { PaginationOptions } from '@vercel-internals/types';
 import type Client from '../client';
 import type { Webhook } from './types';
 
 type Response = {
   webhooks: Webhook[];
-  pagination: PaginationOptions;
 };
 
-export default async function getWebhooks(
-  client: Client,
-  next?: number,
-  limit = 20
-): Promise<Response> {
-  let url = `/v1/webhooks?limit=${limit}`;
-  if (next) {
-    url += `&until=${next}`;
+type ApiResponse = Webhook[] | { webhooks: Webhook[] };
+
+export default async function getWebhooks(client: Client): Promise<Response> {
+  const response = await client.fetch<ApiResponse>('/v1/webhooks');
+
+  // Handle both array response (current API) and object response (future/mock)
+  if (Array.isArray(response)) {
+    return { webhooks: response };
   }
-  return client.fetch<Response>(url);
+  return response;
 }

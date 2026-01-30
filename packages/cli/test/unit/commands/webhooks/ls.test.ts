@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import webhooks from '../../../../src/commands/webhooks';
 import { useUser } from '../../../mocks/user';
-import { useWebhooks } from '../../../mocks/webhooks';
+import { useWebhooks, createWebhook } from '../../../mocks/webhooks';
 
 describe('webhooks ls', () => {
   describe('--help', () => {
@@ -47,55 +47,37 @@ describe('webhooks ls', () => {
     ]);
   });
 
-  describe('--limit', () => {
-    it('should list up to 2 webhooks if limit set to 2', async () => {
+  describe('API response formats', () => {
+    it('handles array response format', async () => {
       useUser();
-      useWebhooks(10);
-      client.setArgv('webhooks', 'ls', '--limit', '2');
+      // Mock the API response format (array directly)
+      const webhooksData = [createWebhook('hook_1'), createWebhook('hook_2')];
+      client.scenario.get('/v1/webhooks', (_req, res) => {
+        res.json(webhooksData);
+      });
+
+      client.setArgv('webhooks', 'ls');
       const exitCode = await webhooks(client);
       expect(exitCode, 'exit code for "webhooks ls"').toEqual(0);
-
       await expect(client.stderr).toOutput('2 Webhooks found');
     });
 
-    it('tracks telemetry data', async () => {
+    it('handles object response format', async () => {
       useUser();
-      useWebhooks(10);
-      client.setArgv('webhooks', 'ls', '--limit', '2');
+      // Some APIs might return object with webhooks property
+      const webhooksData = [
+        createWebhook('hook_1'),
+        createWebhook('hook_2'),
+        createWebhook('hook_3'),
+      ];
+      client.scenario.get('/v1/webhooks', (_req, res) => {
+        res.json({ webhooks: webhooksData });
+      });
+
+      client.setArgv('webhooks', 'ls');
       const exitCode = await webhooks(client);
       expect(exitCode, 'exit code for "webhooks ls"').toEqual(0);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'subcommand:list',
-          value: 'ls',
-        },
-        {
-          key: 'option:limit',
-          value: '2',
-        },
-      ]);
-    });
-  });
-
-  describe('--next', () => {
-    it('tracks telemetry data', async () => {
-      useUser();
-      useWebhooks(5);
-      client.setArgv('webhooks', 'ls', '--next', '1730124407638');
-      const exitCode = await webhooks(client);
-      expect(exitCode, 'exit code for "webhooks ls"').toEqual(0);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'subcommand:list',
-          value: 'ls',
-        },
-        {
-          key: 'option:next',
-          value: '[REDACTED]',
-        },
-      ]);
+      await expect(client.stderr).toOutput('3 Webhooks found');
     });
   });
 

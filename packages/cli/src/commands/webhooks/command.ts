@@ -1,10 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import {
-  formatOption,
-  limitOption,
-  nextOption,
-  yesOption,
-} from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -12,11 +7,11 @@ export const listSubcommand = {
   description: 'Show all webhooks',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [formatOption],
   examples: [
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} webhooks ls --next 1584722256178`,
+      name: 'List all webhooks as JSON',
+      value: `${packageName} webhooks ls --format json`,
     },
   ],
 } as const;
