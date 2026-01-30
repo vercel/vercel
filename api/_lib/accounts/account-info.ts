@@ -158,7 +158,10 @@ export async function listAccounts(
 /**
  * Get account statistics for a team
  */
-export async function getAccountStats(_teamId: string) {
+export async function getAccountStats(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _teamId: string
+) {
   return {
     total: 5,
     active: 4,
