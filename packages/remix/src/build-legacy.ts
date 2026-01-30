@@ -550,14 +550,6 @@ module.exports = config;`;
     {
       handle: 'filesystem',
     },
-    {
-      handle: 'hit',
-    },
-    {
-      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
   ];
 
   for (const route of remixRoutes) {
@@ -610,6 +602,19 @@ module.exports = config;`;
     src: '/(.*)',
     dest: '/404',
   });
+
+  // Apply cache headers only after a file is matched (handle: hit).
+  // This prevents caching 404 responses for nonexistent assets.
+  routes.push(
+    {
+      handle: 'hit',
+    },
+    {
+      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
+      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+      continue: true,
+    }
+  );
 
   return { routes, output, framework: { version: remixVersion } };
 };

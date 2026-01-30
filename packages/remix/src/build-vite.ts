@@ -507,14 +507,6 @@ export const build: BuildV2 = async ({
     {
       handle: 'filesystem',
     },
-    {
-      handle: 'hit',
-    },
-    {
-      src: `^/${assetsDir}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
   ];
 
   for (const [id, functionId] of Object.entries(
@@ -552,6 +544,19 @@ export const build: BuildV2 = async ({
     src: '/(.*)',
     dest: '/',
   });
+
+  // Apply cache headers only after a file is matched (handle: hit).
+  // This prevents caching 404 responses for nonexistent assets.
+  routes.push(
+    {
+      handle: 'hit',
+    },
+    {
+      src: `^/${assetsDir}/(.*)$`,
+      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+      continue: true,
+    }
+  );
 
   return { routes, output, framework: { version: frameworkVersion } };
 };
