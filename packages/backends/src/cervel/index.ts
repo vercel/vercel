@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
+import { Span } from '@vercel/build-utils';
 export { nodeFileTrace } from './node-file-trace.js';
 import type { ParseArgsConfig } from 'node:util';
 import type { CervelBuildOptions, CervelServeOptions } from './types.js';
@@ -29,16 +30,17 @@ export const getBuildSummary = async (outputDir: string) => {
 
 export const build = async (args: CervelBuildOptions) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.workPath));
+  const span = args.span ?? new Span({ name: 'cervel-build' });
 
   // Run TypeScript compilation and rolldown in parallel
   const [, rolldownResult] = await Promise.all([
-    typescript({ entrypoint, workPath: args.workPath, span: args.span }),
+    typescript({ entrypoint, workPath: args.workPath, span }),
     rolldown({
       entrypoint,
       workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: args.out,
-      span: args.span,
+      span,
     }),
   ]);
 

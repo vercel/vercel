@@ -11,13 +11,13 @@ export const main = async () => {
   const repoRootPath = cwd;
 
   if (command === 'build') {
-    const { tsPromise } = await build({
+    // @ts-expect-error - span is not required
+    await build({
       workPath,
       repoRootPath,
       out,
       entrypoint,
     });
-    await tsPromise;
   } else {
     await serve({ workPath, rest });
   }

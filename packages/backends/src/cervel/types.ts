@@ -13,7 +13,7 @@ export type PathOptions = Pick<BuildOptions, 'workPath' | 'repoRootPath'>;
 export type CervelBuildOptions = PathOptions & {
   entrypoint?: string;
   out: string;
-  span: Span;
+  span?: Span;
 };
 
 /**
