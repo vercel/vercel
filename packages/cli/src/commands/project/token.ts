@@ -57,9 +57,11 @@ export default async function getOidcToken(client: Client, argv: string[]) {
       output.error('No such project exists');
       return 1;
     }
-    if (isAPIError(err) && err.status === 403) {
+    if (isAPIError(err)) {
       output.error(err.message);
       return 1;
     }
+    output.error(`An unexpected error occurred!\n${err as string}`);
+    return 1;
   }
 }
