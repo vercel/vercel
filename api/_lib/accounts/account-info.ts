@@ -42,8 +42,8 @@ export async function getAccountInfo(accountId: string): Promise<Account | null>
 export async function listAccounts(
   teamId: string,
   filters?: AccountFilters,
-  page: number = 1,
-  perPage: number = 20
+  page = 1,
+  perPage = 20
 ): Promise<{ accounts: Account[]; total: number }> {
   // Mock accounts data
   const allAccounts: Account[] = [
@@ -158,7 +158,7 @@ export async function listAccounts(
 /**
  * Get account statistics for a team
  */
-export async function getAccountStats(teamId: string) {
+export async function getAccountStats(_teamId: string) {
   return {
     total: 5,
     active: 4,
