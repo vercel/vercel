@@ -11,7 +11,6 @@ export const main = async () => {
   const repoRootPath = cwd;
 
   if (command === 'build') {
-    // @ts-expect-error - span is not required
     await build({
       workPath,
       repoRootPath,
