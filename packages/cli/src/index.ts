@@ -783,6 +783,10 @@ const main = async () => {
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
           func = require('./commands/redirects').default;
           break;
+        case 'routes':
+          telemetry.trackCliCommandRoutes(userSuppliedSubCommand);
+          func = require('./commands/routes').default;
+          break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);
           func = require('./commands/remove').default;
