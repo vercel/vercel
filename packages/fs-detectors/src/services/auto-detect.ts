@@ -199,6 +199,20 @@ async function detectBackendServices(fs: DetectorFilesystem): Promise<{
   if (multiServicesResult.error) {
     return { services: {}, error: multiServicesResult.error };
   }
+
+  for (const serviceName of Object.keys(multiServicesResult.services)) {
+    if (services[serviceName]) {
+      return {
+        services: {},
+        error: {
+          code: 'SERVICE_NAME_CONFLICT',
+          message: `Service name conflict: "${serviceName}" exists in both ${BACKEND_DIR}/ and ${SERVICES_DIR}/${serviceName}/. Rename one of the directories or use explicit experimentalServices config.`,
+          serviceName,
+        },
+      };
+    }
+  }
+
   Object.assign(services, multiServicesResult.services);
 
   return { services };

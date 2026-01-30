@@ -243,7 +243,7 @@ describe('autoDetectServices', () => {
     });
   });
 
-  describe('Frontend in pps/web/ monorepo + services/', () => {
+  describe('Frontend in apps/web/ monorepo + services/', () => {
     it('should detect apps/web/ and multiple services in services/', async () => {
       const fs = new VirtualFilesystem({
         'apps/web/package.json': JSON.stringify({
@@ -341,6 +341,28 @@ describe('autoDetectServices', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
       expect(result.errors[0].message).toContain('backend');
+    });
+
+    it('should error when service name conflicts between backend/ and services/backend/', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            next: '14.0.0',
+          },
+        }),
+        'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+        'backend/main.py': 'from fastapi import FastAPI',
+        'services/backend/requirements.txt': 'flask',
+        'services/backend/index.py': 'from flask import Flask',
+      });
+
+      const result = await autoDetectServices({ fs });
+
+      expect(result.services).toBeNull();
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('SERVICE_NAME_CONFLICT');
+      expect(result.errors[0].message).toContain('backend');
+      expect(result.errors[0].message).toContain('services/backend');
     });
   });
 });
