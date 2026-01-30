@@ -2725,7 +2725,9 @@ export const onPrerenderRoute =
       !isBlocking &&
       (!isNotFound || static404Page) &&
       dataRoute &&
-      (!isAppClientParamParsingEnabled || prefetchDataRoute)
+      // When this is an App route, either isAppClientParamParsingEnabled is disabled
+      // or there's a prefetchDataRoute
+      (!isAppPathRoute || !isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
