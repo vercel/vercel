@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
+import type { ResolvedService } from '@vercel/fs-detectors';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -16,6 +17,11 @@ import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import {
+  tryDetectServices,
+  isExperimentalServicesEnabled,
+} from '../../util/projects/detect-services';
+import { displayDetectedServices } from '../../util/input/display-services';
 
 type Options = {
   '--listen': string;
@@ -83,10 +89,20 @@ export default async function dev(
       .env;
   }
 
+  let services: ResolvedService[] | undefined;
+  if (isExperimentalServicesEnabled()) {
+    const result = await tryDetectServices(cwd);
+    if (result && result.services.length > 0) {
+      displayDetectedServices(result.services);
+      services = result.services;
+    }
+  }
+
   const devServer = new DevServer(cwd, {
     projectSettings,
     envValues,
     repoRoot,
+    services,
   });
 
   const controller = new AbortController();

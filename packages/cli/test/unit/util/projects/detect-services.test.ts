@@ -23,12 +23,12 @@ describe('tryDetectServices()', () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it('should return null when no vercel.json exists', async () => {
+  it('should return null when no vercel.json exists and no service found', async () => {
     const result = await tryDetectServices(tempDir);
     expect(result).toBeNull();
   });
 
-  it('should return null when vercel.json has no experimentalServices', async () => {
+  it('should return null when vercel.json has no experimentalServices and no service found', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({ buildCommand: 'npm run build' })
