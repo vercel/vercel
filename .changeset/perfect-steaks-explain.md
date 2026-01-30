@@ -1,4 +1,0 @@
----
----
-
-fix ruby logo
