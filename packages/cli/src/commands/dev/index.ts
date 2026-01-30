@@ -10,7 +10,6 @@ import { printError } from '../../util/error';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
-import devTunnel from './dev-tunnel';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { packageName, getCommandName } from '../../util/pkg-name';
@@ -132,10 +131,6 @@ export default async function main(client: Client) {
   }
 
   try {
-    // Use devTunnel if --tunnel flag is specified
-    if (parsedArgs.flags['--tunnel']) {
-      return await devTunnel(client, parsedArgs.flags, args);
-    }
     return await dev(client, parsedArgs.flags, args, telemetry);
   } catch (err) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
