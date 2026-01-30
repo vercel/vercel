@@ -72,7 +72,7 @@
       }
     },
     {
-      "logMustContain": "Using python version: 3.12"
+      "logMustContain": "Using Python 3.14 from .python-version"
     }
   ]
 }

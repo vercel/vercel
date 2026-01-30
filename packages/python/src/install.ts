@@ -205,12 +205,15 @@ export async function createPyprojectToml({
   projectName,
   pyprojectPath,
   dependencies,
+  pythonVersion,
 }: {
   projectName: string;
   pyprojectPath: string;
   dependencies: string[];
+  pythonVersion?: string;
 }) {
-  const requiresPython = `~=${DEFAULT_PYTHON_VERSION}.0`;
+  const version = pythonVersion ?? DEFAULT_PYTHON_VERSION;
+  const requiresPython = `~=${version}.0`;
 
   const depsToml =
     dependencies.length > 0
@@ -249,6 +252,7 @@ interface EnsureUvProjectParams {
   repoRootPath?: string;
   pythonPath: string;
   pipPath: string;
+  pythonVersion: string;
   uv: UvRunner;
   venvPath: string;
   meta: Meta;
@@ -310,6 +314,7 @@ export async function ensureUvProject({
   repoRootPath,
   pythonPath,
   pipPath,
+  pythonVersion,
   uv,
   venvPath,
   meta,
@@ -381,6 +386,7 @@ export async function ensureUvProject({
         projectName: 'app',
         pyprojectPath,
         dependencies: [],
+        pythonVersion,
       });
     }
     await uv.addFromFile({
@@ -404,6 +410,7 @@ export async function ensureUvProject({
         projectName: 'app',
         pyprojectPath,
         dependencies: [],
+        pythonVersion,
       });
     }
     await uv.addFromFile({
@@ -423,6 +430,7 @@ export async function ensureUvProject({
       projectName: 'app',
       pyprojectPath,
       dependencies: [],
+      pythonVersion,
     });
     await uv.lock(projectDir);
   }

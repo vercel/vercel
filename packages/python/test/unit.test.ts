@@ -415,7 +415,7 @@ describe('fallback behavior when requested version is not installed', () => {
 });
 
 describe('createPyprojectToml', () => {
-  it('sets requires-python to compatible release of DEFAULT_PYTHON_VERSION', async () => {
+  it('sets requires-python to compatible release of DEFAULT_PYTHON_VERSION when no pythonVersion provided', async () => {
     const tempDir = path.join(tmpdir(), `pyproject-test-${Date.now()}`);
     fs.mkdirSync(tempDir, { recursive: true });
     const pyprojectPath = path.join(tempDir, 'pyproject.toml');
@@ -431,6 +431,28 @@ describe('createPyprojectToml', () => {
       expect(content).toContain(
         `requires-python = "~=${DEFAULT_PYTHON_VERSION}.0"`
       );
+    } finally {
+      if (fs.existsSync(tempDir)) {
+        fs.removeSync(tempDir);
+      }
+    }
+  });
+
+  it('sets requires-python to compatible release of provided pythonVersion', async () => {
+    const tempDir = path.join(tmpdir(), `pyproject-test-${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+
+    try {
+      await createPyprojectToml({
+        projectName: 'test-app',
+        pyprojectPath,
+        dependencies: [],
+        pythonVersion: '3.14',
+      });
+
+      const content = fs.readFileSync(pyprojectPath, 'utf8');
+      expect(content).toContain('requires-python = "~=3.14.0"');
     } finally {
       if (fs.existsSync(tempDir)) {
         fs.removeSync(tempDir);
