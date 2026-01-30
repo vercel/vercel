@@ -620,6 +620,24 @@ describe('PPR', () => {
       }
     });
   });
+
+  it('should still support getStaticProps', async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'ppr-gsp'));
+
+    const html = output['gsp'];
+    expect(html).toBeDefined();
+    expect(html.type).toBe('FileFsRef');
+    expect(html.fsPath.endsWith('.next/server/pages/gsp.html')).toBe(true);
+
+    const data = Object.entries(output).find(
+      ([k]) => k.startsWith('_next/data/') && k.endsWith('/gsp.json')
+    );
+    expect(data).toBeDefined();
+    expect(data[1].type).toBe('FileFsRef');
+    expect(data[1].fsPath.endsWith('.next/server/pages/gsp.json')).toBe(true);
+  });
 });
 
 describe('rewrite headers', () => {
