@@ -389,6 +389,7 @@ export const build: BuildV3 = async ({
         repoRootPath,
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
+        pythonVersion: pythonVersion.version,
         uv,
         venvPath,
         meta,
