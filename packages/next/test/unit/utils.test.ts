@@ -471,11 +471,11 @@ describe('getMaxUncompressedLambdaSize', () => {
 });
 
 describe('getStaticFiles', () => {
-  it('should return immutableFiles when IMMUTABLE manifest exists', async () => {
+  it('should return immutableFiles when immutable.json manifest exists', async () => {
     const dir = await genDir({
       '.next/static/chunks/main.js': 'main content',
       '.next/static/chunks/immutable.js': 'immutable content',
-      '.next/IMMUTABLE': 'chunks/immutable.js\n',
+      '.next/immutable.json': '["chunks/immutable.js"]',
     });
 
     const result = await getStaticFiles(dir, '', '.next');
@@ -498,7 +498,7 @@ describe('getStaticFiles', () => {
     );
   });
 
-  it('should handle missing IMMUTABLE manifest gracefully', async () => {
+  it('should handle missing immutable.json manifest gracefully', async () => {
     const dir = await genDir({
       '.next/static/chunks/main.js': 'main content',
     });
@@ -511,11 +511,11 @@ describe('getStaticFiles', () => {
     expect(Object.keys(result.immutableFiles)).toHaveLength(0);
   });
 
-  it('should warn about non-existent files in IMMUTABLE manifest', async () => {
+  it('should warn about non-existent files in immutable.json manifest', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
     const dir = await genDir({
       '.next/static/chunks/main.js': 'main content',
-      '.next/IMMUTABLE': 'chunks/nonexistent.js\n',
+      '.next/immutable.json': '["chunks/nonexistent.js"]',
     });
 
     const result = await getStaticFiles(dir, '', '.next');
@@ -530,12 +530,12 @@ describe('getStaticFiles', () => {
     warnSpy.mockRestore();
   });
 
-  it('should handle multiple entries in IMMUTABLE manifest', async () => {
+  it('should handle multiple entries in immutable.json manifest', async () => {
     const dir = await genDir({
       '.next/static/chunks/a.js': 'a content',
       '.next/static/chunks/b.js': 'b content',
       '.next/static/chunks/c.js': 'c content',
-      '.next/IMMUTABLE': 'chunks/a.js\nchunks/b.js\n',
+      '.next/immutable.json': '["chunks/a.js", "chunks/b.js"]',
     });
 
     const result = await getStaticFiles(dir, '', '.next');

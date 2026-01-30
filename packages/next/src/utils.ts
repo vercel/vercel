@@ -3458,26 +3458,32 @@ export async function getStaticFiles(
     path.join(entryPath, outputDirectory, 'static')
   );
 
-  // Read IMMUTABLE manifest if it exists
+  // Read immutable.json manifest if it exists
   const immutableManifestPath = path.join(
     entryPath,
     outputDirectory,
-    'IMMUTABLE'
+    'immutable.json'
   );
   const immutableFileSet = new Set<string>();
 
   if (await fs.pathExists(immutableManifestPath)) {
     const immutableContent = await fs.readFile(immutableManifestPath, 'utf8');
-    const immutableLines = immutableContent
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean);
+    const immutableParsed: unknown = JSON.parse(immutableContent);
 
-    // Each line is a path relative to .next/static/ (e.g., "chunks/abc.js")
-    for (const line of immutableLines) {
-      immutableFileSet.add(line);
+    if (!Array.isArray(immutableParsed)) {
+      throw new Error('immutable.json must be an array');
     }
-    debug(`Found IMMUTABLE manifest with ${immutableFileSet.size} entries`);
+
+    // Each entry is a path relative to .next/static/ (e.g., "chunks/abc.js")
+    for (const entry of immutableParsed) {
+      if (typeof entry !== 'string') {
+        throw new Error('immutable.json entries must be strings');
+      }
+      immutableFileSet.add(entry);
+    }
+    debug(
+      `Found immutable.json manifest with ${immutableFileSet.size} entries`
+    );
   }
 
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
@@ -3519,7 +3525,7 @@ export async function getStaticFiles(
   // Warn about unmatched IMMUTABLE entries
   for (const unmatchedFile of immutableFileSet) {
     console.warn(
-      `Warning: IMMUTABLE entry "static/${unmatchedFile}" not found in .next/static/`
+      `Warning: immutable.json entry "${unmatchedFile}" not found in .next/static/`
     );
   }
 
