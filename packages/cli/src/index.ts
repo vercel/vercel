@@ -196,7 +196,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl'];
+  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
@@ -812,6 +812,10 @@ const main = async () => {
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = require('./commands/upgrade').default;
+          break;
+        case 'webhooks':
+          telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
+          func = require('./commands/webhooks').default;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);

@@ -63,6 +63,8 @@ describe('index', () => {
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
         ['upgrade', 'upgrade'],
+        ['webhook', 'webhooks'],
+        ['webhooks', 'webhooks'],
         ['whoami', 'whoami'],
       ])
     );

@@ -313,6 +313,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandWebhooks(actual: string) {
+    this.trackCliCommand({
+      command: 'webhooks',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
