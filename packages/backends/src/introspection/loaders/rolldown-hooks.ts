@@ -1,35 +1,20 @@
-import { build, type Plugin } from 'rolldown';
+import { build } from 'rolldown';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
-import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
+import { plugin } from '../../cervel/plugin.js';
+import { __dirname__filenameShim } from '../../cervel/rolldown.js';
 
-// Plugin to externalize native .node addon files
-function nativeAddonPlugin(baseDir: string): Plugin {
-  const require = createRequire(join(baseDir, 'index.js'));
-  return {
-    name: 'native-addon-external',
-    resolveId(source, importer) {
-      // Skip node built-ins and already-external modules
-      if (source.startsWith('node:') || !importer) {
-        return null;
-      }
-
-      try {
-        // Try to resolve the module to see if it's a native addon
-        const resolved = require.resolve(source, {
-          paths: [dirname(importer)],
-        });
-        if (resolved.endsWith('.node')) {
-          // Mark native addons as external
-          return { id: source, external: true };
-        }
-      } catch {
-        // Module not found, let rolldown handle it
-      }
-
-      return null;
-    },
-  };
+// Find the project root (directory containing package.json)
+function findProjectRoot(startDir: string): string {
+  let dir = startDir;
+  while (dir !== '/' && dir !== '.') {
+    if (existsSync(join(dir, 'package.json'))) {
+      return dir;
+    }
+    dir = dirname(dir);
+  }
+  return startDir;
 }
 
 let honoUrl: string | null = null;
@@ -118,33 +103,35 @@ export default extendedExpress;
     return { format: 'module', source: cached, shortCircuit: true };
   }
 
-  // Bundle with rolldown (only file:// URLs)
-  if (url.startsWith('file://') && !bundled.has(url)) {
+  // Bundle with rolldown (only file:// URLs, skip node_modules)
+  if (
+    url.startsWith('file://') &&
+    !bundled.has(url) &&
+    !url.includes('/node_modules/')
+  ) {
     bundled.add(url);
     const filePath = fileURLToPath(url);
     const fileDir = dirname(filePath);
+    const projectRoot = findProjectRoot(fileDir);
 
     const result = await build({
       input: filePath,
       write: false,
       platform: 'node',
-      plugins: [nativeAddonPlugin(fileDir)],
-      // Only keep hono/express external (for shims) and node built-ins
-      // Bundle everything else so rolldown handles CJS interop
-      external: id =>
-        id === 'hono' ||
-        id === 'express' ||
-        id.startsWith('node:') ||
-        /^(fs|path|os|crypto|util|events|stream|http|https|url|querystring|buffer|assert|child_process|cluster|dgram|dns|domain|net|readline|repl|tls|tty|v8|vm|zlib)$/.test(
-          id
-        ),
+      cwd: projectRoot,
+      plugins: [
+        plugin({
+          repoRootPath: projectRoot,
+          outDir: fileDir,
+          workPath: projectRoot,
+          // Shim CJS imports for ESM output
+          shimBareImports: true,
+          context: { tracedPaths: new Set<string>() },
+        }),
+      ],
       output: {
-        banner: `
-import { fileURLToPath as __fileURLToPath } from 'node:url';
-import { dirname as __dirname_fn } from 'node:path';
-var __filename = typeof __filename !== 'undefined' ? __filename : __fileURLToPath(import.meta.url);
-var __dirname = typeof __dirname !== 'undefined' ? __dirname : __dirname_fn(__filename);
-`,
+        format: 'esm',
+        banner: __dirname__filenameShim,
       },
     });
 

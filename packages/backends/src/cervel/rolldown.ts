@@ -6,7 +6,8 @@ import { plugin } from './plugin.js';
 import { nodeFileTrace } from './node-file-trace.js';
 import type { PluginContext, RolldownOptions } from './types.js';
 
-const __dirname__filenameShim = `
+// Shim for __dirname/__filename/require in ESM output
+export const __dirname__filenameShim = `
 import { createRequire as __createRequire } from 'node:module';
 import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_ } from 'node:path';
