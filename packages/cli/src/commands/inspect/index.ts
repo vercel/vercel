@@ -160,14 +160,14 @@ function stateString(s: Deployment['readyState']) {
   const sTitle = s && title(s);
   switch (s) {
     case 'INITIALIZING':
+    case 'QUEUED':
+      return chalk.gray(CIRCLE) + sTitle;
     case 'BUILDING':
       return chalk.yellow(CIRCLE) + sTitle;
     case 'ERROR':
       return chalk.red(CIRCLE) + sTitle;
     case 'READY':
       return chalk.green(CIRCLE) + sTitle;
-    case 'QUEUED':
-      return chalk.gray(CIRCLE) + sTitle;
     case 'CANCELED':
       return chalk.gray(CIRCLE) + sTitle;
     default:

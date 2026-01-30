@@ -171,10 +171,7 @@ export default async function redeploy(client: Client): Promise<number> {
     }
 
     if (!noWait) {
-      output.spinner(
-        deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
-        0
-      );
+      output.spinner('Building', 0);
       let project: Project | ProjectNotFound | undefined;
       let rollingRelease: ProjectRollingRelease | undefined;
 
@@ -204,7 +201,9 @@ export default async function redeploy(client: Client): Promise<number> {
             deployment,
             clientOptions
           )) {
-            if (event.type === 'building') {
+            if (event.type === 'queued') {
+              output.spinner('Queued', 0);
+            } else if (event.type === 'building') {
               output.spinner('Building', 0);
             } else if (event.type === 'ready' && rollingRelease) {
               output.spinner('Releasing', 0);

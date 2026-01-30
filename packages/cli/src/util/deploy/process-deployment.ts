@@ -129,7 +129,6 @@ export default async function processDeployment({
 
   let rollingRelease: ProjectRollingRelease | undefined;
   let project: Project | ProjectNotFound | undefined;
-  let latestLogMessage = '';
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -218,9 +217,6 @@ export default async function processDeployment({
           return deployment;
         }
 
-        latestLogMessage =
-          deployment.readyState === 'QUEUED' ? 'Queued...' : 'Building...';
-
         if (withFullLogs) {
           let promise: Promise<void>;
           ({ abortController, promise } = displayBuildLogs(
@@ -243,8 +239,7 @@ export default async function processDeployment({
                 const lines = parseLogLines(event);
                 const message = lines[0];
                 if (message) {
-                  latestLogMessage = `Building: ${message}`;
-                  output.spinner(latestLogMessage, 0);
+                  output.spinner(`Building: ${message}`, 0);
                 }
               },
               quiet: false,
@@ -256,11 +251,11 @@ export default async function processDeployment({
             output.warn(`Failed to read build logs: ${error}`)
           );
         }
-        output.spinner(latestLogMessage, 0);
+        output.spinner('Building...', 0);
       }
 
       if (event.type === 'building' && !withFullLogs) {
-        output.spinner(latestLogMessage || 'Building...', 0);
+        output.spinner('Building...', 0);
       }
 
       if (event.type === 'canceled') {

@@ -28,6 +28,7 @@ const EVENTS_ARRAY = [
   'all-files-uploaded',
   // Deployment events
   'created',
+  'queued',
   'building',
   'ready',
   'alias-assigned',

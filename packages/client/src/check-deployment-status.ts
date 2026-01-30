@@ -119,7 +119,14 @@ export async function* checkDeploymentStatus(
       debug('Deployment status check has errorred');
       return yield { type: 'error', payload: deploymentUpdate.error };
     }
-
+    if (
+      deploymentUpdate.readyState === 'QUEUED' &&
+      !finishedEvents.has('queued')
+    ) {
+      debug('Deployment state changed to QUEUED');
+      finishedEvents.add('queued');
+      yield { type: 'queued', payload: deploymentUpdate };
+    }
     if (
       deploymentUpdate.readyState === 'BUILDING' &&
       !finishedEvents.has('building')

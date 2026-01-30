@@ -109,10 +109,10 @@ export default async function list(client: Client) {
   if (statusFlag) {
     // Validate status values
     const validStatuses = [
-      'BUILDING',
-      'ERROR',
       'INITIALIZING',
       'QUEUED',
+      'BUILDING',
+      'ERROR',
       'READY',
       'CANCELED',
     ];
