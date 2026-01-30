@@ -505,12 +505,15 @@ export const build: BuildV2 = async ({
   const assetsDir = viteConfig?.build?.assetsDir || 'assets';
   const routes: any[] = [
     {
+      handle: 'filesystem',
+    },
+    {
+      handle: 'hit',
+    },
+    {
       src: `^/${assetsDir}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
-    },
-    {
-      handle: 'filesystem',
     },
   ];
 

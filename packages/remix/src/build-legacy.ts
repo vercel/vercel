@@ -548,12 +548,15 @@ module.exports = config;`;
   };
   const routes: any[] = [
     {
+      handle: 'filesystem',
+    },
+    {
+      handle: 'hit',
+    },
+    {
       src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
-    },
-    {
-      handle: 'filesystem',
     },
   ];
 
