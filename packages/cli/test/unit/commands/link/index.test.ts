@@ -530,6 +530,62 @@ describe('link', () => {
     });
   });
 
+  describe('--no-env-pull', () => {
+    it('should not pull env when --no-env-pull flag is used', async () => {
+      const cwd = setupTmpDir();
+      const user = useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!, '--yes', '--no-env-pull');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "link"').toEqual(0);
+
+      // Verify env pull was NOT called
+      expect(mockPull).not.toHaveBeenCalled();
+    });
+
+    it('should track use of --no-env-pull flag', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--yes', '--no-env-pull');
+      const exitCode = await link(client);
+      expect(exitCode, 'exit code for "link"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+        {
+          key: 'flag:no-env-pull',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
   describe('--confirm', () => {
     it('should track use of `--confirm` flag', async () => {
       useUser();

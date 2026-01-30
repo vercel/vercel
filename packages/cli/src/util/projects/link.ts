@@ -305,7 +305,7 @@ export async function linkFolderToProject(
   orgSlug: string,
   successEmoji: EmojiLabel = 'link',
   autoConfirm: boolean = false,
-  shouldPullEnv: boolean = true
+  pullEnv: boolean = true
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -347,7 +347,7 @@ export async function linkFolderToProject(
     ) + '\n'
   );
 
-  if (!shouldPullEnv) {
+  if (!pullEnv) {
     return;
   }
 
