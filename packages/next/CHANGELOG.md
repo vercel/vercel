@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.20
+
+### Patch Changes
+
+- Fix assertion for cacheComponents with getStaticProps route ([#14807](https://github.com/vercel/vercel/pull/14807))
+
 ## 4.15.19
 
 ### Patch Changes

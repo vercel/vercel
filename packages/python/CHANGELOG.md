@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.4.2
+
+### Patch Changes
+
+- Fix issue when .python-version file is provided without a pyproject.toml ([#14811](https://github.com/vercel/vercel/pull/14811))
+
 ## 6.4.1
 
 ### Patch Changes
