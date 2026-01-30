@@ -41,6 +41,7 @@ export interface FetchRequestLogsOptions {
   limit?: number;
   search?: string;
   requestId?: string;
+  branch?: string;
   page?: number;
 }
 
@@ -73,6 +74,7 @@ export async function fetchRequestLogs(
     until,
     search,
     requestId,
+    branch,
     page = 0,
   } = options;
 
@@ -116,6 +118,10 @@ export async function fetchRequestLogs(
 
   if (requestId) {
     query.set('requestId', requestId);
+  }
+
+  if (branch) {
+    query.set('branch', branch);
   }
 
   // The request-logs API is on vercel.com, not api.vercel.com
