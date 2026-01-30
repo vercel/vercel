@@ -1,5 +1,19 @@
 # @vercel/python
 
+## 6.4.1
+
+### Patch Changes
+
+- Preserve error code when re-throwing errors in UvRunner methods ([#14796](https://github.com/vercel/vercel/pull/14796))
+
+## 6.4.0
+
+### Minor Changes
+
+- Enable support for python 3.13 and 3.14 runtimes ([#14740](https://github.com/vercel/vercel/pull/14740))
+
+  Preserves the current behaviour of "falling back" to python3.12 when an unsupported version of python is selected
+
 ## 6.3.2
 
 ### Patch Changes

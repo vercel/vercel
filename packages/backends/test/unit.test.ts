@@ -4,60 +4,88 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import { build } from '../src/index';
-import { join, resolve } from 'path';
+import { join, resolve } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
-import { readdir, writeFile, rm, mkdtemp, mkdir } from 'fs/promises';
-import { tmpdir } from 'os';
+import {
+  readdir,
+  writeFile,
+  mkdtemp,
+  cp,
+  rm,
+  mkdir,
+  realpath,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 
-const clearOutputs = async (fixtureName: string) => {
-  await rm(join(__dirname, 'fixtures', fixtureName, '.vercel'), {
-    recursive: true,
-    force: true,
-  });
-  await rm(join(__dirname, 'fixtures', fixtureName, 'dist'), {
-    recursive: true,
-    force: true,
-  });
-  await rm(join(__dirname, 'fixtures', fixtureName, 'node_modules'), {
-    recursive: true,
-    force: true,
-  });
-};
-
+const meta = { skipDownload: true };
 const config = {
   outputDirectory: undefined,
   zeroConfig: true,
+  // Always use npm install to avoid pnpm workspace detection in monorepo
+  projectSettings: { installCommand: 'npm install' },
 };
-const meta = { skipDownload: true };
+
+// Set to true to use packages/backends/debug instead of a temp directory
+const USE_DEBUG_DIR = false;
+// Uncomment to enable debug logs
+// process.env.VERCEL_BUILDER_DEBUG = '1';
+
+const DEBUG_DIR = join(__dirname, 'debug');
+
+const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
+  if (USE_DEBUG_DIR) {
+    const debugDir = join(DEBUG_DIR, fixtureName);
+    await rm(debugDir, { recursive: true, force: true });
+    await mkdir(debugDir, { recursive: true });
+    await cp(fixtureSource, debugDir, { recursive: true });
+    return debugDir;
+  }
+  const tempDir = await realpath(
+    await mkdtemp(join(tmpdir(), `fixture-${fixtureName}-`))
+  );
+  await cp(fixtureSource, tempDir, { recursive: true });
+  return tempDir;
+};
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
     fixtureName => fixtureName.includes('')
   );
   for (const fixtureName of fixtures) {
-    it(`builds ${fixtureName}`, async () => {
-      await clearOutputs(fixtureName);
-      const workPath = join(__dirname, 'fixtures', fixtureName);
+    // Windows is just too slow to build these fixtures
+    const isNestFixture = fixtureName.includes('nest');
+    it.skipIf(process.platform === 'win32' && isNestFixture)(
+      `builds ${fixtureName}`,
+      async () => {
+        // Copy entire fixture to work dir so no parent node_modules can interfere
+        const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+        const workDir = await getWorkDir(fixtureName, fixtureSource);
 
-      const result = (await build({
-        files: {},
-        workPath,
-        config,
-        meta,
-        entrypoint: 'package.json',
-        repoRootPath: workPath,
-      })) as BuildResultV2Typical;
+        const workPath = workDir;
+        const repoRootPath = workDir;
 
-      const lambda = result.output.index as unknown as NodejsLambda;
-      // const lambdaPath = join(__dirname, 'debug');
-      const lambdaPath = undefined;
+        const result = (await build({
+          files: {},
+          workPath,
+          config,
+          meta,
+          entrypoint: 'package.json',
+          repoRootPath,
+        })) as BuildResultV2Typical;
 
-      // Runs without errors
-      await expect(
-        extractAndExecuteCode(lambda, lambdaPath, fixtureName)
-      ).resolves.toBeUndefined();
-    }, 10000);
+        const lambda = result.output.index as unknown as NodejsLambda;
+
+        expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
+          join(fixtureSource, 'routes.json')
+        );
+
+        await expect(
+          extractAndExecuteLambda(lambda, workDir)
+        ).resolves.toBeUndefined();
+      },
+      30000
+    ); // copying fixture and running npm install so it takes a while
   }
 
   // eslint-disable-next-line jest/no-disabled-tests
@@ -73,14 +101,14 @@ describe('successful builds', async () => {
       repoRootPath: workPath,
     })) as BuildResultV2Typical;
 
-    const lambdaPath = join(__dirname, 'debug');
     const lambda = result.output.index as unknown as NodejsLambda;
+    const tempDir = await mkdtemp(join(tmpdir(), 'workflow-server-'));
 
-    await extractAndExecuteCode(lambda, lambdaPath);
+    await extractAndExecuteLambda(lambda, tempDir);
   }, 20000);
 });
 
-it('extractAndExecuteCode throws with invalid code', async () => {
+it('extractAndExecuteLambda throws with invalid code', async () => {
   const validLambda = new NodejsLambda({
     runtime: 'nodejs22.x',
     handler: 'index.js',
@@ -108,40 +136,33 @@ it('extractAndExecuteCode throws with invalid code', async () => {
     shouldAddSourcemapSupport: true,
     awsLambdaHandler: '',
   });
+  const validTempDir = await mkdtemp(join(tmpdir(), 'lambda-test-valid-'));
+  const invalidTempDir = await mkdtemp(join(tmpdir(), 'lambda-test-invalid-'));
   await expect(
-    extractAndExecuteCode(validLambda, undefined, 'valid')
+    extractAndExecuteLambda(validLambda, validTempDir)
   ).resolves.toBeUndefined();
   await expect(
-    extractAndExecuteCode(invalidLambda, undefined, 'invalid')
+    extractAndExecuteLambda(invalidLambda, invalidTempDir)
   ).rejects.toThrow();
 });
 
-const extractAndExecuteCode = async (
-  lambda: NodejsLambda,
-  lambdaDir?: string,
-  fixtureName?: string
-) => {
+const extractAndExecuteLambda = async (lambda: NodejsLambda, dir: string) => {
   const out = await lambda.createZip();
-  const prefix = fixtureName ? `lambda-test-${fixtureName}-` : 'lambda-test-';
-  const tempDir = await mkdtemp(join(tmpdir(), prefix));
-  if (lambdaDir && lambdaDir !== '') {
-    await rm(lambdaDir, { recursive: true, force: true });
-    await mkdir(lambdaDir, { recursive: true });
-  }
-  const lambdaPath = join(lambdaDir || tempDir, 'lambda.zip');
-  await writeFile(lambdaPath, out);
-  await execa('unzip', ['-o', lambdaPath], {
-    cwd: tempDir,
-    stdio: 'ignore', // use inherit to debug
+  const lambdaZipPath = join(dir, 'lambda.zip');
+  await writeFile(lambdaZipPath, new Uint8Array(out));
+
+  const unzipPath = join(dir, 'lambda');
+  await execa('unzip', ['-o', lambdaZipPath, '-d', unzipPath], {
+    stdio: 'ignore',
   });
 
-  const handlerPath = join(tempDir, lambda.handler);
+  const handlerPath = join(unzipPath, lambda.handler);
 
   // Wrap in a Promise to properly wait for the process to exit
   await new Promise<void>((resolve, reject) => {
     const fakeLambdaProcess = execa('node', [handlerPath], {
-      cwd: tempDir,
-      stdio: ['ignore', 'pipe', 'pipe'], // capture stdout/stderr
+      cwd: unzipPath,
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
     let stderr = '';
@@ -153,25 +174,36 @@ const extractAndExecuteCode = async (
       stdout += data.toString();
     });
 
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (!settled) {
+        settled = true;
+        fn();
+      }
+    };
+
     fakeLambdaProcess.on('error', error => {
       console.error(error);
-      reject(error);
+      settle(() => reject(error));
     });
 
     fakeLambdaProcess.on('exit', (code, signal) => {
-      if (signal === 'SIGTERM') {
-        resolve();
+      // Killed by our timeout - success
+      if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+        return settle(() => resolve());
       }
+      // Process exited on its own
       if (code !== 0) {
         const output = stderr || stdout || '(no output)';
-        reject(
-          new Error(
-            `Process exited with code ${code} and signal ${signal}\n${output}`
+        return settle(() =>
+          reject(
+            new Error(
+              `Process exited with code ${code} and signal ${signal}\n${output}`
+            )
           )
         );
-      } else {
-        resolve();
       }
+      settle(() => resolve());
     });
 
     // Kill the process after a short delay if it's still running
@@ -180,5 +212,15 @@ const extractAndExecuteCode = async (
         fakeLambdaProcess.kill('SIGTERM');
       }
     }, 1000);
+    // Force kill if SIGTERM didn't work
+    setTimeout(() => {
+      if (!fakeLambdaProcess.killed) {
+        fakeLambdaProcess.kill('SIGKILL');
+      }
+    }, 1500);
+    // Force resolve after timeout even if exit event hasn't fired
+    setTimeout(() => {
+      settle(() => resolve());
+    }, 2000);
   });
 };

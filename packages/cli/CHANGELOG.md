@@ -1,5 +1,41 @@
 # vercel
 
+## 50.9.5
+
+### Patch Changes
+
+- Updated dependencies [[`26f1f5190c881ea0362157ac3622a3b49bdcba8d`](https://github.com/vercel/vercel/commit/26f1f5190c881ea0362157ac3622a3b49bdcba8d)]:
+  - @vercel/python@6.4.1
+
+## 50.9.4
+
+### Patch Changes
+
+- Updated dependencies [[`c0a87e350e67b67e1b8a3610cde16a7d86f931fd`](https://github.com/vercel/vercel/commit/c0a87e350e67b67e1b8a3610cde16a7d86f931fd), [`1bc969a200180c5828212c43861c7548dbd3e51c`](https://github.com/vercel/vercel/commit/1bc969a200180c5828212c43861c7548dbd3e51c)]:
+  - @vercel/next@4.15.19
+
+## 50.9.3
+
+### Patch Changes
+
+- Updated dependencies [[`eb74394228153cf3fd6728bc0a4cc3e80f3e6e8c`](https://github.com/vercel/vercel/commit/eb74394228153cf3fd6728bc0a4cc3e80f3e6e8c)]:
+  - @vercel/python@6.4.0
+
+## 50.9.2
+
+### Patch Changes
+
+- fix(cli): Scope DELETE confirmation prompt to `vercel api` command only ([#14787](https://github.com/vercel/vercel/pull/14787))
+
+  This fixes a regression from #14769 where the DELETE confirmation prompt was incorrectly applied to all DELETE operations (e.g., `vercel env rm`, `vercel alias rm`) instead of only the `vercel api` command. Commands like `env rm` and `alias rm` have their own `--yes` flags for confirmation and should not be affected.
+
+- experimental rust runtime framework preset ([#14765](https://github.com/vercel/vercel/pull/14765))
+
+- Add redirects command to top level help message. ([#14772](https://github.com/vercel/vercel/pull/14772))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.8.28
+
 ## 50.9.1
 
 ### Patch Changes
