@@ -1,4 +1,4 @@
-import type { BuildOptions, Files } from '@vercel/build-utils';
+import type { BuildOptions, Span } from '@vercel/build-utils';
 
 /**
  * Core path options derived from BuildOptions.
@@ -13,6 +13,7 @@ export type PathOptions = Pick<BuildOptions, 'workPath' | 'repoRootPath'>;
 export type CervelBuildOptions = PathOptions & {
   entrypoint?: string;
   out: string;
+  span?: Span;
 };
 
 /**
@@ -23,11 +24,28 @@ export type CervelServeOptions = Pick<BuildOptions, 'workPath'> & {
 };
 
 /**
+ * Options for TypeScript compilation.
+ */
+export type TypescriptOptions = {
+  entrypoint: string;
+  workPath: string;
+  span: Span;
+};
+
+/**
  * Options for the rolldown bundler.
  */
 export type RolldownOptions = PathOptions & {
   entrypoint: string;
   out: string;
+  span: Span;
+};
+
+/**
+ * Context shared between plugin and rolldown for collecting traced paths.
+ */
+export type PluginContext = {
+  tracedPaths: Set<string>;
 };
 
 /**
@@ -36,7 +54,7 @@ export type RolldownOptions = PathOptions & {
 export type PluginOptions = PathOptions & {
   outDir: string;
   shimBareImports?: boolean;
-  context: { files: Files };
+  context: PluginContext;
 };
 
 /**
@@ -46,5 +64,5 @@ export type NodeFileTraceOptions = PathOptions & {
   keepTracedPaths: boolean;
   outDir: string;
   tracedPaths: string[];
-  context: { files: Files };
+  span: Span;
 };

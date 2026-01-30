@@ -6,13 +6,14 @@ import {
   getPackageJson,
   getScriptName,
   type BuildOptions,
+  type Span,
 } from '@vercel/build-utils';
 import {
   build as cervelBuild,
   nodeFileTrace,
   findEntrypoint,
   getBuildSummary,
-} from '@vercel/cervel';
+} from './cervel/index.js';
 import {
   maybeExecBuildCommand,
   type downloadInstallAndBundle,
@@ -24,12 +25,12 @@ const defaultOutputDirectory = join('.vercel', 'node');
 
 export const doBuild = async (
   args: BuildOptions,
-  downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>
+  downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>,
+  span: Span
 ) => {
   const buildCommandResult = await maybeExecBuildCommand(args, downloadResult);
   const outputSetting = args.config.outputDirectory;
   const buildCommand = args.config.projectSettings?.buildCommand;
-  let tsPromise: Promise<void> | undefined;
 
   // If a build command ran but no output directory was configured, that's an error
   // Exception: if the build command is a cervel command, it handles output internally
@@ -51,7 +52,6 @@ export const doBuild = async (
         return {
           dir: cervelOutputDir,
           handler,
-          tsPromise,
         };
       }
 
@@ -74,7 +74,6 @@ export const doBuild = async (
         return {
           dir: distDir,
           handler,
-          tsPromise,
         };
       }
 
@@ -95,15 +94,14 @@ export const doBuild = async (
             workPath: args.workPath,
             repoRootPath: args.repoRootPath,
             out: defaultOutputDirectory,
+            span,
           });
-          tsPromise = buildResult.tsPromise ?? undefined;
           const { handler } = await getBuildSummary(
             buildResult.rolldownResult.outputDir
           );
           return {
             dir: buildResult.rolldownResult.outputDir,
             handler,
-            tsPromise,
             files: buildResult.rolldownResult.outputFiles,
           };
         }
@@ -116,14 +114,13 @@ export const doBuild = async (
         tracedPaths: [join(distDir, handler)],
         repoRootPath: args.repoRootPath,
         workPath: args.workPath,
-        context: { files: {} },
         outDir: distDir,
+        span,
       });
 
       return {
         dir: distDir,
         handler,
-        tsPromise,
         files,
       };
     }
@@ -136,15 +133,14 @@ export const doBuild = async (
       workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: defaultOutputDirectory,
+      span,
     });
-    tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
     );
     return {
       dir: buildResult.rolldownResult.outputDir,
       handler,
-      tsPromise,
       files: buildResult.rolldownResult.outputFiles,
     };
   }
@@ -164,15 +160,14 @@ export const doBuild = async (
       workPath: args.workPath,
       repoRootPath: args.repoRootPath,
       out: outputDir,
+      span,
     });
-    tsPromise = buildResult.tsPromise ?? undefined;
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
     );
     return {
       dir: buildResult.rolldownResult.outputDir,
       handler,
-      tsPromise,
       files: buildResult.rolldownResult.outputFiles,
     };
   }
@@ -185,7 +180,6 @@ export const doBuild = async (
     return {
       dir: outputDir,
       handler,
-      tsPromise,
     };
   }
 
@@ -205,6 +199,5 @@ export const doBuild = async (
   return {
     dir: outputDir,
     handler,
-    tsPromise,
   };
 };

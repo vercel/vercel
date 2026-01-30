@@ -10,6 +10,7 @@ import { transform } from 'oxc-transform';
 import type { NodeFileTraceOptions } from './types.js';
 
 export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
+  const { span } = args;
   const files: Files = {};
   const { tracedPaths } = args;
 
@@ -29,42 +30,46 @@ export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
    * not part of the traced paths or compiled source files.
    * Most of this is identical to the `@vercel/node` implementation
    */
-  const result = await nft(Array.from(tracedPaths), {
-    base: args.repoRootPath,
-    processCwd: args.workPath,
-    ts: true,
-    mixedModules: true,
-    async resolve(id, parent, job, cjsResolve) {
-      return nftResolveDependency(id, parent, job, cjsResolve);
-    },
-    async readFile(fsPath) {
-      try {
-        let source: string | Buffer = await readFile(fsPath);
+  const runNft = () =>
+    nft(Array.from(tracedPaths), {
+      base: args.repoRootPath,
+      processCwd: args.workPath,
+      ts: true,
+      mixedModules: true,
+      async resolve(id, parent, job, cjsResolve) {
+        return nftResolveDependency(id, parent, job, cjsResolve);
+      },
+      async readFile(fsPath) {
+        try {
+          let source: string | Buffer = await readFile(fsPath);
 
-        // NFT doesn't support TypeScript, so we need to transform the source code.
-        if (
-          (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-          fsPath.endsWith('.tsx') ||
-          fsPath.endsWith('.mts') ||
-          fsPath.endsWith('.cts')
-        ) {
-          const result = await transform(fsPath, source.toString());
-          source = result.code;
-        }
+          // NFT doesn't support TypeScript, so we need to transform the source code.
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx') ||
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
+          ) {
+            const transformResult = await transform(fsPath, source.toString());
+            source = transformResult.code;
+          }
 
-        return source;
-      } catch (error: unknown) {
-        if (
-          isNativeError(error) &&
-          'code' in error &&
-          (error.code === 'ENOENT' || error.code === 'EISDIR')
-        ) {
-          return null;
+          return source;
+        } catch (error: unknown) {
+          if (
+            isNativeError(error) &&
+            'code' in error &&
+            (error.code === 'ENOENT' || error.code === 'EISDIR')
+          ) {
+            return null;
+          }
+          throw error;
         }
-        throw error;
-      }
-    },
-  });
+      },
+    });
+
+  const nftSpan = span.child('vc.builder.backends.nft');
+  const result = await nftSpan.trace(runNft);
 
   // When running this against a built output (eg, the user-provided output directory the
   // traced paths are the same as the compiled source files), so keep them in the result.

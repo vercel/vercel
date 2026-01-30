@@ -23,13 +23,13 @@ export default defineConfig([
     format: 'esm',
   },
   {
-    entry: 'src/express.ts',
-    outDir: 'dist',
+    entry: 'src/loaders/rolldown-esm.ts',
+    outDir: 'dist/loaders',
     format: 'esm',
   },
   {
-    entry: 'src/hono.ts',
-    outDir: 'dist',
+    entry: 'src/loaders/rolldown-hooks.ts',
+    outDir: 'dist/loaders',
     format: 'esm',
   },
 ]);

@@ -3,8 +3,8 @@
     "handle": "filesystem"
   },
   {
-    "src": "^(?:\\/users\\/([^\\/]+))(?:\\/$)?$",
-    "dest": "/users/:id",
+    "src": "^(?:\\/hash\\/([^\\/]+))(?:\\/$)?$",
+    "dest": "/hash/:input",
     "methods": [
       "GET"
     ]

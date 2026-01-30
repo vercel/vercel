@@ -3,16 +3,17 @@ import { rm, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { build as rolldownBuild } from 'rolldown';
 import { plugin } from './plugin.js';
-import type { Files } from '@vercel/build-utils';
-import type { RolldownOptions } from './types.js';
+import { nodeFileTrace } from './node-file-trace.js';
+import type { PluginContext, RolldownOptions } from './types.js';
 
-const __dirname__filenameShim = `
+// Shim for __dirname/__filename/require in ESM output
+export const __dirname__filenameShim = `
 import { createRequire as __createRequire } from 'node:module';
 import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_ } from 'node:path';
-const require = __createRequire(import.meta.url);
-const __filename = __fileURLToPath(import.meta.url);
-const __dirname = __dirname_(__filename);
+var require = typeof require !== 'undefined' ? require : __createRequire(import.meta.url);
+var __filename = typeof __filename !== 'undefined' ? __filename : __fileURLToPath(import.meta.url);
+var __dirname = typeof __dirname !== 'undefined' ? __dirname : __dirname_(__filename);
 `.trim();
 
 export const rolldown = async (args: RolldownOptions) => {
@@ -69,33 +70,41 @@ export const rolldown = async (args: RolldownOptions) => {
   }
   const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
 
-  const context: { files: Files } = { files: {} };
-  const out = await rolldownBuild({
-    input: entrypointPath,
-    cwd: args.workPath, // rolldown's cwd option
-    platform: 'node',
-    tsconfig: true,
-    plugins: [
-      plugin({
-        repoRootPath: args.repoRootPath,
-        outDir: outputDir,
-        workPath: args.workPath,
-        // Only shim CJS imports when output is ESM (CJS can require CJS natively)
-        shimBareImports: resolvedFormat === 'esm',
-        context,
-      }),
-    ],
-    output: {
-      cleanDir: true,
-      dir: outputDir,
-      format: resolvedFormat,
-      entryFileNames: `[name].${resolvedExtension}`,
-      preserveModules: true,
-      preserveModulesRoot: args.repoRootPath,
-      sourcemap: false,
-      banner: resolvedFormat === 'esm' ? __dirname__filenameShim : undefined,
-    },
-  });
+  // Context to collect traced paths from the plugin
+  const context: PluginContext = { tracedPaths: new Set<string>() };
+
+  const runRolldown = () =>
+    rolldownBuild({
+      input: entrypointPath,
+      cwd: args.workPath, // rolldown's cwd option
+      platform: 'node',
+      tsconfig: true,
+      plugins: [
+        plugin({
+          repoRootPath: args.repoRootPath,
+          outDir: outputDir,
+          workPath: args.workPath,
+          // Only shim CJS imports when output is ESM (CJS can require CJS natively)
+          shimBareImports: resolvedFormat === 'esm',
+          context,
+        }),
+      ],
+      output: {
+        cleanDir: true,
+        dir: outputDir,
+        format: resolvedFormat,
+        entryFileNames: `[name].${resolvedExtension}`,
+        preserveModules: true,
+        preserveModulesRoot: args.repoRootPath,
+        sourcemap: false,
+        banner: resolvedFormat === 'esm' ? __dirname__filenameShim : undefined,
+      },
+    });
+
+  // Run rolldown bundling
+  const rolldownSpan = args.span.child('vc.builder.backends.rolldown');
+  const out = await rolldownSpan.trace(runRolldown);
+
   let handler: string | null = null;
   for (const entry of out.output) {
     if (entry.type === 'chunk') {
@@ -108,6 +117,16 @@ export const rolldown = async (args: RolldownOptions) => {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
 
+  // Run NFT separately after rolldown completes
+  const outputFiles = await nodeFileTrace({
+    outDir: outputDir,
+    tracedPaths: Array.from(context.tracedPaths),
+    repoRootPath: args.repoRootPath,
+    workPath: args.workPath,
+    keepTracedPaths: false,
+    span: args.span,
+  });
+
   const cleanup = async () => {
     await rm(outputDir, { recursive: true, force: true });
   };
@@ -116,7 +135,7 @@ export const rolldown = async (args: RolldownOptions) => {
     result: {
       handler,
       outputDir,
-      outputFiles: context.files,
+      outputFiles,
     },
     cleanup,
   };

@@ -3,7 +3,6 @@ import { builtinModules } from 'node:module';
 import { extname, dirname, relative, join } from 'node:path';
 import type { Plugin } from 'rolldown';
 import { exports as resolveExports } from 'resolve.exports';
-import { nodeFileTrace } from './node-file-trace.js';
 import type { PluginOptions } from './types.js';
 
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
@@ -15,7 +14,8 @@ export const plugin = (args: PluginOptions): Plugin => {
   // Track shim metadata: shimId -> { pkgDir, pkgName }
   const shimMeta = new Map<string, { pkgDir: string; pkgName: string }>();
 
-  const tracedPaths = new Set<string>();
+  // Use context's tracedPaths so rolldown.ts can access them after build
+  const { tracedPaths } = args.context;
 
   const isBareImport = (id: string) => {
     // Bare imports don't start with '.', '/', or protocol
@@ -276,20 +276,6 @@ module.exports = requireFromContext('${pkgName}');
         }
 
         return null;
-      },
-    },
-    writeBundle: {
-      order: 'post',
-      async handler() {
-        const files = await nodeFileTrace({
-          outDir: args.outDir,
-          tracedPaths: Array.from(tracedPaths),
-          repoRootPath: args.repoRootPath,
-          workPath: args.workPath,
-          context: args.context,
-          keepTracedPaths: false,
-        });
-        args.context.files = files;
       },
     },
   };

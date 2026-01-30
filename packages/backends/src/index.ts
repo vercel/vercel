@@ -1,5 +1,5 @@
 import { downloadInstallAndBundle } from './utils.js';
-import { introspectApp } from '@vercel/introspection';
+import { introspectApp } from './introspection/index.js';
 import { doBuild } from './build.js';
 import {
   defaultCachePathGlob,
@@ -11,6 +11,25 @@ import {
   getNodeVersion,
   Span,
 } from '@vercel/build-utils';
+import { findEntrypoint } from './cervel/index.js';
+
+// Re-export cervel functions for use by other packages
+export {
+  build as cervelBuild,
+  serve as cervelServe,
+  findEntrypoint,
+  nodeFileTrace,
+  getBuildSummary,
+  srvxOptions,
+} from './cervel/index.js';
+export type {
+  CervelBuildOptions,
+  CervelServeOptions,
+  PathOptions,
+} from './cervel/index.js';
+
+// Re-export introspection functions
+export { introspectApp } from './introspection/index.js';
 
 export const version = 2;
 
@@ -29,34 +48,31 @@ export const build: BuildV2 = async args => {
     'builder.name': builderName,
   });
 
-  const doBuildSpan = span.child('vc.builder.backends.doBuild');
-  const outputConfig = await doBuildSpan.trace(async span => {
-    const result = await doBuild(args, downloadResult);
-    span.setAttributes({
-      'outputConfig.dir': result.dir,
-      'outputConfig.handler': result.handler,
-    });
-    return result;
-  });
+  const entrypoint = await findEntrypoint(args.workPath);
+  debug('Entrypoint', entrypoint);
 
-  const files = outputConfig.files;
+  const buildSpan = span.child('vc.builder.backends.build');
+  const introspectionSpan = span.child('vc.builder.backends.introspectApp');
 
-  debug('Introspection starting..');
-  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
-  const { routes, framework } = await introspectAppSpan.trace(async span => {
-    const result = await introspectApp({
-      ...outputConfig,
-      framework: args.config.framework,
-      env: {
-        ...(args.meta?.env ?? {}),
-        ...(args.meta?.buildEnv ?? {}),
-      },
-    });
-    span.setAttributes({
-      'introspectApp.routes': String(result.routes.length),
-    });
-    return result;
-  });
+  const [buildResult, introspectionResult] = await Promise.all([
+    buildSpan.trace(() => doBuild(args, downloadResult, buildSpan)),
+    introspectionSpan.trace(() =>
+      introspectApp({
+        handler: entrypoint,
+        dir: args.workPath,
+        framework: args.config.framework,
+        env: {
+          ...(args.meta?.env ?? {}),
+          ...(args.meta?.buildEnv ?? {}),
+        },
+        span: introspectionSpan,
+      })
+    ),
+  ]);
+
+  const files = buildResult.files;
+
+  const { routes, framework } = introspectionResult;
 
   if (routes.length > 2) {
     debug(`Introspection completed successfully with ${routes.length} routes`);
@@ -64,7 +80,7 @@ export const build: BuildV2 = async args => {
     debug(`Introspection failed to detect routes`);
   }
 
-  const handler = outputConfig.handler;
+  const handler = buildResult.handler;
   if (!files) {
     throw new Error('Unable to trace files for build');
   }
@@ -94,12 +110,6 @@ export const build: BuildV2 = async args => {
       }
       output[route.dest] = lambda;
     }
-  }
-
-  // Don't return until the TypeScript compilation is complete
-  if (outputConfig.tsPromise) {
-    const tsSpan = span.child('vc.builder.backends.tsCompile');
-    await tsSpan.trace(() => outputConfig.tsPromise);
   }
 
   return {
