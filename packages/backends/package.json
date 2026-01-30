@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsdown",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
+    "vitest-unit": "glob --absolute 'test/unit.*test.ts'",
     "type-check": "tsc --noEmit"
   },
   "files": [
@@ -28,8 +28,6 @@
   ],
   "dependencies": {
     "@vercel/cervel": "workspace:*",
-    "@vercel/nft": "1.1.1",
-    "@vercel/static-config": "workspace:*",
     "@vercel/introspection": "workspace:*",
     "fs-extra": "11.1.0"
   },

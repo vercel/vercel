@@ -138,6 +138,9 @@ describe('api', () => {
         res.json({ uid: 'dpl_abc123' });
       });
 
+      // Skip confirmation prompt for this test (testing request, not confirmation)
+      client.dangerouslySkipPermissions = true;
+
       client.setArgv('api', '/v13/deployments/dpl_abc123', '-X', 'DELETE');
       const exitCode = await api(client);
 

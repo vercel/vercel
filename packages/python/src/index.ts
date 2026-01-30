@@ -21,16 +21,20 @@ import {
   PythonFramework,
 } from '@vercel/build-utils';
 import {
-  getUvBinaryOrInstall,
-  runUvSync,
   ensureUvProject,
   resolveVendorDir,
   mirrorSitePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
 } from './install';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
-import { getSupportedPythonVersion } from './version';
+import {
+  getSupportedPythonVersion,
+  DEFAULT_PYTHON_VERSION,
+  parseVersionTuple,
+  compareTuples,
+} from './version';
 import { startDevServer } from './start-dev-server';
 import {
   runPyprojectScript,
@@ -195,12 +199,39 @@ export const build: BuildV3 = async ({
     fsFiles,
   });
 
-  // Determine Python version from pyproject.toml or Pipfile.lock if present.
+  const pythonVersionFileDir = findDir({
+    file: '.python-version',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+
+  // Determine Python version from .python-version, pyproject.toml, or Pipfile.lock if present.
   let declaredPythonVersion:
-    | { version: string; source: 'Pipfile.lock' | 'pyproject.toml' }
+    | {
+        version: string;
+        source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
+      }
     | undefined;
 
-  if (pyprojectDir) {
+  // .python-version is the highest priority because its what uv will use to select dependencies
+  if (pythonVersionFileDir) {
+    try {
+      const content = await readFile(
+        join(pythonVersionFileDir, '.python-version'),
+        'utf8'
+      );
+      const version = parsePythonVersionFile(content);
+      if (version) {
+        declaredPythonVersion = { version, source: '.python-version' };
+        debug(`Found Python version ${version} in .python-version`);
+      }
+    } catch (err) {
+      debug('Failed to read .python-version file', err);
+    }
+  }
+
+  if (!declaredPythonVersion && pyprojectDir) {
     let requiresPython: string | undefined;
     try {
       const pyproject = await readConfigFile<{
@@ -217,7 +248,9 @@ export const build: BuildV3 = async ({
       };
       debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
     }
-  } else if (pipfileLockDir) {
+  }
+
+  if (!declaredPythonVersion && pipfileLockDir) {
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
@@ -241,6 +274,26 @@ export const build: BuildV3 = async ({
     isDev: meta.isDev,
     declaredPythonVersion,
   });
+
+  // Write a .python-version file on behalf of the user when:
+  // no .python-version file exists and the required version in pyproject.toml
+  // is <= DEFAULT_PYTHON_VERSION
+  const selectedVersionTuple = parseVersionTuple(pythonVersion.version);
+  const defaultVersionTuple = parseVersionTuple(DEFAULT_PYTHON_VERSION);
+  if (
+    !pythonVersionFileDir &&
+    pyprojectDir &&
+    declaredPythonVersion?.source === 'pyproject.toml' &&
+    selectedVersionTuple &&
+    defaultVersionTuple &&
+    compareTuples(selectedVersionTuple, defaultVersionTuple) <= 0
+  ) {
+    const pythonVersionFilePath = join(pyprojectDir, '.python-version');
+    await writeFile(pythonVersionFilePath, `${pythonVersion.version}\n`);
+    console.log(
+      `Writing .python-version file with version ${pythonVersion.version}`
+    );
+  }
 
   fsFiles = await glob('**', workPath);
 
@@ -292,10 +345,11 @@ export const build: BuildV3 = async ({
     if (!ranPyprojectInstall) {
       // Default installation path: use uv to normalize manifests into a uv.lock and
       // sync dependencies into the virtualenv, including required runtime deps.
-      let uvPath: string;
+      let uv: UvRunner;
       try {
-        uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+        const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
         console.log(`Using uv at "${uvPath}"`);
+        uv = new UvRunner(uvPath);
       } catch (err) {
         console.log('Failed to install or locate uv');
         throw new Error(
@@ -335,7 +389,8 @@ export const build: BuildV3 = async ({
         repoRootPath,
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
-        uvPath,
+        pythonVersion: pythonVersion.version,
+        uv,
         venvPath,
         meta,
         runtimeDependencies,
@@ -344,8 +399,7 @@ export const build: BuildV3 = async ({
       // Use the generated/normalized uv.lock as the canonical source of truth and
       // sync it into the venv. Re-running this with the same lockfile is idempotent
       // and prunes any unused dependencies from the virtualenv.
-      await runUvSync({
-        uvPath,
+      await uv.sync({
         venvPath,
         projectDir,
         locked: true,
@@ -519,6 +573,18 @@ export const defaultShouldServe: ShouldServe = ({
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
+}
+
+// Parses a .python-version file and returns the first non-empty, non-comment line.
+// Supports both exact versions (e.g. "3.12") and version specifiers (e.g. ">=3.12").
+function parsePythonVersionFile(content: string): string | undefined {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    return trimmed;
+  }
+  return undefined;
 }
 
 // internal only - expect breaking changes if other packages depend on these exports
