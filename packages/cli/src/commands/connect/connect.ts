@@ -188,18 +188,19 @@ async function createProjectDevContainer(
     try {
       config = await fs.readJson(existingConfigPath);
 
-      // Adjust build paths to reference parent directory (since we're in a subdirectory now)
+      // Adjust build paths since we're in a subdirectory now
+      // Default context is "." and default dockerfile is "Dockerfile"
+      // From the subdirectory, we need to prefix with "../" to reference the parent
       if (config.build) {
-        if (config.build.dockerfile) {
-          config.build.dockerfile = `../${config.build.dockerfile}`;
-          output.debug(
-            `Adjusted dockerfile path to: ${config.build.dockerfile}`
-          );
-        }
-        if (config.build.context) {
-          config.build.context = `../${config.build.context}`;
-          output.debug(`Adjusted context path to: ${config.build.context}`);
-        }
+        config.build.context = config.build.context
+          ? `../${config.build.context}`
+          : '..';
+        config.build.dockerfile = config.build.dockerfile
+          ? `../${config.build.dockerfile}`
+          : '../Dockerfile';
+        output.debug(
+          `Adjusted build paths - context: ${config.build.context}, dockerfile: ${config.build.dockerfile}`
+        );
       }
     } catch (err) {
       output.warn(
@@ -250,12 +251,6 @@ async function createProjectDevContainer(
   const existingAppPorts = config.appPort || [];
   if (!existingAppPorts.includes(port)) {
     config.appPort = [...existingAppPorts, port];
-  }
-
-  // Ensure NET_ADMIN capability is added (merge with existing)
-  const existingCapAdd = config.capAdd || [];
-  if (!existingCapAdd.includes('NET_ADMIN')) {
-    config.capAdd = [...existingCapAdd, 'NET_ADMIN'];
   }
 
   // Write the config
