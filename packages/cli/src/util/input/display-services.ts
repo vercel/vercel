@@ -35,7 +35,7 @@ const frameworkColors: Record<string, (text: string) => string> = {
   // Node frameworks
   express: chalk.yellow,
   nest: chalk.red,
-  hono: chalk.orange,
+  hono: chalk.yellowBright,
 };
 
 const runtimeColors: Record<string, (text: string) => string> = {
@@ -43,7 +43,7 @@ const runtimeColors: Record<string, (text: string) => string> = {
   python: chalk.blue,
   go: chalk.cyan,
   ruby: chalk.red,
-  rust: chalk.orange,
+  rust: chalk.yellowBright,
 };
 
 function getFrameworkName(slug: string | undefined): string | undefined {
