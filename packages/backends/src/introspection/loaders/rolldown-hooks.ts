@@ -1,6 +1,36 @@
-import { build } from 'rolldown';
+import { build, type Plugin } from 'rolldown';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
+
+// Plugin to externalize native .node addon files
+function nativeAddonPlugin(baseDir: string): Plugin {
+  const require = createRequire(join(baseDir, 'index.js'));
+  return {
+    name: 'native-addon-external',
+    resolveId(source, importer) {
+      // Skip node built-ins and already-external modules
+      if (source.startsWith('node:') || !importer) {
+        return null;
+      }
+
+      try {
+        // Try to resolve the module to see if it's a native addon
+        const resolved = require.resolve(source, {
+          paths: [dirname(importer)],
+        });
+        if (resolved.endsWith('.node')) {
+          // Mark native addons as external
+          return { id: source, external: true };
+        }
+      } catch {
+        // Module not found, let rolldown handle it
+      }
+
+      return null;
+    },
+  };
+}
 
 let honoUrl: string | null = null;
 let expressUrl: string | null = null;
@@ -98,6 +128,7 @@ export default extendedExpress;
       input: filePath,
       write: false,
       platform: 'node',
+      plugins: [nativeAddonPlugin(fileDir)],
       // Only keep hono/express external (for shims) and node built-ins
       // Bundle everything else so rolldown handles CJS interop
       external: id =>
