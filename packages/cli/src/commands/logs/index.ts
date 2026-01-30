@@ -24,6 +24,40 @@ import { help } from '../help';
 import { logsCommand } from './command';
 import output from '../../output-manager';
 
+interface BranchDeployment {
+  id: string;
+  url: string;
+}
+
+async function getLatestDeploymentByBranch(
+  client: Client,
+  projectId: string,
+  branch: string
+): Promise<BranchDeployment | null> {
+  const query = new URLSearchParams();
+  query.set('projectId', projectId);
+  query.set('limit', '1');
+  query.set('state', 'READY');
+  query.set('meta-gitCommitRef', branch);
+
+  interface DeploymentResponse {
+    deployments: Array<{ uid: string; url: string }>;
+  }
+
+  const { deployments } = await client.fetch<DeploymentResponse>(
+    `/v6/deployments?${query}`
+  );
+
+  if (deployments.length === 0) {
+    return null;
+  }
+
+  return {
+    id: deployments[0].uid,
+    url: deployments[0].url,
+  };
+}
+
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
 const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
 
@@ -230,13 +264,6 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionBranch(branchFlagValue);
 
   if (followOption) {
-    if (!deploymentOption) {
-      output.error(
-        `The ${chalk.bold('--follow')} flag requires a deployment URL or ID to be specified.`
-      );
-      return 1;
-    }
-
     const incompatibleFlags = [
       { flag: '--environment', value: environmentOption },
       { flag: '--level', value: levelOption },
@@ -363,6 +390,46 @@ export default async function logs(client: Client) {
   }
 
   if (followOption) {
+    // If no deployment specified, try to find one by branch
+    if (!deploymentId) {
+      if (branchFlagValue === false) {
+        output.error(
+          `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or remove ${chalk.bold('--no-branch')} to auto-detect from the current git branch.`
+        );
+        return 1;
+      }
+
+      if (!branchOption) {
+        output.error(
+          `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or run from within a git repository.`
+        );
+        return 1;
+      }
+
+      output.spinner(
+        `Finding latest deployment for branch "${branchOption}"`,
+        1000
+      );
+      const branchDeployment = await getLatestDeploymentByBranch(
+        client,
+        projectId,
+        branchOption
+      );
+      output.stopSpinner();
+
+      if (!branchDeployment) {
+        output.error(
+          `No deployments found for branch "${branchOption}". Deploy this branch first or specify a deployment with ${chalk.bold('--deployment')}.`
+        );
+        return 1;
+      }
+
+      deploymentId = branchDeployment.id;
+      output.debug(
+        `Found deployment ${deploymentId} for branch ${branchOption}`
+      );
+    }
+
     if (!jsonOption) {
       output.print(
         `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
