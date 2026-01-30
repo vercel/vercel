@@ -4,11 +4,47 @@ import type {
   ServiceDetectionError,
 } from '@vercel/fs-detectors';
 import output from '../../output-manager';
+import table from '../output/table';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const chalk = require('chalk');
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
+
+// TODO: move this to frameworks.ts
+const frameworkColors: Record<string, (text: string) => string> = {
+  // JavaScript/TypeScript frameworks
+  nextjs: chalk.white,
+  vite: chalk.magenta,
+  nuxtjs: chalk.green,
+  remix: chalk.cyan,
+  astro: chalk.magenta,
+  gatsby: chalk.magenta,
+  svelte: chalk.red,
+  sveltekit: chalk.red,
+  solidstart: chalk.blue,
+  angular: chalk.red,
+  vue: chalk.green,
+  ember: chalk.red,
+  preact: chalk.magenta,
+
+  // Python frameworks
+  fastapi: chalk.green,
+  flask: chalk.cyan,
+
+  // Node frameworks
+  express: chalk.yellow,
+  nest: chalk.red,
+  hono: chalk.orange,
+};
+
+const runtimeColors: Record<string, (text: string) => string> = {
+  node: chalk.green,
+  python: chalk.blue,
+  go: chalk.cyan,
+  ruby: chalk.red,
+  rust: chalk.orange,
+};
 
 function getFrameworkName(slug: string | undefined): string | undefined {
   if (!slug) return undefined;
@@ -26,18 +62,28 @@ function formatRoutePrefix(routePrefix: string): string {
   return `${normalized}/*`;
 }
 
-function getServiceDescription(service: ResolvedService): string {
+interface ServiceDescriptionInfo {
+  label: string;
+  colorFn: (text: string) => string;
+}
+
+function getServiceDescriptionInfo(
+  service: ResolvedService
+): ServiceDescriptionInfo {
   const frameworkName = getFrameworkName(service.framework);
 
   // Show the most detailed info: framework > runtime > builder
-  if (frameworkName) {
-    return chalk.cyan(`[${frameworkName}]`);
+  if (frameworkName && service.framework) {
+    const colorFn = frameworkColors[service.framework] || chalk.cyan;
+    return { label: frameworkName, colorFn };
   } else if (service.runtime) {
-    return chalk.yellow(`[${service.runtime}]`);
+    const normalizedRuntime = service.runtime.toLowerCase().replace(/@.*$/, '');
+    const colorFn = runtimeColors[normalizedRuntime] || chalk.yellow;
+    return { label: service.runtime, colorFn };
   } else if (service.builder?.use) {
-    return chalk.magenta(`[${service.builder.use}]`);
+    return { label: service.builder.use, colorFn: chalk.magenta };
   }
-  return chalk.dim('[unknown]');
+  return { label: 'unknown', colorFn: chalk.dim };
 }
 
 function getServiceTarget(service: ResolvedService): string {
@@ -57,20 +103,28 @@ function getServiceTarget(service: ResolvedService): string {
 /**
  * Output format:
  * Multiple services detected. Project Settings:
- * - frontend [Next.js] → /
- * - api [python] → /api/*
- * - cleanup [node] → schedule: 0 0 * * *
- * - processor [node] → topic: jobs
+ *   frontend          [Next.js]   →  /
+ *   api               [python]    →  /api/*
+ *   cleanup           [node]      →  schedule: 0 0 * * *
+ *   processor         [node]      →  topic: jobs
  */
 export function displayDetectedServices(services: ResolvedService[]): void {
   output.print(`Multiple services detected. Project Settings:\n`);
 
-  for (const service of services) {
-    const description = getServiceDescription(service);
+  const rows: string[][] = services.map(service => {
+    const descInfo = getServiceDescriptionInfo(service);
     const target = getServiceTarget(service);
-    const line = `- ${chalk.bold(service.name)} ${description} ${chalk.dim('→')} ${target}`;
-    output.print(`${line}\n`);
-  }
+
+    return [
+      `• ${service.name}`,
+      descInfo.colorFn(`[${descInfo.label}]`),
+      chalk.dim('→'),
+      target,
+    ];
+  });
+
+  const tableOutput = table(rows, { align: ['l', 'l', 'l', 'l'], hsep: 2 });
+  output.print(`${tableOutput}\n`);
 }
 
 export function displayServicesConfigNote(): void {
