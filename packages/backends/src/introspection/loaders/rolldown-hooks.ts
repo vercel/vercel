@@ -142,8 +142,8 @@ export default extendedExpress;
         banner: `
 import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_fn } from 'node:path';
-const __filename = __fileURLToPath(import.meta.url);
-const __dirname = __dirname_fn(__filename);
+var __filename = typeof __filename !== 'undefined' ? __filename : __fileURLToPath(import.meta.url);
+var __dirname = typeof __dirname !== 'undefined' ? __dirname : __dirname_fn(__filename);
 `,
       },
     });

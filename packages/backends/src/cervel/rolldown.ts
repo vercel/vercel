@@ -10,9 +10,9 @@ const __dirname__filenameShim = `
 import { createRequire as __createRequire } from 'node:module';
 import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_ } from 'node:path';
-const require = __createRequire(import.meta.url);
-const __filename = __fileURLToPath(import.meta.url);
-const __dirname = __dirname_(__filename);
+var require = typeof require !== 'undefined' ? require : __createRequire(import.meta.url);
+var __filename = typeof __filename !== 'undefined' ? __filename : __fileURLToPath(import.meta.url);
+var __dirname = typeof __dirname !== 'undefined' ? __dirname : __dirname_(__filename);
 `.trim();
 
 export const rolldown = async (args: RolldownOptions) => {
