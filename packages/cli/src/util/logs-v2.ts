@@ -126,13 +126,57 @@ export async function fetchRequestLogs(
       : client.apiUrl;
   const url = `${baseUrl}/api/logs/request-logs?${query.toString()}`;
 
+  interface ApiLogEntry {
+    requestId?: string;
+    timestamp?: string;
+    deploymentId?: string;
+    requestMethod?: string;
+    requestPath?: string;
+    statusCode?: number;
+    environment?: string;
+    branch?: string;
+    cache?: string;
+    traceId?: string;
+    logs?: Array<{
+      level?: string;
+      message?: string;
+      messageTruncated?: boolean;
+    }>;
+    events?: Array<{ source?: string }>;
+    domain?: string;
+  }
+
   const data = await client.fetch<{
-    rows?: RequestLogEntry[];
+    rows?: ApiLogEntry[];
     hasMoreRows?: boolean;
   }>(url);
 
+  const logs: RequestLogEntry[] = (data.rows || []).map(row => {
+    const firstLog = row.logs?.[0];
+    const firstEvent = row.events?.[0];
+    return {
+      id: row.requestId || '',
+      timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
+      deploymentId: row.deploymentId || '',
+      projectId: options.projectId,
+      level: (firstLog?.level as RequestLogEntry['level']) || 'info',
+      message: firstLog?.message || '',
+      messageTruncated: firstLog?.messageTruncated,
+      source: (firstEvent?.source as RequestLogEntry['source']) || 'static',
+      domain: row.domain || '',
+      requestMethod: row.requestMethod || '',
+      requestPath: row.requestPath || '',
+      responseStatusCode: row.statusCode || 0,
+      environment:
+        (row.environment as RequestLogEntry['environment']) || 'production',
+      branch: row.branch,
+      cache: row.cache,
+      traceId: row.traceId,
+    };
+  });
+
   return {
-    logs: data.rows || [],
+    logs,
     pagination: {
       hasMore: data.hasMoreRows ?? false,
     },

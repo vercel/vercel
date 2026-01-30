@@ -6,32 +6,59 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useDeployment } from '../../../mocks/deployment';
 import logsv2 from '../../../../src/commands/logsv2';
 import { join } from 'path';
-import type { RequestLogEntry } from '../../../../src/util/logs-v2';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/logsv2', name);
 
+// API response format (what the server returns)
+interface ApiLogEntry {
+  requestId?: string;
+  timestamp?: string;
+  deploymentId?: string;
+  requestMethod?: string;
+  requestPath?: string;
+  statusCode?: number;
+  environment?: string;
+  domain?: string;
+  logs?: Array<{
+    level?: string;
+    message?: string;
+    messageTruncated?: boolean;
+  }>;
+  events?: Array<{ source?: string }>;
+}
+
 function createMockLog(
-  overrides: Partial<RequestLogEntry> = {}
-): RequestLogEntry {
+  overrides: {
+    id?: string;
+    message?: string;
+    level?: string;
+    source?: string;
+    environment?: string;
+    deploymentId?: string;
+    responseStatusCode?: number;
+  } = {}
+): ApiLogEntry {
   return {
-    id: 'log_123',
-    timestamp: Date.now(),
-    deploymentId: 'dpl_test123',
-    projectId: 'prj_logsv2test',
-    level: 'info',
-    message: 'Test log message',
-    source: 'serverless',
-    domain: 'test.vercel.app',
+    requestId: overrides.id ?? 'log_123',
+    timestamp: new Date().toISOString(),
+    deploymentId: overrides.deploymentId ?? 'dpl_test123',
     requestMethod: 'GET',
     requestPath: '/api/test',
-    responseStatusCode: 200,
-    environment: 'production',
-    ...overrides,
+    statusCode: overrides.responseStatusCode ?? 200,
+    environment: overrides.environment ?? 'production',
+    domain: 'test.vercel.app',
+    logs: [
+      {
+        level: overrides.level ?? 'info',
+        message: overrides.message ?? 'Test log message',
+      },
+    ],
+    events: [{ source: overrides.source ?? 'serverless' }],
   };
 }
 
-function useRequestLogs(logs: RequestLogEntry[] = []) {
+function useRequestLogs(logs: ApiLogEntry[] = []) {
   client.scenario.get('/api/logs/request-logs', (_req, res) => {
     res.json({
       rows: logs,
