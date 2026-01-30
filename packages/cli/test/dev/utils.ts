@@ -160,7 +160,6 @@ export async function exec(directory: string, args: string[] = []) {
 
   return execa(binaryPath, ['dev', directory, '-t', token, ...scope, ...args], {
     reject: false,
-    shell: true,
     env: { __VERCEL_SKIP_DEV_CMD: '1' },
   });
 }
