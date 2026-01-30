@@ -1,9 +1,14 @@
 {
-  "probes": [{
-    "path": "/api",
-    "mustContain": "RANDOMNESS_PLACEHOLDER",
-    "notResponseHeaders": {
-      "content-type": "application/octet-stream"
+  "probes": [
+    {
+      "path": "/api",
+      "mustContain": "RANDOMNESS_PLACEHOLDER",
+      "notResponseHeaders": {
+        "content-type": "application/octet-stream"
+      }
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
-  }]
+  ]
 }

@@ -7,22 +7,36 @@ import {
   type RequestLogEntry,
 } from '../../../src/util/logs-v2';
 
-function createMockLog(
-  overrides: Partial<RequestLogEntry> = {}
-): RequestLogEntry {
+// API response format (what the server returns)
+interface ApiLogEntry {
+  requestId?: string;
+  timestamp?: string;
+  deploymentId?: string;
+  requestMethod?: string;
+  requestPath?: string;
+  statusCode?: number;
+  environment?: string;
+  domain?: string;
+  logs?: Array<{
+    level?: string;
+    message?: string;
+    messageTruncated?: boolean;
+  }>;
+  events?: Array<{ source?: string }>;
+}
+
+function createMockApiLog(overrides: Partial<ApiLogEntry> = {}): ApiLogEntry {
   return {
-    id: 'log_123',
-    timestamp: Date.now(),
+    requestId: 'log_123',
+    timestamp: new Date().toISOString(),
     deploymentId: 'dpl_test123',
-    projectId: 'prj_test',
-    level: 'info',
-    message: 'Test log message',
-    source: 'serverless',
-    domain: 'test.vercel.app',
     requestMethod: 'GET',
     requestPath: '/api/test',
-    responseStatusCode: 200,
+    statusCode: 200,
     environment: 'production',
+    domain: 'test.vercel.app',
+    logs: [{ level: 'info', message: 'Test log message' }],
+    events: [{ source: 'serverless' }],
     ...overrides,
   };
 }
@@ -34,7 +48,7 @@ describe('logs-v2 utility', () => {
 
   describe('fetchRequestLogs', () => {
     it('should fetch logs with projectId and ownerId', async () => {
-      const mockLogs = [createMockLog()];
+      const mockLogs = [createMockApiLog()];
       client.scenario.get('/api/logs/request-logs', (req, res) => {
         expect(req.query.projectId).toEqual('prj_test');
         expect(req.query.ownerId).toEqual('team_test');
@@ -179,8 +193,8 @@ describe('logs-v2 utility', () => {
   describe('fetchAllRequestLogs', () => {
     it('should yield all logs from single page', async () => {
       const mockLogs = [
-        createMockLog({ id: 'log_1' }),
-        createMockLog({ id: 'log_2' }),
+        createMockApiLog({ requestId: 'log_1' }),
+        createMockApiLog({ requestId: 'log_2' }),
       ];
       client.scenario.get('/api/logs/request-logs', (_req, res) => {
         res.json({ rows: mockLogs, hasMoreRows: false });
@@ -206,12 +220,12 @@ describe('logs-v2 utility', () => {
         const page = req.query.page;
         if (page === '0') {
           res.json({
-            rows: [createMockLog({ id: 'log_page1' })],
+            rows: [createMockApiLog({ requestId: 'log_page1' })],
             hasMoreRows: true,
           });
         } else if (page === '1') {
           res.json({
-            rows: [createMockLog({ id: 'log_page2' })],
+            rows: [createMockApiLog({ requestId: 'log_page2' })],
             hasMoreRows: false,
           });
         }
@@ -238,8 +252,8 @@ describe('logs-v2 utility', () => {
         requestCount++;
         res.json({
           rows: [
-            createMockLog({ id: `log_${requestCount}_1` }),
-            createMockLog({ id: `log_${requestCount}_2` }),
+            createMockApiLog({ requestId: `log_${requestCount}_1` }),
+            createMockApiLog({ requestId: `log_${requestCount}_2` }),
           ],
           hasMoreRows: true,
         });

@@ -4172,6 +4172,107 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Rust',
+    slug: 'rust',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/rust.svg',
+    tagline:
+      'A language empowering everyone to build reliable and efficient software.',
+    description:
+      'A generic Rust application deployed as a serverless function.',
+    website: 'https://www.rust-lang.org',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
+    name: 'Node',
+    slug: 'node',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/node.svg',
+    tagline:
+      "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine.",
+    description:
+      'A generic Node.js application deployed as a serverless function.',
+    website: 'https://nodejs.org',
+    useRuntime: { src: 'server.ts', use: '@vercel/backends' },
+    ignoreRuntimes: ['@vercel/node'],
+    detectors: {
+      every: [
+        {
+          path: 'server.ts',
+        },
+        {
+          path: 'package.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`npm run dev` or `npx ts-node server.ts`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
