@@ -1,3 +1,5 @@
 .vercel
 !test/dev/fixtures/**/.now
 !test/dev/fixtures/**/.vercel
+# Vercel dev tunnel env
+.env.development.local
