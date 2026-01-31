@@ -1,3 +1,4 @@
+import { NowBuildError } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import fetch from 'node-fetch';
@@ -92,7 +93,7 @@ export async function emitFlagsDefinitions(
   cwd: string,
   env: NodeJS.ProcessEnv
 ): Promise<void> {
-  output.debug('emit-flag-definitions: Fetching flag definitions');
+  output.debug('vercel-flags: checking env vars for SDK Keys');
 
   // Collect unique SDK keys from environment variables
   // Supports both direct SDK keys (vf_ prefix) and flags: format
@@ -113,7 +114,7 @@ export async function emitFlagsDefinitions(
     }, new Set<string>())
   );
 
-  output.debug(`emit-flag-definitions: found ${sdkKeys.length} SDK keys`);
+  output.debug(`vercel-flags: found ${sdkKeys.length} SDK keys`);
 
   // Fetch definitions for each SDK key
   const fetchPromise = Promise.all(
@@ -140,9 +141,11 @@ export async function emitFlagsDefinitions(
       const res = await fetch(`${FLAGS_HOST}/v1/datafile`, { headers });
 
       if (!res.ok) {
-        throw new Error(
-          `Failed to fetch flag definitions for ${obfuscate(sdkKey)}: ${res.status} ${res.statusText}`
-        );
+        throw new NowBuildError({
+          code: 'VERCEL_FLAGS_DEFINITIONS_FETCH_FAILED',
+          message: `Failed to fetch flag definitions for ${obfuscate(sdkKey)}: ${res.status} ${res.statusText}`,
+          link: 'https://vercel.com/docs/flags', // TODO replace with better link once we have a docs page
+        });
       }
 
       return res.json() as Promise<BundledDefinitions>;
@@ -150,7 +153,7 @@ export async function emitFlagsDefinitions(
   );
 
   const values = await output.time(
-    'emit-flag-definitions: load datafiles',
+    'vercel-flags: load datafiles',
     fetchPromise
   );
 
@@ -189,7 +192,7 @@ export async function emitFlagsDefinitions(
     writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2)),
   ]);
 
-  output.debug('emit-flag-definitions: created module');
+  output.debug('vercel-flags: created module');
   output.debug(`  → ${indexPath}`);
   output.debug(`  → ${dtsPath}`);
   output.debug(`  → ${packageJsonPath}`);

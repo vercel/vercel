@@ -534,12 +534,7 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  try {
-    await emitFlagsDefinitions(cwd, process.env);
-  } catch (error) {
-    output.debug('emit-flag-definitions: failed');
-    output.debug(error);
-  }
+  await emitFlagsDefinitions(cwd, process.env);
 
   // Get a list of source files
   const files = (await getFiles(workPath, {})).map(f =>
