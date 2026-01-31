@@ -107,45 +107,18 @@ export function generateServicesRoutes(
   const sortedFunctionServices = sortServices(functionServices);
   const sortedStaticServices = sortServices(staticServices);
 
-  // Generate routes for serverless function services
-  for (const service of sortedFunctionServices) {
-    const { routePrefix, builder } = service;
+  // Collect all non-root prefixes for exclusion patterns
+  // When a root service (/) exists alongside other services, its catch-all
+  // must exclude paths that belong to other services
+  const nonRootPrefixes = webServices
+    .filter(s => s.routePrefix !== '/')
+    .map(s =>
+      s.routePrefix.startsWith('/') ? s.routePrefix.slice(1) : s.routePrefix
+    );
 
-    // The dest must point to the actual function path (builder.src),
-    // not just the routePrefix, so Vercel can find the .func directory
-    const builderSrc = builder.src || routePrefix;
-    const functionPath = builderSrc.startsWith('/')
-      ? builderSrc
-      : `/${builderSrc}`;
-
-    // `check: true` tells the router to verify the destination exists on the
-    // filesystem before applying the route. If it doesn't exist, the route is
-    // skipped and routing continues. This ensures requests only route to
-    // functions that were successfully built.
-    if (routePrefix === '/') {
-      // Root function service: catch-all route
-      defaults.push({
-        src: '^/(.*)$',
-        dest: functionPath,
-        check: true,
-      });
-    } else {
-      // Non-root function service: prefix-based rewrite
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix.slice(1)
-        : routePrefix;
-      rewrites.push({
-        src: `^/${normalizedPrefix}(?:/.*)?$`,
-        dest: functionPath,
-        check: true,
-      });
-    }
-  }
-
-  // Generate SPA fallback routes for static services
-  // These routes serve index.html for client-side routing after filesystem
-  // routing has been attempted. Framework-specific routes (cache headers, etc.)
-  // are handled by the builder via framework.defaultRoutes.
+  // Generate SPA fallback routes for static services FIRST
+  // These must come before function service catch-alls so that
+  // /admin/something routes to /admin/index.html, not to the root function
   for (const service of sortedStaticServices) {
     const { routePrefix } = service;
 
@@ -167,6 +140,52 @@ export function generateServicesRoutes(
       rewrites.push({
         src: `^/${normalizedPrefix}(?:/.*)?$`,
         dest: `/${normalizedPrefix}/index.html`,
+      });
+    }
+  }
+
+  // Generate routes for serverless function services
+  for (const service of sortedFunctionServices) {
+    const { routePrefix, builder } = service;
+
+    // The dest must point to the actual function path (builder.src),
+    // not just the routePrefix, so Vercel can find the .func directory
+    const builderSrc = builder.src || routePrefix;
+    const functionPath = builderSrc.startsWith('/')
+      ? builderSrc
+      : `/${builderSrc}`;
+
+    // `check: true` tells the router to verify the destination exists on the
+    // filesystem before applying the route. If it doesn't exist, the route is
+    // skipped and routing continues. This ensures requests only route to
+    // functions that were successfully built.
+    if (routePrefix === '/') {
+      // Root function service: catch-all route that excludes other service prefixes
+      // This ensures /admin/* goes to the admin service, not the root function
+      let srcPattern: string;
+      if (nonRootPrefixes.length > 0) {
+        // Negative lookahead to exclude other service prefixes
+        const exclusionPattern = nonRootPrefixes
+          .map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('|');
+        srcPattern = `^/(?!(?:${exclusionPattern})(?:/|$))(.*)$`;
+      } else {
+        srcPattern = '^/(.*)$';
+      }
+      defaults.push({
+        src: srcPattern,
+        dest: functionPath,
+        check: true,
+      });
+    } else {
+      // Non-root function service: prefix-based rewrite
+      const normalizedPrefix = routePrefix.startsWith('/')
+        ? routePrefix.slice(1)
+        : routePrefix;
+      rewrites.push({
+        src: `^/${normalizedPrefix}(?:/.*)?$`,
+        dest: functionPath,
+        check: true,
       });
     }
   }

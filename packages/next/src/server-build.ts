@@ -121,7 +121,7 @@ export async function serverBuild({
   buildId,
   escapedBuildId,
   dynamicPrefix,
-  entryDirectory,
+  outputPrefix,
   outputDirectory,
   redirects,
   beforeFilesRewrites,
@@ -175,7 +175,8 @@ export async function serverBuild({
   escapedBuildId: string;
   wildcardConfig: BuildResult['wildcard'];
   nodeVersion: NodeVersion;
-  entryDirectory: string;
+  /** Where outputs are mounted (may differ from source directory when routePrefix is used) */
+  outputPrefix: string;
   outputDirectory: string;
   headers: Route[];
   workPath: string;
@@ -432,7 +433,7 @@ export async function serverBuild({
     !experimentalAllowBundling &&
     semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
 
-  let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
+  let hasStatic500 = !!staticPages[path.posix.join(outputPrefix, '500')];
 
   if (lambdaPageKeys.length === 0) {
     throw new NowBuildError({
@@ -454,23 +455,23 @@ export async function serverBuild({
   const hasPages404 = routesManifest.pages404;
 
   let static404Page =
-    staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
-      ? path.posix.join(entryDirectory, '404')
-      : staticPages[path.posix.join(entryDirectory, '_errors/404')]
-        ? path.posix.join(entryDirectory, '_errors/404')
+    staticPages[path.posix.join(outputPrefix, '404')] && hasPages404
+      ? path.posix.join(outputPrefix, '404')
+      : staticPages[path.posix.join(outputPrefix, '_errors/404')]
+        ? path.posix.join(outputPrefix, '_errors/404')
         : undefined;
 
   if (
     !static404Page &&
     i18n &&
-    staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
+    staticPages[path.posix.join(outputPrefix, i18n.defaultLocale, '404')]
   ) {
-    static404Page = path.posix.join(entryDirectory, i18n.defaultLocale, '404');
+    static404Page = path.posix.join(outputPrefix, i18n.defaultLocale, '404');
   }
 
   if (!hasStatic500 && i18n) {
     hasStatic500 =
-      !!staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '500')];
+      !!staticPages[path.posix.join(outputPrefix, i18n.defaultLocale, '500')];
   }
 
   const lstatSema = new Sema(25);
@@ -487,7 +488,7 @@ export async function serverBuild({
     const result = onPrerenderRouteInitial(
       prerenderManifest,
       canUsePreviewMode,
-      entryDirectory,
+      outputPrefix,
       nonLambdaSsgPages,
       route,
       routesManifest.pages404,
@@ -716,7 +717,7 @@ export async function serverBuild({
       // have a static 404 page for each locale.
       if (i18n) {
         for (const locale of i18n.locales) {
-          const static404Page = path.posix.join(entryDirectory, locale, '404');
+          const static404Page = path.posix.join(outputPrefix, locale, '404');
           static404Pages.add(static404Page);
         }
       }
@@ -878,16 +879,16 @@ export async function serverBuild({
     );
 
     if (
-      entryDirectory !== '.' &&
-      path.posix.join('/', entryDirectory) !== routesManifest.basePath
+      outputPrefix !== '.' &&
+      path.posix.join('/', outputPrefix) !== routesManifest.basePath
     ) {
-      // we normalize the entryDirectory in the request URL since
+      // we normalize the outputPrefix in the request URL since
       // Next.js isn't aware of it and it isn't included in the
       // x-matched-path header
       launcher = launcher.replace(
-        '// @preserve entryDirectory handler',
+        '// @preserve outputPrefix handler',
         `req.url = req.url.replace(/^${path.posix
-          .join('/', entryDirectory)
+          .join('/', outputPrefix)
           .replace(/\//g, '\\/')}/, '')`
       );
     }
@@ -1409,7 +1410,7 @@ export async function serverBuild({
           });
         }
 
-        let outputName = path.posix.join(entryDirectory, pageName);
+        let outputName = path.posix.join(outputPrefix, pageName);
 
         if (group.isActionLambda) {
           // give the streaming prerenders a .action suffix
@@ -1432,7 +1433,7 @@ export async function serverBuild({
             // If this isn't an omitted page, then we should add the link from the
             // page to the postpone resume lambda.
             if (!omittedPrerenderRoutes.has(pagePathname)) {
-              const output = getPostponeResumeOutput(entryDirectory, pageName);
+              const output = getPostponeResumeOutput(outputPrefix, pageName);
               lambdas[output] = lambda;
 
               // We want to add the `experimentalStreamingLambdaPath` to this
@@ -1465,7 +1466,7 @@ export async function serverBuild({
               const output = getPostponeResumePathname(routePathname);
               lambdas[output] = lambda;
 
-              outputName = path.posix.join(entryDirectory, routePathname);
+              outputName = path.posix.join(outputPrefix, routePathname);
               experimentalStreamingLambdaPaths.set(outputName, {
                 pathname: getPostponeResumePathname(routePathname),
                 output,
@@ -1493,7 +1494,7 @@ export async function serverBuild({
             lambdas[
               normalizeIndexOutput(
                 path.posix.join(
-                  entryDirectory,
+                  outputPrefix,
                   locale,
                   pageName === 'index' ? '' : pageName
                 ),
@@ -1554,7 +1555,7 @@ export async function serverBuild({
     for (const page of Object.values(appPathRoutesManifest)) {
       const pathname = path.posix.join(
         './',
-        entryDirectory,
+        outputPrefix,
         page === '/' ? '/index' : page
       );
 
@@ -1589,13 +1590,13 @@ export async function serverBuild({
 
       const sourcePathname = path.posix.join(
         './',
-        entryDirectory,
+        outputPrefix,
         route.sourcePage === '/' ? '/index' : route.sourcePage
       );
 
       const pathname = path.posix.join(
         './',
-        entryDirectory,
+        outputPrefix,
         route.page === '/' ? '/index' : route.page
       );
 
@@ -1621,7 +1622,7 @@ export async function serverBuild({
     lambdas,
     experimentalStreamingLambdaPaths,
     prerenders,
-    entryDirectory,
+    outputPrefix,
     routesManifest,
     prerenderManifest,
     appPathRoutesManifest,
@@ -1684,7 +1685,7 @@ export async function serverBuild({
 
     delete lambdas[
       normalizeIndexOutput(
-        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
+        path.posix.join('./', outputPrefix, route === '/' ? '/index' : route),
         true
       )
     ];
@@ -1704,7 +1705,7 @@ export async function serverBuild({
 
   const dynamicRoutes = await getDynamicRoutes({
     entryPath,
-    entryDirectory,
+    outputPrefix,
     dynamicPages,
     isDev: false,
     routesManifest,
@@ -1721,7 +1722,7 @@ export async function serverBuild({
     localizeDynamicRoutes(
       arr,
       dynamicPrefix,
-      entryDirectory,
+      outputPrefix,
       staticPages,
       prerenderManifest,
       routesManifest,
@@ -1763,7 +1764,7 @@ export async function serverBuild({
   }
 
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
-    await getStaticFiles(entryPath, entryDirectory, outputDirectory);
+    await getStaticFiles(entryPath, outputPrefix, outputDirectory);
 
   const normalizeNextDataRoute = (isOverride = false) => {
     return isNextDataServerResolving
@@ -1772,14 +1773,14 @@ export async function serverBuild({
           {
             src: `^${path.posix.join(
               '/',
-              entryDirectory,
+              outputPrefix,
               '/_next/data/',
               escapedBuildId,
               '/(.*).json'
             )}`,
             dest: `${path.posix.join(
               '/',
-              entryDirectory,
+              outputPrefix,
               '/$1',
               trailingSlash ? '/' : ''
             )}`,
@@ -1795,18 +1796,14 @@ export async function serverBuild({
           // normalize "/index" from "/_next/data/index.json" to -> just "/"
           // as matches a rewrite sources will expect just "/"
           {
-            src: path.posix.join('^/', entryDirectory, '/index(?:/)?'),
+            src: path.posix.join('^/', outputPrefix, '/index(?:/)?'),
             has: [
               {
                 type: 'header',
                 key: 'x-nextjs-data',
               },
             ],
-            dest: path.posix.join(
-              '/',
-              entryDirectory,
-              trailingSlash ? '/' : ''
-            ),
+            dest: path.posix.join('/', outputPrefix, trailingSlash ? '/' : ''),
             ...(isOverride ? { override: true } : {}),
             continue: true,
           },
@@ -1820,8 +1817,8 @@ export async function serverBuild({
           {
             src: path.posix.join(
               '^/',
-              entryDirectory !== '.'
-                ? `${entryDirectory}${trailingSlash ? '/$' : '$'}`
+              outputPrefix !== '.'
+                ? `${outputPrefix}${trailingSlash ? '/$' : '$'}`
                 : '$'
             ),
             has: [
@@ -1832,7 +1829,7 @@ export async function serverBuild({
             ],
             dest: `${path.posix.join(
               '/',
-              entryDirectory,
+              outputPrefix,
               '/_next/data/',
               buildId,
               '/index.json'
@@ -1843,7 +1840,7 @@ export async function serverBuild({
           {
             src: path.posix.join(
               '^/',
-              entryDirectory,
+              outputPrefix,
               '((?!_next/)(?:.*[^/]|.*))/?$'
             ),
             has: [
@@ -1854,7 +1851,7 @@ export async function serverBuild({
             ],
             dest: `${path.posix.join(
               '/',
-              entryDirectory,
+              outputPrefix,
               '/_next/data/',
               buildId,
               '/$1.json'
@@ -1888,7 +1885,7 @@ export async function serverBuild({
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
-  const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
+  const appNotFoundPath = path.posix.join('.', outputPrefix, '_not-found');
 
   if (isAppPPREnabled && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
@@ -1983,7 +1980,7 @@ export async function serverBuild({
       // server to return a plain text "Not Found". However, as we handle the "_next/static/"
       // routes in Vercel CLI, the Next.js behavior is overwritten. Therefore, create a
       // ".txt" file with "Not Found" content and rewrite any not found static assets to it.
-      [path.posix.join('.', entryDirectory, '_next/static/not-found.txt')]:
+      [path.posix.join('.', outputPrefix, '_next/static/not-found.txt')]:
         new FileBlob({
           data: 'Not Found',
           contentType: 'text/plain',
@@ -2012,7 +2009,7 @@ export async function serverBuild({
             // ensure x-nextjs-data header is always present
             // if we are doing middleware next data resolving
             {
-              src: path.posix.join('/', entryDirectory, '/_next/data/(.*)'),
+              src: path.posix.join('/', outputPrefix, '/_next/data/(.*)'),
               missing: [
                 {
                   type: 'header',
@@ -2045,7 +2042,7 @@ export async function serverBuild({
             {
               src: `^${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
@@ -2053,16 +2050,14 @@ export async function serverBuild({
               // we aren't able to ensure trailing slash mode here
               // so ensure this comes after the trailing slash redirect
               dest: `${
-                entryDirectory !== '.'
-                  ? path.posix.join('/', entryDirectory)
-                  : ''
+                outputPrefix !== '.' ? path.posix.join('/', outputPrefix) : ''
               }$wildcard${trailingSlash ? '/' : ''}`,
               continue: true,
             },
             {
               src: `^${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
@@ -2070,9 +2065,7 @@ export async function serverBuild({
               // we aren't able to ensure trailing slash mode here
               // so ensure this comes after the trailing slash redirect
               dest: `${
-                entryDirectory !== '.'
-                  ? path.posix.join('/', entryDirectory)
-                  : ''
+                outputPrefix !== '.' ? path.posix.join('/', outputPrefix) : ''
               }$wildcard/$1`,
               continue: true,
             },
@@ -2085,7 +2078,7 @@ export async function serverBuild({
                   {
                     src: `^${path.posix.join(
                       '/',
-                      entryDirectory
+                      outputPrefix
                     )}/?(?:${i18n.locales
                       .map(locale => escapeStringRegexp(locale))
                       .join('|')})?/?$`,
@@ -2145,10 +2138,10 @@ export async function serverBuild({
             ...(!skipDefaultLocaleRewrite || i18n.localeDetection !== false
               ? [
                   {
-                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    src: `^${path.posix.join('/', outputPrefix)}$`,
                     dest: `${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       i18n.defaultLocale
                     )}`,
                     continue: true,
@@ -2161,14 +2154,14 @@ export async function serverBuild({
                   {
                     src: `^${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '/'
                     )}(?!(?:_next/.*|${i18n.locales
                       .map(locale => escapeStringRegexp(locale))
                       .join('|')})(?:/.*|$))(.*)$`,
                     dest: `${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       i18n.defaultLocale
                     )}/$1`,
                     continue: true,
@@ -2204,11 +2197,7 @@ export async function serverBuild({
       ...(i18n
         ? [
             {
-              src: `${path.posix.join(
-                '/',
-                entryDirectory,
-                '/'
-              )}(?:${i18n.locales
+              src: `${path.posix.join('/', outputPrefix, '/')}(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})?[/]?404/?`,
               status: 404,
@@ -2223,7 +2212,7 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '404/?'),
+              src: path.posix.join('/', outputPrefix, '404/?'),
               status: 404,
               continue: true,
               missing: [
@@ -2243,7 +2232,7 @@ export async function serverBuild({
               {
                 src: `${path.posix.join(
                   '/',
-                  entryDirectory,
+                  outputPrefix,
                   '/'
                 )}(?:${i18n.locales
                   .map(locale => escapeStringRegexp(locale))
@@ -2254,7 +2243,7 @@ export async function serverBuild({
             ]
           : [
               {
-                src: path.posix.join('/', entryDirectory, '500'),
+                src: path.posix.join('/', outputPrefix, '500'),
                 status: 500,
                 continue: true,
               },
@@ -2281,12 +2270,12 @@ export async function serverBuild({
                   {
                     src: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '/(?<path>.+?)(?:/)?$'
                     ),
                     dest: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       `/$path${prefetchSegmentDirSuffix}/$segmentPath${prefetchSegmentSuffix}`
                     ),
                     has: [
@@ -2310,10 +2299,10 @@ export async function serverBuild({
                     override: true,
                   },
                   {
-                    src: path.posix.join('^/', entryDirectory, '/?$'),
+                    src: path.posix.join('^/', outputPrefix, '/?$'),
                     dest: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       `/index${prefetchSegmentDirSuffix}/$segmentPath${prefetchSegmentSuffix}`
                     ),
                     has: [
@@ -2343,7 +2332,7 @@ export async function serverBuild({
             !shouldSkipPrefetchRSCHandling
               ? [
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}$`,
+                    src: `^${path.posix.join('/', outputPrefix, '/')}$`,
                     has: [
                       {
                         type: 'header',
@@ -2353,7 +2342,7 @@ export async function serverBuild({
                     ],
                     dest: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       `/__index${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
@@ -2363,7 +2352,7 @@ export async function serverBuild({
                   {
                     src: `^${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '/((?!.+\\.rsc).+?)(?:/)?$'
                     )}`,
                     has: [
@@ -2375,7 +2364,7 @@ export async function serverBuild({
                     ],
                     dest: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       `/$1${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
@@ -2385,7 +2374,7 @@ export async function serverBuild({
                 ]
               : []),
             {
-              src: `^${path.posix.join('/', entryDirectory, '/?')}`,
+              src: `^${path.posix.join('/', outputPrefix, '/?')}`,
               has: [
                 {
                   type: 'header',
@@ -2393,7 +2382,7 @@ export async function serverBuild({
                   value: '1',
                 },
               ],
-              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              dest: path.posix.join('/', outputPrefix, '/index.rsc'),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
@@ -2401,7 +2390,7 @@ export async function serverBuild({
             {
               src: `^${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/((?!.+\\.rsc).+?)(?:/)?$'
               )}`,
               has: [
@@ -2411,7 +2400,7 @@ export async function serverBuild({
                   value: '1',
                 },
               ],
-              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              dest: path.posix.join('/', outputPrefix, '/$1.rsc'),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
@@ -2428,7 +2417,7 @@ export async function serverBuild({
       ...(routesManifest?.basePath
         ? [
             {
-              src: path.posix.join('/', entryDirectory, '_next/image/?'),
+              src: path.posix.join('/', outputPrefix, '_next/image/?'),
               dest: '/_next/image',
               check: true,
             },
@@ -2443,8 +2432,8 @@ export async function serverBuild({
             // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
             // if no match to prevent rewriting _next/data unexpectedly
             {
-              src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
-              dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
+              src: path.posix.join('/', outputPrefix, '_next/data/(.*)'),
+              dest: path.posix.join('/', outputPrefix, '_next/data/$1'),
               check: true,
             },
           ]
@@ -2457,10 +2446,10 @@ export async function serverBuild({
             {
               src: path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/index(\\.action|\\.rsc)'
               ),
-              dest: path.posix.join('/', entryDirectory),
+              dest: path.posix.join('/', outputPrefix),
               continue: true,
             },
           ]
@@ -2479,12 +2468,12 @@ export async function serverBuild({
                   {
                     src: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '/\\.prefetch\\.rsc$'
                     ),
                     dest: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       `/__index${RSC_PREFETCH_SUFFIX}`
                     ),
                     check: true,
@@ -2492,25 +2481,25 @@ export async function serverBuild({
                   {
                     src: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '(.+)/\\.prefetch\\.rsc$'
                     ),
                     dest: path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       `$1${RSC_PREFETCH_SUFFIX}`
                     ),
                     check: true,
                   },
                 ]),
             {
-              src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
-              dest: path.posix.join('/', entryDirectory, `/index.rsc`),
+              src: path.posix.join('/', outputPrefix, '/\\.rsc$'),
+              dest: path.posix.join('/', outputPrefix, `/index.rsc`),
               check: true,
             },
             {
-              src: path.posix.join('/', entryDirectory, '(.+)/\\.rsc$'),
-              dest: path.posix.join('/', entryDirectory, '$1.rsc'),
+              src: path.posix.join('/', outputPrefix, '(.+)/\\.rsc$'),
+              dest: path.posix.join('/', outputPrefix, '$1.rsc'),
               check: true,
             },
           ]
@@ -2522,21 +2511,17 @@ export async function serverBuild({
 
       // make sure 404 page is used when a directory is matched without
       // an index page
-      { src: path.posix.join('/', entryDirectory, '.*'), status: 404 },
+      { src: path.posix.join('/', outputPrefix, '.*'), status: 404 },
 
       { handle: 'miss' },
 
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
       {
-        src: path.posix.join('/', entryDirectory, '_next/static/.+'),
+        src: path.posix.join('/', outputPrefix, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: path.posix.join(
-          '/',
-          entryDirectory,
-          '_next/static/not-found.txt'
-        ),
+        dest: path.posix.join('/', outputPrefix, '_next/static/not-found.txt'),
         headers: {
           'content-type': 'text/plain; charset=utf-8',
         },
@@ -2551,10 +2536,10 @@ export async function serverBuild({
             ...(skipDefaultLocaleRewrite && i18n.localeDetection === false
               ? [
                   {
-                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    src: `^${path.posix.join('/', outputPrefix)}$`,
                     dest: `${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       i18n.defaultLocale
                     )}`,
                     check: true,
@@ -2567,14 +2552,14 @@ export async function serverBuild({
                   {
                     src: `^${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '/'
                     )}(?!(?:_next/.*|${i18n.locales
                       .map(locale => escapeStringRegexp(locale))
                       .join('|')})(?:/.*|$))(.*)$`,
                     dest: `${path.posix.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       i18n.defaultLocale
                     )}/$1`,
                     check: true,
@@ -2584,17 +2569,17 @@ export async function serverBuild({
             {
               src: path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 escapeStringRegexp(i18n.defaultLocale)
               ),
               dest: '/',
               check: true,
             },
             {
-              src: `^${path.posix.join('/', entryDirectory)}/?(?:${i18n.locales
+              src: `^${path.posix.join('/', outputPrefix)}/?(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})/(.*)`,
-              dest: `${path.posix.join('/', entryDirectory, '/')}$1`,
+              dest: `${path.posix.join('/', outputPrefix, '/')}$1`,
               check: true,
             },
           ]
@@ -2653,7 +2638,7 @@ export async function serverBuild({
 
               route.src = path.posix.join(
                 '^/',
-                entryDirectory,
+                outputPrefix,
                 '_next/data/',
                 escapedBuildId,
                 normalizedSrc
@@ -2703,8 +2688,8 @@ export async function serverBuild({
             // ensure we 404 for non-existent _next/data routes before
             // trying page dynamic routes
             {
-              src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
-              dest: path.posix.join('/', entryDirectory, '404'),
+              src: path.posix.join('/', outputPrefix, '_next/data/(.*)'),
+              dest: path.posix.join('/', outputPrefix, '404'),
               status: 404,
             },
           ]
@@ -2719,7 +2704,7 @@ export async function serverBuild({
             {
               src: `^${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/_next/data/',
                 escapedBuildId,
                 '/(.*).json'
@@ -2735,7 +2720,7 @@ export async function serverBuild({
             {
               src: `^${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/_next/data/',
                 escapedBuildId,
                 '/(.*).json'
@@ -2753,7 +2738,7 @@ export async function serverBuild({
         // user-emitted files which may be missing a hash in their filename.
         src: path.posix.join(
           '/',
-          entryDirectory,
+          outputPrefix,
           `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
@@ -2765,7 +2750,7 @@ export async function serverBuild({
         important: true,
       },
       {
-        src: path.posix.join('/', entryDirectory, '/index(?:/)?'),
+        src: path.posix.join('/', outputPrefix, '/index(?:/)?'),
         headers: {
           'x-matched-path': '/',
         },
@@ -2773,7 +2758,7 @@ export async function serverBuild({
         important: true,
       },
       {
-        src: path.posix.join('/', entryDirectory, `/((?!index$).*?)(?:/)?`),
+        src: path.posix.join('/', outputPrefix, `/((?!index$).*?)(?:/)?`),
         headers: {
           'x-matched-path': '/$1',
         },
@@ -2791,12 +2776,12 @@ export async function serverBuild({
             {
               src: `${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?<nextLocale>${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})(/.*|$)`,
-              dest: path.posix.join('/', entryDirectory, '/$nextLocale/404'),
+              dest: path.posix.join('/', outputPrefix, '/$nextLocale/404'),
               status: 404,
               caseSensitive: true,
               headers: {
@@ -2804,10 +2789,10 @@ export async function serverBuild({
               },
             },
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join('/', outputPrefix, '.*'),
               dest: path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 `/${i18n.defaultLocale}/404`
               ),
               status: 404,
@@ -2820,18 +2805,18 @@ export async function serverBuild({
             {
               src: path.posix.join(
                 '/',
-                entryDirectory,
-                // if entryDirectory is populated we need to
+                outputPrefix,
+                // if outputPrefix is populated we need to
                 // add optional handling for trailing slash so
-                // that the entryDirectory (basePath) itself matches
-                `${entryDirectory !== '.' ? '?' : ''}.*`
+                // that the outputPrefix (basePath) itself matches
+                `${outputPrefix !== '.' ? '?' : ''}.*`
               ),
               dest: path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 static404Page ||
                   hasIsr404Page ||
-                  lambdas[path.posix.join(entryDirectory, '404')]
+                  lambdas[path.posix.join(outputPrefix, '404')]
                   ? '/404'
                   : appPathRoutesManifest &&
                       (middleware.edgeFunctions[appNotFoundPath] ||
@@ -2852,12 +2837,12 @@ export async function serverBuild({
             {
               src: `${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?<nextLocale>${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})(/.*|$)`,
-              dest: path.posix.join('/', entryDirectory, '/$nextLocale/500'),
+              dest: path.posix.join('/', outputPrefix, '/$nextLocale/500'),
               status: 500,
               caseSensitive: true,
               headers: {
@@ -2865,10 +2850,10 @@ export async function serverBuild({
               },
             },
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join('/', outputPrefix, '.*'),
               dest: path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 `/${i18n.defaultLocale}/500`
               ),
               status: 500,
@@ -2881,18 +2866,18 @@ export async function serverBuild({
             {
               src: path.posix.join(
                 '/',
-                entryDirectory,
-                // if entryDirectory is populated we need to
+                outputPrefix,
+                // if outputPrefix is populated we need to
                 // add optional handling for trailing slash so
-                // that the entryDirectory (basePath) itself matches
-                `${entryDirectory !== '.' ? '?' : ''}.*`
+                // that the outputPrefix (basePath) itself matches
+                `${outputPrefix !== '.' ? '?' : ''}.*`
               ),
               dest: path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 hasStatic500 ||
                   hasIsr500Page ||
-                  lambdas[path.posix.join(entryDirectory, '500')]
+                  lambdas[path.posix.join(outputPrefix, '500')]
                   ? '/500'
                   : '/_error'
               ),

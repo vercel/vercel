@@ -416,7 +416,7 @@ export async function getRoutesManifest(
 
 function getDestinationForSegmentRoute(
   isDev: boolean,
-  entryDirectory: string,
+  outputPrefix: string,
   routeKeys: Record<string, string> | undefined,
   prefetchSegmentDataRoute: {
     destination: string;
@@ -425,11 +425,7 @@ function getDestinationForSegmentRoute(
 ) {
   return `${
     !isDev
-      ? path.posix.join(
-          '/',
-          entryDirectory,
-          prefetchSegmentDataRoute.destination
-        )
+      ? path.posix.join('/', outputPrefix, prefetchSegmentDataRoute.destination)
       : prefetchSegmentDataRoute.destination
   }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
     .map(([key, value]) => `${value}=$${key}`)
@@ -438,7 +434,7 @@ function getDestinationForSegmentRoute(
 
 export async function getDynamicRoutes({
   entryPath,
-  entryDirectory,
+  outputPrefix,
   dynamicPages,
   isDev,
   routesManifest,
@@ -453,7 +449,7 @@ export async function getDynamicRoutes({
   prerenderManifest,
 }: {
   entryPath: string;
-  entryDirectory: string;
+  outputPrefix: string;
   dynamicPages: string[];
   isDev?: boolean;
   routesManifest?: RoutesManifest;
@@ -476,7 +472,7 @@ export async function getDynamicRoutes({
           .map(({ page, regex }: { page: string; regex: string }) => {
             return {
               src: regex,
-              dest: !isDev ? path.posix.join('/', entryDirectory, page) : page,
+              dest: !isDev ? path.posix.join('/', outputPrefix, page) : page,
               check: true,
               status:
                 canUsePreviewMode && omittedRoutes?.has(page) ? 404 : undefined,
@@ -527,9 +523,7 @@ export async function getDynamicRoutes({
           } = params;
           const route: RouteWithSrc = {
             src: namedRegex || regex,
-            dest: `${
-              !isDev ? path.posix.join('/', entryDirectory, page) : page
-            }${
+            dest: `${!isDev ? path.posix.join('/', outputPrefix, page) : page}${
               routeKeys
                 ? `?${Object.keys(routeKeys)
                     .map(key => `${routeKeys[key]}=$${key}`)
@@ -587,7 +581,7 @@ export async function getDynamicRoutes({
                 src: prefetchSegmentDataRoute.source,
                 dest: getDestinationForSegmentRoute(
                   isDev === true,
-                  entryDirectory,
+                  outputPrefix,
                   routeKeys,
                   prefetchSegmentDataRoute
                 ),
@@ -708,7 +702,7 @@ export async function getDynamicRoutes({
   pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
-      ? path.posix.join('/', entryDirectory, pageMatcher.pageName)
+      ? path.posix.join('/', outputPrefix, pageMatcher.pageName)
       : pageMatcher.pageName;
 
     if (pageMatcher && pageMatcher.matcher) {
@@ -725,7 +719,7 @@ export async function getDynamicRoutes({
 export function localizeDynamicRoutes(
   dynamicRoutes: RouteWithSrc[],
   dynamicPrefix: string,
-  entryDirectory: string,
+  outputPrefix: string,
   staticPages: Files,
   prerenderManifest: NextPrerenderedRoutes,
   routesManifest?: RoutesManifest,
@@ -795,8 +789,8 @@ export function localizeDynamicRoutes(
         // ensure destination has locale prefix to match prerender output
         // path so that the prerender object is used
         route.dest = route.dest!.replace(
-          `${path.posix.join('/', entryDirectory, '/')}`,
-          `${path.posix.join('/', entryDirectory, '$nextLocale', '/')}`
+          `${path.posix.join('/', outputPrefix, '/')}`,
+          `${path.posix.join('/', outputPrefix, '$nextLocale', '/')}`
         );
       }
     } else {
@@ -859,7 +853,7 @@ type FileMap = { [page: string]: FileFsRef };
 export function filterStaticPages(
   staticPageFiles: FileMap,
   dynamicPages: string[],
-  entryDirectory: string,
+  outputPrefix: string,
   htmlContentType: string,
   prerenderManifest: NextPrerenderedRoutes,
   nextVersion: string,
@@ -887,7 +881,7 @@ export function filterStaticPages(
       return;
     }
 
-    const staticRoute = path.posix.join(entryDirectory, pathname);
+    const staticRoute = path.posix.join(outputPrefix, pathname);
 
     staticPages[staticRoute] = staticPageFiles[page];
     staticPages[staticRoute].contentType = htmlContentType;
@@ -2296,7 +2290,7 @@ export const detectLambdaLimitExceeding = async (
 export const onPrerenderRouteInitial = (
   prerenderManifest: NextPrerenderedRoutes,
   canUsePreviewMode: boolean,
-  entryDirectory: string,
+  outputPrefix: string,
   nonLambdaSsgPages: Set<string>,
   routeKey: string,
   hasPages404: boolean,
@@ -2320,11 +2314,11 @@ export const onPrerenderRouteInitial = (
   // if the 404 page used getStaticProps we need to update static404Page
   // since it wasn't populated from the staticPages group
   if (routeNoLocale === '/404') {
-    static404Page = path.posix.join(entryDirectory, routeKey);
+    static404Page = path.posix.join(outputPrefix, routeKey);
   }
 
   if (routeNoLocale === '/500') {
-    static500Page = path.posix.join(entryDirectory, routeKey);
+    static500Page = path.posix.join(outputPrefix, routeKey);
   }
 
   if (
@@ -2370,7 +2364,7 @@ type OnPrerenderRouteArgs = {
   localePrefixed404?: boolean;
   static404Page?: string;
   hasPages404: boolean;
-  entryDirectory: string;
+  outputPrefix: string;
   appPathRoutesManifest?: Record<string, string>;
   prerenderManifest: NextPrerenderedRoutes;
   isSharedLambdas: boolean;
@@ -2440,7 +2434,7 @@ export const onPrerenderRoute =
       pagesDir,
       static404Page,
       localePrefixed404,
-      entryDirectory,
+      outputPrefix,
       prerenderManifest,
       isSharedLambdas,
       isServerMode,
@@ -2759,21 +2753,21 @@ export const onPrerenderRoute =
       initialStatus = 404;
     }
 
-    let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+    let outputPathPage = path.posix.join(outputPrefix, routeFileNoExt);
 
     if (!isAppPathRoute) {
       outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
     }
 
     const outputPathPageOrig = path.posix.join(
-      entryDirectory,
+      outputPrefix,
       origRouteFileNoExt
     );
 
     let lambda: undefined | Lambda;
 
     function normalizeDataRoute(route: string) {
-      let normalized = path.posix.join(entryDirectory, route);
+      let normalized = path.posix.join(outputPrefix, route);
 
       if (nonDynamicSsg || isFallback || isOmitted) {
         // the prerender-manifest can be inconsistent with
@@ -2822,7 +2816,7 @@ export const onPrerenderRoute =
           srcRoute == null
             ? outputPathPageOrig
             : path.posix.join(
-                entryDirectory,
+                outputPrefix,
                 srcRoute === '/' ? '/index' : srcRoute
               )
         ),
@@ -2836,7 +2830,7 @@ export const onPrerenderRoute =
         srcRoute == null
           ? outputPathPageOrig
           : path.posix.join(
-              entryDirectory,
+              outputPrefix,
               srcRoute === '/' ? '/index' : srcRoute
             );
 
@@ -2964,7 +2958,7 @@ export const onPrerenderRoute =
         // output path as the target for the chain and assign all the provided
         // headers to the chain.
         chain = {
-          outputPath: pathnameToOutputName(entryDirectory, routeKey),
+          outputPath: pathnameToOutputName(outputPrefix, routeKey),
           headers: routesManifest.ppr.chain.headers,
         };
       } else if (
@@ -2975,11 +2969,11 @@ export const onPrerenderRoute =
         // static route first, then try the srcRoute if it doesn't exist. If we
         // can't find it at all, this constitutes an error.
         let paths = experimentalStreamingLambdaPaths.get(
-          pathnameToOutputName(entryDirectory, routeKey)
+          pathnameToOutputName(outputPrefix, routeKey)
         );
         if (!paths && srcRoute) {
           paths = experimentalStreamingLambdaPaths.get(
-            pathnameToOutputName(entryDirectory, srcRoute)
+            pathnameToOutputName(outputPrefix, srcRoute)
           );
         }
         if (!paths) {
@@ -3395,7 +3389,7 @@ export const onPrerenderRoute =
             locale
           );
           let localeOutputPathPage = path.posix.join(
-            entryDirectory,
+            outputPrefix,
             localeRouteFileNoExt
           );
 
@@ -3456,7 +3450,7 @@ export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 export async function getStaticFiles(
   entryPath: string,
-  entryDirectory: string,
+  outputPrefix: string,
   outputDirectory: string
 ) {
   const collectLabel =
@@ -3492,17 +3486,17 @@ export async function getStaticFiles(
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
-    const outputPath = path.posix.join(entryDirectory, `_next/static/${file}`);
+    const outputPath = path.posix.join(outputPrefix, `_next/static/${file}`);
     staticFiles[outputPath] = nextStaticFiles[file];
   }
 
   for (const file of Object.keys(staticFolderFiles)) {
-    const outputPath = path.posix.join(entryDirectory, 'static', file);
+    const outputPath = path.posix.join(outputPrefix, 'static', file);
     staticDirectoryFiles[outputPath] = staticFolderFiles[file];
   }
 
   for (const file of Object.keys(publicFolderFiles)) {
-    const outputPath = path.posix.join(entryDirectory, file);
+    const outputPath = path.posix.join(outputPrefix, file);
     publicDirectoryFiles[outputPath] = publicFolderFiles[file];
   }
 
@@ -3538,12 +3532,12 @@ export function getNextServerPath(nextVersion: string) {
     : 'next/dist/next-server/server';
 }
 
-function pathnameToOutputName(entryDirectory: string, pathname: string) {
+function pathnameToOutputName(outputPrefix: string, pathname: string) {
   if (pathname === '/') {
     pathname = '/index';
   }
 
-  return path.posix.join(entryDirectory, pathname);
+  return path.posix.join(outputPrefix, pathname);
 }
 
 export function getPostponeResumePathname(pathname: string): string {
@@ -3552,11 +3546,11 @@ export function getPostponeResumePathname(pathname: string): string {
 }
 
 export function getPostponeResumeOutput(
-  entryDirectory: string,
+  outputPrefix: string,
   pathname: string
 ): string {
   if (pathname === '/') pathname = '/index';
-  return path.posix.join(entryDirectory, '_next/postponed/resume', pathname);
+  return path.posix.join(outputPrefix, '_next/postponed/resume', pathname);
 }
 
 // update to leverage

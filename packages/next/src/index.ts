@@ -219,7 +219,7 @@ export const build: BuildV2 = async buildOptions => {
 
   validateEntrypoint(entrypoint);
 
-  let entryDirectory = path.dirname(entrypoint);
+  const entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
 
   // allow testing root directory setting with vercel.json
@@ -233,6 +233,20 @@ export const build: BuildV2 = async buildOptions => {
   // setting that can't be triggered with vercel.json
   const baseDir = repoRootPath || workPath;
 
+  // Support routePrefix for services - determines where outputs are mounted.
+  // This decouples "where source files live" (entryDirectory/entryPath) from
+  // "where outputs are served" (outputPrefix).
+  // routePrefix values: '.' = root, 'docs' = /docs/, undefined = use entryDirectory
+  // Note: We use '.' for root (not empty string) because path.posix.join behaves
+  // differently: join('', '/index') → '/index' but join('.', '/index') → 'index'
+  const routePrefix = config.routePrefix as string | undefined;
+  let outputPrefix =
+    routePrefix !== undefined
+      ? routePrefix === '.'
+        ? '.'
+        : routePrefix
+      : entryDirectory;
+
   debug(
     JSON.stringify(
       {
@@ -241,6 +255,8 @@ export const build: BuildV2 = async buildOptions => {
         workPath,
         entryPath,
         entryDirectory,
+        outputPrefix,
+        routePrefix,
         outputDirectory,
       },
       null,
@@ -629,7 +645,7 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   let appMountPrefixNoTrailingSlash = path.posix
-    .join('/', entryDirectory)
+    .join('/', outputPrefix)
     .replace(/\/+$/, '');
 
   const requiredServerFilesManifest = isServerMode
@@ -834,8 +850,9 @@ export const build: BuildV2 = async buildOptions => {
           }
 
           // if legacy builds are being used then it can cause conflict with
-          // basePath so we show an error
-          if (entryDirectory.length > 1) {
+          // basePath so we show an error. With routePrefix, we allow basePath
+          // since outputPrefix is already decoupled from entryDirectory.
+          if (routePrefix === undefined && entryDirectory.length > 1) {
             throw new NowBuildError({
               code: 'NEXT_BASEPATH_LEGACY_BUILDS',
               message:
@@ -844,9 +861,10 @@ export const build: BuildV2 = async buildOptions => {
             });
           }
 
-          entryDirectory = path.join(entryDirectory, nextBasePath);
+          // Apply basePath to outputPrefix (not entryDirectory, which is for source location)
+          outputPrefix = path.join(outputPrefix, nextBasePath);
           appMountPrefixNoTrailingSlash = path.posix
-            .join('/', entryDirectory)
+            .join('/', outputPrefix)
             .replace(/\/+$/, '');
         }
 
@@ -868,7 +886,7 @@ export const build: BuildV2 = async buildOptions => {
     }
   }
 
-  let dynamicPrefix = path.posix.join('/', entryDirectory);
+  let dynamicPrefix = path.posix.join('/', outputPrefix);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
   if (imagesManifest) {
@@ -1024,7 +1042,7 @@ export const build: BuildV2 = async buildOptions => {
 
         // Make sure to 404 for the /404 path itself
         {
-          src: path.posix.join('/', entryDirectory, '404/?'),
+          src: path.posix.join('/', outputPrefix, '404/?'),
           status: 404,
           continue: true,
         },
@@ -1038,7 +1056,7 @@ export const build: BuildV2 = async buildOptions => {
         ...(routesManifest?.basePath
           ? [
               {
-                src: path.posix.join('/', entryDirectory, '_next/image/?'),
+                src: path.posix.join('/', outputPrefix, '_next/image/?'),
                 dest: '/_next/image',
                 check: true,
               },
@@ -1048,12 +1066,12 @@ export const build: BuildV2 = async buildOptions => {
         // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
         // if no match to prevent rewriting _next/data unexpectedly
         {
-          src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
-          dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
+          src: path.posix.join('/', outputPrefix, '_next/data/(.*)'),
+          dest: path.posix.join('/', outputPrefix, '_next/data/$1'),
           check: true,
         },
         {
-          src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
+          src: path.posix.join('/', outputPrefix, '_next/data/(.*)'),
           status: 404,
         },
 
@@ -1067,19 +1085,19 @@ export const build: BuildV2 = async buildOptions => {
 
         ...fallbackRewrites,
 
-        { src: path.posix.join('/', entryDirectory, '.*'), status: 404 },
+        { src: path.posix.join('/', outputPrefix, '.*'), status: 404 },
 
         // We need to make sure to 404 for /_next after handle: miss since
         // handle: miss is called before rewrites and to prevent rewriting
         // /_next
         { handle: 'miss' },
         {
-          src: path.posix.join('/', entryDirectory, '_next/static/.+'),
+          src: path.posix.join('/', outputPrefix, '_next/static/.+'),
           status: 404,
           check: true,
           dest: path.posix.join(
             '/',
-            entryDirectory,
+            outputPrefix,
             '_next/static/not-found.txt'
           ),
           headers: {
@@ -1099,7 +1117,7 @@ export const build: BuildV2 = async buildOptions => {
           // user-emitted files which may be missing a hash in their filename.
           src: path.posix.join(
             '/',
-            entryDirectory,
+            outputPrefix,
             `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
@@ -1112,15 +1130,15 @@ export const build: BuildV2 = async buildOptions => {
         },
 
         // error handling
-        ...(output[path.posix.join('./', entryDirectory, '404')] ||
-        output[path.posix.join('./', entryDirectory, '404/index')]
+        ...(output[path.posix.join('./', outputPrefix, '404')] ||
+        output[path.posix.join('./', outputPrefix, '404/index')]
           ? [
               { handle: 'error' } as RouteWithHandle,
 
               {
                 status: 404,
-                src: path.posix.join(entryDirectory, '.*'),
-                dest: path.posix.join('/', entryDirectory, '404'),
+                src: path.posix.join(outputPrefix, '.*'),
+                dest: path.posix.join('/', outputPrefix, '404'),
               },
             ]
           : []),
@@ -1270,7 +1288,7 @@ export const build: BuildV2 = async buildOptions => {
         }
 
         debug(`Creating serverless function for page: "${page}"...`);
-        lambdas[path.posix.join(entryDirectory, pathname)] = new NodejsLambda({
+        lambdas[path.posix.join(outputPrefix, pathname)] = new NodejsLambda({
           files: {
             ...nextFiles,
             ...pageFiles,
@@ -1330,38 +1348,36 @@ export const build: BuildV2 = async buildOptions => {
     staticPages = filterStaticPages(
       originalStaticPages,
       dynamicPages,
-      entryDirectory,
+      outputPrefix,
       htmlContentType,
       prerenderManifest,
       nextVersion,
       routesManifest
     );
-    hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
+    hasStatic500 = !!staticPages[path.posix.join(outputPrefix, '500')];
 
     // this can be either 404.html in latest versions
     // or _errors/404.html versions while this was experimental
     static404Page =
-      staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
-        ? path.posix.join(entryDirectory, '404')
-        : staticPages[path.posix.join(entryDirectory, '_errors/404')]
-          ? path.posix.join(entryDirectory, '_errors/404')
+      staticPages[path.posix.join(outputPrefix, '404')] && hasPages404
+        ? path.posix.join(outputPrefix, '404')
+        : staticPages[path.posix.join(outputPrefix, '_errors/404')]
+          ? path.posix.join(outputPrefix, '_errors/404')
           : undefined;
 
     const { i18n } = routesManifest || {};
 
     if (!static404Page && i18n) {
       static404Page = staticPages[
-        path.posix.join(entryDirectory, i18n.defaultLocale, '404')
+        path.posix.join(outputPrefix, i18n.defaultLocale, '404')
       ]
-        ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
+        ? path.posix.join(outputPrefix, i18n.defaultLocale, '404')
         : undefined;
     }
 
     if (!hasStatic500 && i18n) {
       hasStatic500 =
-        !!staticPages[
-          path.posix.join(entryDirectory, i18n.defaultLocale, '500')
-        ];
+        !!staticPages[path.posix.join(outputPrefix, i18n.defaultLocale, '500')];
     }
 
     if (routesManifest) {
@@ -1397,7 +1413,7 @@ export const build: BuildV2 = async buildOptions => {
                 ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
                 dest: path.posix.join(
                   '/',
-                  entryDirectory,
+                  outputPrefix,
                   // make sure to route SSG data route to the data prerender
                   // output, we don't do this for SSP routes since they don't
                   // have a separate data output
@@ -1588,7 +1604,7 @@ export const build: BuildV2 = async buildOptions => {
         imagesManifest,
         wildcardConfig,
         prerenderManifest,
-        entryDirectory,
+        outputPrefix,
         entryPath,
         baseDir,
         dataRoutes,
@@ -1659,7 +1675,7 @@ export const build: BuildV2 = async buildOptions => {
       const result = onPrerenderRouteInitial(
         prerenderManifest,
         canUsePreviewMode,
-        entryDirectory,
+        outputPrefix,
         nonLambdaSsgPages,
         route,
         hasPages404,
@@ -1930,7 +1946,7 @@ export const build: BuildV2 = async buildOptions => {
             continue;
           }
 
-          const outputName = path.join('/', entryDirectory, pathname);
+          const outputName = path.join('/', outputPrefix, pathname);
 
           const lambdaGroupIndex = routeIsApi
             ? apiLambdaGroupIndex
@@ -1947,7 +1963,7 @@ export const build: BuildV2 = async buildOptions => {
               pseudoLayer: group.pseudoLayer,
               lambdaCombinedBytes: group.pseudoLayerBytes,
               lambdaIdentifier: path.join(
-                entryDirectory,
+                outputPrefix,
                 `__NEXT_${
                   routeIsApi ? 'API' : 'PAGE'
                 }_LAMBDA_${lambdaGroupIndex}`
@@ -1991,7 +2007,7 @@ export const build: BuildV2 = async buildOptions => {
           }
 
           if (page === '_error.js' || (hasPages404 && page === '404.js')) {
-            page404Path = path.join('/', entryDirectory, pathname);
+            page404Path = path.join('/', outputPrefix, pathname);
           }
 
           currentLambdaGroup.pages[outputName] = {
@@ -2069,7 +2085,7 @@ export const build: BuildV2 = async buildOptions => {
           }
 
           const outputName = normalizeIndexOutput(
-            path.join(entryDirectory, pathname),
+            path.join(outputPrefix, pathname),
             isServerMode
           );
 
@@ -2127,7 +2143,7 @@ export const build: BuildV2 = async buildOptions => {
 
     dynamicRoutes = await getDynamicRoutes({
       entryPath,
-      entryDirectory,
+      outputPrefix,
       dynamicPages,
       isDev: false,
       routesManifest,
@@ -2143,7 +2159,7 @@ export const build: BuildV2 = async buildOptions => {
       localizeDynamicRoutes(
         arr,
         dynamicPrefix,
-        entryDirectory,
+        outputPrefix,
         staticPages,
         prerenderManifest,
         routesManifest,
@@ -2160,7 +2176,7 @@ export const build: BuildV2 = async buildOptions => {
       // for the page to be able to be matched in the lambda for preview mode
       const completeDynamicRoutes = await getDynamicRoutes({
         entryPath,
-        entryDirectory,
+        outputPrefix,
         dynamicPages,
         isDev: false,
         routesManifest,
@@ -2363,7 +2379,7 @@ export const build: BuildV2 = async buildOptions => {
       experimentalStreamingLambdaPaths: undefined,
       isServerMode,
       prerenders,
-      entryDirectory,
+      outputPrefix,
       routesManifest,
       prerenderManifest,
       appPathRoutesManifest,
@@ -2429,7 +2445,7 @@ export const build: BuildV2 = async buildOptions => {
               `^${appMountPrefixNoTrailingSlash}`
             ),
             // Location of lambda in builder output
-            dest: path.posix.join(entryDirectory, dataRoute),
+            dest: path.posix.join(outputPrefix, dataRoute),
             check: true,
           });
 
@@ -2440,7 +2456,7 @@ export const build: BuildV2 = async buildOptions => {
               /^\^/,
               `^${appMountPrefixNoTrailingSlash}`
             ),
-            dest: path.posix.join(entryDirectory, prefetchDataRoute),
+            dest: path.posix.join(outputPrefix, prefetchDataRoute),
             check: true,
           });
         }
@@ -2455,7 +2471,7 @@ export const build: BuildV2 = async buildOptions => {
     omittedPrerenderRoutes.forEach(routeKey => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = path.posix.join(
-        entryDirectory,
+        outputPrefix,
         routeKey === '/' ? '/index' : routeKey
       );
       if (typeof lambdas[routeFileNoExt] === undefined) {
@@ -2509,7 +2525,7 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
-    await getStaticFiles(entryPath, entryDirectory, outputDirectory);
+    await getStaticFiles(entryPath, outputPrefix, outputDirectory);
 
   const { i18n } = routesManifest || {};
 
@@ -2552,7 +2568,7 @@ export const build: BuildV2 = async buildOptions => {
             {
               src: `^${path.posix.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
@@ -2560,16 +2576,14 @@ export const build: BuildV2 = async buildOptions => {
               // we aren't able to ensure trailing slash mode here
               // so ensure this comes after the trailing slash redirect
               dest: `${
-                entryDirectory !== '.'
-                  ? path.posix.join('/', entryDirectory)
-                  : ''
+                outputPrefix !== '.' ? path.posix.join('/', outputPrefix) : ''
               }$wildcard${trailingSlash ? '/' : ''}`,
               continue: true,
             },
             {
               src: `^${path.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
@@ -2577,7 +2591,7 @@ export const build: BuildV2 = async buildOptions => {
               // we aren't able to ensure trailing slash mode here
               // so ensure this comes after the trailing slash redirect
               dest: `${
-                entryDirectory !== '.' ? path.join('/', entryDirectory) : ''
+                outputPrefix !== '.' ? path.join('/', outputPrefix) : ''
               }$wildcard/$1`,
               continue: true,
             },
@@ -2588,7 +2602,7 @@ export const build: BuildV2 = async buildOptions => {
             i18n.localeDetection !== false
               ? [
                   {
-                    src: `^${path.join('/', entryDirectory)}/?(?:${i18n.locales
+                    src: `^${path.join('/', outputPrefix)}/?(?:${i18n.locales
                       .map(locale => escapeStringRegexp(locale))
                       .join('|')})?/?$`,
                     locale: {
@@ -2642,8 +2656,8 @@ export const build: BuildV2 = async buildOptions => {
               : []),
 
             {
-              src: `^${path.join('/', entryDirectory)}$`,
-              dest: `${path.join('/', entryDirectory, i18n.defaultLocale)}`,
+              src: `^${path.join('/', outputPrefix)}$`,
+              dest: `${path.join('/', outputPrefix, i18n.defaultLocale)}`,
               continue: true,
             },
 
@@ -2655,12 +2669,12 @@ export const build: BuildV2 = async buildOptions => {
             {
               src: `^${path.join(
                 '/',
-                entryDirectory,
+                outputPrefix,
                 '/'
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})(?:/.*|$))(.*)$`,
-              dest: `${path.join('/', entryDirectory, i18n.defaultLocale)}/$1`,
+              dest: `${path.join('/', outputPrefix, i18n.defaultLocale)}/$1`,
               continue: true,
             },
           ]
@@ -2676,7 +2690,7 @@ export const build: BuildV2 = async buildOptions => {
       ...(i18n
         ? [
             {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n.locales
+              src: `${path.join('/', outputPrefix, '/')}(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})?[/]?404/?`,
               status: 404,
@@ -2685,7 +2699,7 @@ export const build: BuildV2 = async buildOptions => {
           ]
         : [
             {
-              src: path.join('/', entryDirectory, '404/?'),
+              src: path.join('/', outputPrefix, '404/?'),
               status: 404,
               continue: true,
             },
@@ -2697,7 +2711,7 @@ export const build: BuildV2 = async buildOptions => {
         : i18n
           ? [
               {
-                src: `${path.join('/', entryDirectory, '/')}(?:${i18n.locales
+                src: `${path.join('/', outputPrefix, '/')}(?:${i18n.locales
                   .map(locale => escapeStringRegexp(locale))
                   .join('|')})?[/]?500`,
                 status: 500,
@@ -2706,7 +2720,7 @@ export const build: BuildV2 = async buildOptions => {
             ]
           : [
               {
-                src: path.join('/', entryDirectory, '500'),
+                src: path.join('/', outputPrefix, '500'),
                 status: 500,
                 continue: true,
               },
@@ -2736,7 +2750,7 @@ export const build: BuildV2 = async buildOptions => {
       ...(routesManifest?.basePath
         ? [
             {
-              src: path.join('/', entryDirectory, '_next/image/?'),
+              src: path.join('/', outputPrefix, '_next/image/?'),
               dest: '/_next/image',
               check: true,
             },
@@ -2746,8 +2760,8 @@ export const build: BuildV2 = async buildOptions => {
       // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
       // if no match to prevent rewriting _next/data unexpectedly
       {
-        src: path.join('/', entryDirectory, '_next/data/(.*)'),
-        dest: path.join('/', entryDirectory, '_next/data/$1'),
+        src: path.join('/', outputPrefix, '_next/data/(.*)'),
+        dest: path.join('/', outputPrefix, '_next/data/$1'),
         check: true,
       },
 
@@ -2761,16 +2775,16 @@ export const build: BuildV2 = async buildOptions => {
 
       ...fallbackRewrites,
 
-      { src: path.join('/', entryDirectory, '.*'), status: 404 },
+      { src: path.join('/', outputPrefix, '.*'), status: 404 },
 
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
       {
-        src: path.join('/', entryDirectory, '_next/static/.+'),
+        src: path.join('/', outputPrefix, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: path.join('/', entryDirectory, '_next/static/not-found.txt'),
+        dest: path.join('/', outputPrefix, '_next/static/not-found.txt'),
         headers: {
           'content-type': 'text/plain; charset=utf-8',
         },
@@ -2780,10 +2794,10 @@ export const build: BuildV2 = async buildOptions => {
       ...(i18n
         ? [
             {
-              src: `^${path.join('/', entryDirectory)}/?(?:${i18n.locales
+              src: `^${path.join('/', outputPrefix)}/?(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})/(.*)`,
-              dest: `${path.join('/', entryDirectory, '/')}$1`,
+              dest: `${path.join('/', outputPrefix, '/')}$1`,
               check: true,
             },
           ]
@@ -2795,7 +2809,7 @@ export const build: BuildV2 = async buildOptions => {
         ? []
         : [
             {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n?.locales
+              src: `${path.join('/', outputPrefix, '/')}(?:${i18n?.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})/(.*)`,
               dest: '/$1',
@@ -2813,8 +2827,8 @@ export const build: BuildV2 = async buildOptions => {
       // ensure we 404 for non-existent _next/data routes before
       // trying page dynamic routes
       {
-        src: path.join('/', entryDirectory, '_next/data/(.*)'),
-        dest: path.join('/', entryDirectory, '404'),
+        src: path.join('/', outputPrefix, '_next/data/(.*)'),
+        dest: path.join('/', outputPrefix, '404'),
         status: 404,
         check: true,
       },
@@ -2834,7 +2848,7 @@ export const build: BuildV2 = async buildOptions => {
         // user-emitted files which may be missing a hash in their filename.
         src: path.join(
           '/',
-          entryDirectory,
+          outputPrefix,
           `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
@@ -2858,7 +2872,7 @@ export const build: BuildV2 = async buildOptions => {
                   {
                     src: `${path.join(
                       '/',
-                      entryDirectory,
+                      outputPrefix,
                       '/'
                     )}(?<nextLocale>${i18n.locales
                       .map(locale => escapeStringRegexp(locale))
@@ -2868,7 +2882,7 @@ export const build: BuildV2 = async buildOptions => {
                     caseSensitive: true,
                   },
                   {
-                    src: path.join('/', entryDirectory, '.*'),
+                    src: path.join('/', outputPrefix, '.*'),
                     dest: `/${i18n.defaultLocale}/404`,
                     status: 404,
                   },
@@ -2876,7 +2890,7 @@ export const build: BuildV2 = async buildOptions => {
               : [
                   isSharedLambdas
                     ? {
-                        src: path.join('/', entryDirectory, '.*'),
+                        src: path.join('/', outputPrefix, '.*'),
                         // if static 404 is not present but we have pages/404.js
                         // it is a lambda due to _app getInitialProps
                         dest: path.join(
@@ -2896,16 +2910,16 @@ export const build: BuildV2 = async buildOptions => {
                             }),
                       }
                     : {
-                        src: path.join('/', entryDirectory, '.*'),
+                        src: path.join('/', outputPrefix, '.*'),
                         // if static 404 is not present but we have pages/404.js
                         // it is a lambda due to _app getInitialProps
                         dest: static404Page
                           ? path.join('/', static404Page)
                           : path.join(
                               '/',
-                              entryDirectory,
+                              outputPrefix,
                               hasPages404 &&
-                                lambdas[path.join('./', entryDirectory, '404')]
+                                lambdas[path.join('./', outputPrefix, '404')]
                                 ? '404'
                                 : '_error'
                             ),
@@ -2921,7 +2935,7 @@ export const build: BuildV2 = async buildOptions => {
                     {
                       src: `${path.join(
                         '/',
-                        entryDirectory,
+                        outputPrefix,
                         '/'
                       )}(?<nextLocale>${i18n.locales
                         .map(locale => escapeStringRegexp(locale))
@@ -2930,15 +2944,15 @@ export const build: BuildV2 = async buildOptions => {
                       status: 500,
                     },
                     {
-                      src: path.join('/', entryDirectory, '.*'),
+                      src: path.join('/', outputPrefix, '.*'),
                       dest: `/${i18n.defaultLocale}/500`,
                       status: 500,
                     },
                   ]
                 : [
                     {
-                      src: path.join('/', entryDirectory, '.*'),
-                      dest: path.join('/', entryDirectory, '/500'),
+                      src: path.join('/', outputPrefix, '.*'),
+                      dest: path.join('/', outputPrefix, '/500'),
                       status: 500,
                     },
                   ]),
