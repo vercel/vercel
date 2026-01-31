@@ -1,5 +1,11 @@
 # @vercel/backends
 
+## 0.0.25
+
+### Patch Changes
+
+- Improve handling of cjs/esm interop during imports ([#14798](https://github.com/vercel/vercel/pull/14798))
+
 ## 0.0.24
 
 ### Patch Changes
