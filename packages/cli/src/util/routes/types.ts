@@ -62,3 +62,70 @@ export type RouteType =
   | 'redirect'
   | 'terminate'
   | 'transform';
+
+/**
+ * Condition types for has/missing fields
+ */
+export type HasFieldHost = { type: 'host'; value: string };
+export type HasFieldWithKey = {
+  type: 'header' | 'cookie' | 'query';
+  key: string;
+  value?: string;
+};
+export type HasField = HasFieldHost | HasFieldWithKey;
+
+/**
+ * Transform operation types
+ */
+export type TransformOp = 'set' | 'append' | 'delete';
+export type TransformType =
+  | 'request.headers'
+  | 'request.query'
+  | 'response.headers';
+
+export interface Transform {
+  type: TransformType;
+  op: TransformOp;
+  target: { key: string };
+  args?: string;
+}
+
+/**
+ * Path syntax types for route source patterns
+ */
+export type PathSyntax = 'regex' | 'path-to-regexp' | 'exact';
+
+/**
+ * Position placement options for route ordering
+ */
+export interface RoutePosition {
+  placement: 'start' | 'end' | 'after' | 'before';
+  referenceId?: string;
+}
+
+/**
+ * Input for creating a new route
+ */
+export interface AddRouteInput {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  route: {
+    src: string;
+    dest?: string;
+    status?: number;
+    headers?: Record<string, string>;
+    transforms?: Transform[];
+    has?: HasField[];
+    missing?: HasField[];
+    continue?: boolean;
+  };
+}
+
+/**
+ * Response from POST /projects/:projectId/routes
+ */
+export interface AddRouteResponse {
+  route: RoutingRule;
+  version: RouteVersion;
+}

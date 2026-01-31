@@ -131,6 +131,103 @@ export function useRoutesWithDiff() {
   });
 }
 
+export function useAddRoute(options?: {
+  hasStaging?: boolean;
+  alias?: string;
+}) {
+  // Mock the versions endpoint to check for existing staging
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      const versions = [];
+      if (options?.hasStaging) {
+        versions.push({
+          id: 'existing-staging',
+          s3Key: 'routes/existing-staging.json',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isStaging: true,
+          isLive: false,
+          ruleCount: 5,
+          alias: 'existing-staging.vercel.app',
+        });
+      }
+      versions.push({
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now() - 86400000,
+        createdBy: 'user@example.com',
+        isLive: true,
+        isStaging: false,
+        ruleCount: 10,
+      });
+      res.json({ versions });
+    }
+  );
+
+  // Mock the add route endpoint
+  client.scenario.post('/v1/projects/:projectId/routes', (req, res) => {
+    const body = req.body as {
+      route: {
+        name: string;
+        description?: string;
+        enabled?: boolean;
+        route: {
+          src: string;
+          dest?: string;
+          status?: number;
+          headers?: Record<string, string>;
+          transforms?: unknown[];
+          has?: unknown[];
+          missing?: unknown[];
+          continue?: boolean;
+        };
+      };
+      position?: { placement: string; referenceId?: string };
+    };
+
+    res.json({
+      route: {
+        id: 'new-route-id',
+        name: body.route.name,
+        description: body.route.description,
+        enabled: body.route.enabled !== false,
+        staged: true,
+        route: body.route.route,
+      },
+      version: {
+        id: 'new-staging-version',
+        s3Key: 'routes/new-staging.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        isLive: false,
+        ruleCount: 1,
+        alias: options?.alias ?? 'test-routes.vercel.app',
+      },
+    });
+  });
+}
+
+export function usePromoteRouteVersion() {
+  client.scenario.post(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        version: {
+          id: 'promoted-version',
+          s3Key: 'routes/promoted.json',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isLive: true,
+          isStaging: false,
+          ruleCount: 1,
+        },
+      });
+    }
+  );
+}
+
 export function useRoutesForInspect() {
   const detailedRoutes = [
     {
