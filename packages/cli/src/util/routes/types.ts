@@ -114,3 +114,72 @@ export function getSrcSyntaxLabel(rule: RoutingRule): string {
   const syntax = rule.srcSyntax ?? 'regex';
   return SRC_SYNTAX_LABELS[syntax];
 }
+
+/**
+ * Condition types for has/missing fields
+ */
+export type HasFieldHost = { type: 'host'; value: string };
+export type HasFieldWithKey = {
+  type: 'header' | 'cookie' | 'query';
+  key: string;
+  value?: string;
+};
+export type HasField = HasFieldHost | HasFieldWithKey;
+
+/**
+ * Transform operation types
+ */
+export type TransformOp = 'set' | 'append' | 'delete';
+export type TransformType =
+  | 'request.headers'
+  | 'request.query'
+  | 'response.headers';
+
+export interface Transform {
+  type: TransformType;
+  op: TransformOp;
+  target: { key: string };
+  args?: string;
+}
+
+/**
+ * Position placement options for route ordering
+ */
+export interface RoutePosition {
+  placement: 'start' | 'end' | 'after' | 'before';
+  referenceId?: string;
+}
+
+/**
+ * Input for creating a new route.
+ * Sent to POST /projects/:projectId/routes as { route: AddRouteInput, position? }.
+ */
+export interface AddRouteInput {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  /**
+   * The syntax type for the source pattern.
+   * Tells the API how to compile `route.src` to regex.
+   * If omitted, the API infers syntax from the pattern.
+   */
+  srcSyntax?: SrcSyntax;
+  route: {
+    src: string;
+    dest?: string;
+    status?: number;
+    headers?: Record<string, string>;
+    transforms?: Transform[];
+    has?: HasField[];
+    missing?: HasField[];
+    continue?: boolean;
+  };
+}
+
+/**
+ * Response from POST /projects/:projectId/routes
+ */
+export interface AddRouteResponse {
+  route: RoutingRule;
+  version: RouteVersion;
+}
