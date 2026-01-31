@@ -92,15 +92,28 @@ export async function emitFlagsDefinitions(
   cwd: string,
   env: NodeJS.ProcessEnv
 ): Promise<void> {
-  // Collect unique SDK keys from environment variables (vf_ prefix only)
+  output.debug('emit-flag-definitions: Fetching flag definitions');
+
+  // Collect unique SDK keys from environment variables
+  // Supports both direct SDK keys (vf_ prefix) and flags: format
   const sdkKeys = Array.from(
     Object.values(env).reduce<Set<string>>((acc, value) => {
-      if (typeof value === 'string' && value.startsWith('vf_')) {
-        acc.add(value);
+      if (typeof value === 'string') {
+        if (value.startsWith('vf_')) {
+          acc.add(value);
+        } else if (value.startsWith('flags:')) {
+          const params = new URLSearchParams(value.slice('flags:'.length));
+          const sdkKey = params.get('sdkKey');
+          if (sdkKey?.startsWith('vf_')) {
+            acc.add(sdkKey);
+          }
+        }
       }
       return acc;
     }, new Set<string>())
   );
+
+  output.debug(`emit-flag-definitions: found ${sdkKeys.length} SDK keys`);
 
   if (sdkKeys.length === 0) {
     output.debug('No flags SDK keys found');
@@ -141,7 +154,9 @@ export async function emitFlagsDefinitions(
     })
   );
 
+  output.debug('emit-flag-definitions: before fetch');
   const values = await output.time('Fetch flag definitions', fetchPromise);
+  output.debug('emit-flag-definitions: after fetch');
 
   // Generate the JS module
   const definitionsJs = generateDefinitionsModule(sdkKeys, values);
@@ -157,11 +172,14 @@ export async function emitFlagsDefinitions(
     '',
   ].join('\n');
 
+  output.debug('emit-flag-definitions: before mkdir');
   await mkdir(storageDir, { recursive: true });
+  output.debug('emit-flag-definitions: after mkdir');
   await Promise.all([
     writeFile(indexPath, definitionsJs),
     writeFile(dtsPath, dts),
   ]);
+  output.debug('emit-flag-definitions: after writeFile(s)');
 
   const packageJson = {
     name: '@vercel/flags-definitions',
