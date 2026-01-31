@@ -38,6 +38,7 @@ export default async function link(client: Client) {
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
+  telemetry.trackCliFlagNoEnvPull(parsedArgs.flags['--no-env-pull']);
 
   if ('--confirm' in parsedArgs.flags) {
     telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
@@ -68,11 +69,13 @@ export default async function link(client: Client) {
       return 1;
     }
   } else {
+    const noEnvPull = !!parsedArgs.flags['--no-env-pull'];
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
+      pullEnv: !noEnvPull,
     });
 
     if (typeof link === 'number') {

@@ -23,6 +23,14 @@ export const linkCommand = {
       deprecated: false,
     },
     {
+      name: 'no-env-pull',
+      description:
+        'Do not pull environment variables after linking (useful for CI)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',

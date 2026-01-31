@@ -39,4 +39,10 @@ export class LinkTelemetryClient
       });
     }
   }
+
+  trackCliFlagNoEnvPull(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-env-pull');
+    }
+  }
 }
