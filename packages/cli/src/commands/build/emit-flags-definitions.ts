@@ -115,11 +115,6 @@ export async function emitFlagsDefinitions(
 
   output.debug(`emit-flag-definitions: found ${sdkKeys.length} SDK keys`);
 
-  if (sdkKeys.length === 0) {
-    output.debug('No flags SDK keys found');
-    return;
-  }
-
   // Fetch definitions for each SDK key
   const fetchPromise = Promise.all(
     sdkKeys.map(async sdkKey => {
@@ -154,9 +149,10 @@ export async function emitFlagsDefinitions(
     })
   );
 
-  output.debug('emit-flag-definitions: before fetch');
-  const values = await output.time('Fetch flag definitions', fetchPromise);
-  output.debug('emit-flag-definitions: after fetch');
+  const values = await output.time(
+    'emit-flag-definitions: load datafiles',
+    fetchPromise
+  );
 
   // Generate the JS module
   const definitionsJs = generateDefinitionsModule(sdkKeys, values);
@@ -172,15 +168,6 @@ export async function emitFlagsDefinitions(
     '',
   ].join('\n');
 
-  output.debug('emit-flag-definitions: before mkdir');
-  await mkdir(storageDir, { recursive: true });
-  output.debug('emit-flag-definitions: after mkdir');
-  await Promise.all([
-    writeFile(indexPath, definitionsJs),
-    writeFile(dtsPath, dts),
-  ]);
-  output.debug('emit-flag-definitions: after writeFile(s)');
-
   const packageJson = {
     name: '@vercel/flags-definitions',
     version: FLAGS_DEFINITIONS_VERSION,
@@ -194,13 +181,19 @@ export async function emitFlagsDefinitions(
       },
     },
   };
-  await writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
-  output.debug('Flags definitions snapshot created:');
+  await mkdir(storageDir, { recursive: true });
+  await Promise.all([
+    writeFile(indexPath, definitionsJs),
+    writeFile(dtsPath, dts),
+    writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2)),
+  ]);
+
+  output.debug('emit-flag-definitions: created module');
   output.debug(`  → ${indexPath}`);
   output.debug(`  → ${dtsPath}`);
   output.debug(`  → ${packageJsonPath}`);
-  for (const key of sdkKeys) {
-    output.debug(`  → included definitions for key "${obfuscate(key)}"`);
-  }
+  output.debug(
+    `  → included definitions for keys "${sdkKeys.map(key => obfuscate(key)).join(', ')}"`
+  );
 }

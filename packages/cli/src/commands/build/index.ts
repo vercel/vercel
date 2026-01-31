@@ -534,14 +534,11 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAGS_DEFINITIONS === '1') {
-    output.debug('emitFlagsDefinitions: before');
+  try {
     await emitFlagsDefinitions(cwd, process.env);
-    output.debug('emitFlagsDefinitions: after');
-  } else {
-    output.debug(
-      'Skipped embedding flags definitions due to VERCEL_EXPERIMENTAL_EMBED_FLAGS_DEFINITIONS'
-    );
+  } catch (error) {
+    output.debug('emit-flag-definitions: failed');
+    output.debug(error);
   }
 
   // Get a list of source files
