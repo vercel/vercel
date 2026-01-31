@@ -30,7 +30,7 @@ export async function ensureLink(
 ): Promise<ProjectLinked | number> {
   let { link } = opts;
   if (!link) {
-    link = await getLinkedProject(client, cwd);
+    link = await getLinkedProject(client, cwd, opts.projectName);
     opts.link = link;
   }
 

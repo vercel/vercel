@@ -230,4 +230,48 @@ describe('getLinkedProject', () => {
     expect(link.project.id).toEqual('QmbKpqpiUqbcke');
     expect(link.repoRoot).toEqual(cwd);
   });
+
+  it('should auto-select project with `repo.json` when projectName is provided', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmX6P93ChNDoZP',
+      name: 'monorepo-marketing',
+    });
+
+    // When projectName is provided, it should auto-select without prompting
+    const link = await getLinkedProject(client, cwd, 'monorepo-marketing');
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmX6P93ChNDoZP');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
+  it('should auto-select first matching project when projectName matches in `repo.json`', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmScb7GPQt6gsS',
+      name: 'monorepo-blog',
+    });
+
+    // When projectName is provided, it should auto-select without prompting
+    const link = await getLinkedProject(client, cwd, 'monorepo-blog');
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmScb7GPQt6gsS');
+    expect(link.repoRoot).toEqual(cwd);
+  });
 });
