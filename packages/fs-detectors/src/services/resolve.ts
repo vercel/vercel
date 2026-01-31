@@ -155,8 +155,11 @@ export function resolveConfiguredService(
 
   // Pass routePrefix to builder config for proper asset mounting
   // Static builds need this to mount files at the correct path prefix
+  // Strip leading slash for mountpoint compatibility
   if (routePrefix) {
-    builderConfig.routePrefix = routePrefix;
+    builderConfig.routePrefix = routePrefix.startsWith('/')
+      ? routePrefix.slice(1)
+      : routePrefix;
   }
   if (config.framework) {
     builderConfig.framework = config.framework;
