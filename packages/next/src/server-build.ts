@@ -886,7 +886,7 @@ export async function serverBuild({
       // Next.js isn't aware of it and it isn't included in the
       // x-matched-path header
       launcher = launcher.replace(
-        '// @preserve outputPrefix handler',
+        '// @preserve entryDirectory handler',
         `req.url = req.url.replace(/^${path.posix
           .join('/', outputPrefix)
           .replace(/\//g, '\\/')}/, '')`
