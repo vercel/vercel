@@ -7,11 +7,13 @@ import { type Command, help } from '../help';
 import list from './list';
 import listVersions from './list-versions';
 import inspect from './inspect';
+import add from './add';
 import {
   routesCommand,
   listSubcommand,
   listVersionsSubcommand,
   inspectSubcommand,
+  addSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -22,6 +24,7 @@ const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   'list-versions': getCommandAliases(listVersionsSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
+  add: getCommandAliases(addSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -90,6 +93,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
+    case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(addSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      return add(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(routesCommand, { columns: client.stderr.columns }));
