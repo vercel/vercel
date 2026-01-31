@@ -92,6 +92,29 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const tokenSubcommand = {
+  name: 'token',
+  aliases: [],
+  description: 'Get a development OIDC token for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Get a development OIDC token for the linked project',
+      value: `${packageName} project token`,
+    },
+    {
+      name: 'Get a development OIDC token for the project named "my-project"',
+      value: `${packageName} project token my-project`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -102,6 +125,7 @@ export const projectCommand = {
     inspectSubcommand,
     listSubcommand,
     removeSubcommand,
+    tokenSubcommand,
   ],
   options: [],
   examples: [],
