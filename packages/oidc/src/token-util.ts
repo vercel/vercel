@@ -165,6 +165,8 @@ interface TokenPayload {
   sub: string;
   name: string;
   exp: number;
+  project_id?: string;
+  owner_id?: string;
 }
 
 export function getTokenPayload(token: string): TokenPayload {

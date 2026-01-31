@@ -45,7 +45,7 @@ export async function getVercelOidcToken(): Promise<string> {
       ]);
 
     if (!token || isExpired(getTokenPayload(token))) {
-      await refreshToken();
+      await refreshToken(token || undefined);
       token = getVercelOidcTokenSync();
     }
   } catch (error) {
