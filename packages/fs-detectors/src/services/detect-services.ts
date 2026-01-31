@@ -75,10 +75,6 @@ export async function detectServices(
  * more specific routes match before broader ones. For example, `/api/users`
  * must be checked before `/api`, which must be checked before the catch-all `/`.
  *
- * Static/SPA services: SPA fallback routes to index.html are generated here.
- * Framework-specific routes (cache headers, etc.) come from the builder via
- * framework.defaultRoutes, transformed with routePrefix.
- *
  * Serverless services: Route requests to the function path.
  *
  * Cron/Worker services: TODO
