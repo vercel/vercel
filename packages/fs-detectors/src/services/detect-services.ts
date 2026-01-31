@@ -71,14 +71,13 @@ export async function detectServices(
 /**
  * Generate routing rules for services.
  *
- * Web services: Routes are ordered by prefix length (longest first) to ensure
- * more specific routes match before broader ones. For example, `/api/users`
- * must be checked before `/api`, which must be checked before the catch-all `/`.
+ * Routes are ordered by prefix length (longest first) to ensure more specific
+ * routes match before broader ones. For example, `/api/users` must be checked
+ * before `/api`, which must be checked before the catch-all `/`.
  *
- * Serverless services: Route requests to the function path.
- *
- * Cron/Worker services: TODO
- * Use internal routes under `/_svc/crons` and `/_svc/workers`
+ * - Static/SPA services: SPA fallback routes to index.html
+ * - Serverless services: Rewrite to the function entrypoint
+ * - Cron/Worker services: TODO - internal routes under `/_svc/`
  */
 export function generateServicesRoutes(
   services: ResolvedService[]
