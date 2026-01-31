@@ -10,9 +10,13 @@ import { useTeams } from '../../../mocks/team';
 const MOCK_ACCOUNT_ID = 'team_test123';
 
 let spawnMock: ReturnType<typeof vi.fn>;
-vi.mock('child_process', () => ({
-  spawn: vi.fn(),
-}));
+vi.mock('child_process', async importOriginal => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    spawn: vi.fn(),
+  };
+});
 
 describe('curl', () => {
   let originalProcessArgv: string[];
