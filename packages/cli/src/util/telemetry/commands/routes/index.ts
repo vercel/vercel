@@ -26,4 +26,11 @@ export class RoutesTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
 }

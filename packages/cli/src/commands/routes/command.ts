@@ -156,13 +156,214 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a new routing rule to the project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    // Path & Matching
+    {
+      name: 'src',
+      description: 'Path pattern (required in non-interactive mode)',
+      shorthand: null,
+      type: String,
+      argument: 'PATTERN',
+      deprecated: false,
+    },
+    {
+      name: 'syntax',
+      description: 'Path syntax: regex (default), path-to-regexp, exact',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
+    // Primary Actions
+    {
+      name: 'dest',
+      description: 'Destination URL for rewrite or redirect',
+      shorthand: null,
+      type: String,
+      argument: 'URL',
+      deprecated: false,
+    },
+    {
+      name: 'status',
+      description:
+        'Status code (301/302/307/308 for redirect, or any for set-status)',
+      shorthand: null,
+      type: Number,
+      argument: 'CODE',
+      deprecated: false,
+    },
+    // Response Headers
+    {
+      name: 'set-response-header',
+      description: 'Set response header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'append-response-header',
+      description: 'Append to response header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'delete-response-header',
+      description: 'Delete response header: key (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY',
+      deprecated: false,
+    },
+    // Request Headers
+    {
+      name: 'set-request-header',
+      description: 'Set request header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'append-request-header',
+      description: 'Append to request header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'delete-request-header',
+      description: 'Delete request header: key (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY',
+      deprecated: false,
+    },
+    // Request Query
+    {
+      name: 'set-request-query',
+      description: 'Set query parameter: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'PARAM',
+      deprecated: false,
+    },
+    {
+      name: 'append-request-query',
+      description: 'Append to query parameter: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'PARAM',
+      deprecated: false,
+    },
+    {
+      name: 'delete-request-query',
+      description: 'Delete query parameter: key (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY',
+      deprecated: false,
+    },
+    // Conditions
+    {
+      name: 'has',
+      description:
+        'Condition that must match: type:key or type:key:value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'CONDITION',
+      deprecated: false,
+    },
+    {
+      name: 'missing',
+      description:
+        'Condition that must NOT match: type:key or type:key:value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'CONDITION',
+      deprecated: false,
+    },
+    // Metadata
+    {
+      name: 'description',
+      description: 'Route description (max 1024 chars)',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+    },
+    {
+      name: 'disabled',
+      description: 'Create route in disabled state',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'position',
+      description: 'Position: start, end, after:<id>, before:<id>',
+      shorthand: null,
+      type: String,
+      argument: 'POSITION',
+      deprecated: false,
+    },
+    {
+      name: 'yes',
+      description: 'Skip confirmation prompts',
+      shorthand: 'y',
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Interactive mode',
+      value: `${packageName} routes add`,
+    },
+    {
+      name: 'Add a rewrite',
+      value: `${packageName} routes add "API Proxy" --src "/api/:path*" --syntax path-to-regexp --dest "https://api.example.com/:path*"`,
+    },
+    {
+      name: 'Add a redirect',
+      value: `${packageName} routes add "Old Blog" --src "/blog" --dest "/articles" --status 301`,
+    },
+    {
+      name: 'Add response headers',
+      value: `${packageName} routes add "CORS" --src "/api/*" --set-response-header "Access-Control-Allow-Origin=*"`,
+    },
+    {
+      name: 'Add with conditions',
+      value: `${packageName} routes add "Auth API" --src "/api/*" --dest "/protected" --has "header:Authorization"`,
+    },
+  ],
+} as const;
+
 export const routesCommand = {
   name: 'routes',
   aliases: ['route'],
   description:
     'Manage routing rules for a project. Routes managed at the project level apply to all deployments and environments.',
   arguments: [],
-  subcommands: [listSubcommand, listVersionsSubcommand, inspectSubcommand],
+  subcommands: [
+    listSubcommand,
+    listVersionsSubcommand,
+    inspectSubcommand,
+    addSubcommand,
+  ],
   options: [],
   examples: [],
   hidden: true, // TODO: Remove when all routes subcommands are complete
