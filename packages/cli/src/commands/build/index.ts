@@ -422,10 +422,37 @@ async function doBuild(
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
+
+  // Compile vercel.ts first if it exists, so we can use its settings
+  const compileResult = await compileVercelConfig(workPath);
+
+  const vercelConfigPath =
+    localConfigPath ||
+    compileResult.configPath ||
+    join(workPath, 'vercel.json');
+
+  // Read the config to get install/build commands from vercel.ts
+  let vercelConfig: VercelConfig | null = null;
+  if (compileResult.configPath) {
+    const configContent = await readJSONFile<VercelConfig>(vercelConfigPath);
+    if (
+      !(configContent instanceof CantParseJSONFile) &&
+      configContent !== null
+    ) {
+      vercelConfig = configContent;
+    }
+  }
+
+  // Merge project settings with vercel.ts config BEFORE running install
+  const mergedSettings = {
+    ...project.settings,
+    ...(vercelConfig ? pickOverrides(vercelConfig) : {}),
+  };
+
   if (sourceConfigFile) {
     corepackShimDir = await initCorepack({ repoRootPath: cwd });
 
-    const installCommand = project.settings.installCommand;
+    const installCommand = mergedSettings.installCommand;
     if (typeof installCommand === 'string') {
       if (installCommand.trim()) {
         output.log(`Running install command before config compilation...`);
@@ -451,22 +478,24 @@ async function doBuild(
     process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
-  const compileResult = await compileVercelConfig(workPath);
-
-  const vercelConfigPath =
-    localConfigPath ||
-    compileResult.configPath ||
-    join(workPath, 'vercel.json');
-
-  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
+  const [pkg, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(vercelConfigPath),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
+  // Re-read vercelConfig if we haven't loaded it yet (e.g., no sourceConfigFile)
+  if (!vercelConfig && compileResult.configPath) {
+    const configContent = await readJSONFile<VercelConfig>(vercelConfigPath);
+    if (
+      !(configContent instanceof CantParseJSONFile) &&
+      configContent !== null
+    ) {
+      vercelConfig = configContent;
+    }
+  }
+
   if (pkg instanceof CantParseJSONFile) throw pkg;
-  if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
   if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
 
   if (hasInstrumentation) {
