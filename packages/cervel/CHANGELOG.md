@@ -1,5 +1,14 @@
 # @vercel/cervel
 
+## 0.0.12
+
+### Patch Changes
+
+- Improve handling of cjs/esm interop during imports ([#14798](https://github.com/vercel/vercel/pull/14798))
+
+- Updated dependencies [[`d36c1ad3ddaf9303041e61a0a41d973b02007988`](https://github.com/vercel/vercel/commit/d36c1ad3ddaf9303041e61a0a41d973b02007988)]:
+  - @vercel/backends@0.0.25
+
 ## 0.0.11
 
 ### Patch Changes
