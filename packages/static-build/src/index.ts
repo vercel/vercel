@@ -834,7 +834,7 @@ export const build: BuildV2 = async ({
           validateDistDir(distPath, workPath);
         }
 
-        if (!extraOutputs.routes && framework) {
+        if (framework && !extraOutputs.routes) {
           const frameworkRoutes = await getFrameworkRoutes(
             framework,
             outputDirPrefix

@@ -37,12 +37,6 @@ export interface ResolvedService {
    * Root services use "/" as the catch-all.
    */
   routePrefix?: string;
-  /**
-   * Whether this service produces static output (SPAs, static sites).
-   * Static services need different routing (filesystem check + SPA fallback)
-   * instead of routing to a serverless function.
-   */
-  isStaticBuild?: boolean;
   /* Cron service config */
   schedule?: string;
   /* Worker service config */

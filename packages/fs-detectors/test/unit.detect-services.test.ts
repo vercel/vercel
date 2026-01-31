@@ -1,4 +1,4 @@
-import { detectServices } from '../src';
+import { detectServices, isStaticBuild } from '../src';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('detectServices', () => {
@@ -344,7 +344,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
-      expect(result.services[0].isStaticBuild).toBe(true);
+      expect(isStaticBuild(result.services[0])).toBe(true);
       expect(result.errors).toEqual([]);
 
       // Root static service gets filesystem handler + SPA fallback in defaults
@@ -371,7 +371,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
-      expect(result.services[0].isStaticBuild).toBe(true);
+      expect(isStaticBuild(result.services[0])).toBe(true);
       expect(result.errors).toEqual([]);
 
       // Prefixed static service gets SPA fallback in rewrites
@@ -399,6 +399,27 @@ describe('detectServices', () => {
       // routePrefix is passed without leading slash for mountpoint
       expect(result.services[0].builder.config).toMatchObject({
         routePrefix: 'admin',
+        framework: 'vite',
+      });
+    });
+
+    it('should pass "." as routePrefix for root static services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              workspace: 'packages/web',
+              framework: 'vite',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      // Root prefix uses '.' so it's truthy in static-build mountpoint logic
+      expect(result.services[0].builder.config).toMatchObject({
+        routePrefix: '.',
         framework: 'vite',
       });
     });
@@ -433,10 +454,10 @@ describe('detectServices', () => {
       const expressApi = result.services.find(s => s.name === 'express-api');
 
       // Vite services should be static builds
-      expect(frontend?.isStaticBuild).toBe(true);
-      expect(adminPanel?.isStaticBuild).toBe(true);
+      expect(isStaticBuild(frontend!)).toBe(true);
+      expect(isStaticBuild(adminPanel!)).toBe(true);
       // Node entrypoint should be a function
-      expect(expressApi?.isStaticBuild).toBe(false);
+      expect(isStaticBuild(expressApi!)).toBe(false);
 
       // Function service and prefixed static service get rewrites
       expect(result.routes.rewrites).toHaveLength(2);

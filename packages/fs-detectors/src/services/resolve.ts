@@ -155,11 +155,13 @@ export function resolveConfiguredService(
 
   // Pass routePrefix to builder config for proper asset mounting
   // Static builds need this to mount files at the correct path prefix
-  // Strip leading slash for mountpoint compatibility
+  // Strip leading slash and use '.' for root to ensure it's truthy in static-build
   if (routePrefix) {
-    builderConfig.routePrefix = routePrefix.startsWith('/')
+    const stripped = routePrefix.startsWith('/')
       ? routePrefix.slice(1)
       : routePrefix;
+    // Use '.' for root prefix (when routePrefix is '/') so it's truthy
+    builderConfig.routePrefix = stripped || '.';
   }
   if (config.framework) {
     builderConfig.framework = config.framework;
@@ -179,7 +181,6 @@ export function resolveConfiguredService(
       config: Object.keys(builderConfig).length > 0 ? builderConfig : undefined,
     },
     runtime,
-    isStaticBuild,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,

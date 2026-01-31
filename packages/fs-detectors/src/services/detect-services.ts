@@ -5,7 +5,7 @@ import type {
   ResolvedService,
   ServicesRoutes,
 } from './types';
-import { readVercelConfig } from './utils';
+import { isStaticBuild, readVercelConfig } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 
 /**
@@ -97,8 +97,8 @@ export function generateServicesRoutes(
       s.type === 'web' && typeof s.routePrefix === 'string'
   );
 
-  const staticServices = webServices.filter(s => s.isStaticBuild);
-  const functionServices = webServices.filter(s => !s.isStaticBuild);
+  const staticServices = webServices.filter(isStaticBuild);
+  const functionServices = webServices.filter(s => !isStaticBuild(s));
 
   // Sort by prefix length (longest first) so specific routes match before broad ones.
   // Root services ("/") go last as the catch-all fallback.
