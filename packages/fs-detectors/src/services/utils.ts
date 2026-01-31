@@ -7,8 +7,13 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
+  ResolvedService,
 } from './types';
-import { RUNTIME_BUILDERS, ENTRYPOINT_EXTENSIONS } from './types';
+import {
+  RUNTIME_BUILDERS,
+  ENTRYPOINT_EXTENSIONS,
+  STATIC_BUILDERS,
+} from './types';
 
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
@@ -16,6 +21,10 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
     throw new Error(`Unknown runtime: ${runtime}`);
   }
   return builder;
+}
+
+export function isStaticBuild(service: ResolvedService): boolean {
+  return STATIC_BUILDERS.has(service.builder.use);
 }
 
 /**

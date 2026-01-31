@@ -355,8 +355,14 @@ export const build: BuildV2 = async ({
 }) => {
   await download(files, workPath, meta);
 
-  const mountpoint = path.dirname(entrypoint);
-  const entrypointDir = path.join(workPath, mountpoint);
+  // Use routePrefix as mountpoint for services to mount static files at the correct path
+  // e.g., routePrefix="/admin" mounts files at "admin/" so they're served at /admin/*
+  // Strip leading slash from routePrefix to create valid mountpoint
+  const routePrefix = config.routePrefix as string | undefined;
+  const mountpoint = routePrefix
+    ? routePrefix.replace(/^\//, '') || '.'
+    : path.dirname(entrypoint);
+  const entrypointDir = path.join(workPath, path.dirname(entrypoint));
 
   let distPath = path.join(
     workPath,

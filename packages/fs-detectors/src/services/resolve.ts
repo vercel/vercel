@@ -153,6 +153,19 @@ export function resolveConfiguredService(
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
   const runtime = isStaticBuild ? undefined : inferredRuntime;
 
+  // Pass routePrefix to builder config as a filesystem mountpoint.
+  // static-build uses this to prefix output paths: '.' = root, 'admin' = /admin/
+  // We strip the leading slash since it's a relative path, not a URL.
+  if (routePrefix) {
+    const stripped = routePrefix.startsWith('/')
+      ? routePrefix.slice(1)
+      : routePrefix;
+    builderConfig.routePrefix = stripped || '.';
+  }
+  if (config.framework) {
+    builderConfig.framework = config.framework;
+  }
+
   return {
     name,
     type,
