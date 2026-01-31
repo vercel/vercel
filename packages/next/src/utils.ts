@@ -3032,14 +3032,27 @@ export const onPrerenderRoute =
         }
         // We additionally vary based on if there's a postponed prerender
         // because if there isn't, then that means that we generated an
-        // empty shell, and producing an empty RSC shell would be a waste.
-        // If there is a postponed prerender, then the RSC shell would be
-        // non-empty, and it would be valuable to also generate an empty
-        // RSC shell.
+        // empty shell. When cache components are enabled, we still want to
+        // vary the HTML by params so the route shell can be cached per-param.
+        // Otherwise, keep the fallback shell shared across params.
         else if (postponedPrerender) {
-          htmlAllowQuery = [];
+          htmlAllowQuery = isAppClientParamParsingEnabled ? allowQuery : [];
         }
       }
+      console.log('[builder] html allowQuery', {
+        routeKey,
+        outputPathPage,
+        isFallback,
+        isBlocking,
+        renderingMode,
+        allowQuery,
+        htmlAllowQuery,
+        fallbackRootParams: isFallback
+          ? prerenderManifest.fallbackRoutes[routeKey]?.fallbackRootParams
+          : prerenderManifest.blockingFallbackRoutes[routeKey]
+              ?.fallbackRootParams,
+        hasPostponedPrerender: Boolean(postponedPrerender),
+      });
 
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
@@ -3286,6 +3299,14 @@ export const onPrerenderRoute =
             const segmentAllowQuery = isAppClientParamParsingEnabled
               ? htmlAllowQuery
               : allowQuery;
+            console.log('[builder] segment allowQuery', {
+              routeKey,
+              outputPathPage,
+              segmentAllowQuery,
+              htmlAllowQuery,
+              allowQuery,
+              isAppClientParamParsingEnabled,
+            });
 
             // No initial headers here means that the fallback is being served
             // and it should infer the initial headers from the base metadata
