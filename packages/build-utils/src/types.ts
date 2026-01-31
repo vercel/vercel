@@ -15,6 +15,7 @@ export type File = FileRef | FileFsRef | FileBlob;
 export interface FileBase {
   type: string;
   mode: number;
+  immutable: boolean;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
   toStreamAsync?: () => Promise<NodeJS.ReadableStream>;

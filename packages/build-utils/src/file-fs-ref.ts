@@ -12,6 +12,7 @@ interface FileFsRefOptions {
   contentType?: string;
   fsPath: string;
   size?: number;
+  immutable?: boolean;
 }
 
 interface FromStreamOptions {
@@ -27,12 +28,18 @@ class FileFsRef implements FileBase {
   public fsPath: string;
   public size?: number;
   public contentType: string | undefined;
+  /**
+   * When true, this file will be written to the `immutable` output directory
+   * instead of `static`, indicating it can be cached indefinitely.
+   */
+  public immutable: boolean;
 
   constructor({
     mode = 0o100644,
     contentType,
     fsPath,
     size,
+    immutable = false,
   }: FileFsRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof fsPath === 'string');
@@ -41,6 +48,7 @@ class FileFsRef implements FileBase {
     this.contentType = contentType;
     this.fsPath = fsPath;
     this.size = size;
+    this.immutable = immutable;
   }
 
   static async fromFsPath({
