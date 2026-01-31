@@ -428,9 +428,11 @@ export async function serverBuild({
   );
   // experimental bundling prevents filtering manifests
   // as we don't know what to filter by at this stage
-  const isCorrectManifests =
-    !experimentalAllowBundling &&
-    semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
+  const mayFilterManifests = !experimentalAllowBundling;
+  const isCorrectManifests = semver.gte(
+    nextVersion,
+    CORRECTED_MANIFESTS_VERSION
+  );
 
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
@@ -1232,71 +1234,86 @@ export async function serverBuild({
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
 
       if (isCorrectManifests) {
-        // filter dynamic routes to only the included dynamic routes
-        // in this specific serverless function so that we don't
-        // accidentally match a dynamic route while resolving that
-        // is not actually in this specific serverless function
-        for (const manifest of [
-          'routes-manifest.json',
-          'server/pages-manifest.json',
-          ...(appPathRoutesManifest ? ['server/app-paths-manifest.json'] : []),
-        ] as const) {
+        for (const manifest of mayFilterManifests
+          ? [
+              'routes-manifest.json',
+              'server/pages-manifest.json',
+              ...(appPathRoutesManifest
+                ? ['server/app-paths-manifest.json']
+                : []),
+            ]
+          : ['routes-manifest.json']) {
           const fsPath = path.join(entryPath, outputDirectory, manifest);
 
           const relativePath = path.relative(baseDir, fsPath);
           delete group.pseudoLayer[relativePath];
 
           const manifestData = await fs.readJSON(fsPath);
-          const normalizedPages = new Set(
-            group.pages.map(page => {
-              page = `/${page.replace(/\.js$/, '')}`;
-              if (page === '/index') page = '/';
-              return page;
-            })
-          );
 
-          switch (manifest) {
-            case 'routes-manifest.json': {
-              const filterItem = (item: { page: string }) =>
-                normalizedPages.has(item.page);
+          if (manifest === 'routes-manifest.json') {
+            // Filter `headers` and `deploymentId` out of the routes-manifest.json for deterministic
+            // functions. In Next.js minimal mode, they aren't used (the builder reads them and
+            // generates the config.json for Vercel)
+            manifestData.headers = [];
+            delete manifestData.deploymentId;
+          }
 
-              manifestData.dynamicRoutes =
-                manifestData.dynamicRoutes?.filter(filterItem);
-              manifestData.staticRoutes =
-                manifestData.staticRoutes?.filter(filterItem);
-              break;
-            }
-            case 'server/pages-manifest.json': {
-              for (const key of Object.keys(manifestData)) {
-                if (
-                  isDynamicRoute(key, nextVersion) &&
-                  !normalizedPages.has(key)
-                ) {
-                  delete manifestData[key];
-                }
+          if (mayFilterManifests) {
+            // filter dynamic routes to only the included dynamic routes
+            // in this specific serverless function so that we don't
+            // accidentally match a dynamic route while resolving that
+            // is not actually in this specific serverless function
+
+            const normalizedPages = new Set(
+              group.pages.map(page => {
+                page = `/${page.replace(/\.js$/, '')}`;
+                if (page === '/index') page = '/';
+                return page;
+              })
+            );
+
+            switch (manifest) {
+              case 'routes-manifest.json': {
+                const filterItem = (item: { page: string }) =>
+                  normalizedPages.has(item.page);
+                manifestData.dynamicRoutes =
+                  manifestData.dynamicRoutes?.filter(filterItem);
+                manifestData.staticRoutes =
+                  manifestData.staticRoutes?.filter(filterItem);
+                break;
               }
-              break;
-            }
-            case 'server/app-paths-manifest.json': {
-              for (const key of Object.keys(manifestData)) {
-                const normalizedKey =
-                  appPathRoutesManifest?.[key] ||
-                  key.replace(/(^|\/)(page|route)$/, '');
-
-                if (
-                  isDynamicRoute(normalizedKey, nextVersion) &&
-                  !normalizedPages.has(normalizedKey)
-                ) {
-                  delete manifestData[key];
+              case 'server/pages-manifest.json': {
+                for (const key of Object.keys(manifestData)) {
+                  if (
+                    isDynamicRoute(key, nextVersion) &&
+                    !normalizedPages.has(key)
+                  ) {
+                    delete manifestData[key];
+                  }
                 }
+                break;
               }
-              break;
-            }
-            default: {
-              throw new NowBuildError({
-                message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
-                code: 'NEXT_MANIFEST_INVARIANT',
-              });
+              case 'server/app-paths-manifest.json': {
+                for (const key of Object.keys(manifestData)) {
+                  const normalizedKey =
+                    appPathRoutesManifest?.[key] ||
+                    key.replace(/(^|\/)(page|route)$/, '');
+
+                  if (
+                    isDynamicRoute(normalizedKey, nextVersion) &&
+                    !normalizedPages.has(normalizedKey)
+                  ) {
+                    delete manifestData[key];
+                  }
+                }
+                break;
+              }
+              default: {
+                throw new NowBuildError({
+                  message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
+                  code: 'NEXT_MANIFEST_INVARIANT',
+                });
+              }
             }
           }
 
