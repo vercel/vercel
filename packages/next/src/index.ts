@@ -861,8 +861,12 @@ export const build: BuildV2 = async buildOptions => {
             });
           }
 
-          // Apply basePath to outputPrefix (not entryDirectory, which is for source location)
-          outputPrefix = path.join(outputPrefix, nextBasePath);
+          // Apply basePath to outputPrefix ONLY if routePrefix is not set.
+          // When routePrefix is provided, it already defines where the app is mounted,
+          // so basePath should only affect Next.js internal link handling, not our output paths.
+          if (routePrefix === undefined) {
+            outputPrefix = path.join(outputPrefix, nextBasePath);
+          }
           appMountPrefixNoTrailingSlash = path.posix
             .join('/', outputPrefix)
             .replace(/\/+$/, '');
