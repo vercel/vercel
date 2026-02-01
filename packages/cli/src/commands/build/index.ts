@@ -95,7 +95,6 @@ import { validateCronSecret } from '../../util/validate-cron-secret';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
-import { emitFlagsDefinitions } from './emit-flags-definitions';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -534,7 +533,10 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  await emitFlagsDefinitions(cwd, process.env);
+  if (process.env.VERCEL_BUILD_EMIT_FLAG_DEFINITIONS === '1') {
+    const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
+    await emitFlagsDefinitions(cwd, process.env);
+  }
 
   // Get a list of source files
   const files = (await getFiles(workPath, {})).map(f =>
