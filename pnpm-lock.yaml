@@ -503,6 +503,9 @@ importers:
       jose:
         specifier: 5.9.6
         version: 5.9.6
+      path-to-regexp:
+        specifier: 6.1.0
+        version: 6.1.0
     devDependencies:
       '@alex_neo/jest-expect-message':
         specifier: 1.0.5
