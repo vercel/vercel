@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
+import { VERCEL_RUNTIME_VERSION } from './runtime-version';
 import {
   download,
   glob,
@@ -366,7 +367,8 @@ export const build: BuildV3 = async ({
 
       if (useRuntime) {
         runtimeDependencies.push(
-          baseEnv.VERCEL_RUNTIME_PYTHON || 'vercel-runtime==0.3.0'
+          baseEnv.VERCEL_RUNTIME_PYTHON ||
+            `vercel-runtime==${VERCEL_RUNTIME_VERSION}`
         );
       } else {
         // Runtime framework dependencies are managed via the uv project so that the
