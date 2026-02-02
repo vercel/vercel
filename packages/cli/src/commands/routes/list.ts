@@ -6,17 +6,14 @@ import { listSubcommand } from './command';
 import { parseSubcommandArgs, ensureProjectLink } from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
-import {
-  getRouteTypes,
-  getRouteTypeLabel,
-} from '../../util/routes/get-route-types';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { getCommandName } from '../../util/pkg-name';
-import type {
-  RoutingRule,
-  RouteType,
-  DiffAction,
+import {
+  getRouteTypeLabels,
+  type RoutingRule,
+  type RouteType,
+  type DiffAction,
 } from '../../util/routes/types';
 
 export default async function list(client: Client, argv: string[]) {
@@ -230,8 +227,7 @@ function formatRoutesTable(
   actionSymbol?: DiffAction
 ): string {
   const rows: string[][] = routes.map((rule, index) => {
-    const types = getRouteTypes(rule);
-    const typeLabels = types.map(t => getRouteTypeLabel(t)).join(', ') || '-';
+    const typeLabels = getRouteTypeLabels(rule);
     const status = rule.enabled === false ? chalk.gray('Disabled') : '';
     const prefix = actionSymbol || '';
     const colorFn =
@@ -270,8 +266,7 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
   const lines: string[] = [''];
 
   routes.forEach((rule, index) => {
-    const types = getRouteTypes(rule);
-    const typeLabels = types.map(t => getRouteTypeLabel(t)).join(', ') || '-';
+    const typeLabels = getRouteTypeLabels(rule);
     const statusText =
       rule.enabled === false ? chalk.gray('Disabled') : chalk.green('Enabled');
     const stagedText = rule.staged ? chalk.yellow(' (staged)') : '';
