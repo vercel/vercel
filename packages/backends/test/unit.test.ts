@@ -54,8 +54,7 @@ describe('successful builds', async () => {
   );
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
-    const isNestFixture = fixtureName.includes('nest');
-    it.skipIf(process.platform === 'win32' && isNestFixture)(
+    it.skipIf(process.platform === 'win32')(
       `builds ${fixtureName}`,
       async () => {
         // Copy entire fixture to work dir so no parent node_modules can interfere
@@ -76,9 +75,9 @@ describe('successful builds', async () => {
 
         const lambda = result.output.index as unknown as NodejsLambda;
 
-        expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
-          join(fixtureSource, 'routes.json')
-        );
+        await expect(
+          JSON.stringify(result.routes, null, 2)
+        ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
 
         await expect(
           extractAndExecuteLambda(lambda, workDir)

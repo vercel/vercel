@@ -12,7 +12,7 @@ import {
   formatOutput,
   generateCurlCommand,
 } from './request-builder';
-import { OpenApiCache } from './openapi-cache';
+import { OpenApiCache } from '../../util/openapi';
 import { API_BASE_URL } from './constants';
 import {
   colorizeMethod,
@@ -671,7 +671,7 @@ async function promptForParameters(
 }
 
 /**
- * Prompt for a single body field value (text input or enum select)
+ * Prompt for a single body field value (text input, enum select, or array multi-select)
  */
 async function promptForBodyField(
   client: Client,
@@ -681,7 +681,28 @@ async function promptForBodyField(
   const description = formatDescription(field.description);
   const optionalHint = required ? '' : chalk.dim(' (optional)');
 
-  // Use select for enum fields
+  // Use checkbox for array fields with enum values (multi-select)
+  if (
+    field.type === 'array' &&
+    field.enumValues &&
+    field.enumValues.length > 0
+  ) {
+    const choices = field.enumValues.map(v => ({
+      name: String(v),
+      value: String(v),
+    }));
+
+    const selected = await client.input.checkbox<string>({
+      message: `Select values for ${chalk.cyan(field.name)}${optionalHint}${description}:`,
+      choices,
+      required,
+    });
+
+    // Return as JSON array for the --field flag
+    return JSON.stringify(selected);
+  }
+
+  // Use select for non-array enum fields
   if (field.enumValues && field.enumValues.length > 0) {
     const choices = field.enumValues.map(v => ({
       name: String(v),
