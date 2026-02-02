@@ -171,12 +171,6 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
-  customErrorPage?:
-    | string
-    | {
-        default5xx?: string;
-        default4xx?: string;
-      };
   /**
    * Path to a file containing bulk redirects (relative to the project root).
    * This file will be included in prebuilt deployments.
@@ -228,10 +222,4 @@ export interface DeploymentOptions {
   gitMetadata?: GitMetadata;
   autoAssignCustomDomains?: boolean;
   customEnvironmentSlugOrId?: string;
-  customErrorPage?:
-    | string
-    | {
-        default5xx?: string;
-        default4xx?: string;
-      };
 }
