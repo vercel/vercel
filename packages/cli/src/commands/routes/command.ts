@@ -335,19 +335,31 @@ export const addSubcommand = {
     },
     {
       name: 'Add a rewrite',
-      value: `${packageName} routes add "API Proxy" --src "/api/:path*" --syntax path-to-regexp --dest "https://api.example.com/:path*"`,
+      value: `${packageName} routes add "API Proxy" --src "/api/:path*" --syntax path-to-regexp --dest "https://api.example.com/:path*" --yes`,
     },
     {
       name: 'Add a redirect',
-      value: `${packageName} routes add "Old Blog" --src "/blog" --dest "/articles" --status 301`,
+      value: `${packageName} routes add "Old Blog" --src "/blog" --syntax exact --dest "/articles" --status 301 --yes`,
     },
     {
-      name: 'Add response headers',
-      value: `${packageName} routes add "CORS" --src "/api/*" --set-response-header "Access-Control-Allow-Origin=*"`,
+      name: 'Add CORS headers',
+      value: `${packageName} routes add "CORS" --src "^/api/.*$" --set-response-header "Access-Control-Allow-Origin=*" --set-response-header "Access-Control-Allow-Methods=GET,POST" --yes`,
     },
     {
-      name: 'Add with conditions',
-      value: `${packageName} routes add "Auth API" --src "/api/*" --dest "/protected" --has "header:Authorization"`,
+      name: 'Block access (set status)',
+      value: `${packageName} routes add "Block Admin" --src "^/admin/.*$" --status 403 --yes`,
+    },
+    {
+      name: 'Conditional routing',
+      value: `${packageName} routes add "Auth Required" --src "/protected/:path*" --syntax path-to-regexp --dest "/login" --status 307 --missing "cookie:session" --yes`,
+    },
+    {
+      name: 'Rewrite with request headers',
+      value: `${packageName} routes add "Backend Proxy" --src "/backend/:path*" --syntax path-to-regexp --dest "https://internal.example.com/:path*" --set-request-header "X-Forwarded-Host=myapp.com" --yes`,
+    },
+    {
+      name: 'Add route at start',
+      value: `${packageName} routes add "Priority Route" --src "/priority" --syntax exact --dest "/handler" --position start --yes`,
     },
   ],
 } as const;

@@ -152,6 +152,38 @@ describe('parse-conditions', () => {
           'Host condition requires a value'
         );
       });
+
+      it('should throw for invalid regex in condition value', () => {
+        expect(() => parseCondition('header:X-Pattern:[invalid(regex')).toThrow(
+          'Invalid regex'
+        );
+      });
+
+      it('should throw for invalid regex in host value', () => {
+        expect(() => parseCondition('host:[invalid(regex')).toThrow(
+          'Invalid regex'
+        );
+      });
+
+      it('should accept valid regex patterns', () => {
+        const result = parseCondition('header:Accept:text/html.*');
+        expect(result).toEqual({
+          type: 'header',
+          key: 'Accept',
+          value: 'text/html.*',
+        });
+      });
+
+      it('should accept complex valid regex patterns', () => {
+        const result = parseCondition(
+          'header:User-Agent:^Mozilla/5\\.0.*Chrome'
+        );
+        expect(result).toEqual({
+          type: 'header',
+          key: 'User-Agent',
+          value: '^Mozilla/5\\.0.*Chrome',
+        });
+      });
     });
   });
 
