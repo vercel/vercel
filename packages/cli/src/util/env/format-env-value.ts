@@ -11,7 +11,10 @@ export function formatEnvValue(value: string | undefined): string {
   }
 
   const needsQuotes =
-    /\s/.test(value) || value.startsWith('#') || value.startsWith('"');
+    /\s/.test(value) ||
+    value.startsWith('#') ||
+    value.startsWith('"') ||
+    value.startsWith("'");
 
   if (!needsQuotes) return value;
 
