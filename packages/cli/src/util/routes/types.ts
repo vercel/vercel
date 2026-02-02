@@ -22,6 +22,8 @@ export interface RoutingRule {
   previousIndex?: number;
   /** Present if route was reordered (new position) */
   newIndex?: number;
+  /** Route types computed by the API */
+  routeTypes?: RouteType[];
 }
 
 /**
@@ -62,3 +64,23 @@ export type RouteType =
   | 'redirect'
   | 'terminate'
   | 'transform';
+
+/**
+ * Display labels for route types
+ */
+const ROUTE_TYPE_LABELS: Record<RouteType, string> = {
+  header: 'Header',
+  rewrite: 'Rewrite',
+  redirect: 'Redirect',
+  terminate: 'Terminating',
+  transform: 'Transform',
+};
+
+/**
+ * Returns a comma-separated string of display labels for a rule's route types.
+ * Returns '-' if the rule has no route types.
+ */
+export function getRouteTypeLabels(rule: RoutingRule): string {
+  const types = rule.routeTypes ?? [];
+  return types.map(t => ROUTE_TYPE_LABELS[t]).join(', ') || '-';
+}

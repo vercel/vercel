@@ -5,13 +5,9 @@ import { inspectSubcommand } from './command';
 import { parseSubcommandArgs, ensureProjectLink } from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
-import {
-  getRouteTypes,
-  getRouteTypeLabel,
-} from '../../util/routes/get-route-types';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import type { RoutingRule } from '../../util/routes/types';
+import { getRouteTypeLabels, type RoutingRule } from '../../util/routes/types';
 
 export default async function inspect(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, inspectSubcommand);
@@ -132,8 +128,7 @@ export default async function inspect(client: Client, argv: string[]) {
 
 function formatRouteDetails(rule: RoutingRule): string {
   const lines: string[] = [''];
-  const types = getRouteTypes(rule);
-  const typeLabels = types.map(t => getRouteTypeLabel(t)).join(', ') || '-';
+  const typeLabels = getRouteTypeLabels(rule);
   const statusText =
     rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
   const stagedText = rule.staged
