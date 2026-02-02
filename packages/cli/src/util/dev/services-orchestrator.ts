@@ -430,11 +430,12 @@ export class ServicesOrchestrator {
     const processError = new Promise<never>((_, reject) => {
       child.on('error', reject);
       child.on('exit', code => {
-        if (code !== 0) {
-          reject(
-            new Error(`Service "${serviceName}" exited with code ${code}`)
-          );
-        }
+        // Any exit before port is available is a failure
+        reject(
+          new Error(
+            `Service "${serviceName}" exited with code ${code} before port was available`
+          )
+        );
       });
     });
 
