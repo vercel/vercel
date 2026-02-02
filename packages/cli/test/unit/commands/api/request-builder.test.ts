@@ -85,6 +85,49 @@ describe('request-builder', () => {
         expected: { notnum: '42abc' },
         desc: 'string starting with number',
       },
+      // JSON array values
+      {
+        input: 'events=["deployment.created"]',
+        expected: { events: ['deployment.created'] },
+        desc: 'JSON array with single string',
+      },
+      {
+        input: 'events=["deployment.created","deployment.ready"]',
+        expected: { events: ['deployment.created', 'deployment.ready'] },
+        desc: 'JSON array with multiple strings',
+      },
+      {
+        input: 'numbers=[1, 2, 3]',
+        expected: { numbers: [1, 2, 3] },
+        desc: 'JSON array with numbers',
+      },
+      {
+        input: 'empty=[]',
+        expected: { empty: [] },
+        desc: 'empty JSON array',
+      },
+      // JSON object values
+      {
+        input: 'config={"key":"value"}',
+        expected: { config: { key: 'value' } },
+        desc: 'JSON object',
+      },
+      {
+        input: 'nested={"outer":{"inner":"value"}}',
+        expected: { nested: { outer: { inner: 'value' } } },
+        desc: 'nested JSON object',
+      },
+      // Invalid JSON stays as string
+      {
+        input: 'invalid=[not valid json',
+        expected: { invalid: '[not valid json' },
+        desc: 'invalid JSON array stays as string',
+      },
+      {
+        input: 'invalid={not valid json',
+        expected: { invalid: '{not valid json' },
+        desc: 'invalid JSON object stays as string',
+      },
     ])('parses typed field: $desc', async ({ input, expected }) => {
       const result = await buildRequest('/api', { '--field': [input] });
       expect(result.body).toEqual(expected);

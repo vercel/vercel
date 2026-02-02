@@ -196,7 +196,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl'];
+  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
@@ -813,6 +813,10 @@ const main = async () => {
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = require('./commands/upgrade').default;
           break;
+        case 'webhooks':
+          telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
+          func = require('./commands/webhooks').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
@@ -916,18 +920,18 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    // Print update information, if available
-    if (!process.env.NO_UPDATE_NOTIFIER) {
-      // Check if an update is available. If so, `latest` will contain a string
-      // of the latest version, otherwise `undefined`.
+    const shouldCheckForUpdates =
+      !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+
+    if (shouldCheckForUpdates) {
       const latest = getLatestVersion({
         pkg,
       });
       if (latest) {
-        const changelog = 'https://github.com/vercel/vercel/releases';
+        const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
 
         if (isTTY) {
-          // Interactive mode: show condensed prompt
+          // Interactive mode: prompt user to update now
           const errorMsg =
             exitCode && exitCode !== 2
               ? chalk.magenta(
@@ -961,7 +965,6 @@ main()
             await open(changelog);
           }
         } else {
-          // Non-interactive mode: show full update box
           const errorMsg =
             exitCode && exitCode !== 2
               ? chalk.magenta(

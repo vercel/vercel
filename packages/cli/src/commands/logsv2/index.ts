@@ -6,6 +6,7 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
+import { formatProject } from '../../util/projects/format-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
 import {
@@ -22,7 +23,125 @@ import { help } from '../help';
 import { logsv2Command } from './command';
 import output from '../../output-manager';
 
-const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
+const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
+const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
+
+interface ColumnDef<T> {
+  label: string;
+  padding?: [number, number];
+  width?: number | 'stretch';
+  getValue: (row: T) => string;
+  format?: (paddedValue: string, row: T) => string;
+}
+
+interface TableOptions<T> {
+  columns: ColumnDef<T>[];
+  rows: T[];
+  tableWidth: number;
+  formatHeader?: (formattedHeader: string) => string;
+  formatRow?: (formattedRow: string, row: T) => string;
+}
+
+function table<T>({
+  columns,
+  rows,
+  tableWidth,
+  formatHeader,
+  formatRow,
+}: TableOptions<T>): { header: string; rows: string[] } {
+  const zeroPad: [number, number] = [0, 0];
+
+  // Calculate max content width for each column
+  const maxWidths = columns.map(col => {
+    const headerWidth = col.label.length;
+    const maxContent = Math.max(
+      headerWidth,
+      ...rows.map(row => col.getValue(row).length)
+    );
+    return maxContent;
+  });
+
+  // Calculate final widths
+  const colPaddings: [number, number][] = columns.map(
+    col => col.padding ?? zeroPad
+  );
+  const finalWidths: number[] = [];
+  let usedWidth = 0;
+  let stretchIndex = -1;
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
+    const padding = colPaddings[i][0] + colPaddings[i][1];
+
+    if (col.width === 'stretch') {
+      stretchIndex = i;
+      finalWidths.push(0);
+    } else if (typeof col.width === 'number') {
+      finalWidths.push(col.width);
+      usedWidth += col.width + padding;
+    } else {
+      finalWidths.push(maxWidths[i]);
+      usedWidth += maxWidths[i] + padding;
+    }
+  }
+
+  // Add separator space between columns (2 spaces)
+  usedWidth += (columns.length - 1) * 2;
+
+  // Fill stretch column
+  if (stretchIndex >= 0) {
+    const stretchPadding =
+      colPaddings[stretchIndex][0] + colPaddings[stretchIndex][1];
+    finalWidths[stretchIndex] = Math.max(
+      10,
+      tableWidth - usedWidth - stretchPadding
+    );
+  }
+
+  // Pad and truncate a value to fit width
+  const pad = (value: string, width: number): string => {
+    if (value.length > width) {
+      return value.slice(0, width - 1) + '…';
+    }
+    return value.padEnd(width);
+  };
+
+  // Build header
+  const headerStr = columns
+    .map((col, i) => {
+      const padded = pad(col.label, finalWidths[i]);
+      return (
+        ' '.repeat(colPaddings[i][0]) + padded + ' '.repeat(colPaddings[i][1])
+      );
+    })
+    .join('  ');
+  const header = formatHeader ? formatHeader(headerStr) : headerStr;
+
+  // Build rows
+  const formattedRows = rows.map(row => {
+    const rowStr = columns
+      .map((col, i) => {
+        const value = col.getValue(row);
+        const padded = pad(value, finalWidths[i]);
+        const formatted = col.format ? col.format(padded, row) : padded;
+        return (
+          ' '.repeat(colPaddings[i][0]) +
+          formatted +
+          ' '.repeat(colPaddings[i][1])
+        );
+      })
+      .join('  ');
+    return formatRow ? formatRow(rowStr, row) : rowStr;
+  });
+
+  return { header, rows: formattedRows };
+}
+
+function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
+  if (logs.length === 0) return false;
+  const firstDay = new Date(logs[0].timestamp).toDateString();
+  return logs.some(log => new Date(log.timestamp).toDateString() !== firstDay);
+}
 
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
@@ -84,6 +203,7 @@ export default async function logsv2(client: Client) {
   const followOption = parsedArguments.flags['--follow'];
   const queryOption = parsedArguments.flags['--query'];
   const requestIdOption = parsedArguments.flags['--request-id'];
+  const expandOption = parsedArguments.flags['--expand'];
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
@@ -99,6 +219,7 @@ export default async function logsv2(client: Client) {
   telemetry.trackCliFlagFollow(followOption);
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
+  telemetry.trackCliFlagExpand(expandOption);
 
   if (followOption) {
     if (!deploymentOption) {
@@ -148,6 +269,8 @@ export default async function logsv2(client: Client) {
   }
 
   let projectId: string;
+  let projectSlug: string;
+  let orgSlug: string;
   let ownerId: string;
 
   if (projectOption) {
@@ -164,6 +287,8 @@ export default async function logsv2(client: Client) {
       return 1;
     }
     projectId = project.id;
+    projectSlug = project.name;
+    orgSlug = contextName!;
     ownerId = project.accountId;
   } else {
     const link = await getLinkedProject(client);
@@ -180,6 +305,8 @@ export default async function logsv2(client: Client) {
     client.config.currentTeam =
       link.org.type === 'team' ? link.org.id : undefined;
     projectId = link.project.id;
+    projectSlug = link.project.name;
+    orgSlug = link.org.slug;
     ownerId = link.org.id;
   }
 
@@ -211,7 +338,7 @@ export default async function logsv2(client: Client) {
   if (followOption) {
     if (!jsonOption) {
       output.print(
-        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), DATE_TIME_FORMAT))}\n\n`
+        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
       );
     }
     const abortController = new AbortController();
@@ -265,15 +392,13 @@ export default async function logsv2(client: Client) {
 
   const limit = limitOption ?? 100;
 
-  if (!jsonOption) {
-    output.print(
-      `Fetching logs for project ${chalk.bold(projectId)} in ${chalk.bold(contextName)}...\n\n`
-    );
-  }
-
   output.spinner('Fetching logs...', 1000);
 
-  let count = 0;
+  const terminalWidth = client.stderr.isTTY
+    ? client.stderr.columns || 120
+    : 120;
+
+  const logs: RequestLogEntry[] = [];
   try {
     for await (const log of fetchAllRequestLogs(client, {
       projectId,
@@ -293,9 +418,8 @@ export default async function logsv2(client: Client) {
       if (jsonOption) {
         client.stdout.write(JSON.stringify(log) + '\n');
       } else {
-        prettyPrintLogEntry(log);
+        logs.push(log);
       }
-      count++;
     }
   } catch (err) {
     output.stopSpinner();
@@ -306,81 +430,160 @@ export default async function logsv2(client: Client) {
   output.stopSpinner();
 
   if (!jsonOption) {
-    if (count === 0) {
+    if (logs.length === 0) {
       output.print(
-        chalk.gray('No logs found matching the specified filters.\n')
+        chalk.dim(`No logs found for ${formatProject(orgSlug, projectSlug)}\n`)
       );
     } else {
-      output.print(chalk.gray(`\nDisplayed ${count} log entries.\n`));
+      const showDate = logsSpanMultipleDays(logs);
+      const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
+
+      // Build row data
+      type RowData = {
+        time: string;
+        level: string;
+        path: string;
+        status: string;
+        statusCode: number;
+        message: string;
+        messageTruncated?: boolean;
+      };
+
+      const rowData: RowData[] = logs.map(log => {
+        const statusCode = log.responseStatusCode;
+        return {
+          time: format(log.timestamp, timeFormat),
+          level: log.level,
+          path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
+          status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
+          statusCode,
+          message: log.message?.replace(/\n/g, ' ').trim() || '',
+          messageTruncated: log.messageTruncated,
+        };
+      });
+
+      // Define columns with formatting
+      const baseColumns: ColumnDef<RowData>[] = [
+        {
+          label: 'TIME',
+          getValue: row => row.time,
+          format: padded => chalk.dim(padded),
+        },
+        {
+          label: 'LEVEL',
+          getValue: row => row.level,
+          format: (padded, row) => colorizeLevel(padded, row.level),
+        },
+        {
+          label: '',
+          padding: [0, 3],
+          getValue: row => row.path,
+        },
+      ];
+
+      const columns: ColumnDef<RowData>[] = expandOption
+        ? baseColumns
+        : [
+            ...baseColumns,
+            {
+              label: 'STATUS',
+              getValue: row => row.status,
+              format: (padded, row) =>
+                row.statusCode <= 0
+                  ? chalk.gray(padded)
+                  : colorizeStatus(padded, row.statusCode),
+            },
+            {
+              label: 'MESSAGE',
+              width: 'stretch',
+              getValue: row => row.message || '(no message)',
+              format: (padded, row) =>
+                row.message
+                  ? colorizeMessage(padded, row.level)
+                  : chalk.dim(padded),
+            },
+          ];
+
+      const formatted = table({
+        columns,
+        rows: rowData,
+        tableWidth: terminalWidth,
+        formatHeader: header => chalk.dim(header),
+        formatRow: expandOption
+          ? (rowStr, row) => {
+              if (row.message) {
+                const coloredMessage = colorizeMessage(row.message, row.level);
+                const truncatedIndicator = row.messageTruncated
+                  ? chalk.gray('…')
+                  : '';
+                return `${rowStr}\n${coloredMessage}${truncatedIndicator}\n`;
+              }
+              return rowStr + '\n';
+            }
+          : undefined,
+      });
+
+      // Print header
+      output.print(formatted.header + '\n');
+
+      // Print rows
+      for (const row of formatted.rows) {
+        output.print(row + '\n');
+      }
+
+      output.print(
+        chalk.gray(
+          `Fetched ${logs.length} logs for ${formatProject(orgSlug, projectSlug)}\n`
+        )
+      );
     }
   }
 
   return 0;
 }
 
-function prettyPrintLogEntry(log: RequestLogEntry) {
-  const date = format(log.timestamp, DATE_TIME_FORMAT);
-  const levelIcon = getLevelIcon(log.level);
-  const sourceIcon = getSourceIcon(log.source);
-  const status =
-    log.responseStatusCode <= 0
-      ? chalk.gray('---')
-      : getStatusColor(log.responseStatusCode);
-
-  const headerLine = `${chalk.dim(date)}  ${levelIcon}  ${chalk.bold(
-    log.requestMethod.padEnd(6)
-  )}  ${status}  ${chalk.dim(log.domain)}  ${sourceIcon}  ${log.requestPath}`;
-
-  output.print(`${headerLine}\n`);
-
-  if (log.message) {
-    const message = log.message.replace(/\n$/, '');
-    const truncatedIndicator = log.messageTruncated ? chalk.gray('…') : '';
-    output.print(
-      `${colorizeMessage(message, log.level)}${truncatedIndicator}\n\n`
-    );
-  } else {
-    output.print('\n');
+function colorizeLevel(formatted: string, level: string): string {
+  switch (level) {
+    case 'fatal':
+      return chalk.red.bold(formatted);
+    case 'error':
+      return chalk.red(formatted);
+    case 'warning':
+      return chalk.yellow(formatted);
+    default:
+      return chalk.dim(formatted);
   }
 }
 
-function getLevelIcon(level: string): string {
-  switch (level) {
-    case 'fatal':
-    case 'error':
-      return '🚫';
-    case 'warning':
-      return '⚠️';
-    default:
-      return 'ℹ️';
+function colorizeStatus(formatted: string, statusCode: number): string {
+  if (statusCode >= 500) {
+    return chalk.red(formatted);
+  } else if (statusCode >= 400) {
+    return chalk.yellow(formatted);
+  } else if (statusCode >= 300) {
+    return chalk.cyan(formatted);
+  } else if (statusCode >= 200) {
+    return chalk.green(formatted);
   }
+  return chalk.gray(formatted);
 }
 
 function getSourceIcon(source: string): string {
   switch (source) {
-    case 'edge-function':
-      return 'ന';
-    case 'edge-middleware':
-      return 'ɛ';
     case 'serverless':
-      return 'ƒ';
+    case 'lambda':
+      return 'λ';
+    case 'edge-function':
+    case 'edge-middleware':
+    case 'middleware':
+      return 'ε';
+    case 'static':
+    case 'external':
+    case 'redirect':
+      return '◇';
     default:
       return ' ';
   }
-}
-
-function getStatusColor(status: number): string {
-  const statusStr = String(status);
-  if (status >= 500) {
-    return chalk.red(statusStr);
-  } else if (status >= 400) {
-    return chalk.yellow(statusStr);
-  } else if (status >= 300) {
-    return chalk.cyan(statusStr);
-  } else if (status >= 200) {
-    return chalk.green(statusStr);
-  }
-  return chalk.gray(statusStr);
 }
 
 function colorizeMessage(message: string, level: string): string {
@@ -391,6 +594,6 @@ function colorizeMessage(message: string, level: string): string {
     case 'warning':
       return chalk.yellow(message);
     default:
-      return message;
+      return chalk.dim(message);
   }
 }
