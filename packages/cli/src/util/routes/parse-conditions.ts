@@ -1,6 +1,20 @@
 import type { HasField } from './types';
 
 /**
+ * Validates that a string is a valid regex pattern.
+ * Throws an error if the pattern is invalid.
+ */
+function validateRegexPattern(pattern: string, context: string): void {
+  try {
+    new RegExp(pattern);
+  } catch (e) {
+    throw new Error(
+      `Invalid regex in ${context}: "${pattern}". ${e instanceof Error ? e.message : ''}`
+    );
+  }
+}
+
+/**
  * Parses condition strings from CLI flags into HasField objects.
  *
  * Format: type:key or type:key:value
@@ -13,9 +27,12 @@ import type { HasField } from './types';
  *   - query:version:2 -> { type: 'query', key: 'version', value: '2' }
  *   - host:api.example.com -> { type: 'host', value: 'api.example.com' }
  *
+ * Note: Condition values are interpreted as regex patterns by the server,
+ * so this function validates that any provided value is a valid regex.
+ *
  * @param conditions Array of condition strings from CLI
  * @returns Array of HasField objects
- * @throws Error if a condition is invalid
+ * @throws Error if a condition is invalid or contains invalid regex
  */
 export function parseConditions(conditions: string[]): HasField[] {
   return conditions.map(parseCondition);
@@ -49,6 +66,8 @@ export function parseCondition(condition: string): HasField {
     if (!value) {
       throw new Error('Host condition requires a value');
     }
+    // Validate host value as regex pattern
+    validateRegexPattern(value, 'host condition');
     return { type: 'host', value };
   }
 
@@ -60,6 +79,11 @@ export function parseCondition(condition: string): HasField {
 
   // Value is optional (everything after the second colon)
   const value = parts.length > 2 ? parts.slice(2).join(':') : undefined;
+
+  // Validate value as regex pattern if provided
+  if (value !== undefined) {
+    validateRegexPattern(value, `${type} condition value`);
+  }
 
   return {
     type: type as 'header' | 'cookie' | 'query',
