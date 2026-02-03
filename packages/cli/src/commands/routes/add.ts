@@ -605,7 +605,7 @@ export default async function add(client: Client, argv: string[]) {
     t => t.type === 'response.headers'
   );
 
-  // Auto-set continue when route modifies response headers and doesn't terminate.
+  // Auto-set continue when route modifies response headers and doesn't set a final status.
   const isTerminating = isRedirect || (finalStatus && !finalDest);
   const hasAnyResponseHeaderMutation =
     hasResponseHeaders || hasResponseHeaderTransforms;
