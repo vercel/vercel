@@ -2,6 +2,10 @@
 name = "vercel-runtime"
 version = "0.2.0"
 license = "Apache-2.0"
+license-files = [
+  "src/vercel_runtime/_vendor/**/*COPYING*",
+  "src/vercel_runtime/_vendor/**/*LICENSE*",
+]
 requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -20,3 +24,20 @@ classifiers = [
 [build-system]
 requires = ["uv_build>=0.9.22,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.vendoring]
+destination = "src/vercel_runtime/_vendor/"
+requirements = "src/vercel_runtime/_vendor/vendor.txt"
+namespace = "vercel_runtime._vendor"
+protected-files = ["__init__.py", "vendor.txt"]
+
+[tool.vendoring.transformations]
+substitute = [
+  # support uvicorn's dynamic `import_from_string`
+  { match='''"uvicorn\.(lifespan|loops|protocols)\.''', replace='''"vercel_runtime._vendor.uvicorn.\1.''' },
+]
+drop = [
+  "bin/",
+  "colorama/tests/",
+  "*.so",
+]
