@@ -505,7 +505,7 @@ export async function serverBuild({
       appDir
     );
 
-    if (shouldStaticallyRender404 && result && result.static404Page) {
+    if (result && result.static404Page) {
       // there can be multiple 404 pages (eg i18n) so we want to keep track of all of them
       static404Pages.add(result.static404Page);
       static404Page = result.static404Page;
