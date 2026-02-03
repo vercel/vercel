@@ -279,6 +279,171 @@ export function usePromoteRouteVersion() {
   );
 }
 
+export function useUpdateRouteVersion(options?: {
+  versions?: Array<{
+    id: string;
+    isLive?: boolean;
+    isStaging?: boolean;
+    ruleCount?: number;
+  }>;
+}) {
+  // Default versions: staging, live, and one previous
+  const defaultVersions = [
+    {
+      id: 'staging-version',
+      isStaging: true,
+      isLive: false,
+      ruleCount: 5,
+    },
+    {
+      id: 'live-version',
+      isStaging: false,
+      isLive: true,
+      ruleCount: 3,
+    },
+    {
+      id: 'previous-version',
+      isStaging: false,
+      isLive: false,
+      ruleCount: 2,
+    },
+  ];
+
+  const versions = (options?.versions ?? defaultVersions).map((v, i) => ({
+    id: v.id,
+    s3Key: `routes/${v.id}.json`,
+    lastModified: Date.now() - i * 60000,
+    createdBy: 'user@example.com',
+    isStaging: v.isStaging ?? false,
+    isLive: v.isLive ?? false,
+    ruleCount: v.ruleCount ?? 5,
+    alias: v.isStaging ? 'test-routes-staging.vercel.app' : undefined,
+  }));
+
+  // Mock get versions
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({ versions });
+    }
+  );
+
+  // Mock update version (promote/restore/discard)
+  client.scenario.post(
+    '/v1/projects/:projectId/routes/versions',
+    (req, res) => {
+      const body = req.body as { id: string; action: string };
+
+      const version = versions.find(v => v.id === body.id);
+      if (!version) {
+        res.status(404).json({ error: { message: 'Version not found' } });
+        return;
+      }
+
+      if (body.action === 'promote') {
+        if (version.isLive) {
+          res
+            .status(400)
+            .json({ error: { message: 'Version is already live' } });
+          return;
+        }
+        if (!version.isStaging) {
+          res.status(400).json({
+            error: { message: 'Only staging versions can be promoted' },
+          });
+          return;
+        }
+      }
+
+      if (body.action === 'restore') {
+        if (version.isLive) {
+          res.status(400).json({
+            error: { message: 'Cannot restore the live version' },
+          });
+          return;
+        }
+        if (version.isStaging) {
+          res.status(400).json({
+            error: { message: 'Cannot restore a staging version' },
+          });
+          return;
+        }
+      }
+
+      if (body.action === 'discard') {
+        if (!version.isStaging) {
+          res.status(400).json({
+            error: { message: 'Only staging versions can be discarded' },
+          });
+          return;
+        }
+      }
+
+      res.json({
+        version: {
+          id: version.id,
+          s3Key: version.s3Key,
+          lastModified: Date.now(),
+          createdBy: version.createdBy,
+          isLive: body.action === 'promote' || body.action === 'restore',
+          isStaging: false,
+          ruleCount: version.ruleCount,
+        },
+      });
+    }
+  );
+}
+
+export function useRoutesWithDiffForPublish() {
+  // Routes with diff info including reorder
+  client.scenario.get('/v1/projects/:projectId/routes', (req, res) => {
+    const diff = req.query.diff === 'true';
+
+    const routes = [
+      {
+        ...createRoute(0),
+        name: 'Added route',
+        action: diff ? ('+' as const) : undefined,
+        routeTypes: ['rewrite' as const],
+      },
+      {
+        ...createRoute(1),
+        name: 'Deleted route',
+        action: diff ? ('-' as const) : undefined,
+        routeTypes: ['redirect' as const],
+      },
+      {
+        ...createRoute(2),
+        name: 'Modified route',
+        action: diff ? ('~' as const) : undefined,
+        routeTypes: ['header' as const],
+      },
+      {
+        ...createRoute(3),
+        name: 'Reordered route',
+        action: diff ? ('~' as const) : undefined,
+        previousIndex: diff ? 5 : undefined,
+        newIndex: diff ? 3 : undefined,
+        routeTypes: ['transform' as const],
+      },
+      { ...createRoute(4), name: 'Unchanged route', action: undefined },
+    ];
+
+    res.json({
+      routes,
+      version: {
+        id: 'staging-version',
+        s3Key: 'routes/staging.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        ruleCount: routes.length,
+        alias: 'test-routes-staging.vercel.app',
+      },
+    });
+  });
+}
+
 export function useRoutesForInspect() {
   const detailedRoutes = [
     {

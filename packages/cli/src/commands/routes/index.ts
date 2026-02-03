@@ -14,6 +14,9 @@ import {
   listVersionsSubcommand,
   inspectSubcommand,
   addSubcommand,
+  publishSubcommand,
+  restoreSubcommand,
+  discardSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -25,6 +28,9 @@ const COMMAND_CONFIG = {
   'list-versions': getCommandAliases(listVersionsSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
+  publish: getCommandAliases(publishSubcommand),
+  restore: getCommandAliases(restoreSubcommand),
+  discard: getCommandAliases(discardSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -101,6 +107,30 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'publish':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(publishSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandPublish(subcommandOriginal);
+      return (await import('./publish')).default(client, args);
+    case 'restore':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(restoreSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRestore(subcommandOriginal);
+      return (await import('./restore')).default(client, args);
+    case 'discard':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(discardSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandDiscard(subcommandOriginal);
+      return (await import('./discard')).default(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(routesCommand, { columns: client.stderr.columns }));
