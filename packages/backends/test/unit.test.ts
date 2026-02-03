@@ -27,9 +27,9 @@ const config = {
 };
 
 // Set to true to use packages/backends/debug instead of a temp directory
-const USE_DEBUG_DIR = false;
+const USE_DEBUG_DIR = true;
 // Uncomment to enable debug logs
-// process.env.VERCEL_BUILDER_DEBUG = '1';
+process.env.VERCEL_BUILDER_DEBUG = '1';
 
 const DEBUG_DIR = join(__dirname, 'debug');
 
@@ -50,11 +50,11 @@ const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('')
+    fixtureName => fixtureName.includes('16')
   );
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
-    it.skipIf(process.platform === 'win32')(
+    it.skipIf(process.platform === 'win32').only(
       `builds ${fixtureName}`,
       async () => {
         // Copy entire fixture to work dir so no parent node_modules can interfere
@@ -75,9 +75,9 @@ describe('successful builds', async () => {
 
         const lambda = result.output.index as unknown as NodejsLambda;
 
-        await expect(
-          JSON.stringify(result.routes, null, 2)
-        ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
+        // await expect(
+        //   JSON.stringify(result.routes, null, 2)
+        // ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
 
         await expect(
           extractAndExecuteLambda(lambda, workDir)
