@@ -162,15 +162,15 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
   });
 
   it.skipIf(process.platform === 'win32').each([
-    { experimentalBackends: true, expectedBuilder: '@vercel/hono' },
+    { experimentalBackends: true, expectedBuilder: '@vercel/backends' },
     {
       experimentalBackends: true,
-      expectedBuilder: '@vercel/hono',
+      expectedBuilder: '@vercel/backends',
       vercelBuildOverride: true,
     },
     {
       experimentalBackends: true,
-      expectedBuilder: '@vercel/hono',
+      expectedBuilder: '@vercel/backends',
       vercelOutputDirectoryOverride: true,
     },
   ])(

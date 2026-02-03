@@ -11,7 +11,12 @@ import type {
   ProjectSettings,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
-import { isPythonEntrypoint } from '@vercel/build-utils';
+import {
+  isPythonEntrypoint,
+  BACKEND_BUILDERS,
+  UNIFIED_BACKEND_BUILDER,
+  isExperimentalBackendsEnabled,
+} from '@vercel/build-utils';
 import { getServicesBuilders } from './services/get-services-builders';
 
 /**
@@ -601,7 +606,13 @@ function detectFrontBuilder(
   const f = slugToFramework.get(framework || '');
   if (f && f.useRuntime) {
     const { src, use } = f.useRuntime;
-    return { src, use: `${use}${withTag}`, config };
+    // Replace framework-specific backend builders with the unified backend builder
+    // when experimental backends is enabled
+    const shouldUseUnifiedBackend =
+      isExperimentalBackendsEnabled() &&
+      BACKEND_BUILDERS.includes(use as (typeof BACKEND_BUILDERS)[number]);
+    const finalUse = shouldUseUnifiedBackend ? UNIFIED_BACKEND_BUILDER : use;
+    return { src, use: `${finalUse}${withTag}`, config };
   }
 
   // Entrypoints for other frameworks

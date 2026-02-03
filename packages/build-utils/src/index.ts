@@ -135,6 +135,8 @@ export { generateNodeBuilderFunctions } from './generate-node-builder-functions'
 
 export {
   BACKEND_FRAMEWORKS,
+  BACKEND_BUILDERS,
+  UNIFIED_BACKEND_BUILDER,
   BackendFramework,
   isBackendFramework,
   isBackendBuilder,
