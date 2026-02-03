@@ -1,0 +1,29 @@
+{
+  "experimentalServices": {
+    "service-next": {
+      "framework": "nextjs",
+      "entrypoint": "service-next",
+      "routePrefix": "/"
+    },
+    "service-express": {
+      "framework": "express",
+      "entrypoint": "service-express",
+      "routePrefix": "/api/express"
+    },
+    "service-hono": {
+      "framework": "hono",
+      "entrypoint": "service-hono",
+      "routePrefix": "/api/hono"
+    },
+    "service-fastapi": {
+      "framework": "fastapi",
+      "entrypoint": "service-fastapi",
+      "routePrefix": "/api/fastapi"
+    },
+    "service-flask": {
+      "framework": "flask",
+      "entrypoint": "service-flask",
+      "routePrefix": "/api/flask"
+    }
+  }
+}

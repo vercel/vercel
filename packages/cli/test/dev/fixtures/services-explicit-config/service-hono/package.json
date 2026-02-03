@@ -1,0 +1,8 @@
+{
+  "name": "services-explicit-config-service-hono",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "hono": "^4.0.0"
+  }
+}
