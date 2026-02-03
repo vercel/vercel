@@ -8,6 +8,7 @@ import {
   type BuildV2,
   getNodeVersion,
   Span,
+  Lambda,
 } from '@vercel/build-utils';
 import { findEntrypoint } from './cervel/index.js';
 
@@ -100,9 +101,20 @@ export const build: BuildV2 = async args => {
     },
   ];
 
+  const output: Record<string, Lambda> = { index: lambda };
+
+  for (const route of routes) {
+    if (route.dest) {
+      if (route.dest === '/') {
+        continue;
+      }
+      output[route.dest] = lambda;
+    }
+  }
+
   return {
     routes,
-    output: { index: lambda },
+    output,
   };
 };
 
