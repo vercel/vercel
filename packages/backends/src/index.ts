@@ -57,19 +57,21 @@ export const build: BuildV2 = async args => {
     ...args,
     span,
   });
-  await introspection({
-    ...args,
-    span,
-    files: rolldownResult.files,
-    handler: rolldownResult.handler,
-  });
-  await nft({
-    ...args,
-    localBuildFiles: rolldownResult.localBuildFiles,
-    files: rolldownResult.files,
-    ignoreNodeModules: false,
-    span,
-  });
+  const [introspectionResult] = await Promise.all([
+    introspection({
+      ...args,
+      span,
+      files: rolldownResult.files,
+      handler: rolldownResult.handler,
+    }),
+    nft({
+      ...args,
+      localBuildFiles: rolldownResult.localBuildFiles,
+      files: rolldownResult.files,
+      ignoreNodeModules: false,
+      span,
+    }),
+  ]);
 
   const lambda = new NodejsLambda({
     runtime: nodeVersion.runtime,
@@ -84,10 +86,12 @@ export const build: BuildV2 = async args => {
       '1',
   });
 
+  // Build routes: filesystem handler, then introspected routes, then catch-all
   const routes = [
     {
       handle: 'filesystem',
     },
+    ...introspectionResult.routes,
     {
       src: '/(.*)',
       dest: '/',

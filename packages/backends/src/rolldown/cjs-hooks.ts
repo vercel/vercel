@@ -2,11 +2,14 @@
  * CJS preload script that intercepts require() calls.
  * - Check tmpDir first for files
  * - Map bare specifiers from tmpDir to repoRootPath
+ * - Wrap hono/express modules with instrumentation
  */
 
 import Module from 'node:module';
 import path from 'node:path';
 import { existsSync, statSync, realpathSync } from 'node:fs';
+import { handle as handleHono } from '../introspection/hono.js';
+import { handle as handleExpress } from '../introspection/express.js';
 
 const repoRootPath = process.env.VERCEL_INTROSPECTION_REPO_ROOT_PATH;
 const tmpDirEnv = process.env.VERCEL_INTROSPECTION_TMP_DIR;
@@ -18,6 +21,9 @@ if (!repoRootPath || !tmpDirEnv) {
 }
 
 const tmpDir = realpathSync(tmpDirEnv);
+
+// Track wrapped modules to avoid double-wrapping
+const wrappedModules = new Map<string, unknown>();
 
 const originalResolveFilename = (Module as any)._resolveFilename;
 (Module as any)._resolveFilename = function (
@@ -61,4 +67,37 @@ const originalResolveFilename = (Module as any)._resolveFilename;
   }
 
   return originalResolveFilename.call(this, request, parent, isMain, options);
+};
+
+// Hook Module._load to wrap hono/express modules
+const originalLoad = (Module as any)._load;
+(Module as any)._load = function (
+  request: string,
+  parent: { filename?: string } | null,
+  isMain: boolean
+): unknown {
+  const result = originalLoad.call(this, request, parent, isMain);
+
+  // Wrap hono module
+  if (request === 'hono') {
+    if (wrappedModules.has('hono')) {
+      return wrappedModules.get('hono');
+    }
+    const TrackedHono = handleHono(result);
+    const wrapped = { ...result, Hono: TrackedHono };
+    wrappedModules.set('hono', wrapped);
+    return wrapped;
+  }
+
+  // Wrap express module
+  if (request === 'express') {
+    if (wrappedModules.has('express')) {
+      return wrappedModules.get('express');
+    }
+    const wrapped = handleExpress(result);
+    wrappedModules.set('express', wrapped);
+    return wrapped;
+  }
+
+  return result;
 };

@@ -26,7 +26,6 @@ setupCloseHandlers(() => {
   const { routes, additionalFolders, additionalDeps } = extractRoutes();
   if (routes.length > 0) {
     return {
-      frameworkSlug: 'express',
       routes,
       additionalFolders,
       additionalDeps,
