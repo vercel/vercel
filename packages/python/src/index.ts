@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
+import { VERCEL_RUNTIME_VERSION } from './runtime-version';
 import {
   download,
   glob,
@@ -366,18 +367,19 @@ export const build: BuildV3 = async ({
 
       if (useRuntime) {
         runtimeDependencies.push(
-          baseEnv.VERCEL_RUNTIME_PYTHON || 'vercel-runtime==0.1.0'
+          baseEnv.VERCEL_RUNTIME_PYTHON ||
+            `vercel-runtime==${VERCEL_RUNTIME_VERSION}`
         );
-      }
-
-      // Runtime framework dependencies are managed via the uv project so that the
-      // lockfile is the single source of truth for all installed packages. These
-      // are intentionally unpinned so they can resolve alongside user-declared
-      // dependencies (for example, modern Flask versions that require newer
-      // Werkzeug releases).
-      runtimeDependencies.push('werkzeug>=1.0.1');
-      if (framework !== 'flask') {
-        runtimeDependencies.push('uvicorn>=0.24');
+      } else {
+        // Runtime framework dependencies are managed via the uv project so that the
+        // lockfile is the single source of truth for all installed packages. These
+        // are intentionally unpinned so they can resolve alongside user-declared
+        // dependencies (for example, modern Flask versions that require newer
+        // Werkzeug releases).
+        runtimeDependencies.push('werkzeug>=1.0.1');
+        if (framework !== 'flask') {
+          runtimeDependencies.push('uvicorn>=0.24');
+        }
       }
 
       // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
