@@ -17,7 +17,7 @@ export default async function install(client: Client) {
   if (flags['--help']) {
     telemetry.trackCliFlagHelp('install');
     output.print(help(installCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   await add(client, args.slice(1));
