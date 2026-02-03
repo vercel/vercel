@@ -25,6 +25,7 @@
 /packages/python*                        @vercel/ci-cd @vercel/team-python
 /python                                  @vercel/ci-cd @vercel/team-python
 /.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python
+/.claude/skills/vercel-runtime-*         @vercel/ci-cd @vercel/compute
 
 # Unrestricted Paths
 # These paths are updated by the changeset CLI for "Version Packages" pull requests
