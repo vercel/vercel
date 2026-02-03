@@ -167,11 +167,11 @@ function outputTable(
       formatCount(store.count),
     ];
 
-    if (noProjects) {
-      return [...baseRow, age];
+    if (!noProjects) {
+      baseRow.push(formatProjects(store.projectsMetadata));
     }
-
-    return [...baseRow, formatProjects(store.projectsMetadata), age];
+    baseRow.push(age);
+    return baseRow;
   });
 
   const tablePrint = table(
