@@ -37,9 +37,12 @@ export default async function restore(client: Client, argv: string[]) {
 
   const { versions } = await getRouteVersions(client, project.id, { teamId });
 
-  const version = versions.find(v => v.id === versionIdentifier);
+  // Support both full UUIDs and partial IDs (matching the truncated display from list-versions)
+  const matchingVersions = versions.filter(v =>
+    v.id.startsWith(versionIdentifier)
+  );
 
-  if (!version) {
+  if (matchingVersions.length === 0) {
     output.error(
       `Version "${versionIdentifier}" not found. Run ${chalk.cyan(
         getCommandName('routes list-versions')
@@ -47,6 +50,17 @@ export default async function restore(client: Client, argv: string[]) {
     );
     return 1;
   }
+
+  if (matchingVersions.length > 1) {
+    output.error(
+      `Multiple versions match "${versionIdentifier}". Please provide a more specific ID:\n${matchingVersions
+        .map(v => `  ${v.id}`)
+        .join('\n')}`
+    );
+    return 1;
+  }
+
+  const version = matchingVersions[0];
 
   if (version.isLive) {
     output.error(
