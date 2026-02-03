@@ -3,6 +3,7 @@ import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
+import { resolveProjectCwd } from '../projects/find-project-root';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -30,6 +31,8 @@ export async function ensureLink(
   cwd: string,
   opts: SetupAndLinkOptions = {}
 ): Promise<ProjectLinked | number> {
+  cwd = await resolveProjectCwd(cwd);
+
   let { link } = opts;
   // All commands respect global --non-interactive; link can override via opts
   const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;

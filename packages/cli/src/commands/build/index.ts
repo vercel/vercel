@@ -81,6 +81,7 @@ import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
 import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
   readProjectSettings,
@@ -162,6 +163,7 @@ export default async function main(client: Client): Promise<number> {
   const rootSpan = new Span({ name: 'vc', reporter });
 
   let { cwd } = client;
+  cwd = await resolveProjectCwd(cwd);
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
