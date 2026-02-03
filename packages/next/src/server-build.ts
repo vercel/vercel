@@ -1268,11 +1268,24 @@ export async function serverBuild({
             manifest === 'server/pages-manifest.json' &&
             !shouldUse404Prerender
           ) {
+            // Replace `(/locale)?/404.html`  with `/(404|_error).js` in pages-manifest to avoid
+            // including static (and non-deterministic) 404 page in lambdas.
             if (manifestData['/404'] === 'pages/404.html') {
               manifestData['/404'] =
                 lambdaPages['404.js'] && !lambdaAppPaths['404.js']
                   ? 'pages/404.js'
                   : 'pages/_error.js';
+            }
+            if (i18n) {
+              for (const locale of i18n.locales) {
+                const locale404Key = `/${locale}/404`;
+                if (manifestData[locale404Key] === `pages/${locale}/404.html`) {
+                  manifestData[locale404Key] =
+                    lambdaPages['404.js'] && !lambdaAppPaths['404.js']
+                      ? `pages/404.js`
+                      : 'pages/_error.js';
+                }
+              }
             }
           }
 
