@@ -14,62 +14,68 @@ export const nft = async (
     span: Span;
   }
 ) => {
-  const nftResult = await nodeFileTrace(Array.from(args.localBuildFiles), {
-    base: args.repoRootPath,
-    processCwd: args.workPath,
-    ts: true,
-    mixedModules: true,
-    ignore: args.ignoreNodeModules
-      ? path => path.includes('node_modules')
-      : undefined,
-    async readFile(fsPath) {
-      try {
-        let source: string | Buffer = await readFile(fsPath);
+  const nftSpan = args.span.child('vc.builder.backends.nft');
 
-        // NFT doesn't support TypeScript, so we need to transform the source code.
-        if (isTypeScriptFile(fsPath)) {
-          const transformResult = await transform(fsPath, source.toString());
-          source = transformResult.code;
+  const runNft = async () => {
+    const nftResult = await nodeFileTrace(Array.from(args.localBuildFiles), {
+      base: args.repoRootPath,
+      processCwd: args.workPath,
+      ts: true,
+      mixedModules: true,
+      ignore: args.ignoreNodeModules
+        ? path => path.includes('node_modules')
+        : undefined,
+      async readFile(fsPath) {
+        try {
+          let source: string | Buffer = await readFile(fsPath);
+
+          // NFT doesn't support TypeScript, so we need to transform the source code.
+          if (isTypeScriptFile(fsPath)) {
+            const transformResult = await transform(fsPath, source.toString());
+            source = transformResult.code;
+          }
+
+          return source;
+        } catch (error: unknown) {
+          if (
+            isNativeError(error) &&
+            'code' in error &&
+            (error.code === 'ENOENT' || error.code === 'EISDIR')
+          ) {
+            return null;
+          }
+          throw error;
         }
+      },
+    });
+    for (const file of nftResult.fileList) {
+      const absolutePath = join(args.repoRootPath, file);
+      const stats = await lstat(absolutePath);
+      const outputPath = file;
 
-        return source;
-      } catch (error: unknown) {
-        if (
-          isNativeError(error) &&
-          'code' in error &&
-          (error.code === 'ENOENT' || error.code === 'EISDIR')
-        ) {
-          return null;
+      if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
+        continue;
+      }
+
+      if (stats.isSymbolicLink() || stats.isFile()) {
+        if (args.ignoreNodeModules) {
+          // Use FileBlob so introspection can include these files
+          const content = await readFile(absolutePath, 'utf-8');
+          args.files[outputPath] = new FileBlob({
+            data: content,
+            mode: stats.mode,
+          });
+        } else {
+          args.files[outputPath] = new FileFsRef({
+            fsPath: absolutePath,
+            mode: stats.mode,
+          });
         }
-        throw error;
-      }
-    },
-  });
-  for (const file of nftResult.fileList) {
-    const absolutePath = join(args.repoRootPath, file);
-    const stats = await lstat(absolutePath);
-    const outputPath = file;
-
-    if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
-      continue;
-    }
-
-    if (stats.isSymbolicLink() || stats.isFile()) {
-      if (args.ignoreNodeModules) {
-        // Use FileBlob so introspection can include these files
-        const content = await readFile(absolutePath, 'utf-8');
-        args.files[outputPath] = new FileBlob({
-          data: content,
-          mode: stats.mode,
-        });
-      } else {
-        args.files[outputPath] = new FileFsRef({
-          fsPath: absolutePath,
-          mode: stats.mode,
-        });
       }
     }
-  }
+  };
+
+  await nftSpan.trace(runNft);
 };
 const isTypeScriptFile = (fsPath: string) => {
   return (

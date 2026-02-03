@@ -49,18 +49,20 @@ export const build: BuildV2 = async args => {
     'builder.name': builderName,
   });
 
+  const buildSpan = span.child('vc.builder.backends.build');
+
   const entrypoint = await findEntrypoint(args.workPath);
   debug('Entrypoint', entrypoint);
   args.entrypoint = entrypoint;
 
   const rolldownResult = await rolldown({
     ...args,
-    span,
+    span: buildSpan,
   });
   const [introspectionResult] = await Promise.all([
     introspection({
       ...args,
-      span,
+      span: buildSpan,
       files: rolldownResult.files,
       handler: rolldownResult.handler,
     }),
@@ -69,7 +71,7 @@ export const build: BuildV2 = async args => {
       localBuildFiles: rolldownResult.localBuildFiles,
       files: rolldownResult.files,
       ignoreNodeModules: false,
-      span,
+      span: buildSpan,
     }),
   ]);
 
