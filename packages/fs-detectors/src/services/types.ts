@@ -5,6 +5,7 @@ import type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
@@ -15,33 +16,21 @@ export type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Service,
   Builder,
 };
 
-export interface ResolvedService {
-  name: string;
-  type: ServiceType;
-  /** Service group name if this service belongs to a group */
-  group?: string;
-  /* build config */
-  workspace: string;
-  entrypoint?: string;
-  framework?: string;
+/**
+ * Fully resolved service with build-time configuration.
+ * Extends Service (the output type) with fields needed during the build process.
+ */
+export interface ResolvedService extends Service {
+  /** Builder configuration for this service */
   builder: Builder;
+  /** Custom build command */
   buildCommand?: string;
+  /** Custom install command */
   installCommand?: string;
-  runtime?: string;
-  /**
-   * URL path prefix for routing requests to this service.
-   * Required for web services; requests matching this prefix are routed to this service.
-   * Root services use "/" as the catch-all.
-   */
-  routePrefix?: string;
-  /* Cron service config */
-  schedule?: string;
-  /* Worker service config */
-  topic?: string;
-  consumer?: string;
 }
 
 export interface DetectServicesOptions {

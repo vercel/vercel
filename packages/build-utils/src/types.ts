@@ -522,6 +522,37 @@ export interface Cron {
   schedule: string;
 }
 
+/**
+ * Base service type for the Build Output API config.json.
+ * Contains the resolved service metadata needed by the platform.
+ *
+ * @see ResolvedService in @vercel/fs-detectors extends this with build-time fields
+ */
+export interface Service {
+  /** Unique name identifying this service */
+  name: string;
+  /** Type of service: web, cron, or worker */
+  type: ServiceType;
+  /** Service group name if this service belongs to a group */
+  group?: string;
+  /** Path to the workspace directory containing the service */
+  workspace: string;
+  /** Entry file for the service, relative to the workspace */
+  entrypoint?: string;
+  /** Framework used by this service (e.g., 'nextjs', 'remix') */
+  framework?: string;
+  /** Lambda runtime (e.g., 'nodejs20.x', 'python3.12') */
+  runtime?: string;
+  /** URL path prefix for routing requests to this service (web services only) */
+  routePrefix?: string;
+  /** Cron schedule expression (cron services only) */
+  schedule?: string;
+  /** Topic name for worker services */
+  topic?: string;
+  /** Consumer name for worker services */
+  consumer?: string;
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;

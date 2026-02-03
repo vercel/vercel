@@ -10,6 +10,7 @@ import type {
   BuilderFunctions,
   ProjectSettings,
 } from '@vercel/build-utils';
+import type { ResolvedService } from './services/types';
 import { isOfficialRuntime } from './is-official-runtime';
 import { isPythonEntrypoint } from '@vercel/build-utils';
 import { getServicesBuilders } from './services/get-services-builders';
@@ -114,6 +115,7 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  services?: ResolvedService[];
 }> {
   const { projectSettings = {} } = options;
   const { framework } = projectSettings;
