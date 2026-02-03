@@ -135,8 +135,13 @@ export function resolveConfiguredService(
     builderSrc = config.entrypoint!;
   }
 
-  // routePrefix is required for web services
-  const routePrefix = type === 'web' ? config.routePrefix : undefined;
+  // routePrefix is required for web services; normalize to always start with /
+  const routePrefix =
+    type === 'web' && config.routePrefix
+      ? config.routePrefix.startsWith('/')
+        ? config.routePrefix
+        : `/${config.routePrefix}`
+      : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces
   const isRoot = workspace === '.';

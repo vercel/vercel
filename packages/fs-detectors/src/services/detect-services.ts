@@ -96,13 +96,8 @@ export function generateServicesRoutes(
   const functionServices = webServices.filter(s => !isStaticBuild(s));
 
   // Sort by prefix length (longest first) so specific routes match before broad ones.
-  // Root services ("/") go last as the catch-all fallback.
   const sortServices = <T extends { routePrefix: string }>(arr: T[]): T[] =>
-    [...arr].sort((a, b) => {
-      if (a.routePrefix === '/') return 1;
-      if (b.routePrefix === '/') return -1;
-      return b.routePrefix.length - a.routePrefix.length;
-    });
+    [...arr].sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
   const sortedFunctionServices = sortServices(functionServices);
   const sortedStaticServices = sortServices(staticServices);
