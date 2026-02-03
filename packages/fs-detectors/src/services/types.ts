@@ -20,16 +20,9 @@ export type {
   Builder,
 };
 
-/**
- * Fully resolved service with build-time configuration.
- * Extends Service (the output type) with fields needed during the build process.
- */
 export interface ResolvedService extends Service {
-  /** Builder configuration for this service */
   builder: Builder;
-  /** Custom build command */
   buildCommand?: string;
-  /** Custom install command */
   installCommand?: string;
 }
 
