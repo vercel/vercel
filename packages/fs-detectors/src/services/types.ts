@@ -20,11 +20,10 @@ export type {
   Builder,
 };
 
-export interface ResolvedService extends Service {
-  builder: Builder;
-  buildCommand?: string;
-  installCommand?: string;
-}
+/**
+ * @deprecated Use `Service` instead
+ */
+export type ResolvedService = Service;
 
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;

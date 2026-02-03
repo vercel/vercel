@@ -529,7 +529,10 @@ export interface Service {
   workspace: string;
   entrypoint?: string;
   framework?: string;
+  builder: Builder;
   runtime?: string;
+  buildCommand?: string;
+  installCommand?: string;
   /* web service config */
   routePrefix?: string;
   /* cron service config */
