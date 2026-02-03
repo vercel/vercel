@@ -105,10 +105,7 @@ export default async function listStores(
       (store): store is BlobStore => store.type === 'blob'
     );
 
-    if (blobStores.length === 0) {
-      if (jsonOutput) {
-        client.stdout.write(`${JSON.stringify({ stores: [] }, null, 2)}\n`);
-      } else {
+    if (blobStores.length === 0 && !jsonOutput){
         output.log(`No blob stores found in ${chalk.bold(contextName)}.`);
       }
       return 0;
