@@ -263,7 +263,8 @@ export class ServicesOrchestrator {
     }
 
     // Try to use builder's startDevServer if available
-    const builderSpec = framework?.useRuntime?.use;
+    // Prefer framework's useRuntime, but fall back to resolved builder from service config
+    const builderSpec = framework?.useRuntime?.use || service.builder?.use;
     if (builderSpec) {
       const result = await this.tryStartWithBuilder(
         service,
@@ -307,8 +308,11 @@ export class ServicesOrchestrator {
         `Starting ${chalk.bold(service.name)} using ${chalk.cyan.bold(builderSpec)}`
       );
 
+      // Use the resolved builder.src which includes framework defaults,
+      // or fall back to explicit entrypoint
+      const entrypoint = service.builder?.src || service.entrypoint || '';
       const result = await builder.startDevServer({
-        entrypoint: service.entrypoint || '',
+        entrypoint,
         workPath: workspacePath,
         repoRootPath: this.repoRoot,
         config: { framework: service.framework },
