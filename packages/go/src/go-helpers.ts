@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import tar from 'tar';
+import * as tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import {
