@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.21
+
+### Patch Changes
+
+- Strip routes-manifest.json for determinism ([#14783](https://github.com/vercel/vercel/pull/14783))
+
+- Update Next.js adapter version ([#14801](https://github.com/vercel/vercel/pull/14801))
+
 ## 4.15.20
 
 ### Patch Changes

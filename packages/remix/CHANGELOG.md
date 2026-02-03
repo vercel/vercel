@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.5.10
+
+### Patch Changes
+
+- [remix] Prevent 404 responses from being cached with immutable headers ([#14828](https://github.com/vercel/vercel/pull/14828))
+
 ## 5.5.9
 
 ### Patch Changes
