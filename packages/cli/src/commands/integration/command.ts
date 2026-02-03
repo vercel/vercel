@@ -154,6 +154,7 @@ export const integrationCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    balanceSubcommand,
     listSubcommand,
     openSubcommand,
     removeSubcommand,
