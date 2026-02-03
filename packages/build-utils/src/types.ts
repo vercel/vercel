@@ -524,22 +524,18 @@ export interface Cron {
 
 export interface Service {
   name: string;
-  /** Type of service: web, cron, or worker */
   type: ServiceType;
-  /** Service group name if this service belongs to a group */
   group?: string;
-  /** Path to the workspace directory containing the service */
   workspace: string;
-  /** Entry file for the service, relative to the workspace */
   entrypoint?: string;
   framework?: string;
   runtime?: string;
+  /* web service config */
   routePrefix?: string;
-  /** Cron schedule expression (cron services only) */
+  /* cron service config */
   schedule?: string;
-  /** Topic name for worker services */
+  /* worker service config */
   topic?: string;
-  /** Consumer name for worker services */
   consumer?: string;
 }
 
