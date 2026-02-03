@@ -1,8 +1,6 @@
 from __future__ import annotations
 import sys
 import os
-import site
-import importlib
 import base64
 import json
 import inspect
@@ -541,11 +539,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                             response.close()
         else:
             # ASGI: Run with Uvicorn so we get proper lifespan and protocol handling
-            try:
-                import uvicorn
-            except Exception:
-                _stderr('Uvicorn is required to run ASGI apps. Please ensure it is installed.')
-                exit(1)
+            from vercel_runtime._vendor import uvicorn
 
             # Prefer a callable app.asgi when available; some frameworks expose a boolean here
             user_app_candidate = getattr(__vc_module.app, 'asgi', None)
@@ -670,8 +664,8 @@ elif 'app' in __vc_variables:
         print('using Web Server Gateway Interface (WSGI)')
         from io import BytesIO
         from urllib.parse import urlparse
-        from werkzeug.datastructures import Headers
-        from werkzeug.wrappers import Response
+        from vercel_runtime._vendor.werkzeug.datastructures import Headers
+        from vercel_runtime._vendor.werkzeug.wrappers import Response
 
         string_types = (str,)
 
@@ -758,7 +752,7 @@ elif 'app' in __vc_variables:
         import asyncio
         import enum
         from urllib.parse import urlparse
-        from werkzeug.datastructures import Headers
+        from vercel_runtime._vendor.werkzeug.datastructures import Headers
 
 
         class ASGICycleState(enum.Enum):
