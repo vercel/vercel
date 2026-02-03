@@ -1,0 +1,29 @@
+{
+  "experimentalServices": {
+    "frontend": {
+      "framework": "nextjs",
+      "workspace": "frontend",
+      "routePrefix": "/"
+    },
+    "service-express": {
+      "framework": "express",
+      "workspace": "service-express",
+      "routePrefix": "/api/express"
+    },
+    "service-hono": {
+      "framework": "hono",
+      "workspace": "service-hono",
+      "routePrefix": "/api/hono"
+    },
+    "service-fastapi": {
+      "framework": "fastapi",
+      "workspace": "service-fastapi",
+      "routePrefix": "/api/fastapi"
+    },
+    "service-flask": {
+      "framework": "flask",
+      "workspace": "service-flask",
+      "routePrefix": "/api/flask"
+    }
+  }
+}

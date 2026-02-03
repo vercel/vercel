@@ -1,0 +1,7 @@
+{
+  "name": "service-express",
+  "private": true,
+  "dependencies": {
+    "express": "5.1.0"
+  }
+}

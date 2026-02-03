@@ -1,0 +1,8 @@
+{
+  "name": "multi-service-explicit-config",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd frontend && npm install && cd ../service-express && npm install && cd ../service-hono && npm install && cd ../service-fastapi && python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/pip install -r requirements.txt && cd ../service-flask && python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/pip install -r requirements.txt"
+  }
+}

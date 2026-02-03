@@ -1,0 +1,8 @@
+{
+  "name": "multi-service-auto-apps-services",
+  "private": true,
+  "scripts": {
+    "build": "echo 'no build needed'",
+    "postinstall": "cd services/service-fastapi && python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/pip install -r requirements.txt && cd ../service-flask && python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/pip install -r requirements.txt"
+  }
+}

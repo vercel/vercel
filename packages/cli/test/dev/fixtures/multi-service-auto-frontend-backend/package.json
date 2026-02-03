@@ -1,0 +1,7 @@
+{
+  "name": "multi-service-auto-frontend-backend",
+  "private": true,
+  "scripts": {
+    "build": "echo 'no build needed'"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "apps-services-hono-fixture",
+  "private": true,
+  "dependencies": {
+    "hono": "^4.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "explicit-config-express",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "express": "5.1.0"
+  }
+}

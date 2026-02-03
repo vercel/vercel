@@ -1,0 +1,14 @@
+{
+  "name": "explicit-config-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port $PORT",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "13.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}
