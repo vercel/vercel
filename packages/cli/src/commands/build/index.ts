@@ -31,7 +31,6 @@ import {
   type Meta,
   type PackageJson,
   type Service,
-  shouldUseExperimentalBackends,
   isBackendBuilder,
   type Lambda,
 } from '@vercel/build-utils';
@@ -736,21 +735,7 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          async () => {
-            // Use experimental backends builder only for backend framework builders,
-            // not for static builders (which handle public/ directories)
-            if (
-              shouldUseExperimentalBackends(buildConfig.framework) &&
-              builderPkg.name !== '@vercel/static' &&
-              isBackendBuilder(build)
-            ) {
-              const experimentalBackendBuilder = await import(
-                '@vercel/backends'
-              );
-              return experimentalBackendBuilder.build(buildOptions);
-            }
-            return builder.build(buildOptions);
-          }
+          async () => builder.build(buildOptions)
         );
 
         // If the build result has no routes and the framework has default routes,
