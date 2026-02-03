@@ -134,4 +134,35 @@ describe('routes restore', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Success!');
   });
+
+  it('should accept partial version IDs', async () => {
+    useUpdateRouteVersion({
+      versions: [
+        { id: 'abc12345-6789-abcd-ef00-111111111111', isLive: true },
+        { id: 'def12345-6789-abcd-ef00-222222222222', isStaging: false },
+      ],
+    });
+    useRoutesWithDiffForPublish();
+    // Use partial ID matching the truncated display (12 chars)
+    client.setArgv('routes', 'restore', 'def12345-678', '--yes');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Success!');
+  });
+
+  it('should error when partial ID matches multiple versions', async () => {
+    useUpdateRouteVersion({
+      versions: [
+        { id: 'abc12345-6789-abcd-ef00-111111111111', isLive: true },
+        { id: 'abc12345-6789-abcd-ef00-222222222222', isStaging: false },
+        { id: 'abc12345-6789-abcd-ef00-333333333333', isStaging: false },
+      ],
+    });
+    useRoutesWithDiffForPublish();
+    // Partial ID matches multiple versions
+    client.setArgv('routes', 'restore', 'abc12345', '--yes');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('Multiple versions match');
+  });
 });
