@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.3.0
+
+### Minor Changes
+
+- vendor Python runtime dependencies ([#14827](https://github.com/vercel/vercel/pull/14827))
+
 ## 0.2.0
 
 ### Minor Changes
