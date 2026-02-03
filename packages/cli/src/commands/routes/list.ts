@@ -41,7 +41,7 @@ export default async function list(client: Client, argv: string[]) {
       'header',
       'rewrite',
       'redirect',
-      'terminate',
+      'set_status',
       'transform',
     ];
     if (!validFilters.includes(filter)) {

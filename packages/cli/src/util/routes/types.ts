@@ -62,7 +62,7 @@ export type RouteType =
   | 'header'
   | 'rewrite'
   | 'redirect'
-  | 'terminate'
+  | 'set_status'
   | 'transform';
 
 /**
@@ -72,7 +72,7 @@ const ROUTE_TYPE_LABELS: Record<RouteType, string> = {
   header: 'Header',
   rewrite: 'Rewrite',
   redirect: 'Redirect',
-  terminate: 'Terminating',
+  set_status: 'Set Status',
   transform: 'Transform',
 };
 
