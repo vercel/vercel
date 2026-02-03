@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -364,6 +365,89 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const publishSubcommand = {
+  name: 'publish',
+  aliases: [],
+  description: 'Publish staged routing changes to production',
+  arguments: [
+    {
+      name: 'version-id',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when publishing',
+    },
+  ],
+  examples: [
+    {
+      name: 'Publish staged changes',
+      value: `${packageName} routes publish`,
+    },
+    {
+      name: 'Publish a specific version',
+      value: `${packageName} routes publish <version-id>`,
+    },
+    {
+      name: 'Publish without confirmation',
+      value: `${packageName} routes publish --yes`,
+    },
+  ],
+} as const;
+
+export const restoreSubcommand = {
+  name: 'restore',
+  aliases: [],
+  description: 'Restore a previous routing version to production',
+  arguments: [
+    {
+      name: 'version-id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when restoring',
+    },
+  ],
+  examples: [
+    {
+      name: 'Restore a previous version',
+      value: `${packageName} routes restore <version-id>`,
+    },
+    {
+      name: 'Restore without confirmation',
+      value: `${packageName} routes restore <version-id> --yes`,
+    },
+  ],
+} as const;
+
+export const discardSubcommand = {
+  name: 'discard',
+  aliases: [],
+  description: 'Discard staged routing changes',
+  arguments: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when discarding',
+    },
+  ],
+  examples: [
+    {
+      name: 'Discard staged changes',
+      value: `${packageName} routes discard`,
+    },
+    {
+      name: 'Discard without confirmation',
+      value: `${packageName} routes discard --yes`,
+    },
+  ],
+} as const;
+
 export const routesCommand = {
   name: 'routes',
   aliases: ['route'],
@@ -375,6 +459,9 @@ export const routesCommand = {
     listVersionsSubcommand,
     inspectSubcommand,
     addSubcommand,
+    publishSubcommand,
+    restoreSubcommand,
+    discardSubcommand,
   ],
   options: [],
   examples: [],

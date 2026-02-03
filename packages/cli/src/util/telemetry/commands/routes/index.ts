@@ -36,6 +36,27 @@ export class RoutesTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandPublish(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'publish',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRestore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'restore',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDiscard(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'discard',
+      value: actual,
+    });
+  }
 }
 
 /**
