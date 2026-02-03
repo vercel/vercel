@@ -136,7 +136,6 @@ Use `runtime: 'executable'` with `runtimeLanguage: 'rust' | 'go'` for IPC orches
 | `runtimeLanguage`           | `'go'` or `'rust'` for executable runtime                         |
 | `architecture`              | `'x86_64'` or `'arm64'`                                           |
 | `supportsResponseStreaming` | Enable streaming responses                                        |
-| `supportsWrapper`           | Enable large env support (64KB)                                   |
 
 ## Common Pitfalls
 
