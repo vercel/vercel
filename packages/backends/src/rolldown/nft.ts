@@ -50,7 +50,7 @@ export const nft = async (
     const stats = await lstat(absolutePath);
     const outputPath = file;
 
-    if (args.localBuildFiles.has(join(args.workPath, outputPath))) {
+    if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
       continue;
     }
 

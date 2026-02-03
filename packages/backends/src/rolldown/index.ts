@@ -258,6 +258,15 @@ module.exports = requireFromContext('${pkgName}');
       write: false,
       cwd: args.workPath,
       platform: 'node',
+      transform: {
+        define:
+          format === 'esm'
+            ? {
+                __dirname: 'import.meta.dirname',
+                __filename: 'import.meta.filename',
+              }
+            : undefined,
+      },
       tsconfig: true,
       plugins: [plugin()],
       output: {
