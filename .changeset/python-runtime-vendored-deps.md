@@ -3,4 +3,4 @@
 '@vercel/python': minor
 ---
 
-vendor runtime dependencies
+vendor Python runtime dependencies
