@@ -122,6 +122,13 @@ const handleUnexpected = async (err: Error) => {
     return;
   }
 
+  // Handle user pressing Ctrl+C to cancel a prompt
+  if (message === 'User force closed the prompt with 0 null') {
+    output.debug(`User canceled the prompt`);
+    process.exit(0);
+    return;
+  }
+
   output.error(`An unexpected error occurred!\n${err.stack}`);
   await reportError(getSentry(), client, err);
 
