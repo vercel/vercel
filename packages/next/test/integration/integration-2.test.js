@@ -807,8 +807,7 @@ describe('determinism', () => {
       )
     );
     expect(originalManifest.deploymentId).toBeDefined();
-    // Not merged yet in Next.js
-    // expect(originalManifest.headers.length).not.toBe(0);
+    expect(originalManifest.headers.length).not.toBe(0);
 
     for (const entry of Object.values(buildResult.output)) {
       if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
