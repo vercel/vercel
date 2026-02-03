@@ -7,7 +7,11 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { Command } from '../help';
-import type { RoutingRule, RouteType } from '../../util/routes/types';
+import type {
+  RoutingRule,
+  RouteType,
+  RouteVersion,
+} from '../../util/routes/types';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -223,26 +227,32 @@ export function getPrimaryRouteType(route: RoutingRule): string | null {
 }
 
 /**
- * Find a version by a partial ID match.
- * Returns the version if exactly one match is found, or null/error details.
+ * Find a version by ID, supporting partial ID matching.
+ * Returns the matched version or an error message.
  */
 export function findVersionById(
-  versions: { id: string }[],
+  versions: RouteVersion[],
   identifier: string
-): { version: { id: string } | null; error?: string } {
-  // Try exact match first
-  const exact = versions.find(v => v.id === identifier);
-  if (exact) return { version: exact };
+):
+  | { version: RouteVersion; error?: undefined }
+  | { version?: undefined; error: string } {
+  const matchingVersions = versions.filter(v => v.id.startsWith(identifier));
 
-  // Try partial match
-  const matches = versions.filter(v => v.id.startsWith(identifier));
-  if (matches.length === 1) return { version: matches[0] };
-  if (matches.length > 1) {
+  if (matchingVersions.length === 0) {
     return {
-      version: null,
-      error: `Ambiguous version identifier "${identifier}" matches ${matches.length} versions. Please provide more characters.`,
+      error: `Version "${identifier}" not found. Run ${chalk.cyan(
+        getCommandName('routes list-versions')
+      )} to see available versions.`,
     };
   }
 
-  return { version: null };
+  if (matchingVersions.length > 1) {
+    return {
+      error: `Multiple versions match "${identifier}". Please provide a more specific ID:\n${matchingVersions
+        .map(v => `  ${v.id}`)
+        .join('\n')}`,
+    };
+  }
+
+  return { version: matchingVersions[0] };
 }
