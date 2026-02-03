@@ -302,23 +302,31 @@ export function getPrimaryRouteType(route: RoutingRule): string | null {
 }
 
 /**
- * Find a version by a partial ID match.
+ * Find a version by ID, supporting partial ID matching.
  */
 export function findVersionById(
-  versions: { id: string }[],
+  versions: RouteVersion[],
   identifier: string
-): { version: { id: string } | null; error?: string } {
-  const exact = versions.find(v => v.id === identifier);
-  if (exact) return { version: exact };
+):
+  | { version: RouteVersion; error?: undefined }
+  | { version?: undefined; error: string } {
+  const matchingVersions = versions.filter(v => v.id.startsWith(identifier));
 
-  const matches = versions.filter(v => v.id.startsWith(identifier));
-  if (matches.length === 1) return { version: matches[0] };
-  if (matches.length > 1) {
+  if (matchingVersions.length === 0) {
     return {
-      version: null,
-      error: `Ambiguous version identifier "${identifier}" matches ${matches.length} versions. Please provide more characters.`,
+      error: `Version "${identifier}" not found. Run ${chalk.cyan(
+        getCommandName('routes list-versions')
+      )} to see available versions.`,
     };
   }
 
-  return { version: null };
+  if (matchingVersions.length > 1) {
+    return {
+      error: `Multiple versions match "${identifier}". Please provide a more specific ID:\n${matchingVersions
+        .map(v => `  ${v.id}`)
+        .join('\n')}`,
+    };
+  }
+
+  return { version: matchingVersions[0] };
 }

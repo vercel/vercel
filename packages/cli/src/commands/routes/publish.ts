@@ -7,6 +7,7 @@ import {
   ensureProjectLink,
   confirmAction,
   printDiffSummary,
+  findVersionById,
 } from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
@@ -32,16 +33,13 @@ export default async function publish(client: Client, argv: string[]) {
 
   let version;
   if (versionIdentifier) {
-    // User provided a specific version ID
-    version = versions.find(v => v.id === versionIdentifier);
-    if (!version) {
-      output.error(
-        `Version "${versionIdentifier}" not found. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
-      );
+    // User provided a specific version ID (supports partial IDs)
+    const result = findVersionById(versions, versionIdentifier);
+    if (result.error) {
+      output.error(result.error);
       return 1;
     }
+    version = result.version;
   } else {
     // Auto-find staging version
     version = versions.find(v => v.isStaging);
