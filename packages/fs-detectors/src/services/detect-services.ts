@@ -87,82 +87,47 @@ export function generateServicesRoutes(
   const crons: Route[] = [];
   const workers: Route[] = [];
 
-  const webServices = services.filter(
-    (s): s is ResolvedService & { routePrefix: string } =>
-      s.type === 'web' && typeof s.routePrefix === 'string'
-  );
+  // Filter and sort web services by prefix length (longest first)
+  // so more specific routes match before broader ones.
+  const sortedWebServices = services
+    .filter(
+      (s): s is ResolvedService & { routePrefix: string } =>
+        s.type === 'web' && typeof s.routePrefix === 'string'
+    )
+    .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
-  const staticServices = webServices.filter(isStaticBuild);
-  const functionServices = webServices.filter(s => !isStaticBuild(s));
-
-  // Sort by prefix length (longest first) so specific routes match before broad ones.
-  const sortServices = <T extends { routePrefix: string }>(arr: T[]): T[] =>
-    [...arr].sort((a, b) => b.routePrefix.length - a.routePrefix.length);
-
-  const sortedFunctionServices = sortServices(functionServices);
-  const sortedStaticServices = sortServices(staticServices);
-
-  // Generate routes for serverless function services
-  for (const service of sortedFunctionServices) {
-    const { routePrefix, builder } = service;
-
-    // The dest must point to the actual function path (builder.src),
-    // not just the routePrefix, so Vercel can find the .func directory
-    const builderSrc = builder.src || routePrefix;
-    const functionPath = builderSrc.startsWith('/')
-      ? builderSrc
-      : `/${builderSrc}`;
-
-    // `check: true` tells the router to verify the destination exists on the
-    // filesystem before applying the route. If it doesn't exist, the route is
-    // skipped and routing continues. This ensures requests only route to
-    // functions that were successfully built.
-    if (routePrefix === '/') {
-      // Root function service: catch-all route
-      defaults.push({
-        src: '^/(.*)$',
-        dest: functionPath,
-        check: true,
-      });
-    } else {
-      // Non-root function service: prefix-based rewrite
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix.slice(1)
-        : routePrefix;
-      rewrites.push({
-        src: `^/${normalizedPrefix}(?:/.*)?$`,
-        dest: functionPath,
-        check: true,
-      });
-    }
-  }
-
-  // Generate SPA fallback routes for static services
-  // These routes serve index.html for client-side routing after filesystem
-  // routing has been attempted. Framework-specific routes (cache headers, etc.)
-  // are handled by the builder via framework.defaultRoutes.
-  for (const service of sortedStaticServices) {
+  for (const service of sortedWebServices) {
     const { routePrefix } = service;
+    const normalizedPrefix = routePrefix.slice(1); // Strip leading /
 
-    if (routePrefix === '/') {
-      // Root static service: SPA fallback after filesystem routing
-      defaults.push({ handle: 'filesystem' });
-      defaults.push({
-        src: '/(.*)',
-        dest: '/index.html',
-      });
+    if (isStaticBuild(service)) {
+      // Static/SPA service: serve index.html for client-side routing
+      if (routePrefix === '/') {
+        defaults.push({ handle: 'filesystem' });
+        defaults.push({ src: '/(.*)', dest: '/index.html' });
+      } else {
+        rewrites.push({
+          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          dest: `/${normalizedPrefix}/index.html`,
+        });
+      }
     } else {
-      // Prefixed static service: SPA fallback for the prefix
-      // Files are mounted at /{prefix}/* by the builder (e.g., admin/index.html)
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix.slice(1)
-        : routePrefix;
+      // Function service: rewrite to the function entrypoint
+      // `check: true` verifies the destination exists before applying the route
+      const builderSrc = service.builder.src || routePrefix;
+      const functionPath = builderSrc.startsWith('/')
+        ? builderSrc
+        : `/${builderSrc}`;
 
-      // SPA fallback: if no static file matches under this prefix, serve its index.html
-      rewrites.push({
-        src: `^/${normalizedPrefix}(?:/.*)?$`,
-        dest: `/${normalizedPrefix}/index.html`,
-      });
+      if (routePrefix === '/') {
+        defaults.push({ src: '^/(.*)$', dest: functionPath, check: true });
+      } else {
+        rewrites.push({
+          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          dest: functionPath,
+          check: true,
+        });
+      }
     }
   }
 
