@@ -10,12 +10,13 @@ import {
   type BuildV2,
   type Lambda,
 } from '@vercel/build-utils';
-import { findEntrypoint } from './cervel/index.js';
+import { findEntrypointOrThrow } from './cervel/index.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
   serve as cervelServe,
   findEntrypoint,
+  findEntrypointOrThrow,
   nodeFileTrace,
   getBuildSummary,
   srvxOptions,
@@ -54,15 +55,12 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
-    const entrypoint = await findEntrypoint(args.workPath);
+    const entrypoint = await findEntrypointOrThrow(args.workPath);
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 
-    const typescriptPromise = typescript({
-      entrypoint,
-      workPath: args.workPath,
-      span: buildSpan,
-    });
+    const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
+
     // Always run rolldown, even if the user has provided a build command
     // It's very fast and we use it for introspection.
     const rolldownResult = await rolldown({
@@ -77,7 +75,13 @@ export const build: BuildV2 = async args => {
       handler: rolldownResult.handler,
     });
 
-    const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
+    // This must come after the build command since turbo repo worksapce deps may need to be transpiled.
+    const typescriptPromise = typescript({
+      entrypoint,
+      workPath: args.workPath,
+      span: buildSpan,
+    });
+
     const localBuildFiles =
       userBuildResult?.localBuildFiles.size > 0
         ? userBuildResult?.localBuildFiles

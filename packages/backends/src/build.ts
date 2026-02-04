@@ -17,19 +17,25 @@ export const maybeDoBuildCommand = async (
   let outputDir: string | undefined;
   let entrypoint: string | undefined;
   if (buildCommandResult && outputSetting) {
-    const _outputDir = join(args.workPath, outputSetting);
-    const _entrypoint = await findEntrypoint(_outputDir);
-    outputDir = _outputDir;
-    entrypoint = _entrypoint;
-  }
-  const commonOutputDirectories = ['dist', 'build', 'output'];
-  if (buildCommandResult && !outputSetting) {
-    for (const outputDirectory of commonOutputDirectories) {
-      const _outputDir = join(args.workPath, outputDirectory);
-      if (existsSync(_outputDir)) {
-        const _entrypoint = await findEntrypoint(_outputDir);
+    if (outputSetting) {
+      const _outputDir = join(args.workPath, outputSetting);
+      const _entrypoint = await findEntrypoint(_outputDir);
+      if (_entrypoint) {
         outputDir = _outputDir;
         entrypoint = _entrypoint;
+      }
+    } else {
+      const commonOutputDirectories = ['dist', 'build', 'output'];
+      for (const outputDirectory of commonOutputDirectories) {
+        const _outputDir = join(args.workPath, outputDirectory);
+        if (existsSync(_outputDir)) {
+          const _entrypoint = await findEntrypoint(_outputDir);
+          if (_entrypoint) {
+            outputDir = _outputDir;
+            entrypoint = _entrypoint;
+            break;
+          }
+        }
       }
     }
   }

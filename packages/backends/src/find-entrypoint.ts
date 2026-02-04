@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { existsSync } from 'node:fs';
 
 const frameworks = [
   'express',
@@ -11,7 +10,16 @@ const frameworks = [
   'h3',
 ];
 
-const entrypointFilenames = ['app', 'index', 'server', 'main'];
+const entrypointFilenames = [
+  'app',
+  'index',
+  'server',
+  'main',
+  'src/app',
+  'src/index',
+  'src/server',
+  'src/main',
+];
 
 const entrypointExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
@@ -26,26 +34,8 @@ const createFrameworkRegex = (framework: string) =>
   );
 
 export const findEntrypoint = async (
-  cwd: string,
-  options?: { ignoreRegex?: boolean }
-) => {
-  const ignoreRegex = options?.ignoreRegex ?? false;
-
-  // If ignoreRegex is true, just find the first file that exists
-  if (ignoreRegex) {
-    for (const entrypoint of entrypoints) {
-      if (existsSync(join(cwd, entrypoint))) {
-        return entrypoint;
-      }
-    }
-    for (const entrypoint of entrypoints) {
-      if (existsSync(join(cwd, 'src', entrypoint))) {
-        return join('src', entrypoint);
-      }
-    }
-    throw new Error('No entrypoint file found');
-  }
-
+  cwd: string
+): Promise<string | undefined> => {
   let framework: string | undefined;
   try {
     // Original behavior: check for framework imports
@@ -68,32 +58,32 @@ export const findEntrypoint = async (
         // ignore
       }
     }
-    throw new Error('No entrypoint or framework found');
   }
 
-  const regex = createFrameworkRegex(framework);
+  const regex = framework ? createFrameworkRegex(framework) : undefined;
 
   for (const entrypoint of entrypoints) {
     const entrypointPath = join(cwd, entrypoint);
     try {
       const content = await readFile(entrypointPath, 'utf-8');
-      if (regex.test(content)) {
-        return entrypoint;
+      if (regex) {
+        if (regex.test(content)) {
+          return entrypoint;
+        }
       }
-    } catch (e) {
-      continue;
+    } catch (_) {
+      // ignore
     }
   }
-  for (const entrypoint of entrypoints) {
-    const entrypointPath = join(cwd, 'src', entrypoint);
-    try {
-      const content = await readFile(entrypointPath, 'utf-8');
-      if (regex.test(content)) {
-        return join('src', entrypoint);
-      }
-    } catch (e) {
-      continue;
-    }
+  return undefined;
+};
+
+export const findEntrypointOrThrow = async (cwd: string): Promise<string> => {
+  const entrypoint = await findEntrypoint(cwd);
+  if (!entrypoint) {
+    throw new Error(
+      `No entrypoint found in "${cwd}". Expected one of: ${entrypoints.join(', ')}`
+    );
   }
-  throw new Error('No entrypoint found');
+  return entrypoint;
 };

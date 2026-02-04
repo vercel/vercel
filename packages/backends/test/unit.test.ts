@@ -73,7 +73,7 @@ const getFixtureConfig = (vercelJson: VercelJson | null) => {
 // Set to true to use packages/backends/debug instead of a temp directory
 const USE_DEBUG_DIR = false;
 // Uncomment to enable debug logs
-// process.env.VERCEL_BUILDER_DEBUG = '1';
+process.env.VERCEL_BUILDER_DEBUG = '0';
 
 const DEBUG_DIR = join(__dirname, 'debug');
 

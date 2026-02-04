@@ -76,7 +76,7 @@ export async function resolve(
     }
   }
 
-  // For bare specifiers, resolve from repoRootPath
+  // For bare specifiers from files in tmpDir, resolve from repoRootPath
   if (
     !specifier.startsWith('.') &&
     !specifier.startsWith('/') &&
@@ -84,21 +84,27 @@ export async function resolve(
     context.parentURL
   ) {
     const parentPath = fileURLToPath(context.parentURL);
-    const relativeToTmp = relative(tmpDir, parentPath);
-    const mappedParent = join(repoRootPath, relativeToTmp);
-    const result = await nextResolve(specifier, {
-      ...context,
-      parentURL: pathToFileURL(mappedParent).href,
-    });
 
-    // Track hono/express URLs for shimming in load hook
-    if (specifier === 'hono') {
-      honoUrl = result.url;
-    } else if (specifier === 'express') {
-      expressUrl = result.url;
+    // Only apply the mapping for files inside tmpDir (the build output)
+    // Files outside tmpDir (like @vercel/backends introspection files) should
+    // resolve their dependencies normally
+    if (parentPath.startsWith(tmpDir)) {
+      const relativeToTmp = relative(tmpDir, parentPath);
+      const mappedParent = join(repoRootPath, relativeToTmp);
+      const result = await nextResolve(specifier, {
+        ...context,
+        parentURL: pathToFileURL(mappedParent).href,
+      });
+
+      // Track hono/express URLs for shimming in load hook
+      if (specifier === 'hono') {
+        honoUrl = result.url;
+      } else if (specifier === 'express') {
+        expressUrl = result.url;
+      }
+
+      return result;
     }
-
-    return result;
   }
 
   return nextResolve(specifier, context);

@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "routes": [
+    {
+      "handle": "error"
+    },
+    {
+      "status": 404,
+      "src": "^(?!/api).*$",
+      "dest": "/404.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^(?:\\/echo)(?:\\/$)?$",
+      "dest": "/echo",
+      "methods": ["GET"]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
+  "crons": []
+}

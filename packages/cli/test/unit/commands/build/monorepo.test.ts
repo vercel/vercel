@@ -159,6 +159,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
   afterEach(() => {
     delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
     delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+    delete process.env.TURBO_FORCE;
   });
 
   it.skipIf(process.platform === 'win32').each([
@@ -228,6 +229,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
       // Enable monorepo support
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      process.env.TURBO_FORCE = '1'; // Force execution, ignore cache
       if (experimentalBackends) {
         process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
       }
@@ -242,6 +244,11 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       // Verify the build output exists
       const outputExists = await fs.pathExists(output);
       expect(outputExists).toBe(true);
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      await expect(JSON.stringify(config, null, 2)).toMatchFileSnapshot(
+        '__filesnapshots__/monorepo.config.json'
+      );
 
       // Check that functions were created
       const functionsDir = join(output, 'functions');
