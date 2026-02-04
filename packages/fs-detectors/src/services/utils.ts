@@ -67,8 +67,21 @@ export function frameworkSupportsPrefixMount(
 
   // If defaultRoutes matches our standard SPA pattern, safe to prefix
   // (e.g., Svelte defines defaultRoutes but they're the same as DEFAULT_SPA_ROUTES)
-  const defaultRoutesJson = JSON.stringify(DEFAULT_SPA_ROUTES);
-  return JSON.stringify(framework.defaultRoutes) === defaultRoutesJson;
+  return isStandardSpaRoutes(framework.defaultRoutes);
+}
+
+/**
+ * Check if routes match the standard SPA fallback pattern.
+ */
+function isStandardSpaRoutes(routes: Route[]): boolean {
+  if (routes.length !== 2) return false;
+
+  const [first, second] = routes;
+  const isFilesystemHandle = 'handle' in first && first.handle === 'filesystem';
+  const isSpaFallback =
+    'src' in second && second.src === '/(.*)' && second.dest === '/index.html';
+
+  return isFilesystemHandle && isSpaFallback;
 }
 
 /**
