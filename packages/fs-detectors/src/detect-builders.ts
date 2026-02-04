@@ -9,6 +9,7 @@ import type {
   Config,
   BuilderFunctions,
   ProjectSettings,
+  Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
@@ -119,6 +120,7 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  services?: Service[];
 }> {
   const { projectSettings = {} } = options;
   const { framework } = projectSettings;
