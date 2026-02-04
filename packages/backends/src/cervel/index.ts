@@ -3,7 +3,7 @@ import { rolldown } from './rolldown.js';
 import { typescript } from './typescript.js';
 import { join } from 'node:path';
 import execa from 'execa';
-import { findEntrypoint } from './find-entrypoint.js';
+import { findEntrypoint } from '../find-entrypoint.js';
 import { Colors as c } from './utils.js';
 import { Span } from '@vercel/build-utils';
 export { nodeFileTrace } from './node-file-trace.js';

@@ -20,7 +20,7 @@ import { z } from 'zod';
 import {
   BEGIN_INTROSPECTION_RESULT,
   END_INTROSPECTION_RESULT,
-} from '../introspection/util.js';
+} from './util.js';
 
 const require = createRequire(import.meta.url);
 

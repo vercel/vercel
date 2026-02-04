@@ -1,3 +1,4 @@
+// @ts-expect-error
 import { sign } from "jsonwebtoken";
 import cowsay from "cowsay";
 

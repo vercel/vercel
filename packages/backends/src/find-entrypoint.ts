@@ -46,12 +46,17 @@ export const findEntrypoint = async (
     throw new Error('No entrypoint file found');
   }
 
-  // Original behavior: check for framework imports
-  const packageJson = await readFile(join(cwd, 'package.json'), 'utf-8');
-  const packageJsonObject = JSON.parse(packageJson);
-  const framework = frameworks.find(
-    framework => packageJsonObject.dependencies?.[framework]
-  );
+  let framework: string | undefined;
+  try {
+    // Original behavior: check for framework imports
+    const packageJson = await readFile(join(cwd, 'package.json'), 'utf-8');
+    const packageJsonObject = JSON.parse(packageJson);
+    framework = frameworks.find(
+      framework => packageJsonObject.dependencies?.[framework]
+    );
+  } catch (_) {
+    // ignore
+  }
 
   if (!framework) {
     for (const entrypoint of entrypoints) {
@@ -59,8 +64,8 @@ export const findEntrypoint = async (
       try {
         await readFile(entrypointPath, 'utf-8');
         return entrypoint;
-      } catch (e) {
-        continue;
+      } catch (_) {
+        // ignore
       }
     }
     throw new Error('No entrypoint or framework found');

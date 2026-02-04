@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import { pathToRegexp } from 'path-to-regexp';
-import { setupCloseHandlers } from './util.js';
+import { setupCloseHandlers } from '../rolldown/util.js';
 import { debug } from '@vercel/build-utils';
 
 const apps: Hono[] = [];
