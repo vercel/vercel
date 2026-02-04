@@ -18,8 +18,10 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test test/unit.test.ts",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts",
     "test-e2e": "pnpm test test/integration-*",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/unit.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
@@ -38,6 +40,7 @@
     "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.2",
     "smol-toml": "1.5.2",
+    "vitest": "2.1.4",
     "which": "3.0.0"
   }
 }
