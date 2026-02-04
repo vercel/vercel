@@ -14,7 +14,6 @@ export type {
   AutoDetectOptions,
   AutoDetectResult,
 } from './services/auto-detect';
-export { isStaticBuild, getFrameworkDefaultRoutes } from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
