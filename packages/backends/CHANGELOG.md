@@ -1,5 +1,18 @@
 # @vercel/backends
 
+## 0.0.26
+
+### Patch Changes
+
+- Updated dependencies [[`4500f1f482cdc19e0904be3b0e5922ceffc6de62`](https://github.com/vercel/vercel/commit/4500f1f482cdc19e0904be3b0e5922ceffc6de62), [`6d87d02723d4385ed1d08bb855fcc43f9466a984`](https://github.com/vercel/vercel/commit/6d87d02723d4385ed1d08bb855fcc43f9466a984)]:
+  - @vercel/build-utils@13.2.17
+
+## 0.0.25
+
+### Patch Changes
+
+- Improve handling of cjs/esm interop during imports ([#14798](https://github.com/vercel/vercel/pull/14798))
+
 ## 0.0.24
 
 ### Patch Changes

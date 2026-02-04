@@ -135,8 +135,13 @@ export function resolveConfiguredService(
     builderSrc = config.entrypoint!;
   }
 
-  // routePrefix is required for web services
-  const routePrefix = type === 'web' ? config.routePrefix : undefined;
+  // routePrefix is required for web services; normalize to always start with /
+  const routePrefix =
+    type === 'web' && config.routePrefix
+      ? config.routePrefix.startsWith('/')
+        ? config.routePrefix
+        : `/${config.routePrefix}`
+      : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces
   const isRoot = workspace === '.';
@@ -152,6 +157,19 @@ export function resolveConfiguredService(
 
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
   const runtime = isStaticBuild ? undefined : inferredRuntime;
+
+  // Pass routePrefix to builder config as a filesystem mountpoint.
+  // static-build uses this to prefix output paths: '.' = root, 'admin' = /admin/
+  // We strip the leading slash since it's a relative path, not a URL.
+  if (routePrefix) {
+    const stripped = routePrefix.startsWith('/')
+      ? routePrefix.slice(1)
+      : routePrefix;
+    builderConfig.routePrefix = stripped || '.';
+  }
+  if (config.framework) {
+    builderConfig.framework = config.framework;
+  }
 
   return {
     name,

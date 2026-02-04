@@ -14,6 +14,7 @@ export type {
   AutoDetectOptions,
   AutoDetectResult,
 } from './services/auto-detect';
+export { isStaticBuild } from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
