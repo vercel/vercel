@@ -1,4 +1,5 @@
 ---
+'@vercel/fs-detectors': patch
 'vercel': patch
 ---
 
