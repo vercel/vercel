@@ -100,12 +100,17 @@ export async function* upload(
         await semaphore.acquire();
 
         if (aborted) {
+          semaphore.release();
           return bail(new Error('Upload aborted'));
         }
 
         const { data } = file;
+        /**
+         * Note: This branch is unreachable. Directories have undefined hash
+         * in FilesMap and are filtered out by mapToObject before being sent
+         * to the server, so they can't appear in the missing_files response.
+         */
         if (typeof data === 'undefined') {
-          // Directories don't need to be uploaded
           return;
         }
 
