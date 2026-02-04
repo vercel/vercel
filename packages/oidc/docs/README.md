@@ -2,6 +2,10 @@
 
 ## Table of contents
 
+### Interfaces
+
+- [GetVercelOidcTokenOptions](interfaces/GetVercelOidcTokenOptions.md)
+
 ### Functions
 
 - [getContext](README.md#getcontext)
@@ -26,7 +30,7 @@
 
 ### getVercelOidcToken
 
-▸ **getVercelOidcToken**(): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+▸ **getVercelOidcToken**(`options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
 
 Gets the current OIDC token from the request context or the environment variable.
 
@@ -56,6 +60,25 @@ getVercelOidcToken()
   });
 ```
 
+**`Example`**
+
+```js
+// Using the OIDC token with explicit team and project
+getVercelOidcToken({ teamId: 'team_abc', projectId: 'prj_xyz' })
+  .then(token => {
+    console.log('OIDC Token:', token);
+  })
+  .catch(error => {
+    console.error('Error:', error.message);
+  });
+```
+
+#### Parameters
+
+| Name       | Type                                                                   | Description                                 |
+| :--------- | :--------------------------------------------------------------------- | :------------------------------------------ |
+| `options?` | [`GetVercelOidcTokenOptions`](interfaces/GetVercelOidcTokenOptions.md) | Optional configuration for token retrieval. |
+
 #### Returns
 
 [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
@@ -64,7 +87,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:30](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L30)
+[get-vercel-oidc-token.ts:58](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L58)
 
 ---
 
@@ -101,4 +124,4 @@ The OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:85](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L85)
+[get-vercel-oidc-token.ts:115](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L115)
