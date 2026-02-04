@@ -53,6 +53,16 @@ const MAIN_GO_FILENAME = 'main__vc__go__.go';
 
 const HANDLER_FILENAME = `bootstrap${OUT_EXTENSION}`;
 
+// Fluid runtime uses 'executable' as the handler name
+const FLUID_HANDLER_FILENAME = `executable${OUT_EXTENSION}`;
+
+// Enable Fluid IPC protocol for Go functions
+const USE_FLUID_RUNTIME = true;
+
+// Main template file for Fluid runtime
+const MAIN_GO_FLUID_TEMPLATE = 'main-fluid.go';
+const MAIN_GO_LEGACY_TEMPLATE = 'main.go';
+
 interface PortInfo {
   port: number;
 }
@@ -130,9 +140,15 @@ export async function build({
     functionRenames: [],
   };
 
+  // Determine target architecture - support both x86_64 and arm64
+  const targetArch =
+    (meta?.env?.VERCEL_BUILD_ARCH as 'x86_64' | 'arm64') || 'x86_64';
+  const goArch = targetArch === 'arm64' ? 'arm64' : 'amd64';
+
   const env = cloneEnv(process.env, meta.env, {
-    GOARCH: 'amd64',
+    GOARCH: goArch,
     GOOS: 'linux',
+    CGO_ENABLED: '0', // Ensure static binaries for Fluid runtime
   });
 
   try {
@@ -245,20 +261,49 @@ export async function build({
     };
 
     if (packageName === 'main') {
+      if (USE_FLUID_RUNTIME) {
+        // Fluid runtime requires Go modules - package main is not supported
+        throw new Error(
+          `Go Fluid runtime requires Go modules. Please change \`package main\` to \`package handler\` in "${entrypoint}" and add a go.mod file.
+Learn more: https://vercel.com/docs/functions/runtimes/go`
+        );
+      }
+      // Legacy mode: build as package main (deprecated)
+      console.warn(
+        'Warning: Building with `package main` is deprecated. Please migrate to Go modules.'
+      );
       await buildHandlerAsPackageMain(buildOptions);
     } else {
       await buildHandlerWithGoMod(buildOptions);
     }
 
-    const runtime = await getProvidedRuntime();
-    const lambda = new Lambda({
-      files: { ...(await glob('**', outDir)), ...includedFiles },
-      handler: HANDLER_FILENAME,
-      runtime,
-      runtimeLanguage: 'go',
-      supportsWrapper: true,
-      environment: {},
-    });
+    // Determine architecture based on build environment
+    const architecture =
+      (meta?.env?.VERCEL_BUILD_ARCH as 'x86_64' | 'arm64') || 'x86_64';
+
+    // Build Lambda configuration based on whether Fluid runtime is enabled
+    const handlerFilename = USE_FLUID_RUNTIME
+      ? FLUID_HANDLER_FILENAME
+      : HANDLER_FILENAME;
+
+    const lambda = USE_FLUID_RUNTIME
+      ? new Lambda({
+          files: { ...(await glob('**', outDir)), ...includedFiles },
+          handler: handlerFilename,
+          runtime: 'executable',
+          runtimeLanguage: 'go',
+          architecture,
+          supportsResponseStreaming: true,
+          environment: {},
+        })
+      : new Lambda({
+          files: { ...(await glob('**', outDir)), ...includedFiles },
+          handler: handlerFilename,
+          runtime: await getProvidedRuntime(),
+          runtimeLanguage: 'go',
+          supportsWrapper: true,
+          environment: {},
+        });
 
     return {
       output: lambda,
@@ -637,8 +682,13 @@ async function writeEntrypoint(
   goPackageName: string,
   goFuncName: string
 ) {
+  // Use the Fluid runtime template if enabled, otherwise use the legacy template
+  const templateFile = USE_FLUID_RUNTIME
+    ? MAIN_GO_FLUID_TEMPLATE
+    : MAIN_GO_LEGACY_TEMPLATE;
+
   const modMainGoContents = await readFile(
-    join(__dirname, '../main.go'),
+    join(__dirname, '..', templateFile),
     'utf8'
   );
   const mainModGoContents = modMainGoContents
