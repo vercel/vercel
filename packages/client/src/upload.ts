@@ -9,7 +9,12 @@ import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import { VercelClientOptions, DeploymentOptions } from './types';
+import type { Agent } from 'http';
+import type {
+  VercelClientOptions,
+  DeploymentOptions,
+  DeploymentEventType,
+} from './types';
 
 const isClientNetworkError = (err: Error) => {
   if (err.message) {
@@ -33,10 +38,9 @@ export async function* upload(
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
-  const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);
 
-  if (!files && !token && !teamId) {
+  if (!files && !clientOptions.token && !clientOptions.teamId) {
     debug(`Neither 'files', 'token' nor 'teamId are present. Exiting`);
     return;
   }
@@ -75,22 +79,77 @@ export async function* upload(
     payload: { total: files, missing: shas, uploads },
   };
 
+  const uploadGenerator = uploadFiles({
+    agent: clientOptions.agent,
+    apiUrl: clientOptions.apiUrl,
+    debug: clientOptions.debug,
+    teamId: clientOptions.teamId,
+    token: clientOptions.token,
+    userAgent: clientOptions.userAgent,
+    files,
+    shas,
+    uploads,
+  });
+
+  for await (const event of uploadGenerator) {
+    if (event.type === 'error') {
+      return yield event;
+    } else {
+      yield event;
+    }
+  }
+
+  debug('All files uploaded');
+  yield { type: 'all-files-uploaded', payload: files };
+
+  try {
+    debug('Starting deployment creation');
+    for await (const event of deploy(files, clientOptions, deploymentOptions)) {
+      if (event.type === 'alias-assigned') {
+        debug('Deployment is ready');
+        return yield event;
+      }
+
+      yield event;
+    }
+  } catch (e) {
+    debug('An unexpected error occurred when starting deployment creation');
+    yield { type: 'error', payload: e };
+  }
+}
+
+/**
+ * Uploads files to the /v2/files endpoint with retry and fault tolerance.
+ */
+async function* uploadFiles(options: {
+  agent?: Agent;
+  apiUrl?: string;
+  debug?: boolean;
+  files: FilesMap;
+  shas: string[];
+  teamId?: string;
+  token: string;
+  uploads: UploadProgress[];
+  userAgent?: string;
+}): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+  const debug = createDebug(options.debug);
+
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const defaultAgent = apiUrl?.startsWith('https://')
+  const defaultAgent = options.apiUrl?.startsWith('https://')
     ? new https.Agent({ keepAlive: true })
     : new http.Agent({ keepAlive: true });
   const abortControllers = new Set<AbortController>();
   let aborted = false;
 
-  shas.forEach((sha, index) => {
-    const uploadProgress = uploads[index];
+  options.shas.forEach((sha, index) => {
+    const uploadProgress = options.uploads[index];
 
     uploadList[sha] = retry(
       async (bail): Promise<any> => {
-        const file = files.get(sha);
+        const file = options.files.get(sha);
 
         if (!file) {
           debug(`File ${sha} is undefined. Bailing`);
@@ -143,9 +202,9 @@ export async function* upload(
         try {
           const res = await fetch(
             API_FILES,
-            token,
+            options.token,
             {
-              agent: clientOptions.agent || defaultAgent,
+              agent: options.agent || defaultAgent,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
@@ -154,13 +213,13 @@ export async function* upload(
                 'x-now-size': data.length,
               },
               body,
-              teamId,
-              apiUrl,
-              userAgent,
+              teamId: options.teamId,
+              apiUrl: options.apiUrl,
+              userAgent: options.userAgent,
               // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
               signal: abortController.signal,
             },
-            clientOptions.debug
+            options.debug
           );
 
           if (res.status === 200) {
@@ -233,24 +292,6 @@ export async function* upload(
     } catch (e) {
       return yield { type: 'error', payload: e };
     }
-  }
-
-  debug('All files uploaded');
-  yield { type: 'all-files-uploaded', payload: files };
-
-  try {
-    debug('Starting deployment creation');
-    for await (const event of deploy(files, clientOptions, deploymentOptions)) {
-      if (event.type === 'alias-assigned') {
-        debug('Deployment is ready');
-        return yield event;
-      }
-
-      yield event;
-    }
-  } catch (e) {
-    debug('An unexpected error occurred when starting deployment creation');
-    yield { type: 'error', payload: e };
   }
 }
 
