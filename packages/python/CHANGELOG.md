@@ -1,5 +1,19 @@
 # @vercel/python
 
+## 6.5.1
+
+### Patch Changes
+
+- switch tests to vitest ([#14853](https://github.com/vercel/vercel/pull/14853))
+
+## 6.5.0
+
+### Minor Changes
+
+- vendor Python runtime dependencies ([#14827](https://github.com/vercel/vercel/pull/14827))
+
+- Bump vercel-runtime version automatically on its releases ([#14842](https://github.com/vercel/vercel/pull/14842))
+
 ## 6.4.2
 
 ### Patch Changes

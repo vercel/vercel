@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 13.2.17
+
+### Patch Changes
+
+- Add `exposeErrBody` optional boolean property to Prerender object ([#14845](https://github.com/vercel/vercel/pull/14845))
+
+- Move backends builder detection to detectBuilders phase ([#14830](https://github.com/vercel/vercel/pull/14830))
+
 ## 13.2.16
 
 ### Patch Changes

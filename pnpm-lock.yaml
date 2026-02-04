@@ -2068,6 +2068,9 @@ importers:
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
+      vitest:
+        specifier: 2.1.4
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
       which:
         specifier: 3.0.0
         version: 3.0.0

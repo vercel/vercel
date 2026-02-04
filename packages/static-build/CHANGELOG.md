@@ -1,5 +1,18 @@
 # @vercel/static-build
 
+## 2.8.30
+
+### Patch Changes
+
+- [services] static-build frontends support ([#14819](https://github.com/vercel/vercel/pull/14819))
+
+## 2.8.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.128
+
 ## 2.8.28
 
 ### Patch Changes
