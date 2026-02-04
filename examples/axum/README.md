@@ -4,7 +4,7 @@ Deploy your [Axum](https://github.com/tokio-rs/axum) project to Vercel with zero
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?demo-description=Deploy%20Rust%20Axum%20applications%20with%20zero%20configuration.&demo-title=Axum%20Boilerplate&demo-url=https%3A%2F%2Fvercel-plus-axum.vercel.app%2F&from=templates&project-name=Axum%20Boilerplate&repository-name=axum-rust-boilerplate&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fvercel%2Ftree%2Fmain%2Fexamples%2Faxum&skippable-integrations=1)
 
-_Live Example: https://vercel-plus-axum.vercel.app/_
+_Live Example: https://vercel-plus-rust.vercel.app/_
 
 Visit the [Axum documentation](https://docs.rs/axum/latest/axum/) to learn more.
 
