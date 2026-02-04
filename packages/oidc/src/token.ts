@@ -9,8 +9,34 @@ import {
   saveToken,
 } from './token-util';
 
-export async function refreshToken(): Promise<void> {
-  const { projectId, teamId } = findProjectInfo();
+export interface RefreshTokenOptions {
+  teamId?: string;
+  projectId?: string;
+}
+
+export async function refreshToken(
+  options?: RefreshTokenOptions
+): Promise<void> {
+  // Use provided options or fall back to reading from .vercel/project.json
+  let projectId: string;
+  let teamId: string;
+
+  if (options?.projectId && options?.teamId) {
+    projectId = options.projectId;
+    teamId = options.teamId;
+  } else if (options?.projectId || options?.teamId) {
+    // If only one is provided, we still need to read from project.json
+    // to get the missing value, then override the provided one
+    const projectInfo = findProjectInfo();
+    projectId = options.projectId ?? projectInfo.projectId;
+    teamId = options.teamId ?? projectInfo.teamId;
+  } else {
+    // No options provided, use the existing behavior
+    const projectInfo = findProjectInfo();
+    projectId = projectInfo.projectId;
+    teamId = projectInfo.teamId;
+  }
+
   let maybeToken = loadToken(projectId);
 
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
