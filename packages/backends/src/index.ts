@@ -1,23 +1,22 @@
 import { downloadInstallAndBundle } from './utils.js';
-import { introspectApp } from './introspection/index.js';
-import { doBuild } from './build.js';
 import {
   defaultCachePathGlob,
   glob,
   NodejsLambda,
   debug,
-  type PrepareCache,
-  type BuildV2,
   getNodeVersion,
   Span,
+  type PrepareCache,
+  type BuildV2,
+  type Lambda,
 } from '@vercel/build-utils';
-import { findEntrypoint } from './cervel/index.js';
-
+import { findEntrypointOrThrow } from './cervel/index.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
   serve as cervelServe,
   findEntrypoint,
+  findEntrypointOrThrow,
   nodeFileTrace,
   getBuildSummary,
   srvxOptions,
@@ -27,6 +26,11 @@ export type {
   CervelServeOptions,
   PathOptions,
 } from './cervel/index.js';
+import { rolldown } from './rolldown/index.js';
+import { introspection } from './rolldown/introspection.js';
+import { nft } from './rolldown/nft.js';
+import { maybeDoBuildCommand } from './build.js';
+import { typescript } from './typescript.js';
 
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
@@ -48,74 +52,97 @@ export const build: BuildV2 = async args => {
     'builder.name': builderName,
   });
 
-  const entrypoint = await findEntrypoint(args.workPath);
-  debug('Entrypoint', entrypoint);
-
   const buildSpan = span.child('vc.builder.backends.build');
-  const introspectionSpan = span.child('vc.builder.backends.introspectApp');
 
-  const [buildResult, introspectionResult] = await Promise.all([
-    buildSpan.trace(() => doBuild(args, downloadResult, buildSpan)),
-    introspectionSpan.trace(() =>
-      introspectApp({
-        handler: entrypoint,
-        dir: args.workPath,
-        framework: args.config.framework,
-        env: {
-          ...(args.meta?.env ?? {}),
-          ...(args.meta?.buildEnv ?? {}),
-        },
-        span: introspectionSpan,
-      })
-    ),
-  ]);
+  return buildSpan.trace(async () => {
+    const entrypoint = await findEntrypointOrThrow(args.workPath);
+    debug('Entrypoint', entrypoint);
+    args.entrypoint = entrypoint;
 
-  const files = buildResult.files;
+    const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
-  const { routes, framework } = introspectionResult;
+    // Always run rolldown, even if the user has provided a build command
+    // It's very fast and we use it for introspection.
+    const rolldownResult = await rolldown({
+      ...args,
+      span: buildSpan,
+    });
 
-  if (routes.length > 2) {
-    debug(`Introspection completed successfully with ${routes.length} routes`);
-  } else {
-    debug(`Introspection failed to detect routes`);
-  }
+    const introspectionPromise = introspection({
+      ...args,
+      span: buildSpan,
+      files: rolldownResult.files,
+      handler: rolldownResult.handler,
+    });
 
-  const handler = buildResult.handler;
-  if (!files) {
-    throw new Error('Unable to trace files for build');
-  }
+    // This must come after the build command since turbo repo worksapce deps may need to be transpiled.
+    const typescriptPromise = typescript({
+      entrypoint,
+      workPath: args.workPath,
+      span: buildSpan,
+    });
 
-  const lambda = new NodejsLambda({
-    runtime: nodeVersion.runtime,
-    handler,
-    files,
-    shouldAddHelpers: false,
-    shouldAddSourcemapSupport: true,
-    framework: {
-      slug: framework?.slug ?? '',
-      version: framework?.version ?? '',
-    },
-    awsLambdaHandler: '',
-    shouldDisableAutomaticFetchInstrumentation:
-      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
-      '1',
-  });
+    const localBuildFiles =
+      userBuildResult?.localBuildFiles.size > 0
+        ? userBuildResult?.localBuildFiles
+        : rolldownResult.localBuildFiles;
 
-  const output: Record<string, NodejsLambda> = { index: lambda };
+    const files = userBuildResult?.files || rolldownResult.files;
+    const handler = userBuildResult?.handler || rolldownResult.handler;
+    const nftWorkPath = userBuildResult?.outputDir || args.workPath;
 
-  for (const route of routes) {
-    if (route.dest) {
-      if (route.dest === '/') {
-        continue;
+    await nft({
+      ...args,
+      workPath: nftWorkPath,
+      localBuildFiles,
+      files,
+      ignoreNodeModules: false,
+      span: buildSpan,
+    });
+    const introspectionResult = await introspectionPromise;
+    await typescriptPromise;
+
+    const lambda = new NodejsLambda({
+      runtime: nodeVersion.runtime,
+      handler,
+      files,
+      framework: rolldownResult.framework,
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: true,
+      awsLambdaHandler: '',
+      shouldDisableAutomaticFetchInstrumentation:
+        process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+        '1',
+    });
+
+    // Build routes: filesystem handler, then introspected routes, then catch-all
+    const routes = [
+      {
+        handle: 'filesystem',
+      },
+      ...introspectionResult.routes,
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ];
+
+    const output: Record<string, Lambda> = { index: lambda };
+
+    for (const route of routes) {
+      if (route.dest) {
+        if (route.dest === '/') {
+          continue;
+        }
+        output[route.dest] = lambda;
       }
-      output[route.dest] = lambda;
     }
-  }
 
-  return {
-    routes,
-    output,
-  };
+    return {
+      routes,
+      output,
+    };
+  });
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
