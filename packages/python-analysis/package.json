@@ -1,7 +1,10 @@
 {
   "name": "@vercel/python-analysis",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "./dist/index.js",
+  "imports": {
+    "#wasm/*": "./dist/wasm/*"
+  },
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
   "publishConfig": {
@@ -16,14 +19,16 @@
     "directory": "packages/python-analysis"
   },
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "pnpm generate:schemas && pnpm build:wasm && node ../../utils/build.mjs",
+    "build:wasm": "node scripts/build-wasm.mjs",
     "generate:schemas": "ts-to-zod --all",
-    "prebuild": "pnpm generate:schemas",
+    "test": "vitest run --config ../../vitest.config.mts",
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "glob --absolute 'test/*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@bytecodealliance/preview2-shim": "0.17.6",
     "@renovatebot/pep440": "4.2.1",
     "fs-extra": "11.1.1",
     "js-yaml": "4.1.1",
@@ -33,6 +38,7 @@
     "zod": "3.22.4"
   },
   "devDependencies": {
+    "@bytecodealliance/jco-transpile": "0.1.1",
     "@types/fs-extra": "11.0.4",
     "@types/js-yaml": "4.0.9",
     "@types/node": "20.11.0",

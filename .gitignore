@@ -1,6 +1,7 @@
 node_modules
 dist
 .vscode
+.zed
 npm-debug.log
 yarn-error.log
 .nyc_output

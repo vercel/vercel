@@ -1,5 +1,3 @@
-import { register } from 'node:module';
-// Disabling network blocking logic while introspection is opt-in
-// import './block-network.js';
-
-register(new URL('./hooks.mjs', import.meta.url), import.meta.url);
+// Re-export from @vercel/backends
+// This file is kept for backwards compatibility
+import '@vercel/backends/introspection/loaders/esm';

@@ -64,7 +64,7 @@ export default async function main(client: Client) {
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -72,7 +72,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, subArgs);
@@ -81,7 +81,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
@@ -90,7 +90,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(balanceSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandBalance(subcommandOriginal);
       return balance(client, subArgs);
@@ -99,7 +99,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(openSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandOpen(subcommandOriginal);
       return openIntegration(client, subArgs);
@@ -108,7 +108,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client);
