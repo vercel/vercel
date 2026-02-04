@@ -24,6 +24,7 @@ export interface DevServerOptions {
   projectSettings?: ProjectSettings;
   envValues?: Record<string, string>;
   repoRoot?: string;
+  rawFlags?: Record<string, any>;
 }
 
 export interface EnvConfigs {

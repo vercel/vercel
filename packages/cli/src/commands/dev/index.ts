@@ -55,7 +55,9 @@ export default async function main(client: Client) {
 
   // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (error) {
     printError(error);
     return 1;
@@ -131,7 +133,7 @@ export default async function main(client: Client) {
   }
 
   try {
-    return await dev(client, parsedArgs.flags, args, telemetry);
+    return await dev(client, parsedArgs.flags, args, telemetry, parsedArgs.flags);
   } catch (err) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
