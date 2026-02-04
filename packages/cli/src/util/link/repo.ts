@@ -20,7 +20,7 @@ import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
-import { isGitWorktreeOrSubmodule } from '../git-helpers';
+import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
 
 const home = homedir();
@@ -123,7 +123,13 @@ export async function ensureRepoLink(
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    const remoteUrls = await getRemoteUrls(join(rootPath, '.git/config'));
+    // Use getGitConfigPath to correctly resolve the config path for
+    // regular repos, worktrees, and submodules
+    const gitConfigPath = getGitConfigPath({ cwd: rootPath });
+    if (!gitConfigPath) {
+      throw new Error('Could not determine Git config path');
+    }
+    const remoteUrls = await getRemoteUrls(gitConfigPath);
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
     }
@@ -340,18 +346,11 @@ export async function ensureRepoLink(
  * the Git config was found, or `undefined` when no Git repo was found.
  */
 export async function findRepoRoot(
-  client: Client,
+  _client: Client,
   start: string
 ): Promise<string | undefined> {
   const { debug } = output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
-  /**
-   * If the current repo is a git submodule or git worktree '.git' is a file
-   * with a pointer to the "parent" git repository instead of a directory.
-   */
-  const GIT_PATH = isGitWorktreeOrSubmodule({ cwd: client.cwd })
-    ? normalize('.git')
-    : normalize('.git/config');
 
   for (const current of traverseUpDirectories({ start })) {
     if (current === home) {
@@ -365,24 +364,23 @@ export async function findRepoRoot(
     // if `.vercel/repo.json` exists (already linked),
     // then consider this the repo root
     const repoConfigPath = join(current, REPO_JSON_PATH);
-    let stat = await lstat(repoConfigPath).catch(err => {
+    const stat = await lstat(repoConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
       debug(`Found "${REPO_JSON_PATH}" - detected "${current}" as repo root`);
       return current;
     }
+  }
 
-    // if `.git/config` exists (unlinked),
-    // then consider this the repo root
-    const gitConfigPath = join(current, GIT_PATH);
-    stat = await lstat(gitConfigPath).catch(err => {
-      if (err.code !== 'ENOENT') throw err;
-    });
-    if (stat) {
-      debug(`Found "${GIT_PATH}" - detected "${current}" as repo root`);
-      return current;
-    }
+  // Use `git rev-parse --show-toplevel` to find the git root.
+  // This correctly handles regular repos, worktrees, and submodules.
+  const gitRoot = getGitRootDirectory({ cwd: start });
+  if (gitRoot) {
+    debug(
+      `Found git root via "git rev-parse --show-toplevel" - detected "${gitRoot}" as repo root`
+    );
+    return gitRoot;
   }
 
   debug('Aborting search for repo root');
