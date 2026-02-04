@@ -7,6 +7,26 @@ export default defineConfig([
   },
   // Introspection loaders
   {
+    entry: 'src/rolldown/index.ts',
+    outDir: 'dist/rolldown',
+    format: 'esm',
+  },
+  {
+    entry: 'src/rolldown/esm.ts',
+    outDir: 'dist/rolldown',
+    format: 'esm',
+  },
+  {
+    entry: 'src/rolldown/hooks.ts',
+    outDir: 'dist/rolldown',
+    format: 'esm',
+  },
+  {
+    entry: 'src/rolldown/cjs-hooks.ts',
+    outDir: 'dist/rolldown',
+    format: 'cjs',
+  },
+  {
     entry: 'src/introspection/loaders/cjs.ts',
     outDir: 'dist/introspection/loaders',
     format: 'cjs',

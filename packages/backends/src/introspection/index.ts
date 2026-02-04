@@ -19,7 +19,7 @@ import {
 import {
   BEGIN_INTROSPECTION_RESULT,
   END_INTROSPECTION_RESULT,
-} from './util.js';
+} from '../rolldown/util.js';
 
 const require = createRequire(import.meta.url);
 
