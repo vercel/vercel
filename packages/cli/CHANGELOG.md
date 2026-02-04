@@ -1,5 +1,32 @@
 # vercel
 
+## 50.10.1
+
+### Patch Changes
+
+- Move backends builder detection to detectBuilders phase ([#14830](https://github.com/vercel/vercel/pull/14830))
+
+- Updated dependencies [[`4500f1f482cdc19e0904be3b0e5922ceffc6de62`](https://github.com/vercel/vercel/commit/4500f1f482cdc19e0904be3b0e5922ceffc6de62), [`6d87d02723d4385ed1d08bb855fcc43f9466a984`](https://github.com/vercel/vercel/commit/6d87d02723d4385ed1d08bb855fcc43f9466a984)]:
+  - @vercel/build-utils@13.2.17
+  - @vercel/backends@0.0.26
+  - @vercel/elysia@0.1.28
+  - @vercel/express@0.1.37
+  - @vercel/fastify@0.1.31
+  - @vercel/go@3.3.4
+  - @vercel/h3@0.1.37
+  - @vercel/hono@0.2.31
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.11
+  - @vercel/nestjs@0.2.32
+  - @vercel/next@4.15.21
+  - @vercel/node@5.5.29
+  - @vercel/python@6.5.0
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/ruby@2.2.5
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.29
+
 ## 50.10.0
 
 ### Minor Changes
