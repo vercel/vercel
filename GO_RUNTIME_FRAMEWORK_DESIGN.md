@@ -6,16 +6,17 @@ This document outlines the design for adding Go as an experimental "runtime" fra
 
 ### Existing Patterns
 
-| Runtime | Detection | Entrypoint | Builder | Runtime Mode |
-|---------|-----------|------------|---------|--------------|
-| **Python** | `requirements.txt` OR `pyproject.toml` OR `Pipfile` | `index.py` | `@vercel/python` | Lambda wrapper |
-| **Ruby** | `config.ru` AND `Gemfile` | `config.ru` | `@vercel/ruby` | Lambda wrapper |
-| **Rust** | `Cargo.toml` AND `src/main.rs` | `src/main.rs` | `@vercel/rust` | `executable` |
-| **Node** | `server.ts` AND `package.json` | `server.ts` | `@vercel/backends` | Lambda wrapper |
+| Runtime    | Detection                                           | Entrypoint    | Builder            | Runtime Mode   |
+| ---------- | --------------------------------------------------- | ------------- | ------------------ | -------------- |
+| **Python** | `requirements.txt` OR `pyproject.toml` OR `Pipfile` | `index.py`    | `@vercel/python`   | Lambda wrapper |
+| **Ruby**   | `config.ru` AND `Gemfile`                           | `config.ru`   | `@vercel/ruby`     | Lambda wrapper |
+| **Rust**   | `Cargo.toml` AND `src/main.rs`                      | `src/main.rs` | `@vercel/rust`     | `executable`   |
+| **Node**   | `server.ts` AND `package.json`                      | `server.ts`   | `@vercel/backends` | Lambda wrapper |
 
 ### Key Characteristics
 
 All runtime framework presets share:
+
 - `experimental: true` - Feature flagged
 - `runtimeFramework: true` - Marks it as a runtime (not a web framework)
 - `useRuntime` - Specifies entrypoint source and builder
@@ -78,6 +79,7 @@ The most Go-idiomatic approach is using `main.go` at the project root:
 2. **`main.go`** - The conventional entry point for Go applications
 
 This combination ensures:
+
 - We don't match projects using the legacy GOPATH mode
 - We identify standalone Go applications (not just function handlers)
 - We follow Go's standard project structure conventions
@@ -100,10 +102,12 @@ detectors: {
 ```
 
 **Pros:**
+
 - Supports the `cmd/` pattern common in larger Go projects
 - More flexible
 
 **Cons:**
+
 - Complex entrypoint resolution
 - Ambiguous when multiple `main.go` files exist
 - The `cmd/` pattern typically builds multiple binaries
@@ -120,10 +124,12 @@ detectors: {
 ```
 
 **Pros:**
+
 - Explicit, no ambiguity
 - Consistent with Node's `server.ts` convention
 
 **Cons:**
+
 - Not idiomatic Go (Go uses `main.go` by convention)
 - Requires users to rename their entry file
 
@@ -150,41 +156,41 @@ For the runtime framework preset, `@vercel/go` needs a new mode supporting stand
 
 ```typescript
 // In build function
-const isStandaloneServer = 
-  entrypoint === 'main.go' && 
-  packageName === 'main' &&
-  !hasExportedHandler;
+const isStandaloneServer =
+  entrypoint === 'main.go' && packageName === 'main' && !hasExportedHandler;
 ```
 
 #### Build Process for Standalone Server
 
 ```typescript
-async function buildStandaloneServer(options: BuildOptions): Promise<BuildResult> {
+async function buildStandaloneServer(
+  options: BuildOptions
+): Promise<BuildResult> {
   const { files, entrypoint, workPath, config, meta } = options;
-  
+
   // 1. Download files
   await download(files, workPath, meta);
-  
+
   // 2. Get Go wrapper
   const go = await createGo({ modulePath: workPath, workPath });
-  
+
   // 3. Build the binary (cross-compile for Linux)
   const outDir = await getWriteableDirectory();
   const binaryPath = join(outDir, 'bootstrap');
-  
+
   await go.build('.', binaryPath); // Build the entire module
-  
+
   // 4. Create Lambda with executable runtime
   const lambda = new Lambda({
     files: {
-      'bootstrap': new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+      bootstrap: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
     },
     handler: 'bootstrap',
     runtime: 'executable',
     runtimeLanguage: 'go',
     supportsResponseStreaming: true,
   });
-  
+
   return { output: lambda };
 }
 ```
@@ -213,9 +219,9 @@ func main() {
     if port == "" {
         port = "8080"
     }
-    
+
     http.HandleFunc("/", handler)
-    
+
     log.Printf("Server listening on port %s", port)
     log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -294,15 +300,19 @@ function isStandaloneServer(analyzed: Analyzed, entrypoint: string): boolean {
 ```typescript
 export async function build(options: BuildOptions) {
   const { entrypoint, workPath } = options;
-  
+
   // ... existing setup code ...
-  
-  const analyzed = await getAnalyzedEntrypoint({ entrypoint, modulePath, workPath });
-  
+
+  const analyzed = await getAnalyzedEntrypoint({
+    entrypoint,
+    modulePath,
+    workPath,
+  });
+
   if (isStandaloneServer(analyzed, entrypoint)) {
     return buildStandaloneServer(options);
   }
-  
+
   // ... existing handler-based build logic ...
 }
 ```
@@ -310,28 +320,34 @@ export async function build(options: BuildOptions) {
 #### 2.3 Implement `buildStandaloneServer`
 
 ```typescript
-async function buildStandaloneServer(options: BuildOptions): Promise<BuildResultV3> {
+async function buildStandaloneServer(
+  options: BuildOptions
+): Promise<BuildResultV3> {
   const { files, entrypoint, workPath, config, meta } = options;
-  
+
   await download(files, workPath, meta);
-  
+
   const { goModPath } = await findGoModPath(workPath, workPath);
   const modulePath = goModPath ? dirname(goModPath) : undefined;
-  
+
   const env = cloneEnv(process.env, meta?.env, {
     GOARCH: 'amd64',
     GOOS: 'linux',
     CGO_ENABLED: '0',
   });
-  
-  const go = await createGo({ modulePath, opts: { cwd: workPath, env }, workPath });
-  
+
+  const go = await createGo({
+    modulePath,
+    opts: { cwd: workPath, env },
+    workPath,
+  });
+
   const outDir = await getWriteableDirectory();
   const binaryPath = join(outDir, 'bootstrap');
-  
+
   // Build entire module
   await go.build('.', binaryPath);
-  
+
   const includedFiles: Files = {};
   if (config?.includeFiles) {
     const patterns = Array.isArray(config.includeFiles)
@@ -342,11 +358,11 @@ async function buildStandaloneServer(options: BuildOptions): Promise<BuildResult
       Object.assign(includedFiles, fsFiles);
     }
   }
-  
+
   const lambda = new Lambda({
     files: {
       ...includedFiles,
-      'bootstrap': new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+      bootstrap: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
     },
     handler: 'bootstrap',
     runtime: 'executable',
@@ -354,7 +370,7 @@ async function buildStandaloneServer(options: BuildOptions): Promise<BuildResult
     supportsResponseStreaming: true,
     environment: {},
   });
-  
+
   return { output: lambda };
 }
 ```
@@ -382,7 +398,7 @@ if parsed.Name.Name == "main" {
             break
         }
     }
-    
+
     if hasMainFunc && !foundHandler {
         analyzed := analyze{
             PackageName:      "main",
@@ -402,50 +418,58 @@ For `vercel dev`, the standalone server mode should:
 3. Proxy requests to the running server
 
 ```typescript
-export async function startDevServer(opts: StartDevServerOptions): Promise<StartDevServerResult> {
+export async function startDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
   const { entrypoint, workPath, meta } = opts;
-  
+
   // Detect standalone mode
-  const analyzed = await getAnalyzedEntrypoint({ entrypoint, modulePath, workPath });
-  
+  const analyzed = await getAnalyzedEntrypoint({
+    entrypoint,
+    modulePath,
+    workPath,
+  });
+
   if (isStandaloneServer(analyzed, entrypoint)) {
     return startStandaloneDevServer(opts);
   }
-  
+
   // ... existing dev server logic ...
 }
 
-async function startStandaloneDevServer(opts: StartDevServerOptions): Promise<StartDevServerResult> {
+async function startStandaloneDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
   const { workPath, meta } = opts;
   const port = await getAvailablePort();
-  
+
   const env = cloneEnv(process.env, meta?.env, {
     PORT: String(port),
   });
-  
+
   const child = spawn('go', ['run', '.'], {
     cwd: workPath,
     env,
     stdio: ['ignore', 'inherit', 'inherit'],
   });
-  
+
   // Wait for server to be ready
   await waitForPort(port);
-  
+
   return { port, pid: child.pid! };
 }
 ```
 
 ## Comparison: Go Serverless Function vs Go Runtime Framework
 
-| Aspect | Serverless Function (`api/*.go`) | Runtime Framework (`main.go`) |
-|--------|----------------------------------|-------------------------------|
-| Package | `package handler` | `package main` |
-| Entry | Exported `func Handler(w, r)` | `func main()` |
-| Routing | One function per file | Application handles routing |
-| Server | go-bridge wrapper | Native `net/http` |
-| Use case | Simple API endpoints | Full web applications |
-| Framework support | N/A | Gin, Chi, Echo, Fiber, etc. |
+| Aspect            | Serverless Function (`api/*.go`) | Runtime Framework (`main.go`) |
+| ----------------- | -------------------------------- | ----------------------------- |
+| Package           | `package handler`                | `package main`                |
+| Entry             | Exported `func Handler(w, r)`    | `func main()`                 |
+| Routing           | One function per file            | Application handles routing   |
+| Server            | go-bridge wrapper                | Native `net/http`             |
+| Use case          | Simple API endpoints             | Full web applications         |
+| Framework support | N/A                              | Gin, Chi, Echo, Fiber, etc.   |
 
 ## Framework-Specific Presets (Future)
 
