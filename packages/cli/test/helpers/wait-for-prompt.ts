@@ -3,11 +3,12 @@ import type { CLIProcess } from './types';
 
 function getPromptErrorDetails(
   rawAssertion: string | Function | RegExp,
-  mostRecentChunk: string
+  accumulatedOutput: string
 ) {
   const assertion = rawAssertion.toString().trim();
-  const mostRecent = (mostRecentChunk || '').trim();
-  return `Waiting for:\n  "${assertion}"\nmost recent chunk was:\n  "${mostRecent}"`;
+  // Show the last 500 characters of accumulated output to help diagnose issues
+  const outputPreview = (accumulatedOutput || '').trim().slice(-500);
+  return `Waiting for:\n  "${assertion}"\naccumulated output (last 500 chars):\n  "${outputPreview}"`;
 }
 
 export default async function waitForPrompt(
@@ -15,17 +16,20 @@ export default async function waitForPrompt(
   rawAssertion: string | RegExp | ((chunk: string) => boolean),
   timeout = 3000
 ) {
-  let assertion: (chunk: string) => boolean;
+  let assertion: (output: string) => boolean;
   if (typeof rawAssertion === 'string') {
-    assertion = (chunk: string) => chunk.includes(rawAssertion);
+    assertion = (output: string) => output.includes(rawAssertion);
   } else if (rawAssertion instanceof RegExp) {
-    assertion = (chunk: string) => rawAssertion.test(chunk);
+    assertion = (output: string) => rawAssertion.test(output);
   } else {
     assertion = rawAssertion;
   }
 
   return new Promise<void>((resolve, reject) => {
-    let mostRecentChunk = 'NO CHUNKS SO FAR';
+    // Accumulate all output to handle non-deterministic stdout buffering.
+    // This fixes flaky tests where the expected prompt text may be split
+    // across multiple chunks or arrive after other output.
+    let accumulatedOutput = '';
 
     // eslint-disable-next-line no-console
     console.log('Waiting for prompt...');
@@ -33,7 +37,7 @@ export default async function waitForPrompt(
       cleanup();
       const promptErrorDetails = getPromptErrorDetails(
         rawAssertion,
-        mostRecentChunk
+        accumulatedOutput
       );
       reject(
         new Error(
@@ -46,7 +50,7 @@ export default async function waitForPrompt(
       cleanup();
       const promptErrorDetails = getPromptErrorDetails(
         rawAssertion,
-        mostRecentChunk
+        accumulatedOutput
       );
       reject(
         new Error(
@@ -58,10 +62,13 @@ export default async function waitForPrompt(
     const onData = (rawChunk: Buffer) => {
       const chunk = stripAnsi(rawChunk.toString());
 
-      mostRecentChunk = chunk;
+      accumulatedOutput += chunk;
       // eslint-disable-next-line no-console
       console.log('> ' + chunk);
-      if (assertion(chunk)) {
+      // Check the accumulated output instead of just the current chunk.
+      // This handles cases where the expected text spans multiple chunks
+      // or arrives after other output like the CLI version banner.
+      if (assertion(accumulatedOutput)) {
         cleanup();
         resolve();
       }
