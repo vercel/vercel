@@ -1,4 +1,4 @@
-import { detectServices } from '../src';
+import { detectServices, isStaticBuild } from '../src';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('detectServices', () => {
@@ -326,6 +326,158 @@ describe('detectServices', () => {
       expect(result.services).toEqual([]);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('INVALID_VERCEL_JSON');
+    });
+  });
+
+  describe('static/SPA service routing', () => {
+    it('should generate SPA fallback for static service at root', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'vite',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(isStaticBuild(result.services[0])).toBe(true);
+      expect(result.errors).toEqual([]);
+
+      // Root static service gets filesystem handler + SPA fallback in defaults
+      expect(result.routes.defaults).toHaveLength(2);
+      expect(result.routes.defaults[0]).toEqual({ handle: 'filesystem' });
+      expect(result.routes.defaults[1]).toEqual({
+        src: '/(.*)',
+        dest: '/index.html',
+      });
+    });
+
+    it('should generate SPA fallback for static service at prefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'vite',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(isStaticBuild(result.services[0])).toBe(true);
+      expect(result.errors).toEqual([]);
+
+      // Prefixed static service gets SPA fallback in rewrites
+      expect(result.routes.rewrites).toHaveLength(1);
+      expect(result.routes.rewrites[0]).toEqual({
+        src: '^/admin(?:/.*)?$',
+        dest: '/admin/index.html',
+      });
+    });
+
+    it('should pass routePrefix in builder config for static services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'vite',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      // routePrefix is passed without leading slash for mountpoint
+      expect(result.services[0].builder.config).toMatchObject({
+        routePrefix: 'admin',
+        framework: 'vite',
+      });
+    });
+
+    it('should pass "." as routePrefix for root static services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              workspace: 'packages/web',
+              framework: 'vite',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      // Root prefix uses '.' so it's truthy in static-build mountpoint logic
+      expect(result.services[0].builder.config).toMatchObject({
+        routePrefix: '.',
+        framework: 'vite',
+      });
+    });
+
+    it('should handle mixed static and function services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'vite',
+              routePrefix: '/',
+            },
+            'admin-panel': {
+              workspace: 'apps/admin',
+              framework: 'vite',
+              routePrefix: '/admin',
+            },
+            'express-api': {
+              entrypoint: 'api/index.js',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(3);
+      expect(result.errors).toEqual([]);
+
+      const frontend = result.services.find(s => s.name === 'frontend');
+      const adminPanel = result.services.find(s => s.name === 'admin-panel');
+      const expressApi = result.services.find(s => s.name === 'express-api');
+
+      // Vite services should be static builds
+      expect(isStaticBuild(frontend!)).toBe(true);
+      expect(isStaticBuild(adminPanel!)).toBe(true);
+      // Node entrypoint should be a function
+      expect(isStaticBuild(expressApi!)).toBe(false);
+
+      // Function service and prefixed static service get rewrites
+      expect(result.routes.rewrites).toHaveLength(2);
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/api(?:/.*)?$',
+        dest: '/api/index.js',
+        check: true,
+      });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/admin(?:/.*)?$',
+        dest: '/admin/index.html',
+      });
+
+      // Root static service gets filesystem + SPA fallback in defaults
+      expect(result.routes.defaults).toHaveLength(2);
+      expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
+      expect(result.routes.defaults).toContainEqual({
+        src: '/(.*)',
+        dest: '/index.html',
+      });
     });
   });
 });

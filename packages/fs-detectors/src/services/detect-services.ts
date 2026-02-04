@@ -5,7 +5,7 @@ import type {
   ResolvedService,
   ServicesRoutes,
 } from './types';
-import { readVercelConfig } from './utils';
+import { isStaticBuild, readVercelConfig } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 
 /**
@@ -71,12 +71,13 @@ export async function detectServices(
 /**
  * Generate routing rules for services.
  *
- * Web services: Routes are ordered by prefix length (longest first) to ensure
- * more specific routes match before broader ones. For example, `/api/users`
- * must be checked before `/api`, which must be checked before the catch-all `/`.
+ * Routes are ordered by prefix length (longest first) to ensure more specific
+ * routes match before broader ones. For example, `/api/users` must be checked
+ * before `/api`, which must be checked before the catch-all `/`.
  *
- * Cron/Worker services: TODO
- * Use internal routes under `/_svc/crons` and `/_svc/workers`
+ * - Static/SPA services: SPA fallback routes to index.html
+ * - Serverless services: Rewrite to the function entrypoint
+ * - Cron/Worker services: TODO - internal routes under `/_svc/`
  */
 export function generateServicesRoutes(
   services: ResolvedService[]
@@ -86,50 +87,47 @@ export function generateServicesRoutes(
   const crons: Route[] = [];
   const workers: Route[] = [];
 
-  const webServices = services.filter(
-    (s): s is ResolvedService & { routePrefix: string } =>
-      s.type === 'web' && typeof s.routePrefix === 'string'
-  );
-
-  // Sort by prefix length (longest first) so specific routes match before broad ones.
-  // Root services ("/") go last as the catch-all fallback.
-  const sortedWebServices = [...webServices].sort((a, b) => {
-    if (a.routePrefix === '/') return 1;
-    if (b.routePrefix === '/') return -1;
-    return b.routePrefix.length - a.routePrefix.length;
-  });
+  // Filter and sort web services by prefix length (longest first)
+  // so more specific routes match before broader ones.
+  const sortedWebServices = services
+    .filter(
+      (s): s is ResolvedService & { routePrefix: string } =>
+        s.type === 'web' && typeof s.routePrefix === 'string'
+    )
+    .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
   for (const service of sortedWebServices) {
-    const { routePrefix, builder } = service;
+    const { routePrefix } = service;
+    const normalizedPrefix = routePrefix.slice(1); // Strip leading /
 
-    // The dest must point to the actual function path (builder.src),
-    // not just the routePrefix, so Vercel can find the .func directory
-    const builderSrc = builder.src || routePrefix;
-    const functionPath = builderSrc.startsWith('/')
-      ? builderSrc
-      : `/${builderSrc}`;
-
-    // `check: true` tells the router to verify the destination exists on the
-    // filesystem before applying the route. If it doesn't exist, the route is
-    // skipped and routing continues. This ensures requests only route to
-    // functions that were successfully built.
-    if (routePrefix === '/') {
-      // Root service: catch-all route
-      defaults.push({
-        src: '^/(.*)$',
-        dest: functionPath,
-        check: true,
-      });
+    if (isStaticBuild(service)) {
+      // Static/SPA service: serve index.html for client-side routing
+      if (routePrefix === '/') {
+        defaults.push({ handle: 'filesystem' });
+        defaults.push({ src: '/(.*)', dest: '/index.html' });
+      } else {
+        rewrites.push({
+          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          dest: `/${normalizedPrefix}/index.html`,
+        });
+      }
     } else {
-      // Non-root service: prefix-based rewrite
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix.slice(1)
-        : routePrefix;
-      rewrites.push({
-        src: `^/${normalizedPrefix}(?:/.*)?$`,
-        dest: functionPath,
-        check: true,
-      });
+      // Function service: rewrite to the function entrypoint
+      // `check: true` verifies the destination exists before applying the route
+      const builderSrc = service.builder.src || routePrefix;
+      const functionPath = builderSrc.startsWith('/')
+        ? builderSrc
+        : `/${builderSrc}`;
+
+      if (routePrefix === '/') {
+        defaults.push({ src: '^/(.*)$', dest: functionPath, check: true });
+      } else {
+        rewrites.push({
+          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          dest: functionPath,
+          check: true,
+        });
+      }
     }
   }
 
