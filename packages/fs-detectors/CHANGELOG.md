@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.7.22
+
+### Patch Changes
+
+- [services] static-build frontends support ([#14819](https://github.com/vercel/vercel/pull/14819))
+
 ## 5.7.21
 
 ### Patch Changes

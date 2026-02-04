@@ -30,6 +30,7 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  type Service,
   isBackendBuilder,
   type Lambda,
 } from '@vercel/build-utils';
@@ -117,6 +118,7 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  services?: Service[];
   deploymentId?: string;
 }
 
@@ -553,6 +555,7 @@ async function doBuild(
 
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let detectedServices: Service[] | undefined;
   let isZeroConfig = false;
 
   if (builds.length > 0) {
@@ -586,6 +589,9 @@ async function doBuild(
     } else {
       builds = [{ src: '**', use: '@vercel/static' }];
     }
+
+    // Capture detected services for the config.json
+    detectedServices = detectedBuilders.services;
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     zeroConfigRoutes.push(
@@ -1043,6 +1049,8 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    ...(detectedServices &&
+      detectedServices.length > 0 && { services: detectedServices }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
