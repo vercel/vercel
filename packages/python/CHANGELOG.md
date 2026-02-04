@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.5.1
+
+### Patch Changes
+
+- switch tests to vitest ([#14853](https://github.com/vercel/vercel/pull/14853))
+
 ## 6.5.0
 
 ### Minor Changes
