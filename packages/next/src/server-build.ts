@@ -75,6 +75,8 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+// Needs https://github.com/vercel/next.js/pull/89263
+const DYNAMICALLY_RENDER_404_VERSION = 'v16.2.0-canary.17';
 
 // Ideally this should be in a Next.js manifest so we can change it in
 // the future but this also allows us to improve existing versions
@@ -434,6 +436,12 @@ export async function serverBuild({
     CORRECTED_MANIFESTS_VERSION
   );
 
+  // When possible, don't embed the static 404 page in lambdas for determinism
+  const shouldUse404Prerender = semver.lt(
+    nextVersion,
+    DYNAMICALLY_RENDER_404_VERSION
+  );
+
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
   if (lambdaPageKeys.length === 0) {
@@ -713,7 +721,7 @@ export async function serverBuild({
       fsPath: nextServerFile,
     });
 
-    if (static404Pages.size > 0) {
+    if (shouldUse404Prerender && static404Pages.size > 0) {
       // If we've generated a static 404 page, it's possible that we also
       // have a static 404 page for each locale.
       if (i18n) {
@@ -1256,6 +1264,29 @@ export async function serverBuild({
             // generates the config.json for Vercel)
             manifestData.headers = [];
             delete manifestData.deploymentId;
+          } else if (
+            manifest === 'server/pages-manifest.json' &&
+            !shouldUse404Prerender
+          ) {
+            // Replace `(/locale)?/404.html`  with `/(404|_error).js` in pages-manifest to avoid
+            // including static (and non-deterministic) 404 page in lambdas.
+            if (manifestData['/404'] === 'pages/404.html') {
+              manifestData['/404'] =
+                lambdaPages['404.js'] && !lambdaAppPaths['404.js']
+                  ? 'pages/404.js'
+                  : 'pages/_error.js';
+            }
+            if (i18n) {
+              for (const locale of i18n.locales) {
+                const locale404Key = `/${locale}/404`;
+                if (manifestData[locale404Key] === `pages/${locale}/404.html`) {
+                  manifestData[locale404Key] =
+                    lambdaPages['404.js'] && !lambdaAppPaths['404.js']
+                      ? `pages/404.js`
+                      : 'pages/_error.js';
+                }
+              }
+            }
           }
 
           if (mayFilterManifests) {
