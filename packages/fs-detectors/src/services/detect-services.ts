@@ -62,11 +62,13 @@ export async function detectServices(
 
     if (autoResult.services) {
       const result = resolveAllConfiguredServices(autoResult.services);
-      const routes = generateServicesRoutes(result.services);
+      const { routes, errors: routeErrors } = await generateServicesRoutes(
+        result.services
+      );
       return {
         services: result.services,
         routes,
-        errors: result.errors,
+        errors: [...result.errors, ...routeErrors],
         warnings: [],
       };
     }
