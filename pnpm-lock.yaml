@@ -1617,22 +1617,6 @@ importers:
         specifier: 16.0.0
         version: 16.0.0
 
-  packages/introspection:
-    dependencies:
-      '@vercel/backends':
-        specifier: workspace:*
-        version: link:../backends
-    devDependencies:
-      '@types/node':
-        specifier: 20.11.0
-        version: 20.11.0
-      tsdown:
-        specifier: 0.16.3
-        version: 0.16.3(typescript@4.9.5)
-      vitest:
-        specifier: ^2.0.1
-        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
-
   packages/koa:
     dependencies:
       '@vercel/node':
