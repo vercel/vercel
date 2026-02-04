@@ -42,11 +42,10 @@ export const DEFAULT_SPA_ROUTES: Route[] = [
 /**
  * Check if a framework can be mounted at a non-root prefix.
  *
- * Currently, only frameworks WITHOUT custom defaultRoutes support prefix mounting,
- * since we can safely use the simple SPA fallback pattern for those.
- *
- * TODO: When frameworks add `getDefaultRoutesForPrefix(prefix: string)`, update this to:
- *   return Boolean(framework?.getDefaultRoutesForPrefix) || !framework?.defaultRoutes;
+ * Frameworks can be prefix-mounted if:
+ * 1. They have no defaultRoutes
+ * 2. Their defaultRoutes match our DEFAULT_SPA_ROUTES
+ * 3. (Future) They provide getDefaultRoutesForPrefix
  */
 export function frameworkSupportsPrefixMount(
   frameworkSlug: string | undefined
@@ -54,9 +53,22 @@ export function frameworkSupportsPrefixMount(
   if (!frameworkSlug) {
     return true;
   }
+
   const framework = frameworksBySlug.get(frameworkSlug);
-  // TODO: Check for framework.getDefaultRoutesForPrefix when available
-  return !framework?.defaultRoutes;
+
+  if (!framework?.defaultRoutes) {
+    return true;
+  }
+
+  // Async defaultRoutes (like Gatsby) = can't check, not safe to prefix
+  if (typeof framework.defaultRoutes === 'function') {
+    return false;
+  }
+
+  // If defaultRoutes matches our standard SPA pattern, safe to prefix
+  // (e.g., Svelte defines defaultRoutes but they're the same as DEFAULT_SPA_ROUTES)
+  const defaultRoutesJson = JSON.stringify(DEFAULT_SPA_ROUTES);
+  return JSON.stringify(framework.defaultRoutes) === defaultRoutesJson;
 }
 
 /**

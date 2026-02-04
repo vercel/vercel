@@ -440,6 +440,33 @@ describe('detectServices', () => {
       });
     });
 
+    it('should allow framework with matching SPA defaultRoutes at prefix (svelte)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'svelte',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+
+      // Svelte HAS defaultRoutes, but they match DEFAULT_SPA_ROUTES
+      // so it's safe to mount at a prefix
+      expect(result.routes.rewrites).toHaveLength(2);
+      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/admin(?:/(.*))?$',
+        dest: '/admin/index.html',
+      });
+    });
+
     it('should pass routePrefix in builder config for static services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
