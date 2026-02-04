@@ -43,7 +43,13 @@ const archMap = new Map([
 const platformMap = new Map([['win32', 'windows']]);
 export const localCacheDir = join('.vercel', 'cache', 'golang');
 
-const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
+// Skip -ldflags "-s -w" on darwin/arm64 due to LC_UUID issues with some Go versions
+// See: https://github.com/golang/go/issues/62078
+const GO_FLAGS =
+  process.platform === 'win32' ||
+  (process.platform === 'darwin' && process.arch === 'arm64')
+    ? []
+    : ['-ldflags', '-s -w'];
 const GO_MIN_MAJOR_VERSION = 1;
 const GO_MIN_MINOR_VERSION = 13;
 

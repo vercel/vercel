@@ -56,9 +56,6 @@ const HANDLER_FILENAME = `bootstrap${OUT_EXTENSION}`;
 // Fluid runtime uses 'executable' as the handler name
 const FLUID_HANDLER_FILENAME = `executable${OUT_EXTENSION}`;
 
-// Enable Fluid IPC protocol for Go functions
-const USE_FLUID_RUNTIME = true;
-
 // Main template file for Fluid runtime
 const MAIN_GO_FLUID_TEMPLATE = 'main-fluid.go';
 const MAIN_GO_LEGACY_TEMPLATE = 'main.go';
@@ -130,6 +127,10 @@ export async function build({
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.skipDownload ? workPath : srcPath;
   await download(files, downloadPath, meta);
+
+  // Use Fluid runtime by default, allow opt-out via VERCEL_GO_LEGACY
+  const useLegacyRuntime = meta?.env?.VERCEL_GO_LEGACY === '1';
+  const useFluidRuntime = !useLegacyRuntime;
 
   // keep track of file system actions we need to undo
   // the keys "from" and "to" refer to what needs to be done
@@ -246,6 +247,12 @@ export async function build({
     });
 
     const outDir = await getWriteableDirectory();
+
+    // Determine the output binary filename based on runtime mode
+    const handlerFilename = useFluidRuntime
+      ? FLUID_HANDLER_FILENAME
+      : HANDLER_FILENAME;
+
     const buildOptions: BuildHandlerOptions = {
       downloadPath,
       entrypoint,
@@ -253,15 +260,17 @@ export async function build({
       entrypointDirname,
       go,
       goModPath,
+      handlerFilename,
       handlerFunctionName,
       isGoModInRootDir,
       outDir,
       packageName,
       undo,
+      useFluidRuntime,
     };
 
     if (packageName === 'main') {
-      if (USE_FLUID_RUNTIME) {
+      if (useFluidRuntime) {
         // Fluid runtime requires Go modules - package main is not supported
         throw new Error(
           `Go Fluid runtime requires Go modules. Please change \`package main\` to \`package handler\` in "${entrypoint}" and add a go.mod file.
@@ -282,11 +291,7 @@ Learn more: https://vercel.com/docs/functions/runtimes/go`
       (meta?.env?.VERCEL_BUILD_ARCH as 'x86_64' | 'arm64') || 'x86_64';
 
     // Build Lambda configuration based on whether Fluid runtime is enabled
-    const handlerFilename = USE_FLUID_RUNTIME
-      ? FLUID_HANDLER_FILENAME
-      : HANDLER_FILENAME;
-
-    const lambda = USE_FLUID_RUNTIME
+    const lambda = useFluidRuntime
       ? new Lambda({
           files: { ...(await glob('**', outDir)), ...includedFiles },
           handler: handlerFilename,
@@ -331,11 +336,13 @@ type BuildHandlerOptions = {
   entrypointDirname: string;
   go: GoWrapper;
   goModPath?: string;
+  handlerFilename: string;
   handlerFunctionName: string;
   isGoModInRootDir: boolean;
   outDir: string;
   packageName: string;
   undo: UndoActions;
+  useFluidRuntime: boolean;
 };
 
 /**
@@ -349,11 +356,13 @@ async function buildHandlerWithGoMod({
   entrypointDirname,
   go,
   goModPath,
+  handlerFilename,
   handlerFunctionName,
   isGoModInRootDir,
   outDir,
   packageName,
   undo,
+  useFluidRuntime,
 }: BuildHandlerOptions): Promise<void> {
   debug(
     `Building Go handler as package "${packageName}" (with${
@@ -412,7 +421,7 @@ async function buildHandlerWithGoMod({
   }
 
   await Promise.all([
-    writeEntrypoint(mainGoFile, goPackageName, goFuncName),
+    writeEntrypoint(mainGoFile, goPackageName, goFuncName, useFluidRuntime),
     writeGoMod({
       destDir: goModDirname ? goModDirname : entrypointDirname,
       goModPath,
@@ -475,7 +484,7 @@ async function buildHandlerWithGoMod({
   }
 
   debug('Running `go build`...');
-  const destPath = join(outDir, HANDLER_FILENAME);
+  const destPath = join(outDir, handlerFilename);
 
   try {
     const src = [join(baseGoModPath, MAIN_GO_FILENAME)];
@@ -496,16 +505,19 @@ async function buildHandlerAsPackageMain({
   entrypointAbsolute,
   entrypointDirname,
   go,
+  handlerFilename,
   handlerFunctionName,
   outDir,
   undo,
+  useFluidRuntime,
 }: BuildHandlerOptions): Promise<void> {
   debug('Building Go handler as package "main" (legacy)');
 
   await writeEntrypoint(
     join(entrypointDirname, MAIN_GO_FILENAME),
     '',
-    handlerFunctionName
+    handlerFunctionName,
+    useFluidRuntime
   );
 
   undo.fileActions.push({
@@ -524,7 +536,7 @@ async function buildHandlerAsPackageMain({
   }
 
   debug('Running `go build`...');
-  const destPath = join(outDir, HANDLER_FILENAME);
+  const destPath = join(outDir, handlerFilename);
   try {
     const src = [
       join(entrypointDirname, MAIN_GO_FILENAME),
@@ -667,9 +679,13 @@ async function copyEntrypoint(entrypoint: string, dest: string): Promise<void> {
 
 async function copyDevServer(
   functionName: string,
-  dest: string
+  dest: string,
+  useFluidRuntime: boolean
 ): Promise<void> {
-  const data = await readFile(join(__dirname, '../dev-server.go'), 'utf8');
+  const templateFile = useFluidRuntime
+    ? 'dev-server-fluid.go'
+    : 'dev-server.go';
+  const data = await readFile(join(__dirname, '..', templateFile), 'utf8');
 
   // Populate the handler function name
   const patched = data.replace('__HANDLER_FUNC_NAME', functionName);
@@ -677,13 +693,35 @@ async function copyDevServer(
   await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
 }
 
+async function copyDevServerFluid(
+  importPath: string,
+  packageName: string,
+  functionName: string,
+  dest: string
+): Promise<void> {
+  const data = await readFile(
+    join(__dirname, '..', 'dev-server-fluid.go'),
+    'utf8'
+  );
+
+  // Use the actual package name from the Go source files as the alias
+  // The import path directory may differ from the package name
+  // e.g., directory "api" may contain "package handler"
+  const patched = data
+    .replace('__VC_HANDLER_PACKAGE_NAME', importPath)
+    .replace('__VC_HANDLER_FUNC_NAME', `${packageName}.${functionName}`);
+
+  await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
+}
+
 async function writeEntrypoint(
   dest: string,
   goPackageName: string,
-  goFuncName: string
+  goFuncName: string,
+  useFluidRuntime: boolean
 ) {
   // Use the Fluid runtime template if enabled, otherwise use the legacy template
-  const templateFile = USE_FLUID_RUNTIME
+  const templateFile = useFluidRuntime
     ? MAIN_GO_FLUID_TEMPLATE
     : MAIN_GO_LEGACY_TEMPLATE;
 
@@ -695,6 +733,58 @@ async function writeEntrypoint(
     .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
     .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
   await writeFile(dest, mainModGoContents, 'utf-8');
+}
+
+/**
+ * Writes a go.mod file for the Fluid dev server.
+ * This is different from the regular writeGoMod because it needs to:
+ * 1. Use a unique module name for the dev server
+ * 2. Require the vercel go-runtime
+ * 3. Require and replace the user's module to point to their local code
+ */
+async function writeDevServerGoMod({
+  destDir,
+  goModPath,
+  userModuleRoot,
+}: {
+  destDir: string;
+  goModPath?: string;
+  userModuleRoot: string;
+}) {
+  // Use a unique module name for the dev server
+  let contents = `module vercel-dev-server\n\ngo 1.21\n\n`;
+
+  // Require the vercel go-runtime
+  contents += `require github.com/vercel/go-runtime v0.0.0\n`;
+
+  if (goModPath) {
+    const goModContents = await readFile(goModPath, 'utf-8');
+    const goModDir = dirname(goModPath);
+    const relPath = relative(destDir, goModDir);
+
+    // Check if the user's go.mod has a replace for go-runtime
+    const runtimeReplaceMatch = goModContents.match(
+      /replace\s+github\.com\/vercel\/go-runtime\s+=>\s+(.+)/
+    );
+    if (runtimeReplaceMatch) {
+      // Adjust the relative path
+      let runtimePath = runtimeReplaceMatch[1].trim();
+      if (runtimePath.startsWith('.')) {
+        runtimePath = join(relPath, runtimePath);
+      }
+      contents += `replace github.com/vercel/go-runtime => ${runtimePath}\n`;
+    }
+
+    // Require and replace the user's module
+    if (userModuleRoot) {
+      contents += `require ${userModuleRoot} v0.0.0-unpublished\n`;
+      contents += `replace ${userModuleRoot} => ${relPath}\n`;
+    }
+  }
+
+  const destGoModPath = join(destDir, 'go.mod');
+  debug(`Writing dev server ${destGoModPath}`);
+  await writeFile(destGoModPath, contents, 'utf-8');
 }
 
 /**
@@ -871,6 +961,10 @@ export async function startDevServer(
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
 
+  // Use Fluid runtime by default, allow opt-out via VERCEL_GO_LEGACY
+  const useLegacyRuntime = meta?.env?.VERCEL_GO_LEGACY === '1';
+  const useFluidRuntime = !useLegacyRuntime;
+
   // For some reason, if `entrypoint` is a path segment (filename contains `[]`
   // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
   let entrypointWithExt = entrypoint;
@@ -893,16 +987,55 @@ export async function startDevServer(
     workPath,
   });
 
-  await Promise.all([
-    copyEntrypoint(entrypointWithExt, tmpPackage),
-    copyDevServer(analyzed.functionName, tmpPackage),
-    writeGoMod({
-      destDir: tmp,
-      goModPath,
-      packageName: analyzed.packageName,
-    }),
-    writeGoWork(tmp, workPath, modulePath),
-  ]);
+  if (useFluidRuntime) {
+    // Fluid runtime: use the full module structure
+    // We need to compute the full import path for the handler package
+    let userModuleName = analyzed.packageName;
+    let userModuleRoot = '';
+    if (goModPath) {
+      const goModContents = await readFile(goModPath, 'utf-8');
+      const moduleMatch = goModContents.match(/module\s+(.+)/);
+      if (moduleMatch) {
+        userModuleRoot = moduleMatch[1].trim();
+        userModuleName = userModuleRoot;
+        // Add the relative path from module root to entrypoint
+        const relPath = posix.relative(
+          dirname(goModPath),
+          join(workPath, entrypointDir)
+        );
+        if (relPath) {
+          userModuleName = posix.join(userModuleName, relPath);
+        }
+      }
+    }
+
+    await Promise.all([
+      copyDevServerFluid(
+        userModuleName,
+        analyzed.packageName,
+        analyzed.functionName,
+        tmp
+      ),
+      writeDevServerGoMod({
+        destDir: tmp,
+        goModPath,
+        userModuleRoot,
+      }),
+      writeGoWork(tmp, workPath, modulePath),
+    ]);
+  } else {
+    // Legacy runtime: copy entrypoint and modify to package main
+    await Promise.all([
+      copyEntrypoint(entrypointWithExt, tmpPackage),
+      copyDevServer(analyzed.functionName, tmpPackage, useFluidRuntime),
+      writeGoMod({
+        destDir: tmp,
+        goModPath,
+        packageName: analyzed.packageName,
+      }),
+      writeGoWork(tmp, workPath, modulePath),
+    ]);
+  }
 
   const portFile = join(
     TMP,
@@ -911,6 +1044,8 @@ export async function startDevServer(
 
   const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: portFile,
+    // Use ephemeral port for Fluid runtime dev server
+    ...(useFluidRuntime ? { PORT: '0' } : {}),
   });
 
   const executable = `./vercel-dev-server-go${
@@ -937,7 +1072,9 @@ export async function startDevServer(
   const child = spawn(executable, [], {
     cwd: tmp,
     env,
-    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+    stdio: useFluidRuntime
+      ? ['ignore', 'pipe', 'inherit']
+      : ['ignore', 'inherit', 'inherit', 'pipe'],
   });
 
   child.on('close', async () => {
@@ -948,18 +1085,36 @@ export async function startDevServer(
     }
   });
 
-  const portPipe = child.stdio[3];
-  if (!isReadable(portPipe)) {
-    throw new Error('File descriptor 3 is not readable');
-  }
-
-  // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
-  const onPort = new Promise<PortInfo>(resolve => {
-    portPipe.setEncoding('utf8');
-    portPipe.once('data', d => {
-      resolve({ port: Number(d) });
+  // Fluid runtime outputs port to stdout: "Dev server listening: <port>"
+  // Legacy runtime writes port to FD 3
+  let onPort: Promise<PortInfo>;
+  if (useFluidRuntime) {
+    const stdout = child.stdout;
+    if (!isReadable(stdout)) {
+      throw new Error('stdout is not readable');
+    }
+    onPort = new Promise<PortInfo>(resolve => {
+      stdout.setEncoding('utf8');
+      stdout.on('data', (data: string) => {
+        const match = data.match(/Dev server listening: (\d+)/);
+        if (match) {
+          resolve({ port: Number(match[1]) });
+        }
+      });
     });
-  });
+  } else {
+    const portPipe = child.stdio[3];
+    if (!isReadable(portPipe)) {
+      throw new Error('File descriptor 3 is not readable');
+    }
+    // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
+    onPort = new Promise<PortInfo>(resolve => {
+      portPipe.setEncoding('utf8');
+      portPipe.once('data', d => {
+        resolve({ port: Number(d) });
+      });
+    });
+  }
   const onPortFile = waitForPortFile(portFile);
   const onExit = once.spread<[number, string | null]>(child, 'exit');
   const result = await Promise.race([onPort, onPortFile, onExit]);
