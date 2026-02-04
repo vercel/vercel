@@ -3,7 +3,7 @@ import { rolldown } from './rolldown.js';
 import { typescript } from './typescript.js';
 import { join } from 'node:path';
 import execa from 'execa';
-import { findEntrypoint } from './find-entrypoint.js';
+import { findEntrypoint, findEntrypointOrThrow } from '../find-entrypoint.js';
 import { Colors as c } from './utils.js';
 import { Span } from '@vercel/build-utils';
 export { nodeFileTrace } from './node-file-trace.js';
@@ -21,7 +21,7 @@ import { readFile, writeFile } from 'fs/promises';
 const require = createRequire(import.meta.url);
 
 // Re-export findEntrypoint for use in other packages
-export { findEntrypoint };
+export { findEntrypoint, findEntrypointOrThrow };
 
 export const getBuildSummary = async (outputDir: string) => {
   const buildSummary = await readFile(join(outputDir, '.cervel.json'), 'utf-8');
@@ -29,7 +29,8 @@ export const getBuildSummary = async (outputDir: string) => {
 };
 
 export const build = async (args: CervelBuildOptions) => {
-  const entrypoint = args.entrypoint || (await findEntrypoint(args.workPath));
+  const entrypoint =
+    args.entrypoint || (await findEntrypointOrThrow(args.workPath));
   const span = args.span ?? new Span({ name: 'cervel-build' });
 
   // Run TypeScript compilation and rolldown in parallel
@@ -55,7 +56,7 @@ export const build = async (args: CervelBuildOptions) => {
 };
 
 export const serve = async (args: CervelServeOptions) => {
-  const entrypoint = await findEntrypoint(args.workPath);
+  const entrypoint = await findEntrypointOrThrow(args.workPath);
   const srvxPath = require.resolve('srvx');
   const srvxBin = join(srvxPath, '..', '..', '..', 'bin', 'srvx.mjs');
   const tsxBin = require.resolve('tsx');
