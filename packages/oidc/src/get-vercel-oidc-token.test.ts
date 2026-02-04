@@ -242,6 +242,165 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     const token = await getVercelOidcToken();
     expect(token).toBe(newToken);
   });
+
+  test('should use provided teamId and projectId for refresh instead of reading project.json', async () => {
+    const customProjectId = 'custom-project-id';
+    const customTeamId = 'custom-team-id';
+
+    fs.writeFileSync(
+      path.join(cliDataDir, 'auth.json'),
+      JSON.stringify({ token: 'test-auth-token' })
+    );
+    // Note: No project.json file created
+
+    const newToken = createValidToken('custom-token');
+    const getVercelOidcTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelOidcToken')
+      .mockResolvedValue({
+        token: newToken,
+      });
+
+    vi.spyOn(tokenUtil, 'getTokenPayload')
+      .mockReturnValueOnce({
+        sub: 'test-sub',
+        name: 'test-name',
+        exp: Date.now() / 1000 - 1000,
+      })
+      .mockReturnValue({
+        sub: 'test-sub',
+        name: 'test-name',
+        exp: Date.now() / 1000 + 43200,
+      });
+
+    process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
+
+    const token = await getVercelOidcToken({
+      teamId: customTeamId,
+      projectId: customProjectId,
+    });
+
+    expect(token).toBe(newToken);
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test-auth-token',
+      customProjectId,
+      customTeamId
+    );
+  });
+
+  test('should use provided projectId and read teamId from project.json', async () => {
+    const customProjectId = 'custom-project-id';
+
+    fs.writeFileSync(
+      path.join(cliDataDir, 'auth.json'),
+      JSON.stringify({ token: 'test-auth-token' })
+    );
+    fs.writeFileSync(
+      path.join(rootDir, '.vercel', 'project.json'),
+      JSON.stringify({ projectId: 'original-project-id', orgId: teamId })
+    );
+
+    const newToken = createValidToken('partial-custom-token');
+    const getVercelOidcTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelOidcToken')
+      .mockResolvedValue({
+        token: newToken,
+      });
+
+    vi.spyOn(tokenUtil, 'getTokenPayload')
+      .mockReturnValueOnce({
+        sub: 'test-sub',
+        name: 'test-name',
+        exp: Date.now() / 1000 - 1000,
+      })
+      .mockReturnValue({
+        sub: 'test-sub',
+        name: 'test-name',
+        exp: Date.now() / 1000 + 43200,
+      });
+
+    process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
+
+    const token = await getVercelOidcToken({
+      projectId: customProjectId,
+    });
+
+    expect(token).toBe(newToken);
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test-auth-token',
+      customProjectId,
+      teamId
+    );
+  });
+
+  test('should use provided teamId and read projectId from project.json', async () => {
+    const customTeamId = 'custom-team-id';
+
+    fs.writeFileSync(
+      path.join(cliDataDir, 'auth.json'),
+      JSON.stringify({ token: 'test-auth-token' })
+    );
+    fs.writeFileSync(
+      path.join(rootDir, '.vercel', 'project.json'),
+      JSON.stringify({ projectId, orgId: 'original-team-id' })
+    );
+
+    const newToken = createValidToken('partial-custom-token-2');
+    const getVercelOidcTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelOidcToken')
+      .mockResolvedValue({
+        token: newToken,
+      });
+
+    vi.spyOn(tokenUtil, 'getTokenPayload')
+      .mockReturnValueOnce({
+        sub: 'test-sub',
+        name: 'test-name',
+        exp: Date.now() / 1000 - 1000,
+      })
+      .mockReturnValue({
+        sub: 'test-sub',
+        name: 'test-name',
+        exp: Date.now() / 1000 + 43200,
+      });
+
+    process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
+
+    const token = await getVercelOidcToken({
+      teamId: customTeamId,
+    });
+
+    expect(token).toBe(newToken);
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test-auth-token',
+      projectId,
+      customTeamId
+    );
+  });
+
+  test('should not refresh when token is valid even with options provided', async () => {
+    const validToken = createValidToken();
+    process.env.VERCEL_OIDC_TOKEN = validToken;
+
+    const getVercelOidcTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelOidcToken')
+      .mockResolvedValue({
+        token: 'should-not-be-called',
+      });
+
+    vi.spyOn(tokenUtil, 'getTokenPayload').mockReturnValue({
+      sub: 'test-sub',
+      name: 'test-name',
+      exp: Date.now() / 1000 + 43200,
+    });
+
+    const token = await getVercelOidcToken({
+      teamId: 'custom-team',
+      projectId: 'custom-project',
+    });
+
+    expect(token).toBe(validToken);
+    expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
+  });
 });
 
 function createExpiredToken(): string {
