@@ -58,6 +58,9 @@ func NewRuntime(handler http.Handler) (*Runtime, error) {
 		}
 	}
 
+	// If port is 0, we'll use an ephemeral port (useful for dev server)
+	// The actual port will be determined after binding
+
 	r := &Runtime{
 		handler:   handler,
 		ipc:       ipc,
