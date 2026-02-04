@@ -121,7 +121,7 @@ export async function* upload(
 /**
  * Uploads files to the /v2/files endpoint with retry and fault tolerance.
  */
-async function* uploadFiles(options: {
+export async function* uploadFiles(options: {
   agent?: Agent;
   apiUrl?: string;
   debug?: boolean;
@@ -295,7 +295,7 @@ async function* uploadFiles(options: {
   }
 }
 
-class UploadProgress extends EventEmitter {
+export class UploadProgress extends EventEmitter {
   sha: string;
   file: DeploymentFile;
   bytesUploaded: number;
