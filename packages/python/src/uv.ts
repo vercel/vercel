@@ -68,8 +68,9 @@ export class UvRunner {
       );
     }
 
-    // Only apply the startsWith filter when not in Vercel Build Image
-    if (!process.env.VERCEL_BUILD_IMAGE) {
+    // Only apply the startsWith filter when in Vercel Build Image
+    // (local builds use system Python paths, not /uv/python/)
+    if (process.env.VERCEL_BUILD_IMAGE) {
       pyList = pyList.filter(
         entry =>
           entry.path !== null &&
