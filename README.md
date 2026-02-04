@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://vercel.com/docs"><strong>Documentation</strong></a> ·
+  <a href="https://vercel.com/docs"><strong>Documentation</sxtrong></a> ·
   <a href="https://vercel.com/changelog"><strong>Changelog</strong></a> ·
   <a href="https://vercel.com/templates"><strong>Templates</strong></a> ·
   <a href="https://vercel.com/docs/cli"><strong>CLI</strong></a>
