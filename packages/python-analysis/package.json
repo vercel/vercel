@@ -1,12 +1,22 @@
 {
   "name": "@vercel/python-analysis",
   "version": "0.3.0",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "imports": {
     "#wasm/*": "./dist/wasm/*"
   },
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
@@ -19,7 +29,7 @@
     "directory": "packages/python-analysis"
   },
   "scripts": {
-    "build": "pnpm generate:schemas && pnpm build:wasm && node ../../utils/build.mjs",
+    "build": "pnpm generate:schemas && pnpm build:wasm && node scripts/build.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "generate:schemas": "ts-to-zod --all",
     "test": "vitest run --config ../../vitest.config.mts",
