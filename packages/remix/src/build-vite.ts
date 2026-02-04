@@ -505,11 +505,6 @@ export const build: BuildV2 = async ({
   const assetsDir = viteConfig?.build?.assetsDir || 'assets';
   const routes: any[] = [
     {
-      src: `^/${assetsDir}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
-    {
       handle: 'filesystem',
     },
   ];
@@ -548,6 +543,18 @@ export const build: BuildV2 = async ({
   routes.push({
     src: '/(.*)',
     dest: '/',
+  });
+
+  // Routes to call after a file has been matched.
+  // Cache headers are set here so they only apply to files that exist,
+  // preventing 404 responses from being cached with immutable headers.
+  routes.push({
+    handle: 'hit',
+  });
+  routes.push({
+    src: `^/${assetsDir}/(.*)$`,
+    headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+    continue: true,
   });
 
   return { routes, output, framework: { version: frameworkVersion } };
