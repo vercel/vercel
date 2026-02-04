@@ -177,7 +177,9 @@ export const rolldown = async (
             }
 
             // Check if we need to shim CJS packages
-            const isCjs = await isCommonJS(id, resolved!.id, resolved!);
+            const isCjs = resolved
+              ? await isCommonJS(id, resolved.id, resolved)
+              : false;
 
             if (isCjs) {
               const importerResolved = await this.resolve(importer);
