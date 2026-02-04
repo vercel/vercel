@@ -102,7 +102,7 @@ describe('successful builds', async () => {
   );
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
-    it.skipIf(process.platform === 'win32').only(
+    it.skipIf(process.platform === 'win32')(
       `builds ${fixtureName}`,
       async () => {
         // Copy entire fixture to work dir so no parent node_modules can interfere
