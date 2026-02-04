@@ -68,17 +68,24 @@ export class UvRunner {
       );
     }
 
+    // Only apply the startsWith filter when not in Vercel Build Image
+    if (!process.env.VERCEL_BUILD_IMAGE) {
+      pyList = pyList.filter(
+        entry =>
+          entry.path !== null &&
+          entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
+          entry.implementation === 'cpython'
+      );
+    } else {
+      pyList = pyList.filter(
+        entry => entry.path !== null && entry.implementation === 'cpython'
+      );
+    }
+
     return new Set(
-      pyList
-        .filter(
-          entry =>
-            entry.path !== null &&
-            entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
-            entry.implementation === 'cpython'
-        )
-        .map(
-          entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
-        )
+      pyList.map(
+        entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
+      )
     );
   }
 
