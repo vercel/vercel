@@ -11,7 +11,7 @@ import {
   readVercelConfig,
   getFrameworkDefaultRoutes,
   frameworkSupportsPrefixMount,
-  getPrefixedSpaRoutes,
+  getRoutesForPrefix,
 } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 
@@ -135,8 +135,10 @@ export async function generateServicesRoutes(
           });
           continue;
         }
-        // Framework supports prefix: use simple SPA fallback
-        const prefixedRoutes = getPrefixedSpaRoutes(normalizedPrefix);
+        const prefixedRoutes = getRoutesForPrefix(
+          service.framework,
+          normalizedPrefix
+        );
         rewrites.push(...prefixedRoutes);
       }
     } else {

@@ -209,6 +209,15 @@ export interface Framework {
    */
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   /**
+   * Generate routing rules for mounting this framework at a specific URL prefix.
+   * Used by experimentalServices when a framework needs to be mounted at a non-root path.
+   * If provided, the framework can be mounted at any prefix; if not, prefix mounting
+   * is only allowed for frameworks with simple/no defaultRoutes.
+   * @param prefix - The URL prefix without leading slash (e.g., "admin", "docs")
+   * @example (prefix) => [{ handle: 'filesystem' }, { src: `^/${prefix}/(.*)$`, dest: `/${prefix}/index.html` }]
+   */
+  getDefaultRoutesForPrefix?: (prefix: string) => Route[];
+  /**
    * A glob string of files to cache for future deployments.
    * @example ".cache/**"
    */

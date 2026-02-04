@@ -385,14 +385,14 @@ describe('detectServices', () => {
       expect(spaRoute).toBeDefined();
     });
 
-    it('should error when framework with defaultRoutes is mounted at prefix (create-react-app)', async () => {
+    it('should error when framework with async defaultRoutes is mounted at prefix (gatsby)', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
-            admin: {
-              workspace: 'apps/admin',
-              framework: 'create-react-app',
-              routePrefix: '/admin',
+            blog: {
+              workspace: 'apps/blog',
+              framework: 'gatsby',
+              routePrefix: '/blog',
             },
           },
         }),
@@ -402,11 +402,11 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(1);
       expect(isStaticBuild(result.services[0])).toBe(true);
 
-      // Frameworks with defaultRoutes cannot be mounted at a prefix
+      // Gatsby has async defaultRoutes and no getDefaultRoutesForPrefix
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toMatchObject({
         code: 'FRAMEWORK_PREFIX_NOT_SUPPORTED',
-        serviceName: 'admin',
+        serviceName: 'blog',
       });
       // No routes generated for this service
       expect(result.routes.rewrites).toHaveLength(0);
@@ -431,9 +431,8 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
 
       // Vite has no defaultRoutes, so it supports prefix mounting
-      // We get simple SPA routes prefixed for the service
-      expect(result.routes.rewrites).toHaveLength(2);
-      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      // Simple SPA fallback - serve index.html for all paths under the prefix
+      expect(result.routes.rewrites).toHaveLength(1);
       expect(result.routes.rewrites).toContainEqual({
         src: '^/admin(?:/(.*))?$',
         dest: '/admin/index.html',
@@ -458,13 +457,71 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
 
       // Svelte HAS defaultRoutes, but they match DEFAULT_SPA_ROUTES
-      // so it's safe to mount at a prefix
-      expect(result.routes.rewrites).toHaveLength(2);
-      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      // so it's safe to mount at a prefix (simple SPA fallback)
+      expect(result.routes.rewrites).toHaveLength(1);
       expect(result.routes.rewrites).toContainEqual({
         src: '^/admin(?:/(.*))?$',
         dest: '/admin/index.html',
       });
+    });
+
+    it('should allow framework with getDefaultRoutesForPrefix at prefix (docusaurus-2)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            docs: {
+              workspace: 'apps/docs',
+              framework: 'docusaurus-2',
+              routePrefix: '/docs',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+
+      // Docusaurus has getDefaultRoutesForPrefix, so it can be mounted at /docs
+      // Should include framework-specific routes with proper prefixes
+      expect(result.routes.rewrites.length).toBeGreaterThan(2);
+      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      // Check that the 404 route is properly prefixed
+      const notFoundRoute = result.routes.rewrites.find(
+        r => 'status' in r && r.status === 404
+      );
+      expect(notFoundRoute).toBeDefined();
+      expect(notFoundRoute).toMatchObject({
+        src: '^/docs/.*',
+        dest: '/docs/404.html',
+      });
+    });
+
+    it('should allow framework with getDefaultRoutesForPrefix at prefix (create-react-app)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'create-react-app',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+
+      // CRA now has getDefaultRoutesForPrefix, so it can be mounted at /admin
+      expect(result.routes.rewrites.length).toBeGreaterThan(2);
+      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      // Check the SPA fallback is properly prefixed
+      const spaRoute = result.routes.rewrites.find(
+        r => 'dest' in r && r.dest === '/admin/index.html'
+      );
+      expect(spaRoute).toBeDefined();
     });
 
     it('should pass routePrefix in builder config for static services', async () => {
@@ -545,16 +602,15 @@ describe('detectServices', () => {
       expect(isStaticBuild(expressApi!)).toBe(false);
 
       // Function service and prefixed static service get rewrites
-      // admin-panel gets 2 prefixed routes (filesystem + SPA fallback)
+      // admin-panel gets 1 SPA fallback route
       // express-api gets 1 rewrite
-      expect(result.routes.rewrites).toHaveLength(3);
+      expect(result.routes.rewrites).toHaveLength(2);
       expect(result.routes.rewrites).toContainEqual({
         src: '^/api(?:/.*)?$',
         dest: '/api/index.js',
         check: true,
       });
-      // Prefixed static service gets prefixed framework routes
-      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      // Prefixed static service gets SPA fallback
       expect(result.routes.rewrites).toContainEqual({
         src: '^/admin(?:/(.*))?$',
         dest: '/admin/index.html',

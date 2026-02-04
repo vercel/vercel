@@ -501,6 +501,41 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
+    getDefaultRoutesForPrefix: (prefix: string) => [
+      {
+        src: `^/${prefix}/[^./]+\\.[0-9a-f]{8}\\.(css|js)$`,
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: `^/${prefix}/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$`,
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: `^/${prefix}/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$`,
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: `^/${prefix}/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$`,
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: `^/${prefix}/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$`,
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: `^/${prefix}/.*`,
+        status: 404,
+        dest: `/${prefix}/404.html`,
+      },
+    ],
   },
   {
     name: 'Docusaurus (v1)',
@@ -1288,6 +1323,35 @@ export const frameworks = [
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
         dest: '/index.html',
+      },
+    ],
+    getDefaultRoutesForPrefix: (prefix: string) => [
+      {
+        src: `/${prefix}/static/(.*)`,
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: `/${prefix}/service-worker.js`,
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        src: `/${prefix}/sockjs-node/(.*)`,
+        dest: `/${prefix}/sockjs-node/$1`,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: `/${prefix}/static/(.*)`,
+        status: 404,
+        dest: `/${prefix}/404.html`,
+      },
+      {
+        src: `^/${prefix}/(.*)`,
+        headers: { 'cache-control': 's-maxage=0' },
+        dest: `/${prefix}/index.html`,
       },
     ],
   },

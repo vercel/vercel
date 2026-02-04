@@ -149,7 +149,10 @@ export function resolveConfiguredService(
     builderSrc = posixPath.join(workspace, builderSrc);
   }
 
-  const builderConfig: Record<string, unknown> = {};
+  const builderConfig: Record<string, unknown> = {
+    // Required for static-build to detect framework and use correct output directory
+    zeroConfig: true,
+  };
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;

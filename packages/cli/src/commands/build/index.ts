@@ -43,6 +43,8 @@ import {
   detectFrameworkVersion,
   detectInstrumentation,
   LocalFileSystemDetector,
+  mergeServicesRoutes,
+  type ResolvedService,
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
@@ -555,6 +557,8 @@ async function doBuild(
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let isZeroConfig = false;
+  // For services builds, store the resolved services for route merging
+  let resolvedServices: ResolvedService[] | undefined;
 
   if (builds.length > 0) {
     output.warn(
@@ -587,6 +591,10 @@ async function doBuild(
     } else {
       builds = [{ src: '**', use: '@vercel/static' }];
     }
+
+    // Store services for route merging (if this is a services build)
+    resolvedServices = (detectedBuilders as { services?: ResolvedService[] })
+      .services;
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     zeroConfigRoutes.push(
@@ -702,7 +710,8 @@ async function doBuild(
             installCommand: projectSettings.installCommand ?? undefined,
             devCommand: projectSettings.devCommand ?? undefined,
             buildCommand: projectSettings.buildCommand ?? undefined,
-            framework: projectSettings.framework,
+            // Use per-build framework (for services) if set, otherwise project-level
+            framework: build.config?.framework ?? projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
           }
@@ -992,28 +1001,55 @@ async function doBuild(
     }
   }
 
-  const builderRoutes: MergeRoutesProps['builds'] = Array.from(
-    buildResults.entries()
-  )
-    .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
-    .map(b => {
-      return {
-        use: b[0].use,
-        entrypoint: b[0].src!,
-        routes: (b[1] as BuildResultV2Typical).routes,
-      };
+  // Merge routes from all builders
+  let mergedRoutes: Route[];
+
+  if (resolvedServices && resolvedServices.length > 0) {
+    // Services build: use services-aware route merging
+    // This handles route ordering and catch-all exclusions properly
+    const builderEntries = Array.from(buildResults.entries())
+      .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
+      .map(([build, result]) => ({
+        src: build.src!,
+        use: build.use,
+        config: build.config as {
+          routePrefix?: string;
+          framework?: string;
+          [key: string]: unknown;
+        },
+        result: result as { routes?: Route[] },
+      }));
+
+    const servicesRoutesResult = mergeServicesRoutes({
+      services: resolvedServices,
+      builders: builderEntries,
     });
-  if (zeroConfigRoutes.length) {
-    builderRoutes.unshift({
-      use: '@vercel/zero-config-routes',
-      entrypoint: '/',
-      routes: zeroConfigRoutes,
+    mergedRoutes = servicesRoutesResult.routes;
+  } else {
+    // Standard build: use normal route merging
+    const builderRoutes: MergeRoutesProps['builds'] = Array.from(
+      buildResults.entries()
+    )
+      .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
+      .map(b => {
+        return {
+          use: b[0].use,
+          entrypoint: b[0].src!,
+          routes: (b[1] as BuildResultV2Typical).routes,
+        };
+      });
+    if (zeroConfigRoutes.length) {
+      builderRoutes.unshift({
+        use: '@vercel/zero-config-routes',
+        entrypoint: '/',
+        routes: zeroConfigRoutes,
+      });
+    }
+    mergedRoutes = mergeRoutes({
+      userRoutes: routesResult.routes,
+      builds: builderRoutes,
     });
   }
-  const mergedRoutes = mergeRoutes({
-    userRoutes: routesResult.routes,
-    builds: builderRoutes,
-  });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());

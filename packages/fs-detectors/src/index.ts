@@ -11,6 +11,12 @@ export {
 } from './services/detect-services';
 export { isStaticBuild, getFrameworkDefaultRoutes } from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
+export {
+  mergeServicesRoutes,
+  type BuilderEntry,
+  type MergeServicesRoutesOptions,
+  type MergeServicesRoutesResult,
+} from './services/merge-services-routes';
 export type {
   DetectServicesOptions,
   DetectServicesResult,

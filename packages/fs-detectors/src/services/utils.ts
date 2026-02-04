@@ -43,9 +43,9 @@ export const DEFAULT_SPA_ROUTES: Route[] = [
  * Check if a framework can be mounted at a non-root prefix.
  *
  * Frameworks can be prefix-mounted if:
- * 1. They have no defaultRoutes
- * 2. Their defaultRoutes match our DEFAULT_SPA_ROUTES
- * 3. (Future) They provide getDefaultRoutesForPrefix
+ * 1. They provide getDefaultRoutesForPrefix
+ * 2. They have no defaultRoutes
+ * 3. Their defaultRoutes match our DEFAULT_SPA_ROUTES
  */
 export function frameworkSupportsPrefixMount(
   frameworkSlug: string | undefined
@@ -56,6 +56,12 @@ export function frameworkSupportsPrefixMount(
 
   const framework = frameworksBySlug.get(frameworkSlug);
 
+  // Framework explicitly supports prefix mounting
+  if (framework?.getDefaultRoutesForPrefix) {
+    return true;
+  }
+
+  // No defaultRoutes = simple static, safe to prefix
   if (!framework?.defaultRoutes) {
     return true;
   }
@@ -66,7 +72,6 @@ export function frameworkSupportsPrefixMount(
   }
 
   // If defaultRoutes matches our standard SPA pattern, safe to prefix
-  // (e.g., Svelte defines defaultRoutes but they're the same as DEFAULT_SPA_ROUTES)
   const defaultRoutesJson = JSON.stringify(DEFAULT_SPA_ROUTES);
   return JSON.stringify(framework.defaultRoutes) === defaultRoutesJson;
 }
@@ -96,14 +101,29 @@ export async function getFrameworkDefaultRoutes(
 }
 
 /**
- * Generate prefixed SPA routes for a service mounted at a non-root path.
- * Only used for frameworks that support prefix mounting (no custom defaultRoutes).
+ * Get routes for a framework mounted at a non-root prefix.
+ *
+ * Priority:
+ * 1. Use framework's getDefaultRoutesForPrefix if available
+ * 2. Fall back to simple SPA routes
+ *
+ * Note: These routes are meant to be used AFTER handle:filesystem,
+ * so they don't include the handle themselves. The handle is added
+ * by the route merging process.
  */
-export function getPrefixedSpaRoutes(prefix: string): Route[] {
-  return [
-    { handle: 'filesystem' },
-    { src: `^/${prefix}(?:/(.*))?$`, dest: `/${prefix}/index.html` },
-  ];
+export function getRoutesForPrefix(
+  frameworkSlug: string | undefined,
+  prefix: string
+): Route[] {
+  if (frameworkSlug) {
+    const framework = frameworksBySlug.get(frameworkSlug);
+    if (framework?.getDefaultRoutesForPrefix) {
+      return framework.getDefaultRoutesForPrefix(prefix);
+    }
+  }
+
+  // Simple SPA fallback - serve index.html for all paths under the prefix
+  return [{ src: `^/${prefix}(?:/(.*))?$`, dest: `/${prefix}/index.html` }];
 }
 
 /**

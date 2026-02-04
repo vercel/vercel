@@ -227,8 +227,20 @@ const getDevRoute = (srcBase: string, devPort: number, route: RouteWithSrc) => {
 
 async function getFrameworkRoutes(
   framework: Framework,
-  dirPrefix: string
+  dirPrefix: string,
+  routePrefix?: string
 ): Promise<Route[]> {
+  // For prefixed services (like /admin or /docs), use getDefaultRoutesForPrefix if available
+  if (routePrefix && routePrefix !== '/' && routePrefix !== '.') {
+    const prefix = routePrefix.replace(/^\//, ''); // Strip leading slash
+    if (framework.getDefaultRoutesForPrefix) {
+      return framework.getDefaultRoutesForPrefix(prefix);
+    }
+    // Frameworks without getDefaultRoutesForPrefix shouldn't have routes added here
+    // The services route generation handles them separately
+    return [];
+  }
+
   if (!framework.defaultRoutes) {
     return [];
   }
@@ -837,7 +849,8 @@ export const build: BuildV2 = async ({
         if (framework && !extraOutputs.routes) {
           const frameworkRoutes = await getFrameworkRoutes(
             framework,
-            outputDirPrefix
+            outputDirPrefix,
+            config.routePrefix as string | undefined
           );
           routes.push(...frameworkRoutes);
         }
