@@ -3,7 +3,7 @@ import VirtualFilesystem from './virtual-file-system';
 
 describe('detectServices', () => {
   describe('with no vercel.json', () => {
-    it('should return error when no services configured', async () => {
+    it('should return auto-detection error when no service found', async () => {
       const fs = new VirtualFilesystem({});
       const result = await detectServices({ fs });
 
@@ -14,7 +14,7 @@ describe('detectServices', () => {
   });
 
   describe('with vercel.json without experimentalServices', () => {
-    it('should return error when no services configured', async () => {
+    it('should return auto-detection error when no service found', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           buildCommand: 'npm run build',

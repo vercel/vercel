@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { isStaticBuild, readVercelConfig } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
+import { autoDetectServices } from './auto-detect';
 
 /**
  * Detect and resolve services within a project.
@@ -39,7 +40,30 @@ export async function detectServices(
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
+  // Try auto-detection
   if (!hasConfiguredServices) {
+    const autoResult = await autoDetectServices({ fs: scopedFs });
+
+    if (autoResult.errors.length > 0) {
+      return {
+        services: [],
+        routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+        errors: autoResult.errors,
+        warnings: [],
+      };
+    }
+
+    if (autoResult.services) {
+      const result = resolveAllConfiguredServices(autoResult.services);
+      const routes = generateServicesRoutes(result.services);
+      return {
+        services: result.services,
+        routes,
+        errors: result.errors,
+        warnings: [],
+      };
+    }
+
     return {
       services: [],
       routes: { rewrites: [], defaults: [], crons: [], workers: [] },

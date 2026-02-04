@@ -196,6 +196,18 @@ export type StartDevServerOptions = BuildOptions & {
    * Directory to serve static files from in dev mode
    */
   publicDir?: string;
+  /**
+   * Optional callback for stdout output from the dev server process.
+   * If provided, the builder should forward stdout to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStdout?: (data: Buffer) => void;
+  /**
+   * Optional callback for stderr output from the dev server process.
+   * If provided, the builder should forward stderr to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStderr?: (data: Buffer) => void;
 };
 
 export interface StartDevServerSuccess {
