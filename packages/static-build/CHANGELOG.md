@@ -1,5 +1,11 @@
 # @vercel/static-build
 
+## 2.8.30
+
+### Patch Changes
+
+- [services] static-build frontends support ([#14819](https://github.com/vercel/vercel/pull/14819))
+
 ## 2.8.29
 
 ### Patch Changes
