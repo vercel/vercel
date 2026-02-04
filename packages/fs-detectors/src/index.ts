@@ -9,7 +9,7 @@ export {
   detectServices,
   generateServicesRoutes,
 } from './services/detect-services';
-export { isStaticBuild } from './services/utils';
+export { isStaticBuild, getFrameworkDefaultRoutes } from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
