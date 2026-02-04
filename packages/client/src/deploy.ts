@@ -134,7 +134,7 @@ export async function* deploy(
   files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
-): AsyncIterableIterator<{ type: string; payload: any }> {
+): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
   const debug = createDebug(clientOptions.debug);
 
   // Check if we should default to a static deployment
@@ -179,6 +179,15 @@ export async function* deploy(
   } catch (e) {
     debug('An unexpected error occurred when creating the deployment');
     return yield { type: 'error', payload: e };
+  }
+
+  /**
+   * When using manual, the deployment will remain INITIALIZING until it is
+   * manually continued so we skip waiting for Ready State.
+   */
+  if (clientOptions.manual) {
+    debug('Manual mode - skipping ready state check');
+    return;
   }
 
   if (deployment) {
