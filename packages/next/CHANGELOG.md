@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.22
+
+### Patch Changes
+
+- Remove 404.html prerenders from serverless function ([#14836](https://github.com/vercel/vercel/pull/14836))
+
 ## 4.15.21
 
 ### Patch Changes
