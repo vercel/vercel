@@ -304,7 +304,7 @@ export class ServicesOrchestrator {
         return null;
       }
 
-      output.log(
+      output.debug(
         `Starting ${chalk.bold(service.name)} using ${chalk.cyan.bold(builderSpec)}`
       );
 
@@ -374,7 +374,7 @@ export class ServicesOrchestrator {
     const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
-    output.log(
+    output.debug(
       `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
     );
 

@@ -946,6 +946,18 @@ export default class DevServer {
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
+
+      let addressFormatted = this.address.toString();
+      if (this.address.pathname === '/' && this.address.protocol === 'http:') {
+        // log address without trailing slash to maintain backwards compatibility
+        addressFormatted = addressFormatted.replace(/\/$/, '');
+      }
+
+      output.print(`${chalk.cyan('>')} Available at:\n`);
+      for (const service of this.services) {
+        const serviceUrl = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
+        output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
+      }
     } else {
       devCommandPromise = this.runDevCommand();
     }
@@ -1043,19 +1055,13 @@ export default class DevServer {
 
     await devCommandPromise;
 
-    let addressFormatted = this.address.toString();
-    if (this.address.pathname === '/' && this.address.protocol === 'http:') {
-      // log address without trailing slash to maintain backwards compatibility
-      addressFormatted = addressFormatted.replace(/\/$/, '');
-    }
-
-    if (this.orchestrator?.hasServices()) {
-      output.ready('Available at:');
-      for (const service of this.orchestrator.getServices().values()) {
-        const url = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
-        output.print(`  ${chalk.bold(service.name)}: ${link(url)}\n`);
+    // For multi-service mode, URLs were already printed.
+    if (!this.orchestrator?.hasServices()) {
+      let addressFormatted = this.address.toString();
+      if (this.address.pathname === '/' && this.address.protocol === 'http:') {
+        // log address without trailing slash to maintain backwards compatibility
+        addressFormatted = addressFormatted.replace(/\/$/, '');
       }
-    } else {
       output.ready(`Available at ${link(addressFormatted)}`);
     }
   }
