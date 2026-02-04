@@ -522,6 +522,26 @@ export interface Cron {
   schedule: string;
 }
 
+export interface Service {
+  name: string;
+  type: ServiceType;
+  group?: string;
+  workspace: string;
+  entrypoint?: string;
+  framework?: string;
+  builder: Builder;
+  runtime?: string;
+  buildCommand?: string;
+  installCommand?: string;
+  /* web service config */
+  routePrefix?: string;
+  /* cron service config */
+  schedule?: string;
+  /* worker service config */
+  topic?: string;
+  consumer?: string;
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
