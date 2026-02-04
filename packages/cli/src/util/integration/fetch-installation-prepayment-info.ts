@@ -11,7 +11,7 @@ export async function fetchInstallationPrepaymentInfo(
   searchParams.set('teamId', teamId);
 
   return await client.fetch<InstallationBalancesAndThresholds>(
-    `/v1/integrations/installations/${installationId}/billing/balance?teamId=${searchParams}`,
+    `/v1/integrations/installations/${installationId}/billing/balance?${searchParams}`,
     {
       json: true,
     }
