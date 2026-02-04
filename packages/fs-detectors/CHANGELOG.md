@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.7.21
+
+### Patch Changes
+
+- Move backends builder detection to detectBuilders phase ([#14830](https://github.com/vercel/vercel/pull/14830))
+
 ## 5.7.20
 
 ### Patch Changes
