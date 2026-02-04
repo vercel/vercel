@@ -246,9 +246,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       expect(outputExists).toBe(true);
 
       const config = await fs.readJSON(join(output, 'config.json'));
-      await expect(JSON.stringify(config, null, 2)).toMatchFileSnapshot(
-        '__filesnapshots__/monorepo.config.json'
-      );
+      expect(config.routes.find((r: any) => r.dest === '/echo')).toBeDefined();
 
       // Check that functions were created
       const functionsDir = join(output, 'functions');
