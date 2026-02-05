@@ -48,64 +48,35 @@ import {
 
 export { shouldServe };
 
-// Supported entrypoints for the Go runtime framework preset
-const SUPPORTED_ENTRYPOINTS = [
+// Candidate entrypoints for Go runtime framework preset (in priority order)
+export const GO_CANDIDATE_ENTRYPOINTS = [
   'main.go',
   'cmd/api/main.go',
   'cmd/server/main.go',
 ];
 
 /**
- * Resolves the entrypoint for standalone Go server mode.
- * Checks for main.go, cmd/api/main.go, or cmd/server/main.go in priority order.
+ * Detect a Go entrypoint path relative to workPath, or return null if not found.
  */
-async function resolveStandaloneEntrypoint(
-  workPath: string
+export async function detectGoEntrypoint(
+  workPath: string,
+  configuredEntrypoint: string
 ): Promise<string | null> {
-  for (const entry of SUPPORTED_ENTRYPOINTS) {
-    if (await pathExists(join(workPath, entry))) {
-      debug(`Resolved Go standalone entrypoint: ${entry}`);
-      return entry;
+  // If the configured entrypoint exists, use it
+  if (await pathExists(join(workPath, configuredEntrypoint))) {
+    debug(`Using configured Go entrypoint: ${configuredEntrypoint}`);
+    return configuredEntrypoint;
+  }
+
+  // Search candidate locations
+  for (const candidate of GO_CANDIDATE_ENTRYPOINTS) {
+    if (await pathExists(join(workPath, candidate))) {
+      debug(`Detected Go entrypoint: ${candidate}`);
+      return candidate;
     }
   }
+
   return null;
-}
-
-/**
- * Checks if a Go file is a standalone server (package main without HTTP handler export).
- * Returns the package name if it's package main, otherwise null.
- */
-async function checkStandaloneServer(
-  filePath: string
-): Promise<{ isStandalone: boolean; packageName: string | null }> {
-  try {
-    const content = await readFile(filePath, 'utf-8');
-
-    // Check for package main
-    const packageMatch = content.match(/^\s*package\s+(\w+)/m);
-    const packageName = packageMatch ? packageMatch[1] : null;
-
-    if (packageName !== 'main') {
-      return { isStandalone: false, packageName };
-    }
-
-    // Check for func main()
-    const hasMainFunc = /func\s+main\s*\(\s*\)/.test(content);
-
-    // Check for HTTP handler signature (indicates this is a handler file, not standalone)
-    const hasHandlerSignature =
-      /func\s+\w+\s*\([^)]*http\.ResponseWriter[^)]*\*http\.Request/.test(
-        content
-      );
-
-    // It's standalone if it has package main + func main() but no HTTP handler
-    return {
-      isStandalone: hasMainFunc && !hasHandlerSignature,
-      packageName,
-    };
-  } catch {
-    return { isStandalone: false, packageName: null };
-  }
 }
 
 // in order to allow the user to have `main.go`,
@@ -211,23 +182,15 @@ export async function build(options: BuildOptions) {
   `);
     }
 
-    // Check for standalone server mode (runtime framework preset)
-    // For entrypoints like main.go or cmd/api/main.go, check if it's a standalone server
-    let resolvedEntrypoint = entrypoint;
-    if (entrypoint === 'main.go') {
-      // Try to resolve the actual entrypoint (could be cmd/api/main.go etc.)
-      const resolved = await resolveStandaloneEntrypoint(workPath);
-      if (resolved) {
-        resolvedEntrypoint = resolved;
+    // Standalone server mode when framework is 'go' or 'services'
+    if (config?.framework === 'go' || config?.framework === 'services') {
+      const resolvedEntrypoint = await detectGoEntrypoint(workPath, entrypoint);
+      if (!resolvedEntrypoint) {
+        throw new Error(
+          `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
+        );
       }
-    }
-
-    // Check if this is a standalone server (package main with func main(), no HTTP handler)
-    const entrypointPath = join(workPath, resolvedEntrypoint);
-    const standaloneCheck = await checkStandaloneServer(entrypointPath);
-
-    if (standaloneCheck.isStandalone) {
-      debug(`Detected standalone Go server mode for ${resolvedEntrypoint}`);
+      debug(`Using standalone Go server mode for ${resolvedEntrypoint}`);
       return buildStandaloneServer({
         ...options,
         entrypoint: resolvedEntrypoint,
@@ -1019,7 +982,7 @@ async function startStandaloneDevServer(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, config, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
 
   // For some reason, if `entrypoint` is a path segment (filename contains `[]`
@@ -1029,19 +992,17 @@ export async function startDevServer(
     entrypointWithExt += '.go';
   }
 
-  // Check for standalone server mode (runtime framework preset)
-  let resolvedEntrypoint = entrypointWithExt;
-  if (entrypointWithExt === 'main.go') {
-    const resolved = await resolveStandaloneEntrypoint(workPath);
-    if (resolved) {
-      resolvedEntrypoint = resolved;
+  // Standalone server mode when framework is 'go' or 'services'
+  if (config?.framework === 'go' || config?.framework === 'services') {
+    const resolvedEntrypoint = await detectGoEntrypoint(
+      workPath,
+      entrypointWithExt
+    );
+    if (!resolvedEntrypoint) {
+      throw new Error(
+        `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
     }
-  }
-
-  const entrypointPath = join(workPath, resolvedEntrypoint);
-  const standaloneCheck = await checkStandaloneServer(entrypointPath);
-
-  if (standaloneCheck.isStandalone) {
     return startStandaloneDevServer(opts, resolvedEntrypoint);
   }
 
