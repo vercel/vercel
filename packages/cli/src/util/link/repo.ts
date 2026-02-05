@@ -124,8 +124,10 @@ export async function ensureRepoLink(
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     // Use getGitConfigPath to correctly resolve the config path for
-    // regular repos, worktrees, and submodules
-    const gitConfigPath = getGitConfigPath({ cwd: rootPath });
+    // regular repos, worktrees, and submodules. Falls back to the
+    // traditional path if git commands fail.
+    const gitConfigPath =
+      getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
     if (!gitConfigPath) {
       throw new Error('Could not determine Git config path');
     }
