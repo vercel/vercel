@@ -372,7 +372,8 @@ export async function detectBuilders(
       frontendBuilder?.use === '@vercel/express' ||
       frontendBuilder?.use === '@vercel/hono' ||
       frontendBuilder?.use === '@vercel/python' ||
-      frontendBuilder?.use === '@vercel/go'
+      frontendBuilder?.use === '@vercel/go' ||
+      frontendBuilder?.use === '@vercel/ocaml'
     ) {
       builders.push({
         src: 'public/**/*',

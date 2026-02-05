@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name dream_app)
+ (libraries dream))

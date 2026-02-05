@@ -1,0 +1,8 @@
+(lang dune 3.0)
+(name dream_app)
+
+(package
+ (name dream_app)
+ (depends
+  (ocaml (>= 5.1))
+  (dream (>= 1.0.0~alpha5))))
