@@ -28,12 +28,13 @@ import {
   glob,
   download,
   Lambda,
-  FileFsRef,
+  FileBlob,
   getWriteableDirectory,
   shouldServe,
   debug,
   cloneEnv,
   getProvidedRuntime,
+  getLambdaOptionsFromFunction,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -55,9 +56,6 @@ export const GO_CANDIDATE_ENTRYPOINTS = [
   'cmd/server/main.go',
 ];
 
-/**
- * Detect a Go entrypoint path relative to workPath, or return null if not found.
- */
 export async function detectGoEntrypoint(
   workPath: string,
   configuredEntrypoint: string
@@ -538,7 +536,13 @@ async function buildHandlerAsPackageMain({
 
 /**
  * Build a standalone Go HTTP server (runtime framework preset mode).
- * This builds the Go binary directly without wrapping it with go-bridge.
+ * This builds a bootstrap wrapper that handles the Vercel IPC protocol
+ * and proxies requests to the user's Go server.
+ *
+ * Architecture:
+ * - User's server is built as 'user-server' binary
+ * - Bootstrap wrapper is built as 'executable' (main entrypoint)
+ * - Bootstrap handles IPC protocol and reverse proxies to user's server
  */
 async function buildStandaloneServer({
   files,
@@ -551,9 +555,17 @@ async function buildStandaloneServer({
 
   await download(files, workPath, meta);
 
-  // Cross-compile for Linux x86_64 (same as Rust approach)
+  // Get lambda options from config (memory, maxDuration, regions, architecture)
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+
+  const architecture = lambdaOptions?.architecture || 'x86_64';
+
+  // Cross-compile for Linux with appropriate architecture
   const env = cloneEnv(process.env, meta.env, {
-    GOARCH: 'amd64',
+    GOARCH: architecture === 'arm64' ? 'arm64' : 'amd64',
     GOOS: 'linux',
     CGO_ENABLED: '0',
   });
@@ -568,7 +580,8 @@ async function buildStandaloneServer({
   });
 
   const outDir = await getWriteableDirectory();
-  const binaryPath = join(outDir, 'executable');
+  const userServerPath = join(outDir, 'user-server');
+  const bootstrapPath = join(outDir, 'executable');
 
   // Determine build target based on entrypoint location
   // - main.go at root: build '.'
@@ -576,16 +589,49 @@ async function buildStandaloneServer({
   const buildTarget =
     entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
 
-  debug(`Building Go binary: go build ${buildTarget} -> ${binaryPath}`);
+  debug(
+    `Building user Go server (${architecture}): go build ${buildTarget} -> ${userServerPath}`
+  );
 
   try {
-    await go.build(buildTarget, binaryPath);
+    await go.build(buildTarget, userServerPath);
   } catch (err) {
     console.error(`Failed to build standalone Go server: ${buildTarget}`);
     throw err;
   }
 
-  // Gather any additional files to include
+  // Build the bootstrap wrapper that handles IPC protocol
+  const bootstrapSrc = join(__dirname, '../vercel-bootstrap.go');
+  debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
+
+  try {
+    // Create a temporary directory for building the bootstrap
+    const bootstrapBuildDir = await getWriteableDirectory();
+    const bootstrapGoFile = join(bootstrapBuildDir, 'main.go');
+
+    // Copy bootstrap source to temp directory
+    await copy(bootstrapSrc, bootstrapGoFile);
+
+    // Initialize a minimal go.mod for the bootstrap
+    const bootstrapGoMod = join(bootstrapBuildDir, 'go.mod');
+    await writeFile(bootstrapGoMod, 'module vercel-bootstrap\n\ngo 1.21\n');
+
+    // Build bootstrap with same env (cross-compile settings)
+    const bootstrapGo = await createGo({
+      modulePath: bootstrapBuildDir,
+      opts: { cwd: bootstrapBuildDir, env },
+      workPath: bootstrapBuildDir,
+    });
+
+    await bootstrapGo.build('.', bootstrapPath);
+  } catch (err) {
+    console.error('Failed to build bootstrap wrapper');
+    throw err;
+  }
+
+  // Gather any additional files to include (user-specified via includeFiles)
+  // Note: Static files in public/static/ should be handled by the static builder,
+  // not bundled with the function. This follows the same pattern as Python.
   const includedFiles: Files = {};
   if (config && config.includeFiles) {
     const patterns = Array.isArray(config.includeFiles)
@@ -599,17 +645,27 @@ async function buildStandaloneServer({
     }
   }
 
+  // Read both binaries as FileBlob (embedded data)
+  // This ensures they persist regardless of temp file lifecycle
+  const [userServerData, bootstrapData] = await Promise.all([
+    readFile(userServerPath),
+    readFile(bootstrapPath),
+  ]);
+
   const lambda = new Lambda({
+    ...lambdaOptions,
     files: {
       ...includedFiles,
-      executable: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+      // Bootstrap is the main entrypoint (handles IPC protocol)
+      executable: new FileBlob({ mode: 0o755, data: bootstrapData }),
+      // User's server is spawned by bootstrap
+      'user-server': new FileBlob({ mode: 0o755, data: userServerData }),
     },
     handler: 'executable',
     runtime: 'executable',
     supportsResponseStreaming: true,
-    architecture: 'x86_64',
+    architecture,
     runtimeLanguage: 'go',
-    environment: {},
   });
 
   return { output: lambda };

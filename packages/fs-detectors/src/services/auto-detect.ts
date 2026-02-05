@@ -57,6 +57,7 @@ export async function autoDetectServices(
   const rootFrameworks = await detectFrameworks({
     fs,
     frameworkList,
+    useExperimentalFrameworks: true,
   });
 
   if (rootFrameworks.length > 1) {
@@ -86,6 +87,7 @@ export async function autoDetectServices(
     const frontendFrameworks = await detectFrameworks({
       fs: frontendFs,
       frameworkList,
+      useExperimentalFrameworks: true,
     });
 
     if (frontendFrameworks.length > 1) {
@@ -269,6 +271,7 @@ async function detectServiceInDir(
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList,
+    useExperimentalFrameworks: true,
   });
 
   if (frameworks.length > 1) {

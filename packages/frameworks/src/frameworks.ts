@@ -4281,7 +4281,7 @@ export const frameworks = [
     tagline: 'An open-source programming language supported by Google.',
     description: 'A generic Go application deployed as a serverless function.',
     website: 'https://go.dev',
-    useRuntime: { src: 'main.go', use: '@vercel/go' },
+    useRuntime: { src: 'index.go', use: '@vercel/go' },
     ignoreRuntimes: ['@vercel/go'],
     detectors: {
       every: [
