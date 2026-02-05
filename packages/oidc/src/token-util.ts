@@ -9,6 +9,11 @@ import {
   type AuthConfig,
 } from './auth-config';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
+import {
+  NoAuthConfigError,
+  TokenExpiredError,
+  RefreshFailedError,
+} from './auth-errors';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -19,20 +24,23 @@ export function getVercelDataDir(): string | null {
   return path.join(dataDir, vercelFolder);
 }
 
-export async function getVercelCliToken(): Promise<string | null> {
+export async function getVercelCliToken(): Promise<string> {
   const authConfig = readAuthConfig();
   if (!authConfig) {
-    return null;
+    throw new NoAuthConfigError();
   }
 
   if (isValidAccessToken(authConfig)) {
-    return authConfig.token || null;
+    if (!authConfig.token) {
+      throw new NoAuthConfigError();
+    }
+    return authConfig.token;
   }
 
   if (!authConfig.refreshToken) {
-    // No refresh token available, clear auth and return null
+    // No refresh token available, clear auth and throw
     writeAuthConfig({});
-    return null;
+    throw new TokenExpiredError();
   }
 
   try {
@@ -45,7 +53,7 @@ export async function getVercelCliToken(): Promise<string | null> {
     if (tokensError || !tokens) {
       // Refresh failed - clear auth
       writeAuthConfig({});
-      return null;
+      throw new RefreshFailedError(tokensError);
     }
 
     // Update auth config with new tokens
@@ -59,11 +67,19 @@ export async function getVercelCliToken(): Promise<string | null> {
     }
 
     writeAuthConfig(updatedConfig);
-    return updatedConfig.token ?? null;
+    // Token is guaranteed to be defined since we just set it from tokens.access_token
+    return updatedConfig.token!;
   } catch (error) {
     // Network error or other failure - clear auth
     writeAuthConfig({});
-    return null;
+    if (
+      error instanceof NoAuthConfigError ||
+      error instanceof TokenExpiredError ||
+      error instanceof RefreshFailedError
+    ) {
+      throw error;
+    }
+    throw new RefreshFailedError(error);
   }
 }
 

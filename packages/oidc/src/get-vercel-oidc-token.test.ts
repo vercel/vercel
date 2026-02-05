@@ -52,7 +52,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     }
   });
 
-  test('should throw helpful error when CLI auth file is missing', async () => {
+  test('should throw NoAuthConfigError when CLI auth file is missing', async () => {
     fs.writeFileSync(
       path.join(rootDir, '.vercel', 'project.json'),
       JSON.stringify({ projectId, orgId: teamId })
@@ -61,7 +61,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
-      /Failed to refresh OIDC token: Log in to Vercel CLI and link your project with `vc link`/
+      /No authentication found\. Please log in\./
     );
   });
 

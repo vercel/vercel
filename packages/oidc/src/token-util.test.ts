@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getVercelCliToken } from './token-util';
 import * as authConfig from './auth-config';
 import * as oauth from './oauth';
+import {
+  NoAuthConfigError,
+  TokenExpiredError,
+  RefreshFailedError,
+} from './auth-errors';
 
 vi.mock('fs');
 vi.mock('./token-io', () => ({
@@ -34,12 +39,10 @@ describe('getVercelCliToken', () => {
     expect(authConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
-  it('should return null if auth config does not exist', async () => {
+  it('should throw NoAuthConfigError if auth config does not exist', async () => {
     vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(null);
 
-    const token = await getVercelCliToken();
-
-    expect(token).toBeNull();
+    await expect(getVercelCliToken()).rejects.toThrow(NoAuthConfigError);
   });
 
   it('should refresh token if expired and refresh token exists', async () => {
@@ -78,7 +81,7 @@ describe('getVercelCliToken', () => {
     );
   });
 
-  it('should clear auth and return null if token expired and no refresh token', async () => {
+  it('should clear auth and throw TokenExpiredError if token expired and no refresh token', async () => {
     const expiredTokenNoRefresh = {
       token: 'expired-access-token',
       expiresAt: Math.floor(Date.now() / 1000) - 3600,
@@ -89,13 +92,11 @@ describe('getVercelCliToken', () => {
     );
     vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
 
-    const token = await getVercelCliToken();
-
-    expect(token).toBeNull();
+    await expect(getVercelCliToken()).rejects.toThrow(TokenExpiredError);
     expect(authConfig.writeAuthConfig).toHaveBeenCalledWith({});
   });
 
-  it('should clear auth if refresh fails with OAuth error', async () => {
+  it('should clear auth and throw RefreshFailedError if refresh fails with OAuth error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'invalid-refresh-token',
@@ -114,13 +115,11 @@ describe('getVercelCliToken', () => {
     vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockErrorResponse);
 
-    const token = await getVercelCliToken();
-
-    expect(token).toBeNull();
+    await expect(getVercelCliToken()).rejects.toThrow(RefreshFailedError);
     expect(authConfig.writeAuthConfig).toHaveBeenCalledWith({});
   });
 
-  it('should clear auth if refresh fails with network error', async () => {
+  it('should clear auth and throw RefreshFailedError if refresh fails with network error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'valid-refresh-token',
@@ -133,9 +132,7 @@ describe('getVercelCliToken', () => {
       new Error('Network error')
     );
 
-    const token = await getVercelCliToken();
-
-    expect(token).toBeNull();
+    await expect(getVercelCliToken()).rejects.toThrow(RefreshFailedError);
     expect(authConfig.writeAuthConfig).toHaveBeenCalledWith({});
   });
 

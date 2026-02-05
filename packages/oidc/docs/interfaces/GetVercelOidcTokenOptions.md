@@ -20,7 +20,7 @@ When provided, this project ID will be used instead of reading from `.vercel/pro
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:17](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L17)
+[packages/oidc/src/get-vercel-oidc-token.ts:17](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L17)
 
 ---
 
@@ -33,4 +33,4 @@ When provided, this team ID will be used instead of reading from `.vercel/projec
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:12](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L12)
+[packages/oidc/src/get-vercel-oidc-token.ts:12](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L12)
