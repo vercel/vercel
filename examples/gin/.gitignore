@@ -21,6 +21,7 @@ vendor/
 # Build output
 gin
 main
+test-server
 
 # Environment files
 .env
