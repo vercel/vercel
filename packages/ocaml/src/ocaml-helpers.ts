@@ -15,6 +15,7 @@ import { debug } from '@vercel/build-utils';
 
 const DEFAULT_OCAML_VERSION = '5.1.1';
 const OPAM_VERSION = '2.1.5';
+const LIBEV_VERSION = '4.33';
 
 export const localCacheDir = '.vercel/cache/ocaml';
 
@@ -22,6 +23,58 @@ export interface OpamWrapper {
   install: () => Promise<void>;
   build: () => Promise<void>;
   env: NodeJS.ProcessEnv;
+}
+
+/**
+ * Download and compile libev from source.
+ * This is required for Dream and other frameworks that depend on conf-libev.
+ * Returns the prefix path where libev is installed.
+ */
+async function installLibev(cacheDir: string): Promise<string> {
+  const libevPrefix = join(cacheDir, 'libev');
+  const libevLib = join(libevPrefix, 'lib', 'libev.a');
+
+  // Check if already cached
+  if (await pathExists(libevLib)) {
+    debug('Using cached libev installation');
+    return libevPrefix;
+  }
+
+  debug(`Installing libev ${LIBEV_VERSION} from source...`);
+
+  const tmpDir = join(cacheDir, 'tmp-libev');
+  await mkdirp(tmpDir);
+
+  const tarball = join(tmpDir, 'libev.tar.gz');
+  const url = `http://dist.schmorp.de/libev/libev-${LIBEV_VERSION}.tar.gz`;
+
+  // Download libev source
+  debug(`Downloading libev from ${url}...`);
+  await execa('curl', ['-fsSL', '-o', tarball, url]);
+
+  // Extract
+  await execa('tar', ['xzf', tarball], { cwd: tmpDir });
+
+  const srcDir = join(tmpDir, `libev-${LIBEV_VERSION}`);
+
+  // Configure and build
+  debug('Configuring libev...');
+  await execa('./configure', [`--prefix=${libevPrefix}`], {
+    cwd: srcDir,
+    stdio: 'inherit',
+  });
+
+  debug('Building libev...');
+  await execa('make', ['-j4'], { cwd: srcDir, stdio: 'inherit' });
+
+  debug('Installing libev...');
+  await execa('make', ['install'], { cwd: srcDir, stdio: 'inherit' });
+
+  // Cleanup tmp directory
+  await execa('rm', ['-rf', tmpDir]);
+
+  debug(`libev installed to ${libevPrefix}`);
+  return libevPrefix;
 }
 
 /**
@@ -155,6 +208,10 @@ export async function createOpam(options: {
 
   const cacheDir = join(workPath, localCacheDir);
   const opamRoot = join(cacheDir, 'opam-root');
+
+  // Install libev first (required for Dream and other async frameworks)
+  const libevPrefix = await installLibev(cacheDir);
+
   const opamBin = await downloadOpam(cacheDir, arch);
 
   const ocamlVersion =
@@ -163,6 +220,20 @@ export async function createOpam(options: {
 
   const switchPath = join(opamRoot, ocamlVersion);
   const switchExists = await pathExists(switchPath);
+
+  // Set up environment with libev paths for compilation and linking
+  const libevInclude = join(libevPrefix, 'include');
+  const libevLib = join(libevPrefix, 'lib');
+
+  const baseEnv: NodeJS.ProcessEnv = {
+    ...env,
+    // Compiler/linker paths for libev
+    C_INCLUDE_PATH: `${libevInclude}:${env.C_INCLUDE_PATH || ''}`,
+    LIBRARY_PATH: `${libevLib}:${env.LIBRARY_PATH || ''}`,
+    LD_LIBRARY_PATH: `${libevLib}:${env.LD_LIBRARY_PATH || ''}`,
+    CFLAGS: `-I${libevInclude} ${env.CFLAGS || ''}`.trim(),
+    LDFLAGS: `-L${libevLib} ${env.LDFLAGS || ''}`.trim(),
+  };
 
   if (!switchExists) {
     debug('Initializing opam...');
@@ -176,7 +247,7 @@ export async function createOpam(options: {
         '--root',
         opamRoot,
       ],
-      { env, stdio: 'inherit' }
+      { env: baseEnv, stdio: 'inherit' }
     );
 
     debug(`Creating OCaml ${ocamlVersion} switch...`);
@@ -190,19 +261,19 @@ export async function createOpam(options: {
         '--root',
         opamRoot,
       ],
-      { env, stdio: 'inherit' }
+      { env: baseEnv, stdio: 'inherit' }
     );
   } else {
     debug(`Using cached OCaml ${ocamlVersion} switch`);
   }
 
   const opamEnv: NodeJS.ProcessEnv = {
-    ...env,
+    ...baseEnv,
     OPAMROOT: opamRoot,
     OPAMSWITCH: ocamlVersion,
     OPAMYES: '1',
     OPAMCOLOR: 'never',
-    PATH: `${join(opamRoot, ocamlVersion, 'bin')}:${env.PATH || ''}`,
+    PATH: `${join(opamRoot, ocamlVersion, 'bin')}:${baseEnv.PATH || ''}`,
   };
 
   return {
@@ -213,7 +284,16 @@ export async function createOpam(options: {
       const projectName = await getProjectName(workPath);
       const lockFile = join(workPath, `${projectName}.opam.locked`);
 
-      const args = ['install', '--deps-only', '.', '--root', opamRoot];
+      // Use --assume-depexts to skip system package manager checks
+      // since we've installed libev locally
+      const args = [
+        'install',
+        '--deps-only',
+        '.',
+        '--root',
+        opamRoot,
+        '--assume-depexts',
+      ];
       if (await pathExists(lockFile)) {
         args.push('--locked');
         debug(`Using locked dependencies from ${lockFile}`);

@@ -60,9 +60,16 @@ let () =
   Dream.run ~port ~interface:"127.0.0.1"
   @@ Dream.logger
   @@ Dream.router [
+    (* Serve static files from public directory *)
+    Dream.get "/static/**" (Dream.static "public");
+
     (* Serve index.html at root *)
     Dream.get "/" (fun _ ->
-      Dream.html (Dream.from_filesystem "public" "index.html"));
+      let ic = open_in "public/index.html" in
+      let n = in_channel_length ic in
+      let s = really_input_string ic n in
+      close_in ic;
+      Dream.html s);
 
     (* API routes *)
     Dream.get "/api/data" (fun _ ->
