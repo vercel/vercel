@@ -3,14 +3,18 @@ import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { packageName } from '../pkg-name';
+import type { ActionRequiredPayload } from '../agent-output';
 
 type Choice = { name: string; value: Org };
+
+export type SelectOrgResult = Org | ActionRequiredPayload;
 
 export default async function selectOrg(
   client: Client,
   question: string,
   autoConfirm?: boolean
-): Promise<Org> {
+): Promise<SelectOrgResult> {
   const {
     config: { currentTeam },
   } = client;
@@ -48,6 +52,23 @@ export default async function selectOrg(
     choices.findIndex(choice => choice.value.id === currentTeam),
     0
   );
+
+  // Non-interactive: when multiple choices and no default, return action_required so caller can output JSON and exit
+  if (client.nonInteractive && choices.length > 1 && !currentTeam) {
+    const actionRequired: ActionRequiredPayload = {
+      status: 'action_required',
+      reason: 'missing_scope',
+      message: 'Multiple teams available. Provide --team or --scope.',
+      choices: choices.map(c => ({
+        id: c.value.id,
+        name: c.value.slug,
+      })),
+      next: choices.map(c => ({
+        command: `${packageName} link --scope ${c.value.slug}`,
+      })),
+    };
+    return actionRequired;
+  }
 
   if (autoConfirm) {
     return choices[defaultChoiceIndex].value;

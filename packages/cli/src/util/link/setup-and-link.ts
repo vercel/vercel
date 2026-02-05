@@ -14,6 +14,8 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
+import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
+import type { ActionRequiredPayload } from '../agent-output';
 import type Client from '../client';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
@@ -24,7 +26,7 @@ import {
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';
-import selectOrg from '../input/select-org';
+import selectOrg, { type SelectOrgResult } from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
@@ -33,7 +35,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -57,6 +59,10 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
+  /** When set, link directly to this project ID (requires org to be resolved) */
+  projectId?: string;
+  /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
+  nonInteractive?: boolean;
 }
 
 export default async function setupAndLink(
@@ -69,8 +75,10 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
+    projectId,
+    nonInteractive = false,
   }: SetupAndLinkOptions
-): Promise<ProjectLinkResult> {
+): Promise<ProjectLinkResult | ActionRequiredPayload> {
   const { config } = client;
 
   if (!isDirectory(path)) {
@@ -95,12 +103,13 @@ export default async function setupAndLink(
     remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
-  if (!isTTY && !autoConfirm) {
+  if (!isTTY && !autoConfirm && !nonInteractive) {
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
   const shouldStartSetup =
     autoConfirm ||
+    nonInteractive ||
     (await client.input.confirm(
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
@@ -112,25 +121,51 @@ export default async function setupAndLink(
   }
 
   try {
-    org = await selectOrg(
+    const orgResult: SelectOrgResult = await selectOrg(
       client,
       'Which scope should contain your project?',
-      autoConfirm
+      autoConfirm || nonInteractive
     );
+    if (
+      typeof orgResult === 'object' &&
+      orgResult !== null &&
+      'status' in orgResult &&
+      orgResult.status === 'action_required'
+    ) {
+      return orgResult;
+    }
+    org = orgResult as Org;
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {
         output.prettyError(err);
         return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
       }
-
       if (err.code === 'TEAM_DELETED') {
         output.prettyError(err);
         return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
       }
     }
-
     throw err;
+  }
+
+  // When --project-id is provided, link directly to that project (no project selection)
+  if (projectId) {
+    const project = await getProjectByNameOrId(client, projectId, org.id);
+    if (project instanceof ProjectNotFound) {
+      output.prettyError(project);
+      return { status: 'error', exitCode: 1 };
+    }
+    await linkFolderToProject(
+      client,
+      path,
+      { projectId: project.id, orgId: org.id },
+      project.name,
+      org.slug,
+      successEmoji,
+      autoConfirm || nonInteractive
+    );
+    return { status: 'linked', org, project };
   }
 
   const projectOrNewProjectName = await inputProject(

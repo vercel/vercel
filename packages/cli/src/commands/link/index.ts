@@ -9,6 +9,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
+import { outputActionRequired } from '../../util/agent-output';
+import type { ActionRequiredPayload } from '../../util/agent-output';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -68,15 +70,32 @@ export default async function link(client: Client) {
       return 1;
     }
   } else {
+    // When --team is provided, set currentTeam so selectOrg uses it as default (avoids action_required when non-interactive)
+    const teamFlag = parsedArgs.flags['--team'];
+    if (typeof teamFlag === 'string') {
+      client.config.currentTeam = teamFlag;
+    }
+
     const link = await ensureLink('link', client, cwd, {
-      autoConfirm: yes,
+      autoConfirm: yes || client.nonInteractive,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
+      projectId: parsedArgs.flags['--project-id'],
       successEmoji: 'success',
+      nonInteractive: client.nonInteractive,
     });
 
     if (typeof link === 'number') {
       return link;
+    }
+    if (
+      typeof link === 'object' &&
+      link !== null &&
+      'status' in link &&
+      (link as ActionRequiredPayload).status === 'action_required'
+    ) {
+      outputActionRequired(client, link as ActionRequiredPayload);
+      return 1;
     }
   }
 
