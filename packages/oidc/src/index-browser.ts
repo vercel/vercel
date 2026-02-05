@@ -1,5 +1,8 @@
 export { getContext } from './get-context';
-export { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
+export {
+  AccessTokenMissingError,
+  RefreshAccessTokenFailedError,
+} from './auth-errors';
 
 export async function getVercelOidcToken(): Promise<string> {
   return '';

@@ -13,8 +13,8 @@ export class AccessTokenMissingError extends Error {
  * Error thrown when attempting to refresh the authentication token fails.
  * This includes cases where no refresh token is available.
  */
-export class RefreshFailedError extends Error {
-  name = 'RefreshFailedError';
+export class RefreshAccessTokenFailedError extends Error {
+  name = 'RefreshAccessTokenFailedError';
   cause?: unknown;
   constructor(cause?: unknown) {
     super('Failed to refresh authentication token.');

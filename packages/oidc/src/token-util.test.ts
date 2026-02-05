@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getVercelCliToken } from './token-util';
 import * as authConfig from './auth-config';
 import * as oauth from './oauth';
-import { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
+import {
+  AccessTokenMissingError,
+  RefreshAccessTokenFailedError,
+} from './auth-errors';
 
 vi.mock('fs');
 vi.mock('./token-io', () => ({
@@ -77,7 +80,7 @@ describe('getVercelCliToken', () => {
     );
   });
 
-  it('should clear auth and throw RefreshFailedError if token expired and no refresh token', async () => {
+  it('should clear auth and throw RefreshAccessTokenFailedError if token expired and no refresh token', async () => {
     const expiredTokenNoRefresh = {
       token: 'expired-access-token',
       expiresAt: Math.floor(Date.now() / 1000) - 3600,
@@ -88,11 +91,13 @@ describe('getVercelCliToken', () => {
     );
     vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
 
-    await expect(getVercelCliToken()).rejects.toThrow(RefreshFailedError);
+    await expect(getVercelCliToken()).rejects.toThrow(
+      RefreshAccessTokenFailedError
+    );
     expect(authConfig.writeAuthConfig).toHaveBeenCalledWith({});
   });
 
-  it('should clear auth and throw RefreshFailedError if refresh fails with OAuth error', async () => {
+  it('should clear auth and throw RefreshAccessTokenFailedError if refresh fails with OAuth error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'invalid-refresh-token',
@@ -111,11 +116,13 @@ describe('getVercelCliToken', () => {
     vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockErrorResponse);
 
-    await expect(getVercelCliToken()).rejects.toThrow(RefreshFailedError);
+    await expect(getVercelCliToken()).rejects.toThrow(
+      RefreshAccessTokenFailedError
+    );
     expect(authConfig.writeAuthConfig).toHaveBeenCalledWith({});
   });
 
-  it('should clear auth and throw RefreshFailedError if refresh fails with network error', async () => {
+  it('should clear auth and throw RefreshAccessTokenFailedError if refresh fails with network error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'valid-refresh-token',
@@ -128,7 +135,9 @@ describe('getVercelCliToken', () => {
       new Error('Network error')
     );
 
-    await expect(getVercelCliToken()).rejects.toThrow(RefreshFailedError);
+    await expect(getVercelCliToken()).rejects.toThrow(
+      RefreshAccessTokenFailedError
+    );
     expect(authConfig.writeAuthConfig).toHaveBeenCalledWith({});
   });
 

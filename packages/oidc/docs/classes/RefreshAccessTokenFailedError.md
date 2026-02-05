@@ -1,4 +1,4 @@
-# Class: RefreshFailedError
+# Class: RefreshAccessTokenFailedError
 
 Error thrown when attempting to refresh the authentication token fails.
 This includes cases where no refresh token is available.
@@ -7,32 +7,32 @@ This includes cases where no refresh token is available.
 
 - [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
 
-  ↳ **`RefreshFailedError`**
+  ↳ **`RefreshAccessTokenFailedError`**
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](RefreshFailedError.md#constructor)
+- [constructor](RefreshAccessTokenFailedError.md#constructor)
 
 ### Properties
 
-- [cause](RefreshFailedError.md#cause)
-- [message](RefreshFailedError.md#message)
-- [name](RefreshFailedError.md#name)
-- [stack](RefreshFailedError.md#stack)
-- [prepareStackTrace](RefreshFailedError.md#preparestacktrace)
-- [stackTraceLimit](RefreshFailedError.md#stacktracelimit)
+- [cause](RefreshAccessTokenFailedError.md#cause)
+- [message](RefreshAccessTokenFailedError.md#message)
+- [name](RefreshAccessTokenFailedError.md#name)
+- [stack](RefreshAccessTokenFailedError.md#stack)
+- [prepareStackTrace](RefreshAccessTokenFailedError.md#preparestacktrace)
+- [stackTraceLimit](RefreshAccessTokenFailedError.md#stacktracelimit)
 
 ### Methods
 
-- [captureStackTrace](RefreshFailedError.md#capturestacktrace)
+- [captureStackTrace](RefreshAccessTokenFailedError.md#capturestacktrace)
 
 ## Constructors
 
 ### constructor
 
-• **new RefreshFailedError**(`cause?`)
+• **new RefreshAccessTokenFailedError**(`cause?`)
 
 #### Parameters
 
@@ -76,7 +76,7 @@ node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:105
 
 ### name
 
-• **name**: `string` = `'RefreshFailedError'`
+• **name**: `string` = `'RefreshAccessTokenFailedError'`
 
 #### Overrides
 

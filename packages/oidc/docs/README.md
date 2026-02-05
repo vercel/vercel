@@ -5,7 +5,7 @@
 ### Classes
 
 - [AccessTokenMissingError](classes/AccessTokenMissingError.md)
-- [RefreshFailedError](classes/RefreshFailedError.md)
+- [RefreshAccessTokenFailedError](classes/RefreshAccessTokenFailedError.md)
 
 ### Functions
 
