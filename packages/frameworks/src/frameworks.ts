@@ -4273,6 +4273,62 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Go',
+    slug: 'go',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
+    tagline: 'An open-source programming language supported by Google.',
+    description: 'A generic Go application deployed as a serverless function.',
+    website: 'https://go.dev',
+    useRuntime: { src: 'main.go', use: '@vercel/go' },
+    ignoreRuntimes: ['@vercel/go'],
+    detectors: {
+      every: [
+        {
+          path: 'go.mod',
+        },
+      ],
+      some: [
+        {
+          path: 'main.go',
+        },
+        {
+          path: 'cmd/api/main.go',
+        },
+        {
+          path: 'cmd/server/main.go',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`go mod download`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`go run .` or `go run ./cmd/api`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,

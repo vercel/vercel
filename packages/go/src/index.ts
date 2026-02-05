@@ -28,6 +28,7 @@ import {
   glob,
   download,
   Lambda,
+  FileFsRef,
   getWriteableDirectory,
   shouldServe,
   debug,
@@ -46,6 +47,66 @@ import {
 } from './go-helpers';
 
 export { shouldServe };
+
+// Supported entrypoints for the Go runtime framework preset
+const SUPPORTED_ENTRYPOINTS = [
+  'main.go',
+  'cmd/api/main.go',
+  'cmd/server/main.go',
+];
+
+/**
+ * Resolves the entrypoint for standalone Go server mode.
+ * Checks for main.go, cmd/api/main.go, or cmd/server/main.go in priority order.
+ */
+async function resolveStandaloneEntrypoint(
+  workPath: string
+): Promise<string | null> {
+  for (const entry of SUPPORTED_ENTRYPOINTS) {
+    if (await pathExists(join(workPath, entry))) {
+      debug(`Resolved Go standalone entrypoint: ${entry}`);
+      return entry;
+    }
+  }
+  return null;
+}
+
+/**
+ * Checks if a Go file is a standalone server (package main without HTTP handler export).
+ * Returns the package name if it's package main, otherwise null.
+ */
+async function checkStandaloneServer(
+  filePath: string
+): Promise<{ isStandalone: boolean; packageName: string | null }> {
+  try {
+    const content = await readFile(filePath, 'utf-8');
+
+    // Check for package main
+    const packageMatch = content.match(/^\s*package\s+(\w+)/m);
+    const packageName = packageMatch ? packageMatch[1] : null;
+
+    if (packageName !== 'main') {
+      return { isStandalone: false, packageName };
+    }
+
+    // Check for func main()
+    const hasMainFunc = /func\s+main\s*\(\s*\)/.test(content);
+
+    // Check for HTTP handler signature (indicates this is a handler file, not standalone)
+    const hasHandlerSignature =
+      /func\s+\w+\s*\([^)]*http\.ResponseWriter[^)]*\*http\.Request/.test(
+        content
+      );
+
+    // It's standalone if it has package main + func main() but no HTTP handler
+    return {
+      isStandalone: hasMainFunc && !hasHandlerSignature,
+      packageName,
+    };
+  } catch {
+    return { isStandalone: false, packageName: null };
+  }
+}
 
 // in order to allow the user to have `main.go`,
 // we need our `main.go` to be called something else
@@ -151,6 +212,32 @@ export async function build({
   We highly recommend you leverage Go Modules in your project.
   Learn more: https://github.com/golang/go/wiki/Modules
   `);
+    }
+
+    // Check for standalone server mode (runtime framework preset)
+    // For entrypoints like main.go or cmd/api/main.go, check if it's a standalone server
+    let resolvedEntrypoint = entrypoint;
+    if (entrypoint === 'main.go') {
+      // Try to resolve the actual entrypoint (could be cmd/api/main.go etc.)
+      const resolved = await resolveStandaloneEntrypoint(workPath);
+      if (resolved) {
+        resolvedEntrypoint = resolved;
+      }
+    }
+
+    // Check if this is a standalone server (package main with func main(), no HTTP handler)
+    const entrypointPath = join(workPath, resolvedEntrypoint);
+    const standaloneCheck = await checkStandaloneServer(entrypointPath);
+
+    if (standaloneCheck.isStandalone) {
+      debug(`Detected standalone Go server mode for ${resolvedEntrypoint}`);
+      return buildStandaloneServer({
+        files,
+        entrypoint: resolvedEntrypoint,
+        config,
+        workPath,
+        meta,
+      });
     }
 
     const originalEntrypointAbsolute = join(workPath, entrypoint);
@@ -492,6 +579,82 @@ async function buildHandlerAsPackageMain({
   }
 }
 
+/**
+ * Build a standalone Go HTTP server (runtime framework preset mode).
+ * This builds the Go binary directly without wrapping it with go-bridge.
+ */
+async function buildStandaloneServer({
+  files,
+  entrypoint,
+  config,
+  workPath,
+  meta = {},
+}: BuildOptions): Promise<{ output: Lambda }> {
+  debug(`Building standalone Go server: ${entrypoint}`);
+
+  await download(files, workPath, meta);
+
+  const env = cloneEnv(process.env, meta.env, {
+    GOARCH: 'amd64',
+    GOOS: 'linux',
+    CGO_ENABLED: '0',
+  });
+
+  const { goModPath } = await findGoModPath(workPath, workPath);
+  const modulePath = goModPath ? dirname(goModPath) : workPath;
+
+  const go = await createGo({
+    modulePath,
+    opts: { cwd: workPath, env },
+    workPath,
+  });
+
+  const outDir = await getWriteableDirectory();
+  const binaryPath = join(outDir, 'bootstrap');
+
+  // Determine build target based on entrypoint location
+  // - main.go at root: build '.'
+  // - cmd/api/main.go: build './cmd/api'
+  const buildTarget =
+    entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
+
+  debug(`Building Go binary: go build ${buildTarget} -> ${binaryPath}`);
+
+  try {
+    await go.build(buildTarget, binaryPath);
+  } catch (err) {
+    console.error(`Failed to build standalone Go server: ${buildTarget}`);
+    throw err;
+  }
+
+  // Gather any additional files to include
+  const includedFiles: Files = {};
+  if (config && config.includeFiles) {
+    const patterns = Array.isArray(config.includeFiles)
+      ? config.includeFiles
+      : [config.includeFiles];
+    for (const pattern of patterns) {
+      const fsFiles = await glob(pattern, workPath);
+      for (const [assetName, asset] of Object.entries(fsFiles)) {
+        includedFiles[assetName] = asset;
+      }
+    }
+  }
+
+  const lambda = new Lambda({
+    files: {
+      ...includedFiles,
+      bootstrap: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+    },
+    handler: 'bootstrap',
+    runtime: 'provided.al2',
+    supportsResponseStreaming: true,
+    environment: {},
+  });
+
+  return { output: lambda };
+}
+
 async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   let fileContents = await readFile(fsPath, 'utf8');
 
@@ -814,12 +977,53 @@ async function writeGoWork(
   await writeFile(join(destDir, 'go.work'), contents, 'utf-8');
 }
 
+/**
+ * Start a dev server for standalone Go server mode.
+ * This runs `go run <target>` directly with the PORT environment variable.
+ */
+async function startStandaloneDevServer(
+  opts: StartDevServerOptions,
+  resolvedEntrypoint: string
+): Promise<StartDevServerResult> {
+  const { workPath, meta = {} } = opts;
+
+  // Use a random port in the ephemeral range
+  const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
+
+  const env = cloneEnv(process.env, meta.env, {
+    PORT: String(port),
+  });
+
+  // Determine run target based on entrypoint location
+  // - main.go at root: go run .
+  // - cmd/api/main.go: go run ./cmd/api
+  const runTarget =
+    resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
+
+  debug(
+    `Starting standalone Go dev server: go run ${runTarget} (port ${port})`
+  );
+
+  const child = spawn('go', ['run', runTarget], {
+    cwd: workPath,
+    env,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+
+  // Give the server time to start
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  return {
+    port,
+    pid: child.pid!,
+  };
+}
+
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
-  const entrypointDir = dirname(entrypoint);
 
   // For some reason, if `entrypoint` is a path segment (filename contains `[]`
   // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
@@ -828,6 +1032,23 @@ export async function startDevServer(
     entrypointWithExt += '.go';
   }
 
+  // Check for standalone server mode (runtime framework preset)
+  let resolvedEntrypoint = entrypointWithExt;
+  if (entrypointWithExt === 'main.go') {
+    const resolved = await resolveStandaloneEntrypoint(workPath);
+    if (resolved) {
+      resolvedEntrypoint = resolved;
+    }
+  }
+
+  const entrypointPath = join(workPath, resolvedEntrypoint);
+  const standaloneCheck = await checkStandaloneServer(entrypointPath);
+
+  if (standaloneCheck.isStandalone) {
+    return startStandaloneDevServer(opts, resolvedEntrypoint);
+  }
+
+  const entrypointDir = dirname(entrypointWithExt);
   const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
