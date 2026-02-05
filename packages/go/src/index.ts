@@ -170,13 +170,10 @@ type UndoActions = {
 
 export const version = 3;
 
-export async function build({
-  files,
-  entrypoint,
-  config,
-  workPath,
-  meta = {},
-}: BuildOptions) {
+export async function build(options: BuildOptions) {
+  const { files, config, workPath, meta = {} } = options;
+  let { entrypoint } = options;
+
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.skipDownload ? workPath : srcPath;
@@ -232,11 +229,8 @@ export async function build({
     if (standaloneCheck.isStandalone) {
       debug(`Detected standalone Go server mode for ${resolvedEntrypoint}`);
       return buildStandaloneServer({
-        files,
+        ...options,
         entrypoint: resolvedEntrypoint,
-        config,
-        workPath,
-        meta,
       });
     }
 
