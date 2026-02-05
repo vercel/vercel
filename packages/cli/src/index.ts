@@ -451,6 +451,14 @@ const main = async () => {
     }
   }
 
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  if (
+    typeof parsedArgs.flags['--token'] !== 'string' &&
+    process.env.VERCEL_TOKEN
+  ) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+  }
+
   if (
     typeof parsedArgs.flags['--token'] === 'string' &&
     subcommand === 'switch'
@@ -463,14 +471,6 @@ const main = async () => {
     });
 
     return 1;
-  }
-
-  // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  if (
-    typeof parsedArgs.flags['--token'] !== 'string' &&
-    process.env.VERCEL_TOKEN
-  ) {
-    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
   }
 
   if (typeof parsedArgs.flags['--token'] === 'string') {
