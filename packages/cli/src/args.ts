@@ -37,6 +37,7 @@ export const help = () => `
     ${chalk.dim('Advanced')}
 
       alias                [cmd]       Manages your domain aliases
+      api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
       bisect                           Use binary search to find the deployment that introduced a bug
       certs                [cmd]       Manages your SSL certificates
       curl                 [path]      cURL requests to your linked project's deployment [beta]
