@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import tar from 'tar';
+import { extract } from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import {
@@ -438,7 +438,7 @@ async function download({ dest, version }: { dest: string; version: string }) {
   await new Promise((resolve, reject) => {
     res.body
       .on('error', reject)
-      .pipe(tar.extract({ cwd: dest, strip: 1 }))
+      .pipe(extract({ cwd: dest, strip: 1 }))
       .on('error', reject)
       .on('finish', resolve);
   });
