@@ -147,6 +147,166 @@ describe('parseMetadataFlags', () => {
       'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1'
     );
   });
+
+  describe('boolean type', () => {
+    const boolSchema: MetadataSchema = {
+      type: 'object',
+      properties: {
+        auth: {
+          type: 'boolean',
+          'ui:control': 'toggle',
+          default: false,
+        },
+        prodPack: {
+          type: 'boolean',
+          'ui:control': 'toggle',
+          default: false,
+        },
+      },
+    };
+
+    it('coerces "true" to boolean true', () => {
+      const result = parseMetadataFlags(['auth=true'], boolSchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ auth: true });
+      expect(typeof result.metadata.auth).toBe('boolean');
+    });
+
+    it('coerces "false" to boolean false', () => {
+      const result = parseMetadataFlags(['auth=false'], boolSchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ auth: false });
+      expect(typeof result.metadata.auth).toBe('boolean');
+    });
+
+    it('rejects non-boolean values', () => {
+      const result = parseMetadataFlags(['auth=yes'], boolSchema);
+      expect(result.errors).toEqual([
+        'Metadata "auth" must be "true" or "false", got: "yes"',
+      ]);
+    });
+
+    it('rejects numeric values for boolean', () => {
+      const result = parseMetadataFlags(['auth=1'], boolSchema);
+      expect(result.errors).toEqual([
+        'Metadata "auth" must be "true" or "false", got: "1"',
+      ]);
+    });
+
+    it('handles multiple boolean flags', () => {
+      const result = parseMetadataFlags(
+        ['auth=true', 'prodPack=false'],
+        boolSchema
+      );
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ auth: true, prodPack: false });
+    });
+  });
+
+  describe('array type', () => {
+    const arraySchema: MetadataSchema = {
+      type: 'object',
+      properties: {
+        readRegions: {
+          type: 'array',
+          'ui:control': 'multi-vercel-region',
+          items: { type: 'string' },
+          'ui:options': ['sfo1', 'iad1', 'fra1', 'dub1'],
+        },
+        tags: {
+          type: 'array',
+          'ui:control': 'multi-select',
+          items: { type: 'string' },
+        },
+        computeSize: {
+          type: 'array',
+          'ui:control': 'slider',
+          items: { type: 'number' },
+        },
+      },
+    };
+
+    it('parses comma-separated string array', () => {
+      const result = parseMetadataFlags(['readRegions=sfo1,iad1'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ readRegions: ['sfo1', 'iad1'] });
+    });
+
+    it('parses single-value string array', () => {
+      const result = parseMetadataFlags(['readRegions=sfo1'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ readRegions: ['sfo1'] });
+    });
+
+    it('validates each item against ui:options', () => {
+      const result = parseMetadataFlags(
+        ['readRegions=sfo1,invalid'],
+        arraySchema
+      );
+      expect(result.errors).toEqual([
+        'Metadata "readRegions" contains invalid value: "invalid". Must be one of: sfo1, iad1, fra1, dub1',
+      ]);
+    });
+
+    it('parses string array without options validation', () => {
+      const result = parseMetadataFlags(['tags=web,api,mobile'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ tags: ['web', 'api', 'mobile'] });
+    });
+
+    it('parses comma-separated number array', () => {
+      const result = parseMetadataFlags(['computeSize=0.25,2'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ computeSize: [0.25, 2] });
+      expect(result.metadata.computeSize).toEqual([0.25, 2]);
+    });
+
+    it('rejects non-numeric values in number array', () => {
+      const result = parseMetadataFlags(['computeSize=0.25,abc'], arraySchema);
+      expect(result.errors).toEqual([
+        'Metadata "computeSize" contains invalid number: "abc"',
+      ]);
+    });
+
+    it('validates min/max constraints on number array items', () => {
+      const schemaWithMinMax: MetadataSchema = {
+        type: 'object',
+        properties: {
+          ports: {
+            type: 'array',
+            'ui:control': 'input',
+            items: { type: 'number' },
+            minimum: 1,
+            maximum: 65535,
+          },
+        },
+      };
+      const belowMin = parseMetadataFlags(['ports=0,80'], schemaWithMinMax);
+      expect(belowMin.errors).toEqual([
+        'Metadata "ports" contains number 0 below minimum 1',
+      ]);
+
+      const aboveMax = parseMetadataFlags(['ports=80,70000'], schemaWithMinMax);
+      expect(aboveMax.errors).toEqual([
+        'Metadata "ports" contains number 70000 above maximum 65535',
+      ]);
+
+      const valid = parseMetadataFlags(['ports=80,443,8080'], schemaWithMinMax);
+      expect(valid.errors).toEqual([]);
+      expect(valid.metadata).toEqual({ ports: [80, 443, 8080] });
+    });
+
+    it('trims whitespace in comma-separated values', () => {
+      const result = parseMetadataFlags(
+        ['readRegions=sfo1, iad1, fra1'],
+        arraySchema
+      );
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({
+        readRegions: ['sfo1', 'iad1', 'fra1'],
+      });
+    });
+  });
 });
 
 describe('validateRequiredMetadata', () => {

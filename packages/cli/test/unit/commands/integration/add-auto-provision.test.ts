@@ -72,7 +72,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product by Acme Integration under ${team.slug}`
       );
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -98,7 +98,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product by Acme Integration under ${team.slug}`
       );
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -126,7 +126,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -159,9 +159,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -182,9 +180,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--no-connect');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -205,9 +201,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--no-env-pull');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -225,7 +219,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
@@ -236,6 +230,38 @@ describe('integration add (auto-provision)', () => {
         {
           key: 'subcommand:add',
           value: 'add',
+        },
+        {
+          key: 'argument:integration',
+          value: 'acme',
+        },
+      ]);
+    });
+
+    it('should track metadata telemetry when --metadata is used', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned'
+      );
+
+      await exitCodePromise;
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:add',
+          value: 'add',
+        },
+        {
+          key: 'option:metadata',
+          value: '[REDACTED]',
         },
         {
           key: 'argument:integration',
@@ -258,7 +284,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('Accept privacy policy?');
       client.stdin.write('y\n');
 
@@ -277,7 +303,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('Accept privacy policy?');
       client.stdin.write('n\n');
 
@@ -293,7 +319,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('Accept privacy policy?');
       client.stdin.write('y\n');
 
@@ -316,7 +342,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -334,15 +360,75 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/source=cli/)
       );
+      // No --metadata flags, so metadata should NOT be in the URL
+      expect(openMock).toHaveBeenCalledWith(
+        expect.not.stringMatching(/metadata=/)
+      );
     });
 
-    it('should open browser for unknown fallback', async () => {
+    it('should forward --metadata to browser fallback URL', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('metadata')).toEqual(
+        JSON.stringify({ region: 'us-east-1' })
+      );
+    });
+
+    it('should forward --metadata to browser URL with slash syntax, --name, and --metadata together', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-two-products/acme-a',
+        '--name',
+        'my-db',
+        '--metadata',
+        'version=5.4',
+        '--metadata',
+        'region=pdx1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('defaultResourceName')).toEqual('my-db');
+      expect(parsed.searchParams.get('metadata')).toEqual(
+        JSON.stringify({ version: '5.4', region: 'pdx1' })
+      );
+      expect(parsed.searchParams.get('source')).toEqual('cli');
+    });
+
+    it('should open browser for unknown fallback without metadata in URL', async () => {
       useAutoProvision({ responseKey: 'unknown' });
 
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -350,6 +436,99 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(openMock).toHaveBeenCalled();
+      // No --metadata flags, so metadata should NOT be in the URL
+      expect(openMock).toHaveBeenCalledWith(
+        expect.not.stringMatching(/metadata=/)
+      );
+    });
+
+    it('should forward --metadata to browser URL on unknown fallback', async () => {
+      useAutoProvision({ responseKey: 'unknown' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('metadata')).toEqual(
+        JSON.stringify({ region: 'us-east-1' })
+      );
+    });
+
+    it('should forward --metadata to browser URL after policy retry falls back', async () => {
+      // First call returns 'install' (policies required), second returns 'metadata' (still needs web)
+      useAutoProvision({
+        responseKey: 'install',
+        secondResponseKey: 'metadata',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      // Accept policies
+      await expect(client.stderr).toOutput('Accept privacy policy?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Accept terms of service?');
+      client.stdin.write('y\n');
+
+      // After retry, still falls back to browser
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('metadata')).toEqual(
+        JSON.stringify({ region: 'us-east-1' })
+      );
+      expect(parsed.searchParams.get('source')).toEqual('cli');
+    });
+
+    it('should not include metadata in URL after policy retry falls back without --metadata', async () => {
+      useAutoProvision({
+        responseKey: 'install',
+        secondResponseKey: 'metadata',
+      });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Accept privacy policy?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Accept terms of service?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.not.stringMatching(/metadata=/)
+      );
     });
 
     it('should include all three URL params (projectSlug, defaultResourceName, source) when project is linked', async () => {
@@ -365,9 +544,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -399,9 +576,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--no-connect');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -426,9 +601,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--name', 'my-custom-db');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // --name flag provides the name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -456,7 +629,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--name', 'my-proj-db');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: server fills defaults, no wizard prompt
+      // Server fills defaults, no wizard prompt
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -494,7 +667,7 @@ describe('integration add (auto-provision)', () => {
       );
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
       );
@@ -522,7 +695,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--name', 'my-custom-name');
       const exitCodePromise = integrationCommand(client);
 
-      // NEW path: --name flag provides the name, server fills metadata defaults — no prompts
+      // --name flag provides the name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: my-custom-name'
       );
@@ -572,9 +745,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '-n', 'shorthand-name');
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // --name flag provides the name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: shorthand-name'
       );
@@ -588,9 +759,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--name', maxName);
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // --name flag provides the name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
         `Acme Product successfully provisioned: ${maxName}`
       );
@@ -680,7 +849,7 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput('Select a product');
       client.stdin.write('\n'); // Select first product
 
-      // NEW path: auto-generated name, server fills metadata defaults — no prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -756,12 +925,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product by Acme Integration under ${team.slug}`
       );
 
-      // Should prompt for resource name
-      await expect(client.stderr).toOutput('What is the name of the resource?');
-      client.stdin.write('test-resource\n');
-
-      // Should skip region wizard since --metadata provided
-      // Goes straight to provisioning
+      // Auto-generated name, --metadata provides metadata — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -783,14 +947,93 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput('Select a product');
       client.stdin.write('\n'); // Select first product (uses metadataSchema2)
 
-      await expect(client.stderr).toOutput('What is the name of the resource?');
-      client.stdin.write('test-resource\n');
-
-      // Should skip version and region wizard since --metadata provided
+      // Auto-generated name, --metadata provides metadata — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+    });
+
+    it('should coerce boolean metadata to true/false', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--metadata',
+        'region=iad1',
+        '--metadata',
+        'auth=true'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should reject invalid boolean metadata value', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--metadata',
+        'auth=yes'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Metadata "auth" must be "true" or "false", got: "yes"'
+      );
+    });
+
+    it('should parse comma-separated array metadata', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--metadata',
+        'region=iad1',
+        '--metadata',
+        'readRegions=iad1,sfo1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should error when required metadata is missing', async () => {
+      // acme-full-schema has required: ['region'] and region has no default
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--metadata',
+        'auth=true'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Required metadata missing: "region"'
+      );
+    });
+
+    it('should reject invalid array item against ui:options', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--metadata',
+        'readRegions=iad1,invalid'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Metadata "readRegions" contains invalid value: "invalid". Must be one of: iad1, sfo1, fra1'
+      );
     });
   });
 
@@ -808,12 +1051,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
       );
 
-      await expect(client.stderr).toOutput('Version');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -848,13 +1086,36 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
       );
 
-      await expect(client.stderr).toOutput('Version');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Region');
-      client.stdin.write('\n');
-
+      // --name flag provides the name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput('successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should use --name, --metadata, and slash syntax together', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-two-products/acme-a',
+        '--name',
+        'my-db',
+        '--metadata',
+        'version=5.4',
+        '--metadata',
+        'region=pdx1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      // Slash syntax selects product, --name provides name, --metadata provides config
+      await expect(client.stderr).toOutput(
+        `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
+      );
+
+      // Fully non-interactive — no product selection, no name prompt, no wizard
+      await expect(client.stderr).toOutput(
+        'Acme Product A successfully provisioned: my-db'
+      );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -895,9 +1156,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product by Acme Integration under ${team.slug}`
       );
 
-      await expect(client.stderr).toOutput('Choose your region');
-      client.stdin.write('\n');
-
+      // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;

@@ -1,3 +1,5 @@
+import output from '../../output-manager';
+import { getAllOptionValues, isHiddenOnCreate } from './format-schema-help';
 import type { Metadata, MetadataSchema } from './types';
 
 export interface ParseMetadataResult {
@@ -36,9 +38,24 @@ export function parseMetadataFlags(
     }
 
     // Type coercion and validation
-    if (propSchema.type === 'number') {
+    if (propSchema.type === 'boolean') {
+      if (value === 'true') {
+        metadata[key] = true;
+      } else if (value === 'false') {
+        metadata[key] = false;
+      } else {
+        errors.push(
+          `Metadata "${key}" must be "true" or "false", got: "${value}"`
+        );
+        continue;
+      }
+    } else if (propSchema.type === 'number') {
+      if (value === '') {
+        errors.push(`Metadata "${key}" must be a number, got: ""`);
+        continue;
+      }
       const num = Number(value);
-      if (Number.isNaN(num)) {
+      if (Number.isNaN(num) || !Number.isFinite(num)) {
         errors.push(`Metadata "${key}" must be a number, got: "${value}"`);
         continue;
       }
@@ -51,13 +68,66 @@ export function parseMetadataFlags(
         continue;
       }
       metadata[key] = num;
+    } else if (propSchema.type === 'array') {
+      const items = value.split(',').map(v => v.trim());
+      const itemType = propSchema.items?.type;
+
+      if (itemType === 'number') {
+        const nums: number[] = [];
+        let hasError = false;
+        for (const item of items) {
+          if (item === '') {
+            errors.push(`Metadata "${key}" contains invalid number: ""`);
+            hasError = true;
+            break;
+          }
+          const num = Number(item);
+          if (Number.isNaN(num) || !Number.isFinite(num)) {
+            errors.push(`Metadata "${key}" contains invalid number: "${item}"`);
+            hasError = true;
+            break;
+          }
+          if (propSchema.minimum !== undefined && num < propSchema.minimum) {
+            errors.push(
+              `Metadata "${key}" contains number ${num} below minimum ${propSchema.minimum}`
+            );
+            hasError = true;
+            break;
+          }
+          if (propSchema.maximum !== undefined && num > propSchema.maximum) {
+            errors.push(
+              `Metadata "${key}" contains number ${num} above maximum ${propSchema.maximum}`
+            );
+            hasError = true;
+            break;
+          }
+          nums.push(num);
+        }
+        if (!hasError) {
+          metadata[key] = nums;
+        }
+      } else {
+        // Validate each item against ui:options if present
+        const validValues = getAllOptionValues(propSchema);
+        if (validValues) {
+          const prevErrorCount = errors.length;
+          for (const item of items) {
+            if (!validValues.includes(item)) {
+              errors.push(
+                `Metadata "${key}" contains invalid value: "${item}". Must be one of: ${validValues.join(', ')}`
+              );
+            }
+          }
+          if (errors.length > prevErrorCount) {
+            continue;
+          }
+        }
+        metadata[key] = items;
+      }
     } else {
       // Validate select options if present
-      if (propSchema['ui:options']) {
-        const options = propSchema['ui:options'];
-        const validValues = options.map((opt: string | { value: string }) =>
-          typeof opt === 'string' ? opt : opt.value
-        );
+      const validValues = getAllOptionValues(propSchema);
+      if (validValues) {
         if (!validValues.includes(value)) {
           errors.push(
             `Metadata "${key}" must be one of: ${validValues.join(', ')}`
@@ -74,7 +144,6 @@ export function parseMetadataFlags(
 
 /**
  * Validate that all required metadata fields are provided.
- * Used by OLD path where server doesn't fill defaults.
  */
 export function validateRequiredMetadata(
   metadata: Metadata,
@@ -87,10 +156,7 @@ export function validateRequiredMetadata(
     const propSchema = schema.properties[key];
 
     // Skip hidden fields (they use defaults server-side)
-    if (
-      propSchema?.['ui:hidden'] === true ||
-      propSchema?.['ui:hidden'] === 'create'
-    ) {
+    if (propSchema && isHiddenOnCreate(propSchema)) {
       continue;
     }
 
@@ -101,4 +167,19 @@ export function validateRequiredMetadata(
   }
 
   return errors;
+}
+
+/**
+ * Validate required metadata and print errors.
+ * Returns true if validation passed, false if there were errors.
+ */
+export function validateAndPrintRequiredMetadata(
+  metadata: Metadata,
+  schema: MetadataSchema
+): boolean {
+  const errors = validateRequiredMetadata(metadata, schema);
+  for (const error of errors) {
+    output.error(error);
+  }
+  return errors.length === 0;
 }

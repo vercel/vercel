@@ -4,7 +4,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
   AcceptedPolicies,
@@ -17,7 +17,10 @@ import {
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
-import { parseMetadataFlags } from '../../util/integration/parse-metadata';
+import {
+  parseMetadataFlags,
+  validateAndPrintRequiredMetadata,
+} from '../../util/integration/parse-metadata';
 import type { Metadata } from '../../util/integration/types';
 
 export interface AddAutoProvisionOptions extends PostProvisionOptions {
@@ -36,6 +39,10 @@ export async function addAutoProvision(
       store: client.telemetryEventStore,
     },
   });
+  telemetry.trackCliOptionName(resourceNameArg);
+  telemetry.trackCliOptionMetadata(options.metadata);
+  telemetry.trackCliFlagNoConnect(options.noConnect);
+  telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
 
   // 1. Get team context
   const { contextName, team } = await getScope(client);
@@ -44,26 +51,14 @@ export async function addAutoProvision(
     return 1;
   }
 
-  telemetry.trackCliOptionName(resourceNameArg);
-  telemetry.trackCliFlagNoConnect(options.noConnect);
-  telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
-
   // 2. Fetch integration
-  let integration;
-  let knownIntegrationSlug = false;
-  try {
-    integration = await fetchIntegration(client, integrationSlug);
-    knownIntegrationSlug = true;
-  } catch (error) {
-    output.error(
-      `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
-    );
+  const integration = await fetchIntegrationWithTelemetry(
+    client,
+    integrationSlug,
+    telemetry
+  );
+  if (!integration) {
     return 1;
-  } finally {
-    telemetry.trackCliArgumentIntegration(
-      integrationSlug,
-      knownIntegrationSlug
-    );
   }
 
   if (!integration.products?.length) {
@@ -92,7 +87,6 @@ export async function addAutoProvision(
   );
 
   // 4. Validate metadata flags (if provided) BEFORE prompting for resource name
-  //    In NEW path, server fills defaults - we never run the wizard here
   let metadata: Metadata;
   if (options.metadata?.length) {
     // Parse metadata from CLI flags
@@ -107,6 +101,10 @@ export async function addAutoProvision(
       for (const error of errors) {
         output.error(error);
       }
+      return 1;
+    }
+    // Validate all required fields are present
+    if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
       return 1;
     }
     metadata = parsed;
@@ -219,6 +217,9 @@ export async function addAutoProvision(
     const url = new URL(result.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
+    if (Object.keys(metadata).length > 0) {
+      url.searchParams.set('metadata', JSON.stringify(metadata));
+    }
     if (projectLink.value) {
       url.searchParams.set('projectSlug', projectLink.value);
     }

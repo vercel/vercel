@@ -73,6 +73,8 @@ export const addSubcommand = {
       value: [
         `${packageName} integration add acme --metadata region=us-east-1`,
         `${packageName} integration add acme -m region=us-east-1 -m version=16`,
+        `${packageName} integration add acme -m auth=true`,
+        `${packageName} integration add acme -m "readRegions=sfo1,iad1"`,
       ],
     },
     {

@@ -148,6 +148,33 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataFullTypes: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Region',
+      type: 'string',
+      'ui:options': ['iad1', 'sfo1'],
+    },
+    auth: {
+      'ui:control': 'toggle',
+      'ui:label': 'Auth',
+      description: 'Enable built-in authentication',
+      type: 'boolean',
+      default: false,
+    },
+    readRegions: {
+      type: 'array',
+      'ui:control': 'multi-vercel-region',
+      'ui:label': 'Read Regions',
+      items: { type: 'string' },
+      'ui:options': ['iad1', 'sfo1', 'fra1'],
+    },
+  },
+  required: ['region'],
+};
+
 const metadataUnsupported: MetadataSchema = {
   type: 'object',
   properties: {
@@ -180,6 +207,19 @@ const metadataUnsupported: MetadataSchema = {
     },
   },
   required: ['region'],
+};
+
+const metadataNoDefaults: MetadataSchema = {
+  type: 'object',
+  properties: {
+    tier: {
+      'ui:control': 'select',
+      'ui:label': 'Tier',
+      type: 'string',
+      'ui:options': ['starter', 'pro', 'enterprise'],
+    },
+  },
+  required: ['tier'],
 };
 
 const integrations: Record<string, Integration> = {
@@ -247,6 +287,21 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-no-products',
     products: [],
   },
+  'acme-full-schema': {
+    id: 'acme-full-schema',
+    name: 'Acme Full Schema',
+    slug: 'acme-full-schema',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with all field types',
+        metadataSchema: metadataFullTypes,
+      },
+    ],
+  },
   'acme-prepayment': {
     id: 'acme-prepayment',
     name: 'Acme Prepayment',
@@ -259,6 +314,36 @@ const integrations: Record<string, Integration> = {
         type: 'ai',
         shortDescription: 'The Acme product',
         metadataSchema: metadataSchema1,
+      },
+    ],
+  },
+  'acme-required': {
+    id: 'acme-required',
+    name: 'Acme Required',
+    slug: 'acme-required',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with required metadata',
+        metadataSchema: metadataNoDefaults,
+      },
+    ],
+  },
+  'acme-multi': {
+    id: 'acme-multi',
+    name: 'Acme Multi',
+    slug: 'acme-multi',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with multiple fields',
+        metadataSchema: metadataSchema2,
       },
     ],
   },
@@ -432,6 +517,20 @@ const integrationPlans: Record<string, unknown> = {
           },
         ],
         disabled: true,
+      },
+    ],
+  },
+  'acme-multi': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
       },
     ],
   },
