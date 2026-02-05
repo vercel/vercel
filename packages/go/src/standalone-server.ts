@@ -117,8 +117,8 @@ export async function buildStandaloneServer({
     throw err;
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol (vc_init.go)
-  const bootstrapSrc = join(__dirname, '../vc_init.go');
+  // Build the bootstrap wrapper that handles IPC protocol (vc-init.go)
+  const bootstrapSrc = join(__dirname, '../vc-init.go');
   debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
 
   try {

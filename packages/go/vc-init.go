@@ -1,6 +1,5 @@
-// vc_init.go - Bootstrap wrapper for standalone Go servers on Vercel
+// vc-init.go - Bootstrap wrapper for standalone Go servers on Vercel
 // This handles the IPC protocol required for executable runtime mode.
-// Named vc_init to match the Python and Ruby conventions (vc_init.py, vc_init.rb).
 //
 // The bootstrap:
 // 1. Connects to VERCEL_IPC_PATH Unix socket
