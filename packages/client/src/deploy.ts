@@ -138,7 +138,7 @@ export async function* deploy(
   const debug = createDebug(clientOptions.debug);
 
   // Check if we should default to a static deployment
-  if (!deploymentOptions.name) {
+  if (!deploymentOptions.name && files.size > 0) {
     deploymentOptions.version = 2;
     deploymentOptions.name =
       files.size === 1 ? 'file' : getDefaultName(files, clientOptions);
@@ -148,7 +148,7 @@ export async function* deploy(
     }
   }
 
-  if (!deploymentOptions.name) {
+  if (!deploymentOptions.name && files.size > 0) {
     deploymentOptions.name =
       clientOptions.defaultName || getDefaultName(files, clientOptions);
     debug('No name provided. Defaulting to', deploymentOptions.name);
