@@ -148,7 +148,7 @@ describe('dns rm', () => {
       const exitCode = await dns(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'Error: Unknown or unexpected option: --unknown'
+        'Error: unknown or unexpected option: --unknown'
       );
     });
   });
