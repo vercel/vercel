@@ -148,7 +148,10 @@ export function createGracefulReadStream(
       const now = Date.now();
 
       // Check for timeout before attempting
-      if (timeRef !== undefined && now - timeRef.startTime >= GRACEFUL_FS_TIMEOUT) {
+      if (
+        timeRef !== undefined &&
+        now - timeRef.startTime >= GRACEFUL_FS_TIMEOUT
+      ) {
         debug(`[graceful-fs] EMFILE/ENFILE retry timeout for ${fsPath}`);
         reject(
           Object.assign(new Error('EMFILE retry timeout'), { code: 'EMFILE' })
