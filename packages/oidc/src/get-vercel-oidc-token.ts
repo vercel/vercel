@@ -20,7 +20,7 @@ export interface GetVercelOidcTokenOptions {
    * When provided, the token will be refreshed if it expires within this buffer time.
    * @default 0
    */
-  bufferMs?: number;
+  expirationBufferMs?: number;
 }
 
 /**
@@ -80,7 +80,10 @@ export async function getVercelOidcToken(
         await import('./token.js'),
       ]);
 
-    if (!token || isExpired(getTokenPayload(token), options?.bufferMs)) {
+    if (
+      !token ||
+      isExpired(getTokenPayload(token), options?.expirationBufferMs)
+    ) {
       await refreshToken(options);
       token = getVercelOidcTokenSync();
     }

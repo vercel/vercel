@@ -23,13 +23,24 @@ export function getVercelDataDir(): string | null {
   return path.join(dataDir, vercelFolder);
 }
 
-export async function getVercelCliToken(): Promise<string> {
+export interface GetVercelCliTokenOptions {
+  /**
+   * Optional time buffer in milliseconds before token expiry to consider it expired.
+   * When provided, the token will be refreshed if it expires within this buffer time.
+   * @default 0
+   */
+  expirationBufferMs?: number;
+}
+
+export async function getVercelCliToken(
+  options?: GetVercelCliTokenOptions
+): Promise<string> {
   const authConfig = readAuthConfig();
   if (!authConfig?.token) {
     throw new AccessTokenMissingError();
   }
 
-  if (isValidAccessToken(authConfig)) {
+  if (isValidAccessToken(authConfig, options?.expirationBufferMs)) {
     return authConfig.token;
   }
 

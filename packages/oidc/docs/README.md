@@ -32,7 +32,13 @@
 
 ### getVercelCliToken
 
-▸ **getVercelCliToken**(): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+▸ **getVercelCliToken**(`options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+
+#### Parameters
+
+| Name       | Type                       |
+| :--------- | :------------------------- |
+| `options?` | `GetVercelCliTokenOptions` |
 
 #### Returns
 
@@ -40,7 +46,7 @@
 
 #### Defined in
 
-[packages/oidc/src/token-util.ts:26](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L26)
+[packages/oidc/src/token-util.ts:35](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L35)
 
 ---
 
@@ -140,4 +146,4 @@ The OIDC token.
 
 #### Defined in
 
-[packages/oidc/src/get-vercel-oidc-token.ts:121](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L121)
+[packages/oidc/src/get-vercel-oidc-token.ts:124](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L124)
