@@ -1,16 +1,3 @@
-/**
- * Standalone Go server support for Vercel runtime framework preset mode.
- *
- * This module handles building and running Go HTTP servers as standalone
- * executables (not wrapped with go-bridge). It uses a bootstrap wrapper
- * (vc_init.go) that implements the Vercel IPC protocol.
- *
- * Architecture:
- * - User's server is built as 'user-server' binary
- * - Bootstrap wrapper (vc_init.go) is built as 'executable' (main entrypoint)
- * - Bootstrap handles IPC protocol and reverse proxies to user's server
- */
-
 import { spawn } from 'child_process';
 import { dirname, join } from 'path';
 import { readFile, writeFile, pathExists, copy } from 'fs-extra';

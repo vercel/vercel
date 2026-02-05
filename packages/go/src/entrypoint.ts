@@ -1,15 +1,7 @@
-/**
- * Go entrypoint detection for Vercel runtime framework preset mode.
- *
- * This module handles detecting and validating Go entrypoints for standalone
- * server deployments (not go-bridge wrapped handlers).
- */
-
 import { join } from 'path';
 import { pathExists } from 'fs-extra';
 import { debug } from '@vercel/build-utils';
 
-// Candidate entrypoints for Go runtime framework preset (in priority order)
 export const GO_CANDIDATE_ENTRYPOINTS = [
   'main.go',
   'cmd/api/main.go',
