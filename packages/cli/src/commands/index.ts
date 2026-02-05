@@ -23,7 +23,6 @@ import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
-import { logsv2Command } from './logsv2/command';
 import { mcpCommand } from './mcp/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
@@ -71,7 +70,6 @@ const commandsStructs = [
   loginCommand,
   logoutCommand,
   logsCommand,
-  logsv2Command,
   mcpCommand,
   microfrontendsCommand,
   openCommand,
