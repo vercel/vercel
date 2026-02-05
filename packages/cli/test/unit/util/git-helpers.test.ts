@@ -16,20 +16,39 @@ import {
 } from '../../../src/util/git-helpers';
 
 /**
+ * On Windows, `tmpdir()` may return a path with 8.3 short names (e.g., RUNNER~1)
+ * but git commands return the full long path (e.g., runneradmin).
+ * This function resolves the full long path on Windows.
+ *
+ * On macOS, this also resolves symlinks (e.g., /var -> /private/var).
+ */
+function resolveLongPath(p: string): string {
+  // realpathSync resolves symlinks on macOS but does NOT resolve 8.3 short paths on Windows.
+  // So we need a different approach for Windows.
+  const normalized = realpathSync(normalize(p));
+
+  if (process.platform === 'win32') {
+    // On Windows, use PowerShell to get the full long path
+    try {
+      const result = execSync(
+        `powershell -Command "(Get-Item -LiteralPath '${normalized}').FullName"`,
+        { encoding: 'utf-8' }
+      ).trim();
+      return result || normalized;
+    } catch {
+      return normalized;
+    }
+  }
+
+  return normalized;
+}
+
+/**
  * Normalizes a path for comparison across platforms.
- * - Converts forward slashes to backslashes on Windows
- * - Resolves Windows short paths (8.3 names like RUNNER~1) to long paths
- * - Resolves symlinks (e.g., /var -> /private/var on macOS)
  */
 function normalizePath(p: string | null): string | null {
   if (p === null) return null;
-  try {
-    // Use realpathSync to resolve short paths on Windows and symlinks on macOS
-    return realpathSync(normalize(p));
-  } catch {
-    // If the path doesn't exist, just normalize it
-    return normalize(p);
-  }
+  return normalize(p);
 }
 
 describe('git-helpers', () => {
@@ -38,8 +57,10 @@ describe('git-helpers', () => {
 
     beforeAll(() => {
       // Create a temporary git repository
-      // Use realpathSync to resolve symlinks (e.g., /var -> /private/var on macOS)
-      repoDir = realpathSync(mkdtempSync(join(tmpdir(), 'git-helpers-test-')));
+      // Use resolveLongPath to resolve symlinks on macOS and 8.3 short paths on Windows
+      repoDir = resolveLongPath(
+        mkdtempSync(join(tmpdir(), 'git-helpers-test-'))
+      );
       execSync('git init', { cwd: repoDir, stdio: 'ignore' });
       execSync('git config user.email "test@test.com"', {
         cwd: repoDir,
@@ -101,11 +122,11 @@ describe('git-helpers', () => {
 
     beforeAll(() => {
       // Create a temporary git repository with a worktree
-      // Use realpathSync to resolve symlinks (e.g., /var -> /private/var on macOS)
-      mainRepoDir = realpathSync(
+      // Use resolveLongPath to resolve symlinks on macOS and 8.3 short paths on Windows
+      mainRepoDir = resolveLongPath(
         mkdtempSync(join(tmpdir(), 'git-helpers-main-'))
       );
-      worktreeDir = realpathSync(
+      worktreeDir = resolveLongPath(
         mkdtempSync(join(tmpdir(), 'git-helpers-worktree-'))
       );
 
@@ -192,7 +213,7 @@ describe('git-helpers', () => {
     let nonRepoDir: string;
 
     beforeAll(() => {
-      nonRepoDir = realpathSync(
+      nonRepoDir = resolveLongPath(
         mkdtempSync(join(tmpdir(), 'git-helpers-non-repo-'))
       );
     });
