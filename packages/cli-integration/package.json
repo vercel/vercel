@@ -1,0 +1,12 @@
+{
+  "name": "@vercel/cli-integration",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Integration tests for the Vercel CLI",
+  "scripts": {
+    "test": "bash scripts/run-tests.sh"
+  },
+  "devDependencies": {
+    "vercel": "workspace:*"
+  }
+}

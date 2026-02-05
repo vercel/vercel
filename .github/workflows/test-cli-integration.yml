@@ -1,0 +1,45 @@
+name: CLI Integration Tests
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cli/**'
+      - 'packages/cli-integration/**'
+      - '.github/workflows/test-cli-integration.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  NODE_VERSION: '22'
+
+jobs:
+  test:
+    name: CLI Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - run: pnpm install
+
+      - name: Install scrut
+        run: curl --proto '=https' --tlsv1.2 -sSf https://facebookincubator.github.io/scrut/install.sh | sh
+
+      - name: Install Prism
+        run: npm i -g @stoplight/prism-cli
+
+      - name: Build CLI
+        run: turbo build --filter=vercel...
+
+      - name: Run CLI integration tests
+        run: pnpm --filter @vercel/cli-integration test
