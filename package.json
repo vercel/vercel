@@ -122,6 +122,23 @@
     "overrides": [
       {
         "files": [
+          "packages/cli/src/commands/**/*"
+        ],
+        "excludedFiles": [
+          "**/index.ts"
+        ],
+        "rules": {
+          "no-restricted-syntax": [
+            "error",
+            {
+              "selector": "Property[key.name='permissive'][value.value=true]",
+              "message": "Do not use 'permissive: true' in leaf commands. Unknown flags will be treated as arguments, causing misleading errors. Only index.ts routing files should use permissive mode."
+            }
+          ]
+        }
+      },
+      {
+        "files": [
           "packages/cli/**/*"
         ],
         "rules": {

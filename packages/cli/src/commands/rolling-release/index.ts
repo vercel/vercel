@@ -91,8 +91,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
-          getFlagsSpecification(configureSubcommand.options),
-          { permissive: true }
+          getFlagsSpecification(configureSubcommand.options)
         );
         const cfgString = subcommandFlags.flags['--cfg'];
         if (!cfgString) {
@@ -124,8 +123,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
-          getFlagsSpecification(startSubcommand.options),
-          { permissive: true }
+          getFlagsSpecification(startSubcommand.options)
         );
         const dpl = subcommandFlags.flags['--dpl'];
         if (dpl === undefined) {
@@ -149,8 +147,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
-          getFlagsSpecification(approveSubcommand.options),
-          { permissive: true }
+          getFlagsSpecification(approveSubcommand.options)
         );
         const dpl = subcommandFlags.flags['--dpl'];
         const currentStageIndex = subcommandFlags.flags['--currentStageIndex'];
@@ -184,8 +181,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
-          getFlagsSpecification(abortSubcommand.options),
-          { permissive: true }
+          getFlagsSpecification(abortSubcommand.options)
         );
         const dpl = subcommandFlags.flags['--dpl'];
         if (!dpl) {
@@ -208,8 +204,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
-          getFlagsSpecification(completeSubcommand.options),
-          { permissive: true }
+          getFlagsSpecification(completeSubcommand.options)
         );
         const dpl = subcommandFlags.flags['--dpl'];
         if (!dpl) {
