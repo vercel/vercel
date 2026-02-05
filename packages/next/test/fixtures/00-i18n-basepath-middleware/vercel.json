@@ -3,13 +3,13 @@
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
      {
-      "path": "/docs/_next/data/testing-build-id/en/dynamic/first.json?slug=first",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/en/dynamic/first.json?slug=first",
       "status": 200,
       "mustContain": "slug\":\"first\"",
       "mustNotContain": "<html"
     },
     {
-      "path": "/docs/_next/data/testing-build-id/en/dynamic/123.json?slug=123",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/en/dynamic/123.json?slug=123",
       "status": 200,
       "mustContain": "slug\":\"123\"",
       "mustNotContain": "<html"
