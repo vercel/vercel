@@ -51,6 +51,7 @@
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
+    "@vercel/ocaml": "workspace:*",
     "@vercel/python": "workspace:*",
     "@vercel/redwood": "workspace:*",
     "@vercel/remix-builder": "workspace:*",

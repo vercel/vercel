@@ -14,8 +14,52 @@ import { pathExists, readFile, mkdirp, chmod, writeFile } from 'fs-extra';
 import { debug } from '@vercel/build-utils';
 
 const DEFAULT_OCAML_VERSION = '5.1.1';
-const OPAM_VERSION = '2.1.5';
+
+/**
+ * Query opam for the latest patch version matching a major.minor prefix.
+ * E.g., "5.1" -> "5.1.1"
+ */
+async function findLatestPatchVersion(
+  opamBin: string,
+  opamRoot: string,
+  majorMinor: string
+): Promise<string> {
+  try {
+    // Query available versions of ocaml-base-compiler
+    const result = await execa(opamBin, [
+      'show',
+      'ocaml-base-compiler',
+      '--field=all-versions',
+      '--root',
+      opamRoot,
+    ]);
+
+    // Parse versions and find matches for our major.minor
+    const versions = result.stdout.trim().split(/\s+/);
+    const matching = versions
+      .filter(v => v.startsWith(`${majorMinor}.`))
+      .sort((a, b) => {
+        // Sort by patch version descending
+        const patchA = parseInt(a.split('.')[2] || '0', 10);
+        const patchB = parseInt(b.split('.')[2] || '0', 10);
+        return patchB - patchA;
+      });
+
+    if (matching.length > 0) {
+      debug(`Found versions for ${majorMinor}: ${matching.join(', ')}`);
+      return matching[0]; // Return highest patch version
+    }
+  } catch (err) {
+    debug(`Failed to query opam for versions: ${err}`);
+  }
+
+  // Fallback: try .0 first, then .1
+  return `${majorMinor}.0`;
+}
+
+const OPAM_VERSION = '2.5.0';
 const LIBEV_VERSION = '4.33';
+const GMP_VERSION = '6.3.0';
 
 export const localCacheDir = '.vercel/cache/ocaml';
 
@@ -23,6 +67,85 @@ export interface OpamWrapper {
   install: () => Promise<void>;
   build: () => Promise<void>;
   env: NodeJS.ProcessEnv;
+}
+
+/**
+ * Ensure required system tools are available.
+ * opam requires diff and patch which may not be in minimal containers.
+ * Always installs busybox to cache and creates symlinks.
+ */
+async function ensureRequiredTools(
+  cacheDir: string,
+  arch: string
+): Promise<string> {
+  const binDir = join(cacheDir, 'bin');
+  await mkdirp(binDir);
+
+  // Check if diff and patch are already available
+  let hasDiff = false;
+  let hasPatch = false;
+
+  try {
+    await execa('which', ['diff']);
+    hasDiff = true;
+    debug('Found diff in PATH');
+  } catch {
+    // not found
+  }
+
+  try {
+    await execa('which', ['patch']);
+    hasPatch = true;
+    debug('Found patch in PATH');
+  } catch {
+    // not found
+  }
+
+  // If both tools are available, we're done
+  if (hasDiff && hasPatch) {
+    return binDir;
+  }
+
+  // Need to install missing tools via busybox
+  // Only x86_64 is supported - busybox static binaries aren't available for arm64
+  if (arch === 'arm64') {
+    throw new Error(
+      `OCaml builds are not supported on arm64 architecture.\n` +
+        `Please use x86_64 architecture for OCaml projects.`
+    );
+  }
+
+  const busyboxPath = join(binDir, 'busybox');
+
+  // Download busybox if not cached
+  if (!(await pathExists(busyboxPath))) {
+    debug('Downloading busybox for required tools (diff, patch)...');
+    const url =
+      'https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox';
+
+    await execa('curl', ['-fsSL', '-o', busyboxPath, url]);
+    await chmod(busyboxPath, 0o755);
+    debug(`Downloaded busybox from ${url}`);
+  }
+
+  // Create symlinks for missing tools
+  if (!hasDiff) {
+    const diffPath = join(binDir, 'diff');
+    if (!(await pathExists(diffPath))) {
+      await execa('ln', ['-sf', 'busybox', 'diff'], { cwd: binDir });
+      debug('Created diff symlink to busybox');
+    }
+  }
+
+  if (!hasPatch) {
+    const patchPath = join(binDir, 'patch');
+    if (!(await pathExists(patchPath))) {
+      await execa('ln', ['-sf', 'busybox', 'patch'], { cwd: binDir });
+      debug('Created patch symlink to busybox');
+    }
+  }
+
+  return binDir;
 }
 
 /**
@@ -75,6 +198,58 @@ async function installLibev(cacheDir: string): Promise<string> {
 
   debug(`libev installed to ${libevPrefix}`);
   return libevPrefix;
+}
+
+/**
+ * Download and compile GMP from source.
+ * This is required for cryptographic packages (mirage-crypto, zarith, etc.)
+ * Returns the prefix path where GMP is installed.
+ */
+async function installGmp(cacheDir: string): Promise<string> {
+  const gmpPrefix = join(cacheDir, 'gmp');
+  const gmpLib = join(gmpPrefix, 'lib', 'libgmp.a');
+
+  // Check if already cached
+  if (await pathExists(gmpLib)) {
+    debug('Using cached GMP installation');
+    return gmpPrefix;
+  }
+
+  debug(`Installing GMP ${GMP_VERSION} from source...`);
+
+  const tmpDir = join(cacheDir, 'tmp-gmp');
+  await mkdirp(tmpDir);
+
+  const tarball = join(tmpDir, 'gmp.tar.xz');
+  const url = `https://gmplib.org/download/gmp/gmp-${GMP_VERSION}.tar.xz`;
+
+  // Download GMP source
+  debug(`Downloading GMP from ${url}...`);
+  await execa('curl', ['-fsSL', '-o', tarball, url]);
+
+  // Extract (xz format)
+  await execa('tar', ['xJf', tarball], { cwd: tmpDir });
+
+  const srcDir = join(tmpDir, `gmp-${GMP_VERSION}`);
+
+  // Configure and build
+  debug('Configuring GMP...');
+  await execa('./configure', [`--prefix=${gmpPrefix}`, '--enable-shared'], {
+    cwd: srcDir,
+    stdio: 'inherit',
+  });
+
+  debug('Building GMP...');
+  await execa('make', ['-j4'], { cwd: srcDir, stdio: 'inherit' });
+
+  debug('Installing GMP...');
+  await execa('make', ['install'], { cwd: srcDir, stdio: 'inherit' });
+
+  // Cleanup tmp directory
+  await execa('rm', ['-rf', tmpDir]);
+
+  debug(`GMP installed to ${gmpPrefix}`);
+  return gmpPrefix;
 }
 
 /**
@@ -209,33 +384,70 @@ export async function createOpam(options: {
   const cacheDir = join(workPath, localCacheDir);
   const opamRoot = join(cacheDir, 'opam-root');
 
-  // Install libev first (required for Dream and other async frameworks)
+  // Ensure required tools (diff, patch) are available
+  const toolsBinDir = await ensureRequiredTools(cacheDir, arch);
+
+  // Install native dependencies (required for Dream and crypto packages)
   const libevPrefix = await installLibev(cacheDir);
+  const gmpPrefix = await installGmp(cacheDir);
 
   const opamBin = await downloadOpam(cacheDir, arch);
 
-  const ocamlVersion =
-    (await detectOcamlVersion(workPath)) || DEFAULT_OCAML_VERSION;
-  debug(`Using OCaml version: ${ocamlVersion}`);
-
-  const switchPath = join(opamRoot, ocamlVersion);
-  const switchExists = await pathExists(switchPath);
-
-  // Set up environment with libev paths for compilation and linking
+  // Set up environment with native library paths for compilation and linking
   const libevInclude = join(libevPrefix, 'include');
   const libevLib = join(libevPrefix, 'lib');
+  const gmpInclude = join(gmpPrefix, 'include');
+  const gmpLib = join(gmpPrefix, 'lib');
+
+  // Support user-vendored native dependencies
+  // Users can put pre-compiled libs in .vercel/deps/ or vendor/
+  const userDepsDir = join(workPath, '.vercel', 'deps');
+  const vendorDir = join(workPath, 'vendor');
+
+  const includePaths: string[] = [libevInclude, gmpInclude];
+  const libPaths: string[] = [libevLib, gmpLib];
+
+  // Add user deps if they exist
+  if (await pathExists(join(userDepsDir, 'include'))) {
+    includePaths.unshift(join(userDepsDir, 'include'));
+    debug(`Found user deps include: ${userDepsDir}/include`);
+  }
+  if (await pathExists(join(userDepsDir, 'lib'))) {
+    libPaths.unshift(join(userDepsDir, 'lib'));
+    debug(`Found user deps lib: ${userDepsDir}/lib`);
+  }
+  if (await pathExists(join(vendorDir, 'include'))) {
+    includePaths.unshift(join(vendorDir, 'include'));
+    debug(`Found vendor include: ${vendorDir}/include`);
+  }
+  if (await pathExists(join(vendorDir, 'lib'))) {
+    libPaths.unshift(join(vendorDir, 'lib'));
+    debug(`Found vendor lib: ${vendorDir}/lib`);
+  }
+
+  const includePathStr = includePaths.join(':');
+  const libPathStr = libPaths.join(':');
+  const cflagsIncludes = includePaths.map(p => `-I${p}`).join(' ');
+  const ldflagsLibs = libPaths.map(p => `-L${p}`).join(' ');
 
   const baseEnv: NodeJS.ProcessEnv = {
     ...env,
-    // Compiler/linker paths for libev
-    C_INCLUDE_PATH: `${libevInclude}:${env.C_INCLUDE_PATH || ''}`,
-    LIBRARY_PATH: `${libevLib}:${env.LIBRARY_PATH || ''}`,
-    LD_LIBRARY_PATH: `${libevLib}:${env.LD_LIBRARY_PATH || ''}`,
-    CFLAGS: `-I${libevInclude} ${env.CFLAGS || ''}`.trim(),
-    LDFLAGS: `-L${libevLib} ${env.LDFLAGS || ''}`.trim(),
+    // Add tools bin dir to PATH (for diff, patch from busybox if needed)
+    PATH: `${toolsBinDir}:${env.PATH || ''}`,
+    // Compiler/linker paths for native libs
+    C_INCLUDE_PATH: `${includePathStr}:${env.C_INCLUDE_PATH || ''}`,
+    LIBRARY_PATH: `${libPathStr}:${env.LIBRARY_PATH || ''}`,
+    LD_LIBRARY_PATH: `${libPathStr}:${env.LD_LIBRARY_PATH || ''}`,
+    CFLAGS: `${cflagsIncludes} ${env.CFLAGS || ''}`.trim(),
+    LDFLAGS: `${ldflagsLibs} ${env.LDFLAGS || ''}`.trim(),
+    // Non-interactive mode for opam
+    OPAMYES: '1',
+    OPAMCOLOR: 'never',
   };
 
-  if (!switchExists) {
+  // Always initialize opam first (needed to query versions)
+  const opamInitialized = await pathExists(join(opamRoot, 'config'));
+  if (!opamInitialized) {
     debug('Initializing opam...');
     await execa(
       opamBin,
@@ -249,7 +461,27 @@ export async function createOpam(options: {
       ],
       { env: baseEnv, stdio: 'inherit' }
     );
+  }
 
+  // Detect version from project
+  const detectedVersion =
+    (await detectOcamlVersion(workPath)) || DEFAULT_OCAML_VERSION;
+
+  // Normalize to full version (e.g., 5.1 -> 5.1.1) by querying opam
+  let ocamlVersion = detectedVersion;
+  if (!/^\d+\.\d+\.\d+$/.test(detectedVersion)) {
+    ocamlVersion = await findLatestPatchVersion(
+      opamBin,
+      opamRoot,
+      detectedVersion
+    );
+  }
+  debug(`Using OCaml version: ${ocamlVersion} (detected: ${detectedVersion})`);
+
+  const switchPath = join(opamRoot, ocamlVersion);
+  const switchExists = await pathExists(switchPath);
+
+  if (!switchExists) {
     debug(`Creating OCaml ${ocamlVersion} switch...`);
     await execa(
       opamBin,
@@ -273,7 +505,7 @@ export async function createOpam(options: {
     OPAMSWITCH: ocamlVersion,
     OPAMYES: '1',
     OPAMCOLOR: 'never',
-    PATH: `${join(opamRoot, ocamlVersion, 'bin')}:${baseEnv.PATH || ''}`,
+    PATH: `${join(opamRoot, ocamlVersion, 'bin')}:${toolsBinDir}:${env.PATH || ''}`,
   };
 
   return {

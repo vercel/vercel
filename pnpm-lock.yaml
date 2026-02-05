@@ -477,6 +477,9 @@ importers:
       '@vercel/node':
         specifier: workspace:*
         version: link:../node
+      '@vercel/ocaml':
+        specifier: workspace:*
+        version: link:../ocaml
       '@vercel/python':
         specifier: workspace:*
         version: link:../python

@@ -3,3 +3,4 @@ _opam/
 .vercel/
 *.install
 .merlin
+.vercel
