@@ -125,7 +125,8 @@
           "packages/cli/src/commands/**/*"
         ],
         "excludedFiles": [
-          "**/index.ts"
+          "**/index.ts",
+          "**/blob/store.ts"
         ],
         "rules": {
           "no-restricted-syntax": [
