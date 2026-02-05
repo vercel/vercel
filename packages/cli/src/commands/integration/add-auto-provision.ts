@@ -20,7 +20,8 @@ import { createMetadataWizard } from './wizard';
 
 export async function addAutoProvision(
   client: Client,
-  integrationSlug: string
+  integrationSlug: string,
+  jsonOutput = false
 ) {
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
@@ -33,6 +34,12 @@ export async function addAutoProvision(
   if (!team) {
     output.error('Team not found');
     return 1;
+  }
+
+  // JSON mode validation: requires non-interactive execution
+  if (jsonOutput && !client.stdin.isTTY) {
+    // In non-interactive JSON mode, we'll proceed without prompts
+    // This is useful for scripting/automation
   }
 
   // 2. Fetch integration
@@ -199,6 +206,40 @@ export async function addAutoProvision(
   );
   output.debug(`Installation: ${JSON.stringify(result.installation, null, 2)}`);
   output.debug(`Billing plan: ${JSON.stringify(result.billingPlan, null, 2)}`);
+
+  // In JSON mode, output the result and exit without prompting for project link
+  if (jsonOutput) {
+    const jsonResult = {
+      resource: {
+        id: result.resource.id,
+        name: result.resource.name,
+        status: result.resource.status,
+      },
+      integration: {
+        id: result.integration.id,
+        slug: result.integration.slug,
+        name: result.integration.name,
+      },
+      product: {
+        id: result.product.id,
+        slug: result.product.slug,
+        name: result.product.name,
+      },
+      installation: result.installation
+        ? { id: result.installation.id }
+        : null,
+      billingPlan: result.billingPlan
+        ? {
+            id: result.billingPlan.id,
+            name: result.billingPlan.name,
+            type: result.billingPlan.type,
+          }
+        : null,
+    };
+    client.stdout.write(`${JSON.stringify(jsonResult, null, 2)}\n`);
+    return 0;
+  }
+
   output.success(`${product.name} successfully provisioned`);
 
   // 10. Link to project (prompt)

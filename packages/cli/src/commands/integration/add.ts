@@ -28,7 +28,11 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
-export async function add(client: Client, args: string[]) {
+export async function add(
+  client: Client,
+  args: string[],
+  jsonOutput = false
+) {
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -49,7 +53,7 @@ export async function add(client: Client, args: string[]) {
 
   // Auto-provision: completely separate code path
   if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
-    return await addAutoProvision(client, integrationSlug);
+    return await addAutoProvision(client, integrationSlug, jsonOutput);
   }
 
   const { contextName, team } = await getScope(client);

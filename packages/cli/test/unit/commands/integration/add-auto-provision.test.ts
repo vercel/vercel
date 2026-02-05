@@ -462,4 +462,80 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
     });
   });
+
+  describe('--format=json', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should output JSON when --format=json is passed', async () => {
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('What is the name of the resource?');
+      client.stdin.write('test-resource\n');
+
+      await expect(client.stderr).toOutput('Choose your region');
+      client.stdin.write('\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify JSON output was written to stdout
+      const stdoutOutput = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(stdoutOutput);
+
+      expect(jsonOutput).toMatchObject({
+        resource: {
+          id: 'resource_123',
+          name: 'test-resource',
+          status: 'available',
+        },
+        integration: {
+          id: 'acme',
+          slug: 'acme',
+          name: 'Acme Integration',
+        },
+        product: {
+          id: 'acme-product',
+          slug: 'acme',
+          name: 'Acme Product',
+        },
+      });
+    });
+
+    it('should not prompt for project linking in JSON mode', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('What is the name of the resource?');
+      client.stdin.write('test-resource\n');
+
+      await expect(client.stderr).toOutput('Choose your region');
+      client.stdin.write('\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify JSON output - no project linking prompt should appear
+      const stdoutOutput = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(stdoutOutput);
+      expect(jsonOutput.resource.id).toEqual('resource_123');
+    });
+
+    it('should error with invalid format value', async () => {
+      client.setArgv('integration', 'add', 'acme', '--format=xml');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid output format');
+    });
+  });
 });

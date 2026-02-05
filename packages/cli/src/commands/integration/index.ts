@@ -5,6 +5,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
+import { validateJsonOutput } from '../../util/output-format';
 import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
 import { type Command, help } from '../help';
 import { add } from './add';
@@ -20,6 +21,7 @@ import {
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
+import { printError } from '../../util/error';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -75,7 +77,26 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, subArgs);
+
+      // Parse add subcommand flags from subArgs
+      let addParsedArgs;
+      try {
+        addParsedArgs = parseArguments(
+          subArgs,
+          getFlagsSpecification(addSubcommand.options)
+        );
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      const formatResult = validateJsonOutput(addParsedArgs.flags);
+      if (!formatResult.valid) {
+        output.error(formatResult.error);
+        return 1;
+      }
+
+      return add(client, addParsedArgs.args, formatResult.jsonOutput);
     }
     case 'list': {
       if (needHelp) {

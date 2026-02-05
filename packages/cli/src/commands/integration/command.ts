@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const addSubcommand = {
@@ -11,7 +11,7 @@ export const addSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [formatOption],
   examples: [
     {
       name: 'Install a marketplace integration',
