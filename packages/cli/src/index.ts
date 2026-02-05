@@ -945,10 +945,10 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          const shouldUpgrade = await client.input.confirm({
-            message: 'Would you like to upgrade now?',
-            default: true,
-          });
+          const shouldUpgrade = await client.input.confirm(
+            'Would you like to upgrade now?',
+            true
+          );
 
           if (shouldUpgrade) {
             const upgradeExitCode = await executeUpgrade();
