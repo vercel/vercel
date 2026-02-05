@@ -29,22 +29,22 @@
       "mustContain": "article 2"
     },
     {
-      "path": "/_next/data/testing-build-id/articles/one.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/articles/one.json",
       "status": 200,
       "mustContain": "\"slug\":\"one\""
     },
     {
-      "path": "/_next/data/testing-build-id/articles/one.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/articles/one.json",
       "status": 200,
       "mustContain": "\"slug\":\"one\""
     },
     {
-      "path": "/_next/data/testing-build-id/articles/two.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/articles/two.json",
       "status": 200,
       "mustContain": "\"slug\":\"two\""
     },
     {
-      "path": "/_next/data/testing-build-id/articles/two.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/articles/two.json",
       "status": 200,
       "mustContain": "\"slug\":\"two\""
     }

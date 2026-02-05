@@ -16,7 +16,7 @@
       "mustContain": "index page"
     },
     {
-      "path": "/_next/data/testing-build-id/index.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/index.json",
       "status": 200,
       "mustContain": "page\":\"index\""
     },
@@ -24,7 +24,7 @@
       "delay": 3000
     },
     {
-      "path": "/_next/data/testing-build-id/index.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/index.json",
       "status": 200,
       "mustContain": "page\":\"index\""
     },

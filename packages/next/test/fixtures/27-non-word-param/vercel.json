@@ -32,20 +32,20 @@
 
     // make sure lazy catch-all SSG data route matches
     {
-      "path": "/_next/data/testing-build-id/something.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/something.json",
       "mustContain": "My awesome article"
     },
 
     // make sure lazy catch-all SSG data route has correct param
     {
-      "path": "/_next/data/testing-build-id/something.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/something.json",
       "mustContain": "something"
     },
 
     // make sure lazy catch-all SSG data route doesn't have HTML
     // make sure lazy catch-all SSG data route matches
     {
-      "path": "/_next/data/testing-build-id/one-more.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/one-more.json",
       "mustNotContain": "<html>"
     }
   ]

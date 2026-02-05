@@ -2,6 +2,6 @@ module.exports = {
   basePath: '/docs',
 
   generateBuildId() {
-    return 'testing-build-id';
+    return 'build-TfctsWXpff2fKS';
   },
 };

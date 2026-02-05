@@ -57,22 +57,22 @@
       "mustContain": "comments post: post-1"
     },
     {
-      "path": "/docs/_next/data/testing-build-id/blog/post-1.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/blog/post-1.json",
       "status": 200,
       "mustContain": "\"post\""
     },
     {
-      "path": "/docs/_next/data/testing-build-id/blog/post-2/comments.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/blog/post-2/comments.json",
       "status": 200,
       "mustContain": "\"post\""
     },
     {
-      "path": "/docs/_next/data/testing-build-id/blog-ssg/post-1.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/blog-ssg/post-1.json",
       "status": 200,
       "mustContain": "\"post\""
     },
     {
-      "path": "/docs/_next/data/testing-build-id/blog-ssg/post-2/comments.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/blog-ssg/post-2/comments.json",
       "status": 200,
       "mustContain": "\"post\""
     }

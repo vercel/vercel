@@ -8,7 +8,7 @@
   ],
   "probes": [
     {
-      "path": "/_next/data/testing-build-id/en/dynamic/static.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/dynamic/static.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -18,7 +18,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/en/team-1/slug-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/team-1/slug-1.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -28,7 +28,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/en/dynamic/id-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/dynamic/id-1.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -38,7 +38,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/en/rewrite-to-site.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/rewrite-to-site.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -79,7 +79,7 @@
       "mustContain": "About Page"
     },
     {
-      "path": "/_next/data/testing-build-id/en/after-file-rewrite.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/after-file-rewrite.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": "1"
@@ -87,7 +87,7 @@
       "mustContain": "page\":\"about\""
     },
     {
-      "path": "/_next/data/testing-build-id/en/after-file-rewrite-auto-static-dynamic.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/after-file-rewrite-auto-static-dynamic.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": "1"
@@ -98,7 +98,7 @@
       "mustContain": "{}"
     },
     {
-      "path": "/_next/data/testing-build-id/en/_sites/subdomain-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/_sites/subdomain-1.json",
       "status": 200,
       "fetchOptions": {
         "redirect": "manual"

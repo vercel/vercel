@@ -150,7 +150,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     const manifestPrefix = scriptArgs.shift() || '';
 
     if (!ctx.nextBuildManifest) {
-      const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/testing-build-id/_buildManifest.js`;
+      const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/build-TfctsWXpff2fKS/_buildManifest.js`;
 
       logWithinTest('fetching buildManifest at', manifestUrl);
       const { text: manifestContent } = await fetchDeploymentUrl(manifestUrl);

@@ -43,7 +43,7 @@
       "retryDelay": 2000
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-4.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-4.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "MISS"
@@ -51,7 +51,7 @@
     },
     { "delay": 2000 },
     {
-      "path": "/_next/data/testing-build-id/blog/post-4.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-4.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE/"
@@ -70,11 +70,11 @@
       "mustContain": "loading..."
     },
     {
-      "path": "/_next/data/testing-build-id/lambda.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/lambda.json",
       "status": 404
     },
     {
-      "path": "/_next/data/testing-build-id/forever.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/forever.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/PRERENDER|HIT/"
@@ -89,14 +89,14 @@
       "retryDelay": 2000
     },
     {
-      "path": "/_next/data/testing-build-id/forever.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/forever.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/another2.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another2.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "PRERENDER"
@@ -104,7 +104,7 @@
     },
     { "delay": 2000 },
     {
-      "path": "/_next/data/testing-build-id/another2.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another2.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
@@ -128,21 +128,21 @@
       "mustContain": "This page could not be found"
     },
     {
-      "path": "/_next/data/testing-build-id/nofallback/one.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nofallback/one.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/nofallback/two.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nofallback/two.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/nofallback/nope.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nofallback/nope.json",
       "status": 404
     },
     {
@@ -156,7 +156,7 @@
       "mustContain": "Loading..."
     },
     {
-      "path": "/_next/data/testing-build-id/api-docs/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/api-docs/first.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE|PRERENDER/"
@@ -168,12 +168,12 @@
       "mustContain": "Hi"
     },
     {
-      "path": "/_next/data/testing-build-id/index.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/index.json",
       "status": 200,
       "mustContain": "\"hello\":\"index\""
     },
     {
-      "path": "/_next/data/testing-build-id/api-docs/second.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/api-docs/second.json",
       "status": 200
     },
     {

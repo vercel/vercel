@@ -26,7 +26,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(props.now)).toBe(false);
 
     const { pageProps: data } = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/rewrite-to-another-site.json`,
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/rewrite-to-another-site.json`,
       { headers: { 'x-nextjs-data': '1' } }
     ).then(res => res.json());
 
@@ -55,7 +55,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await check(async () => {
       const { pageProps: newData } = await fetch(
-        `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/rewrite-to-another-site.json`,
+        `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/rewrite-to-another-site.json`,
         { headers: { 'x-nextjs-data': '1' } }
       ).then(res => res.json());
 
@@ -86,7 +86,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(props.now)).toBe(false);
 
     const { pageProps: data } = await fetch(
-      `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/financial.json?slug=financial`,
+      `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/financial.json?slug=financial`,
       { headers: { 'x-nextjs-data': '1' } }
     ).then(res => res.json());
 
@@ -115,7 +115,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await check(async () => {
       const { pageProps: newData } = await fetch(
-        `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/financial.json?slug=financial`,
+        `${ctx.deploymentUrl}/docs/_next/data/build-TfctsWXpff2fKS/financial.json?slug=financial`,
         { headers: { 'x-nextjs-data': '1' } }
       ).then(res => res.json());
 

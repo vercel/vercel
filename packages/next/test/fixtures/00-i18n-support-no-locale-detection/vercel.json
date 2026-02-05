@@ -396,7 +396,7 @@
       "retryDelay": 2000
     },
     {
-      "path": "/_next/data/testing-build-id/en/not-found/fallback/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/not-found/fallback/first.json",
       "status": 404
     },
     {
@@ -415,7 +415,7 @@
       "mustContain": "lang=\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr/not-found/fallback/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr/not-found/fallback/first.json",
       "status": 200
     },
     {
@@ -435,43 +435,43 @@
     },
 
     {
-      "path": "/_next/data/testing-build-id/en-US.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en-US.json",
       "status": 200,
       "mustContain": "\"locale\":\"en-US\""
     },
     {
-      "path": "/_next/data/testing-build-id/en.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en.json",
       "status": 200,
       "mustContain": "\"locale\":\"en\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr.json",
       "status": 200,
       "mustContain": "\"locale\":\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl.json",
       "status": 200,
       "mustContain": "\"locale\":\"nl\""
     },
 
     {
-      "path": "/_next/data/testing-build-id/en-US/gsp.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en-US/gsp.json",
       "status": 200,
       "mustContain": "\"locale\":\"en-US\""
     },
     {
-      "path": "/_next/data/testing-build-id/en/gsp.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/gsp.json",
       "status": 200,
       "mustContain": "\"locale\":\"en\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr/gsp.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr/gsp.json",
       "status": 200,
       "mustContain": "\"locale\":\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl/gsp.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl/gsp.json",
       "status": 200,
       "mustContain": "\"locale\":\"nl\""
     },
@@ -487,7 +487,7 @@
       "mustContain": "lang=\"en-US\""
     },
     {
-      "path": "/_next/data/testing-build-id/en-US/gsp/blocking/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en-US/gsp/blocking/first.json",
       "status": 200,
       "mustContain": "\"catchall\":\"yes\""
     },
@@ -502,7 +502,7 @@
       "mustContain": "lang=\"nl-NL\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl-NL/gsp/blocking/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl-NL/gsp/blocking/first.json",
       "status": 200,
       "mustContain": "\"catchall\":\"yes\""
     },
@@ -517,7 +517,7 @@
       "mustContain": "lang=\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr/gsp/blocking/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr/gsp/blocking/first.json",
       "status": 200,
       "mustContain": "\"catchall\":\"yes\""
     }

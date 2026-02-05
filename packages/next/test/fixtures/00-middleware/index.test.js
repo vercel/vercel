@@ -24,7 +24,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(props.now)).toBe(false);
 
     const { pageProps: data } = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/rewrite-to-another-site.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/rewrite-to-another-site.json`
     ).then(res => res.json());
 
     expect(isNaN(data.now)).toBe(false);
@@ -52,7 +52,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await check(async () => {
       const { pageProps: newData } = await fetch(
-        `${ctx.deploymentUrl}/_next/data/testing-build-id/rewrite-to-another-site.json`
+        `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/rewrite-to-another-site.json`
       ).then(res => res.json());
 
       console.log({ newData, data });
@@ -82,7 +82,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(props.now)).toBe(false);
 
     const { pageProps: data } = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/financial.json?slug=financial`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/financial.json?slug=financial`
     ).then(res => res.json());
 
     expect(isNaN(data.now)).toBe(false);
@@ -110,7 +110,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await check(async () => {
       const { pageProps: newData } = await fetch(
-        `${ctx.deploymentUrl}/_next/data/testing-build-id/financial.json?slug=financial`
+        `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/financial.json?slug=financial`
       ).then(res => res.json());
 
       console.log(JSON.stringify({ newData, data }, null, 2));

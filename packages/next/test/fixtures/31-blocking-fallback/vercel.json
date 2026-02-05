@@ -21,7 +21,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/fixed/yellow.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fixed/yellow.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
@@ -33,7 +33,7 @@
       "mustContain": "yellow"
     },
     {
-      "path": "/_next/data/testing-build-id/fixed/yellow.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fixed/yellow.json",
       "status": 200,
       "mustContain": "yellow"
     },
@@ -52,7 +52,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/regenerated/blue.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/regenerated/blue.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE/"

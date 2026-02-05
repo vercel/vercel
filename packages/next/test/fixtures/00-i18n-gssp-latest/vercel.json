@@ -35,63 +35,63 @@
     },
 
     {
-      "path": "/_next/data/testing-build-id/en.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en.json",
       "status": 200,
       "mustContain": "gsspData"
     },
     {
-      "path": "/_next/data/testing-build-id/en.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en.json",
       "status": 200,
       "mustContain": "locale\":\"en\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr.json",
       "status": 200,
       "mustContain": "gsspData"
     },
     {
-      "path": "/_next/data/testing-build-id/fr.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr.json",
       "status": 200,
       "mustContain": "locale\":\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl.json",
       "status": 200,
       "mustContain": "gsspData"
     },
     {
-      "path": "/_next/data/testing-build-id/nl.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl.json",
       "status": 200,
       "mustContain": "locale\":\"nl\""
     },
 
     {
-      "path": "/_next/data/testing-build-id/en/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/another.json",
       "status": 200,
       "mustContain": "gsspData"
     },
     {
-      "path": "/_next/data/testing-build-id/en/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/en/another.json",
       "status": 200,
       "mustContain": "locale\":\"en\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr/another.json",
       "status": 200,
       "mustContain": "gsspData"
     },
     {
-      "path": "/_next/data/testing-build-id/fr/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fr/another.json",
       "status": 200,
       "mustContain": "locale\":\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl/another.json",
       "status": 200,
       "mustContain": "gsspData"
     },
     {
-      "path": "/_next/data/testing-build-id/nl/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/nl/another.json",
       "status": 200,
       "mustContain": "locale\":\"nl\""
     }

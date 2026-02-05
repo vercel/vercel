@@ -52,7 +52,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /_next/data dynamic pathname', async () => {
     const res = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/regenerated/blue.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/regenerated/blue.json`
     );
     expect(res.status).toBe(200);
 
@@ -63,7 +63,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     // wait for revalidation to occur
     await checkForChange(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/regenerated/blue.json`,
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/regenerated/blue.json`,
       initialTime,
       async res => {
         const { pageProps: data } = await res.json();
@@ -72,7 +72,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
 
     const res2 = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/regenerated/blue.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/regenerated/blue.json`
     );
     expect(res2.status).toBe(200);
 
