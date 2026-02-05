@@ -354,16 +354,7 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(
-            client,
-            project,
-            buildsJson,
-            cwd,
-            outputDir,
-            span,
-            standalone,
-            envToUnset
-          )
+          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
     } finally {
       await rootSpan.stop();
@@ -422,8 +413,7 @@ async function doBuild(
   cwd: string,
   outputDir: string,
   span: Span,
-  standalone: boolean = false,
-  envToUnset: Set<string> = new Set()
+  standalone: boolean = false
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -618,7 +608,6 @@ async function doBuild(
 
       for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
         process.env[key] = value;
-        envToUnset.add(key);
         output.debug(`Injected service URL env var: ${key}=${value}`);
       }
     }
