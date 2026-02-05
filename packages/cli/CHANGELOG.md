@@ -1,5 +1,22 @@
 # vercel
 
+## 50.12.1
+
+### Patch Changes
+
+- Add support for `VERCEL_TOKEN` environment variable ([#14831](https://github.com/vercel/vercel/pull/14831))
+
+  The CLI now reads the `VERCEL_TOKEN` environment variable as an alternative to the `--token` flag. This allows for easier scripting and CI/CD integration without needing to pass the token as a command-line argument.
+
+  The `--token` flag takes precedence over the environment variable when both are provided.
+
+- Fix `vc link --repo` in git worktree ([#14867](https://github.com/vercel/vercel/pull/14867))
+
+- Simplify CLI update prompt to yes/no confirmation with changelog link in body ([#14885](https://github.com/vercel/vercel/pull/14885))
+
+- Updated dependencies [[`df1d02d5257e33dc10640b20eea1c1e59c5842cf`](https://github.com/vercel/vercel/commit/df1d02d5257e33dc10640b20eea1c1e59c5842cf), [`e558a1657f5aa43048cde0f3b97bead7c9bf1070`](https://github.com/vercel/vercel/commit/e558a1657f5aa43048cde0f3b97bead7c9bf1070)]:
+  - @vercel/next@4.15.23
+
 ## 50.12.0
 
 ### Minor Changes

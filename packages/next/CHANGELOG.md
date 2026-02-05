@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.23
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14888](https://github.com/vercel/vercel/pull/14888))
+
+- Fix pages-manifest.json when using i18n ([#14878](https://github.com/vercel/vercel/pull/14878))
+
 ## 4.15.22
 
 ### Patch Changes
