@@ -47,6 +47,7 @@ import cmd from './util/output/cmd';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
+import getCommonArgs from './util/arg-common';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
@@ -145,11 +146,10 @@ const main = async () => {
   let parsedArgs;
 
   try {
-    parsedArgs = parseArguments(
-      process.argv,
-      { '--version': Boolean, '-v': '--version' },
-      { permissive: true }
-    );
+    // Use the single global options spec so all global flags are defined in one place (arg-common.ts)
+    parsedArgs = parseArguments(process.argv, getCommonArgs(), {
+      permissive: true,
+    });
     const isDebugging = parsedArgs.flags['--debug'];
     const isNoColor = parsedArgs.flags['--no-color'];
     output.initialize({
@@ -338,6 +338,8 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize
+  // When an agent is detected, --non-interactive is effectively the default
+  const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
@@ -352,6 +354,7 @@ const main = async () => {
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
+    nonInteractive,
   });
 
   // The `--cwd` flag is respected for all sub-commands
