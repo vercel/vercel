@@ -346,7 +346,8 @@ export async function ensureRepoLink(
  * First traverses up the directory hierarchy looking for `.vercel/repo.json`
  * (indicating an already-linked repository). If not found, uses
  * `git rev-parse --show-toplevel` to find the Git root, which correctly
- * handles regular repositories, worktrees, and submodules.
+ * handles regular repositories, worktrees, and submodules. Falls back to
+ * filesystem traversal looking for `.git` as a last resort.
  *
  * Returns `undefined` when no Git repo was found or if the home directory
  * is reached (to avoid matching dotfile repos).
@@ -384,6 +385,25 @@ export async function findRepoRoot(start: string): Promise<string | undefined> {
       `Found git root via "git rev-parse --show-toplevel" - detected "${gitRoot}" as repo root`
     );
     return gitRoot;
+  }
+
+  // Fallback: traverse up looking for `.git` directory or file.
+  // This handles cases where git commands fail (e.g., in test environments
+  // or when git is not installed).
+  for (const current of traverseUpDirectories({ start })) {
+    if (current === home) {
+      debug('Arrived at home directory');
+      break;
+    }
+
+    const gitPath = join(current, '.git');
+    const stat = await lstat(gitPath).catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    if (stat) {
+      debug(`Found ".git" - detected "${current}" as repo root`);
+      return current;
+    }
   }
 
   debug('Aborting search for repo root');
