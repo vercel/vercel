@@ -93,7 +93,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-packages/oidc/dist/get-vercel-oidc-token.d.ts:54
+packages/oidc/dist/get-vercel-oidc-token.d.ts:60
 
 ---
 
@@ -130,4 +130,4 @@ The OIDC token.
 
 #### Defined in
 
-packages/oidc/dist/get-vercel-oidc-token.d.ts:76
+packages/oidc/dist/get-vercel-oidc-token.d.ts:82
