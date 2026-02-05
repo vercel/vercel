@@ -1,5 +1,14 @@
 # @vercel/backends
 
+## 0.0.28
+
+### Patch Changes
+
+- [backends]: Improve cjs interop in monorepos ([#14846](https://github.com/vercel/vercel/pull/14846))
+
+- Updated dependencies [[`f45189244c2ca28083b0077532be4e2d9945faf0`](https://github.com/vercel/vercel/commit/f45189244c2ca28083b0077532be4e2d9945faf0)]:
+  - @vercel/build-utils@13.3.1
+
 ## 0.0.27
 
 ### Patch Changes

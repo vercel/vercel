@@ -1,688 +1,905 @@
-import type { Deployment } from '@vercel-internals/types';
-// import from node because vitest won't mock it
-import { setTimeout } from 'timers';
-import { promisify } from 'util';
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useDeployment, useRuntimeLogs } from '../../../mocks/deployment';
+import { useTeams } from '../../../mocks/team';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useDeployment } from '../../../mocks/deployment';
 import logs from '../../../../src/commands/logs';
-import { stateString } from '../../../../src/commands/list';
-import { CommandTimeout } from '../../../../src/commands/logs/command';
+import { join } from 'path';
 
-const logsFixtures = [
-  {
-    rowId: 1,
-    timestampInMs: 1717426870339,
-    level: 'info',
-    message: 'Hello, world!',
-    messageTruncated: false,
-    domain: 'acme.com',
+const fixture = (name: string) =>
+  join(__dirname, '../../../fixtures/unit/commands/logs', name);
+
+// API response format (what the server returns)
+interface ApiLogEntry {
+  requestId?: string;
+  timestamp?: string;
+  deploymentId?: string;
+  requestMethod?: string;
+  requestPath?: string;
+  statusCode?: number;
+  environment?: string;
+  domain?: string;
+  logs?: Array<{
+    level?: string;
+    message?: string;
+    messageTruncated?: boolean;
+  }>;
+  events?: Array<{ source?: string }>;
+}
+
+function createMockLog(
+  overrides: {
+    id?: string;
+    message?: string;
+    level?: string;
+    source?: string;
+    environment?: string;
+    deploymentId?: string;
+    responseStatusCode?: number;
+  } = {}
+): ApiLogEntry {
+  return {
+    requestId: overrides.id ?? 'log_123',
+    timestamp: new Date().toISOString(),
+    deploymentId: overrides.deploymentId ?? 'dpl_test123',
     requestMethod: 'GET',
-    requestPath: '/',
-    responseStatusCode: 200,
-  },
-  {
-    rowId: 2,
-    timestampInMs: 1717426870540,
-    message: 'Bye...',
-    messageTruncated: false,
-    domain: 'acme.com',
-    requestMethod: 'OPTION',
-    requestPath: '/logout',
-    responseStatusCode: 204,
-  },
-];
+    requestPath: '/api/test',
+    statusCode: overrides.responseStatusCode ?? 200,
+    environment: overrides.environment ?? 'production',
+    domain: 'test.vercel.app',
+    logs: [
+      {
+        level: overrides.level ?? 'info',
+        message: overrides.message ?? 'Test log message',
+      },
+    ],
+    events: [{ source: overrides.source ?? 'serverless' }],
+  };
+}
+
+function useRequestLogs(logs: ApiLogEntry[] = []) {
+  client.scenario.get('/api/logs/request-logs', (_req, res) => {
+    res.json({
+      rows: logs,
+      hasMoreRows: false,
+    });
+  });
+}
 
 describe('logs', () => {
   describe('--help', () => {
-    it('tracks telemetry', async () => {
-      const command = 'logs';
+    it('should display help and track telemetry', async () => {
+      client.setArgv('logs', '--help');
+      const exitCode = await logs(client);
 
-      client.setArgv(command, '--help');
-      const exitCodePromise = logs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
-
+      expect(exitCode).toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: command,
+          value: 'logs',
         },
       ]);
     });
+
+    it('should display help with examples', async () => {
+      client.setArgv('logs', '--help');
+      await logs(client);
+
+      const output = client.getFullOutput();
+      expect(output).toContain('Display request logs');
+      expect(output).toContain('--level');
+      expect(output).toContain('--environment');
+    });
   });
 
-  describe('[url|deploymentId]', () => {
-    let user: ReturnType<typeof useUser>;
-    let deployment: Deployment;
-    const runtimeEndpointSpy = vi.fn();
-
-    beforeAll(() => {
-      process.env.TZ = 'UTC';
-    });
-
+  describe('with linked project', () => {
     beforeEach(() => {
-      vi.useFakeTimers();
-      vi.clearAllMocks();
-      user = useUser();
-      deployment = useDeployment({ creator: user });
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
     });
 
-    afterEach(() => {
-      vi.useRealTimers();
-    });
+    it('should fetch logs for linked project', async () => {
+      const mockLogs = [
+        createMockLog({ message: 'First log' }),
+        createMockLog({ message: 'Second log' }),
+      ];
+      useRequestLogs(mockLogs);
 
-    it('prints help message', async () => {
-      client.setArgv('logs', '-h');
-      expect(await logs(client)).toEqual(2);
-      expect(client.getFullOutput()).toMatchInlineSnapshot(`
-        "
-          ▲ vercel logs url|deploymentId [options]
-
-          Display runtime logs for a deployment in ready state, from now and for 5      
-          minutes at most.                                                              
-
-          Options:
-
-          -F,  --format <FORMAT>  Specify the output format (json)                      
-
-
-          Global Options:
-
-               --cwd <DIR>            Sets the current working directory for a single   
-                                      run of a command                                  
-          -d,  --debug                Debug mode (default off)                          
-          -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
-          -h,  --help                 Output usage information                          
-          -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
-               --no-color             No color mode (default off)                       
-          -S,  --scope                Set a custom scope                                
-          -t,  --token <TOKEN>        Login token                                       
-          -v,  --version              Output the version number                         
-
-
-          Examples:
-
-          - Pretty print all the new runtime logs for the deployment DEPLOYMENT_URL from now on
-
-            $ vercel logs DEPLOYMENT_URL
-
-          - Print all runtime logs for the deployment DEPLOYMENT_ID as json objects
-
-            $ vercel logs DEPLOYMENT_ID --format=json
-
-          - Filter runtime logs for warning with JQ third party tool
-
-            $ vercel logs DEPLOYMENT_ID --format=json | jq 'select(.level == "warning")'
-
-        "
-      `);
-    });
-
-    it('prints error when not providing deployement id or url', async () => {
+      client.cwd = fixture('linked-project');
       client.setArgv('logs');
       const exitCode = await logs(client);
-      const output = client.getFullOutput();
-      expect(exitCode).toEqual(1);
-      expect(output).toContain(
-        '`vercel logs <deployment>` expects exactly one argument'
-      );
-    });
 
-    it('prints error when deployment not found', async () => {
-      client.setArgv('logs', 'bad.com');
-      await expect(logs(client)).rejects.toThrow(
-        `Can't find the deployment "bad.com" under the context "${user.username}"`
-      );
-    });
-
-    it('prints error when argument parsing failed', async () => {
-      client.setArgv('logs', '--unknown');
-      expect(await logs(client)).toEqual(1);
-      expect(client.stderr).toOutput(
-        'Error: unknown or unexpected option: --unknown'
-      );
-    });
-
-    it.each([
-      { state: 'QUEUED', withDisclaimer: true },
-      { state: 'BUILDING', withDisclaimer: true },
-      { state: 'INITIALIZING', withDisclaimer: true },
-      { state: 'DEPLOYING', withDisclaimer: false },
-      { state: 'ERROR', withDisclaimer: false },
-      { state: 'CANCELED', withDisclaimer: false },
-    ] as {
-      state: Deployment['readyState'];
-      withDisclaimer: boolean;
-    }[])(
-      'prints disclaimer when deployment is $state',
-      async ({ state, withDisclaimer }) => {
-        const deployment = useDeployment({ creator: user, state });
-        client.setArgv('logs', deployment.url);
-        const exitCode = await logs(client);
-        const output = client.getFullOutput();
-        expect(output).toContain(
-          `Fetching deployment "${deployment.url}" in ${user.username}`
-        );
-        expect(output).toContain(
-          `Error: Deployment not ready. Currently: ${stateString(state)}.`
-        );
-        if (withDisclaimer) {
-          expect(output).toContain(
-            `To follow build logs, run \`vercel inspect --logs --wait ${deployment.url}\``
-          );
-        }
-        expect(exitCode).toEqual(1);
-      }
-    );
-
-    it('prints disclaimer for deprecated flags', async () => {
-      useRuntimeLogs({
-        deployment,
-        logProducer: async function* () {
-          for (const log of logsFixtures) {
-            yield log;
-          }
-        },
-      });
-      client.setArgv(
-        'logs',
-        deployment.url,
-        `--follow=true`,
-        '--since=forever',
-        '--until=tomorrow',
-        '--limit=1000',
-        '--json'
-      );
-      const exitCode = await logs(client);
       expect(exitCode).toEqual(0);
-      const output = client.getFullOutput();
-      expect(output).toContain(
-        `The "--follow" option was ignored because it is now deprecated. Please remove it`
-      );
-      expect(output).toContain(
-        `The "--limit" option was ignored because it is now deprecated. Please remove it`
-      );
-      expect(output).toContain(
-        `The "--since" option was ignored because it is now deprecated. Please remove it`
-      );
-      expect(output).toContain(
-        `The "--until" option was ignored because it is now deprecated. Please remove it`
-      );
-      expect(output).toContain(
-        `The "--json" option was ignored because it is now deprecated. Please remove it`
-      );
+      await expect(client.stderr).toOutput('Fetching logs');
     });
 
-    it('should track redacted deployment ID/URL positional argument', async () => {
-      useRuntimeLogs({
-        spy: runtimeEndpointSpy,
-        deployment,
-        logProducer: async function* () {
-          for (const log of logsFixtures) {
-            yield log;
-          }
-        },
-      });
-      client.setArgv('logs', deployment.url);
+    it('should output logs as JSON with --json flag', async () => {
+      const mockLogs = [createMockLog({ message: 'JSON log test' })];
+      useRequestLogs(mockLogs);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--json');
       const exitCode = await logs(client);
+
       expect(exitCode).toEqual(0);
+      await expect(client.stdout).toOutput('"message":"JSON log test"');
+    });
+
+    it('should track telemetry for --json flag', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--json');
+      await logs(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:urlOrDeploymentId',
+          key: 'flag:json',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('should display "no logs found" when empty', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('No logs found');
+    });
+  });
+
+  describe('--project option', () => {
+    beforeEach(() => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'prj_explicit',
+        name: 'explicit-project',
+      });
+    });
+
+    it('should fetch logs for specified project', async () => {
+      useRequestLogs([createMockLog()]);
+
+      client.setArgv('logs', '--project', 'explicit-project');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should track telemetry for --project option', async () => {
+      useRequestLogs([]);
+
+      client.setArgv('logs', '--project', 'explicit-project');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
           value: '[REDACTED]',
         },
       ]);
     });
 
-    it('pretty prints log lines', async () => {
-      useRuntimeLogs({
-        spy: runtimeEndpointSpy,
-        deployment,
-        logProducer: async function* () {
-          for (const log of logsFixtures) {
-            yield log;
-          }
-        },
+    it('should error when project not found', async () => {
+      client.scenario.get('/v9/projects/nonexistent', (_req, res) => {
+        res.status(404).json({ error: { code: 'not_found' } });
       });
-      client.setArgv('logs', deployment.url);
+
+      client.setArgv('logs', '--project', 'nonexistent');
       const exitCode = await logs(client);
-      expect(exitCode).toEqual(0);
-      expect(runtimeEndpointSpy).toHaveBeenCalledWith(
-        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-        { format: 'lines' }
-      );
-      expect(runtimeEndpointSpy).toHaveBeenCalledOnce();
-      await expect(client.stderr).toOutput(
-        `Fetching deployment "${deployment.url}" in ${user.username}
-`
-      );
-      const output = client.getFullOutput();
-      // 3nd line is time dependent and others are blank lines
-      expect(output.split('\n').slice(3).join('\n')).toMatchInlineSnapshot(`
-        "waiting for new logs...
-        15:01:10.33  ℹ️  GET  200  acme.com     /
-        -----------------------------------------
-        Hello, world!
 
-        waiting for new logs...
-        15:01:10.54  ℹ️  OPTION  204  acme.com     /logout
-        --------------------------------------------------
-        Bye...
-
-        waiting for new logs...
-        "
-      `);
-      expect(client.stdout.getFullOutput()).toEqual('');
-    });
-
-    it('prints log lines in json', async () => {
-      useRuntimeLogs({
-        spy: runtimeEndpointSpy,
-        deployment,
-        logProducer: async function* () {
-          for (const log of logsFixtures) {
-            yield log;
-          }
-        },
-      });
-      client.setArgv('logs', deployment.url, '--json');
-      const exitCode = await logs(client);
-      expect(exitCode).toEqual(0);
-      expect(runtimeEndpointSpy).toHaveBeenCalledWith(
-        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-        { format: 'lines' }
-      );
-      expect(runtimeEndpointSpy).toHaveBeenCalledOnce();
-      await expect(client.stderr).toOutput(
-        `Fetching deployment "${deployment.url}" in ${user.username}
-`
-      );
-      expect(client.stdout.getFullOutput())
-        .toContain(`{"rowId":1,"timestampInMs":1717426870339,"level":"info","message":"Hello, world!","messageTruncated":false,"domain":"acme.com","requestMethod":"GET","requestPath":"/","responseStatusCode":200}
-{"rowId":2,"timestampInMs":1717426870540,"message":"Bye...","messageTruncated":false,"domain":"acme.com","requestMethod":"OPTION","requestPath":"/logout","responseStatusCode":204}`);
-    });
-
-    it('stops when receiving "limit exceeded" delimiter from server', async () => {
-      useRuntimeLogs({
-        spy: runtimeEndpointSpy,
-        deployment,
-        logProducer: async function* () {
-          yield {
-            message: `Exceeded runtime logs limit 3 log lines`,
-            messageTruncated: false,
-            source: 'delimiter',
-            level: 'error',
-            rowId: '',
-            domain: '',
-            timestampInMs: Date.now(),
-            requestMethod: '',
-            requestPath: '',
-            responseStatusCode: 0,
-          };
-          yield logsFixtures[0];
-        },
-      });
-      client.setArgv('logs', deployment.url);
-      const exitCode = await logs(client);
       expect(exitCode).toEqual(1);
-      expect(runtimeEndpointSpy).toHaveBeenCalledWith(
-        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-        { format: 'lines' }
-      );
-      await expect(client.stderr).toOutput(
-        `Fetching deployment "${deployment.url}" in ${user.username}
-`
-      );
-      expect(client.getFullOutput()).toContain(
-        `WARN! Exceeded runtime logs limit 3 log lines`
-      );
+      await expect(client.stderr).toOutput('Project not found');
     });
+  });
 
-    it(`aborts the command after ${CommandTimeout}`, async () => {
-      useRuntimeLogs({
-        spy: runtimeEndpointSpy,
-        deployment,
-        logProducer: async function* () {
-          yield logsFixtures[0];
-          await promisify(setTimeout)(100);
-          vi.runAllTimers();
-          yield logsFixtures[1];
-        },
+  describe('--level option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
       });
-      client.setArgv('logs', deployment.url);
-      const exitCode = await logs(client);
-      expect(exitCode).toEqual(1);
-      expect(runtimeEndpointSpy).toHaveBeenCalledWith(
-        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-        { format: 'lines' }
-      );
-      await expect(client.stderr).toOutput(
-        `Fetching deployment "${deployment.url}" in ${user.username}
-`
-      );
-      expect(client.getFullOutput()).toContain(
-        `WARN! Command automatically interrupted after ${CommandTimeout}.`
-      );
     });
 
-    it('does not retry on a server validation error', async () => {
-      const spy = vi.fn();
+    it('should filter by error level', async () => {
+      let receivedLevel: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedLevel = req.query.level as string;
+        res.json({
+          rows: [createMockLog({ level: 'error', message: 'Error occurred' })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--level', 'error');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedLevel).toEqual('error');
+    });
+
+    it('should track telemetry for valid --level values', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--level', 'error');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:level',
+          value: 'error',
+        },
+      ]);
+    });
+
+    it('should track telemetry for multiple --level values', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--level', 'error', '--level', 'warning');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:level',
+          value: 'error,warning',
+        },
+      ]);
+    });
+
+    it('should error on invalid level', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--level', 'invalid');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid log level: invalid');
+    });
+  });
+
+  describe('--environment option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should filter by production environment', async () => {
+      let receivedEnvironment: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedEnvironment = req.query.environment as string;
+        res.json({
+          rows: [createMockLog({ environment: 'production' })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--environment', 'production');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedEnvironment).toEqual('production');
+    });
+
+    it('should track telemetry for production environment', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--environment', 'production');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:environment',
+          value: 'production',
+        },
+      ]);
+    });
+
+    it('should track telemetry for preview environment', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--environment', 'preview');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:environment',
+          value: 'preview',
+        },
+      ]);
+    });
+
+    it('should error on invalid environment', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--environment', 'staging');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid environment: staging');
+    });
+  });
+
+  describe('--source option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should filter by serverless source', async () => {
+      let receivedSource: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedSource = req.query.source as string;
+        res.json({
+          rows: [createMockLog({ source: 'serverless' })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--source', 'serverless');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedSource).toEqual('serverless');
+    });
+
+    it('should track telemetry for valid --source values', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--source', 'edge-function');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:source',
+          value: 'edge-function',
+        },
+      ]);
+    });
+
+    it('should error on invalid source', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--source', 'invalid-source');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid source: invalid-source');
+    });
+  });
+
+  describe('--status-code option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should filter by status code', async () => {
+      let receivedStatusCode: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedStatusCode = req.query.statusCode as string;
+        res.json({
+          rows: [createMockLog({ responseStatusCode: 500 })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--status-code', '500');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedStatusCode).toEqual('500');
+    });
+
+    it('should track telemetry for --status-code option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--status-code', '500');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:status-code',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--since and --until options', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should filter by time range', async () => {
+      let receivedStartDate: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedStartDate = req.query.startDate as string;
+        res.json({
+          rows: [createMockLog()],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--since', '1h');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const startDateMs = parseInt(receivedStartDate!, 10);
+      const now = Date.now();
+      const oneHourAgo = now - 60 * 60 * 1000;
+      expect(startDateMs).toBeGreaterThan(oneHourAgo - 1000);
+      expect(startDateMs).toBeLessThan(oneHourAgo + 1000);
+    });
+
+    it('should track telemetry for --since option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--since', '1h');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:since',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('should track telemetry for --until option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--until', '30m');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:until',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--limit option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should limit number of results', async () => {
+      useRequestLogs([createMockLog(), createMockLog()]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--limit', '10');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should track telemetry for --limit option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--limit', '50');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:limit',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--query option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should search logs', async () => {
+      let receivedSearch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedSearch = req.query.search as string;
+        res.json({
+          rows: [createMockLog({ message: 'timeout error occurred' })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--query', 'timeout');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedSearch).toEqual('timeout');
+    });
+
+    it('should track telemetry for --query option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--query', 'error');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:query',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--deployment option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should filter by deployment ID with --no-follow', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--deployment', deployment.id, '--no-follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
+    it('should track telemetry for --deployment option', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
       client.scenario.get(
-        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-        async (req, res) => {
-          spy(req.path, req.query);
-          res.statusCode = 400;
-          return res.json({
-            error: { code: 'bad_request', message: 'Limit exceeded' },
-          });
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
         }
       );
-      client.setArgv('logs', deployment.url);
-      await expect(logs(client)).rejects.toThrow(`Limit exceeded (400)`);
-      expect(spy).toHaveBeenCalledOnce();
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--deployment', deployment.id);
+      await logs(client);
+
+      // Implicit --follow is enabled when deployment is specified
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:deployment',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'flag:follow',
+          value: 'TRUE',
+        },
+      ]);
     });
+  });
 
-    it.each([
-      { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
-      {
-        title: 'as json',
-        flag: '--format=json',
-        getOutput: () => client.stdout.getFullOutput(),
-      },
-    ])(
-      'retries on server error when reading logs $title',
-      async ({ flag, getOutput }) => {
-        vi.useRealTimers();
-        const spy = vi.fn();
-        let count = 0;
-        client.scenario.get(
-          `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-          async (req, res) => {
-            spy(req.path, req.query);
-            if (count++ < 2) {
-              res.statusCode = 500;
-              return res.json({
-                error: { code: 'server_error', message: `I'm full` },
-              });
-            }
-            res.write(JSON.stringify(logsFixtures[0]) + '\n');
-            res.end();
-          }
-        );
-        client.setArgv('logs', deployment.url, flag);
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
-        await expect(client.stderr).toOutput(
-          `Fetching deployment "${deployment.url}" in ${user.username}
-`
-        );
-        expect(getOutput()).toContain(logsFixtures[0].message);
-        expect(spy).toHaveBeenCalledWith(
-          `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-          { format: 'lines' }
-        );
-        expect(spy).toHaveBeenCalledTimes(3);
-      },
-      8000
-    );
-
-    it.each([
-      { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
-      {
-        title: 'as json',
-        flag: '--format=json',
-        getOutput: () => client.stdout.getFullOutput(),
-      },
-    ])(
-      'resumes showing logs when failing to process a log line $title',
-      async ({ flag, getOutput }) => {
-        vi.useRealTimers();
-        const spy = vi.fn();
-        let count = 0;
-        client.scenario.get(
-          `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-          async (req, res) => {
-            spy(req.path, req.query);
-            await promisify(setTimeout)(100);
-            res.write(JSON.stringify(logsFixtures[count]) + '\n');
-            if (count++ === 0) {
-              res.write('unparseable\n');
-              await promisify(setTimeout)(100);
-              res.destroy(new Error('boom'));
-            } else {
-              res.end();
-            }
-          }
-        );
-        client.setArgv('logs', deployment.url, flag);
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
-        await expect(client.stderr).toOutput(
-          `Fetching deployment "${deployment.url}" in ${user.username}
-`
-        );
-        expect(getOutput()).toContain(logsFixtures[0].message);
-        expect(getOutput()).toContain(logsFixtures[1].message);
-        expect(spy).toHaveBeenCalledWith(
-          `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
-          { format: 'lines' }
-        );
-        expect(spy).toHaveBeenCalledTimes(2);
-      }
-    );
-
-    describe('--json', () => {
-      it('should track usage of `--json` flag', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
-        });
-        client.setArgv('logs', deployment.url, '--json');
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'flag:json',
-            value: 'TRUE',
-          },
-        ]);
+  describe('positional deployment argument (implicit --follow)', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
       });
     });
 
-    describe('--follow', () => {
-      it('should track usage of `--follow` flag', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
-        });
-        client.setArgv('logs', deployment.url, '--follow');
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
+    it('should enable --follow implicitly when deployment ID is specified', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
 
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'flag:follow',
-            value: 'TRUE',
-          },
-        ]);
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should allow --no-follow to disable implicit follow', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--no-follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
+    it('should extract hostname from URL positional argument', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      client.scenario.get(`/v13/deployments/${deployment.url}`, (_req, res) => {
+        res.json(deployment);
+      });
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', `https://${deployment.url}/some/path`);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should prioritize positional argument over --deployment flag', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          res.status(200);
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--deployment', 'other_dpl_id');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+    });
+  });
+
+  describe('--request-id option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
       });
     });
 
-    describe('--limit', () => {
-      it('should track redacted usage of `--limit` flag', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
+    it('should filter by request ID', async () => {
+      let receivedRequestId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedRequestId = req.query.requestId as string;
+        res.json({
+          rows: [createMockLog({ id: 'req_specific123' })],
+          hasMoreRows: false,
         });
-        client.setArgv('logs', deployment.url, '--limit', '10');
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
+      });
 
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'option:limit',
-            value: '[REDACTED]',
-          },
-        ]);
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--request-id', 'req_specific123');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedRequestId).toEqual('req_specific123');
+    });
+
+    it('should track telemetry for --request-id option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--request-id', 'req_abc123');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:request-id',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should error when not linked and no project specified', async () => {
+      useUser();
+
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput("isn't linked to a project");
+    });
+  });
+
+  describe('--follow option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
       });
     });
 
-    describe('--since', () => {
-      it('should track redacted usage of `--since` flag', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
-        });
-        client.setArgv(
-          'logs',
-          deployment.url,
-          '--since',
-          '2024-10-25T19:51:14.304Z'
-        );
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
+    it('should error when --follow is used with --no-branch and no deployment', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--follow', '--no-branch');
+      const exitCode = await logs(client);
 
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'option:since',
-            value: '[REDACTED]',
-          },
-        ]);
-      });
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        '--follow flag requires a deployment'
+      );
     });
 
-    describe('--until', () => {
-      it('should track redacted usage of `--until` flag', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
-        });
-        client.setArgv(
-          'logs',
-          deployment.url,
-          '--until',
-          '2024-10-25T19:51:14.304Z'
-        );
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
+    it('should error when --follow is used with --level', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--level',
+        'error'
+      );
+      const exitCode = await logs(client);
 
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'option:until',
-            value: '[REDACTED]',
-          },
-        ]);
-      });
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --level');
     });
 
-    describe('--output', () => {
-      it('should track usage of `--output` flag with known value', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
-        });
-        client.setArgv('logs', deployment.url, '--output', 'raw');
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
+    it('should error when --follow is used with --environment', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--environment',
+        'production'
+      );
+      const exitCode = await logs(client);
 
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'option:output',
-            value: 'raw',
-          },
-        ]);
-      });
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --environment');
+    });
 
-      it('should track redacted usage of `--output` flag with unknown value', async () => {
-        useRuntimeLogs({
-          spy: runtimeEndpointSpy,
-          deployment,
-          logProducer: async function* () {
-            for (const log of logsFixtures) {
-              yield log;
-            }
-          },
-        });
-        client.setArgv('logs', deployment.url, '--output', 'other');
-        const exitCode = await logs(client);
-        expect(exitCode).toEqual(0);
+    it('should error when --follow is used with --query', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--query',
+        'error'
+      );
+      const exitCode = await logs(client);
 
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'argument:urlOrDeploymentId',
-            value: '[REDACTED]',
-          },
-          {
-            key: 'option:output',
-            value: '[REDACTED]',
-          },
-        ]);
-      });
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --query');
+    });
+
+    it('should error when --follow is used with multiple incompatible flags', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--level',
+        'error',
+        '--since',
+        '1h'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --level, --since');
+    });
+
+    it('should track telemetry for --follow flag', async () => {
+      client.cwd = fixture('linked-project');
+      // Use --no-branch to avoid branch detection and deployment lookup
+      client.setArgv('logs', '--follow', '--no-branch');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:follow',
+          value: 'TRUE',
+        },
+      ]);
     });
   });
 });
