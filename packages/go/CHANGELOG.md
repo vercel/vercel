@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.3.5
+
+### Patch Changes
+
+- Update deprecated tar package ([#14877](https://github.com/vercel/vercel/pull/14877))
+
 ## 3.3.4
 
 ### Patch Changes

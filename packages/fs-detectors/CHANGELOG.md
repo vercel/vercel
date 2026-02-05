@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.8.1
+
+### Patch Changes
+
+- [services] `vercel dev` will add the known framework prefix to env vars for services ([#14866](https://github.com/vercel/vercel/pull/14866))
+
 ## 5.8.0
 
 ### Minor Changes
