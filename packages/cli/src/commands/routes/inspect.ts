@@ -2,12 +2,21 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { inspectSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  formatCondition,
+  formatTransform,
+} from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { getRouteTypeLabels, type RoutingRule } from '../../util/routes/types';
+import {
+  getRouteTypeLabels,
+  getSrcSyntaxLabel,
+  type RoutingRule,
+} from '../../util/routes/types';
 
 export default async function inspect(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, inspectSubcommand);
@@ -129,6 +138,7 @@ export default async function inspect(client: Client, argv: string[]) {
 function formatRouteDetails(rule: RoutingRule): string {
   const lines: string[] = [''];
   const typeLabels = getRouteTypeLabels(rule);
+  const syntaxLabel = getSrcSyntaxLabel(rule);
   const statusText =
     rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
   const stagedText = rule.staged
@@ -151,6 +161,7 @@ function formatRouteDetails(rule: RoutingRule): string {
 
   lines.push(chalk.bold('  Route Configuration'));
   lines.push(`  ${chalk.cyan('Source:')}      ${rule.route.src}`);
+  lines.push(`  ${chalk.cyan('Syntax:')}      ${syntaxLabel}`);
 
   if (rule.route.dest) {
     lines.push(`  ${chalk.cyan('Destination:')} ${rule.route.dest}`);
@@ -174,9 +185,17 @@ function formatRouteDetails(rule: RoutingRule): string {
 
   if (rule.route.headers && Object.keys(rule.route.headers).length > 0) {
     lines.push('');
-    lines.push(chalk.bold('  Headers'));
+    lines.push(chalk.bold('  Response Headers'));
     for (const [key, value] of Object.entries(rule.route.headers)) {
       lines.push(`  ${chalk.cyan(key + ':')} ${value}`);
+    }
+  }
+
+  if (rule.route.transforms && rule.route.transforms.length > 0) {
+    lines.push('');
+    lines.push(chalk.bold('  Transforms'));
+    for (const transform of rule.route.transforms) {
+      lines.push(`  ${formatTransform(transform)}`);
     }
   }
 
@@ -199,27 +218,4 @@ function formatRouteDetails(rule: RoutingRule): string {
   lines.push('');
 
   return lines.join('\n');
-}
-
-function formatCondition(condition: {
-  type: string;
-  key?: string;
-  value?: unknown;
-}): string {
-  const parts = [chalk.gray(`[${condition.type}]`)];
-
-  if (condition.key) {
-    parts.push(chalk.cyan(condition.key));
-  }
-
-  if (condition.value !== undefined) {
-    if (typeof condition.value === 'string') {
-      parts.push(`= ${condition.value}`);
-    } else {
-      // Complex MatchableValue - show as JSON
-      parts.push(`= ${JSON.stringify(condition.value)}`);
-    }
-  }
-
-  return parts.join(' ');
 }

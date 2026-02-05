@@ -67,7 +67,7 @@ describe('routes inspect', () => {
     client.setArgv('routes', 'inspect', 'Custom headers');
     const exitCode = await routes(client);
     expect(exitCode, 'exit code for inspect with headers').toEqual(0);
-    await expect(client.stderr).toOutput('Headers');
+    await expect(client.stderr).toOutput('Response Headers');
   });
 
   it('should show disabled status', async () => {
@@ -94,6 +94,22 @@ describe('routes inspect', () => {
     await expect(client.stderr).toOutput('Conditions');
   });
 
+  it('should show srcSyntax label', async () => {
+    useRoutesForInspect();
+    client.setArgv('routes', 'inspect', 'Old page redirect');
+    const exitCode = await routes(client);
+    expect(exitCode, 'exit code for inspect with syntax').toEqual(0);
+    await expect(client.stderr).toOutput('Exact Match');
+  });
+
+  it('should show transforms in route details', async () => {
+    useRoutesForInspect();
+    client.setArgv('routes', 'inspect', 'API transforms');
+    const exitCode = await routes(client);
+    expect(exitCode, 'exit code for inspect with transforms').toEqual(0);
+    await expect(client.stderr).toOutput('Transforms');
+  });
+
   it('should show interactive selection when multiple matches', async () => {
     useRoutesForInspect();
     // Search for 'route' which matches all route IDs
@@ -106,7 +122,7 @@ describe('routes inspect', () => {
     expect(exitCode, 'exit code for ambiguous search with selection').toEqual(
       0
     );
-    await expect(client.stderr).toOutput('Found 3 routes matching');
+    await expect(client.stderr).toOutput('Found 4 routes matching');
   });
 
   it('should show error when no routes match', async () => {

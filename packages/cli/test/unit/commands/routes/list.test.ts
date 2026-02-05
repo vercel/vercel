@@ -170,7 +170,7 @@ describe('routes list', () => {
       client.setArgv('routes', 'list', '--expand');
       const exitCode = await routes(client);
       expect(exitCode, 'exit code for "routes list --expand"').toEqual(0);
-      await expect(client.stderr).toOutput('Headers');
+      await expect(client.stderr).toOutput('Response Headers');
     });
 
     it('should show description in expanded view', async () => {
@@ -179,6 +179,15 @@ describe('routes list', () => {
       const exitCode = await routes(client);
       expect(exitCode, 'exit code for "routes list --expand"').toEqual(0);
       await expect(client.stderr).toOutput('Description for route');
+    });
+
+    it('should show syntax label in expanded view', async () => {
+      useRoutes(2);
+      client.setArgv('routes', 'list', '--expand');
+      const exitCode = await routes(client);
+      expect(exitCode, 'exit code for "routes list --expand"').toEqual(0);
+      // Default routes have no srcSyntax, so should show 'Regex' (the default)
+      await expect(client.stderr).toOutput('Regex');
     });
   });
 });
