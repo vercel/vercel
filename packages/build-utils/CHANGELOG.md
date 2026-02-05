@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.3.1
+
+### Patch Changes
+
+- Replace Python-based AST parser with WASM-based `@vercel/python-analysis` for detecting Python entrypoints. This eliminates the need for a Python runtime when analyzing Python files for WSGI/ASGI application patterns. ([#14843](https://github.com/vercel/vercel/pull/14843))
+
 ## 13.3.0
 
 ### Minor Changes
