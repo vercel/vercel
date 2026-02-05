@@ -187,22 +187,31 @@ async function buildStandaloneServer(
   // 1. Download files
   await download(files, workPath, meta);
 
-  // 2. Get Go wrapper
-  const go = await createGo({ modulePath: workPath, workPath });
+  // 2. Get Go wrapper (cross-compile for Linux x86_64)
+  const env = cloneEnv(process.env, meta?.env, {
+    GOARCH: 'amd64',
+    GOOS: 'linux',
+    CGO_ENABLED: '0',
+  });
+  const go = await createGo({ modulePath: workPath, workPath, opts: { env } });
 
-  // 3. Build the binary (cross-compile for Linux)
+  // 3. Build the binary
   const outDir = await getWriteableDirectory();
-  const binaryPath = join(outDir, 'bootstrap');
+  const binaryPath = join(outDir, 'executable');
 
-  await go.build('.', binaryPath); // Build the entire module
+  // Build target based on entrypoint location
+  const buildTarget =
+    entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
+  await go.build(buildTarget, binaryPath);
 
-  // 4. Create Lambda with executable runtime
+  // 4. Create Lambda with executable runtime (like @vercel/rust)
   const lambda = new Lambda({
     files: {
-      bootstrap: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+      executable: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
     },
-    handler: 'bootstrap',
+    handler: 'executable',
     runtime: 'executable',
+    architecture: 'x86_64',
     runtimeLanguage: 'go',
     supportsResponseStreaming: true,
   });
@@ -378,6 +387,7 @@ async function buildStandaloneServer(
   const { goModPath } = await findGoModPath(workPath, workPath);
   const modulePath = goModPath ? dirname(goModPath) : undefined;
 
+  // Cross-compile for Linux x86_64
   const env = cloneEnv(process.env, meta?.env, {
     GOARCH: 'amd64',
     GOOS: 'linux',
@@ -391,7 +401,7 @@ async function buildStandaloneServer(
   });
 
   const outDir = await getWriteableDirectory();
-  const binaryPath = join(outDir, 'bootstrap');
+  const binaryPath = join(outDir, 'executable');
 
   // Determine build target based on entrypoint location
   // - main.go at root: build '.'
@@ -416,10 +426,11 @@ async function buildStandaloneServer(
   const lambda = new Lambda({
     files: {
       ...includedFiles,
-      bootstrap: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+      executable: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
     },
-    handler: 'bootstrap',
+    handler: 'executable',
     runtime: 'executable',
+    architecture: 'x86_64',
     runtimeLanguage: 'go',
     supportsResponseStreaming: true,
     environment: {},
@@ -463,7 +474,9 @@ if parsed.Name.Name == "main" {
 }
 ```
 
-### Phase 3: Dev Server Support
+### Phase 3: Dev Server Support (Future Enhancement)
+
+> **Note**: Dev server support is planned for a future PR. The initial implementation focuses on production deployment using the `executable` runtime.
 
 For `vercel dev`, the standalone server mode should:
 
@@ -583,16 +596,18 @@ This covers the vast majority of Go web applications while keeping the implement
 
 ### Changes to `@vercel/go`
 
-1. **Add entrypoint resolution** - Check for `main.go`, `cmd/api/main.go`, or `cmd/server/main.go`
-2. **Add standalone server detection** - Detect `package main` without exported handler
-3. **Add standalone build mode** - Build binary with correct target and use `executable` runtime
-4. **Update analyzer** - Detect standalone main functions
-5. **Add standalone dev server** - Run `go run <target>` with PORT env var
+1. **Add entrypoint resolution** - Check for `main.go`, `cmd/api/main.go`, or `cmd/server/main.go` ✅
+2. **Add standalone server detection** - Detect `package main` without exported handler ✅
+3. **Add standalone build mode** - Build binary with correct target and use `executable` runtime ✅
+4. **Update analyzer** - Using regex-based detection (simpler than AST) ✅
+5. **Add standalone dev server** - Run `go run <target>` with PORT env var (future enhancement)
 
 ### Future Enhancements
 
 If user feedback indicates demand:
 
+- **Dev server support** (`vercel dev`) - Run `go run <target>` with PORT env var
 - `cmd/web/main.go`, `cmd/app/main.go` support
 - Content-based validation (regex check for HTTP server patterns)
 - Explicit configuration via `vercel.json`
+- Framework-specific presets (Gin, Echo, Fiber, Chi)
