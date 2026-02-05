@@ -128,9 +128,6 @@ export async function ensureRepoLink(
     // traditional path if git commands fail.
     const gitConfigPath =
       getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-    if (!gitConfigPath) {
-      throw new Error('Could not determine Git config path');
-    }
     const remoteUrls = await getRemoteUrls(gitConfigPath);
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
