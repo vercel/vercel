@@ -588,6 +588,7 @@ async function buildStandaloneServer({
 
   await download(files, workPath, meta);
 
+  // Cross-compile for Linux x86_64 (same as Rust approach)
   const env = cloneEnv(process.env, meta.env, {
     GOARCH: 'amd64',
     GOOS: 'linux',
@@ -604,7 +605,7 @@ async function buildStandaloneServer({
   });
 
   const outDir = await getWriteableDirectory();
-  const binaryPath = join(outDir, 'bootstrap');
+  const binaryPath = join(outDir, 'executable');
 
   // Determine build target based on entrypoint location
   // - main.go at root: build '.'
@@ -638,11 +639,13 @@ async function buildStandaloneServer({
   const lambda = new Lambda({
     files: {
       ...includedFiles,
-      bootstrap: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
+      executable: new FileFsRef({ mode: 0o755, fsPath: binaryPath }),
     },
-    handler: 'bootstrap',
-    runtime: 'provided.al2',
+    handler: 'executable',
+    runtime: 'executable',
     supportsResponseStreaming: true,
+    architecture: 'x86_64',
+    runtimeLanguage: 'go',
     environment: {},
   });
 
