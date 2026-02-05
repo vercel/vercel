@@ -4,7 +4,7 @@ import { Transform, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
   cloneEnv,
@@ -92,7 +92,7 @@ interface ServiceDevProcess {
 }
 
 interface ServicesOrchestratorOptions {
-  services: ResolvedService[];
+  services: Service[];
   cwd: string;
   repoRoot: string;
   env: NodeJS.ProcessEnv;
@@ -104,29 +104,26 @@ export class ServicesOrchestrator {
   private managedProcesses = new Map<string, ChildProcess>();
   private stopping = false;
 
-  private resolvedServices: ResolvedService[];
+  private services: Service[];
   private cwd: string;
   private repoRoot: string;
   private env: NodeJS.ProcessEnv;
   private maxNameLength: number;
+  private proxyOrigin: string;
 
   constructor(options: ServicesOrchestratorOptions) {
-    this.resolvedServices = options.services;
+    this.services = options.services;
     this.cwd = options.cwd;
     this.repoRoot = options.repoRoot;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
-
-    const serviceUrlEnvVars = this.generateServiceUrlEnvVars(
-      options.services,
-      options.proxyOrigin
-    );
-    this.env = { ...options.env, ...serviceUrlEnvVars };
+    this.proxyOrigin = options.proxyOrigin;
+    this.env = options.env;
   }
 
   async startAll(): Promise<void> {
-    output.debug(`Starting ${this.resolvedServices.length} services`);
+    output.debug(`Starting ${this.services.length} services`);
 
-    const startPromises = this.resolvedServices.map((service, index) =>
+    const startPromises = this.services.map((service, index) =>
       this.startService(service, index)
     );
 
@@ -238,7 +235,7 @@ export class ServicesOrchestrator {
   }
 
   private async startService(
-    service: ResolvedService,
+    service: Service,
     colorIndex: number
   ): Promise<ServiceDevProcess> {
     const workspacePath = path.join(this.cwd, service.workspace || '.');
@@ -249,13 +246,18 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
+    const serviceUrlEnvVars = this.generateServiceUrlEnvVars(
+      framework?.envPrefix
+    );
+
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
       process.env,
-      this.env
+      this.env,
+      serviceUrlEnvVars
     );
 
     if (service.routePrefix && service.routePrefix !== '/') {
@@ -289,7 +291,7 @@ export class ServicesOrchestrator {
   }
 
   private async tryStartWithBuilder(
-    service: ResolvedService,
+    service: Service,
     builderSpec: string,
     workspacePath: string,
     env: NodeJS.ProcessEnv,
@@ -350,7 +352,7 @@ export class ServicesOrchestrator {
 
   // Adapted from DevServer
   private async startServiceWithDevCommand(
-    service: ResolvedService,
+    service: Service,
     framework: Framework | undefined,
     workspacePath: string,
     env: NodeJS.ProcessEnv,
@@ -447,23 +449,23 @@ export class ServicesOrchestrator {
   }
 
   private generateServiceUrlEnvVars(
-    services: ResolvedService[],
-    proxyOrigin: string
+    envPrefix?: string
   ): Record<string, string> {
     const envVars: Record<string, string> = {};
 
-    for (const service of services) {
+    for (const service of this.services) {
       const { name, routePrefix } = service;
       if (!routePrefix) continue;
 
-      const serviceEnvVarName = `${name.toUpperCase().replace(/-/g, '_')}_URL`;
+      const baseName = name.toUpperCase().replace(/-/g, '_');
+      const key = envPrefix ? `${envPrefix}${baseName}_URL` : `${baseName}_URL`;
 
       const url =
         routePrefix === '/'
-          ? proxyOrigin
-          : `${proxyOrigin}${routePrefix.startsWith('/') ? '' : '/'}${routePrefix}`;
+          ? this.proxyOrigin
+          : `${this.proxyOrigin}${routePrefix.startsWith('/') ? '' : '/'}${routePrefix}`;
 
-      envVars[serviceEnvVarName] = url;
+      envVars[key] = url;
     }
 
     return envVars;
