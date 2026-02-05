@@ -139,7 +139,7 @@ export const removeSubcommand = {
     {
       name: 'Uninstall an integration',
       value: [
-        `${packageName} integration remove <inegration>`,
+        `${packageName} integration remove <integration>`,
         `${packageName} integration remove acme`,
       ],
     },

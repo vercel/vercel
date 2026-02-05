@@ -2911,14 +2911,14 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Examples:
 
-  - Disconnect a resource from the current projecct
+  - Disconnect a resource from the current project
 
     $ vercel integration-resource disconnect <resource>
     $ vercel integration-resource disconnect my-acme-resource
 
   - Disconnect all projects from a resource
 
-    $ vercel integration-resource disconnect <resource> --unlink-all
+    $ vercel integration-resource disconnect <resource> --all
     $ vercel integration-resource disconnect my-acme-resource --all
     $ vercel integration-resource disconnect my-acme-resource -a
 
