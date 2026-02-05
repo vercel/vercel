@@ -7,10 +7,6 @@
 - [AccessTokenMissingError](classes/AccessTokenMissingError.md)
 - [RefreshFailedError](classes/RefreshFailedError.md)
 
-### Interfaces
-
-- [AuthConfig](interfaces/AuthConfig.md)
-
 ### Functions
 
 - [getContext](README.md#getcontext)

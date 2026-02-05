@@ -1,5 +1,4 @@
 export { getContext } from './get-context';
-export type { AuthConfig } from './auth-config';
 export { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
 
 export async function getVercelOidcToken(): Promise<string> {
