@@ -29,7 +29,6 @@ export async function detectProjects(cwd: string) {
       const frameworks = await detectFrameworks({
         fs: fs.chdir(join('.', p)),
         frameworkList,
-        useExperimentalFrameworks: true,
       });
       if (frameworks.length === 0) return;
       detectedProjects.set(p.slice(1), frameworks);
