@@ -1277,7 +1277,9 @@ export async function serverBuild({
             if (i18n) {
               for (const locale of i18n.locales) {
                 const locale404Key = `/${locale}/404`;
-                if (manifestData[locale404Key] === 'pages/404.html') {
+                if (manifestData[locale404Key].endsWith('/404.html')) {
+                  // This might be a pages/404.html or pages/en/404.html, but all of them were
+                  // prerendered from the same page
                   manifestData[locale404Key] =
                     lambdaPages['404.js'] && !lambdaAppPaths['404.js']
                       ? 'pages/404.js'
