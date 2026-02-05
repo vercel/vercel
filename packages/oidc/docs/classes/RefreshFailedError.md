@@ -1,6 +1,7 @@
 # Class: RefreshFailedError
 
 Error thrown when attempting to refresh the authentication token fails.
+This includes cases where no refresh token is available.
 
 ## Hierarchy
 
@@ -45,7 +46,7 @@ Error.constructor
 
 #### Defined in
 
-[packages/oidc/src/auth-errors.ts:29](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L29)
+[packages/oidc/src/auth-errors.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L19)
 
 ## Properties
 
@@ -55,7 +56,7 @@ Error.constructor
 
 #### Defined in
 
-[packages/oidc/src/auth-errors.ts:28](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L28)
+[packages/oidc/src/auth-errors.ts:18](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L18)
 
 ---
 
@@ -83,7 +84,7 @@ Error.name
 
 #### Defined in
 
-[packages/oidc/src/auth-errors.ts:27](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L27)
+[packages/oidc/src/auth-errors.ts:17](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L17)
 
 ---
 

@@ -9,11 +9,7 @@ import {
   type AuthConfig,
 } from './auth-config';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
-import {
-  NoAuthError,
-  TokenExpiredError,
-  RefreshFailedError,
-} from './auth-errors';
+import { NoAuthError, RefreshFailedError } from './auth-errors';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -40,7 +36,7 @@ export async function getVercelCliToken(): Promise<string> {
   if (!authConfig.refreshToken) {
     // No refresh token available, clear auth and throw
     writeAuthConfig({});
-    throw new TokenExpiredError();
+    throw new RefreshFailedError('No refresh token available');
   }
 
   try {
@@ -72,11 +68,7 @@ export async function getVercelCliToken(): Promise<string> {
   } catch (error) {
     // Network error or other failure - clear auth
     writeAuthConfig({});
-    if (
-      error instanceof NoAuthError ||
-      error instanceof TokenExpiredError ||
-      error instanceof RefreshFailedError
-    ) {
+    if (error instanceof NoAuthError || error instanceof RefreshFailedError) {
       throw error;
     }
     throw new RefreshFailedError(error);

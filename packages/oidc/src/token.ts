@@ -40,8 +40,8 @@ export async function refreshToken(
   let maybeToken = loadToken(projectId);
 
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
-    // getVercelCliToken() now throws NoAuthConfigError, TokenExpiredError,
-    // or RefreshFailedError instead of returning null
+    // getVercelCliToken() now throws NoAuthError or RefreshFailedError
+    // instead of returning null
     const authToken = await getVercelCliToken();
     if (!projectId) {
       throw new VercelOidcTokenError(

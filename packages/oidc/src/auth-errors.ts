@@ -10,18 +10,8 @@ export class NoAuthError extends Error {
 }
 
 /**
- * Error thrown when the authentication token is expired
- * and no refresh token is available to obtain a new one.
- */
-export class TokenExpiredError extends Error {
-  name = 'TokenExpiredError';
-  constructor() {
-    super('Token expired and no refresh token available.');
-  }
-}
-
-/**
  * Error thrown when attempting to refresh the authentication token fails.
+ * This includes cases where no refresh token is available.
  */
 export class RefreshFailedError extends Error {
   name = 'RefreshFailedError';

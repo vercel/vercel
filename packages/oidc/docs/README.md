@@ -6,7 +6,6 @@
 
 - [NoAuthError](classes/NoAuthError.md)
 - [RefreshFailedError](classes/RefreshFailedError.md)
-- [TokenExpiredError](classes/TokenExpiredError.md)
 
 ### Interfaces
 
@@ -49,7 +48,7 @@
 
 #### Defined in
 
-[packages/oidc/src/token-util.ts:27](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L27)
+[packages/oidc/src/token-util.ts:23](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L23)
 
 ---
 
