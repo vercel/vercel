@@ -1,15 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { execSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
 import { join } from 'path';
 import fs from 'fs-extra';
 import os from 'os';
-import createLineIterator from 'line-async-iterator';
-import { getWriteableDirectory } from '@vercel/build-utils';
-import {
-  createGitMeta,
-  getOriginUrl,
-  getRemoteUrls,
-  isDirty,
-} from '../../../../src/util/create-git-meta';
+import { createGitMeta, isDirty } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
@@ -17,49 +12,13 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import type { Project } from '@vercel-internals/types';
 import { vi } from 'vitest';
 import output from '../../../../src/output-manager';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import { initBareGitRepo } from '../../../helpers/git-test-helpers';
 
 vi.setConfig({ testTimeout: 10 * 1000 });
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
-
-describe('getOriginUrl', () => {
-  it('does not provide data for no-origin', async () => {
-    const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getOriginUrl(configPath);
-    expect(data).toBeNull();
-  });
-  it('displays debug message when repo data cannot be parsed', async () => {
-    const dir = await getWriteableDirectory();
-    output.initialize({ debug: true });
-    const data = await getOriginUrl(join(dir, 'git/config'));
-    expect(data).toBeNull();
-    await expect(client.stderr).toOutput('Error while parsing repo data');
-  });
-});
-
-describe('getRemoteUrls', () => {
-  it('does not provide data when there are no remote urls', async () => {
-    const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getRemoteUrls(configPath);
-    expect(data).toBeUndefined();
-  });
-  it('returns an object when multiple urls are present', async () => {
-    const configPath = join(fixture('multiple-remotes'), 'git/config');
-    const data = await getRemoteUrls(configPath);
-    expect(data).toMatchObject({
-      origin: 'https://github.com/user/repo',
-      secondary: 'https://github.com/user/repo2',
-    });
-  });
-  it('returns an object for origin url', async () => {
-    const configPath = join(fixture('test-github'), 'git/config');
-    const data = await getRemoteUrls(configPath);
-    expect(data).toMatchObject({
-      origin: 'https://github.com/user/repo.git',
-    });
-  });
-});
 
 describe('parseRepoUrl', () => {
   it('should be null when a url does not match the regex', () => {
@@ -306,10 +265,8 @@ describe('createGitMeta', () => {
       output.initialize({ debug: true });
       const data = await createGitMeta(tmpDir);
 
-      const lines = createLineIterator(client.stderr);
-
-      const line = await lines.next();
-      expect(line.value).toContain(
+      // Should see debug messages about failures and return undefined
+      await expect(client.stderr).toOutput(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
 
@@ -352,5 +309,75 @@ describe('createGitMeta', () => {
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
+  });
+
+  describe('bare repository worktree', () => {
+    let testDir: string;
+    let bareRepoPath: string;
+    let worktreePath: string;
+    let commitSha: string;
+
+    beforeAll(() => {
+      // Set up bare repo with worktree (same pattern as git-helpers.test.ts)
+      testDir = setupTmpDir('create-git-meta-worktree-test');
+      bareRepoPath = join(testDir, 'repo.git');
+      worktreePath = join(testDir, 'worktree');
+
+      // Initialize a bare repository with remote
+      execSync('mkdir repo.git', { cwd: testDir });
+      initBareGitRepo(bareRepoPath, {
+        origin: 'https://github.com/user/repo.git',
+      });
+
+      // Create an initial commit in the bare repo (required to create a worktree).
+      // We do this by creating a temporary clone, committing, and pushing.
+      const tempClone = join(testDir, 'temp-clone');
+      execSync(`git clone ${bareRepoPath} temp-clone`, { cwd: testDir });
+      execSync('git config user.email "test@test.com"', { cwd: tempClone });
+      execSync('git config user.name "Test User"', { cwd: tempClone });
+      execSync('echo "hello" > README.md', { cwd: tempClone });
+      execSync('git add .', { cwd: tempClone });
+      execSync('git commit -m "initial commit"', { cwd: tempClone });
+      commitSha = execSync('git rev-parse HEAD', { cwd: tempClone })
+        .toString()
+        .trim();
+      execSync('git push origin HEAD:main', { cwd: tempClone });
+      rmSync(tempClone, { recursive: true });
+
+      // Create a worktree from the bare repo
+      execSync(`git worktree add ${worktreePath} main`, { cwd: bareRepoPath });
+    });
+
+    it('gets git metadata from a worktree', async () => {
+      const data = await createGitMeta(worktreePath);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo.git',
+        commitAuthorName: 'Test User',
+        commitAuthorEmail: 'test@test.com',
+        commitMessage: 'initial commit',
+        commitRef: 'main',
+        commitSha: commitSha,
+        dirty: false,
+      });
+    });
+
+    it('detects dirty state in a worktree', async () => {
+      // Create an untracked file to make it dirty
+      const untrackedFile = join(worktreePath, 'untracked.txt');
+      fs.writeFileSync(untrackedFile, 'untracked content');
+
+      try {
+        const dirty = await isDirty(worktreePath);
+        expect(dirty).toBeTruthy();
+
+        const data = await createGitMeta(worktreePath);
+        expect(data).toMatchObject({
+          dirty: true,
+        });
+      } finally {
+        // Clean up
+        fs.unlinkSync(untrackedFile);
+      }
+    });
   });
 });

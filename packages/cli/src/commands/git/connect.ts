@@ -1,9 +1,8 @@
 import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
-import { join } from 'path';
 import type { Org, Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
-import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
+import { getGitDirectory, getGitRemoteUrls } from '../../util/git-helpers';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -30,7 +29,7 @@ interface ConnectArgParams {
 }
 
 interface ConnectGitArgParams extends ConnectArgParams {
-  gitConfig: Dictionary<any>;
+  remoteUrls: Dictionary<string>;
 }
 
 interface PromptConnectArgParams {
@@ -90,9 +89,10 @@ export default async function connect(client: Client, argv: string[]) {
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  // get project from .git
-  const gitConfigPath = join(cwd, '.git/config');
-  const gitConfig = await parseGitConfig(gitConfigPath);
+  // Check if we're in a git repository
+  const gitDir = await getGitDirectory({ cwd });
+
+  const remoteUrls = await getGitRemoteUrls({ cwd });
 
   if (repoArg) {
     // parse repo arg
@@ -103,13 +103,13 @@ export default async function connect(client: Client, argv: string[]) {
       );
       return 1;
     }
-    if (gitConfig) {
+    if (remoteUrls && Object.keys(remoteUrls).length > 0) {
       return await connectArgWithLocalGit({
         client,
         org,
         project,
         confirm,
-        gitConfig,
+        remoteUrls,
         repoInfo: parsedUrlArg,
       });
     }
@@ -122,7 +122,8 @@ export default async function connect(client: Client, argv: string[]) {
     });
   }
 
-  if (!gitConfig) {
+  // No repo arg provided, so we need local git repo with remotes
+  if (!gitDir) {
     output.error(
       `No local Git repository found. Run ${chalk.cyan(
         '`git clone <url>`'
@@ -130,8 +131,7 @@ export default async function connect(client: Client, argv: string[]) {
     );
     return 1;
   }
-  const remoteUrls = pluckRemoteUrls(gitConfig);
-  if (!remoteUrls) {
+  if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
     output.error(
       `No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
         '`git remote --help`'
@@ -173,24 +173,16 @@ async function connectArg({
   project,
   repoInfo,
 }: ConnectArgParams) {
-  const { url: repoUrl } = repoInfo;
-  const parsedRepoArg = parseRepoUrl(repoUrl);
-  if (!parsedRepoArg) {
-    output.error(
-      `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
-    );
-    return 1;
-  }
   const result = await checkExistsAndConnect({
     client,
     confirm,
     gitProviderLink: project.link,
     org,
-    gitOrg: parsedRepoArg.org,
+    gitOrg: repoInfo.org,
     project,
-    provider: parsedRepoArg.provider,
-    repo: parsedRepoArg.repo,
-    repoPath: `${parsedRepoArg.org}/${parsedRepoArg.repo}`,
+    provider: repoInfo.provider,
+    repo: repoInfo.repo,
+    repoPath: `${repoInfo.org}/${repoInfo.repo}`,
   });
   if (typeof result === 'number') {
     return result;
@@ -203,39 +195,33 @@ async function connectArgWithLocalGit({
   org,
   project,
   confirm,
-  gitConfig,
+  remoteUrls,
   repoInfo,
 }: ConnectGitArgParams) {
-  const remoteUrls = pluckRemoteUrls(gitConfig);
-  if (remoteUrls) {
-    const shouldConnect = await promptConnectArg({
-      client,
-      yes: confirm,
-      repoInfo,
-      remoteUrls,
-    });
-    if (!shouldConnect) {
-      return 1;
-    }
-    if (shouldConnect) {
-      const result = await checkExistsAndConnect({
-        client,
-        confirm,
-        gitProviderLink: project.link,
-        org,
-        gitOrg: repoInfo.org,
-        project,
-        provider: repoInfo.provider,
-        repo: repoInfo.repo,
-        repoPath: `${repoInfo.org}/${repoInfo.repo}`,
-      });
-      if (typeof result === 'number') {
-        return result;
-      }
-    }
-    return 0;
+  const shouldConnect = await promptConnectArg({
+    client,
+    yes: confirm,
+    repoInfo,
+    remoteUrls,
+  });
+  if (!shouldConnect) {
+    return 1;
   }
-  return await connectArg({ client, confirm, org, project, repoInfo });
+  const result = await checkExistsAndConnect({
+    client,
+    confirm,
+    gitProviderLink: project.link,
+    org,
+    gitOrg: repoInfo.org,
+    project,
+    provider: repoInfo.provider,
+    repo: repoInfo.repo,
+    repoPath: `${repoInfo.org}/${repoInfo.repo}`,
+  });
+  if (typeof result === 'number') {
+    return result;
+  }
+  return 0;
 }
 
 async function promptConnectArg({
@@ -257,7 +243,9 @@ async function promptConnectArg({
       return false;
     }
     if (
-      JSON.stringify(repoInfoFromGitConfig) === JSON.stringify(repoInfoFromArg)
+      repoInfoFromGitConfig.org === repoInfoFromArg.org &&
+      repoInfoFromGitConfig.repo === repoInfoFromArg.repo &&
+      repoInfoFromGitConfig.provider === repoInfoFromArg.provider
     ) {
       return true;
     }
