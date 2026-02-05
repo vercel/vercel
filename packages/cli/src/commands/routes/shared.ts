@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -61,4 +62,79 @@ export async function confirmAction(
   }
 
   return await client.input.confirm(message, false);
+}
+
+/**
+ * Formats a has/missing condition for display.
+ * Output: [type] key = value  (or [type] value for host, or [type] key for existence checks)
+ */
+export function formatCondition(condition: {
+  type: string;
+  key?: string;
+  value?: unknown;
+}): string {
+  const parts = [chalk.gray(`[${condition.type}]`)];
+
+  if (condition.key) {
+    parts.push(chalk.cyan(condition.key));
+  }
+
+  if (condition.value !== undefined) {
+    const formatted =
+      typeof condition.value === 'string'
+        ? condition.value
+        : JSON.stringify(condition.value);
+    parts.push(`= ${formatted}`);
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Display labels for transform types.
+ */
+const TRANSFORM_TYPE_LABELS: Record<string, string> = {
+  'request.headers': 'Request Header',
+  'request.query': 'Request Query',
+  'response.headers': 'Response Header',
+};
+
+/**
+ * Display labels for transform operations.
+ */
+const TRANSFORM_OP_LABELS: Record<string, string> = {
+  set: 'set',
+  append: 'append',
+  delete: 'delete',
+};
+
+/**
+ * Formats a single transform for display.
+ * Output: [Request Header] set X-Custom = "value"
+ *         [Response Header] delete X-Powered-By
+ */
+export function formatTransform(transform: {
+  type: string;
+  op: string;
+  target: { key: string | Record<string, unknown> };
+  args?: string | string[];
+}): string {
+  const typeLabel = TRANSFORM_TYPE_LABELS[transform.type] ?? transform.type;
+  const opLabel = TRANSFORM_OP_LABELS[transform.op] ?? transform.op;
+
+  const key =
+    typeof transform.target.key === 'string'
+      ? transform.target.key
+      : JSON.stringify(transform.target.key);
+
+  const parts = [chalk.gray(`[${typeLabel}]`), chalk.yellow(opLabel), chalk.cyan(key)];
+
+  if (transform.args !== undefined && transform.op !== 'delete') {
+    const argsStr = Array.isArray(transform.args)
+      ? transform.args.join(', ')
+      : transform.args;
+    parts.push(`= ${argsStr}`);
+  }
+
+  return parts.join(' ');
 }

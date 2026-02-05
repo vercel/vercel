@@ -131,6 +131,161 @@ export function useRoutesWithDiff() {
   });
 }
 
+export function useAddRoute(options?: {
+  hasStaging?: boolean;
+  alias?: string;
+}) {
+  // Mock the versions endpoint to check for existing staging
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      const versions = [];
+      if (options?.hasStaging) {
+        versions.push({
+          id: 'existing-staging',
+          s3Key: 'routes/existing-staging.json',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isStaging: true,
+          isLive: false,
+          ruleCount: 5,
+          alias: 'existing-staging.vercel.app',
+        });
+      }
+      versions.push({
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now() - 86400000,
+        createdBy: 'user@example.com',
+        isLive: true,
+        isStaging: false,
+        ruleCount: 10,
+      });
+      res.json({ versions });
+    }
+  );
+
+  // Mock the add route endpoint with validation
+  client.scenario.post('/v1/projects/:projectId/routes', (req, res) => {
+    const body = req.body as {
+      route: {
+        name: string;
+        description?: string;
+        enabled?: boolean;
+        route: {
+          src: string;
+          dest?: string;
+          status?: number;
+          headers?: Record<string, string>;
+          transforms?: unknown[];
+          has?: unknown[];
+          missing?: unknown[];
+          continue?: boolean;
+        };
+      };
+      position?: { placement: string; referenceId?: string };
+    };
+
+    // Validate required fields
+    if (!body.route) {
+      res.status(400).json({ error: { message: 'route is required' } });
+      return;
+    }
+
+    if (!body.route.name) {
+      res.status(400).json({ error: { message: 'route.name is required' } });
+      return;
+    }
+
+    if (body.route.name.length > 256) {
+      res.status(400).json({
+        error: { message: 'route.name must be 256 characters or less' },
+      });
+      return;
+    }
+
+    if (!body.route.route) {
+      res.status(400).json({ error: { message: 'route.route is required' } });
+      return;
+    }
+
+    if (!body.route.route.src) {
+      res
+        .status(400)
+        .json({ error: { message: 'route.route.src is required' } });
+      return;
+    }
+
+    if (body.route.description && body.route.description.length > 1024) {
+      res.status(400).json({
+        error: { message: 'route.description must be 1024 characters or less' },
+      });
+      return;
+    }
+
+    // Validate conditions limit
+    const hasCount = body.route.route.has?.length ?? 0;
+    const missingCount = body.route.route.missing?.length ?? 0;
+    if (hasCount + missingCount > 16) {
+      res.status(400).json({
+        error: { message: 'Maximum 16 conditions allowed (has + missing)' },
+      });
+      return;
+    }
+
+    // Validate position if provided
+    if (body.position) {
+      const { placement, referenceId } = body.position;
+      if ((placement === 'after' || placement === 'before') && !referenceId) {
+        res.status(400).json({
+          error: { message: `position.referenceId required for ${placement}` },
+        });
+        return;
+      }
+    }
+
+    res.json({
+      route: {
+        id: 'new-route-id',
+        name: body.route.name,
+        description: body.route.description,
+        enabled: body.route.enabled !== false,
+        staged: true,
+        route: body.route.route,
+      },
+      version: {
+        id: 'new-staging-version',
+        s3Key: 'routes/new-staging.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        isLive: false,
+        ruleCount: 1,
+        alias: options?.alias ?? 'test-routes.vercel.app',
+      },
+    });
+  });
+}
+
+export function usePromoteRouteVersion() {
+  client.scenario.post(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        version: {
+          id: 'promoted-version',
+          s3Key: 'routes/promoted.json',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isLive: true,
+          isStaging: false,
+          ruleCount: 1,
+        },
+      });
+    }
+  );
+}
+
 export function useRoutesForInspect() {
   const detailedRoutes = [
     {
@@ -139,11 +294,13 @@ export function useRoutesForInspect() {
       description: 'Redirects old page to new location',
       enabled: true,
       staged: false,
+      srcSyntax: 'equals',
       route: {
-        src: '^/old-page$',
+        src: '/old-page',
         dest: '/new-page',
         status: 308,
       },
+      routeTypes: ['redirect'],
     },
     {
       id: 'route-header-456',
@@ -151,13 +308,16 @@ export function useRoutesForInspect() {
       description: 'Add custom headers to all requests',
       enabled: false,
       staged: true,
+      srcSyntax: 'path-to-regexp',
       route: {
-        src: '^/api/(.*)$',
+        src: '/api/:path*',
         headers: {
           'X-Custom-Header': 'custom-value',
           'Cache-Control': 'no-cache',
         },
+        continue: true,
       },
+      routeTypes: ['header'],
     },
     {
       id: 'route-condition-789',
@@ -165,12 +325,46 @@ export function useRoutesForInspect() {
       description: 'Requires auth cookie',
       enabled: true,
       staged: false,
+      srcSyntax: 'regex',
       route: {
         src: '^/protected$',
         dest: '/login',
         missing: [{ type: 'cookie', key: 'auth' }],
         has: [{ type: 'header', key: 'Accept', value: 'text/html' }],
       },
+      routeTypes: ['rewrite'],
+    },
+    {
+      id: 'route-transform-101',
+      name: 'API transforms',
+      description: 'Transform request headers and query for API',
+      enabled: true,
+      staged: true,
+      srcSyntax: 'path-to-regexp',
+      route: {
+        src: '/api/:version/users/:id',
+        dest: '/internal-api/$1/users/$2',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'X-Forwarded-Host' },
+            args: 'api.example.com',
+          },
+          {
+            type: 'request.query',
+            op: 'delete',
+            target: { key: 'debug' },
+          },
+          {
+            type: 'response.headers',
+            op: 'append',
+            target: { key: 'Vary' },
+            args: 'Accept',
+          },
+        ],
+      },
+      routeTypes: ['rewrite', 'transform'],
     },
   ];
 

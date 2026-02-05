@@ -3,7 +3,12 @@ import plural from 'pluralize';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  formatCondition,
+  formatTransform,
+} from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
@@ -11,6 +16,7 @@ import formatTable from '../../util/format-table';
 import { getCommandName } from '../../util/pkg-name';
 import {
   getRouteTypeLabels,
+  getSrcSyntaxLabel,
   type RoutingRule,
   type RouteType,
   type DiffAction,
@@ -267,6 +273,7 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
 
   routes.forEach((rule, index) => {
     const typeLabels = getRouteTypeLabels(rule);
+    const syntaxLabel = getSrcSyntaxLabel(rule);
     const statusText =
       rule.enabled === false ? chalk.gray('Disabled') : chalk.green('Enabled');
     const stagedText = rule.staged ? chalk.yellow(' (staged)') : '';
@@ -282,19 +289,27 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
     }
 
     lines.push(`     ${chalk.cyan('Source:')}  ${rule.route.src}`);
+    lines.push(`     ${chalk.cyan('Syntax:')}  ${syntaxLabel}`);
 
     if (rule.route.dest) {
       lines.push(`     ${chalk.cyan('Dest:')}    ${rule.route.dest}`);
     }
 
     if (rule.route.status) {
-      lines.push(`     ${chalk.cyan('Status:')}  ${rule.route.status}`);
+      lines.push(`     ${chalk.cyan('Code:')}    ${rule.route.status}`);
     }
 
     if (rule.route.headers && Object.keys(rule.route.headers).length > 0) {
-      lines.push(`     ${chalk.cyan('Headers:')}`);
+      lines.push(`     ${chalk.cyan('Response Headers:')}`);
       for (const [key, value] of Object.entries(rule.route.headers)) {
         lines.push(`       ${key}: ${value}`);
+      }
+    }
+
+    if (rule.route.transforms && rule.route.transforms.length > 0) {
+      lines.push(`     ${chalk.cyan('Transforms:')}`);
+      for (const transform of rule.route.transforms) {
+        lines.push(`       ${formatTransform(transform)}`);
       }
     }
 
@@ -316,26 +331,4 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
   });
 
   return lines.join('\n');
-}
-
-function formatCondition(condition: {
-  type: string;
-  key?: string;
-  value?: unknown;
-}): string {
-  const formatValue = (val: unknown): string => {
-    if (typeof val === 'string') return val;
-    return JSON.stringify(val);
-  };
-
-  if (condition.key && condition.value !== undefined) {
-    return `${condition.type}: ${condition.key}=${formatValue(condition.value)}`;
-  }
-  if (condition.key) {
-    return `${condition.type}: ${condition.key}`;
-  }
-  if (condition.value !== undefined) {
-    return `${condition.type}: ${formatValue(condition.value)}`;
-  }
-  return condition.type;
 }
