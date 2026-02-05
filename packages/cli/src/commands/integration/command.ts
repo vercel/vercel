@@ -99,7 +99,7 @@ export const balanceSubcommand = {
   name: 'balance',
   aliases: [],
   description:
-    'Shows the balances and thresholds of specified marketplace integration',
+    'Shows the balances and thresholds of a specified marketplace integration',
   arguments: [
     {
       name: 'integration',

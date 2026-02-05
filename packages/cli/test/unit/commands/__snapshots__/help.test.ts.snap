@@ -2710,6 +2710,35 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 "
 `;
 
+exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration balance integration
+
+  Shows the balances and thresholds of a specified marketplace integration                                              
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the balance(s) & threshold(s) of a marketplace integration
+
+    $ vercel integration balance <integration-name>
+    $ vercel integration balance acme
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration help column width 40 1`] = `
 "
   ▲ vercel integration command
@@ -2727,7 +2756,7 @@ exports[`help command > integration help output snapshots > integration help col
                         balances
                         and     
                         thresho…
-                        of      
+                        of a    
                         specifi…
                         marketp…
                         integra…
@@ -2797,7 +2826,7 @@ exports[`help command > integration help output snapshots > integration help col
   Commands:
 
   add      name         Installs a marketplace integration              
-  balance  integration  Shows the balances and thresholds of specified  
+  balance  integration  Shows the balances and thresholds of a specified
                         marketplace integration                         
   list     [project]    Lists all resources from marketplace            
                         integrations                                    
@@ -2831,7 +2860,7 @@ exports[`help command > integration help output snapshots > integration help col
   Commands:
 
   add      name         Installs a marketplace integration                                                      
-  balance  integration  Shows the balances and thresholds of specified marketplace integration                  
+  balance  integration  Shows the balances and thresholds of a specified marketplace integration                
   list     [project]    Lists all resources from marketplace integrations                                       
   open     name         Opens a marketplace integration's dashboard                                             
   remove   integration  Uninstalls a marketplace integration                                                    
@@ -2894,6 +2923,41 @@ exports[`help command > integration help output snapshots > integration list sub
 
     $ vercel integration list --all
     $ vercel integration list -a
+
+"
+`;
+
+exports[`help command > integration-resource help output snapshots > integration-resource create-threshold subcommand > integration-resource create-threshold subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration-resource create-threshold resource minimum spend limit [options]
+
+  Creates a threshold for a resource (or installation, if the integration uses installation-level thresholds)           
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when creating a threshold                                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - create threshold
+
+    $ vercel integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]
+    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000
+    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000 --yes
 
 "
 `;
