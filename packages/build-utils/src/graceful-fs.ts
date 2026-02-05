@@ -15,11 +15,15 @@ import debug from './debug';
 // Timeout for EMFILE retries (in milliseconds)
 const GRACEFUL_FS_TIMEOUT = 30_000;
 
+interface TimeRef {
+  startTime: number;
+  lastTime: number;
+}
+
 interface QueueItem {
   fn: () => void;
   error: Error;
-  startTime: number;
-  lastTime: number;
+  timeRef: TimeRef;
 }
 
 const queue: QueueItem[] = [];
@@ -56,12 +60,13 @@ function trackStreamClose(stream: fs.ReadStream): void {
 /**
  * Reset timestamps on queued items and trigger retry.
  * Called when a tracked stream closes, indicating file descriptors may be available.
+ * Uses timeRef object so the closure in attemptOpen sees the updated startTime.
  */
 function resetQueue(): void {
   const now = Date.now();
   for (const item of queue) {
-    item.startTime = now;
-    item.lastTime = now;
+    item.timeRef.startTime = now;
+    item.timeRef.lastTime = now;
   }
   retry();
 }
@@ -83,7 +88,8 @@ function retry(): void {
   if (queue.length === 0) return;
 
   const elem = queue.shift()!;
-  const { fn, startTime, lastTime } = elem;
+  const { fn, timeRef } = elem;
+  const { startTime, lastTime } = timeRef;
 
   const now = Date.now();
 
@@ -134,13 +140,15 @@ export function createGracefulReadStream(
   onEmfileError?: OnEmfileError
 ): Promise<NodeJS.ReadableStream> {
   return new Promise((resolve, reject) => {
-    let startTime: number | undefined;
+    // Use a reference object so resetQueue() can update the startTime
+    // and the closure will see the updated value
+    let timeRef: TimeRef | undefined;
 
     function attemptOpen(): void {
       const now = Date.now();
 
       // Check for timeout before attempting
-      if (startTime !== undefined && now - startTime >= GRACEFUL_FS_TIMEOUT) {
+      if (timeRef !== undefined && now - timeRef.startTime >= GRACEFUL_FS_TIMEOUT) {
         debug(`[graceful-fs] EMFILE/ENFILE retry timeout for ${fsPath}`);
         reject(
           Object.assign(new Error('EMFILE retry timeout'), { code: 'EMFILE' })
@@ -161,14 +169,15 @@ export function createGracefulReadStream(
           // Notify caller about the error
           onEmfileError?.();
 
-          if (startTime === undefined) {
-            startTime = now;
+          if (timeRef === undefined) {
+            timeRef = { startTime: now, lastTime: now };
+          } else {
+            timeRef.lastTime = now;
           }
           enqueue({
             fn: attemptOpen,
             error: err,
-            startTime,
-            lastTime: now,
+            timeRef,
           });
         } else {
           reject(err);
