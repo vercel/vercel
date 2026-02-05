@@ -10,6 +10,7 @@ import {
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
+  getServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -353,7 +354,16 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            project,
+            buildsJson,
+            cwd,
+            outputDir,
+            span,
+            standalone,
+            envToUnset
+          )
         );
     } finally {
       await rootSpan.stop();
@@ -412,7 +422,8 @@ async function doBuild(
   cwd: string,
   outputDir: string,
   span: Span,
-  standalone: boolean = false
+  standalone: boolean = false,
+  envToUnset: Set<string> = new Set()
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -592,6 +603,25 @@ async function doBuild(
 
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
+
+    // Inject service URL environment variables so they're available during builds.
+    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+    // these env vars are baked into the client bundle so they can be accessed in the client code.
+    // User-defined env vars take precedence and won't be overwritten.
+    if (detectedServices && detectedServices.length > 0) {
+      const serviceUrlEnvVars = getServiceUrlEnvVars({
+        services: detectedServices,
+        frameworkList,
+        currentEnv: process.env,
+        deploymentUrl: process.env.VERCEL_URL,
+      });
+
+      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+        process.env[key] = value;
+        envToUnset.add(key);
+        output.debug(`Injected service URL env var: ${key}=${value}`);
+      }
+    }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     zeroConfigRoutes.push(
