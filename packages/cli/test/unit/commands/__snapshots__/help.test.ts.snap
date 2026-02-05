@@ -1408,9 +1408,14 @@ exports[`help command > dns help output snapshots > dns list help output snapsho
 
 exports[`help command > dns help output snapshots > dns remove help output snapshots > dns remove help column width 120 1`] = `
 "
-  ▲ vercel dns remove id
+  ▲ vercel dns remove id [options]
 
   Remove a DNS entry using its ID                                                                                       
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when removing a DNS record                                                   
+
 
   Global Options:
 
