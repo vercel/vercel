@@ -1,0 +1,4 @@
+{
+  "rootDirectory": "apps/api",
+  "installCommand": "pnpm install"
+}

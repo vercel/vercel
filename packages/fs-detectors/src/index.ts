@@ -20,6 +20,7 @@ export type {
   DetectServicesOptions,
   DetectServicesResult,
   ResolvedService,
+  Service,
   ServicesRoutes,
   ServiceDetectionError,
 } from './services/types';

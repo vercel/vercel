@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import { pathToRegexp } from 'path-to-regexp';
-import { setupCloseHandlers } from './util.js';
+import { setupCloseHandlers } from '../rolldown/util.js';
 import { debug } from '@vercel/build-utils';
 
 let app: Express | null = null;
@@ -26,7 +26,6 @@ setupCloseHandlers(() => {
   const { routes, additionalFolders, additionalDeps } = extractRoutes();
   if (routes.length > 0) {
     return {
-      frameworkSlug: 'express',
       routes,
       additionalFolders,
       additionalDeps,
