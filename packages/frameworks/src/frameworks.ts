@@ -4329,6 +4329,62 @@ export const frameworks = [
     ],
   },
   {
+    name: 'OCaml',
+    slug: 'ocaml',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/ocaml.svg',
+    tagline: 'A general-purpose, multi-paradigm programming language.',
+    description:
+      'An OCaml application using Dream, Cohttp, or any HTTP framework.',
+    website: 'https://ocaml.org',
+    useRuntime: { src: 'dune-project', use: '@vercel/ocaml' },
+    ignoreRuntimes: ['@vercel/ocaml'],
+    detectors: {
+      every: [
+        {
+          path: 'dune-project',
+        },
+      ],
+      some: [
+        {
+          path: 'bin/main.ml',
+        },
+        {
+          path: 'src/main.ml',
+        },
+        {
+          path: 'main.ml',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`opam install --deps-only .`',
+      },
+      buildCommand: {
+        placeholder: '`dune build --release`',
+      },
+      devCommand: {
+        placeholder: '`dune exec -- ./bin/main.exe`',
+        value: null,
+      },
+      outputDirectory: {
+        value: '_build/default',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
