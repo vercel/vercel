@@ -6,6 +6,14 @@ import type { RouteWithSrc } from '@vercel/routing-utils';
 export type DiffAction = '+' | '-' | '~';
 
 /**
+ * The syntax type for the source pattern.
+ * - 'equals': Exact string match (escaped and anchored by the API)
+ * - 'path-to-regexp': Express-style patterns with :param syntax
+ * - 'regex': Raw regex patterns
+ */
+export type SrcSyntax = 'equals' | 'path-to-regexp' | 'regex';
+
+/**
  * Main routing rule type that matches the API response.
  * The route definition is nested under the `route` property.
  */
@@ -16,6 +24,12 @@ export interface RoutingRule {
   enabled?: boolean;
   staged: boolean;
   route: RouteWithSrc;
+  /**
+   * The syntax type of the source pattern.
+   * Determines how the pattern was compiled to regex by the API.
+   * For legacy routes without this field, assume 'regex'.
+   */
+  srcSyntax?: SrcSyntax;
   /** Present when fetched with diff option */
   action?: DiffAction;
   /** Present if route was reordered (original position) */
@@ -83,4 +97,21 @@ const ROUTE_TYPE_LABELS: Record<RouteType, string> = {
 export function getRouteTypeLabels(rule: RoutingRule): string {
   const types = rule.routeTypes ?? [];
   return types.map(t => ROUTE_TYPE_LABELS[t]).join(', ') || '-';
+}
+
+/**
+ * Display labels for source syntax types
+ */
+const SRC_SYNTAX_LABELS: Record<SrcSyntax, string> = {
+  equals: 'Exact Match',
+  'path-to-regexp': 'Pattern',
+  regex: 'Regex',
+};
+
+/**
+ * Returns a display label for a rule's source syntax type.
+ */
+export function getSrcSyntaxLabel(rule: RoutingRule): string {
+  const syntax = rule.srcSyntax ?? 'regex';
+  return SRC_SYNTAX_LABELS[syntax];
 }
