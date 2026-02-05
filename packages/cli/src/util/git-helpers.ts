@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 /** Defines the options for executing Git commands */
 export type GitExecOptions = Readonly<{
@@ -134,6 +134,8 @@ function getGitCommonDirectory(opts: GitExecOptions): string | null {
  * @throws {Error} Can throw an error if `opts.unsafe` is set to `true`
  */
 export function getGitConfigPath(opts: GitExecOptions): string | null {
+  const { cwd } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
+
   // Use git-common-dir to get the path where config is stored.
   // In worktrees, the config is shared with the main repository.
   const gitCommonDir = getGitCommonDirectory(opts);
@@ -142,7 +144,10 @@ export function getGitConfigPath(opts: GitExecOptions): string | null {
     return null;
   }
 
-  return join(gitCommonDir, 'config');
+  // Resolve the path against cwd since git can return a relative path
+  // (e.g., ".git" for regular repositories)
+  const absoluteGitCommonDir = resolve(cwd, gitCommonDir);
+  return join(absoluteGitCommonDir, 'config');
 }
 
 /**

@@ -341,9 +341,15 @@ export async function ensureRepoLink(
 }
 
 /**
- * Given a `start` directory, traverses up the directory hierarchy until
- * the nearest `.git/config` file is found. Returns the directory where
- * the Git config was found, or `undefined` when no Git repo was found.
+ * Given a `start` directory, finds the root of the Git repository.
+ *
+ * First traverses up the directory hierarchy looking for `.vercel/repo.json`
+ * (indicating an already-linked repository). If not found, uses
+ * `git rev-parse --show-toplevel` to find the Git root, which correctly
+ * handles regular repositories, worktrees, and submodules.
+ *
+ * Returns `undefined` when no Git repo was found or if the home directory
+ * is reached (to avoid matching dotfile repos).
  */
 export async function findRepoRoot(
   _client: Client,
