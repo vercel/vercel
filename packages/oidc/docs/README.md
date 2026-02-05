@@ -4,7 +4,7 @@
 
 ### Classes
 
-- [NoAuthConfigError](classes/NoAuthConfigError.md)
+- [NoAuthError](classes/NoAuthError.md)
 - [RefreshFailedError](classes/RefreshFailedError.md)
 - [TokenExpiredError](classes/TokenExpiredError.md)
 

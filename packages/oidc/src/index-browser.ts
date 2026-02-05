@@ -2,7 +2,7 @@ export { getContext } from './get-context';
 export type { GetVercelOidcTokenOptions } from './get-vercel-oidc-token';
 export type { AuthConfig } from './auth-config';
 export {
-  NoAuthConfigError,
+  NoAuthError,
   TokenExpiredError,
   RefreshFailedError,
 } from './auth-errors';

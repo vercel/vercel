@@ -3,7 +3,7 @@ import { getVercelCliToken } from './token-util';
 import * as authConfig from './auth-config';
 import * as oauth from './oauth';
 import {
-  NoAuthConfigError,
+  NoAuthError,
   TokenExpiredError,
   RefreshFailedError,
 } from './auth-errors';
@@ -39,10 +39,10 @@ describe('getVercelCliToken', () => {
     expect(authConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
-  it('should throw NoAuthConfigError if auth config does not exist', async () => {
+  it('should throw NoAuthError if auth config does not exist', async () => {
     vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(null);
 
-    await expect(getVercelCliToken()).rejects.toThrow(NoAuthConfigError);
+    await expect(getVercelCliToken()).rejects.toThrow(NoAuthError);
   });
 
   it('should refresh token if expired and refresh token exists', async () => {

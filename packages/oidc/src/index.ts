@@ -11,7 +11,7 @@ export {
   type AuthConfig,
 } from './auth-config';
 export {
-  NoAuthConfigError,
+  NoAuthError,
   TokenExpiredError,
   RefreshFailedError,
 } from './auth-errors';

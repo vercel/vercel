@@ -2,8 +2,8 @@
  * Error thrown when no authentication configuration is found.
  * This typically means the user needs to log in.
  */
-export class NoAuthConfigError extends Error {
-  name = 'NoAuthConfigError';
+export class NoAuthError extends Error {
+  name = 'NoAuthError';
   constructor() {
     super('No authentication found. Please log in.');
   }

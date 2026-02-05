@@ -1,4 +1,4 @@
-# Class: NoAuthConfigError
+# Class: NoAuthError
 
 Error thrown when no authentication configuration is found.
 This typically means the user needs to log in.
@@ -7,31 +7,31 @@ This typically means the user needs to log in.
 
 - [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
 
-  ↳ **`NoAuthConfigError`**
+  ↳ **`NoAuthError`**
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](NoAuthConfigError.md#constructor)
+- [constructor](NoAuthError.md#constructor)
 
 ### Properties
 
-- [message](NoAuthConfigError.md#message)
-- [name](NoAuthConfigError.md#name)
-- [stack](NoAuthConfigError.md#stack)
-- [prepareStackTrace](NoAuthConfigError.md#preparestacktrace)
-- [stackTraceLimit](NoAuthConfigError.md#stacktracelimit)
+- [message](NoAuthError.md#message)
+- [name](NoAuthError.md#name)
+- [stack](NoAuthError.md#stack)
+- [prepareStackTrace](NoAuthError.md#preparestacktrace)
+- [stackTraceLimit](NoAuthError.md#stacktracelimit)
 
 ### Methods
 
-- [captureStackTrace](NoAuthConfigError.md#capturestacktrace)
+- [captureStackTrace](NoAuthError.md#capturestacktrace)
 
 ## Constructors
 
 ### constructor
 
-• **new NoAuthConfigError**()
+• **new NoAuthError**()
 
 #### Overrides
 
@@ -59,7 +59,7 @@ node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:105
 
 ### name
 
-• **name**: `string` = `'NoAuthConfigError'`
+• **name**: `string` = `'NoAuthError'`
 
 #### Overrides
 
