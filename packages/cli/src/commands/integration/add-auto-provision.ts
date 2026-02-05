@@ -185,6 +185,12 @@ export async function addAutoProvision(
     const url = new URL(result.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
+    const definedMetadata = Object.fromEntries(
+      Object.entries(metadata).filter(([, v]) => v !== undefined)
+    );
+    if (Object.keys(definedMetadata).length > 0) {
+      url.searchParams.set('metadata', JSON.stringify(definedMetadata));
+    }
     if (projectLink?.project) {
       url.searchParams.set('projectSlug', projectLink.project.name);
     }

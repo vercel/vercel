@@ -131,6 +131,14 @@ export async function add(client: Client, args: string[]) {
     installation && metadataWizard.isSupported;
 
   if (!provisionResourceViaCLIIsSupported) {
+    // Collect metadata if the wizard supports it, even when installation
+    // is missing (terms not yet accepted). This lets us pre-fill the web
+    // checkout form so the user doesn't have to re-enter values.
+    let metadata: Metadata = {};
+    if (metadataWizard.isSupported) {
+      metadata = await metadataWizard.run(client);
+    }
+
     const projectLink = await getOptionalLinkedProject(client);
 
     if (projectLink?.status === 'error') {
@@ -149,7 +157,8 @@ export async function add(client: Client, args: string[]) {
         team.id,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink?.project?.id,
+        metadata
       );
     }
 
@@ -193,7 +202,8 @@ function provisionResourceViaWebUI(
   teamId: string,
   integrationId: string,
   productId: string,
-  projectId?: string
+  projectId?: string,
+  metadata?: Metadata
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
@@ -201,6 +211,14 @@ function provisionResourceViaWebUI(
   url.searchParams.set('productId', productId);
   if (projectId) {
     url.searchParams.set('projectId', projectId);
+  }
+  if (metadata) {
+    const definedMetadata = Object.fromEntries(
+      Object.entries(metadata).filter(([, v]) => v !== undefined)
+    );
+    if (Object.keys(definedMetadata).length > 0) {
+      url.searchParams.set('metadata', JSON.stringify(definedMetadata));
+    }
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');

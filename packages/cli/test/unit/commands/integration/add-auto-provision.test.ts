@@ -270,6 +270,14 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/source=cli/)
       );
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringMatching(/metadata=/)
+      );
+      const calledUrl = new URL(openMock.mock.calls[0][0] as string);
+      const metadata = JSON.parse(
+        calledUrl.searchParams.get('metadata') ?? '{}'
+      );
+      expect(metadata).toEqual({ region: 'us-west-1' });
     });
 
     it('should open browser for unknown fallback', async () => {
@@ -291,6 +299,11 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(openMock).toHaveBeenCalled();
+      const calledUrl = new URL(openMock.mock.calls[0][0] as string);
+      const metadata = JSON.parse(
+        calledUrl.searchParams.get('metadata') ?? '{}'
+      );
+      expect(metadata).toEqual({ region: 'us-west-1' });
     });
 
     it('should include projectSlug when user consents to link project', async () => {

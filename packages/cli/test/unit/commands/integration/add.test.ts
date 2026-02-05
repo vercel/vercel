@@ -87,6 +87,11 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+          // Wizard runs first for supported metadata schemas
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n'); // Select default region (us-west-1)
           await expect(client.stderr).toOutput(
             'Do you want to link this resource to the current project? (Y/n)'
           );
@@ -97,9 +102,21 @@ describe('integration', () => {
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&projectId=vercel-integration-add&cmd=add'
+          const openedUrl = new URL(openMock.mock.calls[0][0] as string);
+          expect(openedUrl.origin).toBe('https://vercel.com');
+          expect(openedUrl.pathname).toBe('/api/marketplace/cli');
+          expect(openedUrl.searchParams.get('teamId')).toBe('team_dummy');
+          expect(openedUrl.searchParams.get('integrationId')).toBe('acme');
+          expect(openedUrl.searchParams.get('productId')).toBe('acme-product');
+          expect(openedUrl.searchParams.get('projectId')).toBe(
+            'vercel-integration-add'
           );
+          expect(openedUrl.searchParams.get('cmd')).toBe('add');
+          // Metadata from the wizard should be forwarded
+          const metadata = JSON.parse(
+            openedUrl.searchParams.get('metadata') as string
+          );
+          expect(metadata).toEqual({ region: 'us-west-1' });
         });
 
         it('should handle provisioning resource on team-level in project context', async () => {
@@ -115,6 +132,11 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+          // Wizard runs first for supported metadata schemas
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n'); // Select default region (us-west-1)
           await expect(client.stderr).toOutput(
             'Do you want to link this resource to the current project? (Y/n)'
           );
@@ -125,9 +147,17 @@ describe('integration', () => {
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
+          const openedUrl = new URL(openMock.mock.calls[0][0] as string);
+          expect(openedUrl.searchParams.get('teamId')).toBe('team_dummy');
+          expect(openedUrl.searchParams.get('integrationId')).toBe('acme');
+          expect(openedUrl.searchParams.get('productId')).toBe('acme-product');
+          expect(openedUrl.searchParams.has('projectId')).toBe(false);
+          expect(openedUrl.searchParams.get('cmd')).toBe('add');
+          // Metadata from the wizard should be forwarded
+          const metadata = JSON.parse(
+            openedUrl.searchParams.get('metadata') as string
           );
+          expect(metadata).toEqual({ region: 'us-west-1' });
         });
 
         it('should handle provisioning resource without project context', async () => {
@@ -136,20 +166,32 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+          // Wizard runs first for supported metadata schemas
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n'); // Select default region (us-west-1)
           await expect(client.stderr).toOutput(
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
+          const openedUrl = new URL(openMock.mock.calls[0][0] as string);
+          expect(openedUrl.searchParams.get('metadata')).toBeTruthy();
+          const metadata = JSON.parse(
+            openedUrl.searchParams.get('metadata') as string
           );
+          expect(metadata).toEqual({ region: 'us-west-1' });
         });
 
         it('should track [name] positional argument with known integration name', async () => {
           client.setArgv('integration', 'add', 'acme');
           const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
           await expect(client.stderr).toOutput(
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
