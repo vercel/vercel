@@ -1,4 +1,4 @@
-# Class: NoAuthError
+# Class: AccessTokenMissingError
 
 Error thrown when no authentication configuration is found.
 This typically means the user needs to log in.
@@ -7,31 +7,31 @@ This typically means the user needs to log in.
 
 - [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
 
-  ↳ **`NoAuthError`**
+  ↳ **`AccessTokenMissingError`**
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](NoAuthError.md#constructor)
+- [constructor](AccessTokenMissingError.md#constructor)
 
 ### Properties
 
-- [message](NoAuthError.md#message)
-- [name](NoAuthError.md#name)
-- [stack](NoAuthError.md#stack)
-- [prepareStackTrace](NoAuthError.md#preparestacktrace)
-- [stackTraceLimit](NoAuthError.md#stacktracelimit)
+- [message](AccessTokenMissingError.md#message)
+- [name](AccessTokenMissingError.md#name)
+- [stack](AccessTokenMissingError.md#stack)
+- [prepareStackTrace](AccessTokenMissingError.md#preparestacktrace)
+- [stackTraceLimit](AccessTokenMissingError.md#stacktracelimit)
 
 ### Methods
 
-- [captureStackTrace](NoAuthError.md#capturestacktrace)
+- [captureStackTrace](AccessTokenMissingError.md#capturestacktrace)
 
 ## Constructors
 
 ### constructor
 
-• **new NoAuthError**()
+• **new AccessTokenMissingError**()
 
 #### Overrides
 
@@ -59,7 +59,7 @@ node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:105
 
 ### name
 
-• **name**: `string` = `'NoAuthError'`
+• **name**: `string` = `'AccessTokenMissingError'`
 
 #### Overrides
 

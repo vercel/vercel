@@ -9,7 +9,7 @@ import {
   type AuthConfig,
 } from './auth-config';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
-import { NoAuthError, RefreshFailedError } from './auth-errors';
+import { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -22,14 +22,11 @@ export function getVercelDataDir(): string | null {
 
 export async function getVercelCliToken(): Promise<string> {
   const authConfig = readAuthConfig();
-  if (!authConfig) {
-    throw new NoAuthError();
+  if (!authConfig?.token) {
+    throw new AccessTokenMissingError();
   }
 
   if (isValidAccessToken(authConfig)) {
-    if (!authConfig.token) {
-      throw new NoAuthError();
-    }
     return authConfig.token;
   }
 
@@ -68,7 +65,10 @@ export async function getVercelCliToken(): Promise<string> {
   } catch (error) {
     // Network error or other failure - clear auth
     writeAuthConfig({});
-    if (error instanceof NoAuthError || error instanceof RefreshFailedError) {
+    if (
+      error instanceof AccessTokenMissingError ||
+      error instanceof RefreshFailedError
+    ) {
       throw error;
     }
     throw new RefreshFailedError(error);

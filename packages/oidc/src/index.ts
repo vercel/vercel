@@ -10,5 +10,5 @@ export {
   isValidAccessToken,
   type AuthConfig,
 } from './auth-config';
-export { NoAuthError, RefreshFailedError } from './auth-errors';
+export { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
 export { getVercelCliToken } from './token-util';

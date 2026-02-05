@@ -4,7 +4,7 @@
 
 ### Classes
 
-- [NoAuthError](classes/NoAuthError.md)
+- [AccessTokenMissingError](classes/AccessTokenMissingError.md)
 - [RefreshFailedError](classes/RefreshFailedError.md)
 
 ### Interfaces

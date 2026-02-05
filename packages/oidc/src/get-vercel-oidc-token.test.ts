@@ -52,7 +52,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     }
   });
 
-  test('should throw NoAuthError when CLI auth file is missing', async () => {
+  test('should throw AccessTokenMissingError when CLI auth file is missing', async () => {
     fs.writeFileSync(
       path.join(rootDir, '.vercel', 'project.json'),
       JSON.stringify({ projectId, orgId: teamId })

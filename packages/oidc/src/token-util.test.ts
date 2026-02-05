@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getVercelCliToken } from './token-util';
 import * as authConfig from './auth-config';
 import * as oauth from './oauth';
-import { NoAuthError, RefreshFailedError } from './auth-errors';
+import { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
 
 vi.mock('fs');
 vi.mock('./token-io', () => ({
@@ -35,10 +35,10 @@ describe('getVercelCliToken', () => {
     expect(authConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
-  it('should throw NoAuthError if auth config does not exist', async () => {
+  it('should throw AccessTokenMissingError if auth config does not exist', async () => {
     vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(null);
 
-    await expect(getVercelCliToken()).rejects.toThrow(NoAuthError);
+    await expect(getVercelCliToken()).rejects.toThrow(AccessTokenMissingError);
   });
 
   it('should refresh token if expired and refresh token exists', async () => {
