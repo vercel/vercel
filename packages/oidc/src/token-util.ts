@@ -194,6 +194,6 @@ export function getTokenPayload(token: string): TokenPayload {
   return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
 }
 
-export function isExpired(token: TokenPayload): boolean {
-  return token.exp * 1000 < Date.now();
+export function isExpired(token: TokenPayload, bufferMs = 0): boolean {
+  return token.exp * 1000 < Date.now() + bufferMs;
 }

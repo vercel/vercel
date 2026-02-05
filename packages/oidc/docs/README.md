@@ -40,7 +40,7 @@
 
 #### Defined in
 
-[packages/oidc/src/token-util.ts:23](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L23)
+[packages/oidc/src/token-util.ts:26](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L26)
 
 ---
 
@@ -103,7 +103,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[packages/oidc/src/get-vercel-oidc-token.ts:58](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L58)
+[packages/oidc/src/get-vercel-oidc-token.ts:64](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L64)
 
 ---
 
@@ -140,4 +140,4 @@ The OIDC token.
 
 #### Defined in
 
-[packages/oidc/src/get-vercel-oidc-token.ts:115](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L115)
+[packages/oidc/src/get-vercel-oidc-token.ts:121](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L121)

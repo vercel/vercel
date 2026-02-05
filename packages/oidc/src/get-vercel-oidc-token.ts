@@ -15,6 +15,12 @@ export interface GetVercelOidcTokenOptions {
    * When provided, this project ID will be used instead of reading from `.vercel/project.json`.
    */
   projectId?: string;
+  /**
+   * Optional time buffer in milliseconds before token expiry to consider it expired.
+   * When provided, the token will be refreshed if it expires within this buffer time.
+   * @default 0
+   */
+  bufferMs?: number;
 }
 
 /**
@@ -74,7 +80,7 @@ export async function getVercelOidcToken(
         await import('./token.js'),
       ]);
 
-    if (!token || isExpired(getTokenPayload(token))) {
+    if (!token || isExpired(getTokenPayload(token), options?.bufferMs)) {
       await refreshToken(options);
       token = getVercelOidcTokenSync();
     }
