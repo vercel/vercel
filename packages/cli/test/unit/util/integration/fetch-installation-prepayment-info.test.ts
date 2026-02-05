@@ -6,7 +6,11 @@ describe('fetchInstallationPrepaymentInfo', () => {
     const mockFetch = vi.fn().mockResolvedValue({});
     const mockClient = { fetch: mockFetch } as any;
 
-    await fetchInstallationPrepaymentInfo(mockClient, 'team_dummy', 'install_123');
+    await fetchInstallationPrepaymentInfo(
+      mockClient,
+      'team_dummy',
+      'install_123'
+    );
 
     expect(mockFetch).toHaveBeenCalledWith(
       '/v1/integrations/installations/install_123/billing/balance?teamId=team_dummy',
