@@ -2,7 +2,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "types": ["node"],
-    "lib": ["DOM", "ES2021"], // DOM needed for WebAssembly
+    "lib": ["DOM", "ES2022"], // DOM needed for WebAssembly
+    "module": "ES2022",
     "paths": {
       "#wasm/*": ["./dist/wasm/*"]
     }

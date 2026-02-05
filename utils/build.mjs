@@ -1,8 +1,15 @@
 import execa from 'execa';
 import ts from 'typescript';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
+
+export function getDependencies(cwd = process.cwd()) {
+  const pkgPath = path.join(cwd, 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+  return Object.keys(pkg.dependencies || {});
+}
 
 function parseTsConfig(tsconfigPath) {
   const parsedConfig = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
