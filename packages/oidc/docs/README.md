@@ -10,7 +10,6 @@
 ### Interfaces
 
 - [AuthConfig](interfaces/AuthConfig.md)
-- [GetVercelOidcTokenOptions](interfaces/GetVercelOidcTokenOptions.md)
 
 ### Functions
 
@@ -18,9 +17,6 @@
 - [getVercelCliToken](README.md#getvercelclitoken)
 - [getVercelOidcToken](README.md#getverceloidctoken)
 - [getVercelOidcTokenSync](README.md#getverceloidctokensync)
-- [isValidAccessToken](README.md#isvalidaccesstoken)
-- [readAuthConfig](README.md#readauthconfig)
-- [writeAuthConfig](README.md#writeauthconfig)
 
 ## Functions
 
@@ -99,9 +95,9 @@ getVercelOidcToken({ teamId: 'team_abc', projectId: 'prj_xyz' })
 
 #### Parameters
 
-| Name       | Type                                                                   | Description                                 |
-| :--------- | :--------------------------------------------------------------------- | :------------------------------------------ |
-| `options?` | [`GetVercelOidcTokenOptions`](interfaces/GetVercelOidcTokenOptions.md) | Optional configuration for token retrieval. |
+| Name       | Type                        | Description                                 |
+| :--------- | :-------------------------- | :------------------------------------------ |
+| `options?` | `GetVercelOidcTokenOptions` | Optional configuration for token retrieval. |
 
 #### Returns
 
@@ -149,65 +145,3 @@ The OIDC token.
 #### Defined in
 
 [packages/oidc/src/get-vercel-oidc-token.ts:115](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L115)
-
----
-
-### isValidAccessToken
-
-▸ **isValidAccessToken**(`authConfig`): `boolean`
-
-Check if an access token is valid (not expired)
-Copied from packages/cli/src/util/client.ts:72-81
-
-#### Parameters
-
-| Name         | Type                                     |
-| :----------- | :--------------------------------------- |
-| `authConfig` | [`AuthConfig`](interfaces/AuthConfig.md) |
-
-#### Returns
-
-`boolean`
-
-#### Defined in
-
-[packages/oidc/src/auth-config.ts:75](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-config.ts#L75)
-
----
-
-### readAuthConfig
-
-▸ **readAuthConfig**(): [`AuthConfig`](interfaces/AuthConfig.md) \| `null`
-
-Read the auth config from disk
-Returns null if the file doesn't exist or cannot be read
-
-#### Returns
-
-[`AuthConfig`](interfaces/AuthConfig.md) \| `null`
-
-#### Defined in
-
-[packages/oidc/src/auth-config.ts:39](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-config.ts#L39)
-
----
-
-### writeAuthConfig
-
-▸ **writeAuthConfig**(`config`): `void`
-
-Write the auth config to disk with proper permissions
-
-#### Parameters
-
-| Name     | Type                                     |
-| :------- | :--------------------------------------- |
-| `config` | [`AuthConfig`](interfaces/AuthConfig.md) |
-
-#### Returns
-
-`void`
-
-#### Defined in
-
-[packages/oidc/src/auth-config.ts:58](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-config.ts#L58)

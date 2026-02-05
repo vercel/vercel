@@ -1,5 +1,4 @@
 export { getContext } from './get-context';
-export type { GetVercelOidcTokenOptions } from './get-vercel-oidc-token';
 export type { AuthConfig } from './auth-config';
 export { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
 
@@ -9,18 +8,6 @@ export async function getVercelOidcToken(): Promise<string> {
 
 export function getVercelOidcTokenSync(): string {
   return '';
-}
-
-export function readAuthConfig(): null {
-  return null;
-}
-
-export function writeAuthConfig(): void {
-  // No-op in browser
-}
-
-export function isValidAccessToken(): boolean {
-  return false;
 }
 
 export async function getVercelCliToken(): Promise<string> {

@@ -1,14 +1,8 @@
 export {
   getVercelOidcToken,
   getVercelOidcTokenSync,
-  type GetVercelOidcTokenOptions,
 } from './get-vercel-oidc-token';
 export { getContext } from './get-context';
-export {
-  readAuthConfig,
-  writeAuthConfig,
-  isValidAccessToken,
-  type AuthConfig,
-} from './auth-config';
+export { type AuthConfig } from './auth-config';
 export { AccessTokenMissingError, RefreshFailedError } from './auth-errors';
 export { getVercelCliToken } from './token-util';
