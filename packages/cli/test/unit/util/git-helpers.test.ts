@@ -8,12 +8,22 @@ import {
   realpathSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 import {
   getGitConfigPath,
   getGitRootDirectory,
   isGitWorktreeOrSubmodule,
 } from '../../../src/util/git-helpers';
+
+/**
+ * Normalizes a path for comparison across platforms.
+ * On Windows, git returns paths with forward slashes, but Node.js uses backslashes.
+ * This function converts all paths to use the platform's native separator.
+ */
+function normalizePath(p: string | null): string | null {
+  if (p === null) return null;
+  return normalize(p);
+}
 
 describe('git-helpers', () => {
   describe('in a regular git repository', () => {
@@ -47,19 +57,21 @@ describe('git-helpers', () => {
 
     it('getGitRootDirectory should return the repo root', () => {
       const root = getGitRootDirectory({ cwd: repoDir });
-      expect(root).toEqual(repoDir);
+      expect(normalizePath(root)).toEqual(normalizePath(repoDir));
     });
 
     it('getGitRootDirectory should return the repo root from a subdirectory', () => {
       const subDir = join(repoDir, 'subdir');
       execSync(`mkdir -p "${subDir}"`);
       const root = getGitRootDirectory({ cwd: subDir });
-      expect(root).toEqual(repoDir);
+      expect(normalizePath(root)).toEqual(normalizePath(repoDir));
     });
 
     it('getGitConfigPath should return path to .git/config', () => {
       const configPath = getGitConfigPath({ cwd: repoDir });
-      expect(configPath).toEqual(join(repoDir, '.git', 'config'));
+      expect(normalizePath(configPath)).toEqual(
+        normalizePath(join(repoDir, '.git', 'config'))
+      );
     });
 
     it('getGitConfigPath should return a valid config file with remotes', () => {
@@ -138,13 +150,15 @@ describe('git-helpers', () => {
 
     it('getGitRootDirectory should return the worktree directory (not main repo)', () => {
       const root = getGitRootDirectory({ cwd: worktreeDir });
-      expect(root).toEqual(worktreeDir);
+      expect(normalizePath(root)).toEqual(normalizePath(worktreeDir));
     });
 
     it('getGitConfigPath should return the shared config in main repo', () => {
       const configPath = getGitConfigPath({ cwd: worktreeDir });
       // Config should be in the main repo's .git directory
-      expect(configPath).toEqual(join(mainRepoDir, '.git', 'config'));
+      expect(normalizePath(configPath)).toEqual(
+        normalizePath(join(mainRepoDir, '.git', 'config'))
+      );
     });
 
     it('getGitConfigPath should return a valid config file with remotes', () => {
