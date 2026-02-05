@@ -17,12 +17,19 @@ import {
 
 /**
  * Normalizes a path for comparison across platforms.
- * On Windows, git returns paths with forward slashes, but Node.js uses backslashes.
- * This function converts all paths to use the platform's native separator.
+ * - Converts forward slashes to backslashes on Windows
+ * - Resolves Windows short paths (8.3 names like RUNNER~1) to long paths
+ * - Resolves symlinks (e.g., /var -> /private/var on macOS)
  */
 function normalizePath(p: string | null): string | null {
   if (p === null) return null;
-  return normalize(p);
+  try {
+    // Use realpathSync to resolve short paths on Windows and symlinks on macOS
+    return realpathSync(normalize(p));
+  } catch {
+    // If the path doesn't exist, just normalize it
+    return normalize(p);
+  }
 }
 
 describe('git-helpers', () => {
