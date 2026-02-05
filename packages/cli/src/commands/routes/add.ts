@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { pathToRegexp } from 'path-to-regexp';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { addSubcommand } from './command';
@@ -20,7 +19,7 @@ import type {
   AddRouteInput,
   HasField,
   Transform,
-  PathSyntax,
+  SrcSyntax,
   RoutePosition,
 } from '../../util/routes/types';
 
@@ -28,7 +27,7 @@ import type {
 const MAX_NAME_LENGTH = 256;
 const MAX_DESCRIPTION_LENGTH = 1024;
 const MAX_CONDITIONS = 16;
-const VALID_SYNTAXES: PathSyntax[] = ['regex', 'path-to-regexp', 'exact'];
+const VALID_SYNTAXES: SrcSyntax[] = ['regex', 'path-to-regexp', 'equals'];
 const REDIRECT_STATUS_CODES = [301, 302, 307, 308];
 
 /**
@@ -97,45 +96,32 @@ function collectHeadersAndTransforms(transformFlags: TransformFlags): {
 
 /**
  * Escapes special regex characters in a string.
+ * Used for building condition value patterns (equals, contains).
  */
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Validates that a string is a valid regex pattern.
+ * Condition operators that match the frontend's behavior.
+ * Each operator compiles user input to a regex pattern for the API.
  */
-function validateRegex(pattern: string): void {
-  try {
-    new RegExp(pattern);
-  } catch (e) {
-    throw new Error(
-      `Invalid regex pattern: "${pattern}". ${e instanceof Error ? e.message : ''}`
-    );
-  }
-}
+type ConditionOperator = 'eq' | 'contains' | 're' | 'exists';
 
 /**
- * Converts a path pattern to regex based on the syntax type.
+ * Compiles a condition operator and value to a regex pattern for the API.
+ * Matches the frontend's buildConditionValue() in form-state.ts.
  */
-function convertToRegex(value: string, syntax: PathSyntax): string {
-  switch (syntax) {
-    case 'exact':
-      return `^${escapeRegExp(value)}$`;
-    case 'path-to-regexp':
-      try {
-        return pathToRegexp(value).source;
-      } catch (e) {
-        throw new Error(
-          `Invalid path-to-regexp pattern: "${value}". ${e instanceof Error ? e.message : ''}`
-        );
-      }
-    case 'regex':
-    default:
-      // Validate regex pattern
-      validateRegex(value);
-      return value;
-  }
+function buildConditionValue(
+  operator: ConditionOperator,
+  value: string,
+): string | undefined {
+  if (operator === 'exists') return undefined;
+  if (operator === 're') return value;
+  const escapedValue = escapeRegExp(value);
+  if (operator === 'contains') return `.*${escapedValue}.*`;
+  // 'eq'
+  return `^${escapedValue}$`;
 }
 
 /**
@@ -166,6 +152,26 @@ function parsePosition(position: string): RoutePosition {
     `Invalid position: "${position}". Use: start, end, after:<id>, or before:<id>`
   );
 }
+
+/**
+ * Interactive action types. Exclusive actions (rewrite, redirect, set-status) can only
+ * be selected once and are removed from the list after selection. Non-exclusive modify
+ * actions can be added alongside any other action.
+ */
+interface ActionChoice {
+  name: string;
+  value: string;
+  exclusive?: boolean;
+}
+
+const ALL_ACTION_CHOICES: ActionChoice[] = [
+  { name: 'Rewrite', value: 'rewrite', exclusive: true },
+  { name: 'Redirect', value: 'redirect', exclusive: true },
+  { name: 'Set Status Code', value: 'set-status', exclusive: true },
+  { name: 'Response Headers', value: 'response-headers' },
+  { name: 'Request Headers', value: 'request-headers' },
+  { name: 'Request Query', value: 'request-query' },
+];
 
 /**
  * Adds a new route to the current project.
@@ -199,8 +205,6 @@ export default async function add(client: Client, argv: string[]) {
   const existingStagingVersion = versions.find(v => v.isStaging);
 
   // --- Collect route name ---
-  // Note: By the time we reach here, getSubcommand() has already stripped
-  // the subcommand from args, so args[0] is the route name (if provided).
   let name: string;
   const nameArg = args[0];
 
@@ -232,17 +236,17 @@ export default async function add(client: Client, argv: string[]) {
 
   // --- Collect path pattern ---
   let src: string;
-  let syntax: PathSyntax = 'regex';
+  let syntax: SrcSyntax = 'regex';
 
   if (flags['--syntax']) {
     const syntaxArg = flags['--syntax'] as string;
-    if (!VALID_SYNTAXES.includes(syntaxArg as PathSyntax)) {
+    if (!VALID_SYNTAXES.includes(syntaxArg as SrcSyntax)) {
       output.error(
         `Invalid syntax: "${syntaxArg}". Valid options: ${VALID_SYNTAXES.join(', ')}. Usage: ${getCommandName('routes add "Name" --src "/path" --syntax path-to-regexp')}`
       );
       return 1;
     }
-    syntax = syntaxArg as PathSyntax;
+    syntax = syntaxArg as SrcSyntax;
   }
 
   if (flags['--src']) {
@@ -261,16 +265,16 @@ export default async function add(client: Client, argv: string[]) {
           name: 'Path pattern (e.g., /api/:version/users/:id)',
           value: 'path-to-regexp',
         },
-        { name: 'Exact match (e.g., /about)', value: 'exact' },
+        { name: 'Exact match (e.g., /about)', value: 'equals' },
         { name: 'Regular expression (e.g., ^/api/(.*)$)', value: 'regex' },
       ],
     });
-    syntax = syntaxChoice as PathSyntax;
+    syntax = syntaxChoice as SrcSyntax;
 
     const syntaxHelp =
       syntax === 'path-to-regexp'
         ? 'Use :param for parameters, :param* for optional wildcard'
-        : syntax === 'exact'
+        : syntax === 'equals'
           ? 'Enter the exact path to match'
           : 'Enter a regular expression pattern';
 
@@ -281,15 +285,6 @@ export default async function add(client: Client, argv: string[]) {
         return true;
       },
     });
-  }
-
-  // Convert to regex
-  let regexSrc: string;
-  try {
-    regexSrc = convertToRegex(src, syntax);
-  } catch (e) {
-    output.error(e instanceof Error ? e.message : 'Invalid path pattern');
-    return 1;
   }
 
   // --- Collect action ---
@@ -325,89 +320,9 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  // Interactive mode for action selection
+  // Interactive mode: conditions first, then action selection loop
   if (!hasAnyAction && !skipPrompts) {
-    const actionType = await client.input.select({
-      message: 'What action should this route perform?',
-      choices: [
-        {
-          name: 'Rewrite - Internal redirect to different URL',
-          value: 'rewrite',
-        },
-        {
-          name: 'Redirect - Browser redirect (301, 302, 307, 308)',
-          value: 'redirect',
-        },
-        {
-          name: 'Set Status Code - Return HTTP status without proxying',
-          value: 'set-status',
-        },
-        { name: 'Modify Response Headers', value: 'response-headers' },
-        { name: 'Modify Request Headers', value: 'request-headers' },
-        { name: 'Modify Request Query', value: 'request-query' },
-      ],
-    });
-
-    switch (actionType) {
-      case 'rewrite': {
-        const rewriteDest = await client.input.text({
-          message: 'Destination URL:',
-          validate: val => (val ? true : 'Destination is required'),
-        });
-        Object.assign(flags, { '--dest': rewriteDest });
-        break;
-      }
-      case 'redirect': {
-        const redirectDest = await client.input.text({
-          message: 'Destination URL:',
-          validate: val => (val ? true : 'Destination is required'),
-        });
-        const redirectStatus = await client.input.select({
-          message: 'Status code:',
-          choices: [
-            { name: '307 - Temporary Redirect (preserves method)', value: 307 },
-            { name: '308 - Permanent Redirect (preserves method)', value: 308 },
-            { name: '301 - Moved Permanently (may change to GET)', value: 301 },
-            { name: '302 - Found (may change to GET)', value: 302 },
-          ],
-        });
-        Object.assign(flags, {
-          '--dest': redirectDest,
-          '--status': redirectStatus,
-        });
-        break;
-      }
-      case 'set-status': {
-        const statusCode = await client.input.text({
-          message: 'HTTP status code:',
-          validate: val => {
-            const num = parseInt(val, 10);
-            if (isNaN(num) || num < 100 || num > 599) {
-              return 'Status code must be between 100 and 599';
-            }
-            return true;
-          },
-        });
-        Object.assign(flags, { '--status': parseInt(statusCode, 10) });
-        break;
-      }
-      case 'response-headers': {
-        await collectInteractiveHeaders(client, 'response', flags);
-        break;
-      }
-      case 'request-headers': {
-        await collectInteractiveHeaders(client, 'request-header', flags);
-        break;
-      }
-      case 'request-query': {
-        await collectInteractiveHeaders(client, 'request-query', flags);
-        break;
-      }
-    }
-
-    // --- Additional interactive prompts after primary action ---
-
-    // Conditions prompt
+    // --- Conditions (before actions) ---
     const addConditions = await client.input.confirm(
       'Add conditions (has/missing)?',
       false
@@ -417,45 +332,121 @@ export default async function add(client: Client, argv: string[]) {
       await collectInteractiveConditions(client, flags);
     }
 
-    // Response headers prompt (if not already collecting them as primary action)
-    if (actionType !== 'response-headers') {
-      const addResponseHeaders = await client.input.confirm(
-        'Modify response headers?',
-        false
-      );
+    // --- Action selection loop ---
+    const availableActions = [...ALL_ACTION_CHOICES];
+    let hasExclusiveAction = false;
+    let actionCount = 0;
 
-      if (addResponseHeaders) {
-        await collectInteractiveHeaders(client, 'response', flags);
+    while (true) {
+      const choices = [...availableActions];
+
+      // Only show "Done" after at least one action has been added
+      if (actionCount > 0) {
+        choices.push({ name: 'Done', value: 'done' });
       }
-    }
 
-    // Request transforms prompt (for rewrite actions where it makes sense)
-    if (actionType === 'rewrite') {
-      const addRequestTransforms = await client.input.confirm(
-        'Modify request headers or query parameters?',
-        false
-      );
+      const actionType = await client.input.select({
+        message:
+          actionCount === 0
+            ? 'What action should this route perform?'
+            : 'Add another action:',
+        choices: choices.map(c => ({ name: c.name, value: c.value })),
+      });
 
-      if (addRequestTransforms) {
-        const transformType = await client.input.select({
-          message: 'What to modify?',
-          choices: [
-            { name: 'Request Headers', value: 'request-header' },
-            { name: 'Request Query Parameters', value: 'request-query' },
-            { name: 'Both', value: 'both' },
-          ],
-        });
+      if (actionType === 'done') break;
 
-        if (transformType === 'request-header' || transformType === 'both') {
+      // Handle the selected action
+      switch (actionType) {
+        case 'rewrite': {
+          const rewriteDest = await client.input.text({
+            message: 'Destination URL:',
+            validate: val => (val ? true : 'Destination is required'),
+          });
+          Object.assign(flags, { '--dest': rewriteDest });
+          break;
+        }
+        case 'redirect': {
+          const redirectDest = await client.input.text({
+            message: 'Destination URL:',
+            validate: val => (val ? true : 'Destination is required'),
+          });
+          const redirectStatus = await client.input.select({
+            message: 'Status code:',
+            choices: [
+              {
+                name: '307 - Temporary Redirect (preserves method)',
+                value: 307,
+              },
+              {
+                name: '308 - Permanent Redirect (preserves method)',
+                value: 308,
+              },
+              {
+                name: '301 - Moved Permanently (may change to GET)',
+                value: 301,
+              },
+              { name: '302 - Found (may change to GET)', value: 302 },
+            ],
+          });
+          Object.assign(flags, {
+            '--dest': redirectDest,
+            '--status': redirectStatus,
+          });
+          break;
+        }
+        case 'set-status': {
+          const statusCode = await client.input.text({
+            message: 'HTTP status code:',
+            validate: val => {
+              const num = parseInt(val, 10);
+              if (isNaN(num) || num < 100 || num > 599) {
+                return 'Status code must be between 100 and 599';
+              }
+              return true;
+            },
+          });
+          Object.assign(flags, { '--status': parseInt(statusCode, 10) });
+          break;
+        }
+        case 'response-headers': {
+          await collectInteractiveHeaders(client, 'response', flags);
+          break;
+        }
+        case 'request-headers': {
           await collectInteractiveHeaders(client, 'request-header', flags);
+          break;
         }
-        if (transformType === 'request-query' || transformType === 'both') {
+        case 'request-query': {
           await collectInteractiveHeaders(client, 'request-query', flags);
+          break;
         }
       }
+
+      actionCount++;
+
+      // Remove exclusive actions once one is selected.
+      // Non-exclusive actions (headers, query) stay available so the user
+      // can add multiple header/query modifications across separate selections.
+      const selectedChoice = ALL_ACTION_CHOICES.find(
+        c => c.value === actionType
+      );
+      if (selectedChoice?.exclusive) {
+        hasExclusiveAction = true;
+        // Remove all exclusive actions from available choices
+        const exclusiveValues = ALL_ACTION_CHOICES.filter(c => c.exclusive).map(
+          c => c.value
+        );
+        for (const val of exclusiveValues) {
+          const idx = availableActions.findIndex(a => a.value === val);
+          if (idx !== -1) availableActions.splice(idx, 1);
+        }
+      }
+
+      // If no more actions are available, break
+      if (availableActions.length === 0) break;
     }
 
-    // Description prompt
+    // --- Description ---
     const addDescription = await client.input.confirm(
       'Add a description?',
       false
@@ -474,7 +465,7 @@ export default async function add(client: Client, argv: string[]) {
       }
     }
 
-    // Position prompt
+    // --- Position ---
     const customPosition = await client.input.confirm(
       'Set route position? (default: end)',
       false
@@ -632,8 +623,9 @@ export default async function add(client: Client, argv: string[]) {
     name,
     description,
     enabled: !flags['--disabled'],
+    srcSyntax: syntax,
     route: {
-      src: regexSrc,
+      src,
       ...(finalDest && { dest: finalDest }),
       ...(finalStatus && { status: finalStatus }),
       ...(hasResponseHeaders && { headers }),
@@ -695,16 +687,13 @@ export default async function add(client: Client, argv: string[]) {
 
     // Show test URL if available
     if (version.alias) {
-      // For exact and path-to-regexp patterns, use the original src
-      // For regex, try to extract a simple testable path or default to /
       let testPath = '/';
-      if (syntax === 'exact') {
+      if (syntax === 'equals') {
         testPath = src;
       } else if (syntax === 'path-to-regexp') {
         // Replace params with example values
         testPath = src.replace(/:\w+\*/g, 'test').replace(/:\w+/g, 'test');
       } else if (src.startsWith('/')) {
-        // For regex, use root path (extracting from regex is unreliable)
         testPath = '/';
       }
       output.print(
@@ -755,7 +744,9 @@ export default async function add(client: Client, argv: string[]) {
 }
 
 /**
- * Interactive condition collection for has/missing conditions.
+ * Interactive condition collection with operator support.
+ * Supports equals, contains, matches (regex), and exists operators,
+ * matching the frontend's condition-rows.tsx behavior.
  */
 async function collectInteractiveConditions(
   client: Client,
@@ -765,15 +756,15 @@ async function collectInteractiveConditions(
 
   while (addMore) {
     // Show current conditions
-    const hasConditions = (flags['--has'] as string[]) || [];
-    const missingConditions = (flags['--missing'] as string[]) || [];
+    const currentHas = (flags['--has'] as string[]) || [];
+    const currentMissing = (flags['--missing'] as string[]) || [];
 
-    if (hasConditions.length > 0 || missingConditions.length > 0) {
+    if (currentHas.length > 0 || currentMissing.length > 0) {
       output.log('\nCurrent conditions:');
-      for (const c of hasConditions) {
+      for (const c of currentHas) {
         output.print(`  has: ${c}\n`);
       }
-      for (const c of missingConditions) {
+      for (const c of currentMissing) {
         output.print(`  missing: ${c}\n`);
       }
       output.print('\n');
@@ -800,48 +791,81 @@ async function collectInteractiveConditions(
     let conditionValue: string;
 
     if (targetType === 'host') {
-      const hostValue = await client.input.text({
-        message: 'Host pattern (regex):',
+      // Host conditions use an operator to build the value pattern
+      const operator = await client.input.select({
+        message: 'How to match the host:',
+        choices: [
+          { name: 'Equals', value: 'eq' },
+          { name: 'Contains', value: 'contains' },
+          { name: 'Matches (regex)', value: 're' },
+        ],
+      });
+
+      const hostInput = await client.input.text({
+        message:
+          operator === 're' ? 'Host pattern (regex):' : 'Host value:',
         validate: val => {
-          if (!val) return 'Host pattern is required';
-          try {
-            new RegExp(val);
-            return true;
-          } catch {
-            return 'Invalid regex pattern';
-          }
-        },
-      });
-      conditionValue = `host:${hostValue}`;
-    } else {
-      const key = await client.input.text({
-        message: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} name:`,
-        validate: val => (val ? true : `${targetType} name is required`),
-      });
-
-      const addValuePattern = await client.input.confirm(
-        'Add a value pattern (regex)?',
-        false
-      );
-
-      if (addValuePattern) {
-        const valuePattern = await client.input.text({
-          message: 'Value pattern (regex):',
-          validate: val => {
-            if (!val) return true; // Empty is OK
+          if (!val) return 'Host value is required';
+          if (operator === 're') {
             try {
               new RegExp(val);
               return true;
             } catch {
               return 'Invalid regex pattern';
             }
+          }
+          return true;
+        },
+      });
+
+      const compiledValue = buildConditionValue(
+        operator as ConditionOperator,
+        hostInput,
+      );
+      conditionValue = `host:${compiledValue ?? '.*'}`;
+    } else {
+      const key = await client.input.text({
+        message: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} name:`,
+        validate: val => (val ? true : `${targetType} name is required`),
+      });
+
+      const operator = await client.input.select({
+        message: 'How to match the value:',
+        choices: [
+          { name: 'Exists (any value)', value: 'exists' },
+          { name: 'Equals', value: 'eq' },
+          { name: 'Contains', value: 'contains' },
+          { name: 'Matches (regex)', value: 're' },
+        ],
+      });
+
+      if (operator === 'exists') {
+        conditionValue = `${targetType}:${key}`;
+      } else {
+        const valueInput = await client.input.text({
+          message:
+            operator === 're' ? 'Value pattern (regex):' : 'Value:',
+          validate: val => {
+            if (!val) return 'Value is required';
+            if (operator === 're') {
+              try {
+                new RegExp(val);
+                return true;
+              } catch {
+                return 'Invalid regex pattern';
+              }
+            }
+            return true;
           },
         });
-        conditionValue = valuePattern
-          ? `${targetType}:${key}:${valuePattern}`
+
+        const compiledValue = buildConditionValue(
+          operator as ConditionOperator,
+          valueInput,
+        );
+        conditionValue = compiledValue
+          ? `${targetType}:${key}:${compiledValue}`
           : `${targetType}:${key}`;
-      } else {
-        conditionValue = `${targetType}:${key}`;
       }
     }
 

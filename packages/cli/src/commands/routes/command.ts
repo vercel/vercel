@@ -178,7 +178,7 @@ export const addSubcommand = {
     },
     {
       name: 'syntax',
-      description: 'Path syntax: regex (default), path-to-regexp, exact',
+      description: 'Path syntax: regex (default), path-to-regexp, equals',
       shorthand: null,
       type: String,
       argument: 'TYPE',
@@ -339,7 +339,7 @@ export const addSubcommand = {
     },
     {
       name: 'Add a redirect',
-      value: `${packageName} routes add "Old Blog" --src "/blog" --syntax exact --dest "/articles" --status 301 --yes`,
+      value: `${packageName} routes add "Old Blog" --src "/blog" --syntax equals --dest "/articles" --status 301 --yes`,
     },
     {
       name: 'Add CORS headers',
@@ -359,7 +359,7 @@ export const addSubcommand = {
     },
     {
       name: 'Add route at start',
-      value: `${packageName} routes add "Priority Route" --src "/priority" --syntax exact --dest "/handler" --position start --yes`,
+      value: `${packageName} routes add "Priority Route" --src "/priority" --syntax equals --dest "/handler" --position start --yes`,
     },
   ],
 } as const;
