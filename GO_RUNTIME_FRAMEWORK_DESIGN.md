@@ -25,9 +25,9 @@ All runtime framework presets share:
 
 ## Go Runtime Framework Preset Design
 
-### Go Project Structure Patterns
+### Supported Project Structures
 
-Based on the [Standard Go Project Layout](https://github.com/golang-standards/project-layout) and analysis of popular Go projects, there are two common patterns:
+We support the most common Go project layouts:
 
 #### Pattern 1: Simple Projects - `main.go` at root
 
@@ -41,30 +41,21 @@ myproject/
 
 Best for: Small projects, simple APIs, learning/prototyping.
 
-#### Pattern 2: Standard Layout - `cmd/` directory
+#### Pattern 2: Standard Layout - `cmd/api/` or `cmd/server/`
 
 ```
 myproject/
 ├── go.mod
 ├── cmd/
-│   ├── api/
-│   │   └── main.go    ← API server entry point
-│   └── workers/
-│       └── main.go    ← Background workers
+│   └── api/
+│       └── main.go    ← API server entry point
 ├── internal/
 └── pkg/
 ```
 
-Best for: Production applications, multiple binaries, larger codebases.
+Best for: Production applications following the [Standard Go Project Layout](https://github.com/golang-standards/project-layout).
 
-**Real-world examples using `cmd/` pattern:**
-
-- [JordanMarcelino/go-gin-starter](https://github.com/JordanMarcelino/go-gin-starter) - `cmd/api/main.go`, `cmd/workers/main.go`
-- [withzeus/rest-in-go](https://github.com/withzeus/rest-in-go) - `cmd/app/app.go`
-
-### Recommended Approach: Support Both Patterns
-
-To serve the majority of Go projects, we should support both patterns with intelligent entrypoint resolution:
+### Framework Preset Definition
 
 ```typescript
 {
@@ -76,20 +67,16 @@ To serve the majority of Go projects, we should support both patterns with intel
   tagline: 'An open-source programming language supported by Google.',
   description: 'A generic Go application deployed as a serverless function.',
   website: 'https://go.dev',
-  useRuntime: { src: 'main.go', use: '@vercel/go' },  // Default, resolved dynamically
+  useRuntime: { src: 'main.go', use: '@vercel/go' },
   ignoreRuntimes: ['@vercel/go'],
   detectors: {
     every: [
       { path: 'go.mod' },
     ],
     some: [
-      // Simple project pattern
       { path: 'main.go' },
-      // Standard layout patterns (prioritized for web APIs)
       { path: 'cmd/api/main.go' },
       { path: 'cmd/server/main.go' },
-      { path: 'cmd/app/main.go' },
-      { path: 'cmd/web/main.go' },
     ],
   },
   settings: {
@@ -116,98 +103,55 @@ To serve the majority of Go projects, we should support both patterns with intel
 }
 ```
 
-### Entrypoint Resolution Priority
+### Entrypoint Resolution
 
-When multiple entry points exist, resolve in this order (most specific to least):
+Simple priority-based resolution:
 
 | Priority | Path                 | Rationale                              |
 | -------- | -------------------- | -------------------------------------- |
 | 1        | `main.go`            | Simplest case, unambiguous             |
 | 2        | `cmd/api/main.go`    | Most relevant for Vercel (API servers) |
 | 3        | `cmd/server/main.go` | Common convention for HTTP servers     |
-| 4        | `cmd/web/main.go`    | Web application convention             |
-| 5        | `cmd/app/main.go`    | Generic application                    |
-| 6        | `cmd/*/main.go`      | First match alphabetically (fallback)  |
 
-**Implementation in `@vercel/go`:**
+**Implementation:**
 
 ```typescript
-async function resolveEntrypoint(workPath: string): Promise<string> {
-  const priorities = [
-    'main.go',
-    'cmd/api/main.go',
-    'cmd/server/main.go',
-    'cmd/web/main.go',
-    'cmd/app/main.go',
-  ];
+const SUPPORTED_ENTRYPOINTS = [
+  'main.go',
+  'cmd/api/main.go',
+  'cmd/server/main.go',
+];
 
-  for (const entry of priorities) {
+async function resolveEntrypoint(workPath: string): Promise<string> {
+  for (const entry of SUPPORTED_ENTRYPOINTS) {
     if (await pathExists(join(workPath, entry))) {
+      debug(`Resolved Go entrypoint: ${entry}`);
       return entry;
     }
   }
 
-  // Fallback: find first cmd/*/main.go
-  const cmdDirs = await readdir(join(workPath, 'cmd')).catch(() => []);
-  for (const dir of cmdDirs.sort()) {
-    const candidate = `cmd/${dir}/main.go`;
-    if (await pathExists(join(workPath, candidate))) {
-      return candidate;
-    }
-  }
-
-  throw new Error('No Go entrypoint found');
+  throw new Error(
+    'No Go entrypoint found. Expected one of: main.go, cmd/api/main.go, or cmd/server/main.go'
+  );
 }
 ```
 
-### Detection Logic Rationale
+### Why These Three Paths?
 
-**Why `go.mod` + (multiple entrypoint options)?**
+1. **`main.go`** - The standard Go convention for simple projects
+2. **`cmd/api/main.go`** - Most relevant for Vercel's use case (API servers)
+3. **`cmd/server/main.go`** - Common alternative naming for HTTP servers
 
-1. **`go.mod`** - Required for all modern Go projects (Go modules since 1.11)
-2. **Multiple entrypoint options** - Accommodates both simple and production-grade projects
+This covers the vast majority of Go web applications while keeping the implementation simple and predictable.
 
-This ensures:
+### Future Enhancements
 
-- We don't match projects using the legacy GOPATH mode
-- We support the standard Go project layout (`cmd/` pattern)
-- We prioritize API/server entrypoints relevant to Vercel's use case
-- Simple projects with `main.go` at root still work
+If user feedback indicates demand, we could add:
 
-### Edge Cases and Considerations
-
-#### Multiple `cmd/` directories
-
-Projects like `go-gin-starter` have both `cmd/api/` and `cmd/workers/`. Our priority list handles this by preferring `api` over other options.
-
-**Future enhancement:** Allow explicit configuration in `vercel.json`:
-
-```json
-{
-  "builds": [
-    {
-      "src": "cmd/api/main.go",
-      "use": "@vercel/go"
-    }
-  ]
-}
-```
-
-#### Non-standard naming (e.g., `cmd/app/app.go`)
-
-Some projects use `app.go` instead of `main.go`. While less common, we could extend detection:
-
-```typescript
-some: [
-  { path: 'main.go' },
-  { path: 'cmd/api/main.go' },
-  { path: 'cmd/server/main.go' },
-  { path: 'cmd/app/main.go' },
-  { path: 'cmd/app/app.go' },  // Less common but exists
-],
-```
-
-**Recommendation:** Start with `main.go` patterns only, as this covers ~90% of projects. Add `app.go` support if user feedback indicates demand.
+- `cmd/web/main.go` - Web application convention
+- `cmd/app/main.go` - Generic application
+- Content-based validation (regex check for HTTP server patterns)
+- Explicit configuration via `vercel.json`
 
 ## Changes Required to `@vercel/go`
 
@@ -319,7 +263,7 @@ Add the Go framework preset to `packages/frameworks/src/frameworks.ts`:
   tagline: 'An open-source programming language supported by Google.',
   description: 'A generic Go application deployed as a serverless function.',
   website: 'https://go.dev',
-  useRuntime: { src: 'main.go', use: '@vercel/go' },  // Default, builder resolves actual entrypoint
+  useRuntime: { src: 'main.go', use: '@vercel/go' },
   ignoreRuntimes: ['@vercel/go'],
   detectors: {
     every: [
@@ -329,8 +273,6 @@ Add the Go framework preset to `packages/frameworks/src/frameworks.ts`:
       { path: 'main.go' },
       { path: 'cmd/api/main.go' },
       { path: 'cmd/server/main.go' },
-      { path: 'cmd/web/main.go' },
-      { path: 'cmd/app/main.go' },
     ],
   },
   settings: {
@@ -364,37 +306,23 @@ Add the Go framework preset to `packages/frameworks/src/frameworks.ts`:
 In `packages/go/src/index.ts`:
 
 ```typescript
-const ENTRYPOINT_PRIORITIES = [
+const SUPPORTED_ENTRYPOINTS = [
   'main.go',
   'cmd/api/main.go',
   'cmd/server/main.go',
-  'cmd/web/main.go',
-  'cmd/app/main.go',
 ];
 
 async function resolveEntrypoint(workPath: string): Promise<string> {
-  // Check priority list first
-  for (const entry of ENTRYPOINT_PRIORITIES) {
+  for (const entry of SUPPORTED_ENTRYPOINTS) {
     if (await pathExists(join(workPath, entry))) {
-      debug(`Resolved entrypoint: ${entry}`);
+      debug(`Resolved Go entrypoint: ${entry}`);
       return entry;
     }
   }
 
-  // Fallback: find first cmd/*/main.go alphabetically
-  const cmdPath = join(workPath, 'cmd');
-  if (await pathExists(cmdPath)) {
-    const cmdDirs = await readdir(cmdPath);
-    for (const dir of cmdDirs.sort()) {
-      const candidate = `cmd/${dir}/main.go`;
-      if (await pathExists(join(workPath, candidate))) {
-        debug(`Resolved entrypoint (fallback): ${candidate}`);
-        return candidate;
-      }
-    }
-  }
-
-  throw new Error('No Go entrypoint found. Expected main.go or cmd/*/main.go');
+  throw new Error(
+    'No Go entrypoint found. Expected one of: main.go, cmd/api/main.go, or cmd/server/main.go'
+  );
 }
 ```
 
@@ -636,40 +564,35 @@ Similar to how FastAPI/Flask supersede Python, we could add Go framework presets
 
 ## Summary
 
-### Recommended Detection
+### Supported Entrypoints
 
 - **Required**: `go.mod`
 - **Entrypoint (one of)**:
   - `main.go` (simple projects)
-  - `cmd/api/main.go` (API servers - preferred for Vercel)
-  - `cmd/server/main.go` (generic servers)
-  - `cmd/web/main.go` (web applications)
-  - `cmd/app/main.go` (generic applications)
-  - `cmd/*/main.go` (fallback - first alphabetically)
+  - `cmd/api/main.go` (API servers)
+  - `cmd/server/main.go` (HTTP servers)
 - **Runtime**: `@vercel/go` (with new standalone server mode)
 
-### Why This Approach Works for Most Projects
+### Why These Three Paths?
 
-1. **Simple projects** with `main.go` at root are supported
-2. **Production projects** using the standard `cmd/` layout are supported
-3. **API servers** (`cmd/api/`) are prioritized, aligning with Vercel's use case
-4. **`go.mod`** is required for all modern Go projects
-5. **`package main`** with `func main()` is how Go applications start
-6. The server reads `PORT` from environment (12-factor app standard)
+1. **`main.go`** - Standard Go convention for simple projects
+2. **`cmd/api/main.go`** - Most relevant for Vercel's use case (API servers)
+3. **`cmd/server/main.go`** - Common alternative naming for HTTP servers
+
+This covers the vast majority of Go web applications while keeping the implementation simple and predictable.
 
 ### Changes to `@vercel/go`
 
-1. **Add entrypoint resolution** - Find main.go or cmd/\*/main.go with priority ordering
+1. **Add entrypoint resolution** - Check for `main.go`, `cmd/api/main.go`, or `cmd/server/main.go`
 2. **Add standalone server detection** - Detect `package main` without exported handler
 3. **Add standalone build mode** - Build binary with correct target and use `executable` runtime
 4. **Update analyzer** - Detect standalone main functions
 5. **Add standalone dev server** - Run `go run <target>` with PORT env var
 
-### Coverage Estimate
+### Future Enhancements
 
-This approach should cover:
+If user feedback indicates demand:
 
-- ~60% of projects: Simple `main.go` at root
-- ~30% of projects: Standard layout with `cmd/api/`, `cmd/server/`, etc.
-- ~5% of projects: Non-standard `cmd/` naming (handled by fallback)
-- ~5% of projects: May need explicit configuration (edge cases)
+- `cmd/web/main.go`, `cmd/app/main.go` support
+- Content-based validation (regex check for HTTP server patterns)
+- Explicit configuration via `vercel.json`
