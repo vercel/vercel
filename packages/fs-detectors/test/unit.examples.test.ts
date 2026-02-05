@@ -20,7 +20,13 @@ const overrides = new Map([
 
 // Examples that use experimental frameworks and should
 // be tested with useExperimentalFrameworks enabled
-const experimentalExamples = new Set(['starlette', 'sinatra', 'axum', 'gin']);
+const experimentalExamples = new Set([
+  'starlette',
+  'sinatra',
+  'axum',
+  'gin',
+  'dream',
+]);
 
 describe('examples should be detected', () => {
   it.each(getExamples())(
