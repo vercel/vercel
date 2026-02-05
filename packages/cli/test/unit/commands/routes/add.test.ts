@@ -74,7 +74,7 @@ describe('routes add', () => {
         '--src',
         '/blog',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/articles',
         '--status',
@@ -274,7 +274,7 @@ describe('routes add', () => {
         '--src',
         '/path',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/dest',
         '--description',
@@ -298,7 +298,7 @@ describe('routes add', () => {
         '--src',
         '/disabled',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/dest',
         '--disabled',
@@ -321,7 +321,7 @@ describe('routes add', () => {
         '--src',
         '/priority',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/handler',
         '--position',
@@ -345,7 +345,7 @@ describe('routes add', () => {
         '--src',
         '/after',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/handler',
         '--position',
@@ -577,28 +577,6 @@ describe('routes add', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
 
-    it('should error on invalid path-to-regexp pattern', async () => {
-      useAddRoute();
-
-      client.setArgv(
-        'routes',
-        'add',
-        'My Route',
-        '--src',
-        '/api/((invalid',
-        '--syntax',
-        'path-to-regexp',
-        '--dest',
-        '/dest',
-        '--yes'
-      );
-      const exitCodePromise = routes(client);
-
-      await expect(client.stderr).toOutput('Invalid path-to-regexp pattern');
-
-      await expect(exitCodePromise).resolves.toEqual(1);
-    });
-
     it('should error on invalid transform format', async () => {
       useAddRoute();
 
@@ -702,26 +680,6 @@ describe('routes add', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
 
-    it('should error on invalid regex pattern', async () => {
-      useAddRoute();
-
-      client.setArgv(
-        'routes',
-        'add',
-        'My Route',
-        '--src',
-        '[invalid(regex',
-        '--dest',
-        '/dest',
-        '--yes'
-      );
-      const exitCodePromise = routes(client);
-
-      await expect(client.stderr).toOutput('Invalid regex pattern');
-
-      await expect(exitCodePromise).resolves.toEqual(1);
-    });
-
     it('should error on position after: without ID', async () => {
       useAddRoute();
 
@@ -803,7 +761,7 @@ describe('routes add', () => {
         '--src',
         '/about',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/about-page',
         '--yes'
@@ -928,7 +886,7 @@ describe('routes add', () => {
           '--src',
           '/old-page',
           '--syntax',
-          'exact',
+          'equals',
           '--dest',
           '/new-page',
           '--status',
@@ -947,7 +905,7 @@ describe('routes add', () => {
           '--src',
           '/temp',
           '--syntax',
-          'exact',
+          'equals',
           '--dest',
           '/temporary-location',
           '--status',
@@ -1002,7 +960,7 @@ describe('routes add', () => {
           '--src',
           '/docs',
           '--syntax',
-          'exact',
+          'equals',
           '--dest',
           'https://docs.example.com/',
           '--status',
@@ -1491,7 +1449,7 @@ describe('routes add', () => {
           '--src',
           '/proxy',
           '--syntax',
-          'exact',
+          'equals',
           '--dest',
           '/handler',
           '--has',
@@ -1510,7 +1468,7 @@ describe('routes add', () => {
           '--src',
           '/complex',
           '--syntax',
-          'exact',
+          'equals',
           '--dest',
           '/handler',
         ];
@@ -1627,6 +1585,189 @@ describe('routes add', () => {
       // Succeeds because the pattern is still valid regex
       // (just includes a literal " at the start)
       await expect(routes(client)).resolves.toEqual(0);
+    });
+  });
+
+  describe('srcSyntax behavior', () => {
+    it('should send srcSyntax and raw pattern to API', async () => {
+      let capturedBody: unknown;
+
+      client.scenario.get(
+        '/v1/projects/:projectId/routes/versions',
+        (_req, res) => {
+          res.json({
+            versions: [
+              {
+                id: 'live-version',
+                isLive: true,
+                isStaging: false,
+                ruleCount: 0,
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.post('/v1/projects/:projectId/routes', (req, res) => {
+        capturedBody = req.body;
+        res.json({
+          route: {
+            id: 'new-route-id',
+            name: 'Pattern Route',
+            enabled: true,
+            staged: true,
+            route: req.body.route.route,
+          },
+          version: {
+            id: 'new-staging',
+            isStaging: true,
+            ruleCount: 1,
+            alias: 'test.vercel.app',
+          },
+        });
+      });
+
+      client.setArgv(
+        'routes',
+        'add',
+        'Pattern Route',
+        '--src',
+        '/api/:version/users/:id',
+        '--syntax',
+        'path-to-regexp',
+        '--dest',
+        '/handler/:version/:id',
+        '--yes'
+      );
+
+      await expect(routes(client)).resolves.toEqual(0);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = capturedBody as any;
+      // Raw pattern should be sent as-is (not compiled to regex)
+      expect(body.route.route.src).toBe('/api/:version/users/:id');
+      // srcSyntax should be sent alongside the route
+      expect(body.route.srcSyntax).toBe('path-to-regexp');
+    });
+
+    it('should send equals syntax for equals match', async () => {
+      let capturedBody: unknown;
+
+      client.scenario.get(
+        '/v1/projects/:projectId/routes/versions',
+        (_req, res) => {
+          res.json({
+            versions: [
+              {
+                id: 'live-version',
+                isLive: true,
+                isStaging: false,
+                ruleCount: 0,
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.post('/v1/projects/:projectId/routes', (req, res) => {
+        capturedBody = req.body;
+        res.json({
+          route: {
+            id: 'new-route-id',
+            name: 'Exact Route',
+            enabled: true,
+            staged: true,
+            route: req.body.route.route,
+          },
+          version: {
+            id: 'new-staging',
+            isStaging: true,
+            ruleCount: 1,
+            alias: 'test.vercel.app',
+          },
+        });
+      });
+
+      client.setArgv(
+        'routes',
+        'add',
+        'Exact Route',
+        '--src',
+        '/about',
+        '--syntax',
+        'equals',
+        '--dest',
+        '/about-page',
+        '--yes'
+      );
+
+      await expect(routes(client)).resolves.toEqual(0);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = capturedBody as any;
+      // Raw path should be sent as-is (not escaped to regex)
+      expect(body.route.route.src).toBe('/about');
+      // 'equals' syntax is sent directly to the API
+      expect(body.route.srcSyntax).toBe('equals');
+    });
+
+    it('should send regex syntax for regex pattern', async () => {
+      let capturedBody: unknown;
+
+      client.scenario.get(
+        '/v1/projects/:projectId/routes/versions',
+        (_req, res) => {
+          res.json({
+            versions: [
+              {
+                id: 'live-version',
+                isLive: true,
+                isStaging: false,
+                ruleCount: 0,
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.post('/v1/projects/:projectId/routes', (req, res) => {
+        capturedBody = req.body;
+        res.json({
+          route: {
+            id: 'new-route-id',
+            name: 'Regex Route',
+            enabled: true,
+            staged: true,
+            route: req.body.route.route,
+          },
+          version: {
+            id: 'new-staging',
+            isStaging: true,
+            ruleCount: 1,
+            alias: 'test.vercel.app',
+          },
+        });
+      });
+
+      client.setArgv(
+        'routes',
+        'add',
+        'Regex Route',
+        '--src',
+        '^/api/(.*)$',
+        '--dest',
+        '/handler/$1',
+        '--yes'
+      );
+
+      await expect(routes(client)).resolves.toEqual(0);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = capturedBody as any;
+      // Regex pattern sent as-is
+      expect(body.route.route.src).toBe('^/api/(.*)$');
+      // Default syntax is regex
+      expect(body.route.srcSyntax).toBe('regex');
     });
   });
 
@@ -1802,7 +1943,7 @@ describe('routes add', () => {
         '--src',
         '/old-path',
         '--syntax',
-        'exact',
+        'equals',
         '--dest',
         '/new-path',
         '--status',
