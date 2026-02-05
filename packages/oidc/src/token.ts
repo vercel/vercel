@@ -12,6 +12,7 @@ import {
 export interface RefreshTokenOptions {
   teamId?: string;
   projectId?: string;
+  expirationBufferMs?: number;
 }
 
 export async function refreshToken(
@@ -39,7 +40,10 @@ export async function refreshToken(
 
   let maybeToken = loadToken(projectId);
 
-  if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
+  if (
+    !maybeToken ||
+    isExpired(getTokenPayload(maybeToken.token), options?.expirationBufferMs)
+  ) {
     // getVercelCliToken() now throws AccessTokenMissingError or RefreshAccessTokenFailedError
     // instead of returning null
     const authToken = await getVercelCliToken();

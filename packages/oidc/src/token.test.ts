@@ -164,4 +164,76 @@ describe('refreshToken', () => {
     expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
     expect(process.env.VERCEL_OIDC_TOKEN).toBe('cached-valid-token');
   });
+
+  test('should refresh token when cached token expires within buffer', async () => {
+    const customProjectId = 'buffer-test-project';
+    const customTeamId = 'buffer-test-team';
+
+    // Save a token that expires in 3 minutes
+    const cachedToken = { token: 'expiring-soon-token' };
+    const tokenPath = path.join(tokenDataDir, `${customProjectId}.json`);
+    fs.writeFileSync(tokenPath, JSON.stringify(cachedToken));
+
+    // Mock getTokenPayload to return a token that expires in 3 minutes (180000ms)
+    const expiresIn3Minutes = Math.floor((Date.now() + 180000) / 1000);
+    vi.spyOn(tokenUtil, 'getTokenPayload').mockReturnValue({
+      sub: 'test-sub',
+      name: 'test-name',
+      exp: expiresIn3Minutes,
+    });
+
+    const getVercelOidcTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelOidcToken')
+      .mockResolvedValue({ token: 'fresh-token' });
+
+    // Request with 5 minute buffer (300000ms)
+    await refreshToken({
+      teamId: customTeamId,
+      projectId: customProjectId,
+      expirationBufferMs: 300000,
+    });
+
+    // Should fetch new token since cached one expires within buffer
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      customProjectId,
+      customTeamId
+    );
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('fresh-token');
+
+    // Verify the fresh token was saved
+    const savedToken = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
+    expect(savedToken).toEqual({ token: 'fresh-token' });
+  });
+
+  test('should use cached token when it does not expire within buffer', async () => {
+    const customProjectId = 'buffer-valid-project';
+    const customTeamId = 'buffer-valid-team';
+
+    // Save a token that expires in 10 minutes
+    const cachedToken = { token: 'valid-cached-token' };
+    const tokenPath = path.join(tokenDataDir, `${customProjectId}.json`);
+    fs.writeFileSync(tokenPath, JSON.stringify(cachedToken));
+
+    // Mock getTokenPayload to return a token that expires in 10 minutes (600000ms)
+    const expiresIn10Minutes = Math.floor((Date.now() + 600000) / 1000);
+    vi.spyOn(tokenUtil, 'getTokenPayload').mockReturnValue({
+      sub: 'test-sub',
+      name: 'test-name',
+      exp: expiresIn10Minutes,
+    });
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    // Request with 5 minute buffer (300000ms)
+    await refreshToken({
+      teamId: customTeamId,
+      projectId: customProjectId,
+      expirationBufferMs: 300000,
+    });
+
+    // Should not fetch new token since cached one is valid beyond buffer
+    expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('valid-cached-token');
+  });
 });
