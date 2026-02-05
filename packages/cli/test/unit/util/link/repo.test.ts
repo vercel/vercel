@@ -6,24 +6,23 @@ import {
   findProjectsFromPath,
   findRepoRoot,
 } from '../../../../src/util/link/repo';
-import { client } from '../../../mocks/client';
 
 // Root of `vercel/vercel` repo
 const vercelRepoRoot = join(__dirname, '../../../../../..');
 
 describe('findRepoRoot()', () => {
   it('should find Git repo root from root', async () => {
-    const repoRoot = await findRepoRoot(client, vercelRepoRoot);
+    const repoRoot = await findRepoRoot(vercelRepoRoot);
     expect(repoRoot).toEqual(vercelRepoRoot);
   });
 
   it('should find Git repo root sub directory', async () => {
-    const repoRoot = await findRepoRoot(client, __dirname);
+    const repoRoot = await findRepoRoot(__dirname);
     expect(repoRoot).toEqual(vercelRepoRoot);
   });
 
   it('should return `undefined` when no Git root found', async () => {
-    const repoRoot = await findRepoRoot(client, tmpdir());
+    const repoRoot = await findRepoRoot(tmpdir());
     expect(repoRoot).toEqual(undefined);
   });
 });

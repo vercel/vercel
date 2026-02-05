@@ -65,7 +65,7 @@ export async function getRepoLink(
   cwd: string
 ): Promise<RepoLink | undefined> {
   // Determine where the root of the repo is
-  const rootPath = await findRepoRoot(client, cwd);
+  const rootPath = await findRepoRoot(cwd);
   if (!rootPath) return undefined;
 
   // Read the `repo.json`, if this repo has already been linked
@@ -351,10 +351,7 @@ export async function ensureRepoLink(
  * Returns `undefined` when no Git repo was found or if the home directory
  * is reached (to avoid matching dotfile repos).
  */
-export async function findRepoRoot(
-  _client: Client,
-  start: string
-): Promise<string | undefined> {
+export async function findRepoRoot(start: string): Promise<string | undefined> {
   const { debug } = output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
 
