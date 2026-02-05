@@ -46,7 +46,7 @@ import {
   detectApiDirectory,
   detectApiExtensions,
   isOfficialRuntime,
-  type ResolvedService,
+  type Service,
 } from '@vercel/fs-detectors';
 import { frameworkList } from '@vercel/frameworks';
 
@@ -168,7 +168,7 @@ export default class DevServer {
   >;
   private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
-  private services?: ResolvedService[];
+  private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
 
   private vercelConfigWarning: boolean;
