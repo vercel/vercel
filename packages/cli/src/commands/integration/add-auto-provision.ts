@@ -17,9 +17,11 @@ import {
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
-import { createMetadataWizard } from './wizard';
+import { parseMetadataFlags } from '../../util/integration/parse-metadata';
+import type { Metadata } from '../../util/integration/types';
 
 export interface AddAutoProvisionOptions extends PostProvisionOptions {
+  metadata?: string[];
   productSlug?: string;
 }
 
@@ -89,10 +91,31 @@ export async function addAutoProvision(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
   );
 
-  const metadataWizard = createMetadataWizard(product.metadataSchema);
-  output.debug(`Metadata wizard supported: ${metadataWizard.isSupported}`);
+  // 4. Validate metadata flags (if provided) BEFORE prompting for resource name
+  //    In NEW path, server fills defaults - we never run the wizard here
+  let metadata: Metadata;
+  if (options.metadata?.length) {
+    // Parse metadata from CLI flags
+    output.debug(
+      `Parsing metadata from flags: ${JSON.stringify(options.metadata)}`
+    );
+    const { metadata: parsed, errors } = parseMetadataFlags(
+      options.metadata,
+      product.metadataSchema
+    );
+    if (errors.length) {
+      for (const error of errors) {
+        output.error(error);
+      }
+      return 1;
+    }
+    metadata = parsed;
+  } else {
+    // No --metadata flags: pass {} and let server fill defaults (API PR #58905)
+    metadata = {};
+  }
 
-  // 4. Resolve and validate resource name
+  // 5. Resolve and validate resource name
   const nameResult = resolveResourceName(product.slug, resourceNameArg);
   if ('error' in nameResult) {
     output.error(nameResult.error);
@@ -100,10 +123,6 @@ export async function addAutoProvision(
   }
   const { resourceName } = nameResult;
 
-  // 5. Collect metadata (if supported, otherwise let server use defaults)
-  const metadata = metadataWizard.isSupported
-    ? await metadataWizard.run(client)
-    : {};
   output.debug(`Collected metadata: ${JSON.stringify(metadata)}`);
   output.debug(`Resource name: ${resourceName}`);
 

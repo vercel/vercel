@@ -1052,6 +1052,173 @@ describe('integration', () => {
           );
         });
       });
+
+      describe('--metadata flag', () => {
+        it('should error on invalid metadata value before prompting for resource name', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--metadata',
+            'region=invalid-region'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Metadata "region" must be one of: us-west-1, us-east-1'
+          );
+          // Should NOT prompt for resource name since validation fails first
+          await expect(client.stderr).not.toOutput(
+            'What is the name of the resource?'
+          );
+        });
+
+        it('should error on invalid metadata even when CLI provisioning not supported (no installation)', async () => {
+          useIntegration({ withInstallation: false });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--metadata',
+            'region=invalid-region'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Metadata "region" must be one of: us-west-1, us-east-1'
+          );
+          // Should NOT fall through to web UI with invalid metadata
+          expect(openMock).not.toHaveBeenCalled();
+        });
+
+        it('should error on unknown metadata key', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--metadata',
+            'unknown=value'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Unknown metadata key: "unknown"'
+          );
+        });
+
+        it('should error on invalid metadata format', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--metadata',
+            'no-equals-sign'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid metadata format: "no-equals-sign". Expected KEY=VALUE'
+          );
+        });
+
+        it('should accept valid metadata and skip wizard prompts', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--metadata',
+            'region=us-east-1'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          // Should prompt for resource name
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          // Should skip region wizard since --metadata provided
+          // Go straight to billing plan selection
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+        });
+
+        it('should error in non-TTY mode without --metadata flag', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.stdin.isTTY = false;
+          client.setArgv('integration', 'add', 'acme');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Metadata is required in non-interactive mode. Use --metadata KEY=VALUE flags.'
+          );
+        });
+
+        it('should work in non-TTY mode with valid --metadata flag', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          client.stdin.isTTY = false;
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--metadata',
+            'region=us-east-1'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          // In non-TTY, use input.text still works for resource name
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          // Should skip wizard and go to billing plan
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+        });
+
+        it('should enable CLI provisioning with --metadata even when wizard not supported', async () => {
+          // acme-unsupported has a schema with expressions that wizard can't handle
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          client.setArgv(
+            'integration',
+            'add',
+            'acme-unsupported',
+            '--metadata',
+            'region=us-east-1'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput('Installing Acme Product');
+          // Should NOT fall back to web UI since --metadata provided
+          // Should proceed to resource name prompt
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          // Should NOT have opened browser
+          expect(openMock).not.toHaveBeenCalled();
+        });
+      });
     });
   });
 });
