@@ -1695,8 +1695,8 @@ importers:
         version: 1.1.1
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.5
-        version: 0.0.1-beta.5(next@16.1.6)
+        specifier: https://adapter-vercel-adapt-git-4964fc-vtest314-next-adapter-e2e-tests.vercel.app/adapter.tgz
+        version: '@adapter-vercel-adapt-git-4964fc-vtest314-next-adapter-e2e-tests.vercel.app/adapter.tgz(next@16.1.6)'
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -6283,15 +6283,6 @@ packages:
       '@emnapi/runtime': 1.8.1
       '@tybys/wasm-util': 0.10.1
     optional: true
-
-  /@next-community/adapter-vercel@0.0.1-beta.5(next@16.1.6):
-    resolution: {integrity: sha512-r/+209HdUzVGP//cmpe5ugkI52pr2olUi0GRxcj+rJZu9FA59lynuUuKUsXHPNmvbcCr8xGHjT4cSVNbbBf1vg==}
-    engines: {node: '>= 20.6.0'}
-    peerDependencies:
-      next: '>= 16.1.1-canary.18'
-    dependencies:
-      next: 16.1.6(@babel/core@7.24.4)(react-dom@18.2.0)(react@18.2.0)
-    dev: true
 
   /@next/env@11.1.2:
     resolution: {integrity: sha512-+fteyVdQ7C/OoulfcF6vd1Yk0FEli4453gr8kSFbU8sKseNSizYq6df5MKz/AjwLptsxrUeIkgBdAzbziyJ3mA==}
@@ -20916,3 +20907,15 @@ packages:
   /zod@4.1.11:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
     dev: false
+
+  '@adapter-vercel-adapt-git-4964fc-vtest314-next-adapter-e2e-tests.vercel.app/adapter.tgz(next@16.1.6)':
+    resolution: {tarball: https://adapter-vercel-adapt-git-4964fc-vtest314-next-adapter-e2e-tests.vercel.app/adapter.tgz}
+    id: '@adapter-vercel-adapt-git-4964fc-vtest314-next-adapter-e2e-tests.vercel.app/adapter.tgz'
+    name: '@next-community/adapter-vercel'
+    version: 0.0.1-beta.5
+    engines: {node: '>= 20.6.0'}
+    peerDependencies:
+      next: '>= 16.1.1-canary.18'
+    dependencies:
+      next: 16.1.6(@babel/core@7.24.4)(react-dom@18.2.0)(react@18.2.0)
+    dev: true
