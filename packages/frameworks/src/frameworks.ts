@@ -4338,7 +4338,6 @@ export const frameworks = [
     description:
       'Multiple services deployed as serverless functions within your project.',
     website: 'https://vercel.com',
-    detectors: {},
     settings: {
       installCommand: {
         placeholder: 'None',
