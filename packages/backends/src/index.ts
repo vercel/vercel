@@ -9,6 +9,7 @@ import {
   type PrepareCache,
   type BuildV2,
   type Lambda,
+  isBunVersion,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
 // Re-export cervel functions for use by other packages
@@ -39,7 +40,13 @@ export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
-  const nodeVersion = await getNodeVersion(args.workPath);
+  const nodeVersion = await getNodeVersion(
+    args.workPath,
+    undefined,
+    args.config,
+    args.meta
+  );
+  const isBun = isBunVersion(nodeVersion);
   const builderName = '@vercel/backends';
 
   const span =
@@ -97,6 +104,7 @@ export const build: BuildV2 = async args => {
       localBuildFiles,
       files,
       ignoreNodeModules: false,
+      conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
     const introspectionResult = await introspectionPromise;

@@ -12,6 +12,7 @@ export const nft = async (
     localBuildFiles: Set<string>;
     files: Files;
     span: Span;
+    conditions?: string[];
   }
 ) => {
   const nftSpan = args.span.child('vc.builder.backends.nft');
@@ -22,6 +23,7 @@ export const nft = async (
       processCwd: args.workPath,
       ts: true,
       mixedModules: true,
+      conditions: args.conditions,
       ignore: args.ignoreNodeModules
         ? path => path.includes('node_modules')
         : undefined,

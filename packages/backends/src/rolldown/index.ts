@@ -1,5 +1,6 @@
 import { BuildOptions, Span } from '@vercel/build-utils';
 import type { Plugin, ResolvedId } from 'rolldown';
+import { Colors as c } from '../cervel/utils.js';
 import { resolveEntrypointAndFormat } from './resolve-format.js';
 import { build as rolldownBuild } from 'rolldown';
 import { builtinModules } from 'node:module';
@@ -310,5 +311,6 @@ module.exports = requireFromContext('${pkgName}');
       `Unable to resolve build handler for entrypoint: ${args.entrypoint}`
     );
   }
+  console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
   return { files, handler, framework, localBuildFiles };
 };
