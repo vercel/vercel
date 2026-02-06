@@ -29,6 +29,14 @@ import { importWasmModule } from './load';
  * ```
  */
 export async function containsAppOrHandler(source: string): Promise<boolean> {
+  // Skip parsing if file doesn't contain {app|[Hh]andler}
+  if (
+    !source.includes('app') &&
+    !source.includes('handler') &&
+    !source.includes('Handler')
+  ) {
+    return false;
+  }
   const mod = await importWasmModule();
   return mod.containsAppOrHandler(source);
 }

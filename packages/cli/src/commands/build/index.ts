@@ -10,6 +10,7 @@ import {
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
+  getServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -30,6 +31,7 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  type Service,
   isBackendBuilder,
   type Lambda,
 } from '@vercel/build-utils';
@@ -117,6 +119,7 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  services?: Service[];
   deploymentId?: string;
 }
 
@@ -558,6 +561,7 @@ async function doBuild(
 
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let detectedServices: Service[] | undefined;
   let isZeroConfig = false;
 
   if (builds.length > 0) {
@@ -590,6 +594,27 @@ async function doBuild(
       builds = detectedBuilders.builders;
     } else {
       builds = [{ src: '**', use: '@vercel/static' }];
+    }
+
+    // Capture detected services for the config.json
+    detectedServices = detectedBuilders.services;
+
+    // Inject service URL environment variables so they're available during builds.
+    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+    // these env vars are baked into the client bundle so they can be accessed in the client code.
+    // User-defined env vars take precedence and won't be overwritten.
+    if (detectedServices && detectedServices.length > 0) {
+      const serviceUrlEnvVars = getServiceUrlEnvVars({
+        services: detectedServices,
+        frameworkList,
+        currentEnv: process.env,
+        deploymentUrl: process.env.VERCEL_URL,
+      });
+
+      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+        process.env[key] = value;
+        output.debug(`Injected service URL env var: ${key}=${value}`);
+      }
     }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
@@ -1048,6 +1073,8 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    ...(detectedServices &&
+      detectedServices.length > 0 && { services: detectedServices }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });

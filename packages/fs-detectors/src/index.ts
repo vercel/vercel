@@ -9,11 +9,18 @@ export {
   detectServices,
   generateServicesRoutes,
 } from './services/detect-services';
+export { autoDetectServices } from './services/auto-detect';
+export type {
+  AutoDetectOptions,
+  AutoDetectResult,
+} from './services/auto-detect';
+export { isStaticBuild } from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
   DetectServicesResult,
   ResolvedService,
+  Service,
   ServicesRoutes,
   ServiceDetectionError,
 } from './services/types';

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/cervel",
-  "version": "0.0.12",
+  "version": "0.0.16",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
   "publishConfig": {

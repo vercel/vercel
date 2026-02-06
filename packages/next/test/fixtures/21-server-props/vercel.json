@@ -106,18 +106,18 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/lambda.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/lambda.json",
       "status": 404
     },
     {
-      "path": "/_next/data/testing-build-id/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/MISS/"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/another2.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another2.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "MISS"
@@ -125,38 +125,38 @@
     },
     { "delay": 2000 },
     {
-      "path": "/_next/data/testing-build-id/another2.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another2.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/MISS/"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1.json",
       "status": 200,
       "mustContain": "post-1"
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1337/comment-1337.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1337/comment-1337.json",
       "status": 200,
       "mustContain": "comment-1337"
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1337/comment-1337.json",
       "status": 200,
       "mustContain": "post-1337"
     }

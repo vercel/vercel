@@ -1,5 +1,25 @@
 # @vercel/next
 
+## 4.15.24
+
+### Patch Changes
+
+- Add version gate for adapters opt-in ([#14896](https://github.com/vercel/vercel/pull/14896))
+
+## 4.15.23
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14888](https://github.com/vercel/vercel/pull/14888))
+
+- Fix pages-manifest.json when using i18n ([#14878](https://github.com/vercel/vercel/pull/14878))
+
+## 4.15.22
+
+### Patch Changes
+
+- Remove 404.html prerenders from serverless function ([#14836](https://github.com/vercel/vercel/pull/14836))
+
 ## 4.15.21
 
 ### Patch Changes

@@ -23,12 +23,12 @@
       "mustContain": "dynamic page"
     },
     {
-      "path": "/_next/data/testing-build-id/dynamic/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/dynamic/first.json",
       "status": 200,
       "mustContain": "hello\":\"world\""
     },
     {
-      "path": "/_next/data/testing-build-id/dynamic/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/dynamic/first.json",
       "status": 200,
       "mustContain": "slug\":\"first\""
     },
@@ -43,22 +43,22 @@
       "mustContain": "first"
     },
     {
-      "path": "/_next/data/testing-build-id/fallback/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fallback/first.json",
       "status": 200,
       "mustContain": "hello\":\"world\""
     },
     {
-      "path": "/_next/data/testing-build-id/fallback/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fallback/first.json",
       "status": 200,
       "mustContain": "slug\":\"first\""
     },
     {
-      "path": "/_next/data/testing-build-id/fallback/second.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fallback/second.json",
       "status": 200,
       "mustContain": "hello\":\"world\""
     },
     {
-      "path": "/_next/data/testing-build-id/fallback/second.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/fallback/second.json",
       "status": 200,
       "mustContain": "slug\":\"second\""
     },
@@ -114,12 +114,12 @@
       "mustContain": "<html"
     },
     {
-      "path": "/_next/data/testing-build-id/errors/gsp/crash.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/errors/gsp/crash.json",
       "status": 500,
       "mustContain": "500: Internal Server Error"
     },
     {
-      "path": "/_next/data/testing-build-id/errors/gsp/crash.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/errors/gsp/crash.json",
       "status": 500,
       "mustContain": "<html"
     },

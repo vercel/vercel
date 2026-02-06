@@ -196,6 +196,18 @@ export type StartDevServerOptions = BuildOptions & {
    * Directory to serve static files from in dev mode
    */
   publicDir?: string;
+  /**
+   * Optional callback for stdout output from the dev server process.
+   * If provided, the builder should forward stdout to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStdout?: (data: Buffer) => void;
+  /**
+   * Optional callback for stderr output from the dev server process.
+   * If provided, the builder should forward stderr to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStderr?: (data: Buffer) => void;
 };
 
 export interface StartDevServerSuccess {
@@ -520,6 +532,26 @@ export interface BuildResultBuildOutput {
 export interface Cron {
   path: string;
   schedule: string;
+}
+
+export interface Service {
+  name: string;
+  type: ServiceType;
+  group?: string;
+  workspace: string;
+  entrypoint?: string;
+  framework?: string;
+  builder: Builder;
+  runtime?: string;
+  buildCommand?: string;
+  installCommand?: string;
+  /* web service config */
+  routePrefix?: string;
+  /* cron service config */
+  schedule?: string;
+  /* worker service config */
+  topic?: string;
+  consumer?: string;
 }
 
 /** The framework which created the function */
