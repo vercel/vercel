@@ -406,6 +406,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'account',
     'login',
     'logout',
     'help',
