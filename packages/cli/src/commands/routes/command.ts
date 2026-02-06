@@ -290,7 +290,7 @@ export const addSubcommand = {
     {
       name: 'has',
       description:
-        'Condition that must match (repeatable). Format: type:key, type:key:value, or type:key:op=value. Types: header, cookie, query, host. Operators: eq, contains, re, exists. Examples: header:Authorization, header:Accept:contains=json, cookie:session:eq=abc, host:eq=example.com',
+        'Condition that must match: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -299,7 +299,7 @@ export const addSubcommand = {
     {
       name: 'missing',
       description:
-        'Condition that must NOT match (repeatable). Format: type:key, type:key:value, or type:key:op=value. Types: header, cookie, query, host. Operators: eq, contains, re, exists. Examples: cookie:session, header:X-Block:eq=true',
+        'Condition that must NOT match: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -601,10 +601,10 @@ export const reorderSubcommand = {
   ],
 } as const;
 
-export const deleteSubcommand = {
-  name: 'delete',
-  aliases: ['rm'],
-  description: 'Delete one or more routing rules',
+export const editSubcommand = {
+  name: 'edit',
+  aliases: [],
+  description: 'Edit an existing routing rule',
   arguments: [
     {
       name: 'name-or-id',
@@ -612,136 +612,221 @@ export const deleteSubcommand = {
     },
   ],
   options: [
+    // Metadata
     {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when deleting',
-    },
-  ],
-  examples: [
-    {
-      name: 'Delete a route by name',
-      value: `${packageName} routes delete "Old Redirect"`,
-    },
-    {
-      name: 'Delete a route by ID',
-      value: `${packageName} routes delete abc123`,
-    },
-    {
-      name: 'Delete multiple routes',
-      value: `${packageName} routes delete "Route A" "Route B"`,
-    },
-    {
-      name: 'Delete without confirmation',
-      value: `${packageName} routes delete "Old Route" --yes`,
-    },
-  ],
-} as const;
-
-export const enableSubcommand = {
-  name: 'enable',
-  aliases: [],
-  description: 'Enable a disabled routing rule',
-  arguments: [
-    {
-      name: 'name-or-id',
-      required: true,
-    },
-  ],
-  options: [],
-  examples: [
-    {
-      name: 'Enable a route by name',
-      value: `${packageName} routes enable "API Proxy"`,
-    },
-    {
-      name: 'Enable a route by ID',
-      value: `${packageName} routes enable abc123`,
-    },
-  ],
-} as const;
-
-export const disableSubcommand = {
-  name: 'disable',
-  aliases: [],
-  description: 'Disable a routing rule without deleting it',
-  arguments: [
-    {
-      name: 'name-or-id',
-      required: true,
-    },
-  ],
-  options: [],
-  examples: [
-    {
-      name: 'Disable a route by name',
-      value: `${packageName} routes disable "API Proxy"`,
-    },
-    {
-      name: 'Disable a route by ID',
-      value: `${packageName} routes disable abc123`,
-    },
-  ],
-} as const;
-
-export const reorderSubcommand = {
-  name: 'reorder',
-  aliases: ['move'],
-  description: 'Move a routing rule to a different position',
-  arguments: [
-    {
-      name: 'name-or-id',
-      required: true,
-    },
-  ],
-  options: [
-    {
-      name: 'position',
-      description:
-        'Target position: start, end, a number (1-based), before:<id>, after:<id>',
+      name: 'name',
+      description: 'Change route name',
       shorthand: null,
       type: String,
-      argument: 'POSITION',
+      argument: 'NAME',
       deprecated: false,
     },
     {
-      name: 'first',
-      description: 'Move to the first position (highest priority)',
+      name: 'description',
+      description: 'Change description (use "" to clear)',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+    },
+    // Path & Matching
+    {
+      name: 'src',
+      description: 'Change source path pattern',
+      shorthand: null,
+      type: String,
+      argument: 'PATTERN',
+      deprecated: false,
+    },
+    {
+      name: 'src-syntax',
+      description: 'Change path syntax: regex, path-to-regexp, equals',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
+    // Primary action
+    {
+      name: 'action',
+      description:
+        'Set action type: rewrite, redirect, or set-status (required when switching types)',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
+    {
+      name: 'dest',
+      description: 'Set destination URL',
+      shorthand: null,
+      type: String,
+      argument: 'URL',
+      deprecated: false,
+    },
+    {
+      name: 'status',
+      description: 'Set status code',
+      shorthand: null,
+      type: Number,
+      argument: 'CODE',
+      deprecated: false,
+    },
+    {
+      name: 'no-dest',
+      description: 'Remove destination',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
-      name: 'last',
-      description: 'Move to the last position (lowest priority)',
+      name: 'no-status',
+      description: 'Remove status code',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    // Response Headers
+    {
+      name: 'set-response-header',
+      description: 'Set response header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'append-response-header',
+      description: 'Append to response header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'delete-response-header',
+      description: 'Delete response header: key (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY',
+      deprecated: false,
+    },
+    // Request Headers
+    {
+      name: 'set-request-header',
+      description: 'Set request header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'append-request-header',
+      description: 'Append to request header: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'HEADER',
+      deprecated: false,
+    },
+    {
+      name: 'delete-request-header',
+      description: 'Delete request header: key (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY',
+      deprecated: false,
+    },
+    // Request Query
+    {
+      name: 'set-request-query',
+      description: 'Set query parameter: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'PARAM',
+      deprecated: false,
+    },
+    {
+      name: 'append-request-query',
+      description: 'Append to query parameter: key=value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'PARAM',
+      deprecated: false,
+    },
+    {
+      name: 'delete-request-query',
+      description: 'Delete query parameter: key (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY',
+      deprecated: false,
+    },
+    // Conditions
+    {
+      name: 'has',
+      description:
+        'Add a has condition: type:key or type:key:value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'CONDITION',
+      deprecated: false,
+    },
+    {
+      name: 'missing',
+      description:
+        'Add a missing condition: type:key or type:key:value (repeatable)',
+      shorthand: null,
+      type: [String],
+      argument: 'CONDITION',
+      deprecated: false,
+    },
+    // Clearing
+    {
+      name: 'clear-conditions',
+      description: 'Remove all has/missing conditions',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'clear-headers',
+      description: 'Remove all response headers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'clear-transforms',
+      description: 'Remove all transforms (request headers, request query)',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when reordering',
+      description: 'Skip confirmation prompts',
     },
   ],
   examples: [
     {
-      name: 'Move to first position',
-      value: `${packageName} routes reorder "Catch All" --first`,
+      name: 'Interactive mode',
+      value: `${packageName} routes edit "API Proxy"`,
     },
     {
-      name: 'Move to last position',
-      value: `${packageName} routes reorder "Catch All" --last`,
+      name: 'Change destination',
+      value: `${packageName} routes edit "API Proxy" --dest "https://new-api.example.com/:path*"`,
     },
     {
-      name: 'Move to a specific position',
-      value: `${packageName} routes reorder "API Proxy" --position 3`,
+      name: 'Switch to redirect',
+      value: `${packageName} routes edit "Old Route" --action redirect --dest "/new" --status 301`,
     },
     {
-      name: 'Move after another route',
-      value: `${packageName} routes reorder "API Proxy" --position after:route-id-123`,
+      name: 'Add a response header',
+      value: `${packageName} routes edit "My Route" --set-response-header "Cache-Control=public, max-age=3600"`,
     },
     {
-      name: 'Interactive reorder (prompts for position)',
-      value: `${packageName} routes reorder "API Proxy"`,
+      name: 'Clear all conditions and add new ones',
+      value: `${packageName} routes edit "My Route" --clear-conditions --has "header:Authorization"`,
     },
   ],
 } as const;
@@ -757,6 +842,7 @@ export const routesCommand = {
     listVersionsSubcommand,
     inspectSubcommand,
     addSubcommand,
+    editSubcommand,
     deleteSubcommand,
     enableSubcommand,
     disableSubcommand,

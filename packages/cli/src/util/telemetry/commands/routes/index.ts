@@ -86,30 +86,9 @@ export class RoutesTelemetryClient
     });
   }
 
-  trackCliSubcommandDelete(actual: string) {
+  trackCliSubcommandEdit(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'delete',
-      value: actual,
-    });
-  }
-
-  trackCliSubcommandEnable(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'enable',
-      value: actual,
-    });
-  }
-
-  trackCliSubcommandDisable(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'disable',
-      value: actual,
-    });
-  }
-
-  trackCliSubcommandReorder(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'reorder',
+      subcommand: 'edit',
       value: actual,
     });
   }
