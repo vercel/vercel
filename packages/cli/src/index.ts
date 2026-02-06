@@ -338,6 +338,8 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize
+  const nonInteractive =
+    parsedArgs.flags['--non-interactive'] === true || isAgent;
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
@@ -352,6 +354,7 @@ const main = async () => {
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
+    nonInteractive,
   });
 
   // The `--cwd` flag is respected for all sub-commands

@@ -70,6 +70,8 @@ export interface ClientOptions extends Stdio {
   agentName?: string;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
+  /** Never prompt; output structured JSON and exit on action required (--non-interactive or agent) */
+  nonInteractive?: boolean;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -113,6 +115,8 @@ export default class Client extends EventEmitter implements Stdio {
   agentName?: string;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Never prompt; output structured JSON and exit on action required */
+  nonInteractive: boolean;
 
   constructor(opts: ClientOptions) {
     super();
@@ -131,6 +135,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.isAgent = opts.isAgent ?? false;
     this.agentName = opts.agentName;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
+    this.nonInteractive = opts.nonInteractive ?? this.isAgent;
 
     const theme = {
       prefix: gray('?'),

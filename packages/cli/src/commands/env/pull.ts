@@ -28,6 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import { outputActionRequired } from '../../util/agent-output';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -148,16 +149,33 @@ export async function envPullCommandLogic(
 
   if (head === CONTENTS_PREFIX) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
-  } else if (
-    exists &&
-    !skipConfirmation &&
-    !(await client.input.confirm(
-      `Found existing file ${param(filename)}. Do you want to overwrite?`,
-      false
-    ))
-  ) {
-    output.log('Canceled');
-    return;
+  } else if (exists && !skipConfirmation) {
+    if (client.nonInteractive) {
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'env_file_exists',
+        message: `File ${param(filename)} already exists and was not created by Vercel CLI. Use --yes to overwrite or specify a different filename.`,
+        next: [
+          {
+            command: getCommandName(`env pull ${filename} --yes`),
+            when: 'Overwrite this file',
+          },
+          {
+            command: getCommandName('env pull <filename>'),
+            when: 'Use a different filename',
+          },
+        ],
+      });
+    }
+    if (
+      !(await client.input.confirm(
+        `Found existing file ${param(filename)}. Do you want to overwrite?`,
+        false
+      ))
+    ) {
+      output.log('Canceled');
+      return;
+    }
   }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);

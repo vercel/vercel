@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
@@ -576,6 +576,49 @@ describe('env pull', () => {
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
+  });
+
+  describe('non-interactive mode', () => {
+    it('outputs action_required when file exists and is not Vercel-created', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      await fs.writeFile(
+        path.join(cwd, '.env.local'),
+        'LOCAL_ONLY=value\n',
+        'utf8'
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv('env', 'pull');
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'env_file_exists',
+        message: expect.stringContaining('.env.local'),
+        next: expect.any(Array),
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
   });
 
   describe('[filename]', () => {

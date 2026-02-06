@@ -28,6 +28,7 @@ import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import { outputActionRequired } from '../../util/agent-output';
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
@@ -82,6 +83,20 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   if (!envName) {
+    if (client.nonInteractive) {
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'missing_name',
+        message: 'Provide the variable name as an argument.',
+        next: [
+          {
+            command: getCommandName(
+              `env add <name> ${getEnvTargetPlaceholder()} [git-branch] --yes`
+            ),
+          },
+        ],
+      });
+    }
     envName = await client.input.text({
       message: `What's the name of the variable?`,
       validate: val => (val ? true : 'Name cannot be empty'),
@@ -103,6 +118,29 @@ export default async function add(client: Client, argv: string[]) {
         }
         keyAccepted = true;
         break;
+      }
+
+      if (client.nonInteractive) {
+        const nameWithoutPrefix = removePublicPrefix(envName);
+        outputActionRequired(client, {
+          status: 'action_required',
+          reason: 'env_key_sensitive',
+          message: `Key ${envName} may expose sensitive data (public prefix). Use --yes to keep as is, or rename to ${nameWithoutPrefix}.`,
+          choices: [
+            { id: 'keep', name: 'Leave as is (use --yes)' },
+            { id: 'rename', name: `Rename to ${nameWithoutPrefix}` },
+          ],
+          next: [
+            {
+              command: getCommandName(`env add ${envName} --yes`),
+              when: 'Leave as is',
+            },
+            {
+              command: getCommandName(`env add ${nameWithoutPrefix} --yes`),
+              when: 'Rename',
+            },
+          ],
+        });
       }
 
       // Sensitive public variable: show all warnings then options
@@ -207,6 +245,21 @@ export default async function add(client: Client, argv: string[]) {
   if (stdInput) {
     envValue = stdInput;
   } else {
+    if (client.nonInteractive) {
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'missing_value',
+        message:
+          'In non-interactive mode provide the value via stdin. Example: echo -n "value" | vercel env add <name> <environment> --yes',
+        next: [
+          {
+            command: getCommandName(
+              `env add <name> ${getEnvTargetPlaceholder()} --yes`
+            ),
+          },
+        ],
+      });
+    }
     if (type === 'encrypted') {
       const isSensitive = await client.input.confirm(
         `Your value will be encrypted. Mark as sensitive?`,
@@ -238,6 +291,22 @@ export default async function add(client: Client, argv: string[]) {
   });
 
   while (envTargets.length === 0) {
+    if (client.nonInteractive && choices.length > 0) {
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'missing_environment',
+        message: `Specify at least one environment. Add as argument or use: ${getCommandName(
+          `env add ${envName} <environment> --yes`
+        )}`,
+        choices: choices.map(c => ({
+          id: c.value,
+          name: typeof c.name === 'string' ? c.name : c.value,
+        })),
+        next: choices.slice(0, 5).map(c => ({
+          command: getCommandName(`env add ${envName} ${c.value} --yes`),
+        })),
+      });
+    }
     envTargets = await client.input.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
       choices,
@@ -254,9 +323,13 @@ export default async function add(client: Client, argv: string[]) {
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    envGitBranch = await client.input.text({
-      message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
-    });
+    if (client.nonInteractive) {
+      envGitBranch = '';
+    } else {
+      envGitBranch = await client.input.text({
+        message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
+      });
+    }
   }
 
   const upsert = opts['--force'] ? 'true' : '';

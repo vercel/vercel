@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -513,6 +513,93 @@ describe('env add', () => {
             },
           ]);
         });
+      });
+    });
+
+    describe('non-interactive mode', () => {
+      it('outputs action_required when name is missing', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv('env', 'add', '--non-interactive');
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_name',
+          message: expect.stringContaining('Provide the variable name'),
+          next: expect.any(Array),
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs action_required for sensitive public key without --yes', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_KEY',
+          'preview',
+          'branchName'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'env_key_sensitive',
+          message: expect.stringContaining('NEXT_PUBLIC_API_KEY'),
+          choices: expect.any(Array),
+          next: expect.any(Array),
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs action_required when value would be prompted without stdin', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv('env', 'add', 'SOME_VAR', 'production');
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_value',
+          message: expect.stringContaining('stdin'),
+          next: expect.any(Array),
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
     });
   });

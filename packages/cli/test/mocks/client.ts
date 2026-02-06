@@ -259,6 +259,7 @@ export class MockClient extends Client {
     this.isAgent = false;
     this.agentName = undefined;
     this.dangerouslySkipPermissions = false;
+    this.nonInteractive = false;
   }
 
   events = {
