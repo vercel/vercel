@@ -1,10 +1,10 @@
-import { delimiter, join } from 'path';
 import { type PackageJson, spawnAsync } from '@vercel/build-utils';
 import fs from 'fs-extra';
+import { delimiter, join } from 'path';
+import output from '../../output-manager';
 import { CantParseJSONFile } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
-import output from '../../output-manager';
 
 export async function initCorepack({
   repoRootPath,

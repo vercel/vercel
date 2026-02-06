@@ -1,5 +1,5 @@
-import path from 'path';
 import { FileFsRef, type Files } from '@vercel/build-utils';
+import path from 'path';
 
 // Mirror from Next.js: https://github.com/vercel/next.js/blob/4b66771895737170a06be242be1e5afc760142d4/packages/next/src/lib/metadata/is-metadata-route.ts#L54
 const STATIC_METADATA_IMAGES = {
@@ -28,10 +28,10 @@ const suffixMatcher = '\\d?';
 // The following regex patterns match static metadata files
 // Pattern: <filename><number suffix><group suffix><extension>
 const METADATA_STATIC_FILE_REGEX = [
-  new RegExp(`^[\\\\/]robots\\.txt$`),
-  new RegExp(`^[\\\\/]manifest\\.(webmanifest|json)$`),
-  new RegExp(`[\\\\/]sitemap\\.xml$`),
-  new RegExp(`^[\\\\/]favicon\\.ico$`),
+  /^[\\/]robots\.txt$/,
+  /^[\\/]manifest\.(webmanifest|json)$/,
+  /[\\/]sitemap\.xml$/,
+  /^[\\/]favicon\.ico$/,
   new RegExp(
     `[\\\\/]${STATIC_METADATA_IMAGES.icon.filename}${suffixMatcher}${groupSuffix}${`\\.(?:${STATIC_METADATA_IMAGES.icon.extensions.join('|')})`}$`
   ),

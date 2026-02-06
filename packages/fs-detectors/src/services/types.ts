@@ -1,13 +1,13 @@
-import type { Route } from '@vercel/routing-utils';
 import type {
+  Builder,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  Service,
   ServiceRuntime,
   ServiceType,
-  Service,
-  Builder,
 } from '@vercel/build-utils';
+import type { Route } from '@vercel/routing-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {

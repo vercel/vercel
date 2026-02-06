@@ -1,14 +1,14 @@
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import { dangerouslyDeleteSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
+import plural from 'pluralize';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete';
-import plural from 'pluralize';
+import { dangerouslyDeleteSubcommand } from './command';
 
 export default async function dangerouslyDelete(
   client: Client,

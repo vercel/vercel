@@ -1,8 +1,8 @@
-import { packageName } from '../../util/pkg-name';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import { yesOption } from '../../util/arg-common';
-import type { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import type { parseArguments } from '../../util/get-args';
+import type { getFlagsSpecification } from '../../util/get-flags-specification';
+import { packageName } from '../../util/pkg-name';
 
 export const pullCommand = {
   name: 'pull',

@@ -2,7 +2,7 @@ import { join } from 'path';
 
 import {
   testDeployment,
-  // @ts-ignore
+  // @ts-expect-error
 } from '../../../test/lib/deployment/test-deployment';
 
 jest.setTimeout(4 * 60 * 1000);

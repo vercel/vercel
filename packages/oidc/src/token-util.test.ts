@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getVercelCliToken } from './token-util';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authConfig from './auth-config';
 import * as oauth from './oauth';
+import { getVercelCliToken } from './token-util';
 
 vi.mock('fs');
 vi.mock('./token-io', () => ({

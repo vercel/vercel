@@ -1,18 +1,18 @@
-import { printError } from '../../util/error';
-import {
-  writeToConfigFile,
-  writeToAuthConfigFile,
-} from '../../util/config/files';
-import { parseArguments } from '../../util/get-args';
-import type Client from '../../util/client';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
 import { errorToString } from '@vercel/error-utils';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import {
+  writeToAuthConfigFile,
+  writeToConfigFile,
+} from '../../util/config/files';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getCommandName } from '../../util/pkg-name';
+import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
 import { help } from '../help';
 import { logoutCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
 import { logout as future } from './future';
 
 export default async function logout(client: Client): Promise<number> {

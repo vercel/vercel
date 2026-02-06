@@ -1,11 +1,10 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
-import type Client from '../../util/client';
-import { httpstatCommand } from './command';
 import output from '../../output-manager';
-import { requoteArgs } from '../curl/utils';
+import type Client from '../../util/client';
 import { HttpstatTelemetryClient } from '../../util/telemetry/commands/httpstat';
 import { getDeploymentUrlAndToken, setupCurlLikeCommand } from '../curl/shared';
+import { requoteArgs } from '../curl/utils';
+import { httpstatCommand } from './command';
 
 export default async function httpstat(client: Client): Promise<number> {
   const telemetryClient = new HttpstatTelemetryClient({

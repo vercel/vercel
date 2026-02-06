@@ -1,6 +1,6 @@
+import output from '../output-manager';
 import didYouMean from './did-you-mean';
 import param from './output/param';
-import output from '../output-manager';
 
 /**
  * Handles typo detection for invalid commands and provides helpful error messages.

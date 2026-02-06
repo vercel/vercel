@@ -90,7 +90,7 @@ it('Should build the serverless-no-config example', async () => {
 });
 
 // eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should invoke build command with serverless-no-config', async () => {
+it('Should invoke build command with serverless-no-config', async () => {
   const {
     workPath,
     buildResult: { output },
@@ -127,12 +127,12 @@ it.skip('Should invoke build command with serverless-no-config', async () => {
 });
 
 // eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
+it('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
 
-  console.log = function (...args) {
+  console.log = (...args) => {
     logs += args.join(' ');
     origLog(...args);
   };
@@ -181,12 +181,12 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
 });
 
 // eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
+it('Should not exceed function limit for large dependencies (shared lambda)', async () => {
   let logs = '';
 
   const origLog = console.log;
 
-  console.log = function (...args) {
+  console.log = (...args) => {
     logs += args.join(' ');
     origLog(...args);
   };
@@ -236,7 +236,7 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
 
   const origLog = console.log;
 
-  console.log = function (...args) {
+  console.log = (...args) => {
     logs += args.join(' ');
     origLog(...args);
   };
@@ -269,7 +269,7 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
 
   const origLog = console.log;
 
-  console.log = function (...args) {
+  console.log = (...args) => {
     logs += args.join(' ');
     origLog(...args);
   };
@@ -301,7 +301,7 @@ it('Should provide lambda info when limit is hit (uncompressed)', async () => {
 
   const origLog = console.log;
 
-  console.log = function (...args) {
+  console.log = (...args) => {
     logs += args.join(' ');
     origLog(...args);
   };
@@ -650,7 +650,7 @@ describe('rewrite headers', () => {
   });
 
   it('should add rewrite headers to the original rewrite', () => {
-    let route = routes.filter(r => r.src?.includes('/hello/sam'));
+    const route = routes.filter(r => r.src?.includes('/hello/sam'));
     expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/hello/samantha',
@@ -659,7 +659,7 @@ describe('rewrite headers', () => {
   });
 
   it('should add rewrite query headers', () => {
-    let route = routes.filter(r => r.src?.includes('/hello/fred'));
+    const route = routes.filter(r => r.src?.includes('/hello/fred'));
     expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/other',
@@ -693,7 +693,7 @@ describe('rewrite headers with rewrite', () => {
   });
 
   it('should add rewrite headers to the original rewrite', () => {
-    let route = routes.filter(r => r.headers?.['x-nextjs-rewritten-path']);
+    const route = routes.filter(r => r.headers?.['x-nextjs-rewritten-path']);
     expect(route.length).toBe(1);
 
     expect(route[0].headers).toEqual({
@@ -811,7 +811,7 @@ describe('determinism', () => {
     });
 
     it('should strip routes-manifest', async () => {
-      let originalManifest = JSON.parse(
+      const originalManifest = JSON.parse(
         await fs.readFile(
           path.join(workPath, '.next', 'routes-manifest.json'),
           'utf8'
@@ -825,7 +825,7 @@ describe('determinism', () => {
           const manifest = entry.files['.next/routes-manifest.json'];
           if (manifest) {
             expect(manifest.type).toBe('FileBlob');
-            let parsed = JSON.parse(manifest.data);
+            const parsed = JSON.parse(manifest.data);
             expect(parsed.deploymentId).toBeUndefined();
             expect(parsed.headers.length).toBe(0);
           }

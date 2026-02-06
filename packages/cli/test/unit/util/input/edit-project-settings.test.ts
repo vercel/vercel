@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
 import type { Framework } from '@vercel/frameworks';
 import { frameworks } from '@vercel/frameworks';
+import { describe, expect, test } from 'vitest';
 import { editProjectSettings } from '../../../../src/util/input/edit-project-settings';
 import { client } from '../../../mocks/client';
 

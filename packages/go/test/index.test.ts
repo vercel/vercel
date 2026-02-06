@@ -1,6 +1,6 @@
 import { getNewHandlerFunctionName } from '../src/index';
 
-describe('getNewHandlerFunctionName', function () {
+describe('getNewHandlerFunctionName', () => {
   it('does nothing with empty original function name', async () => {
     let error: Error | undefined;
     try {

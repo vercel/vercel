@@ -1,6 +1,7 @@
+import * as swc from '@swc/core';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as swc from '@swc/core';
+import { BaseFunctionConfigSchema } from '../src';
 import {
   extractExportedConstValue,
   getConfig,
@@ -11,7 +12,6 @@ import {
   TEST_CASES,
   UNSUPPORTED_VALUE_CASES,
 } from './fixtures/extract-const-value';
-import { BaseFunctionConfigSchema } from '../src';
 
 function parse(source: string): swc.Module {
   return swc.parseSync(source, { syntax: 'typescript' });

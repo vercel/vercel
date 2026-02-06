@@ -1,5 +1,5 @@
-import * as ERRORS from '../errors-ts';
 import type Client from '../client';
+import * as ERRORS from '../errors-ts';
 
 type Response = {
   moved: boolean;

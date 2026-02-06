@@ -1,14 +1,14 @@
+import type { Deployment, LastAliasRequest } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { describe, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
 import promote from '../../../../src/commands/promote';
+import sleep from '../../../../src/util/sleep';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
 import { useDeployment } from '../../../mocks/deployment';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import sleep from '../../../../src/util/sleep';
-import type { Deployment, LastAliasRequest } from '@vercel-internals/types';
 
 vi.setConfig({ testTimeout: 60000 });
 

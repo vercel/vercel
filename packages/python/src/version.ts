@@ -1,5 +1,5 @@
 import { NowBuildError } from '@vercel/build-utils';
-import { UvRunner, findUvInPath } from './uv';
+import { findUvInPath, UvRunner } from './uv';
 
 interface PythonVersion {
   version: string;

@@ -1,6 +1,6 @@
-import { join } from 'path';
-import { pathExists } from 'fs-extra';
 import { debug } from '@vercel/build-utils';
+import { pathExists } from 'fs-extra';
+import { join } from 'path';
 
 export const GO_CANDIDATE_ENTRYPOINTS = [
   'main.go',

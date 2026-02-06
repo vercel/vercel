@@ -1,6 +1,6 @@
+import type { disconnectSubcommand } from '../../../../commands/git/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { disconnectSubcommand } from '../../../../commands/git/command';
 
 export class GitDisconnectTelemetryClient
   extends TelemetryClient

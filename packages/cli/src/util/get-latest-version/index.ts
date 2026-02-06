@@ -1,9 +1,9 @@
-import semver from 'semver';
-import XDGAppPaths from 'xdg-app-paths';
-import { dirname, parse as parsePath, resolve as resolvePath } from 'path';
-import { existsSync, outputJSONSync, readJSONSync } from 'fs-extra';
 import type { PackageJson } from '@vercel/build-utils';
 import { spawn } from 'child_process';
+import { existsSync, outputJSONSync, readJSONSync } from 'fs-extra';
+import { dirname, parse as parsePath, resolve as resolvePath } from 'path';
+import semver from 'semver';
+import XDGAppPaths from 'xdg-app-paths';
 import output from '../../output-manager';
 
 interface GetLatestVersionOptions {

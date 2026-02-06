@@ -1,27 +1,27 @@
+import output from '../../output-manager';
+import { getBlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
+import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
-import list from './list';
 import {
   blobCommand,
+  copySubcommand,
   delSubcommand,
   listSubcommand,
   putSubcommand,
-  copySubcommand,
   storeSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { getCommandAliases } from '..';
-import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
-import put from './put';
-import del from './del';
 import copy from './copy';
+import del from './del';
+import list from './list';
+import put from './put';
 import { store } from './store';
-import { printError } from '../../util/error';
-import { getBlobRWToken } from '../../util/blob/token';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),

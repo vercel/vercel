@@ -1,14 +1,14 @@
-import * as path from 'path';
 import * as fs from 'fs';
-import { VercelOidcTokenError } from './token-error';
-import { findRootDir, getUserDataDir } from './token-io';
+import * as path from 'path';
 import {
+  type AuthConfig,
+  isValidAccessToken,
   readAuthConfig,
   writeAuthConfig,
-  isValidAccessToken,
-  type AuthConfig,
 } from './auth-config';
-import { refreshTokenRequest, processTokenResponse } from './oauth';
+import { processTokenResponse, refreshTokenRequest } from './oauth';
+import { VercelOidcTokenError } from './token-error';
+import { findRootDir, getUserDataDir } from './token-io';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -60,7 +60,7 @@ export async function getVercelCliToken(): Promise<string | null> {
 
     writeAuthConfig(updatedConfig);
     return updatedConfig.token ?? null;
-  } catch (error) {
+  } catch (_error) {
     // Network error or other failure - clear auth
     writeAuthConfig({});
     return null;

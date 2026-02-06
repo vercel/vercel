@@ -1,9 +1,9 @@
-import { startDevServer } from '../src/start-dev-server';
-import path from 'path';
-import fs from 'fs-extra';
 import execa from 'execa';
+import fs from 'fs-extra';
 // @ts-expect-error - node-fetch types not available
 import fetch from 'node-fetch';
+import path from 'path';
+import { startDevServer } from '../src/start-dev-server';
 
 jest.setTimeout(120 * 1000);
 

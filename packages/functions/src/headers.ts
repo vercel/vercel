@@ -101,7 +101,7 @@ function getHeaderWithDecode(
  * @returns A flag emoji or undefined.
  */
 function getFlag(countryCode: string | undefined): string | undefined {
-  const regex = new RegExp('^[A-Z]{2}$').test(countryCode!);
+  const regex = /^[A-Z]{2}$/.test(countryCode!);
   if (!countryCode || !regex) return undefined;
   return String.fromCodePoint(
     ...countryCode

@@ -1,5 +1,5 @@
-import type Client from '../client';
 import type { Cert, PaginationOptions } from '@vercel-internals/types';
+import type Client from '../client';
 
 type Response = {
   certs: Cert[];

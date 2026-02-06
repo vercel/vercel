@@ -1,8 +1,8 @@
+import type { Files } from '@vercel/build-utils';
 import { FileFsRef } from '@vercel/build-utils';
 import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
-import type { Files } from '@vercel/build-utils';
 
 export type Fs = Record<string, Buffer | string | { copy: string }>;
 

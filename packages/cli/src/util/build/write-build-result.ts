@@ -1,3 +1,30 @@
+import {
+  type Builder,
+  type BuilderV2,
+  type BuilderV3,
+  type BuildResultBuildOutput,
+  type BuildResultV2,
+  type BuildResultV3,
+  download,
+  downloadFile,
+  type EdgeFunction,
+  type File,
+  FileFsRef,
+  type Files,
+  getLambdaOptionsFromFunction,
+  isBackendBuilder,
+  isExperimentalBackendsEnabled,
+  type Lambda,
+  normalizePath,
+  type PackageJson,
+  type Prerender,
+  type TriggerEvent,
+} from '@vercel/build-utils';
+import {
+  fileNameSymbol,
+  getVercelIgnore,
+  type VercelConfig,
+} from '@vercel/client';
 import fs, { existsSync } from 'fs-extra';
 import mimeTypes from 'mime-types';
 import {
@@ -5,42 +32,15 @@ import {
   dirname,
   extname,
   join,
+  posix,
   relative,
   resolve,
-  posix,
 } from 'path';
-import {
-  type Builder,
-  type BuildResultV2,
-  type BuildResultV3,
-  type File,
-  type Files,
-  FileFsRef,
-  type BuilderV2,
-  type BuilderV3,
-  type Lambda,
-  type PackageJson,
-  type Prerender,
-  download,
-  downloadFile,
-  type EdgeFunction,
-  type BuildResultBuildOutput,
-  getLambdaOptionsFromFunction,
-  normalizePath,
-  type TriggerEvent,
-  isBackendBuilder,
-  isExperimentalBackendsEnabled,
-} from '@vercel/build-utils';
 import pipe from 'promisepipe';
+import outputManager from '../../output-manager';
+import { VERCEL_DIR } from '../projects/link';
 import { merge } from './merge';
 import { unzip } from './unzip';
-import { VERCEL_DIR } from '../projects/link';
-import {
-  fileNameSymbol,
-  type VercelConfig,
-  getVercelIgnore,
-} from '@vercel/client';
-import outputManager from '../../output-manager';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');

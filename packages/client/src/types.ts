@@ -1,14 +1,14 @@
-import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
+  Cron,
+  ExperimentalServiceGroups,
+  ExperimentalServices,
   Images,
   ProjectSettings,
-  Cron,
-  ExperimentalServices,
-  ExperimentalServiceGroups,
 } from '@vercel/build-utils';
-import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
+import type { Header, Redirect, Rewrite, Route } from '@vercel/routing-utils';
+import type { Agent } from 'http';
 
 export { DeploymentEventType } from './utils';
 

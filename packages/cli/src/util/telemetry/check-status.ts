@@ -1,7 +1,6 @@
 import type { GlobalConfig } from '@vercel-internals/types';
-import * as configFiles from '../config/files';
-
 import output from '../../output-manager';
+import * as configFiles from '../config/files';
 
 export function checkTelemetryStatus({ config }: { config: GlobalConfig }) {
   if (config.telemetry) {

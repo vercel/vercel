@@ -1,8 +1,8 @@
 import type { Dictionary } from '@vercel/client';
-import { readFile } from 'fs-extra';
-import { parseEnv } from '../parse-env';
 import chalk from 'chalk';
+import { readFile } from 'fs-extra';
 import output from '../../output-manager';
+import { parseEnv } from '../parse-env';
 
 export async function createEnvObject(
   envPath: string

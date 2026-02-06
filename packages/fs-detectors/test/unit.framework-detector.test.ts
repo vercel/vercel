@@ -1,13 +1,13 @@
-import { join } from 'path';
 import frameworkList from '@vercel/frameworks';
-import workspaceManagers from '../src/workspaces/workspace-managers';
+import { join } from 'path';
 import {
   detectFramework,
   detectFrameworks,
   LocalFileSystemDetector,
 } from '../src';
-import VirtualFilesystem from './virtual-file-system';
 import { removeSupersededFrameworks } from '../src/detect-framework';
+import workspaceManagers from '../src/workspaces/workspace-managers';
+import VirtualFilesystem from './virtual-file-system';
 
 const EXAMPLES_DIR = join(__dirname, '../../../examples');
 

@@ -1,14 +1,14 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'node:child_process';
 import {
   mkdtempSync,
-  rmSync,
-  writeFileSync,
   readFileSync,
   realpathSync,
+  rmSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, normalize } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   getGitConfigPath,
   getGitRootDirectory,

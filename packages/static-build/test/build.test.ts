@@ -1,5 +1,5 @@
-import path from 'path';
 import { remove } from 'fs-extra';
+import path from 'path';
 import { build } from '../src';
 
 jest.setTimeout(2 * 60 * 1000);

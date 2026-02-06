@@ -1,21 +1,21 @@
 import assert from 'assert';
-import { describe, it, expect, beforeAll } from 'vitest';
 import createLineIterator from 'line-async-iterator';
-import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
+import { join } from 'path';
+import { beforeAll, describe, expect, it } from 'vitest';
 import list, {
   getDeploymentDuration,
   stateString,
 } from '../../../../src/commands/list';
-import { join } from 'path';
-import { useTeams } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { useDeployment } from '../../../mocks/deployment';
+import output from '../../../../src/output-manager';
 import {
   parseSpacedTableRow,
   pluckIdentifiersFromDeploymentList,
 } from '../../../helpers/parse-table';
-import output from '../../../../src/output-manager';
+import { client } from '../../../mocks/client';
+import { useDeployment } from '../../../mocks/deployment';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/list', name);

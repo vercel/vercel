@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { useDeployment } from '../../../mocks/deployment';
-import logs from '../../../../src/commands/logs';
 import { join } from 'path';
+import { beforeEach, describe, expect, it } from 'vitest';
+import logs from '../../../../src/commands/logs';
+import { client } from '../../../mocks/client';
+import { useDeployment } from '../../../mocks/deployment';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/logs', name);

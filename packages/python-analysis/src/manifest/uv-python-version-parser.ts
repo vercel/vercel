@@ -2,9 +2,9 @@
 
 import type { Pep440Constraint } from './pep440';
 import {
-  pep440ConstraintFromVersion,
   parsePep440Constraint,
   parsePep440Version,
+  pep440ConstraintFromVersion,
 } from './pep440';
 import type { PythonRequest, PythonVersionRequest } from './python-specifiers';
 import { PythonImplementation, PythonVariant } from './python-specifiers';
@@ -176,7 +176,7 @@ function splitWheelTagVersion(version: string): string | null {
 
   // Validate minor can be parsed as a number
   const minor = parseInt(minorStr, 10);
-  if (isNaN(minor) || minor > 255) {
+  if (Number.isNaN(minor) || minor > 255) {
     // Overflow protection similar to Rust implementation
     return null;
   }

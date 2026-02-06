@@ -1,10 +1,13 @@
-import { parseArguments } from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';
+import { getCommandAliases } from '..';
+import { type Command, help } from '../help';
 import add from './add';
-import importZone from './import';
-import ls from './ls';
-import rm from './rm';
 import {
   addSubcommand,
   dnsCommand,
@@ -12,12 +15,9 @@ import {
   listSubcommand,
   removeSubcommand,
 } from './command';
-import { type Command, help } from '../help';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';
-import type Client from '../../util/client';
-import { getCommandAliases } from '..';
+import importZone from './import';
+import ls from './ls';
+import rm from './rm';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),

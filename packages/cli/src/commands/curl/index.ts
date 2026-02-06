@@ -1,11 +1,10 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
-import type Client from '../../util/client';
-import { curlCommand } from './command';
 import output from '../../output-manager';
-import { requoteArgs } from './utils';
+import type Client from '../../util/client';
 import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
+import { curlCommand } from './command';
 import { getDeploymentUrlAndToken, setupCurlLikeCommand } from './shared';
+import { requoteArgs } from './utils';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({

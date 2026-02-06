@@ -1,25 +1,25 @@
+import type { DNSRecord } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
-import { DomainNotFound } from '../../util/errors-ts';
-import type { DNSRecord } from '@vercel-internals/types';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import formatTable from '../../util/format-table';
 import getDNSRecords, {
   type DomainRecordsItem,
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import getScope from '../../util/get-scope';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
-import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
-import { listSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { DomainNotFound } from '../../util/errors-ts';
+import formatTable from '../../util/format-table';
+import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 export default async function ls(client: Client, argv: string[]) {
   let parsedArgs;

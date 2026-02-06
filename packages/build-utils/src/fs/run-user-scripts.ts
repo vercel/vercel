@@ -1,34 +1,34 @@
 import assert from 'assert';
-import fs from 'fs-extra';
-import path from 'path';
 import Sema from 'async-sema';
+import { SpawnOptions } from 'child_process';
 import spawn from 'cross-spawn';
+import fs from 'fs-extra';
+import yaml from 'js-yaml';
+import json5 from 'json5';
+import path from 'path';
 import {
   coerce,
-  intersects,
-  SemVer,
-  validRange,
-  parse,
-  satisfies,
   gte,
+  intersects,
   minVersion,
+  parse,
+  SemVer,
+  satisfies,
+  validRange,
 } from 'semver';
-import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
+import { cloneEnv } from '../clone-env';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
-import { Meta, PackageJson, NodeVersion, Config, BunVersion } from '../types';
+import { BunVersion, Config, Meta, NodeVersion, PackageJson } from '../types';
 import {
-  getSupportedNodeVersion,
-  getLatestNodeVersion,
   getAvailableNodeVersions,
+  getLatestNodeVersion,
   getSupportedBunVersion,
+  getSupportedNodeVersion,
   isBunVersion,
 } from './node-version';
 import { readConfigFile } from './read-config-file';
-import { cloneEnv } from '../clone-env';
-import json5 from 'json5';
-import yaml from 'js-yaml';
 
 const NO_OVERRIDE = {
   detectedLockfile: undefined,
@@ -542,7 +542,7 @@ async function checkTurboSupportsCorepack(
   if (turboConfigPath) {
     try {
       turboJson = json5.parse(await fs.readFile(turboConfigPath, 'utf8'));
-    } catch (err) {
+    } catch (_err) {
       console.warn(
         `WARNING: Failed to parse ${path.basename(turboConfigPath)}`
       );

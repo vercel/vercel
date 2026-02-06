@@ -12,9 +12,6 @@ export function execCli(
   args: string[] = [],
   opts: execa.Options<string> & { token?: string | boolean } = {}
 ): execa.ExecaChildProcess<string> {
-  // eslint-disable-next-line no-console
-  console.log(`$ vercel ${args.join(' ')}`);
-
   if (!args.includes('--token') && opts.token !== false) {
     args.push(
       '--token',
@@ -30,7 +27,7 @@ export function execCli(
     ...defaultOptions,
     ...opts,
   };
-  // @ts-ignore - allow overwriting readonly property "env"
+  // @ts-expect-error - allow overwriting readonly property "env"
   combinedOptions.env = combinedOptions.env ?? {};
 
   // Force color to be off. We can test color in unit tests.

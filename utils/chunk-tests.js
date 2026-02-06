@@ -314,7 +314,7 @@ async function main() {
   }
 }
 
-// @ts-ignore
+// @ts-expect-error
 if (module === require.main || !module.parent) {
   main();
 }

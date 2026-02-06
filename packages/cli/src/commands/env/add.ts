@@ -1,33 +1,33 @@
+import { determineAgent } from '@vercel/detect-agent';
 import chalk from 'chalk';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import addEnvRecord from '../../util/env/add-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
-import {
-  getEnvTargetPlaceholder,
-  envTargetChoices,
-} from '../../util/env/env-target';
-import readStandardInput from '../../util/input/read-standard-input';
-import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
+import addEnvRecord from '../../util/env/add-env-record';
+import {
+  envTargetChoices,
+  getEnvTargetPlaceholder,
+} from '../../util/env/env-target';
+import getEnvRecords from '../../util/env/get-env-records';
 import { isKnownError } from '../../util/env/known-error';
 import {
   getEnvKeyWarnings,
   removePublicPrefix,
   validateEnvValue,
 } from '../../util/env/validate-env';
-import { getCommandName } from '../../util/pkg-name';
+import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
-import { getCustomEnvironments } from '../../util/target/get-custom-environments';
-import output from '../../output-manager';
-import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { addSubcommand } from './command';
+import readStandardInput from '../../util/input/read-standard-input';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
-import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
+import { addSubcommand } from './command';
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
@@ -42,7 +42,6 @@ export default async function add(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArgs;
 
   const stdInput = await readStandardInput(client.stdin);
-  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvAddTelemetryClient({

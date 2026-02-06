@@ -1,4 +1,4 @@
-import { esbuild, tsc, getDependencies } from '../../../utils/build.mjs';
+import { esbuild, getDependencies, tsc } from '../../../utils/build.mjs';
 
 const externals = getDependencies();
 

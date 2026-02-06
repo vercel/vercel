@@ -5,11 +5,11 @@
  * - Wrap hono/express modules with instrumentation
  */
 
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import Module from 'node:module';
 import path from 'node:path';
-import { existsSync, statSync, realpathSync } from 'node:fs';
-import { handle as handleHono } from '../introspection/hono.js';
 import { handle as handleExpress } from '../introspection/express.js';
+import { handle as handleHono } from '../introspection/hono.js';
 
 const repoRootPath = process.env.VERCEL_INTROSPECTION_REPO_ROOT_PATH;
 const tmpDirEnv = process.env.VERCEL_INTROSPECTION_TMP_DIR;

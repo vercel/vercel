@@ -1,7 +1,7 @@
-import { join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
-import { stat, move, remove, rmdir, readdir } from 'fs-extra';
 import type { Stats } from 'fs-extra';
+import { move, readdir, remove, rmdir, stat } from 'fs-extra';
+import { join, relative } from 'path';
 
 type IgnoreFilter = (path: string) => boolean;
 

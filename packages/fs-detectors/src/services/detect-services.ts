@@ -1,4 +1,6 @@
 import type { Route } from '@vercel/routing-utils';
+import { autoDetectServices } from './auto-detect';
+import { resolveAllConfiguredServices } from './resolve';
 import type {
   DetectServicesOptions,
   DetectServicesResult,
@@ -6,8 +8,6 @@ import type {
   ServicesRoutes,
 } from './types';
 import { isStaticBuild, readVercelConfig } from './utils';
-import { resolveAllConfiguredServices } from './resolve';
-import { autoDetectServices } from './auto-detect';
 
 /**
  * Detect and resolve services within a project.

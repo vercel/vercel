@@ -7,9 +7,8 @@ import {
   test,
   vitest,
 } from 'vitest';
-
-import { getCache } from '../../../src/cache/index';
 import { InMemoryCache } from '../../../src/cache/in-memory-cache';
+import { getCache } from '../../../src/cache/index';
 import { getContext } from '../../../src/get-context';
 
 vitest.mock('../../../src/get-context', () => ({

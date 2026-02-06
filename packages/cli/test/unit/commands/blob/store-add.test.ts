@@ -1,9 +1,9 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import addStore from '../../../../src/commands/blob/store-add';
-import * as linkModule from '../../../../src/util/projects/link';
-import * as connectResourceModule from '../../../../src/util/integration-resource/connect-resource-to-project';
 import output from '../../../../src/output-manager';
+import * as connectResourceModule from '../../../../src/util/integration-resource/connect-resource-to-project';
+import * as linkModule from '../../../../src/util/projects/link';
+import { client } from '../../../mocks/client';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');

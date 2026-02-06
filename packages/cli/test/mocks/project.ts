@@ -1,14 +1,14 @@
-import { client } from './client';
+import type { Env } from '@vercel/build-utils';
 import type {
-  ProjectEnvTarget,
-  Project,
-  ProjectEnvVariable,
   CustomEnvironment,
   Deployment,
+  Project,
+  ProjectEnvTarget,
+  ProjectEnvVariable,
 } from '@vercel-internals/types';
-import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
-import type { Env } from '@vercel/build-utils';
+import { formatProvider } from '../../src/util/git/connect-git-provider';
+import { client } from './client';
 
 export const envs: ProjectEnvVariable[] = [
   {

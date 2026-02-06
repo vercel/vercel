@@ -1,8 +1,8 @@
-import type { Route } from '@vercel/routing-utils';
 import type { Builder } from '@vercel/build-utils';
-import type { ResolvedService } from './types';
-import { detectServices } from './detect-services';
+import type { Route } from '@vercel/routing-utils';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
+import { detectServices } from './detect-services';
+import type { ResolvedService } from './types';
 
 export interface ErrorResponse {
   code: string;

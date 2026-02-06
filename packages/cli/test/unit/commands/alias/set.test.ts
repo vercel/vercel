@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import alias from '../../../../src/commands/alias';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
 import { useDeployment } from '../../../mocks/deployment';
+import { useUser } from '../../../mocks/user';
 
 vi.setConfig({ testTimeout: 600000 });
 

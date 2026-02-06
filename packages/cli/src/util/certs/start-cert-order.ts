@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import type Client from '../client';
 import output from '../../output-manager';
+import type Client from '../client';
 
 export type CertificateChallenge = {
   type: 'dns-01';

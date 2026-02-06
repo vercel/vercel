@@ -1,6 +1,6 @@
+import type { redirectsCommand } from '../../../../commands/redirects/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { redirectsCommand } from '../../../../commands/redirects/command';
 
 export class RedirectsTelemetryClient
   extends TelemetryClient

@@ -4,8 +4,8 @@ import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
   InvalidDeploymentId,
+  isAPIError,
 } from '../errors-ts';
-import { isAPIError } from '../errors-ts';
 import getScope from '../get-scope';
 
 type Response = {

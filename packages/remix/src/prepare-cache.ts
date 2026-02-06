@@ -1,7 +1,7 @@
+import type { Files, PrepareCache } from '@vercel/build-utils';
 import { defaultCachePathGlob, glob, runNpmInstall } from '@vercel/build-utils';
 import { dirname, join, relative } from 'path';
-import { require_, chdirAndReadConfig, isVite } from './utils';
-import type { Files, PrepareCache } from '@vercel/build-utils';
+import { chdirAndReadConfig, isVite, require_ } from './utils';
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,

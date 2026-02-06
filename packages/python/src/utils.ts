@@ -1,7 +1,7 @@
-import fs from 'fs';
-import { delimiter as pathDelimiter, join } from 'path';
-import { readConfigFile, execCommand } from '@vercel/build-utils';
+import { execCommand, readConfigFile } from '@vercel/build-utils';
 import execa from 'execa';
+import fs from 'fs';
+import { join, delimiter as pathDelimiter } from 'path';
 import { getProtectedUvEnv } from './uv';
 
 const isWin = process.platform === 'win32';

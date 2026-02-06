@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { prepareFilesystem } from '../test-utils';
+import { describe, expect, it } from 'vitest';
 import { build } from '../../../src';
+import { prepareFilesystem } from '../test-utils';
 
 describe('middleware matchers', () => {
   it.each([

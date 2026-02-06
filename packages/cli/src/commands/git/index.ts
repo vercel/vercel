@@ -1,15 +1,15 @@
-import { parseArguments } from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import connect from './connect';
-import disconnect from './disconnect';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import getSubcommand from '../../util/get-subcommand';
+import { GitTelemetryClient } from '../../util/telemetry/commands/git';
 import { help } from '../help';
 import { gitCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { GitTelemetryClient } from '../../util/telemetry/commands/git';
-import type Client from '../../util/client';
-import getSubcommand from '../../util/get-subcommand';
+import connect from './connect';
+import disconnect from './disconnect';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],

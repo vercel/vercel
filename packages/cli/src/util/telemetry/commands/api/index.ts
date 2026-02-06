@@ -1,6 +1,6 @@
+import type { apiCommand } from '../../../../commands/api/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { apiCommand } from '../../../../commands/api/command';
 
 export class ApiTelemetryClient
   extends TelemetryClient

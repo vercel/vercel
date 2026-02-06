@@ -1,9 +1,9 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
-import del from '../../../../src/commands/blob/del';
 import * as blobModule from '@vercel/blob';
-import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import del from '../../../../src/commands/blob/del';
 import output from '../../../../src/output-manager';
+import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
+import { client } from '../../../mocks/client';
 
 // Mock the external dependencies
 vi.mock('@vercel/blob');

@@ -1,7 +1,7 @@
-import { copy } from 'fs-extra';
-import { readFileSync, promises as fsPromises } from 'node:fs';
+import { promises as fsPromises, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { copy } from 'fs-extra';
 
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';

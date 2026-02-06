@@ -1,5 +1,5 @@
-import fs from 'fs';
 import { containsAppOrHandler } from '@vercel/python-analysis';
+import fs from 'fs';
 import debug from './debug';
 import FileFsRef from './file-fs-ref';
 

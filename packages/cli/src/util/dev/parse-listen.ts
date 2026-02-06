@@ -4,7 +4,7 @@ import type { ListenSpec } from './types';
 export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   let port = Number(str);
 
-  if (!isNaN(port)) {
+  if (!Number.isNaN(port)) {
     return [port];
   }
 
@@ -38,7 +38,7 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
           return [defaultPort, url.pathname ?? undefined];
         }
         port = Number(url.hostname);
-        if (url.protocol && !isNaN(port)) {
+        if (url.protocol && !Number.isNaN(port)) {
           return [port, url.protocol.substring(0, url.protocol.length - 1)];
         }
       }

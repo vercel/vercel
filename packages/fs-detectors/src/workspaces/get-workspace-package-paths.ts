@@ -1,10 +1,10 @@
-import _path from 'path';
-import yaml from 'js-yaml';
 import glob from 'glob';
+import yaml from 'js-yaml';
 import json5 from 'json5';
+import _path from 'path';
 import { DetectorFilesystem } from '../detectors/filesystem';
-import { Workspace } from './get-workspaces';
 import { getGlobFs } from './get-glob-fs';
+import { Workspace } from './get-workspaces';
 
 const posixPath = _path.posix;
 

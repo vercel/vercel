@@ -1,6 +1,6 @@
+import type { microfrontendsCommand } from '../../../../commands/microfrontends/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { microfrontendsCommand } from '../../../../commands/microfrontends/command';
 
 export class MicrofrontendsTelemetryClient
   extends TelemetryClient

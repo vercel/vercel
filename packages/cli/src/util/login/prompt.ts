@@ -1,10 +1,10 @@
+import login from '../../commands/login';
+import output from '../../output-manager';
 import type Client from '../client';
 import error from '../output/error';
 import { getCommandName } from '../pkg-name';
-import type { SAMLError } from './types';
 import doSamlLogin from './saml';
-import output from '../../output-manager';
-import login from '../../commands/login';
+import type { SAMLError } from './types';
 
 export default async function prompt(
   client: Client,

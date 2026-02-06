@@ -1,12 +1,12 @@
+import * as blob from '@vercel/blob';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import output from '../../output-manager';
-import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { copySubcommand } from './command';
-import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
+import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
+import { copySubcommand } from './command';
 
 export default async function copy(
   client: Client,

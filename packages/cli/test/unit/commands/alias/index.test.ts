@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import alias from '../../../../src/commands/alias';
 import * as set from '../../../../src/commands/alias/set';
 import { client } from '../../../mocks/client';

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { type fs, vol } from 'memfs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import dev from '../../../../src/commands/dev';
 import { client } from '../../../mocks/client';
-import { type fs, vol } from 'memfs';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {

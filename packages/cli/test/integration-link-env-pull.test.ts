@@ -1,14 +1,14 @@
+import fs from 'fs-extra';
 import path from 'path';
 import { execCli } from './helpers/exec';
-import fs from 'fs-extra';
-import waitForPrompt from './helpers/wait-for-prompt';
-import { listTmpDirs } from './helpers/get-tmp-dir';
-import { teamPromise } from './helpers/get-account';
-import {
-  setupE2EFixture,
-  prepareE2EFixtures,
-} from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
+import { teamPromise } from './helpers/get-account';
+import { listTmpDirs } from './helpers/get-tmp-dir';
+import {
+  prepareE2EFixtures,
+  setupE2EFixture,
+} from './helpers/setup-e2e-fixture';
+import waitForPrompt from './helpers/wait-for-prompt';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -19,12 +19,7 @@ beforeAll(async () => {
   try {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
-    console.log(err);
-
+  } catch (_err) {
     process.exit(1);
   }
 });
@@ -32,8 +27,6 @@ beforeAll(async () => {
 afterAll(async () => {
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
-    // eslint-disable-next-line no-console
-    console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
 });

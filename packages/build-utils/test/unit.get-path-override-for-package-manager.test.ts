@@ -1,17 +1,17 @@
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  MockInstance,
+  test,
+  vi,
+} from 'vitest';
+import { getNodeVersionByMajor } from '../src/fs/node-version';
+import {
   getPathOverrideForPackageManager,
   PNPM_10_PREFERRED_AT,
 } from '../src/fs/run-user-scripts';
-import {
-  describe,
-  beforeEach,
-  test,
-  expect,
-  vi,
-  MockInstance,
-  afterEach,
-} from 'vitest';
-import { getNodeVersionByMajor } from '../src/fs/node-version';
 
 describe('Test `getPathOverrideForPackageManager()`', () => {
   describe('with no corepack package manger', () => {

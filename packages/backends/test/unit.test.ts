@@ -1,23 +1,23 @@
 import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import {
   BuildResultV2Typical,
   FileBlob,
   NodejsLambda,
 } from '@vercel/build-utils';
-import { build } from '../src/index';
-import { join, resolve } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
-import {
-  readdir,
-  readFile,
-  writeFile,
-  mkdtemp,
-  cp,
-  rm,
-  mkdir,
-  realpath,
-} from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { build } from '../src/index';
 
 const meta = { skipDownload: true };
 const defaultConfig = {
@@ -144,8 +144,7 @@ describe('successful builds', async () => {
     ); // copying fixture and running npm install so it takes a while
   }
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip(`builds workflow-server`, async () => {
+  it(`builds workflow-server`, async () => {
     const workPath = resolve(process.env.HOME!, 'code/workflow-server');
 
     const result = (await build({

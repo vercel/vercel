@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { commands } from '../../../src/commands';
+
 describe('index', () => {
   it('outputs a map of what aliases our commands use', () => {
     expect(commands).toEqual(

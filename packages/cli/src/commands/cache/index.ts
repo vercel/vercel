@@ -1,22 +1,22 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/error';
+import { CacheTelemetryClient } from '../../util/telemetry/commands/cache';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
-import purge from './purge';
-import invalidate from './invalidate';
-import dangerouslyDelete from './dangerously-delete';
 import {
   cacheCommand,
-  purgeSubcommand,
-  invalidateSubcommand,
   dangerouslyDeleteSubcommand,
+  invalidateSubcommand,
+  purgeSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { getCommandAliases } from '..';
-import { CacheTelemetryClient } from '../../util/telemetry/commands/cache';
+import dangerouslyDelete from './dangerously-delete';
+import invalidate from './invalidate';
+import purge from './purge';
 
 const COMMAND_CONFIG = {
   purge: getCommandAliases(purgeSubcommand),

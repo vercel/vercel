@@ -1,5 +1,5 @@
-import table from './output/table';
 import { gray } from 'chalk';
+import table from './output/table';
 
 const HEADER = ['name', 'type', 'value'].map(v => gray(v));
 

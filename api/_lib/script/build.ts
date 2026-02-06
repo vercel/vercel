@@ -1,8 +1,8 @@
 import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
-import tar from 'tar-fs';
+import { dirname, join } from 'path';
 import { pipeline } from 'stream/promises';
-import { join, dirname } from 'path';
+import tar from 'tar-fs';
 import { getExampleList } from '../examples/example-list';
 import { mapOldToNew } from '../examples/map-old-to-new';
 

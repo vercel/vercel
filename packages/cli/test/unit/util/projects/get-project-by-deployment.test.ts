@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
 import getProjectByDeployment from '../../../../src/util/projects/get-project-by-deployment';
-import { useTeam } from '../../../mocks/team';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { useDeployment } from '../../../mocks/deployment';
 import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeam } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('getProjectByDeployment', () => {
   it('should get project and deployment', async () => {

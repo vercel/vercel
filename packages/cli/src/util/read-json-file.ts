@@ -1,7 +1,7 @@
-import fs from 'fs-extra';
-import { CantParseJSONFile } from './errors-ts';
-import JSONparse from 'json-parse-better-errors';
 import { errorToString } from '@vercel/error-utils';
+import fs from 'fs-extra';
+import JSONparse from 'json-parse-better-errors';
+import { CantParseJSONFile } from './errors-ts';
 
 export default async function readJSONFile<T>(
   file: string

@@ -1,7 +1,7 @@
-import { describe, beforeEach, expect, it, vi, afterEach } from 'vitest';
-import { client } from '../../../mocks/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getBlobRWToken } from '../../../../src/util/blob/token';
 import * as envDiffModule from '../../../../src/util/env/diff-env-files';
+import { client } from '../../../mocks/client';
 
 // Mock dependencies
 vi.mock('../../../../src/util/env/diff-env-files');

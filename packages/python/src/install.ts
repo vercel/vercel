@@ -1,25 +1,25 @@
-import execa from 'execa';
-import fs from 'fs';
-import { join, dirname } from 'path';
 import {
+  debug,
   FileFsRef,
   Files,
+  glob,
   Meta,
   NowBuildError,
-  debug,
-  glob,
 } from '@vercel/build-utils';
 import {
-  discoverPythonPackage,
-  stringifyManifest,
   createMinimalManifest,
+  discoverPythonPackage,
   PythonAnalysisError,
   PythonLockFileKind,
   PythonManifestConvertedKind,
   type PythonPackage,
+  stringifyManifest,
 } from '@vercel/python-analysis';
+import execa from 'execa';
+import fs from 'fs';
+import { dirname, join } from 'path';
 import { getVenvPythonBin } from './utils';
-import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
+import { filterUnsafeUvPipArgs, getProtectedUvEnv, UvRunner } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
 
 const makeDependencyCheckCode = (dependency: string) => `
@@ -45,7 +45,7 @@ export async function isInstalled(
       }
     );
     return stdout.startsWith(cwd);
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }
@@ -74,7 +74,7 @@ async function areRequirementsInstalled(
       }
     );
     return true;
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }

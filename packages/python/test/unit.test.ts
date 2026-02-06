@@ -1,15 +1,15 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  vi,
-  type MockInstance,
-} from 'vitest';
 import fs from 'fs-extra';
-import path from 'path';
 import { tmpdir } from 'os';
+import path from 'path';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 
 const tmpPythonDir = path.join(
   tmpdir(),
@@ -28,17 +28,18 @@ vi.mock('../src/install', async () => {
   };
 });
 
+import { FileBlob } from '@vercel/build-utils';
+import { build } from '../src/index';
+import { createPyprojectToml } from '../src/install';
+import { createVenvEnv, getVenvBinDir } from '../src/utils';
+import { getProtectedUvEnv, UV_PYTHON_DOWNLOADS_MODE } from '../src/uv';
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
-  getSupportedPythonVersion,
   DEFAULT_PYTHON_VERSION,
+  getSupportedPythonVersion,
   resetInstalledPythonsCache,
 } from '../src/version';
-import { build } from '../src/index';
-import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
-import { createPyprojectToml } from '../src/install';
-import { FileBlob } from '@vercel/build-utils';
+
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
 const realDateNow = Date.now.bind(global.Date);
@@ -54,7 +55,6 @@ function createMockUvRunner(options?: {
   onLock?: () => void;
 }) {
   return class MockUvRunner {
-    constructor() {}
     getPath() {
       return '/mock/uv';
     }

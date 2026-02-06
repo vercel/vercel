@@ -1,7 +1,6 @@
 import type { GlobalConfig } from '@vercel-internals/types';
-import * as configFiles from '../config/files';
-
 import output from '../../output-manager';
+import * as configFiles from '../config/files';
 
 export function checkGuidanceStatus({ config }: { config: GlobalConfig }) {
   if (!process.env.FF_GUIDANCE_MODE) {

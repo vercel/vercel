@@ -9,7 +9,7 @@ if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
 }
 
-// @ts-ignore
+// @ts-expect-error
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const page = require(__LAUNCHER_PAGE_PATH__);
 

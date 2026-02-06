@@ -1,6 +1,6 @@
+import type { linkCommand } from '../../../../commands/link/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { linkCommand } from '../../../../commands/link/command';
 
 export class LinkTelemetryClient
   extends TelemetryClient

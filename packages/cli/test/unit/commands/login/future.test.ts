@@ -1,10 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import login from '../../../../src/commands/login';
-import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from 'node-fetch';
-import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
+import _fetch, { Headers, type Response } from 'node-fetch';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import login from '../../../../src/commands/login';
+import * as oauth from '../../../../src/util/oauth';
+import { client } from '../../../mocks/client';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({

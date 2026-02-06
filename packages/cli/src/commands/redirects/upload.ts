@@ -1,20 +1,20 @@
-import { readFileSync } from 'fs';
-import { basename } from 'path';
 import chalk from 'chalk';
 import FormData from 'form-data';
-import type Client from '../../util/client';
+import { readFileSync } from 'fs';
+import { basename } from 'path';
 import output from '../../output-manager';
-import { uploadSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import type Client from '../../util/client';
+import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
-import updateRedirectVersion from '../../util/redirects/update-redirect-version';
 import getRedirects from '../../util/redirects/get-redirects';
-import formatTable from '../../util/format-table';
+import updateRedirectVersion from '../../util/redirects/update-redirect-version';
+import { uploadSubcommand } from './command';
+import { ensureProjectLink, parseSubcommandArgs } from './shared';
 import {
-  validateUploadFile,
-  validateRedirectsArray,
   validateCSVStructure,
+  validateRedirectsArray,
+  validateUploadFile,
   validateVersionName,
 } from './validate-redirects';
 
@@ -143,7 +143,7 @@ export default async function upload(client: Client, argv: string[]) {
 
       try {
         redirects = JSON.parse(content);
-      } catch (err) {
+      } catch (_err) {
         output.error('Invalid JSON file format');
         return 1;
       }

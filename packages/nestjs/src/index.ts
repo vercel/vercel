@@ -1,10 +1,11 @@
 export const version = 3;
 export * from './build';
 export * from './prepare-cache';
+
+import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: startDevServer types are not exported
 import { startDevServer as nodeStartDevServer } from '@vercel/node';
 import { entrypointCallback } from './build';
-import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
 
 export const shouldServe: ShouldServe = async opts => {
   const requestPath = opts.requestPath.replace(/\/$/, ''); // sanitize trailing '/'

@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import box from '../../../../src/util/output/box';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
+import { describe, expect, it } from 'vitest';
+import box from '../../../../src/util/output/box';
 
 describe('box()', () => {
   it('should show single line box with default padding', () => {

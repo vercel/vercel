@@ -2,10 +2,10 @@ import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
-import { printError } from '../../util/error';
 import { deleteResource as _deleteResource } from '../../util/integration-resource/delete-resource';
 import { getResources } from '../../util/integration-resource/get-resources';
 import {

@@ -1,29 +1,29 @@
-import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
-import { basename, dirname, join, relative } from 'path';
-import { isErrnoException, errorToString } from '@vercel/error-utils';
-import { nodeFileTrace, type NodeFileTraceResult } from '@vercel/nft';
+import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 import {
   BuildResultV2Typical,
   debug,
+  EdgeFunction,
   execCommand,
+  FileFsRef,
   getEnvForPackageManager,
   getNodeVersion,
   glob,
+  NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  FileFsRef,
-  EdgeFunction,
-  NodejsLambda,
 } from '@vercel/build-utils';
+import { errorToString, isErrnoException } from '@vercel/error-utils';
+import { type NodeFileTraceResult, nodeFileTrace } from '@vercel/nft';
+import { existsSync, promises as fs, readFileSync, statSync } from 'fs';
+import { basename, dirname, join, relative } from 'path';
 import {
+  getPackageVersion,
   getPathFromRoute,
   getRegExpFromPath,
-  getPackageVersion,
   hasScript,
   logNftWarnings,
 } from './utils';
-import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
 const DEFAULTS_PATH = join(__dirname, '../defaults');
 

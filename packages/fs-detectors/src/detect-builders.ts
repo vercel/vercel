@@ -1,23 +1,23 @@
-import minimatch from 'minimatch';
-import { valid as validSemver } from 'semver';
-import { parse as parsePath, extname, join } from 'path';
-import type { Route, RouteWithSrc } from '@vercel/routing-utils';
-import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
-  PackageJson,
   Builder,
-  Config,
   BuilderFunctions,
+  Config,
+  PackageJson,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
-import { isOfficialRuntime } from './is-official-runtime';
 import {
-  isPythonEntrypoint,
   BACKEND_BUILDERS,
-  UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
+  isPythonEntrypoint,
+  UNIFIED_BACKEND_BUILDER,
 } from '@vercel/build-utils';
+import frameworkList, { Framework } from '@vercel/frameworks';
+import type { Route, RouteWithSrc } from '@vercel/routing-utils';
+import minimatch from 'minimatch';
+import { extname, join, parse as parsePath } from 'path';
+import { valid as validSemver } from 'semver';
+import { isOfficialRuntime } from './is-official-runtime';
 import { getServicesBuilders } from './services/get-services-builders';
 
 /**

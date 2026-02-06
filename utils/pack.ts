@@ -1,6 +1,6 @@
 import execa from 'execa';
-import path from 'path';
 import fs from 'fs-extra';
+import path from 'path';
 import { TurboDryRun } from './types';
 
 const rootDir = path.join(__dirname, '..');

@@ -1,5 +1,5 @@
-import type Client from '../../util/client';
 import output from '../../output-manager';
+import type Client from '../../util/client';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 
 interface DeploymentCreateResponsePartial {

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { client } from '../../../mocks/client';
+import { describe, expect, it } from 'vitest';
 import { isWindows } from '../../../helpers/is-windows';
+import { client } from '../../../mocks/client';
 
 const theme = {
   // Override spinner with a single frame
@@ -15,8 +15,6 @@ describe.skipIf(isWindows)('client.input', () => {
   describe('text', () => {
     it('should match the snapshot', async () => {
       if (process.platform === 'win32') {
-        // eslint-disable-next-line no-console
-        console.log('Skipping test on windows');
       }
       const answer = client.input.text({
         message: 'What is your name',

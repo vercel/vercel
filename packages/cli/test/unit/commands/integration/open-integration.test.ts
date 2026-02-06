@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import { useConfiguration } from '../../../mocks/integration';

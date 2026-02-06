@@ -1,10 +1,10 @@
-import fs from 'fs-extra';
-import { join } from 'path';
-import ini from 'ini';
-import git from 'git-last-commit';
-import { exec } from 'child_process';
-import type { GitMetadata, Project } from '@vercel-internals/types';
 import { errorToString, normalizeError } from '@vercel/error-utils';
+import type { GitMetadata, Project } from '@vercel-internals/types';
+import { exec } from 'child_process';
+import fs from 'fs-extra';
+import git from 'git-last-commit';
+import ini from 'ini';
+import { join } from 'path';
 import output from '../output-manager';
 
 export async function createGitMeta(
@@ -88,7 +88,7 @@ export function isDirty(directory: string): Promise<boolean> {
     exec(
       'git --no-optional-locks status -s',
       { cwd: directory },
-      function (err, stdout, stderr) {
+      (err, stdout, stderr) => {
         if (err) {
           return reject(err);
         }

@@ -1,9 +1,9 @@
-import { basename, join, dirname } from 'path';
-import { getNextjsEdgeFunctionSource } from '../../src/edge-function-source/get-edge-function-source';
+import { randomBytes } from 'crypto';
+import { writeFile } from 'fs-extra';
 import { nanoid } from 'nanoid';
 import { tmpdir } from 'os';
-import { writeFile } from 'fs-extra';
-import { randomBytes } from 'crypto';
+import { basename, dirname, join } from 'path';
+import { getNextjsEdgeFunctionSource } from '../../src/edge-function-source/get-edge-function-source';
 
 it('should throw an error when exceeds the script size limit', async () => {
   const filepath = `${join(tmpdir(), nanoid())}.js`;

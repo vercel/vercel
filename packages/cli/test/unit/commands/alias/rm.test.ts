@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { client } from '../../../mocks/client';
+import { describe, expect, it } from 'vitest';
 import alias from '../../../../src/commands/alias';
+import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 
 describe('alias rm', () => {

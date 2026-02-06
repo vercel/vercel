@@ -1,10 +1,10 @@
-import { describe, it, beforeEach, expect } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import env from '../../../../src/commands/env';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { useUser } from '../../../mocks/user';
 
 describe('env', () => {
   describe('--help', () => {

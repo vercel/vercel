@@ -1,9 +1,9 @@
-import chalk from 'chalk';
-import retry from 'async-retry';
-import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
 import type { Domain } from '@vercel-internals/types';
-import type Client from '../client';
+import retry from 'async-retry';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../client';
+import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
 
 type Response = {
   domain: Domain;

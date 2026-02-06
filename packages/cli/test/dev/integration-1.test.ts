@@ -1,10 +1,10 @@
-import os from 'os';
-import url from 'url';
-import fs from 'fs-extra';
-import { join } from 'path';
 import { listen } from 'async-listen';
-import stripAnsi from 'strip-ansi';
+import fs from 'fs-extra';
 import { createServer } from 'http';
+import os from 'os';
+import { join } from 'path';
+import stripAnsi from 'strip-ansi';
+import url from 'url';
 import {
   exec,
   fetch,
@@ -515,7 +515,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
 
 // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('[vercel dev] should frontend dev server and routes', async () => {
+test('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
   const { dev, port, readyResolver } = await testFixture(dir);
 
@@ -964,8 +964,6 @@ test(
   testFixtureStdio('handle-miss-querystring', async (testPath: any) => {
     await testPath(200, '/', 'Index Page');
     if (process.env.CI && process.platform === 'darwin') {
-      // eslint-disable-next-line no-console
-      console.log('Skipping since GH Actions hangs for some reason');
     } else {
       await testPath(200, '/echo/first/second', 'a=first,b=second');
       await testPath(200, '/functions/echo.js?a=one&b=two', 'a=one,b=two');

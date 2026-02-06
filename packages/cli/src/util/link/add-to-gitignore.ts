@@ -1,6 +1,6 @@
+import { readFile, writeFile } from 'fs-extra';
 import os from 'os';
 import { join } from 'path';
-import { readFile, writeFile } from 'fs-extra';
 import { VERCEL_DIR } from '../projects/link';
 
 export async function addToGitIgnore(path: string, ignore = VERCEL_DIR) {
@@ -24,7 +24,7 @@ export async function addToGitIgnore(path: string, ignore = VERCEL_DIR) {
       await writeFile(gitIgnorePath, gitIgnore);
       isGitIgnoreUpdated = true;
     }
-  } catch (error) {
+  } catch (_error) {
     // ignore errors since this is non-critical
   }
   return isGitIgnoreUpdated;

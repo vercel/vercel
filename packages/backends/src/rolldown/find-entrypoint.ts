@@ -1,6 +1,6 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { existsSync } from 'node:fs';
 
 const frameworks = [
   'express',
@@ -59,9 +59,7 @@ export const findEntrypoint = async (
       try {
         await readFile(entrypointPath, 'utf-8');
         return entrypoint;
-      } catch (e) {
-        continue;
-      }
+      } catch (_e) {}
     }
     throw new Error('No entrypoint or framework found');
   }

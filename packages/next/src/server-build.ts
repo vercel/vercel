@@ -1,73 +1,73 @@
-import path from 'path';
-import semver from 'semver';
-import { Sema } from 'async-sema';
 import {
+  BuildResultV2Typical as BuildResult,
   Config,
+  debug,
   FileBlob,
   FileFsRef,
+  Files,
+  glob,
   Lambda,
   NodeVersion,
   NowBuildError,
   Prerender,
-  debug,
-  glob,
-  Files,
-  BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
-import { MAX_AGE_ONE_YEAR } from '.';
 import {
-  NextRequiredServerFilesManifest,
-  NextImagesManifest,
-  NextPrerenderedRoutes,
-  RoutesManifest,
-  collectTracedFiles,
-  createPseudoLayer,
-  createLambdaFromPseudoLayers,
-  getPageLambdaGroups,
-  getDynamicRoutes,
-  localizeDynamicRoutes,
-  isDynamicRoute,
-  normalizePage,
-  getStaticFiles,
-  onPrerenderRouteInitial,
-  onPrerenderRoute,
-  normalizeLocalePath,
-  PseudoFile,
-  detectLambdaLimitExceeding,
-  outputFunctionFileSizeInfo,
-  normalizeIndexOutput,
-  getImagesConfig,
-  getNextServerPath,
-  getMiddlewareBundle,
-  getFilesMapFromReasons,
-  UnwrapPromise,
-  getOperationType,
-  FunctionsConfigManifestV1,
-  VariantsManifest,
-  RSC_CONTENT_TYPE,
-  RSC_PREFETCH_SUFFIX,
-  normalizePrefetches,
-  CreateLambdaFromPseudoLayersOptions,
-  getPostponeResumePathname,
-  LambdaGroup,
-  getMaxUncompressedLambdaSize,
-  RenderingMode,
-  getPostponeResumeOutput,
-  getNodeMiddleware,
-  getServerActionMetaRoutes,
-} from './utils';
-import { INTERNAL_PAGES } from './constants';
-import {
-  nodeFileTrace,
   NodeFileTraceReasons,
   NodeFileTraceResult,
+  nodeFileTrace,
 } from '@vercel/nft';
-import resolveFrom from 'resolve-from';
-import fs, { lstat } from 'fs-extra';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
+import { Sema } from 'async-sema';
 import escapeStringRegexp from 'escape-string-regexp';
+import fs, { lstat } from 'fs-extra';
+import path from 'path';
 import prettyBytes from 'pretty-bytes';
+import resolveFrom from 'resolve-from';
+import semver from 'semver';
+import { MAX_AGE_ONE_YEAR } from '.';
+import { INTERNAL_PAGES } from './constants';
 import { getAppRouterPathnameFilesMap } from './metadata';
+import {
+  CreateLambdaFromPseudoLayersOptions,
+  collectTracedFiles,
+  createLambdaFromPseudoLayers,
+  createPseudoLayer,
+  detectLambdaLimitExceeding,
+  FunctionsConfigManifestV1,
+  getDynamicRoutes,
+  getFilesMapFromReasons,
+  getImagesConfig,
+  getMaxUncompressedLambdaSize,
+  getMiddlewareBundle,
+  getNextServerPath,
+  getNodeMiddleware,
+  getOperationType,
+  getPageLambdaGroups,
+  getPostponeResumeOutput,
+  getPostponeResumePathname,
+  getServerActionMetaRoutes,
+  getStaticFiles,
+  isDynamicRoute,
+  LambdaGroup,
+  localizeDynamicRoutes,
+  NextImagesManifest,
+  NextPrerenderedRoutes,
+  NextRequiredServerFilesManifest,
+  normalizeIndexOutput,
+  normalizeLocalePath,
+  normalizePage,
+  normalizePrefetches,
+  onPrerenderRoute,
+  onPrerenderRouteInitial,
+  outputFunctionFileSizeInfo,
+  PseudoFile,
+  RenderingMode,
+  RoutesManifest,
+  RSC_CONTENT_TYPE,
+  RSC_PREFETCH_SUFFIX,
+  UnwrapPromise,
+  VariantsManifest,
+} from './utils';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -1002,7 +1002,7 @@ export async function serverBuild({
               await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
             );
             scTrace.files.forEach((file: string) => files.push(file));
-          } catch (err) {
+          } catch (_err) {
             /* non-fatal for now */
           }
         }
@@ -1916,7 +1916,7 @@ export async function serverBuild({
         ]
       : [];
   };
-  let nextDataCatchallOutput: FileFsRef | undefined = undefined;
+  let nextDataCatchallOutput: FileFsRef | undefined;
 
   if (isNextDataServerResolving) {
     const catchallFsPath = path.join(

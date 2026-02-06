@@ -1,48 +1,47 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import ms from 'ms';
-import bytes from 'bytes';
-import { delimiter, dirname, join } from 'path';
-import { fork, type ChildProcess } from 'child_process';
-import { createFunction } from '@vercel/fun';
+
 import {
   type Builder,
   type BuildOptions,
   type Env,
   type File,
-  Lambda,
   FileBlob,
   FileFsRef,
-  normalizePath,
   isBackendFramework,
   isPythonFramework,
+  Lambda,
+  normalizePath,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import plural from 'pluralize';
+import { createFunction } from '@vercel/fun';
+import { normalizeRoutes } from '@vercel/routing-utils';
+import bytes from 'bytes';
+import { type ChildProcess, fork } from 'child_process';
 import minimatch from 'minimatch';
-
-import highlight from '../output/highlight';
-import { treeKill } from '../tree-kill';
-import { relative } from '../path-helpers';
+import ms from 'ms';
+import { delimiter, dirname, join } from 'path';
+import plural from 'pluralize';
+import output from '../../output-manager';
+import { importBuilders } from '../build/import-builders';
 import { LambdaSizeExceededError } from '../errors-ts';
-
+import getUpdateCommand from '../get-update-command';
+import highlight from '../output/highlight';
+import { relative } from '../path-helpers';
+import { getTitleName } from '../pkg-name';
+import { treeKill } from '../tree-kill';
 import type DevServer from './server';
 import type {
-  VercelConfig,
-  BuildMatch,
-  BuildResult,
   BuilderInputs,
   BuilderOutput,
-  BuildResultV3,
   BuilderOutputs,
-  EnvConfigs,
+  BuildMatch,
+  BuildResult,
+  BuildResultV3,
   BuiltLambda,
+  EnvConfigs,
+  VercelConfig,
 } from './types';
-import { normalizeRoutes } from '@vercel/routing-utils';
-import getUpdateCommand from '../get-update-command';
-import { getTitleName } from '../pkg-name';
-import { importBuilders } from '../build/import-builders';
-import output from '../../output-manager';
 
 interface BuildMessage {
   type: string;

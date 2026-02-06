@@ -1,15 +1,15 @@
+import { listen } from 'async-listen';
 import http from 'http';
 import open from 'open';
 import { URL } from 'url';
-import { listen } from 'async-listen';
+import output from '../../output-manager';
 import type Client from '../client';
-import prompt from './prompt';
-import verify from './verify';
+import eraseLines from '../output/erase-lines';
 import highlight from '../output/highlight';
 import link from '../output/link';
-import eraseLines from '../output/erase-lines';
+import prompt from './prompt';
 import type { LoginResult } from './types';
-import output from '../../output-manager';
+import verify from './verify';
 
 export default async function doOauthLogin(
   client: Client,

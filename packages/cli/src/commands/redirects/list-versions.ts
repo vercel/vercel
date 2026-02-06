@@ -1,14 +1,14 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import type Client from '../../util/client';
 import output from '../../output-manager';
-import { listVersionsSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
-import getRedirectVersions from '../../util/redirects/get-redirect-versions';
-import type { RedirectVersion } from '../../util/redirects/get-redirect-versions';
-import stamp from '../../util/output/stamp';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
+import stamp from '../../util/output/stamp';
+import type { RedirectVersion } from '../../util/redirects/get-redirect-versions';
+import getRedirectVersions from '../../util/redirects/get-redirect-versions';
+import { listVersionsSubcommand } from './command';
+import { ensureProjectLink, parseSubcommandArgs } from './shared';
 
 export default async function listVersions(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listVersionsSubcommand);

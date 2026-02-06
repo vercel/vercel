@@ -1,12 +1,12 @@
-import type Client from '../../util/client';
-import output from '../../output-manager';
 import * as blob from '@vercel/blob';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { delSubcommand } from './command';
-import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
-import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
+import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
+import { delSubcommand } from './command';
 
 export default async function del(
   client: Client,

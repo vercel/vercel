@@ -1,6 +1,6 @@
+import type { aliasCommand } from '../../../../commands/alias/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { aliasCommand } from '../../../../commands/alias/command';
 
 export class AliasTelemetryClient
   extends TelemetryClient

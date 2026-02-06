@@ -1,15 +1,15 @@
-import {
-  SourceMapConsumer,
-  SourceMapGenerator,
-  type RawSourceMap,
-} from 'source-map';
 import convertSourceMap from 'convert-source-map';
 import fs from 'fs-extra';
 import {
+  type RawSourceMap,
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map';
+import {
   ConcatSource,
   OriginalSource,
-  SourceMapSource,
   Source,
+  SourceMapSource,
 } from 'webpack-sources';
 
 /**

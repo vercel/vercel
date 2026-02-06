@@ -1,8 +1,8 @@
+import { getVercelIgnore } from '@vercel/client';
 import fs from 'fs-extra';
 import { resolve } from 'path';
-import { getVercelIgnore } from '@vercel/client';
-import uniqueStrings from './unique-strings';
 import output from '../output-manager';
+import uniqueStrings from './unique-strings';
 
 type NullableString = string | null;
 
@@ -28,7 +28,7 @@ function flatten(
  * @param {String} parent full path
  */
 
-const asAbsolute = function (path: string, parent: string) {
+const asAbsolute = (path: string, parent: string) => {
   if (path[0] === '/') {
     return path;
   }
@@ -136,14 +136,14 @@ async function explode(
 
     try {
       s = await fs.stat(path);
-    } catch (e) {
+    } catch (_e) {
       // In case the file comes from `files`
       // and it wasn't specified with `.js` by the user
       path = `${file}.js`;
 
       try {
         s = await fs.stat(path);
-      } catch (e2) {
+      } catch (_e2) {
         debug(`Ignoring invalid file ${file}`);
         return null;
       }

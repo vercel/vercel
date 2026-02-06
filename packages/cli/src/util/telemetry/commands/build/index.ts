@@ -1,6 +1,6 @@
+import type { buildCommand } from '../../../../commands/build/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { buildCommand } from '../../../../commands/build/command';
 
 export class BuildTelemetryClient
   extends TelemetryClient

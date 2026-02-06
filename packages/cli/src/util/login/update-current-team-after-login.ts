@@ -1,6 +1,6 @@
+import output from '../../output-manager';
 import type Client from '../client';
 import getUser from '../get-user';
-import output from '../../output-manager';
 
 // NOTE: `client.authConfig.token` must be set before calling this
 export async function updateCurrentTeamAfterLogin(
@@ -13,7 +13,7 @@ export async function updateCurrentTeamAfterLogin(
     let user = null;
     try {
       user = await getUser(client);
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       // Shouldn't happen since we just logged in
       output.error('Failed to fetch the logged in user. Please try again.');
       return 1;

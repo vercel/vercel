@@ -1,10 +1,10 @@
-import path from 'path';
 import assert from 'assert';
-import vanillaGlob_ from 'glob';
-import { promisify } from 'util';
 import { lstat, readlink, Stats } from 'fs-extra';
-import { normalizePath } from './normalize-path';
+import vanillaGlob_ from 'glob';
+import path from 'path';
+import { promisify } from 'util';
 import FileFsRef from '../file-fs-ref';
+import { normalizePath } from './normalize-path';
 
 export interface GlobOptions {
   cwd?: string;

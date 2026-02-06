@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import sleep from 'sleep-promise';
-import type { Deployment, VercelClientOptions } from '../src/types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { checkDeploymentStatus } from '../src/check-deployment-status';
+import type { Deployment, VercelClientOptions } from '../src/types';
 
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 

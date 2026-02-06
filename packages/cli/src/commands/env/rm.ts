@@ -1,23 +1,23 @@
 import chalk from 'chalk';
-import removeEnvRecord from '../../util/env/remove-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvironments from '../../util/env/format-environments';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import type Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
-import { getCustomEnvironments } from '../../util/target/get-custom-environments';
-import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
 import output from '../../output-manager';
-import { removeSubcommand } from './command';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import formatEnvironments from '../../util/env/format-environments';
+import getEnvRecords from '../../util/env/get-env-records';
+import { isKnownError } from '../../util/env/known-error';
+import removeEnvRecord from '../../util/env/remove-env-record';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
+import { removeSubcommand } from './command';
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetryClient = new EnvRmTelemetryClient({
@@ -45,7 +45,6 @@ export default async function rm(client: Client, argv: string[]) {
     return 1;
   }
 
-  // eslint-disable-next-line prefer-const
   let [envName, envTarget, envGitBranch] = args;
   telemetryClient.trackCliArgumentName(envName);
   telemetryClient.trackCliArgumentEnvironment(envTarget);

@@ -1,6 +1,6 @@
-import { readFile, realpath } from 'fs-extra';
-import { sep, dirname, join, resolve } from 'path';
 import { scanParentDirs } from '@vercel/build-utils';
+import { readFile, realpath } from 'fs-extra';
+import { dirname, join, resolve, sep } from 'path';
 import { packageName } from './pkg-name';
 
 async function getConfigPrefix() {

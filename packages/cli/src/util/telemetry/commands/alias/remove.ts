@@ -1,6 +1,6 @@
+import type { removeSubcommand } from '../../../../commands/alias/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { removeSubcommand } from '../../../../commands/alias/command';
 
 export class AliasRemoveTelemetryClient
   extends TelemetryClient

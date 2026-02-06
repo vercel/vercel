@@ -13,15 +13,15 @@ const addExtension = filePath => {
       try {
         fs.statSync(filePath + '/index.ts');
         filePath += '/index.ts';
-      } catch (e) {
+      } catch (_e) {
         fs.statSync(filePath + '/index.js');
         filePath += '/index.js';
       }
-    } catch (e) {
+    } catch (_e) {
       try {
         fs.statSync(filePath + '.ts');
         filePath += '.ts';
-      } catch (e2) {
+      } catch (_e2) {
         fs.statSync(filePath + '.js');
         filePath += '.js';
       }

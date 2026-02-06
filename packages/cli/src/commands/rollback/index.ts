@@ -1,16 +1,16 @@
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
-import requestRollback from './request-rollback';
-import rollbackStatus from './status';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
 import { help } from '../help';
 import { rollbackCommand, statusSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
-import output from '../../output-manager';
+import requestRollback from './request-rollback';
+import rollbackStatus from './status';
 
 /**
  * `vc rollback` command

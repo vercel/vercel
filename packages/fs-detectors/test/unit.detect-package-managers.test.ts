@@ -1,8 +1,8 @@
 import path from 'path';
 import {
-  packageManagers,
   detectFramework,
   LocalFileSystemDetector,
+  packageManagers,
 } from '../src';
 
 describe('package-managers', () => {

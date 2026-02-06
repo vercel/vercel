@@ -1,10 +1,10 @@
+import slugify from '@sindresorhus/slugify';
+import type { Org, Project } from '@vercel-internals/types';
+import chalk from 'chalk';
+import output from '../../output-manager';
+import { ProjectNotFound } from '../../util/errors-ts';
 import type Client from '../client';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
-import chalk from 'chalk';
-import { ProjectNotFound } from '../../util/errors-ts';
-import type { Project, Org } from '@vercel-internals/types';
-import slugify from '@sindresorhus/slugify';
-import output from '../../output-manager';
 
 export default async function inputProject(
   client: Client,

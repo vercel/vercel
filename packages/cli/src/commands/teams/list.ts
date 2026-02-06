@@ -1,20 +1,20 @@
-import chars from '../../util/output/chars';
-import table from '../../util/output/table';
 import { gray } from 'chalk';
-import getUser from '../../util/get-user';
-import getTeams from '../../util/teams/get-teams';
-import { packageName } from '../../util/pkg-name';
-import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { listSubcommand } from './command';
-import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getUser from '../../util/get-user';
+import chars from '../../util/output/chars';
+import cmd from '../../util/output/cmd';
+import table from '../../util/output/table';
+import { validateJsonOutput } from '../../util/output-format';
+import { packageName } from '../../util/pkg-name';
+import getTeams from '../../util/teams/get-teams';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 export default async function list(
   client: Client,

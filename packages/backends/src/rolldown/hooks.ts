@@ -1,6 +1,6 @@
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { existsSync, statSync, realpathSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Node.js loader hook types
 interface ResolveContext {

@@ -1,11 +1,10 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
-import sleep from '../../../src/util/sleep';
+import { join } from 'path';
 // @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import getLatestVersion from '../../../src/util/get-latest-version';
-import { join } from 'path';
-import { vi } from 'vitest';
+import sleep from '../../../src/util/sleep';
 
 tmp.setGracefulCleanup();
 
@@ -93,7 +92,7 @@ describe('get latest version', () => {
 
   // this test is too flakey in its current form
   // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should not check twice', async () => {
+  it('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,

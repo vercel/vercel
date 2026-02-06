@@ -1,12 +1,12 @@
-import { describe, it, beforeEach, expect } from 'vitest';
+import { outputFile } from 'fs-extra';
+import { basename, join } from 'path';
+import { beforeEach, describe, expect, it } from 'vitest';
 import cache from '../../../../src/commands/cache';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeam } from '../../../mocks/team';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import { basename, join } from 'path';
-import { outputFile } from 'fs-extra';
+import { useUser } from '../../../mocks/user';
 
 describe('cache purge', () => {
   beforeEach(async () => {

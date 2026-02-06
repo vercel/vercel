@@ -1,12 +1,12 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { client } from '../../../mocks/client';
-import redirects from '../../../../src/commands/redirects';
-import { useUser } from '../../../mocks/user';
-import { useProject, defaultProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { writeFileSync, mkdirSync } from 'fs';
+import { beforeEach, describe, expect, it } from 'vitest';
+import redirects from '../../../../src/commands/redirects';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('redirects upload', () => {
   let fixtureDir: string;

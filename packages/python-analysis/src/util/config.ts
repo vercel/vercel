@@ -3,9 +3,8 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import toml from 'smol-toml';
 import { z } from 'zod';
-
-import { readFileTextIfExists } from './fs';
 import { PythonAnalysisError } from './error';
+import { readFileTextIfExists } from './fs';
 
 /**
  * Parse raw content into a JavaScript object based on file type.

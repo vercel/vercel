@@ -1,10 +1,9 @@
-import chalk from 'chalk';
 import type { Deployment } from '@vercel-internals/types';
-
-import { isDeploying } from '../../util/deploy/is-deploying';
-import linkStyle from '../output/link';
-import { prependEmoji, emoji } from '../../util/emoji';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import { isDeploying } from '../../util/deploy/is-deploying';
+import { emoji, prependEmoji } from '../../util/emoji';
+import linkStyle from '../output/link';
 import { getCommandName } from '../pkg-name';
 import { suggestNextCommands } from '../suggest-next-commands';
 

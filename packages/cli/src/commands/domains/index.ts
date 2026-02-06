@@ -1,14 +1,13 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
+import { type Command, help } from '../help';
 import add from './add';
 import buy from './buy';
-import transferIn from './transfer-in';
-import inspect from './inspect';
-import ls from './ls';
-import rm from './rm';
-import move from './move';
 import {
   addSubcommand,
   buySubcommand,
@@ -18,10 +17,11 @@ import {
   removeSubcommand,
   transferInSubcommand,
 } from './command';
-import { type Command, help } from '../help';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
-import output from '../../output-manager';
+import inspect from './inspect';
+import ls from './ls';
+import move from './move';
+import rm from './rm';
+import transferIn from './transfer-in';
 
 const COMMAND_CONFIG = {
   add: ['add'],

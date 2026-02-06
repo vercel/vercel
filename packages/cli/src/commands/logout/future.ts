@@ -1,8 +1,8 @@
 import { errorToString } from '@vercel/error-utils';
-import type Client from '../../util/client';
-import { getCommandName } from '../../util/pkg-name';
-import { revocationRequest, processRevocationResponse } from '../../util/oauth';
 import o from '../../output-manager';
+import type Client from '../../util/client';
+import { processRevocationResponse, revocationRequest } from '../../util/oauth';
+import { getCommandName } from '../../util/pkg-name';
 
 export async function logout(client: Client): Promise<number> {
   const { authConfig } = client;

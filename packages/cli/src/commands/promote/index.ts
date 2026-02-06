@@ -1,16 +1,16 @@
-import ms from 'ms';
-import { parseArguments } from '../../util/get-args';
-import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
-import requestPromote from './request-promote';
-import promoteStatus from './status';
-import { promoteCommand, statusSubcommand } from './command';
-import { help } from '../help';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { PromoteTelemetryClient } from '../../util/telemetry/commands/promote';
+import ms from 'ms';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { PromoteTelemetryClient } from '../../util/telemetry/commands/promote';
+import { help } from '../help';
+import { promoteCommand, statusSubcommand } from './command';
+import requestPromote from './request-promote';
+import promoteStatus from './status';
 
 /**
  * `vc promote` command

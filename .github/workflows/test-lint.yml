@@ -51,7 +51,6 @@ jobs:
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - run: pnpm run lint
-      - run: pnpm run prettier-check
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build

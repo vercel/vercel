@@ -1,9 +1,9 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
 import execa from 'execa';
 import ts from 'typescript';
-import path from 'node:path';
-import { readFileSync } from 'node:fs';
-import { build } from 'esbuild';
-import { fileURLToPath } from 'node:url';
 
 export function getDependencies(cwd = process.cwd()) {
   const pkgPath = path.join(cwd, 'package.json');
@@ -52,7 +52,7 @@ export async function esbuild(
     : // When not bundling, compile all files referenced by the `tsconfig.json` file
       tsconfig.fileNames;
 
-  let outdir = opts.outfile ? undefined : tsconfig.options.outDir;
+  const outdir = opts.outfile ? undefined : tsconfig.options.outDir;
 
   await build({
     entryPoints,

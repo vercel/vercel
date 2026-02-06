@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import certs from '../../../../src/commands/certs';
+import { useCert } from '../../../mocks/certs';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useCert } from '../../../mocks/certs';
-import certs from '../../../../src/commands/certs';
 
 describe('certs rm', () => {
   describe('--help', () => {

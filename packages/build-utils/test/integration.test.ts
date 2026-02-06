@@ -1,10 +1,10 @@
-import path from 'path';
 import fs from 'fs-extra';
+import path from 'path';
+import { expect, it, vi } from 'vitest';
 import {
   testDeployment,
-  // @ts-ignore
+  // @ts-expect-error
 } from '../../../test/lib/deployment/test-deployment';
-import { expect, it, vi } from 'vitest';
 
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 

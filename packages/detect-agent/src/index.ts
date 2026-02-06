@@ -1,5 +1,5 @@
-import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { access } from 'node:fs/promises';
 
 const DEVIN_LOCAL_PATH = '/opt/.devin';
 
@@ -96,7 +96,7 @@ export async function determineAgent(): Promise<AgentResult> {
   try {
     await access(DEVIN_LOCAL_PATH, constants.F_OK);
     return { isAgent: true, agent: { name: DEVIN } };
-  } catch (error) {
+  } catch (_error) {
     // noop
   }
 

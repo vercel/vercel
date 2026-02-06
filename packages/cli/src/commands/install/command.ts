@@ -1,5 +1,5 @@
-import type { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import type { Command } from '../help';
 
 export const installCommand: Command = {
   name: 'install',

@@ -1,8 +1,8 @@
 import assert from 'assert';
+import Sema from 'async-sema';
 import fs from 'fs-extra';
 import multiStream from 'multistream';
 import path from 'path';
-import Sema from 'async-sema';
 import { FileBase } from './types';
 
 const semaToPreventEMFILE = new Sema(20);

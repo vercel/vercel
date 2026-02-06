@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  parseUvPythonRequest,
   parsePythonVersionFile,
+  parseUvPythonRequest,
   pythonRequestFromConstraint,
 } from '../src/manifest/uv-python-version-parser';
 

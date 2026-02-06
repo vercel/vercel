@@ -1,16 +1,16 @@
-import {
-  injectPlugins,
-  createPluginSymlinks,
-  cleanupGatsbyFiles,
-} from '../src/utils/gatsby';
-import path from 'path';
+import frameworks from '@vercel/frameworks';
 import {
   detectFrameworkRecord,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
-import frameworks from '@vercel/frameworks';
 import fs from 'fs-extra';
 import os from 'os';
+import path from 'path';
+import {
+  cleanupGatsbyFiles,
+  createPluginSymlinks,
+  injectPlugins,
+} from '../src/utils/gatsby';
 
 async function detectVersion(fixturePath: string) {
   const localFileSystemDetector = new LocalFileSystemDetector(fixturePath);

@@ -2,8 +2,8 @@ import http from 'node:http';
 import { listen } from 'async-listen';
 import open from 'open';
 import * as z from 'zod/mini';
-import type { OAuth } from './oauth';
 import type { Credentials } from './credentials-store';
+import type { OAuth } from './oauth';
 
 /**
  * Re-authorize a team's SSO session by opening the browser and waiting for the user to complete

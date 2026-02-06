@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import table from './output/table';
 import chars from './output/chars';
+import table from './output/table';
 
 export default function formatNSTable(
   intendedNameservers: string[],

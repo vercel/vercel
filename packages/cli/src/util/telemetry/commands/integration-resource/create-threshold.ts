@@ -1,6 +1,6 @@
+import type { createThresholdSubcommand } from '../../../../commands/integration-resource/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { createThresholdSubcommand } from '../../../../commands/integration-resource/command';
 
 export class IntegrationResourceCreateThresholdTelemetryClient
   extends TelemetryClient

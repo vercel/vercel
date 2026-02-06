@@ -1,8 +1,8 @@
+import { chmod, mkdirp, readlink, remove, symlink } from 'fs-extra';
 import path from 'path';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink, chmod } from 'fs-extra';
 import streamToBuffer from './stream-to-buffer';
 
 export interface DownloadedFiles {

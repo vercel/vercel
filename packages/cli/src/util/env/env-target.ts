@@ -1,5 +1,5 @@
-import type { ProjectEnvTarget } from '@vercel-internals/types';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import type { ProjectEnvTarget } from '@vercel-internals/types';
 import title from 'title';
 
 export const envTargetChoices = PROJECT_ENV_TARGET.map(t => ({

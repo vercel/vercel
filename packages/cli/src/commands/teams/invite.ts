@@ -1,22 +1,22 @@
-import chalk from 'chalk';
-import type Client from '../../util/client';
-import cmd from '../../util/output/cmd';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import chars from '../../util/output/chars';
-import eraseLines from '../../util/output/erase-lines';
-import getUser from '../../util/get-user';
-import { getCommandName } from '../../util/pkg-name';
-import { email as regexEmail } from '../../util/input/regexes';
-import getTeams from '../../util/teams/get-teams';
-import inviteUserToTeam from '../../util/teams/invite-user-to-team';
-import { isAPIError } from '../../util/errors-ts';
 import { errorToString, isError } from '@vercel/error-utils';
-import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/invite';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getUser from '../../util/get-user';
+import { email as regexEmail } from '../../util/input/regexes';
+import chars from '../../util/output/chars';
+import cmd from '../../util/output/cmd';
+import eraseLines from '../../util/output/erase-lines';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import getTeams from '../../util/teams/get-teams';
+import inviteUserToTeam from '../../util/teams/invite-user-to-team';
+import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/invite';
 import { inviteSubcommand } from './command';
 
 const validateEmail = (data: string) =>
@@ -96,7 +96,6 @@ export default async function invite(
         let userInfo = null;
 
         try {
-          // eslint-disable-next-line no-await-in-loop
           const res = await inviteUserToTeam(client, currentTeam.id, email);
           userInfo = res.username;
         } catch (err: unknown) {

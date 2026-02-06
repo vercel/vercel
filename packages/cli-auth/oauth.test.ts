@@ -1,4 +1,4 @@
-import { vi, it, expect } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { type AuthorizationServerMetadata, OAuth } from './oauth';
 
 globalThis.fetch = vi.fn();

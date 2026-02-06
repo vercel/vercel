@@ -1,6 +1,6 @@
 import fetch, { type Response } from 'node-fetch';
-import ua from './ua';
 import { hostname } from 'os';
+import ua from './ua';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';

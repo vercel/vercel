@@ -1,22 +1,21 @@
-import { join, basename, dirname } from 'path';
-import loadJSON from 'load-json-file';
-import writeJSON from 'write-json-file';
-import { accessSync, constants } from 'fs';
 import { fileNameSymbol } from '@vercel/client';
-import getGlobalPathConfig from './global-path';
-import getLocalPathConfig from './local-path';
+import { isErrnoException, isError } from '@vercel/error-utils';
+import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
+import { accessSync, constants } from 'fs';
+import loadJSON from 'load-json-file';
+import { basename, dirname, join } from 'path';
+import writeJSON from 'write-json-file';
+import output from '../../output-manager';
+import {
+  DEFAULT_VERCEL_CONFIG_FILENAME,
+  VERCEL_CONFIG_EXTENSIONS,
+} from '../compile-vercel-config';
+import type { VercelConfig } from '../dev/types';
 import { NowError } from '../now-error';
 import highlight from '../output/highlight';
-import type { VercelConfig } from '../dev/types';
-import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { isErrnoException, isError } from '@vercel/error-utils';
 import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
-import {
-  VERCEL_CONFIG_EXTENSIONS,
-  DEFAULT_VERCEL_CONFIG_FILENAME,
-} from '../compile-vercel-config';
-
-import output from '../../output-manager';
+import getGlobalPathConfig from './global-path';
+import getLocalPathConfig from './local-path';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
@@ -31,7 +30,7 @@ export const readConfigFile = (): GlobalConfig => {
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
-    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+    writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
@@ -104,7 +103,7 @@ export function getAuthConfigFilePath() {
 export function readLocalConfig(
   prefix: string = process.cwd()
 ): VercelConfig | undefined {
-  let config: VercelConfig | undefined = undefined;
+  let config: VercelConfig | undefined;
   let target = '';
 
   try {
@@ -129,6 +128,7 @@ export function readLocalConfig(
     } catch {
       // File doesn't exist, config remains undefined
     }
+    // biome-ignore lint/correctness/noUnreachable: inner catch swallows all errors; preserving existing error handling structure
   } catch (err: unknown) {
     if (isError(err) && err.name === 'JSONError') {
       output.error(err.message);

@@ -1,6 +1,6 @@
-import { generateNewToken } from './common';
-import { createDeployment } from '../src/index';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createDeployment } from '../src/index';
+import { generateNewToken } from './common';
 
 describe('path handling', () => {
   let token = '';

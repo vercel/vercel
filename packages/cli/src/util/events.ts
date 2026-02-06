@@ -1,17 +1,16 @@
 // Native
-import { URLSearchParams } from 'url';
+
+import { eraseLines } from 'ansi-escapes';
 
 // Packages
 import retry from 'async-retry';
 import jsonlines from 'jsonlines';
-import { eraseLines } from 'ansi-escapes';
-
+import { URLSearchParams } from 'url';
+import output from '../output-manager';
 import type Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
-
 import type { BuildLog } from './logs';
-import output from '../output-manager';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';

@@ -1,8 +1,8 @@
 import { Files } from '@vercel/build-utils';
 import {
-  isStaticMetadataRoute,
-  getSourceFileRefOfStaticMetadata,
   getAppRouterPathnameFilesMap,
+  getSourceFileRefOfStaticMetadata,
+  isStaticMetadataRoute,
 } from '../../src/metadata';
 
 describe('isStaticMetadataRoute', () => {

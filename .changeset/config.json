@@ -12,11 +12,7 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": [
-    "api",
-    "examples",
-    "@vercel-internals/*"
-  ],
+  "ignore": ["api", "examples", "@vercel-internals/*"],
   "privatePackages": {
     "version": true,
     "tag": true

@@ -1,8 +1,8 @@
+import { compileVercelConfig } from '../compile-vercel-config';
+import type { VercelConfig } from '../dev/types';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
-import type { VercelConfig } from '../dev/types';
 import getLocalConfigPath from './local-path';
-import { compileVercelConfig } from '../compile-vercel-config';
 
 export default async function readConfig(dir: string) {
   let pkgFilePath: string;

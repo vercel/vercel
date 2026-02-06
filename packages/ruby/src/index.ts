@@ -1,28 +1,28 @@
-import { EOL, release } from 'os';
-import { join, dirname } from 'path';
+import {
+  type BuildV3,
+  cloneEnv,
+  debug,
+  download,
+  FileBlob,
+  type Files,
+  type GlobOptions,
+  getWriteableDirectory,
+  glob,
+  Lambda,
+  type ShouldServe,
+  walkParentDirs,
+} from '@vercel/build-utils';
 import execa from 'execa';
 import {
   ensureDir,
   move,
-  remove,
   pathExists,
   readFile,
+  remove,
   writeFile,
 } from 'fs-extra';
-import {
-  download,
-  getWriteableDirectory,
-  glob,
-  Lambda,
-  debug,
-  walkParentDirs,
-  cloneEnv,
-  FileBlob,
-  type GlobOptions,
-  type Files,
-  type BuildV3,
-  type ShouldServe,
-} from '@vercel/build-utils';
+import { EOL, release } from 'os';
+import { dirname, join } from 'path';
 import { installBundler } from './install-ruby';
 
 async function matchPaths(
@@ -240,7 +240,7 @@ export const build: BuildV3 = async ({
   // try to remove gem cache to slim bundle size
   try {
     await remove(join(vendorDir, 'cache'));
-  } catch (e) {
+  } catch (_e) {
     // don't do anything here
   }
 

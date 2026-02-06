@@ -1,34 +1,34 @@
-import chalk from 'chalk';
-import { checkDeploymentStatus } from '@vercel/client';
-import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { parseArguments } from '../../util/get-args';
-import { getCommandName } from '../../util/pkg-name';
-import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
-import getScope from '../../util/get-scope';
-import { printError } from '../../util/error';
-import { isErrnoException } from '@vercel/error-utils';
-import Now from '../../util';
-import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
-import stamp from '../../util/output/stamp';
-import ua from '../../util/ua';
 import type { VercelClientOptions } from '@vercel/client';
-import { help } from '../help';
-import { redeployCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
+import { checkDeploymentStatus } from '@vercel/client';
+import { isErrnoException } from '@vercel/error-utils';
 import type {
   CustomEnvironment,
   Project,
   ProjectRollingRelease,
 } from '@vercel-internals/types';
+import chalk from 'chalk';
+import output from '../../output-manager';
+import Now from '../../util';
+import type Client from '../../util/client';
+import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { printError } from '../../util/error';
+import type { ProjectNotFound } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import {
   getCustomEnvironments,
   pickCustomEnvironment,
 } from '../../util/target/get-custom-environments';
-import type { ProjectNotFound } from '../../util/errors-ts';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
+import ua from '../../util/ua';
+import { help } from '../help';
+import { redeployCommand } from './command';
 
 /**
  * `vc redeploy` command
@@ -178,7 +178,7 @@ export default async function redeploy(client: Client): Promise<number> {
       let project: Project | ProjectNotFound | undefined;
       let rollingRelease: ProjectRollingRelease | undefined;
 
-      if (deployment.projectId && deployment.projectId != '') {
+      if (deployment.projectId && deployment.projectId !== '') {
         project = await getProjectByNameOrId(client, deployment.projectId);
         rollingRelease = (project as Project)?.rollingRelease;
       }

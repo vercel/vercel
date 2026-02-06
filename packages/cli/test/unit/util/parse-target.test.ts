@@ -1,6 +1,6 @@
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
-import parseTarget from '../../../src/util/parse-target';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import output from '../../../src/output-manager';
+import parseTarget from '../../../src/util/parse-target';
 
 describe('parseTarget', () => {
   beforeEach(() => {

@@ -1,8 +1,8 @@
 import path from 'node:path';
-import execa from 'execa';
 import { debug } from '@vercel/build-utils';
-import { assertEnv, getExecutableName } from './utils';
+import execa from 'execa';
 import { findBinaryName, findCargoWorkspace, getCargoMetadata } from './cargo';
+import { assertEnv, getExecutableName } from './utils';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 

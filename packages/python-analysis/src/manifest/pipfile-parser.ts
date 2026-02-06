@@ -5,11 +5,8 @@
 /** The default PyPI index name used by Pipenv */
 const PYPI_INDEX_NAME = 'pypi';
 
-import type { PyProjectToml } from './pyproject/types';
-import type {
-  DependencySource,
-  NormalizedRequirement,
-} from './requirement/types';
+import { isPlainObject } from '../util/type';
+import { formatPep508, mergeExtras, splitExtras } from './pep508';
 import type {
   PipfileDependency,
   PipfileDependencyDetail,
@@ -17,8 +14,11 @@ import type {
   PipfileLockLike,
   PipfileSource,
 } from './pipfile/types';
-import { formatPep508, mergeExtras, splitExtras } from './pep508';
-import { isPlainObject } from '../util/type';
+import type { PyProjectToml } from './pyproject/types';
+import type {
+  DependencySource,
+  NormalizedRequirement,
+} from './requirement/types';
 
 interface ToolUvIndexEntry {
   name: string;

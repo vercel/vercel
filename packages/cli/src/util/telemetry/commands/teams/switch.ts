@@ -1,6 +1,6 @@
+import type { switchSubcommand } from '../../../../commands/teams/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { switchSubcommand } from '../../../../commands/teams/command';
 
 export class TeamsSwitchTelemetryClient
   extends TelemetryClient

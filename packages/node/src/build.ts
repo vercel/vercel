@@ -1,54 +1,54 @@
-import { isErrnoException } from '@vercel/error-utils';
-import { createRequire } from 'module';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
-import {
-  basename,
-  dirname,
-  join,
-  relative,
-  resolve,
-  sep,
-  parse as parsePath,
-  extname,
-} from 'path';
-import { Project } from 'ts-morph';
-import { nodeFileTrace } from '@vercel/nft';
-import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
-import {
-  glob,
-  download,
-  FileBlob,
-  FileFsRef,
-  EdgeFunction,
-  NodejsLambda,
-  runNpmInstall,
-  runPackageJsonScript,
-  getNodeVersion,
-  debug,
-  isSymbolicLink,
-  walkParentDirs,
-  execCommand,
-  getEnvForPackageManager,
-  scanParentDirs,
-  isBunVersion,
-} from '@vercel/build-utils';
 import type {
+  BuildResultV3,
+  BuildV3,
+  Config,
   File,
   Files,
   Meta,
-  Config,
-  BuildV3,
   NodeVersion,
-  BuildResultV3,
 } from '@vercel/build-utils';
-import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
+import {
+  debug,
+  download,
+  EdgeFunction,
+  execCommand,
+  FileBlob,
+  FileFsRef,
+  getEnvForPackageManager,
+  getNodeVersion,
+  glob,
+  isBunVersion,
+  isSymbolicLink,
+  NodejsLambda,
+  runNpmInstall,
+  runPackageJsonScript,
+  scanParentDirs,
+  walkParentDirs,
+} from '@vercel/build-utils';
+import { isErrnoException } from '@vercel/error-utils';
+import { nodeFileTrace } from '@vercel/nft';
+import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
+import { type BaseFunctionConfig, getConfig } from '@vercel/static-config';
+import { lstatSync, readFileSync, readlinkSync, statSync } from 'fs';
+import { createRequire } from 'module';
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  parse as parsePath,
+  relative,
+  resolve,
+  sep,
+} from 'path';
+import { Project } from 'ts-morph';
 
 import { Register, register } from './typescript';
 import {
-  validateConfiguredRuntime,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
+  validateConfiguredRuntime,
 } from './utils';
 
 interface DownloadOptions {
@@ -62,8 +62,7 @@ interface DownloadOptions {
 
 const require_ = createRequire(__filename);
 
-// eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const libPathRegEx = /^node_modules|[/\\]node_modules[/\\]/;
 
 async function downloadInstallAndBundle({
   files,

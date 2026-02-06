@@ -1,6 +1,6 @@
+import { execSync } from 'child_process';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { execSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
 
 const MCP_ENDPOINT = 'https://mcp.vercel.com';
@@ -48,7 +48,7 @@ async function getProjectSpecificUrl(
       url: `${MCP_ENDPOINT}/${org.slug}/${project.name}`,
       projectName: project.name,
     };
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -222,7 +222,7 @@ export default async function mcp(client: Client) {
               server.url === mcpUrl || server.url === MCP_ENDPOINT
           );
         }
-      } catch (error) {
+      } catch (_error) {
         // If we can't read the config, assume it's not configured
       }
 
@@ -254,7 +254,7 @@ export default async function mcp(client: Client) {
 
         summary.push('✅ Cursor: One-click installer opened');
         output.print('ℹ️  Follow the prompts in Cursor to complete setup\n');
-      } catch (error) {
+      } catch (_error) {
         summary.push('⚠️ Cursor: Deep link may not have worked');
         output.print('⚠️ Could not open Cursor automatically\n');
         output.print('💡 Manual setup:\n');
@@ -337,7 +337,7 @@ export default async function mcp(client: Client) {
               server.url === mcpUrl || server.url === MCP_ENDPOINT
           );
         }
-      } catch (error) {
+      } catch (_error) {
         // If we can't read the config, assume it's not configured
       }
 
@@ -368,7 +368,7 @@ export default async function mcp(client: Client) {
 
         summary.push('✅ VS Code: One-click installer opened');
         output.print('ℹ️  Follow the prompts in VS Code to complete setup\n');
-      } catch (error) {
+      } catch (_error) {
         summary.push('❌ VS Code: Failed to open one-click installer');
         output.print('💡 Manual setup instructions:\n');
         output.print('   1. Open VS Code\n');

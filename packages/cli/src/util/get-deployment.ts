@@ -1,3 +1,5 @@
+import type { Deployment } from '@vercel-internals/types';
+import mapCertError from './certs/map-cert-error';
 import type Client from './client';
 import {
   DeploymentNotFound,
@@ -5,8 +7,6 @@ import {
   InvalidDeploymentId,
   isAPIError,
 } from './errors-ts';
-import type { Deployment } from '@vercel-internals/types';
-import mapCertError from './certs/map-cert-error';
 import toHost from './to-host';
 
 /**

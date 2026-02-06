@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { client } from '../../../mocks/client';
+import { beforeEach, describe, expect, it } from 'vitest';
 import alias from '../../../../src/commands/alias';
-import { useUser } from '../../../mocks/user';
 import { useAlias } from '../../../mocks/alias';
+import { client } from '../../../mocks/client';
+import { useUser } from '../../../mocks/user';
 
 describe('alias ls', () => {
   beforeEach(() => {

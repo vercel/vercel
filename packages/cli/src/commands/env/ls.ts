@@ -1,31 +1,31 @@
-import chalk from 'chalk';
-import ms from 'ms';
+import { determineAgent } from '@vercel/detect-agent';
 import type {
   CustomEnvironment,
   ProjectEnvVariable,
   ProjectLinked,
 } from '@vercel-internals/types';
-import type Client from '../../util/client';
-import formatTable from '../../util/format-table';
-import getEnvRecords from '../../util/env/get-env-records';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import ellipsis from '../../util/output/ellipsis';
-import { getCustomEnvironments } from '../../util/target/get-custom-environments';
-import formatEnvironments from '../../util/env/format-environments';
-import { formatProject } from '../../util/projects/format-project';
+import chalk from 'chalk';
+import ms from 'ms';
 import output from '../../output-manager';
-import { validateJsonOutput } from '../../util/output-format';
-import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
-import { listSubcommand } from './command';
+import type Client from '../../util/client';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import formatEnvironments from '../../util/env/format-environments';
+import getEnvRecords from '../../util/env/get-env-records';
+import { printError } from '../../util/error';
+import formatTable from '../../util/format-table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import ellipsis from '../../util/output/ellipsis';
+import stamp from '../../util/output/stamp';
+import { validateJsonOutput } from '../../util/output-format';
+import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
 import { getLinkedProject } from '../../util/projects/link';
-import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({

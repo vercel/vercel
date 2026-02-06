@@ -1,31 +1,30 @@
-import fs from 'fs';
+import { getPlatformEnv, NowBuildError } from '@vercel/build-utils';
+import { isErrnoException, isError } from '@vercel/error-utils';
+import type {
+  Org,
+  Project,
+  ProjectLink,
+  ProjectLinkResult,
+} from '@vercel-internals/types';
 import AJV from 'ajv';
 import chalk from 'chalk';
-import { join, relative } from 'path';
+import fs from 'fs';
 import { ensureDir } from 'fs-extra';
+import { join, relative } from 'path';
 import { promisify } from 'util';
-
-import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import pull from '../../commands/env/pull';
+import output from '../../output-manager';
 import type Client from '../client';
+import { isDirectory } from '../config/global-path';
+import { type EmojiLabel, emoji, prependEmoji } from '../emoji';
 import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
-import getTeamById from '../teams/get-team-by-id';
-import type {
-  Project,
-  ProjectLinkResult,
-  Org,
-  ProjectLink,
-} from '@vercel-internals/types';
-import { prependEmoji, emoji, type EmojiLabel } from '../emoji';
-import { isDirectory } from '../config/global-path';
-import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
-import outputCode from '../output/code';
-import { isErrnoException, isError } from '@vercel/error-utils';
-import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
-import output from '../../output-manager';
-import pull from '../../commands/env/pull';
+import { findProjectsFromPath, getRepoLink } from '../link/repo';
+import outputCode from '../output/code';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import getTeamById from '../teams/get-team-by-id';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -376,7 +375,7 @@ export async function linkFolderToProject(
           'Failed to pull environment variables. You can run `vc env pull` manually.'
         );
       }
-    } catch (error) {
+    } catch (_error) {
       output.error(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );

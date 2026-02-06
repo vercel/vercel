@@ -1,5 +1,4 @@
-import { promises as fs } from 'fs';
-import { dirname, join, relative } from 'path';
+import type { BuildV2, PackageJson } from '@vercel/build-utils';
 import {
   debug,
   download,
@@ -13,8 +12,9 @@ import {
   runPackageJsonScript,
   scanParentDirs,
 } from '@vercel/build-utils';
-import type { BuildV2, PackageJson } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
+import { promises as fs } from 'fs';
+import { dirname, join, relative } from 'path';
 import { Project } from 'ts-morph';
 
 export const build: BuildV2 = async ({

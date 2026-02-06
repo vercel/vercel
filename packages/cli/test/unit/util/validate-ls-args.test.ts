@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from 'strip-ansi';
-import { validateLsArgs } from '../../../src/util/validate-ls-args';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import output from '../../../src/output-manager';
 import { getCommandName } from '../../../src/util/pkg-name';
+import { validateLsArgs } from '../../../src/util/validate-ls-args';
 
 vi.mock('../../../src/output-manager', () => ({
   default: {

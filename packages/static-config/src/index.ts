@@ -1,13 +1,13 @@
+import { FromSchema, JSONSchema } from 'json-schema-to-ts';
 import {
+  ArrayLiteralExpression,
+  Node,
+  NodeFlags,
+  ObjectLiteralExpression,
   Project,
   SourceFile,
   SyntaxKind,
-  NodeFlags,
-  ObjectLiteralExpression,
-  Node,
-  ArrayLiteralExpression,
 } from 'ts-morph';
-import { FromSchema, JSONSchema } from 'json-schema-to-ts';
 import { validate } from './validation';
 
 export const BaseFunctionConfigSchema = {
@@ -49,7 +49,7 @@ export function getConfig<
   const configNode = getConfigNode(sourceFile);
   if (!configNode) return null;
   const config = getValue(configNode);
-  // @ts-ignore
+  // @ts-expect-error
   return validate(schema || BaseFunctionConfigSchema, config);
 }
 
@@ -108,7 +108,6 @@ function getObject(obj: ObjectLiteralExpression): unknown {
   const rtn: { [v: string]: unknown } = {};
   for (const prop of obj.getProperties()) {
     if (!Node.isPropertyAssignment(prop)) continue;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [nameNode, _colon, valueNode] = prop.getChildren();
     const name = nameNode.getText();
     rtn[name] = getValue(valueNode);

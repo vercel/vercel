@@ -1,8 +1,9 @@
+import frameworkList from '@vercel/frameworks';
 import { posix as posixPath } from 'path';
 import type {
-  ResolvedService,
   ExperimentalServiceConfig,
   ExperimentalServices,
+  ResolvedService,
   ServiceDetectionError,
 } from './types';
 import {
@@ -11,7 +12,6 @@ import {
   STATIC_BUILDERS,
 } from './types';
 import { getBuilderForRuntime, inferServiceRuntime } from './utils';
-import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 

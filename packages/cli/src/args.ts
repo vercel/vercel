@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { packageName, logo } from './util/pkg-name';
+import { logo, packageName } from './util/pkg-name';
 
 export const help = () => `
   ${chalk.bold(`${logo} ${packageName}`)} [options] <command | path>

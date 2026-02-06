@@ -1,15 +1,15 @@
+import { errorToString, isError } from '@vercel/error-utils';
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp';
-import eraseLines from '../../util/output/erase-lines';
-import chars from '../../util/output/chars';
-import invite from './invite';
-import { writeToConfigFile } from '../../util/config/files';
-import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { writeToConfigFile } from '../../util/config/files';
+import chars from '../../util/output/chars';
+import eraseLines from '../../util/output/erase-lines';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
-import { errorToString, isError } from '@vercel/error-utils';
-import output from '../../output-manager';
+import invite from './invite';
 
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
 const validateName = (value: string) => /^[ a-zA-Z0-9_-]+$/.test(value);
@@ -29,7 +29,6 @@ export default async function add(client: Client): Promise<number> {
   );
   do {
     try {
-      // eslint-disable-next-line no-await-in-loop
       slug = await client.input.text({
         message: `- ${teamUrlPrefix}`,
         validate: validateSlug,
@@ -48,7 +47,6 @@ export default async function add(client: Client): Promise<number> {
     output.spinner(teamUrlPrefix + slug);
 
     try {
-      // eslint-disable-next-line no-await-in-loop
       team = await createTeam(client, { slug });
     } catch (err: unknown) {
       output.stopSpinner();

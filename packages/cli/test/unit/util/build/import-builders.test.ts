@@ -1,16 +1,15 @@
-import { describe, it, expect } from 'vitest';
-import { join } from 'path';
-import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
-import { client } from '../../../mocks/client';
+import vercelNextPkg from '@vercel/next/package.json';
+import vercelNodePkg from '@vercel/node/package.json';
+import { remove } from 'fs-extra';
+import { join } from 'path';
+import { describe, expect, it, vi } from 'vitest';
 import {
   importBuilders,
   resolveBuilders,
 } from '../../../../src/util/build/import-builders';
-import vercelNextPkg from '@vercel/next/package.json';
-import vercelNodePkg from '@vercel/node/package.json';
-import { vi } from 'vitest';
 import { isWindows } from '../../../helpers/is-windows';
+import { client } from '../../../mocks/client';
 
 // these tests can take upwards of 190s on macos-latest
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });

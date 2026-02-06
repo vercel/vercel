@@ -1,8 +1,8 @@
-import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
+import chalk from 'chalk';
 import Table, { type CellOptions } from 'cli-table3';
-import { noBorderChars } from '../util/output/table';
 import { globalCommandOptions } from '../util/arg-common';
+import { noBorderChars } from '../util/output/table';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';

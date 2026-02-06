@@ -1,6 +1,6 @@
+import type { connectSubcommand } from '../../../../commands/git/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { connectSubcommand } from '../../../../commands/git/command';
 
 export class GitConnectTelemetryClient
   extends TelemetryClient

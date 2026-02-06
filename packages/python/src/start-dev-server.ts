@@ -1,15 +1,15 @@
-import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
+import type { ChildProcess } from 'child_process';
+import { spawn } from 'child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import {
-  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  PYTHON_CANDIDATE_ENTRYPOINTS,
 } from './entrypoint';
-import { getDefaultPythonVersion } from './version';
 import { isInVirtualEnv, useVirtualEnv } from './utils';
+import { getDefaultPythonVersion } from './version';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.

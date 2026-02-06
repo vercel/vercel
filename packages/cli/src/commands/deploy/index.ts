@@ -9,26 +9,28 @@ import {
   VALID_ARCHIVE_FORMATS,
   type VercelConfig,
 } from '@vercel/client';
+import { determineAgent } from '@vercel/detect-agent';
 import { errorToString, isError } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
+import output from '../../output-manager';
 import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';
-import { readLocalConfig } from '../../util/config/files';
 import { compileVercelConfig } from '../../util/compile-vercel-config';
+import { readLocalConfig } from '../../util/config/files';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { printError } from '../../util/error';
-import { SchemaValidationFailed } from '../../util/errors-ts';
 import {
   AliasDomainConfigured,
   BuildError,
@@ -46,6 +48,7 @@ import {
   isAPIError,
   MissingBuildScript,
   NotDomainOwner,
+  SchemaValidationFailed,
   TooManyRequests,
   UserAborted,
 } from '../../util/errors-ts';
@@ -53,26 +56,23 @@ import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getProjectName from '../../util/get-project-name';
+import { ensureLink } from '../../util/link/ensure-link';
+import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
+import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
 import { pickOverrides } from '../../util/projects/project-settings';
+import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { help } from '../help';
 import { deployCommand, deprecatedArchiveSplitTgz } from './command';
-import parseTarget from '../../util/parse-target';
-import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
-import output from '../../output-manager';
-import { ensureLink } from '../../util/link/ensure-link';
-import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
-import { displayBuildLogsUntilFinalError } from '../../util/logs';
-import { determineAgent } from '@vercel/detect-agent';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -479,7 +479,7 @@ export default async (client: Client): Promise<number> => {
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
-  const withFullLogs = parsedArguments.flags['--logs'] ? true : false;
+  const withFullLogs = !!parsedArguments.flags['--logs'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 

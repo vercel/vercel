@@ -1,4 +1,4 @@
-import { vi, describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseRetryAfterHeaderAsMillis } from '../../../src/util/errors-ts';
 
 describe('APIError Retry-After parsing', () => {

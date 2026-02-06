@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import webhooks from '../../../../src/commands/webhooks';
 import * as ls from '../../../../src/commands/webhooks/ls';
 import { client } from '../../../mocks/client';

@@ -1,11 +1,11 @@
-import semver from 'semver';
-import { isOfficialRuntime } from './';
 import type {
   Builder,
   BuilderFunctions,
   PackageJson,
   ProjectSettings,
 } from '@vercel/build-utils';
+import semver from 'semver';
+import { isOfficialRuntime } from './';
 
 interface Metadata {
   plugins: string[];

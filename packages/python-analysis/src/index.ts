@@ -40,9 +40,9 @@ export {
 // =============================================================================
 
 export {
+  type CreateMinimalManifestOptions,
   createMinimalManifest,
   stringifyManifest,
-  type CreateMinimalManifestOptions,
 } from './manifest/serialize';
 
 // =============================================================================
@@ -62,6 +62,24 @@ export { PythonAnalysisError } from './util/error';
 // Schemas (runtime validation)
 // =============================================================================
 
+// Pipfile schemas
+export {
+  PipfileDependencyDetailSchema,
+  PipfileDependencySchema,
+  PipfileLikeSchema,
+  PipfileLockLikeSchema,
+  PipfileLockMetaSchema,
+  PipfileSourceSchema,
+} from './manifest/pipfile/schema';
+// Pipfile types (from source of truth)
+export type {
+  PipfileDependency,
+  PipfileDependencyDetail,
+  PipfileLike,
+  PipfileLockLike,
+  PipfileLockMeta,
+  PipfileSource,
+} from './manifest/pipfile/types';
 // PyProject schemas
 export {
   LicenseObjectSchema,
@@ -70,12 +88,11 @@ export {
   PyProjectBuildSystemSchema,
   PyProjectDependencyGroupsSchema,
   PyProjectProjectSchema,
-  PyProjectToolSectionSchema,
   PyProjectTomlSchema,
+  PyProjectToolSectionSchema,
   ReadmeObjectSchema,
   ReadmeSchema,
 } from './manifest/pyproject/schema';
-
 // PyProject types (from source of truth)
 export type {
   License,
@@ -89,54 +106,30 @@ export type {
   Readme,
   ReadmeObject,
 } from './manifest/pyproject/types';
-
-// UV config schemas
-export {
-  UvConfigSchema,
-  UvConfigWorkspaceSchema,
-  UvIndexEntrySchema,
-} from './manifest/uv-config/schema';
-
-// UV config types (from source of truth)
-export type {
-  UvConfig,
-  UvConfigWorkspace,
-  UvIndexEntry,
-} from './manifest/uv-config/types';
-
-// Pipfile schemas
-export {
-  PipfileDependencyDetailSchema,
-  PipfileDependencySchema,
-  PipfileLikeSchema,
-  PipfileLockLikeSchema,
-  PipfileLockMetaSchema,
-  PipfileSourceSchema,
-} from './manifest/pipfile/schema';
-
-// Pipfile types (from source of truth)
-export type {
-  PipfileDependency,
-  PipfileDependencyDetail,
-  PipfileLike,
-  PipfileLockLike,
-  PipfileLockMeta,
-  PipfileSource,
-} from './manifest/pipfile/types';
-
 // Requirement schemas
 export {
   DependencySourceSchema,
   HashDigestSchema,
   NormalizedRequirementSchema,
 } from './manifest/requirement/schema';
-
 // Requirement types (from source of truth)
 export type {
   DependencySource,
   HashDigest,
   NormalizedRequirement,
 } from './manifest/requirement/types';
+// UV config schemas
+export {
+  UvConfigSchema,
+  UvConfigWorkspaceSchema,
+  UvIndexEntrySchema,
+} from './manifest/uv-config/schema';
+// UV config types (from source of truth)
+export type {
+  UvConfig,
+  UvConfigWorkspace,
+  UvIndexEntry,
+} from './manifest/uv-config/types';
 
 // =============================================================================
 // Python specifier types (no schemas - internal types)

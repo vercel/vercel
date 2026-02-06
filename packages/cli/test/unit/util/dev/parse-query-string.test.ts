@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  parseQueryString,
   formatQueryString,
+  parseQueryString,
 } from '../../../../src/util/dev/parse-query-string';
 
 describe('parseQueryString', () => {

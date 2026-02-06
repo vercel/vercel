@@ -1,19 +1,19 @@
-import path from 'path';
-import { execCli } from './helpers/exec';
-import fetch from 'node-fetch';
-import { apiFetch } from './helpers/api-fetch';
-import fs from 'fs-extra';
-import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
-import { listTmpDirs } from './helpers/get-tmp-dir';
-import { teamPromise } from './helpers/get-account';
-import {
-  setupE2EFixture,
-  prepareE2EFixtures,
-} from './helpers/setup-e2e-fixture';
-import formatOutput from './helpers/format-output';
-import type { CLIProcess } from './helpers/types';
 import { randomBytes } from 'crypto';
+import fs from 'fs-extra';
+import fetch from 'node-fetch';
+import path from 'path';
+import sleep from '../src/util/sleep';
+import { apiFetch } from './helpers/api-fetch';
+import { execCli } from './helpers/exec';
+import formatOutput from './helpers/format-output';
+import { teamPromise } from './helpers/get-account';
+import { listTmpDirs } from './helpers/get-tmp-dir';
+import {
+  prepareE2EFixtures,
+  setupE2EFixture,
+} from './helpers/setup-e2e-fixture';
+import type { CLIProcess } from './helpers/types';
+import waitForPrompt from './helpers/wait-for-prompt';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -61,12 +61,7 @@ beforeAll(async () => {
   try {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
-    console.log(err);
-
+  } catch (_err) {
     // force test suite to actually stop
     process.exit(1);
   }
@@ -77,8 +72,6 @@ afterAll(async () => {
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
-    // eslint-disable-next-line no-console
-    console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
 });
@@ -462,7 +455,7 @@ test('deploy using --local-config flag above target', async () => {
 });
 
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
+test('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
   // Randomness is required so that tests can run in
   // parallel on the same project
@@ -732,10 +725,6 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     expect(res.status).toBe(200);
     if (res.status === 200) {
-      // eslint-disable-next-line no-console
-      console.log(
-        `Set autoExposeSystemEnvs=true for project ${link.projectId}`
-      );
     }
   }
 

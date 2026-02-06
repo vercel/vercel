@@ -1,19 +1,19 @@
+import type { DNSRecord } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
-import table from '../../util/output/table';
-import type { DNSRecord } from '@vercel-internals/types';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
-import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
-import { removeSubcommand } from './command';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
+import { getCommandName } from '../../util/pkg-name';
+import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
+import { removeSubcommand } from './command';
 
 export default async function rm(client: Client, argv: string[]) {
   let parsedArgs;

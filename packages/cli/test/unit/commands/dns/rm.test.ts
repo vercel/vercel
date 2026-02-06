@@ -1,8 +1,8 @@
-import { describe, beforeEach, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
+import { beforeEach, describe, expect, it } from 'vitest';
 import dns from '../../../../src/commands/dns';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { useDns } from '../../../mocks/dns';
+import { useUser } from '../../../mocks/user';
 
 describe('dns rm', () => {
   beforeEach(() => {

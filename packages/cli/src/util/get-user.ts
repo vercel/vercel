@@ -1,5 +1,5 @@
-import type Client from './client';
 import type { User } from '@vercel-internals/types';
+import type Client from './client';
 import { APIError, InvalidToken, MissingUser } from './errors-ts';
 
 export default async function getUser(client: Client) {

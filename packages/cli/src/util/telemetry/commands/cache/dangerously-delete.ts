@@ -1,6 +1,6 @@
+import type { dangerouslyDeleteSubcommand } from '../../../../commands/cache/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { dangerouslyDeleteSubcommand } from '../../../../commands/cache/command';
 
 export class CacheDangerouslyDeleteTelemetryClient
   extends TelemetryClient

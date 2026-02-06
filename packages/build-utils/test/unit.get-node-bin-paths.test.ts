@@ -1,6 +1,6 @@
 import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 import { getNodeBinPaths } from '../src/fs/run-user-scripts';
-import { describe, it, expect } from 'vitest';
 
 describe('getNodeBinPaths()', () => {
   const cwd = process.cwd();

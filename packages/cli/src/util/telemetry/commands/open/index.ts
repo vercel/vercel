@@ -1,6 +1,6 @@
+import type { openCommand } from '../../../../commands/open/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { openCommand } from '../../../../commands/open/command';
 
 export class OpenTelemetryClient
   extends TelemetryClient

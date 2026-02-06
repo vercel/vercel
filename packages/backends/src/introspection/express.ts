@@ -1,7 +1,7 @@
+import { debug } from '@vercel/build-utils';
 import type { Express } from 'express';
 import { pathToRegexp } from 'path-to-regexp';
 import { setupCloseHandlers } from '../rolldown/util.js';
-import { debug } from '@vercel/build-utils';
 
 let app: Express | null = null;
 

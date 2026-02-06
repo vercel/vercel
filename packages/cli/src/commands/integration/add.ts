@@ -1,13 +1,16 @@
 import chalk from 'chalk';
 import open from 'open';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import { packageName } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
 import list from '../../util/input/list';
-import cmd from '../../util/output/cmd';
-import indent from '../../util/output/indent';
-import { getLinkedProject } from '../../util/projects/link';
+import { createAuthorization } from '../../util/integration/create-authorization';
+import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
+import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { provisionStoreResource } from '../../util/integration/provision-store-resource';
 import type {
   BillingPlan,
   Integration,
@@ -15,18 +18,15 @@ import type {
   IntegrationProduct,
   Metadata,
 } from '../../util/integration/types';
-import { createMetadataWizard, type MetadataWizard } from './wizard';
-import { provisionStoreResource } from '../../util/integration/provision-store-resource';
-import { addAutoProvision } from './add-auto-provision';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
-import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
-import { fetchInstallations } from '../../util/integration/fetch-installations';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
-import output from '../../output-manager';
-import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
-import { createAuthorization } from '../../util/integration/create-authorization';
+import cmd from '../../util/output/cmd';
+import indent from '../../util/output/indent';
+import { packageName } from '../../util/pkg-name';
+import { getLinkedProject } from '../../util/projects/link';
 import sleep from '../../util/sleep';
-import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
+import { addAutoProvision } from './add-auto-provision';
+import { createMetadataWizard, type MetadataWizard } from './wizard';
 
 export async function add(client: Client, args: string[]) {
   const telemetry = new IntegrationAddTelemetryClient({

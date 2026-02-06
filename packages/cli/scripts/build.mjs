@@ -1,8 +1,8 @@
-import { dirname, join } from 'node:path';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { esbuild, getDependencies } from '../../../utils/build.mjs';
 import { compileDevTemplates } from './compile-templates.mjs';
-import { createRequire } from 'node:module';
 
 const repoRoot = new URL('../', import.meta.url);
 

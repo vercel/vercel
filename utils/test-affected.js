@@ -93,7 +93,7 @@ async function main() {
         console.log('  ✅ Only affected package e2e tests will run');
         console.log('  This saves time while maintaining safety');
       }
-    } catch (e) {
+    } catch (_e) {
       console.log('  (Could not determine e2e strategy)');
     }
   } catch (error) {

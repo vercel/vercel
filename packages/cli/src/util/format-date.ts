@@ -1,6 +1,6 @@
-import ms from 'ms';
 import chalk from 'chalk';
 import format from 'date-fns/format';
+import ms from 'ms';
 
 export default function formatDate(dateStrOrNumber?: number | string | null) {
   if (!dateStrOrNumber) {

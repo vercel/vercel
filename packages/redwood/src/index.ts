@@ -1,41 +1,41 @@
 import {
-  join,
-  dirname,
-  relative,
-  parse as parsePath,
-  sep,
-  basename,
-} from 'path';
-import { Project } from 'ts-morph';
-import { getConfig } from '@vercel/static-config';
-import { readFileSync, lstatSync, existsSync } from 'fs';
-import { intersects, validRange } from 'semver';
-import {
-  Lambda,
-  Files,
-  download,
-  glob,
+  BuildV2,
   debug,
-  getNodeVersion,
-  getPrefixedEnvVars,
-  runNpmInstall,
-  runPackageJsonScript,
+  defaultCachePathGlob,
+  download,
   execCommand,
   File,
   FileBlob,
   FileFsRef,
-  PackageJson,
+  Files,
   getEnvForPackageManager,
-  readConfigFile,
+  getNodeVersion,
+  getPrefixedEnvVars,
+  glob,
   isSymbolicLink,
-  scanParentDirs,
+  Lambda,
   NodejsLambda,
-  BuildV2,
+  PackageJson,
   PrepareCache,
-  defaultCachePathGlob,
+  readConfigFile,
+  runNpmInstall,
+  runPackageJsonScript,
+  scanParentDirs,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { getTransformedRoutes, Route } from '@vercel/routing-utils';
+import { getConfig } from '@vercel/static-config';
+import { existsSync, lstatSync, readFileSync } from 'fs';
+import {
+  basename,
+  dirname,
+  join,
+  parse as parsePath,
+  relative,
+  sep,
+} from 'path';
+import { intersects, validRange } from 'semver';
+import { Project } from 'ts-morph';
 
 interface RedwoodToml {
   web: { port?: number; apiProxyPath?: string };

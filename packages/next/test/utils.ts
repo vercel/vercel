@@ -1,15 +1,13 @@
-import type { Context, LoggerServer, Dictionary } from './types';
-import type { IncomingMessage } from 'http';
-
-import { testDeployment } from '../../../test/lib/deployment/test-deployment';
-
 import fs from 'fs-extra';
+import type { IncomingMessage } from 'http';
 import http from 'http';
-import listen from 'test-listen';
 import ms from 'ms';
 import ndjson from 'ndjson';
 import os from 'os';
 import path from 'path';
+import listen from 'test-listen';
+import { testDeployment } from '../../../test/lib/deployment/test-deployment';
+import type { Context, Dictionary, LoggerServer } from './types';
 
 jest.setTimeout(ms('6m'));
 

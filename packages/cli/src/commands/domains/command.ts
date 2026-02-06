@@ -1,4 +1,3 @@
-import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
   formatOption,
@@ -6,6 +5,7 @@ import {
   nextOption,
   yesOption,
 } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const listSubcommand = {
   name: 'list',

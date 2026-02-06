@@ -1,5 +1,5 @@
-import { DetectorFilesystem } from './detectors/filesystem';
 import semver from 'semver';
+import { DetectorFilesystem } from './detectors/filesystem';
 
 interface InstrumentationDependency {
   name: string;

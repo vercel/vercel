@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
 import webhooks from '../../../../src/commands/webhooks';
+import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useWebhooks, createWebhook } from '../../../mocks/webhooks';
+import { createWebhook, useWebhooks } from '../../../mocks/webhooks';
 
 describe('webhooks ls', () => {
   describe('--help', () => {

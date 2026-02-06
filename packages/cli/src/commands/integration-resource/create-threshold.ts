@@ -4,19 +4,19 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { getResources } from '../../util/integration-resource/get-resources';
-import { IntegrationResourceCreateThresholdTelemetryClient } from '../../util/telemetry/commands/integration-resource/create-threshold';
-import { createThresholdSubcommand } from './command';
 import getScope from '../../util/get-scope';
 import { getBalanceInformation } from '../../util/integration/fetch-installation-prepayment-info';
-import { updateThreshold } from '../../util/integration-resource/update-threshold';
-import { updateInstallationThreshold } from '../../util/integration/update-installation-threshold';
 import type {
   CreditWithAmount,
   InstallationBalancesAndThresholds,
   PrepaymentCreditThreshold,
 } from '../../util/integration/types';
+import { updateInstallationThreshold } from '../../util/integration/update-installation-threshold';
+import { getResources } from '../../util/integration-resource/get-resources';
 import type { Resource } from '../../util/integration-resource/types';
+import { updateThreshold } from '../../util/integration-resource/update-threshold';
+import { IntegrationResourceCreateThresholdTelemetryClient } from '../../util/telemetry/commands/integration-resource/create-threshold';
+import { createThresholdSubcommand } from './command';
 
 export async function createThreshold(client: Client) {
   const telemetry = new IntegrationResourceCreateThresholdTelemetryClient({
@@ -166,19 +166,19 @@ function parseCreateThresholdArguments(
 
   const resourceName = args[0];
   const minimum = Number.parseFloat(args[1]) * 100;
-  const spend = Number.parseInt(args[2]) * 100;
-  const limit = Number.parseInt(args[3]) * 100;
-  if (isNaN(minimum)) {
+  const spend = Number.parseInt(args[2], 10) * 100;
+  const limit = Number.parseInt(args[3], 10) * 100;
+  if (Number.isNaN(minimum)) {
     throw new Error(
       'Minimum is an invalid number format. Spend must be a positive number (ex. "5.75")'
     );
   }
-  if (isNaN(spend)) {
+  if (Number.isNaN(spend)) {
     throw new Error(
       'Spend is an invalid number format. Spend must be a positive number (ex. "10.99").'
     );
   }
-  if (isNaN(limit)) {
+  if (Number.isNaN(limit)) {
     throw new Error(
       'Limit is an invalid number format. Limit must be a positive number (ex. "1000").'
     );

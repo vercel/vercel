@@ -1,15 +1,14 @@
-import { delimiter } from 'path';
-import { dirname, join } from 'path';
+import type { BuildV2 } from '@vercel/build-utils';
 import {
   download,
-  runNpmInstall,
-  runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
-  scanParentDirs,
   getNodeBinPaths,
+  runNpmInstall,
+  runPackageJsonScript,
+  scanParentDirs,
 } from '@vercel/build-utils';
-import type { BuildV2 } from '@vercel/build-utils';
+import { delimiter, dirname, join } from 'path';
 
 export async function downloadInstallAndBundle(
   args: Parameters<BuildV2>[0]

@@ -1,10 +1,10 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import { InstallTelemetryClient } from '../../util/telemetry/commands/install';
 import { help } from '../help';
 import { add } from '../integration/add';
 import { installCommand } from './command';
-import output from '../../output-manager';
-import { InstallTelemetryClient } from '../../util/telemetry/commands/install';
 
 export default async function install(client: Client) {
   const { args, flags } = parseArguments(client.argv.slice(2));

@@ -1,16 +1,16 @@
-import {
-  describe,
-  test,
-  expect,
-  beforeEach,
-  afterEach,
-  vi,
-  MockInstance,
-} from 'vitest';
 import { delimiter } from 'path';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  MockInstance,
+  test,
+  vi,
+} from 'vitest';
 import { getEnvForPackageManager } from '../src';
-import { PNPM_10_PREFERRED_AT } from '../src/fs/run-user-scripts';
 import { getNodeVersionByMajor } from '../src/fs/node-version';
+import { PNPM_10_PREFERRED_AT } from '../src/fs/run-user-scripts';
 
 describe('Test `getEnvForPackageManager()`', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;

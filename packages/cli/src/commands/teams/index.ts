@@ -1,8 +1,12 @@
-import list from './list';
-import add from './add';
-import change from './switch';
-import invite from './invite';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
+import { type Command, help } from '../help';
+import add from './add';
 import {
   addSubcommand,
   inviteSubcommand,
@@ -10,13 +14,9 @@ import {
   switchSubcommand,
   teamsCommand,
 } from './command';
-import { type Command, help } from '../help';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
-import output from '../../output-manager';
-import getSubcommand from '../../util/get-subcommand';
-import type Client from '../../util/client';
+import invite from './invite';
+import list from './list';
+import change from './switch';
 
 const COMMAND_CONFIG = {
   list: ['ls', 'list'],

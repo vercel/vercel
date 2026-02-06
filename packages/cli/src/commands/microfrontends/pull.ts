@@ -1,17 +1,17 @@
-import chalk from 'chalk';
 import { join } from 'node:path';
-import output from '../../output-manager';
-import getScope from '../../util/get-scope';
-import type Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
-import { emoji, prependEmoji } from '../../util/emoji';
-import humanizePath from '../../util/humanize-path';
-import stamp from '../../util/output/stamp';
+import chalk from 'chalk';
 import { outputJSON } from 'fs-extra';
-import { pullSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import humanizePath from '../../util/humanize-path';
+import { ensureLink } from '../../util/link/ensure-link';
+import stamp from '../../util/output/stamp';
+import { pullSubcommand } from './command';
 
 interface MicrofrontendsConfig {
   $schema: string;

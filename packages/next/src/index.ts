@@ -1,44 +1,44 @@
 import {
+  BUILDER_COMPILE_STEP,
+  BUILDER_INSTALLER_STEP,
+  BuildResultV2Typical as BuildResult,
+  BuildResultBuildOutput,
+  BuildV2,
   Diagnostics,
+  debug,
+  detectPackageManager,
+  download,
+  execCommand,
   FileBlob,
   FileFsRef,
   Files,
-  Lambda,
-  NowBuildError,
-  PackageJson,
-  Prerender,
-  debug,
-  download,
+  getEnvForPackageManager,
+  getInstalledPackageVersion,
   getLambdaOptionsFromFunction,
+  getNodeBinPaths,
   getNodeVersion,
   getPrefixedEnvVars,
   getScriptName,
   glob,
+  Lambda,
+  NodejsLambda,
+  NowBuildError,
+  PackageJson,
+  PrepareCache,
+  Prerender,
   runNpmInstall,
   runPackageJsonScript,
-  execCommand,
-  getEnvForPackageManager,
-  getNodeBinPaths,
-  scanParentDirs,
-  BuildV2,
-  PrepareCache,
-  NodejsLambda,
-  BuildResultV2Typical as BuildResult,
-  BuildResultBuildOutput,
-  getInstalledPackageVersion,
   Span,
-  detectPackageManager,
-  BUILDER_INSTALLER_STEP,
-  BUILDER_COMPILE_STEP,
+  scanParentDirs,
   type TriggerEvent,
 } from '@vercel/build-utils';
+import { nodeFileTrace } from '@vercel/nft';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
-import { nodeFileTrace } from '@vercel/nft';
 import { Sema } from 'async-sema';
 // escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
@@ -57,30 +57,35 @@ import semver from 'semver';
 import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
+import { getAppRouterPathnameFilesMap } from './metadata';
 import { serverBuild } from './server-build';
 import {
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
   detectLambdaLimitExceeding,
-  excludeFiles,
   ExperimentalTraceVersion,
+  excludeFiles,
   filterStaticPages,
   getDynamicRoutes,
   getExportIntent,
   getExportStatus,
   getFilesMapFromReasons,
+  getFunctionsConfigManifest,
   getImagesConfig,
   getImagesManifest,
   getNextConfig,
+  getOperationType,
   getPageLambdaGroups,
   getPrerenderManifest,
   getPrivateOutputs,
   getRequiredServerFilesManifest,
   getRoutesManifest,
+  getServerlessPages,
   getSourceFilePathFromPage,
   getStaticFiles,
   getVariantsManifest,
+  isApiPage,
   isDynamicRoute,
   localizeDynamicRoutes,
   normalizeIndexOutput,
@@ -91,16 +96,11 @@ import {
   PseudoFile,
   PseudoLayer,
   PseudoLayerResult,
+  RenderingMode,
+  require_,
   updateRouteSrc,
   validateEntrypoint,
-  getOperationType,
-  isApiPage,
-  getFunctionsConfigManifest,
-  require_,
-  getServerlessPages,
-  RenderingMode,
 } from './utils';
-import { getAppRouterPathnameFilesMap } from './metadata';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -124,7 +124,7 @@ async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     debug('package.json not found in entry');
     return {};
   }
@@ -721,7 +721,7 @@ export const build: BuildV2 = async buildOptions => {
         'utf8'
       );
       escapedBuildId = escapeStringRegexp(buildId);
-    } catch (err) {
+    } catch (_err) {
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
         message:
@@ -2468,7 +2468,7 @@ export const build: BuildV2 = async buildOptions => {
         entryDirectory,
         routeKey === '/' ? '/index' : routeKey
       );
-      if (typeof lambdas[routeFileNoExt] === undefined) {
+      if (lambdas[routeFileNoExt] === undefined) {
         throw new NowBuildError({
           code: 'NEXT__UNKNOWN_ROUTE_KEY',
           message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,

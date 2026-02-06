@@ -1,10 +1,10 @@
+import { debug, Meta, NowBuildError, Version } from '@vercel/build-utils';
+import { spawnSync } from 'child_process';
 import execa from 'execa';
-import which from 'which';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { intersects } from 'semver';
-import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
-import { spawnSync } from 'child_process';
-import { tmpdir } from 'os';
+import which from 'which';
 
 class RubyVersion extends Version {}
 

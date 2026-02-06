@@ -9,9 +9,9 @@ import type {
   InstallationBalancesAndThresholds,
   PrepaymentCreditThreshold,
 } from '../../util/integration/types';
-import { IntegrationBalanceTelemetryClient } from '../../util/telemetry/commands/integration/balance';
-import type { Resource } from '../../util/integration-resource/types';
 import { getResources } from '../../util/integration-resource/get-resources';
+import type { Resource } from '../../util/integration-resource/types';
+import { IntegrationBalanceTelemetryClient } from '../../util/telemetry/commands/integration/balance';
 
 export async function balance(client: Client, args: string[]) {
   const telemetry = new IntegrationBalanceTelemetryClient({

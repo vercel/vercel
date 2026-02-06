@@ -1,20 +1,20 @@
-import type { MockInstance } from 'vitest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fileNameSymbol } from '@vercel/client';
 import bytes from 'bytes';
+import { randomBytes } from 'crypto';
 import fs from 'fs-extra';
 import { join } from 'path';
-import { randomBytes } from 'crypto';
-import { fileNameSymbol } from '@vercel/client';
-import { client } from '../../../mocks/client';
+import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import deploy from '../../../../src/commands/deploy';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { useDeployment, useBuildLogs } from '../../../mocks/deployment';
-import { useTeams } from '../../../mocks/team';
-import { useUser } from '../../../mocks/user';
+import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
 import humanizePath from '../../../../src/util/humanize-path';
 import sleep from '../../../../src/util/sleep';
-import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
+import { useBuildLogs, useDeployment } from '../../../mocks/deployment';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('deploy', () => {
   describe('--help', () => {
@@ -196,7 +196,7 @@ describe('deploy', () => {
     client.setArgv('deploy');
     client.localConfig = {
       [fileNameSymbol]: 'vercel.json',
-      // @ts-ignore
+      // @ts-expect-error
       version: {},
     };
     const exitCodePromise = deploy(client);

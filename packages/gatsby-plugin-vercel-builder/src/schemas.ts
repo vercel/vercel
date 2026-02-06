@@ -1,6 +1,6 @@
-import { Static, Type, Kind } from '@sinclair/typebox';
-import { Custom } from '@sinclair/typebox/custom';
+import { Kind, Static, Type } from '@sinclair/typebox';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
+import { Custom } from '@sinclair/typebox/custom';
 
 Custom.Set<{ enum: string[] }>('StringEnum', (schema, value) => {
   return schema.enum.includes(value as string);

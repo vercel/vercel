@@ -1,29 +1,29 @@
+import {
+  type ArchiveFormat,
+  createDeployment,
+  type DeploymentOptions,
+  type VercelClientOptions,
+} from '@vercel/client';
+import { isErrorLike } from '@vercel/error-utils';
 import type {
   Deployment,
   Org,
   Project,
   ProjectRollingRelease,
 } from '@vercel-internals/types';
-import {
-  type ArchiveFormat,
-  type DeploymentOptions,
-  type VercelClientOptions,
-  createDeployment,
-} from '@vercel/client';
-import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
+import output from '../../output-manager';
 import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
-import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
-import { progress } from '../output/progress';
-import ua from '../ua';
-import output from '../../output-manager';
-import eraseLines from '../output/erase-lines';
-import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
+import { type BuildLog, displayBuildLogs, parseLogLines } from '../logs';
+import eraseLines from '../output/erase-lines';
+import { progress } from '../output/progress';
+import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
+import ua from '../ua';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,

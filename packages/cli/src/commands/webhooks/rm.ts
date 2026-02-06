@@ -1,18 +1,18 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import deleteWebhook from '../../util/webhooks/delete-webhook';
-import getWebhook from '../../util/webhooks/get-webhook';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { WebhooksRmTelemetryClient } from '../../util/telemetry/commands/webhooks/rm';
-import { removeSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { WebhooksRmTelemetryClient } from '../../util/telemetry/commands/webhooks/rm';
+import deleteWebhook from '../../util/webhooks/delete-webhook';
+import getWebhook from '../../util/webhooks/get-webhook';
+import { removeSubcommand } from './command';
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetry = new WebhooksRmTelemetryClient({

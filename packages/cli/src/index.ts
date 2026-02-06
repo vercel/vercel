@@ -1,4 +1,4 @@
-import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
+import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
@@ -6,8 +6,6 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    // eslint-disable-next-line no-console
-    console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
 }
@@ -17,9 +15,8 @@ try {
     'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
   ];
 
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console override for silencing deprecation warnings
   const originalError = console.error;
-  // eslint-disable-next-line no-console
   console.error = (msg: unknown) => {
     const isSilencedError = SILENCED_ERRORS.some(
       error => typeof msg === 'string' && msg.includes(error)
@@ -31,52 +28,52 @@ try {
   };
 }
 
-import { join } from 'path';
-import { existsSync } from 'fs';
-import { mkdirp } from 'fs-extra';
+import type { VercelConfig } from '@vercel/client';
+import { determineAgent } from '@vercel/detect-agent';
+import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import getLatestVersion from './util/get-latest-version';
+import { existsSync } from 'fs';
+import { mkdirp } from 'fs-extra';
+import { join } from 'path';
+import { ProxyAgent } from 'proxy-agent';
 import { URL } from 'url';
-import { getSentry } from './util/get-sentry';
-import hp from './util/humanize-path';
-import { commands, commandNames } from './commands';
-import { handleCommandTypo } from './util/handle-command-typo';
-import pkg from './util/pkg';
-import cmd from './util/output/cmd';
-import param from './util/output/param';
-import highlight from './util/output/highlight';
-import { parseArguments } from './util/get-args';
-import getUser from './util/get-user';
-import getTeams from './util/teams/get-teams';
+import { help } from './args';
+import { commandNames, commands } from './commands';
+import login from './commands/login';
+import output from './output-manager';
 import Client from './util/client';
-import { printError } from './util/error';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
 import * as configFiles from './util/config/files';
-import getGlobalPathConfig from './util/config/global-path';
 import {
   defaultAuthConfig,
   defaultGlobalConfig,
 } from './util/config/get-default';
+import getGlobalPathConfig from './util/config/global-path';
+import { printError } from './util/error';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
-import getUpdateCommand from './util/get-update-command';
-import { executeUpgrade } from './util/upgrade';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import login from './commands/login';
-import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import type { VercelConfig } from '@vercel/client';
-import { ProxyAgent } from 'proxy-agent';
-import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
-import { TelemetryEventStore } from './util/telemetry';
-import { RootTelemetryClient } from './util/telemetry/root';
-import { help } from './args';
-import { checkTelemetryStatus } from './util/telemetry/check-status';
-import output from './output-manager';
+import { parseArguments } from './util/get-args';
+import getConfig from './util/get-config';
+import getLatestVersion from './util/get-latest-version';
+import { getSentry } from './util/get-sentry';
+import getUpdateCommand from './util/get-update-command';
+import getUser from './util/get-user';
 import { checkGuidanceStatus } from './util/guidance/check-status';
-import { determineAgent } from '@vercel/detect-agent';
+import { handleCommandTypo } from './util/handle-command-typo';
+import hp from './util/humanize-path';
+import box from './util/output/box';
+import cmd from './util/output/cmd';
+import highlight from './util/output/highlight';
+import param from './util/output/param';
+import pkg from './util/pkg';
+import { getCommandName, getTitleName } from './util/pkg-name';
+import reportError from './util/report-error';
+import getTeams from './util/teams/get-teams';
+import { TelemetryEventStore } from './util/telemetry';
+import { checkTelemetryStatus } from './util/telemetry/check-status';
+import { RootTelemetryClient } from './util/telemetry/root';
+import { executeUpgrade } from './util/upgrade';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -208,8 +205,6 @@ const main = async () => {
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
-    // eslint-disable-next-line no-console
-    console.log(pkg.version);
     return 0;
   }
 
@@ -331,7 +326,7 @@ const main = async () => {
 
   try {
     new URL(apiUrl);
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
@@ -362,7 +357,7 @@ const main = async () => {
   let defaultDeploy = false;
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
-  let subcommand: string | undefined = undefined;
+  let subcommand: string | undefined;
   let userSuppliedSubCommand: string = '';
   // Check if we are deploying something
   if (targetOrSubcommand) {

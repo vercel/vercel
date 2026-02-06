@@ -5,23 +5,23 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
-import { join } from 'path';
-import type { Headers } from 'undici';
-import type { VercelProxyResponse } from './types.js';
 import { Config, getLambdaOptionsFromFunction } from '@vercel/build-utils';
-import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
+import { getConfig } from '@vercel/static-config';
+import { listen } from 'async-listen';
+import { parse as parseCjs } from 'cjs-module-lexer';
+import { init, parse as parseEsm } from 'es-module-lexer';
+import { readFile } from 'fs/promises';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { join } from 'path';
+import { Project } from 'ts-morph';
+import type { Headers } from 'undici';
+import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import {
   createServerlessEventHandler,
   HTTP_METHODS,
 } from './serverless-functions/serverless-handler.mjs';
+import type { VercelProxyResponse } from './types.js';
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
-import { init, parse as parseEsm } from 'es-module-lexer';
-import { parse as parseCjs } from 'cjs-module-lexer';
-import { getConfig } from '@vercel/static-config';
-import { Project } from 'ts-morph';
-import { listen } from 'async-listen';
-import { readFile } from 'fs/promises';
 
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);
@@ -160,7 +160,7 @@ async function onDevRequest(
         res.statusCode = 200;
         res.end(content);
         return;
-      } catch (error) {
+      } catch (_error) {
         // If there's an error reading the static file, fall through to the main handler
       }
     }

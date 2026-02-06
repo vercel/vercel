@@ -1,12 +1,12 @@
 // This file only exists to ensure that the duck typing is compatible with the actual types.
 // It is not used in the codebase.
 
-import type { Pool as PgPoolType } from 'pg';
-import type { Pool as MySQL2PoolType } from 'mysql2/promise';
+import type { Client as CassandraClientType } from 'cassandra-driver';
+import type { Redis as IoRedisType } from 'ioredis';
 import type { Pool as MariaDBPoolType } from 'mariadb';
 import type { MongoClient as MongoDBClientType } from 'mongodb';
-import type { Redis as IoRedisType } from 'ioredis';
-import type { Client as CassandraClientType } from 'cassandra-driver';
+import type { Pool as MySQL2PoolType } from 'mysql2/promise';
+import type { Pool as PgPoolType } from 'pg';
 import type { DbPool } from '.';
 
 // Note: Our interfaces are simplified versions that only include the properties

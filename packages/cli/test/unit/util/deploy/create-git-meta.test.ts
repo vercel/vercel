@@ -1,22 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { join } from 'path';
-import fs from 'fs-extra';
-import os from 'os';
-import createLineIterator from 'line-async-iterator';
 import { getWriteableDirectory } from '@vercel/build-utils';
+import type { Project } from '@vercel-internals/types';
+import fs from 'fs-extra';
+import createLineIterator from 'line-async-iterator';
+import os from 'os';
+import { join } from 'path';
+import { describe, expect, it, vi } from 'vitest';
+import output from '../../../../src/output-manager';
 import {
   createGitMeta,
   getOriginUrl,
   getRemoteUrls,
   isDirty,
 } from '../../../../src/util/create-git-meta';
-import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
-import type { Project } from '@vercel-internals/types';
-import { vi } from 'vitest';
-import output from '../../../../src/output-manager';
+import { useUser } from '../../../mocks/user';
 
 vi.setConfig({ testTimeout: 10 * 1000 });
 

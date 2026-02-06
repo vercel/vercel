@@ -1,10 +1,10 @@
-import path from 'path';
-import { tmpdir } from 'os';
 import fs from 'fs-extra';
+import { tmpdir } from 'os';
+import path from 'path';
+import { describe, expect, it } from 'vitest';
+import { FileBlob, glob, spawnAsync } from '../src';
 import { createZip, Lambda, TriggerEvent } from '../src/lambda';
 import type { Files } from '../src/types';
-import { FileBlob, glob, spawnAsync } from '../src';
-import { describe, expect, it } from 'vitest';
 
 const MODE_DIRECTORY = 16877; /* drwxr-xr-x */
 const MODE_FILE = 33188; /* -rw-r--r-- */

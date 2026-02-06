@@ -1,10 +1,10 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
-import getStore from '../../../../src/commands/blob/store-get';
-import * as linkModule from '../../../../src/util/projects/link';
-import output from '../../../../src/output-manager';
 import dfns from 'date-fns';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import getStore from '../../../../src/commands/blob/store-get';
+import output from '../../../../src/output-manager';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
+import * as linkModule from '../../../../src/util/projects/link';
+import { client } from '../../../mocks/client';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
@@ -247,31 +247,27 @@ describe('blob store get', () => {
       { size: 1073741824, expected: '1GB' },
     ];
 
-    it.each(sizeCases)(
-      'should format different store sizes correctly',
-      async ({ size, expected }) => {
-        client.fetch = vi.fn().mockResolvedValue({
-          store: {
-            id: 'store_size_test_123',
-            name: 'Size Test Store',
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            billingState: 'active',
-            size,
-          },
-        });
+    it.each(sizeCases)('should format different store sizes correctly', async ({
+      size,
+      expected,
+    }) => {
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_size_test_123',
+          name: 'Size Test Store',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          billingState: 'active',
+          size,
+        },
+      });
 
-        const exitCode = await getStore(
-          client,
-          ['store_size_test_123'],
-          noToken
-        );
-        expect(exitCode).toBe(0);
-        expect(mockedOutput.print).toHaveBeenCalledWith(
-          expect.stringContaining(`Size: ${expected}`)
-        );
-      }
-    );
+      const exitCode = await getStore(client, ['store_size_test_123'], noToken);
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining(`Size: ${expected}`)
+      );
+    });
   });
 
   describe('store ID validation and detection', () => {

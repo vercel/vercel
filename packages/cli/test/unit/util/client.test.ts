@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
 import { listen } from 'async-listen';
+import { createServer } from 'http';
 import { createProxy } from 'proxy';
 import { ProxyAgent } from 'proxy-agent';
-import { createServer } from 'http';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 
 describe('Client', () => {

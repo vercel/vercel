@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { join } from 'path';
 import type { Framework } from '@vercel/frameworks';
+import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 import { detectProjects } from '../../../../src/util/projects/detect-projects';
 
 const REPO_ROOT = join(__dirname, '../../../../../..');

@@ -1,4 +1,4 @@
-import { tsc, esbuild } from '../../utils/build.mjs';
+import { esbuild, tsc } from '../../utils/build.mjs';
 
 await Promise.all([
   tsc(),

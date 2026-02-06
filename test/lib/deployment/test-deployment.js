@@ -384,7 +384,7 @@ async function testDeployment(fixturePath, opts = {}) {
 
   // Set `projectSettings.nodeVersion` based on the "engines.node" field of
   // the `package.json`. This ensures the correct build-container version is used.
-  let rootDirectory = path.join(
+  const rootDirectory = path.join(
     fixturePath,
     nowJson.builds?.length
       ? path.dirname(nowJson.builds[0].src)

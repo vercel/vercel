@@ -1,50 +1,50 @@
-import { Project } from 'ts-morph';
-import { readFileSync, promises as fs, existsSync } from 'fs';
-import { basename, dirname, extname, join, posix, relative, sep } from 'path';
+import type {
+  BuildResultV2Typical,
+  BuildV2,
+  Files,
+  NodeVersion,
+  PackageJson,
+} from '@vercel/build-utils';
 import {
   debug,
   download,
+  EdgeFunction,
   execCommand,
   FileBlob,
   FileFsRef,
   getEnvForPackageManager,
   getNodeVersion,
   glob,
-  EdgeFunction,
   NodejsLambda,
   rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
-import type {
-  BuildV2,
-  Files,
-  NodeVersion,
-  PackageJson,
-  BuildResultV2Typical,
-} from '@vercel/build-utils';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import { getConfig } from '@vercel/static-config';
+import { existsSync, promises as fs, readFileSync } from 'fs';
+import { basename, dirname, extname, join, posix, relative, sep } from 'path';
+import { Project } from 'ts-morph';
+import { patchHydrogenServer } from './hydrogen';
+import type { RouteManifestEntry } from './types';
 import {
   calculateRouteConfigHash,
+  chdirAndReadConfig,
+  ensureResolvable,
   findConfig,
+  findEntry,
   getPathFromRoute,
   getRegExpFromPath,
   getResolvedRouteConfig,
-  isLayoutRoute,
-  ResolvedRouteConfig,
-  ResolvedNodeRouteConfig,
-  ResolvedEdgeRouteConfig,
-  findEntry,
-  chdirAndReadConfig,
-  resolveSemverMinMax,
-  ensureResolvable,
   isESM,
+  isLayoutRoute,
+  ResolvedEdgeRouteConfig,
+  ResolvedNodeRouteConfig,
+  ResolvedRouteConfig,
+  resolveSemverMinMax,
 } from './utils';
-import { patchHydrogenServer } from './hydrogen';
-import type { RouteManifestEntry } from './types';
 
 interface ServerBundle {
   serverBuildPath: string;

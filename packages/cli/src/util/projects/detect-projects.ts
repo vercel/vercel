@@ -1,11 +1,11 @@
-import { join } from 'path';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import { type Framework, frameworkList } from '@vercel/frameworks';
 import {
   detectFrameworks,
   getWorkspacePackagePaths,
   getWorkspaces,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
+import { join } from 'path';
 
 export async function detectProjects(cwd: string) {
   const fs = new LocalFileSystemDetector(cwd);

@@ -1,14 +1,14 @@
-import { join } from 'path';
 import { getNodeVersion } from '@vercel/build-utils';
 import { build } from 'esbuild';
 import {
   copy,
   copyFile,
-  pathExists,
-  writeJson,
-  writeFileSync,
   ensureFileSync,
+  pathExists,
+  writeFileSync,
+  writeJson,
 } from 'fs-extra';
+import { join } from 'path';
 import type {
   NodejsServerlessFunctionConfig,
   PrerenderFunctionConfig,

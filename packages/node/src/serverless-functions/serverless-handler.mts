@@ -1,22 +1,21 @@
-import { addHelpers } from './helpers.js';
-import { createServer } from 'http';
+import { buildToHeaders } from '@edge-runtime/node-utils';
+import { listen } from 'async-listen';
+import type { IncomingMessage, ServerResponse } from 'http';
+import http, { createServer, Server } from 'http';
+import { isAbsolute } from 'path';
+import type { Readable } from 'stream';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
+import { pathToFileURL } from 'url';
+import { promisify } from 'util';
+import { Awaiter } from '../awaiter.js';
+import type { VercelProxyResponse } from '../types.js';
 import {
-  WAIT_UNTIL_TIMEOUT,
   serializeBody,
+  WAIT_UNTIL_TIMEOUT,
   waitUntilWarning,
 } from '../utils.js';
-import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
-import { listen } from 'async-listen';
-import { isAbsolute } from 'path';
-import { pathToFileURL } from 'url';
-import { buildToHeaders } from '@edge-runtime/node-utils';
-import { promisify } from 'util';
-import type { ServerResponse, IncomingMessage } from 'http';
-import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
-import type { Readable } from 'stream';
-import { Awaiter } from '../awaiter.js';
-import http, { Server } from 'http';
+import { addHelpers } from './helpers.js';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -188,9 +187,9 @@ export async function createServerlessEventHandler(
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
 
-  const handler = async function (
+  const handler = async (
     request: IncomingMessage
-  ): Promise<VercelProxyResponse> {
+  ): Promise<VercelProxyResponse> => {
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
       body: await serializeBody(request),
@@ -202,7 +201,7 @@ export async function createServerlessEventHandler(
     });
 
     let body: Readable | Buffer | null = null;
-    let headers = toHeaders(response.headers) as Headers;
+    const headers = toHeaders(response.headers) as Headers;
 
     if (isStreaming) {
       body = response.body;

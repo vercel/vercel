@@ -1,12 +1,12 @@
 import { deepEqual } from 'assert';
-import { Route, RouteWithSrc, normalizeRoutes } from '../src';
+import { normalizeRoutes, Route, RouteWithSrc } from '../src';
 import {
-  getCleanUrls,
   convertCleanUrls,
+  convertHeaders,
   convertRedirects,
   convertRewrites,
-  convertHeaders,
   convertTrailingSlash,
+  getCleanUrls,
 } from '../src/superstatic';
 
 function routesToRegExps(routeArray: Route[]) {

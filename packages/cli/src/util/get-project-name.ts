@@ -1,5 +1,5 @@
-import { basename } from 'path';
 import type { VercelConfig } from '@vercel/client';
+import { basename } from 'path';
 
 export interface GetProjectNameOptions {
   nameParam?: string;

@@ -1,7 +1,7 @@
-import type { ServerResponse, IncomingMessage } from 'http';
 import type { NodeHandler } from '@edge-runtime/node-utils';
-import type { Awaiter } from '../awaiter';
 import { buildToNodeHandler } from '@edge-runtime/node-utils';
+import type { IncomingMessage, ServerResponse } from 'http';
+import type { Awaiter } from '../awaiter';
 
 export const createWebExportsHandler = (awaiter: Awaiter) => {
   const webHandlerToNodeHandler = buildToNodeHandler(

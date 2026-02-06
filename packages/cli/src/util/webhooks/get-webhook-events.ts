@@ -1,5 +1,5 @@
-import { OpenApiCache } from '../openapi';
 import output from '../../output-manager';
+import { OpenApiCache } from '../openapi';
 
 let cachedEvents: string[] | null = null;
 

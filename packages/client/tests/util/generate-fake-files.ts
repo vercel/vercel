@@ -1,7 +1,7 @@
 // Mostly from packages/cli/test/helpers/setup-unit-fixture.ts
 
-import path from 'path';
 import fs from 'fs-extra';
+import path from 'path';
 // @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
 import { afterAll } from 'vitest';

@@ -1,18 +1,16 @@
-import semver from 'semver';
-import { existsSync, readFileSync, promises as fs } from 'fs';
-import { basename, dirname, extname, join, relative, resolve, sep } from 'path';
-import { debug, type PackageJson } from '@vercel/build-utils';
-import { walkParentDirs } from '@vercel/build-utils';
-import { createRequire } from 'module';
+import { debug, type PackageJson, walkParentDirs } from '@vercel/build-utils';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import type { RouteManifestEntry, RouteManifest, RemixConfig } from './types';
-
+import { existsSync, promises as fs, readFileSync } from 'fs';
+import { createRequire } from 'module';
+import { basename, dirname, extname, join, relative, resolve, sep } from 'path';
 /*
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
   https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
 */
-import { pathToRegexp as pathToRegexpCurrent, Key } from 'path-to-regexp';
+import { Key, pathToRegexp as pathToRegexpCurrent } from 'path-to-regexp';
 import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
+import semver from 'semver';
+import type { RemixConfig, RouteManifest, RouteManifestEntry } from './types';
 
 function cloneKeys(keys: Key[] | undefined): Key[] | undefined {
   if (typeof keys === 'undefined') {

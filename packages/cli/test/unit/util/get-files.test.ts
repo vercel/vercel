@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { join, sep } from 'path';
-// @ts-ignore - Missing types for "alpha-sort"
+// @ts-expect-error - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
+import { join, sep } from 'path';
+import { describe, expect, it } from 'vitest';
 import { staticFiles as getStaticFiles_ } from '../../../src/util/get-files';
 
 const prefix = `${join(__dirname, '../../fixtures/unit')}${sep}`;

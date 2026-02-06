@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { fileURLToPath } from 'node:url';
-import { dirname, join, extname } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { dirname, extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
 
 /**
  * These tests validate that worker files are correctly set up for ESM→CJS interop.

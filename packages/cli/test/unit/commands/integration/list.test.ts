@@ -1,13 +1,13 @@
+import createLineIterator from 'line-async-iterator';
 import { beforeEach, describe, expect, it } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
+import { parseSpacedTableRow } from '../../../helpers/parse-table';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import createLineIterator from 'line-async-iterator';
-import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
 describe('integration', () => {
   describe('list', () => {

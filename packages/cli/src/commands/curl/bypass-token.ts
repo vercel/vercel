@@ -1,11 +1,11 @@
-import type Client from '../../util/client';
-import output from '../../output-manager';
 import type {
   Project,
   ProjectLinked,
   ProjectProtectionBypass,
 } from '@vercel-internals/types';
 import chalk from 'chalk';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import sleep from '../../util/sleep';
 
 async function createDeploymentProtectionToken(

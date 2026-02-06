@@ -1,21 +1,21 @@
-import { printError } from '../../util/error';
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
+import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
-import ls from './ls';
-import rm from './rm';
-import set from './set';
 import {
   aliasCommand,
   listSubcommand,
   removeSubcommand,
   setSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
-import output from '../../output-manager';
-import { getCommandAliases } from '..';
+import ls from './ls';
+import rm from './rm';
+import set from './set';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),

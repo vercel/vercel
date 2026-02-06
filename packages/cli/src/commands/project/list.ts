@@ -1,18 +1,18 @@
-import ms from 'ms';
+import type { Project } from '@vercel-internals/types';
 import chalk from 'chalk';
-import table from '../../util/output/table';
+import ms from 'ms';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
 import getCommandFlags from '../../util/get-command-flags';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import table from '../../util/output/table';
+import { validateJsonOutput } from '../../util/output-format';
 import { getCommandName } from '../../util/pkg-name';
 import { ProjectListTelemetryClient } from '../../util/telemetry/commands/project/list';
-import output from '../../output-manager';
-import { validateJsonOutput } from '../../util/output-format';
 import { listSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import getScope from '../../util/get-scope';
-import type Client from '../../util/client';
-import type { Project } from '@vercel-internals/types';
 
 // Constants
 const TABLE_HEADERS = [

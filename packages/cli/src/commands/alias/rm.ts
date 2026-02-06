@@ -1,19 +1,19 @@
+import type { Alias } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
-import table from '../../util/output/table';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import removeAliasById from '../../util/alias/remove-alias-by-id';
-import stamp from '../../util/output/stamp';
-import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-import { isValidName } from '../../util/is-valid-name';
-import { getCommandName } from '../../util/pkg-name';
-import { AliasRemoveTelemetryClient } from '../../util/telemetry/commands/alias/remove';
 import output from '../../output-manager';
-import type { Alias } from '@vercel-internals/types';
+import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
+import removeAliasById from '../../util/alias/remove-alias-by-id';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import { isValidName } from '../../util/is-valid-name';
+import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
+import { getCommandName } from '../../util/pkg-name';
+import { AliasRemoveTelemetryClient } from '../../util/telemetry/commands/alias/remove';
 import { removeSubcommand } from './command';
 
 export default async function rm(client: Client, argv: string[]) {

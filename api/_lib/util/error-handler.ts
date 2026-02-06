@@ -1,4 +1,4 @@
-import { init, captureException, withScope } from '@sentry/node';
+import { captureException, init, withScope } from '@sentry/node';
 import { assertEnv } from './assert-env';
 
 const serviceName = 'api-frameworks';
@@ -14,7 +14,7 @@ function initSentry() {
 
   init({
     // Cannot figure out what's going wrong here. VSCode resolves this fine. But when we build it blows up.
-    // @ts-ignore
+    // @ts-expect-error
     dsn: assertEnv('SENTRY_DSN'),
     environment: process.env.NODE_ENV || 'production',
     release: `${serviceName}`,

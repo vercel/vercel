@@ -1,5 +1,5 @@
+import { FileBlob, glob } from '@vercel/build-utils';
 import { join } from 'path';
-import { glob, FileBlob } from '@vercel/build-utils';
 import { describe, expect, it } from 'vitest';
 import { filesWithoutFsRefs } from '../../../../src/util/build/write-build-result';
 

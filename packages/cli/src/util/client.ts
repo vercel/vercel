@@ -1,4 +1,3 @@
-import { bold, gray, red, yellow, bgRed, white } from 'chalk';
 import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
@@ -6,42 +5,43 @@ import input from '@inquirer/input';
 import password from '@inquirer/password';
 import search from '@inquirer/search';
 import select from '@inquirer/select';
-import { EventEmitter } from 'events';
-import { URL } from 'url';
 import type { VercelConfig } from '@vercel/client';
+import { normalizeError } from '@vercel/error-utils';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  JSONObject,
+  PaginationOptions,
+  ReadableTTY,
+  Stdio,
+} from '@vercel-internals/types';
 import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
+import { bgRed, bold, gray, red, white, yellow } from 'chalk';
+import { EventEmitter } from 'events';
+import type { Agent } from 'http';
 import fetch, {
   type BodyInit,
   Headers,
   type RequestInit,
   type Response,
 } from 'node-fetch';
-import ua from './ua';
-import responseError from './response-error';
-import printIndications from './print-indications';
+import type * as tty from 'tty';
+import { URL } from 'url';
+import output from '../output-manager';
+import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
+import { APIError } from './errors-ts';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
-import type { TelemetryEventStore } from './telemetry';
-import type {
-  AuthConfig,
-  GlobalConfig,
-  JSONObject,
-  Stdio,
-  ReadableTTY,
-  PaginationOptions,
-} from '@vercel-internals/types';
-import { sharedPromise } from './promise';
-import { APIError } from './errors-ts';
-import { normalizeError } from '@vercel/error-utils';
-import type { Agent } from 'http';
-import sleep from './sleep';
-import type * as tty from 'tty';
-import output from '../output-manager';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
+import printIndications from './print-indications';
+import { sharedPromise } from './promise';
+import responseError from './response-error';
+import sleep from './sleep';
+import type { TelemetryEventStore } from './telemetry';
+import ua from './ua';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -73,7 +73,7 @@ export interface ClientOptions extends Stdio {
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
-  return v && typeof v == 'object' && v.constructor === Object;
+  return v && typeof v === 'object' && v.constructor === Object;
 };
 
 export function isValidAccessToken(authConfig: AuthConfig): boolean {

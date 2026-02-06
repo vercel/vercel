@@ -1,5 +1,5 @@
-import { readFile } from 'fs-extra';
 import { isErrnoException } from '@vercel/error-utils';
+import { readFile } from 'fs-extra';
 
 export async function getOsRelease() {
   try {

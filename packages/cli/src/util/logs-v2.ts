@@ -52,7 +52,7 @@ function parseRelativeTime(input: string): number {
     return now - msValue;
   }
   const date = new Date(input);
-  if (!isNaN(date.getTime())) {
+  if (!Number.isNaN(date.getTime())) {
     return date.getTime();
   }
   throw new Error(`Invalid time format: ${input}`);

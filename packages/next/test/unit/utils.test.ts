@@ -1,16 +1,16 @@
-import path from 'path';
+import { FileFsRef, FileRef } from '@vercel/build-utils';
 import os from 'os';
+import path from 'path';
 import {
   excludeFiles,
-  validateEntrypoint,
-  normalizePackageJson,
   getImagesConfig,
+  getMaxUncompressedLambdaSize,
   getNextConfig,
   getServerlessPages,
+  normalizePackageJson,
   normalizePrefetches,
-  getMaxUncompressedLambdaSize,
+  validateEntrypoint,
 } from '../../src/utils';
-import { FileFsRef, FileRef } from '@vercel/build-utils';
 import { genDir } from '../utils';
 
 describe('getNextConfig', () => {
@@ -449,22 +449,23 @@ describe('getMaxUncompressedLambdaSize', () => {
     expect(size).toBe(150 * 1024 * 1024);
   });
 
-  it.each(['provided.al2023', 'nodejs22.x'])(
-    'should return 250 MiB for %s runtime',
-    runtime => {
-      const size = getMaxUncompressedLambdaSize(runtime);
-      expect(size).toBe(250 * 1024 * 1024);
-    }
-  );
+  it.each([
+    'provided.al2023',
+    'nodejs22.x',
+  ])('should return 250 MiB for %s runtime', runtime => {
+    const size = getMaxUncompressedLambdaSize(runtime);
+    expect(size).toBe(250 * 1024 * 1024);
+  });
 
-  it.each(['bun1.x', 'provided.al2023', 'nodejs22.x'])(
-    'should use override for %s',
-    runtime => {
-      const override = 100 * 1024 * 1024;
-      process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE = override.toString();
-      const size = getMaxUncompressedLambdaSize(runtime);
-      expect(size).toBe(override);
-      delete process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE;
-    }
-  );
+  it.each([
+    'bun1.x',
+    'provided.al2023',
+    'nodejs22.x',
+  ])('should use override for %s', runtime => {
+    const override = 100 * 1024 * 1024;
+    process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE = override.toString();
+    const size = getMaxUncompressedLambdaSize(runtime);
+    expect(size).toBe(override);
+    delete process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE;
+  });
 });

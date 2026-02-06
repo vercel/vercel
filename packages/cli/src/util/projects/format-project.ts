@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import type { LinkOptions } from '../output/create-output';
 import output from '../../output-manager';
+import type { LinkOptions } from '../output/create-output';
 
 export function formatProject(
   orgSlug: string,

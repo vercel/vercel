@@ -1,6 +1,7 @@
-import { getContext as getVercelRequestContext } from './vercel-request-context';
-import { withNextRequestContext } from './next-request-context';
 import { toPlainHeaders } from './edge-function-source/to-plain-headers';
+import { withNextRequestContext } from './next-request-context';
+import { getContext as getVercelRequestContext } from './vercel-request-context';
+
 // The Next.js builder can emit the project in a subdirectory depending on how
 // many folder levels of `node_modules` are traced. To ensure `process.cwd()`
 // returns the proper path, we change the directory to the folder with the

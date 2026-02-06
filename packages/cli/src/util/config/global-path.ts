@@ -1,5 +1,5 @@
-import { homedir } from 'os';
 import fs from 'fs';
+import { homedir } from 'os';
 import path from 'path';
 import XDGAppPaths from 'xdg-app-paths';
 import getArgs from '../../util/get-args';

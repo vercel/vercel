@@ -1,5 +1,5 @@
-import path from 'path';
 import fs, { ensureDirSync } from 'fs-extra';
+import path from 'path';
 import XDGAppPaths from 'xdg-app-paths';
 import { getCachedTmpDir } from './get-tmp-dir';
 
@@ -13,8 +13,6 @@ export default function getGlobalDir() {
   }
 
   if (!fs.existsSync(globalDir)) {
-    // eslint-disable-next-line no-console
-    console.log('Creating global config directory ', globalDir);
     ensureDirSync(globalDir);
   }
 

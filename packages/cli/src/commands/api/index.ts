@@ -1,35 +1,35 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
 import type { Response } from 'node-fetch';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import { OpenApiCache } from '../../util/openapi';
+import { ApiTelemetryClient } from '../../util/telemetry/commands/api';
 import { help } from '../help';
 import { apiCommand, listSubcommand } from './command';
-import { ApiTelemetryClient } from '../../util/telemetry/commands/api';
+import { API_BASE_URL } from './constants';
+import {
+  colorizeMethod,
+  colorizeMethodPadded,
+  formatDescription,
+  formatPathParam,
+  formatTypeHint,
+} from './format-utils';
 import {
   buildRequest,
   formatOutput,
   generateCurlCommand,
 } from './request-builder';
-import { OpenApiCache } from '../../util/openapi';
-import { API_BASE_URL } from './constants';
-import {
-  colorizeMethod,
-  colorizeMethodPadded,
-  formatPathParam,
-  formatTypeHint,
-  formatDescription,
-} from './format-utils';
-import output from '../../output-manager';
 import type {
-  ParsedFlags,
+  BodyField,
   EndpointInfo,
   Parameter,
-  BodyField,
-  SelectedEndpoint,
+  ParsedFlags,
   PromptResult,
   RequestConfig,
+  SelectedEndpoint,
 } from './types';
 
 export default async function api(client: Client): Promise<number> {

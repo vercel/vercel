@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
+import { Chance } from 'chance';
 import _fetch, { Request, Response } from 'node-fetch';
+import { describe, expect, it, vi } from 'vitest';
 
 import whoami from '../../../../src/commands/whoami';
-import { Chance } from 'chance';
+import { client } from '../../../mocks/client';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({

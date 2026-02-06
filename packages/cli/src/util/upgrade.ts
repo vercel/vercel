@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
-import getUpdateCommand from './get-update-command';
 import output from '../output-manager';
+import getUpdateCommand from './get-update-command';
 
 /**
  * Executes the upgrade command to update the Vercel CLI.

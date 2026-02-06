@@ -2,8 +2,8 @@ const fs = require('fs');
 const assert = require('assert');
 
 const locales = ['en'];
-let charStart = 97;
-let charEnd = 105;
+const charStart = 97;
+const charEnd = 105;
 
 // generate 81 random locales under en
 for (let i = charStart; i <= charEnd; i++) {

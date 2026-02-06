@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { client } from '../../../mocks/client';
+import { beforeEach, describe, expect, it } from 'vitest';
 import teams from '../../../../src/commands/teams';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { createTeam, useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('teams add', () => {
   const currentTeamId = 'team_123';

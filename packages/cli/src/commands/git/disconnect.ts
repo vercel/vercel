@@ -1,15 +1,14 @@
 import chalk from 'chalk';
-
-import { getCommandName } from '../../util/pkg-name';
-import { disconnectGitProvider } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
-import { disconnectSubcommand } from './command';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
-import type Client from '../../util/client';
+import { disconnectGitProvider } from '../../util/git/connect-git-provider';
 import { ensureLink } from '../../util/link/ensure-link';
+import { getCommandName } from '../../util/pkg-name';
+import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
+import { disconnectSubcommand } from './command';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;

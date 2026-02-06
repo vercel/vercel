@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join, normalize, sep } from 'node:path';
+import { describe, expect, it } from 'vitest';
 import type { RepoProjectConfig } from '../../../../src/util/link/repo';
 import {
   findProjectsFromPath,

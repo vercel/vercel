@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
 
 vi.setConfig({ testTimeout: 10000 });
 

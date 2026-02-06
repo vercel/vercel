@@ -1,5 +1,5 @@
-import type Client from '../client';
 import type { DomainConfig } from '@vercel-internals/types';
+import type Client from '../client';
 import { isAPIError } from '../errors-ts';
 
 export async function getDomainConfig(client: Client, domainName: string) {

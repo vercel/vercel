@@ -1,6 +1,6 @@
+import type { redeployCommand } from '../../../../commands/redeploy/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { redeployCommand } from '../../../../commands/redeploy/command';
 
 export class RedeployTelemetryClient
   extends TelemetryClient

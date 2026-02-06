@@ -1,3 +1,5 @@
+import type { MatcherState } from '@vitest/expect';
+import type { MatcherHintOptions } from 'jest-matcher-utils';
 import {
   getLabelPrinter,
   matcherHint,
@@ -5,8 +7,6 @@ import {
   printReceived,
 } from 'jest-matcher-utils';
 import type { Readable } from 'stream';
-import type { MatcherState } from '@vitest/expect';
-import type { MatcherHintOptions } from 'jest-matcher-utils';
 import stripAnsi from 'strip-ansi';
 
 export interface ToOutputMatchers<R = unknown> {

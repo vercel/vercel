@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -8,7 +8,7 @@ import {
   usePreauthorization,
 } from '../../../mocks/integration';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { useTeams, type Team } from '../../../mocks/team';
+import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {

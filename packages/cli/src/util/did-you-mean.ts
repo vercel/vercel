@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error
 import distance from 'jaro-winkler';
 
 export default didYouMean;

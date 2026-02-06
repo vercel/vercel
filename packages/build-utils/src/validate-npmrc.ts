@@ -1,5 +1,5 @@
-import { join } from 'path';
 import { readFile } from 'fs/promises';
+import { join } from 'path';
 
 /**
  * Checks if there is a `.npmrc` in the cwd (project root) and makes sure it

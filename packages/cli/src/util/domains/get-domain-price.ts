@@ -1,5 +1,5 @@
-import { isAPIError, UnsupportedTLD } from '../errors-ts';
 import type Client from '../client';
+import { isAPIError, UnsupportedTLD } from '../errors-ts';
 
 type Response = {
   purchasePrice: number | null;

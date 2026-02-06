@@ -1,16 +1,16 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
-import stamp from '../../util/output/stamp';
-import importZonefile from '../../util/dns/import-zonefile';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { DnsImportTelemetryClient } from '../../util/telemetry/commands/dns/import';
-import { importSubcommand } from './command';
+import type Client from '../../util/client';
+import importZonefile from '../../util/dns/import-zonefile';
+import { printError } from '../../util/error';
+import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { DnsImportTelemetryClient } from '../../util/telemetry/commands/dns/import';
+import { importSubcommand } from './command';
 
 export default async function importZone(client: Client, argv: string[]) {
   let parsedArgs;

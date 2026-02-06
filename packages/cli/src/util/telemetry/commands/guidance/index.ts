@@ -1,6 +1,6 @@
+import type { guidanceCommand } from '../../../../commands/guidance/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { guidanceCommand } from '../../../../commands/guidance/command';
 
 export class GuidanceTelemetryClient
   extends TelemetryClient

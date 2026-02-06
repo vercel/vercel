@@ -1,22 +1,22 @@
+import type { Team, User } from '@vercel-internals/types';
 import chalk from 'chalk';
 import plural from 'pluralize';
-import * as ERRORS from '../../util/errors-ts';
-import getScope from '../../util/get-scope';
-import moveOutDomain from '../../util/domains/move-out-domain';
-import isRootDomain from '../../util/is-root-domain';
-import param from '../../util/output/param';
-import getDomainAliases from '../../util/alias/get-domain-aliases';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getTeams from '../../util/teams/get-teams';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { DomainsMoveTelemetryClient } from '../../util/telemetry/commands/domains/move';
-import { moveSubcommand } from './command';
+import getDomainAliases from '../../util/alias/get-domain-aliases';
+import type Client from '../../util/client';
+import getDomainByName from '../../util/domains/get-domain-by-name';
+import moveOutDomain from '../../util/domains/move-out-domain';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import type Client from '../../util/client';
-import type { User, Team } from '@vercel-internals/types';
+import getScope from '../../util/get-scope';
+import isRootDomain from '../../util/is-root-domain';
+import param from '../../util/output/param';
+import { getCommandName } from '../../util/pkg-name';
+import getTeams from '../../util/teams/get-teams';
+import { DomainsMoveTelemetryClient } from '../../util/telemetry/commands/domains/move';
+import { moveSubcommand } from './command';
 
 export default async function move(client: Client, argv: string[]) {
   const telemetry = new DomainsMoveTelemetryClient({

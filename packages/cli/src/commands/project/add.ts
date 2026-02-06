@@ -1,16 +1,16 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import type Client from '../../util/client';
-import { isAPIError } from '../../util/errors-ts';
-import { getCommandName } from '../../util/pkg-name';
-import createProject from '../../util/projects/create-project';
 import output from '../../output-manager';
-import { ProjectAddTelemetryClient } from '../../util/telemetry/commands/project/add';
-import { addSubcommand } from './command';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
+import { getCommandName } from '../../util/pkg-name';
+import createProject from '../../util/projects/create-project';
+import { ProjectAddTelemetryClient } from '../../util/telemetry/commands/project/add';
+import { addSubcommand } from './command';
 
 export default async function add(
   client: Client,

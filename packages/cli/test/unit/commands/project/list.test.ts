@@ -1,13 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import createLineIterator from 'line-async-iterator';
-import projects from '../../../../src/commands/project';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { client } from '../../../mocks/client';
-
-import { parseSpacedTableRow } from '../../../helpers/parse-table';
 import assert from 'node:assert';
+import createLineIterator from 'line-async-iterator';
+import { describe, expect, it } from 'vitest';
+import projects from '../../../../src/commands/project';
+import { parseSpacedTableRow } from '../../../helpers/parse-table';
+import { client } from '../../../mocks/client';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('list', () => {
   describe('invalid argument', () => {

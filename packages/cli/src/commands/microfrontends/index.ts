@@ -1,15 +1,15 @@
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import { printError } from '../../util/error';
-import { type Command, help } from '../help';
-import pull from './pull';
-import { microfrontendsCommand, pullSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { getCommandAliases } from '..';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { MicrofrontendsTelemetryClient } from '../../util/telemetry/commands/microfrontends';
+import { getCommandAliases } from '..';
+import { type Command, help } from '../help';
+import { microfrontendsCommand, pullSubcommand } from './command';
+import pull from './pull';
 
 const COMMAND_CONFIG = {
   pull: getCommandAliases(pullSubcommand),
@@ -35,8 +35,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  // eslint-disable-next-line prefer-const
-  let { subcommand, subcommandOriginal } = getSubcommand(
+  const { subcommand, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );

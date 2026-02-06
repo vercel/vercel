@@ -2,19 +2,19 @@
  * This converts Superstatic configuration to vercel.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
-import { parse as parseUrl, format as formatUrl } from 'url';
-import { Route, Redirect, Rewrite, HasField, Header } from './types';
 
 /*
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
   https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
 */
 import {
-  pathToRegexp as pathToRegexpCurrent,
-  Key,
   compile,
+  Key,
+  pathToRegexp as pathToRegexpCurrent,
 } from 'path-to-regexp';
 import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
+import { format as formatUrl, parse as parseUrl } from 'url';
+import { HasField, Header, Redirect, Rewrite, Route } from './types';
 
 function cloneKeys(keys: Key[] | undefined): Key[] | undefined {
   if (typeof keys === 'undefined') {
@@ -159,7 +159,7 @@ export function convertRedirects(
         route.missing = r.missing;
       }
       return route;
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
     }
   });
@@ -198,7 +198,7 @@ export function convertRewrites(
         route.status = r.statusCode;
       }
       return route;
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
   });
@@ -390,7 +390,6 @@ function replaceSegments(
   delete (parsedDestination as any).path;
   delete (parsedDestination as any).search;
   delete (parsedDestination as any).host;
-  // eslint-disable-next-line prefer-const
   let { pathname, hash, query, hostname, ...rest } = parsedDestination;
   pathname = unescapeSegments(pathname || '');
   hash = unescapeSegments(hash || '');
@@ -484,7 +483,7 @@ function safelyCompile(
       // to safely compiling to handle edge cases if path-to-regexp compile
       // fails
       return compile(value, { validate: false })(indexes);
-    } catch (e) {
+    } catch (_e) {
       // non-fatal, we continue to safely compile
     }
   }

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import { getCommandName } from './pkg-name';
 import output from '../output-manager';
+import { getCommandName } from './pkg-name';
 
 export function validateLsArgs(options: {
   commandName: string;

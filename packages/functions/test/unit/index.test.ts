@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest';
 import $ from 'tinyspawn';
+import { describe, expect, test } from 'vitest';
 
 const evalScript = (code: string, flags: string[] = []) =>
   $('node', ['--eval', code, ...flags]).then(({ stdout }) => stdout);

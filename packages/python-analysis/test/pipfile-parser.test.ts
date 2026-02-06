@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import {
-  convertPipfileToPyprojectToml,
-  convertPipfileLockToPyprojectToml,
-} from '../src/manifest/pipfile-parser';
+import { describe, expect, it } from 'vitest';
 import type {
   PipfileLike,
   PipfileLockLike,
 } from '../src/manifest/pipfile/types';
+import {
+  convertPipfileLockToPyprojectToml,
+  convertPipfileToPyprojectToml,
+} from '../src/manifest/pipfile-parser';
 
 describe('convertPipfileToPyprojectToml', () => {
   it('converts simple packages to dependencies', () => {

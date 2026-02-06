@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { getPathFromRoute } from '../src/utils';
+import { describe, expect, it } from 'vitest';
 import type { RouteManifest } from '../src/types';
+import { getPathFromRoute } from '../src/utils';
 
 describe('getPathFromRoute()', () => {
   const routes: RouteManifest = {

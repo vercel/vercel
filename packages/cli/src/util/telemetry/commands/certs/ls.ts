@@ -1,6 +1,6 @@
+import type { listSubcommand } from '../../../../commands/certs/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { listSubcommand } from '../../../../commands/certs/command';
 
 export class CertsLsTelemetryClient
   extends TelemetryClient

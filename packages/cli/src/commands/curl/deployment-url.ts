@@ -1,6 +1,6 @@
-import type Client from '../../util/client';
-import output from '../../output-manager';
 import type { Deployment } from '@vercel-internals/types';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 
 export async function getDeploymentUrlById(
   client: Client,
@@ -17,7 +17,7 @@ export async function getDeploymentUrlById(
         const url = new URL(deploymentIdOrUrl);
         // Normalize to origin (scheme + host), ignore path/query/fragment
         return url.origin;
-      } catch (err) {
+      } catch (_err) {
         output.debug(`Invalid deployment URL provided: ${deploymentIdOrUrl}`);
         return null;
       }

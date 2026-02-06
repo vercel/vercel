@@ -1,7 +1,7 @@
 import path from 'path';
+import { afterEach, expect, it, vi } from 'vitest';
 import { runNpmInstall } from '../src';
 import type { Meta } from '../src/types';
-import { afterEach, expect, it, vi } from 'vitest';
 
 let spawnExitCode = 0;
 

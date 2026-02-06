@@ -1,5 +1,5 @@
-import { parse } from 'url';
 import { basename, dirname } from 'path';
+import { parse } from 'url';
 
 export function getPageName(url: string, pathPrefix = '') {
   let pathName = (parse(url).pathname || '/').slice(pathPrefix.length);

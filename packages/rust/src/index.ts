@@ -1,31 +1,30 @@
 import path from 'node:path';
 import {
-  FileFsRef,
-  debug,
-  download,
-  glob,
-  Lambda,
   type BuildOptions,
   type BuildResultV3,
+  debug,
+  download,
+  FileFsRef,
   getLambdaOptionsFromFunction,
+  glob,
+  Lambda,
 } from '@vercel/build-utils';
 import execa from 'execa';
-import { installRustToolchain } from './lib/rust-toolchain';
-import type { Runtime } from './lib/runtime';
 import {
-  getCargoMetadata,
   findBinaryName,
-  findCargoWorkspace,
   findCargoBuildConfiguration,
+  findCargoWorkspace,
+  getCargoMetadata,
 } from './lib/cargo';
+import type { Runtime } from './lib/runtime';
+import { installRustToolchain } from './lib/rust-toolchain';
+import { startDevServer as rustStartDevServer } from './lib/start-dev-server';
 import {
   assertEnv,
-  getExecutableName,
   gatherExtraFiles,
+  getExecutableName,
   runUserScripts,
 } from './lib/utils';
-
-import { startDevServer as rustStartDevServer } from './lib/start-dev-server';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 

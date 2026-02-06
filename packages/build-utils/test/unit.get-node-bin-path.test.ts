@@ -1,6 +1,6 @@
 import { join, parse } from 'path';
+import { describe, expect, it } from 'vitest';
 import { getNodeBinPath } from '../src';
-import { describe, it, expect } from 'vitest';
 
 describe('Test `getNodeBinPath()`', () => {
   it('should work with npm7', async () => {

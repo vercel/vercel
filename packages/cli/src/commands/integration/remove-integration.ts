@@ -2,14 +2,14 @@ import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
-import { printError } from '../../util/error';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { removeIntegration } from '../../util/integration/remove-integration';
-import { removeSubcommand } from './command';
 import { IntegrationRemoveTelemetryClient } from '../../util/telemetry/commands/integration/remove';
+import { removeSubcommand } from './command';
 
 export async function remove(client: Client) {
   const telemetry = new IntegrationRemoveTelemetryClient({

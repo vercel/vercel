@@ -1,14 +1,14 @@
 import fs from 'node:fs';
+import { describe, expect, test } from 'vitest';
 import {
-  isObject,
-  isError,
-  isErrnoException,
-  isErrorLike,
-  normalizeError,
-  isSpawnError,
   errorToString,
+  isErrnoException,
+  isError,
+  isErrorLike,
+  isObject,
+  isSpawnError,
+  normalizeError,
 } from '../src';
-import { describe, test, expect } from 'vitest';
 
 const ARRAY: any[] = [];
 const BIGINT = 1n;

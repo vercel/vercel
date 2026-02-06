@@ -1,17 +1,17 @@
-import type Client from '../../util/client';
-import output from '../../output-manager';
 import * as blob from '@vercel/blob';
-import table from '../../util/output/table';
 import chalk from 'chalk';
 import ms from 'ms';
-import getCommandFlags from '../../util/get-command-flags';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { listSubcommand } from './command';
+import table from '../../util/output/table';
 import { getCommandName } from '../../util/pkg-name';
 import { BlobListTelemetryClient } from '../../util/telemetry/commands/blob/list';
-import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 function isMode(mode: string): mode is 'folded' | 'expanded' {
   return mode === 'folded' || mode === 'expanded';

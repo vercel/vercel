@@ -35,7 +35,7 @@ export function validateRegexPattern(pattern: string): string {
     // Test if it's a valid regex pattern
     new RegExp(pattern);
     return pattern;
-  } catch (e) {
+  } catch (_e) {
     throw new Error(`Invalid regex pattern: ${pattern}`);
   }
 }

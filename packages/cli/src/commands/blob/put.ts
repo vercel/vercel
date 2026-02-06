@@ -1,17 +1,17 @@
-import type Client from '../../util/client';
-import output from '../../output-manager';
-import * as blob from '@vercel/blob';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { putSubcommand } from './command';
 import { statSync } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { isErrnoException } from '@vercel/error-utils';
 import { basename } from 'node:path';
-import { getCommandName } from '../../util/pkg-name';
+import * as blob from '@vercel/blob';
+import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
-import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getCommandName } from '../../util/pkg-name';
+import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
+import { putSubcommand } from './command';
 
 export default async function put(
   client: Client,

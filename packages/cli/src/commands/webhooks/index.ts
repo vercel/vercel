@@ -1,22 +1,22 @@
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/error';
-import ls from './ls';
-import get from './get';
-import create from './create';
-import rm from './rm';
-import {
-  webhooksCommand,
-  listSubcommand,
-  getSubcommand as getSubcommandDef,
-  createSubcommand,
-  removeSubcommand,
-} from './command';
-import { type Command, help } from '../help';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { WebhooksTelemetryClient } from '../../util/telemetry/commands/webhooks';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { WebhooksTelemetryClient } from '../../util/telemetry/commands/webhooks';
+import { type Command, help } from '../help';
+import {
+  createSubcommand,
+  getSubcommand as getSubcommandDef,
+  listSubcommand,
+  removeSubcommand,
+  webhooksCommand,
+} from './command';
+import create from './create';
+import get from './get';
+import ls from './ls';
+import rm from './rm';
 
 const COMMAND_CONFIG = {
   create: ['create', 'add'],

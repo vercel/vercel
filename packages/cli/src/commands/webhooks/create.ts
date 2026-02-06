@@ -1,17 +1,17 @@
 import chalk from 'chalk';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import createWebhook from '../../util/webhooks/create-webhook';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
 import { WebhooksCreateTelemetryClient } from '../../util/telemetry/commands/webhooks/create';
-import { createSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { isAPIError } from '../../util/errors-ts';
+import createWebhook from '../../util/webhooks/create-webhook';
 import { validateWebhookEvents } from '../../util/webhooks/get-webhook-events';
+import { createSubcommand } from './command';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new WebhooksCreateTelemetryClient({

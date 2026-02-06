@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { client } from '../../../mocks/client';
+import { describe, expect, it } from 'vitest';
 import projects from '../../../../src/commands/project';
+import { client } from '../../../mocks/client';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { useUser } from '../../../mocks/user';
 
 describe('add', () => {

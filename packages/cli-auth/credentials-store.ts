@@ -1,6 +1,6 @@
-import path from 'node:path';
 import * as fs from 'node:fs';
 import { homedir } from 'node:os';
+import path from 'node:path';
 // NOTE: We are pinned on v5 because newer versions behave differently
 // when there are dots in the application name, eg. `com.vercel.cli` becomes `com.vercel`
 import XDGAppPaths from 'xdg-app-paths';

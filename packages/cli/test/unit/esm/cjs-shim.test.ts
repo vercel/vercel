@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
 
 /**
  * These tests validate the CJS shim pattern used in the ESM build.

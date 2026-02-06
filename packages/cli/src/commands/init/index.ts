@@ -1,14 +1,14 @@
-import { parseArguments } from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
+import { isError } from '@vercel/error-utils';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import init from './init';
-import { isError } from '@vercel/error-utils';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { InitTelemetryClient } from '../../util/telemetry/commands/init';
 import { help } from '../help';
 import { initCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { InitTelemetryClient } from '../../util/telemetry/commands/init';
+import init from './init';
 
 const COMMAND_CONFIG = {
   init: ['init'],

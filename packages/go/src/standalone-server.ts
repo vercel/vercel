@@ -1,20 +1,20 @@
-import { spawn } from 'child_process';
-import { dirname, join } from 'path';
-import { readFile, writeFile, pathExists, copy } from 'fs-extra';
 import {
   BuildOptions,
+  cloneEnv,
+  debug,
+  download,
+  FileBlob,
   Files,
+  getLambdaOptionsFromFunction,
+  getWriteableDirectory,
+  glob,
+  Lambda,
   StartDevServerOptions,
   StartDevServerResult,
-  glob,
-  download,
-  Lambda,
-  FileBlob,
-  getWriteableDirectory,
-  debug,
-  cloneEnv,
-  getLambdaOptionsFromFunction,
 } from '@vercel/build-utils';
+import { spawn } from 'child_process';
+import { copy, pathExists, readFile, writeFile } from 'fs-extra';
+import { dirname, join } from 'path';
 
 import { createGo } from './go-helpers';
 
@@ -22,7 +22,7 @@ import { createGo } from './go-helpers';
  * Find the go.mod file starting from a directory and scanning up.
  */
 async function findGoModPath(entrypointDir: string, workPath: string) {
-  let goModPath: string | undefined = undefined;
+  let goModPath: string | undefined;
   let isGoModInRootDir = false;
   let dir = entrypointDir;
 

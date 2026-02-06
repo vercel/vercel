@@ -1,7 +1,7 @@
+import type { Env } from '@vercel/build-utils';
+import { cloneEnv, debug } from '@vercel/build-utils';
 import { createHash } from 'crypto';
-import { extract } from 'tar';
 import execa from 'execa';
-import fetch from 'node-fetch';
 import {
   createWriteStream,
   mkdirp,
@@ -10,15 +10,15 @@ import {
   remove,
   symlink,
 } from 'fs-extra';
-import { delimiter, dirname, join } from 'path';
-import stringArgv from 'string-argv';
-import { cloneEnv, debug } from '@vercel/build-utils';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
+import fetch from 'node-fetch';
 import { tmpdir } from 'os';
-import yauzl from 'yauzl-promise';
+import { delimiter, dirname, join } from 'path';
+import { pipeline } from 'stream';
+import stringArgv from 'string-argv';
+import { extract } from 'tar';
+import { promisify } from 'util';
 import XDGAppPaths from 'xdg-app-paths';
-import type { Env } from '@vercel/build-utils';
+import yauzl from 'yauzl-promise';
 
 const streamPipeline = promisify(pipeline);
 

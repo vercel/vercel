@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, Mock, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { BuildCache } from '../../../src/cache/build-client';
 
 describe('BuildCache', () => {
@@ -16,7 +16,7 @@ describe('BuildCache', () => {
   beforeEach(() => {
     fetchMock = vi.fn();
     onError = vi.fn();
-    // @ts-ignore
+    // @ts-expect-error
     global.fetch = fetchMock;
     cache = new BuildCache({
       endpoint,
@@ -26,7 +26,7 @@ describe('BuildCache', () => {
   });
 
   afterEach(() => {
-    // @ts-ignore
+    // @ts-expect-error
     delete global.fetch;
   });
 

@@ -1,9 +1,9 @@
-import type { BuildOptions, Files } from '@vercel/build-utils';
-import { nodeFileTrace } from '@vercel/nft';
-import { readFile, lstat } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNativeError } from 'node:util/types';
-import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
+import type { BuildOptions, Files } from '@vercel/build-utils';
+import { FileBlob, FileFsRef, type Span } from '@vercel/build-utils';
+import { nodeFileTrace } from '@vercel/nft';
 import { transform } from 'oxc-transform';
 
 export const nft = async (

@@ -1,4 +1,4 @@
-import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { attachDatabasePool } from '../../../src/db-connections';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../../src/get-context';
 

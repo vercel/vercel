@@ -1,12 +1,14 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import getSubcommand from '../../util/get-subcommand';
+import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
 import add from './add';
-import inspect from './inspect';
-import list from './list';
-import rm from './rm';
 import {
   addSubcommand,
   inspectSubcommand,
@@ -14,11 +16,9 @@ import {
   projectCommand,
   removeSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
-import output from '../../output-manager';
-import { getCommandAliases } from '..';
-import getSubcommand from '../../util/get-subcommand';
+import inspect from './inspect';
+import list from './list';
+import rm from './rm';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
@@ -45,7 +45,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  // eslint-disable-next-line prefer-const
   let { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG

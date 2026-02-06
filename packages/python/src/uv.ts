@@ -1,11 +1,10 @@
+import { debug } from '@vercel/build-utils';
 import { execSync } from 'child_process';
-import { join } from 'path';
-import { delimiter as pathDelimiter } from 'path';
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
+import { join, delimiter as pathDelimiter } from 'path';
 import which from 'which';
-import { debug } from '@vercel/build-utils';
 
 export const UV_VERSION = '0.9.22';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';

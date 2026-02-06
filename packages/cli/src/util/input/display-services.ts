@@ -92,7 +92,6 @@ function getServiceTarget(service: ResolvedService): string {
       return `schedule: ${service.schedule ?? 'none'}`;
     case 'worker':
       return `topic: ${service.topic ?? 'none'}`;
-    case 'web':
     default:
       return service.routePrefix
         ? formatRoutePrefix(service.routePrefix)

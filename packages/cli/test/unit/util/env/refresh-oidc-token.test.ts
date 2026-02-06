@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, vi, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { refreshOidcToken } from '../../../../src/util/env/refresh-oidc-token';
 import { client } from '../../../mocks/client';
 

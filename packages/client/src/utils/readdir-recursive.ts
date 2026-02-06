@@ -29,11 +29,11 @@ THE SOFTWARE.
 */
 
 import fs from 'fs';
-import p from 'path';
 import minimatch from 'minimatch';
+import p from 'path';
 
 function patternMatcher(pattern: string) {
-  return function (path: string, stats: fs.Stats) {
+  return (path: string, stats: fs.Stats) => {
     const minimatcher = new minimatch.Minimatch(pattern, { matchBase: true });
     return (!minimatcher.negate || stats.isFile()) && minimatcher.match(path);
   };
@@ -57,8 +57,8 @@ export default function readdir(
 
   let list: string[] = [];
 
-  return new Promise(function (resolve, reject) {
-    fs.readdir(path, function (err, files) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(path, (err, files) => {
       if (err) {
         return reject(err);
       }
@@ -68,9 +68,9 @@ export default function readdir(
         return resolve(list);
       }
 
-      files.forEach(function (file) {
+      files.forEach(file => {
         const filePath = p.join(path, file);
-        fs.lstat(filePath, function (_err, stats) {
+        fs.lstat(filePath, (_err, stats) => {
           if (_err) {
             return reject(_err);
           }
@@ -86,7 +86,7 @@ export default function readdir(
 
           if (stats.isDirectory()) {
             readdir(filePath, ignores)
-              .then(function (res) {
+              .then(res => {
                 if (res.length === 0) {
                   // Empty directories get returned
                   list.push(filePath);

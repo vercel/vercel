@@ -3,6 +3,7 @@ import { bisectCommand } from '../src/commands/bisect/command';
 import { buildCommand } from '../src/commands/build/command';
 import { certsCommand } from '../src/commands/certs/command';
 import { deployCommand } from '../src/commands/deploy/command';
+import { devCommand } from '../src/commands/dev/command';
 import { dnsCommand } from '../src/commands/dns/command';
 import { domainsCommand } from '../src/commands/domains/command';
 import { envCommand } from '../src/commands/env/command';
@@ -12,6 +13,8 @@ import { inspectCommand } from '../src/commands/inspect/command';
 import { linkCommand } from '../src/commands/link/command';
 import { listCommand } from '../src/commands/list/command';
 import { loginCommand } from '../src/commands/login/command';
+import { logoutCommand } from '../src/commands/logout/command';
+import { logsCommand } from '../src/commands/logs/command';
 import { projectCommand } from '../src/commands/project/command';
 import { promoteCommand } from '../src/commands/promote/command';
 import { pullCommand } from '../src/commands/pull/command';
@@ -19,12 +22,9 @@ import { redeployCommand } from '../src/commands/redeploy/command';
 import { removeCommand } from '../src/commands/remove/command';
 import { rollbackCommand } from '../src/commands/rollback/command';
 import { rollingReleaseCommand } from '../src/commands/rolling-release/command';
-import { teamsCommand, listSubcommand } from '../src/commands/teams/command';
-import { whoamiCommand } from '../src/commands/whoami/command';
-import { devCommand } from '../src/commands/dev/command';
-import { logoutCommand } from '../src/commands/logout/command';
-import { logsCommand } from '../src/commands/logs/command';
 import { targetCommand } from '../src/commands/target/command';
+import { listSubcommand, teamsCommand } from '../src/commands/teams/command';
+import { whoamiCommand } from '../src/commands/whoami/command';
 import { globalCommandOptions } from '../src/util/arg-common';
 
 const commands = {
@@ -58,14 +58,7 @@ const commands = {
   whoami: whoamiCommand.options,
   global: globalCommandOptions,
 };
-
-// eslint-disable-next-line no-console
-console.log(`command,name,shorthand,type,deprecated,description`);
 for (const command of Object.keys(commands)) {
-  for (const option of commands[command]) {
-    // eslint-disable-next-line no-console
-    console.log(
-      `${command},${option.name},${option.shorthand ?? '(null)'},${option.type.name},${option.deprecated},"${option.description ?? ''}"`
-    );
+  for (const _option of commands[command]) {
   }
 }

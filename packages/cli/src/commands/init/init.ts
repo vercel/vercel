@@ -1,17 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import tar from 'tar-fs';
 import chalk from 'chalk';
-
-// @ts-ignore
-import listInput from '../../util/input/list';
-import listItem from '../../util/output/list-item';
-import toHumanPath from '../../util/humanize-path';
-import type Client from '../../util/client';
-import cmd from '../../util/output/cmd';
-import didYouMean from '../../util/did-you-mean';
-import { getCommandName } from '../../util/pkg-name';
+import tar from 'tar-fs';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import didYouMean from '../../util/did-you-mean';
+import toHumanPath from '../../util/humanize-path';
+import listInput from '../../util/input/list';
+import cmd from '../../util/output/cmd';
+import listItem from '../../util/output/list-item';
+import { getCommandName } from '../../util/pkg-name';
 import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 type Options = {
@@ -198,7 +196,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
   } else if (dest !== cwd) {
     try {
       fs.mkdirSync(dest);
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
     }
   }

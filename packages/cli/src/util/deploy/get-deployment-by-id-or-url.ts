@@ -1,10 +1,10 @@
-import chalk from 'chalk';
-import getDeployment from '../get-deployment';
-import getTeamById from '../teams/get-team-by-id';
-import { isValidName } from '../is-valid-name';
-import type Client from '../client';
 import type { Deployment, Team } from '@vercel-internals/types';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../client';
+import getDeployment from '../get-deployment';
+import { isValidName } from '../is-valid-name';
+import getTeamById from '../teams/get-team-by-id';
 
 /**
  * Renders feedback while retrieving a deployment, then validates the

@@ -1,15 +1,15 @@
-import { help } from '../help';
-import { upgradeCommand } from './command';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { executeUpgrade } from '../../util/upgrade';
 import getUpdateCommand, { isGlobal } from '../../util/get-update-command';
-import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
-import output from '../../output-manager';
 import pkg from '../../util/pkg';
-import type Client from '../../util/client';
 import { UpgradeTelemetryClient } from '../../util/telemetry/commands/upgrade';
+import { executeUpgrade } from '../../util/upgrade';
+import { help } from '../help';
+import { upgradeCommand } from './command';
 
 export default async function upgrade(client: Client): Promise<number> {
   let parsedArgs = null;

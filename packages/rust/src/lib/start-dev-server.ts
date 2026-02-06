@@ -1,10 +1,10 @@
-import { spawn } from 'child_process';
-import { once } from 'events';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
-import { installRustToolchain } from './rust-toolchain';
+import { spawn } from 'child_process';
+import { once } from 'events';
 import { buildExecutableForDev } from './dev-build';
 import { createDevServerEnv } from './dev-server';
+import { installRustToolchain } from './rust-toolchain';
 
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, meta = {} } = opts;

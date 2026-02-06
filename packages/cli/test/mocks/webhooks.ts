@@ -1,6 +1,6 @@
 import chance from 'chance';
-import { client } from './client';
 import type { Webhook, WebhookEvent } from '../../src/util/webhooks/types';
+import { client } from './client';
 
 export function createWebhook(
   id?: string,

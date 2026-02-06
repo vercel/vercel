@@ -1,9 +1,9 @@
-import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
+import { type BuildV3, FileFsRef, Files, glob } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
+import fs from 'fs';
 import { createRequire } from 'module';
 import { join } from 'path';
-import fs from 'fs';
 
 const frameworkName = 'express';
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
@@ -51,7 +51,7 @@ export const build: BuildV3 = async args => {
       return entrypointCallback(args);
     },
   });
-  let version = undefined;
+  let version;
   try {
     const resolved = require_.resolve(`${frameworkName}/package.json`, {
       paths: [args.workPath],
@@ -60,7 +60,7 @@ export const build: BuildV3 = async args => {
     if (expressVersion) {
       version = expressVersion;
     }
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
   res.output.framework = {

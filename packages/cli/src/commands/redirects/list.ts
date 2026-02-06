@@ -1,14 +1,14 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-import type Client from '../../util/client';
 import output from '../../output-manager';
-import { listSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
-import getRedirects from '../../util/redirects/get-redirects';
-import getRedirectVersions from '../../util/redirects/get-redirect-versions';
-import stamp from '../../util/output/stamp';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
+import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import getRedirectVersions from '../../util/redirects/get-redirect-versions';
+import getRedirects from '../../util/redirects/get-redirects';
+import { listSubcommand } from './command';
+import { ensureProjectLink, parseSubcommandArgs } from './shared';
 
 export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);

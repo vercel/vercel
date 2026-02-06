@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
-import { rm, readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { build as rolldownBuild } from 'rolldown';
-import { plugin } from './plugin.js';
 import { nodeFileTrace } from './node-file-trace.js';
+import { plugin } from './plugin.js';
 import type { PluginContext, RolldownOptions } from './types.js';
 
 // Shim for __dirname/__filename/require in ESM output

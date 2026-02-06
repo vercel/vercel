@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { basename, join } from 'path';
-import { getVercelDirectory } from '../../../../src/util/projects/link';
 import assert from 'assert';
+import { basename, join } from 'path';
+import { describe, expect, it } from 'vitest';
+import { getVercelDirectory } from '../../../../src/util/projects/link';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit', name);

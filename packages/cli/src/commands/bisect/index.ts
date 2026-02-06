@@ -1,25 +1,24 @@
-import open from 'open';
-import execa from 'execa';
-import plural from 'pluralize';
-import { resolve } from 'path';
-import chalk, { type Chalk } from 'chalk';
-import { URLSearchParams, parse } from 'url';
-
-import box from '../../util/output/box';
-import formatDate from '../../util/format-date';
-import link from '../../util/output/link';
-import { parseArguments } from '../../util/get-args';
-import type Client from '../../util/client';
 import type { Deployment } from '@vercel-internals/types';
+import chalk, { type Chalk } from 'chalk';
+import execa from 'execa';
+import open from 'open';
+import { resolve } from 'path';
+import plural from 'pluralize';
+import { parse, URLSearchParams } from 'url';
+import output from '../../output-manager';
 import { normalizeURL } from '../../util/bisect/normalize-url';
-import getScope from '../../util/get-scope';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import formatDate from '../../util/format-date';
+import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import box from '../../util/output/box';
+import link from '../../util/output/link';
+import { BisectTelemetryClient } from '../../util/telemetry/commands/bisect';
 import { help } from '../help';
 import { bisectCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import output from '../../output-manager';
-import { BisectTelemetryClient } from '../../util/telemetry/commands/bisect';
 
 interface Deployments {
   deployments: Deployment[];

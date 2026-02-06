@@ -17,9 +17,9 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
   process.env.NODE_ENV = 'production';
 }
 
-// @ts-ignore
+// @ts-expect-error
 // eslint-disable-next-line
-let page: any = {};
+const page: any = {};
 // __LAUNCHER_PAGE_HANDLER__
 
 // page.render is for React rendering

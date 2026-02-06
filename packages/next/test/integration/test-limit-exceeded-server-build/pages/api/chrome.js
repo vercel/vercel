@@ -1,5 +1,3 @@
-/* eslint-disable */
-import chrome from 'chrome-aws-lambda';
 import fs from 'fs';
 import path from 'path';
 

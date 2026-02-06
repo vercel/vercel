@@ -1,5 +1,5 @@
+import { describe, expect, it } from 'vitest';
 import { getRegExpFromPath } from '../src/utils';
-import { describe, it, expect } from 'vitest';
 
 describe('getRegExpFromPath()', () => {
   describe('paths without parameters', () => {
@@ -204,11 +204,11 @@ describe('getRegExpFromPath()', () => {
       expect(re).toBeInstanceOf(RegExp);
     });
 
-    it.each(urls)(
-      'should match URL "$url" - $expected',
-      ({ url, expected }) => {
-        expect(re.test(url)).toEqual(expected);
-      }
-    );
+    it.each(urls)('should match URL "$url" - $expected', ({
+      url,
+      expected,
+    }) => {
+      expect(re.test(url)).toEqual(expected);
+    });
   });
 });

@@ -1,7 +1,7 @@
+import type { JSONObject, JSONValue } from '@vercel-internals/types';
 import { readFile } from 'fs/promises';
 import { resolve } from 'path';
-import type { JSONObject, JSONValue } from '@vercel-internals/types';
-import type { RequestConfig, ParsedFlags } from './types';
+import type { ParsedFlags, RequestConfig } from './types';
 
 /**
  * Build a request configuration from CLI flags

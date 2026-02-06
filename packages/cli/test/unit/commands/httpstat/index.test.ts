@@ -1,9 +1,9 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { client } from '../../../mocks/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import httpstat from '../../../../src/commands/httpstat';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 let spawnMock: ReturnType<typeof vi.fn>;
 vi.mock('child_process', () => ({

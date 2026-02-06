@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { spawnAsync, NowBuildError } from '../src';
+import { NowBuildError, spawnAsync } from '../src';
 
 it('should execute a command', async () => {
   // should resolve (it doesn't return anything, so it resolves with "undefined")

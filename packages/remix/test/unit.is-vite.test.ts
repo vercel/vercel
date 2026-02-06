@@ -1,7 +1,7 @@
-import { join } from 'path';
 import { readdirSync } from 'fs';
+import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 import { isVite } from '../src/utils';
-import { describe, it, expect } from 'vitest';
 
 describe('isVite()', () => {
   it.each([

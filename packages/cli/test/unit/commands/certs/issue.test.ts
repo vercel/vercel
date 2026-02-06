@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
 import certs from '../../../../src/commands/certs';
+import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 
 describe('certs issue', () => {

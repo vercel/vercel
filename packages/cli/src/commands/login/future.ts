@@ -1,22 +1,22 @@
 import readline from 'node:readline';
+import { eraseLines } from 'ansi-escapes';
 import chalk from 'chalk';
 import * as open from 'open';
-import { eraseLines } from 'ansi-escapes';
-import type Client from '../../util/client';
-import { printError } from '../../util/error';
-import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
-import getGlobalPathConfig from '../../util/config/global-path';
-import { getCommandName } from '../../util/pkg-name';
-import { emoji } from '../../util/emoji';
-import hp from '../../util/humanize-path';
-import {
-  deviceAuthorizationRequest,
-  processDeviceAuthorizationResponse,
-  deviceAccessTokenRequest,
-  processTokenResponse,
-  isOAuthError,
-} from '../../util/oauth';
 import o from '../../output-manager';
+import type Client from '../../util/client';
+import getGlobalPathConfig from '../../util/config/global-path';
+import { emoji } from '../../util/emoji';
+import { printError } from '../../util/error';
+import hp from '../../util/humanize-path';
+import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
+import {
+  deviceAccessTokenRequest,
+  deviceAuthorizationRequest,
+  isOAuthError,
+  processDeviceAuthorizationResponse,
+  processTokenResponse,
+} from '../../util/oauth';
+import { getCommandName } from '../../util/pkg-name';
 import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
 export async function login(

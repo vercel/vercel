@@ -1,7 +1,7 @@
 import path from 'path';
-import { getWorkspaces } from '../src/workspaces/get-workspaces';
-import { getWorkspacePackagePaths } from '../src/workspaces/get-workspace-package-paths';
 import { LocalFileSystemDetector } from '../src';
+import { getWorkspacePackagePaths } from '../src/workspaces/get-workspace-package-paths';
+import { getWorkspaces } from '../src/workspaces/get-workspaces';
 
 describe.each<[string, string[]]>([
   ['21-npm-workspaces', ['/a', '/b']],

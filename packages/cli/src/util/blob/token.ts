@@ -1,13 +1,13 @@
 import { resolve } from 'node:path';
-import { createEnvObject } from '../env/diff-env-files';
+import { blobCommand } from '../../commands/blob/command';
 
 import type Client from '../client';
-import { getFlagsSpecification } from '../get-flags-specification';
-import { blobCommand } from '../../commands/blob/command';
+import { createEnvObject } from '../env/diff-env-files';
 import { parseArguments } from '../get-args';
-import { getCommandName, packageName } from '../pkg-name';
+import { getFlagsSpecification } from '../get-flags-specification';
 import cmd from '../output/cmd';
 import listItem from '../output/list-item';
+import { getCommandName, packageName } from '../pkg-name';
 
 const ErrorMessage = `No Vercel Blob token found. To fix this issue, choose one of the following options:
 ${listItem(`Pass the token directly as an option: ${getCommandName('blob list --rw-token BLOB_TOKEN')}`, 1)}
@@ -33,7 +33,7 @@ export async function getBlobRWToken(
     if (rwToken) {
       return { token: rwToken, success: true };
     }
-  } catch (err) {
+  } catch (_err) {
     // continue with token hierarchy
   }
 
@@ -50,7 +50,7 @@ export async function getBlobRWToken(
     if (env?.BLOB_READ_WRITE_TOKEN) {
       return { token: env.BLOB_READ_WRITE_TOKEN, success: true };
     }
-  } catch (error) {
+  } catch (_error) {
     // continue with token hierarchy
   }
 

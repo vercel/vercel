@@ -1,7 +1,7 @@
-import chalk from 'chalk';
 import type { DNSRecordData } from '@vercel-internals/types';
-import type Client from '../client';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../client';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
 
@@ -81,7 +81,7 @@ export default async function getDNSData(
           value,
         }
       : null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

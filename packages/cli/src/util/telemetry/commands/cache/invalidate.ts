@@ -1,6 +1,6 @@
+import type { invalidateSubcommand } from '../../../../commands/cache/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { invalidateSubcommand } from '../../../../commands/cache/command';
 
 export class CacheInvalidateTelemetryClient
   extends TelemetryClient

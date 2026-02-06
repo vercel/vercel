@@ -1,12 +1,12 @@
 import chalk from 'chalk';
-import { parseArguments } from '../../util/get-args';
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { help } from '../help';
 import { loginCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import output from '../../output-manager';
-import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
 
 export default async function login(

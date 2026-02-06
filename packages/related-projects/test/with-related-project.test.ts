@@ -1,6 +1,6 @@
-import { withRelatedProject } from '../src/with-related-project';
 import { relatedProjects } from '../src/related-projects';
 import type { VercelRelatedProjects } from '../src/types';
+import { withRelatedProject } from '../src/with-related-project';
 
 jest.mock('../src/related-projects', () => ({
   relatedProjects: jest.fn(),

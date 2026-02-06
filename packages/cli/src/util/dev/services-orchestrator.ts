@@ -1,21 +1,21 @@
-import path from 'path';
-import ms from 'ms';
-import { Transform, type TransformCallback } from 'stream';
-import type { ChildProcess } from 'child_process';
-import getPort from 'get-port';
-import chalk from 'chalk';
-import type { Service } from '@vercel/fs-detectors';
-import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
+  type BuilderV3,
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
-  type BuilderV3,
 } from '@vercel/build-utils';
-import { checkForPort } from './port-utils';
-import { importBuilders } from '../build/import-builders';
+import { type Framework, frameworkList } from '@vercel/frameworks';
+import type { Service } from '@vercel/fs-detectors';
+import chalk from 'chalk';
+import type { ChildProcess } from 'child_process';
+import getPort from 'get-port';
+import ms from 'ms';
+import path from 'path';
+import { Transform, type TransformCallback } from 'stream';
 import output from '../../output-manager';
+import { importBuilders } from '../build/import-builders';
 import { treeKill } from '../tree-kill';
+import { checkForPort } from './port-utils';
 
 const STARTUP_TIMEOUT = ms('5m');
 

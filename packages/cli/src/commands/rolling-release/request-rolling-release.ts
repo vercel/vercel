@@ -1,5 +1,5 @@
-import type Client from '../../util/client';
 import type { RollingReleaseDocument } from '@vercel-internals/types';
+import type Client from '../../util/client';
 
 export interface RR {
   rollingRelease: RollingReleaseDocument;

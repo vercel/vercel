@@ -1,7 +1,7 @@
+import { join } from 'path';
 import { describe, expect, test } from 'vitest';
 import { build } from '../../src';
 import { prepareFilesystem } from './test-utils';
-import { join } from 'path';
 
 // Normalize paths for Windows compatibility
 const normalizePath = (path: string) => path.replace(/\\/g, '/');

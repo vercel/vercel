@@ -1,20 +1,20 @@
 import chalk from 'chalk';
-import * as ERRORS from '../../util/errors-ts';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
-import transferInDomain from '../../util/domains/transfer-in-domain';
-import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
 import getDomainPrice from '../../util/domains/get-domain-price';
-import isRootDomain from '../../util/is-root-domain';
-import { getCommandName } from '../../util/pkg-name';
-import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
-import output from '../../output-manager';
-import { transferInSubcommand } from './command';
+import transferInDomain from '../../util/domains/transfer-in-domain';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import isRootDomain from '../../util/is-root-domain';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
+import { transferInSubcommand } from './command';
 
 export default async function transferIn(client: Client, argv: string[]) {
   const telemetry = new DomainsTransferInTelemetryClient({

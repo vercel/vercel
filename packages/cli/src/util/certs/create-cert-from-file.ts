@@ -1,10 +1,10 @@
+import { isErrnoException } from '@vercel/error-utils';
+import type { Cert } from '@vercel-internals/types';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import type Client from '../client';
-import type { Cert } from '@vercel-internals/types';
-import { isErrnoException } from '@vercel/error-utils';
-import { isAPIError } from '../errors-ts';
 import output from '../../output-manager';
+import type Client from '../client';
+import { isAPIError } from '../errors-ts';
 
 export default async function createCertFromFile(
   client: Client,

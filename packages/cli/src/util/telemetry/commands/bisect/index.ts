@@ -1,6 +1,6 @@
+import type { bisectCommand } from '../../../../commands/bisect/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { bisectCommand } from '../../../../commands/bisect/command';
 
 export class BisectTelemetryClient
   extends TelemetryClient

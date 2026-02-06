@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { updateCurrentTeamAfterLogin } from '../../../../src/util/login/update-current-team-after-login';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { updateCurrentTeamAfterLogin } from '../../../../src/util/login/update-current-team-after-login';
 
 describe('updateCurrentTeamAfterLogin', () => {
   describe('SSO Login', () => {

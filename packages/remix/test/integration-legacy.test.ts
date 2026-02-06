@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { join } = require('path');
-import { vi, it, expect } from 'vitest';
+
+import { expect, it, vi } from 'vitest';
 
 const {
   testDeployment,

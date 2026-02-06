@@ -1,8 +1,8 @@
 import { isErrnoException } from '@vercel/error-utils';
 import fs from 'fs-extra';
+import { createRequire } from 'module';
 import * as path from 'path';
 import semver from 'semver';
-import { createRequire } from 'module';
 import { fileExists } from './_shared';
 
 const PLUGINS = [

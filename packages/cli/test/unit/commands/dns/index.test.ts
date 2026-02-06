@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import dns from '../../../../src/commands/dns';
 import * as ls from '../../../../src/commands/dns/ls';
 import { client } from '../../../mocks/client';

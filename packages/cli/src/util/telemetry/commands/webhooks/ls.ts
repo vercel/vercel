@@ -1,6 +1,6 @@
+import type { listSubcommand } from '../../../../commands/webhooks/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { listSubcommand } from '../../../../commands/webhooks/command';
 
 export class WebhooksLsTelemetryClient
   extends TelemetryClient

@@ -1,10 +1,13 @@
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
+import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
+import { getCommandAliases } from '..';
+import { type Command, help } from '../help';
 import add from './add';
-import issue from './issue';
-import ls from './ls';
-import rm from './rm';
 import {
   addSubcommand,
   certsCommand,
@@ -12,12 +15,9 @@ import {
   listSubcommand,
   removeSubcommand,
 } from './command';
-import { type Command, help } from '../help';
-import type Client from '../../util/client';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
-import { getCommandAliases } from '..';
+import issue from './issue';
+import ls from './ls';
+import rm from './rm';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),

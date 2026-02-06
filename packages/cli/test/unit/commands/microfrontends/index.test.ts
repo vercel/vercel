@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as pull from '../../../../src/commands/microfrontends/pull';
 import { client } from '../../../mocks/client';

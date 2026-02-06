@@ -1,28 +1,28 @@
 import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import { format } from 'date-fns';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
-import { formatProject } from '../../util/projects/format-project';
-import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
-import { getLinkedProject } from '../../util/projects/link';
 import {
   DeploymentNotFound,
   InvalidDeploymentId,
   ProjectNotFound,
 } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import getDeployment from '../../util/get-deployment';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
 import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
-import getDeployment from '../../util/get-deployment';
 import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
+import { getLinkedProject } from '../../util/projects/link';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { logsCommand } from './command';
-import output from '../../output-manager';
 
 interface BranchDeployment {
   id: string;

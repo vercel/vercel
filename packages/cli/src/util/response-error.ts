@@ -13,7 +13,7 @@ export default async function responseError(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = parsedBody;
     }
 

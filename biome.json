@@ -1,0 +1,131 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!examples",
+      "!python",
+      "!packages/node/src/bridge.ts",
+      "!packages/*/test/fixtures",
+      "!packages/**/test/fixtures-*",
+      "!packages/**/test/dev/fixtures",
+      "!packages/**/test/build-fixtures",
+      "!packages/**/test/cache-fixtures",
+      "!packages/cli/@types",
+      "!packages/cli/download",
+      "!packages/cli/bin",
+      "!packages/cli/link",
+      "!packages/cli/src/util/dev/templates/*.ts",
+      "!packages/client/tests/fixtures",
+      "!packages/client/lib",
+      "!packages/hydrogen/edge-entry.js",
+      "!packages/next/test/integration/middleware",
+      "!packages/next/test/integration/middleware-eval",
+      "!packages/middleware/src/entries.js",
+      "!packages/static-build/test/fixtures",
+      "!packages/static-build/test/build-fixtures",
+      "!packages/static-build/test/cache-fixtures",
+      "!packages/redwood/test/fixtures",
+      "!packages/remix/test/fixtures-*",
+      "!packages/gatsby-plugin-vercel-analytics",
+      "!packages/functions/**/*.js",
+      "!packages/cli/test/dev/fixtures/edge-function-error/api/edge-error-syntax.js",
+      "!packages/cli/test/fixtures/unit/commands/build/node-error/api/typescript.ts",
+      "!packages/cli/types/express/index.d.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "es5",
+      "arrowParentheses": "asNeeded"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noUnusedFunctionParameters": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noImplicitAnyLet": "off",
+        "noConfusingVoidType": "off",
+        "noAssignInExpressions": "off",
+        "noThenProperty": "off",
+        "noShadowRestrictedNames": "off",
+        "useIterableCallbackReturn": "off",
+        "noNonNullAssertedOptionalChain": "off",
+        "noPrototypeBuiltins": "off",
+        "noFocusedTests": "error",
+        "noSkippedTests": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "useImportType": "off",
+        "useNodejsImportProtocol": "off",
+        "useTemplate": "off"
+      },
+      "complexity": {
+        "useLiteralKeys": "off",
+        "useOptionalChain": "off",
+        "noBannedTypes": "off"
+      },
+      "performance": {
+        "noAccumulatingSpread": "off",
+        "noDelete": "off"
+      },
+      "security": {
+        "noGlobalEval": "off"
+      },
+      "a11y": {
+        "useHtmlLang": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/cli/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "error",
+            "noAsyncPromiseExecutor": "off",
+            "noControlCharactersInRegex": "off"
+          },
+          "style": {
+            "useImportType": "error",
+            "useConst": "error"
+          },
+          "complexity": {
+            "noUselessTypeConstraint": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/client/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConst": "off"
+          }
+        }
+      }
+    }
+  ]
+}

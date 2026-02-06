@@ -1,13 +1,18 @@
-import { BuildOptions, Span } from '@vercel/build-utils';
-import type { Plugin, ResolvedId } from 'rolldown';
-import { resolveEntrypointAndFormat } from './resolve-format.js';
-import { build as rolldownBuild } from 'rolldown';
-import { builtinModules } from 'node:module';
-import { join, dirname, relative, extname } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { type Files, FileBlob, isBackendFramework } from '@vercel/build-utils';
-import { nft } from './nft.js';
+import { builtinModules } from 'node:module';
+import { dirname, extname, join, relative } from 'node:path';
+import {
+  BuildOptions,
+  FileBlob,
+  type Files,
+  isBackendFramework,
+  Span,
+} from '@vercel/build-utils';
 import { exports as resolveExports } from 'resolve.exports';
+import type { Plugin, ResolvedId } from 'rolldown';
+import { build as rolldownBuild } from 'rolldown';
+import { nft } from './nft.js';
+import { resolveEntrypointAndFormat } from './resolve-format.js';
 
 const PLUGIN_NAME = 'vercel:backends';
 const CJS_SHIM_PREFIX = '\0cjs-shim:';

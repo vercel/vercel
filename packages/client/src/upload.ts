@@ -1,15 +1,14 @@
-import http from 'http';
-import https from 'https';
-import { Readable } from 'stream';
 import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
-
-import { DeploymentFile, FilesMap } from './utils/hashes';
-import { fetch, API_FILES, createDebug } from './utils';
-import { DeploymentError } from './errors';
+import http from 'http';
+import https from 'https';
+import { Readable } from 'stream';
 import { deploy } from './deploy';
-import { VercelClientOptions, DeploymentOptions } from './types';
+import { DeploymentError } from './errors';
+import { DeploymentOptions, VercelClientOptions } from './types';
+import { API_FILES, createDebug, fetch } from './utils';
+import { DeploymentFile, FilesMap } from './utils/hashes';
 
 const isClientNetworkError = (err: Error) => {
   if (err.message) {
@@ -114,7 +113,7 @@ export async function* upload(
         // Split out into chunks
         const body = new Readable();
         const originalRead = body.read.bind(body);
-        body.read = function (...args) {
+        body.read = (...args) => {
           const chunk = originalRead(...args);
           if (chunk) {
             uploadProgress.bytesUploaded += chunk.length;

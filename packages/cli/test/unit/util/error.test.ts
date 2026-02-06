@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fetch from 'node-fetch';
+import type { JSONValue } from '@vercel-internals/types';
 import { listen } from 'async-listen';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import { createServer } from 'http';
-import type { JSONValue } from '@vercel-internals/types';
+import fetch from 'node-fetch';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   responseError,
   responseErrorMessage,

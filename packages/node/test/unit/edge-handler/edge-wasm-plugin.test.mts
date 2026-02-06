@@ -1,8 +1,8 @@
-import { test, expect } from 'vitest';
-import { createEdgeWasmPlugin } from '../../../src/edge-functions/edge-wasm-plugin.mjs';
-import { prepareFilesystem } from '../test-utils';
 import { build } from 'esbuild';
 import { join } from 'path';
+import { expect, test } from 'vitest';
+import { createEdgeWasmPlugin } from '../../../src/edge-functions/edge-wasm-plugin.mjs';
+import { prepareFilesystem } from '../test-utils';
 
 test('fails to locate the file', async () => {
   const { workPath: dir } = await prepareFilesystem({

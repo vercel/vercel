@@ -1,8 +1,8 @@
-import { TelemetryClient } from '../..';
-import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
-import type { TelemetryMethods } from '../../types';
-import type { removeSubcommand } from '../../../../commands/env/command';
 import type { CustomEnvironmentType } from '@vercel-internals/types';
+import type { removeSubcommand } from '../../../../commands/env/command';
+import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
+import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
 
 export class EnvRmTelemetryClient
   extends TelemetryClient

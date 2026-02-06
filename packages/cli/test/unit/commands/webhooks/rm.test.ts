@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
 import webhooks from '../../../../src/commands/webhooks';
+import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import {
+  useDeleteWebhook,
   useWebhook,
   useWebhookNotFound,
-  useDeleteWebhook,
 } from '../../../mocks/webhooks';
 
 describe('webhooks rm', () => {

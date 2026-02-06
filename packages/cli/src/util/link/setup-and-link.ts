@@ -1,54 +1,53 @@
-import chalk from 'chalk';
-import { remove } from 'fs-extra';
-import { join, basename } from 'path';
+import { frameworkList } from '@vercel/frameworks';
 import type {
+  Org,
   ProjectLinkResult,
   ProjectSettings,
-  Org,
 } from '@vercel-internals/types';
-import {
-  getLinkedProject,
-  linkFolderToProject,
-  getVercelDirectory,
-  VERCEL_DIR_README,
-  VERCEL_DIR_PROJECT,
-} from '../projects/link';
-import createProject from '../projects/create-project';
-import type Client from '../client';
-import { printError } from '../error';
-import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
-import {
-  selectAndParseRemoteUrl,
-  checkExistsAndConnect,
-} from '../git/connect-git-provider';
-
-import toHumanPath from '../humanize-path';
-import { isDirectory } from '../config/global-path';
-import selectOrg from '../input/select-org';
-import inputProject from '../input/input-project';
-import { validateRootDirectory } from '../validate-paths';
-import { inputRootDirectory } from '../input/input-root-directory';
-import {
-  editProjectSettings,
-  type PartialProjectSettings,
-} from '../input/edit-project-settings';
-import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import chalk from 'chalk';
+import { remove } from 'fs-extra';
+import { basename, join } from 'path';
 import output from '../../output-manager';
-import { detectProjects } from '../projects/detect-projects';
+import type Client from '../client';
+import { isDirectory } from '../config/global-path';
 import readConfig from '../config/read-config';
-import { frameworkList } from '@vercel/frameworks';
+import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
+import type { EmojiLabel } from '../emoji';
+import { printError } from '../error';
+import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import {
-  vercelAuth,
-  type VercelAuthSetting,
-  DEFAULT_VERCEL_AUTH_SETTING,
-} from '../input/vercel-auth';
-import { tryDetectServices } from '../projects/detect-services';
+  checkExistsAndConnect,
+  selectAndParseRemoteUrl,
+} from '../git/connect-git-provider';
+import toHumanPath from '../humanize-path';
 import {
   displayDetectedServices,
   displayServiceErrors,
   displayServicesConfigNote,
 } from '../input/display-services';
+import {
+  editProjectSettings,
+  type PartialProjectSettings,
+} from '../input/edit-project-settings';
+import inputProject from '../input/input-project';
+import { inputRootDirectory } from '../input/input-root-directory';
+import selectOrg from '../input/select-org';
+import {
+  DEFAULT_VERCEL_AUTH_SETTING,
+  type VercelAuthSetting,
+  vercelAuth,
+} from '../input/vercel-auth';
+import createProject from '../projects/create-project';
+import { detectProjects } from '../projects/detect-projects';
+import { tryDetectServices } from '../projects/detect-services';
+import {
+  getLinkedProject,
+  getVercelDirectory,
+  linkFolderToProject,
+  VERCEL_DIR_PROJECT,
+  VERCEL_DIR_README,
+} from '../projects/link';
+import { validateRootDirectory } from '../validate-paths';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;

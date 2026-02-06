@@ -1,15 +1,15 @@
-import { join, basename, extname } from 'node:path';
-import { Project } from 'ts-morph';
+import { basename, extname, join } from 'node:path';
+import type { BuildManifest, Config, Preset } from '@react-router/dev/config';
+import { type BaseFunctionConfig, getConfig } from '@vercel/static-config';
 import {
-  mkdirSync,
-  writeFileSync,
   cpSync,
-  rmSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
+  writeFileSync,
 } from 'fs';
-import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
-import type { Preset, Config, BuildManifest } from '@react-router/dev/config';
+import { Project } from 'ts-morph';
 
 type RouteManifestEntry = BuildManifest['routes'][string];
 

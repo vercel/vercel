@@ -1,16 +1,16 @@
 import { randomUUID } from 'crypto';
-import { describe, beforeEach, afterEach, test, vi, expect } from 'vitest';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as fs from 'fs';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 vi.mock('./token-io');
 vi.mock('./get-context', () => ({
   getContext: () => ({ headers: {} }),
 }));
 
-import { findRootDir, getUserDataDir } from './token-io';
 import { getVercelOidcToken } from './get-vercel-oidc-token';
+import { findRootDir, getUserDataDir } from './token-io';
 import * as tokenUtil from './token-util';
 
 describe('getVercelOidcToken - Error Scenarios', () => {

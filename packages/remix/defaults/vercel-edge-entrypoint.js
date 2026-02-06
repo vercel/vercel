@@ -1,7 +1,6 @@
 /**
  * Edge runtime entrypoint for `@remix-run/vercel`.
  */
-'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
@@ -12,7 +11,7 @@ var serverRuntime = require('@remix-run/server-runtime');
  * the Remix SSR response.
  */
 function createRequestHandler({ build, mode }) {
-  let handleRequest = serverRuntime.createRequestHandler(build, mode);
+  const handleRequest = serverRuntime.createRequestHandler(build, mode);
   return request => {
     return handleRequest(request);
   };

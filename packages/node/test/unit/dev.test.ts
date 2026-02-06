@@ -1,12 +1,12 @@
-import { afterAll, describe, expect, test, vi } from 'vitest';
-import { forkDevServer, readMessage } from '../../src/fork-dev-server';
-import { resolve, extname } from 'path';
-import { createServer, request } from 'http';
-import { listen } from 'async-listen';
 import { once } from 'node:events';
+import { listen } from 'async-listen';
+import { createServer, request } from 'http';
+import { extname, resolve } from 'path';
+import { setTimeout } from 'timers/promises';
 import { fetch } from 'undici';
 import { promisify } from 'util';
-import { setTimeout } from 'timers/promises';
+import { afterAll, describe, expect, test, vi } from 'vitest';
+import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 
 vi.setConfig({ testTimeout: 20 * 1000 });
 
@@ -69,7 +69,7 @@ async function withDevServer(
       if (child.pid) {
         try {
           process.kill(child.pid, 'SIGTERM');
-        } catch (err) {
+        } catch (_err) {
           // Process might have already exited
         }
       }

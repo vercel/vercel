@@ -40,7 +40,6 @@ export async function importWasmModule(): Promise<RootType> {
     wasmLoadPromise = (async () => {
       // Use dynamic import() to load ESM modules
       // This works in Node.js and Jest (with --experimental-vm-modules)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wasiShimModule: any = await import(WASI_SHIM_PATH);
       const WASIShim = wasiShimModule.WASIShim;
       const wasmModule: ModuleType = await import(WASM_MODULE_PATH);

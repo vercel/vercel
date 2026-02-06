@@ -1,23 +1,23 @@
+import type { Cert } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import table from '../../util/output/table';
-import type { Cert } from '@vercel-internals/types';
-import * as ERRORS from '../../util/errors-ts';
+import output from '../../output-manager';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
 import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
 import { CertsRemoveTelemetryClient } from '../../util/telemetry/commands/certs/remove';
 import { removeSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import type Client from '../../util/client';
 
 async function rm(client: Client, argv: string[]): Promise<number> {
   const rmStamp = stamp();

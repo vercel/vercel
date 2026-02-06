@@ -1,22 +1,22 @@
-import { URL } from 'url';
-import plural from 'pluralize';
-import npa from 'npm-package-arg';
-import { satisfies } from 'semver';
-import { dirname, join } from 'path';
-import { createRequire } from 'module';
-import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
-import { isStaticRuntime } from '@vercel/fs-detectors';
 import type { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
-import execa from 'execa';
-import * as staticBuilder from './static-builder';
-import { VERCEL_DIR } from '../projects/link';
-import readJSONFile from '../read-json-file';
-import { CantParseJSONFile } from '../errors-ts';
 import { isErrnoException, isError } from '@vercel/error-utils';
+import { isStaticRuntime } from '@vercel/fs-detectors';
+import execa from 'execa';
+import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
+import { createRequire } from 'module';
+import npa from 'npm-package-arg';
+import { dirname, join } from 'path';
+import plural from 'pluralize';
+import { satisfies } from 'semver';
+import type { Writable } from 'stream';
+import { URL } from 'url';
+import output from '../../output-manager';
+import { CantParseJSONFile } from '../errors-ts';
 import cmd from '../output/cmd';
 import code from '../output/code';
-import type { Writable } from 'stream';
-import output from '../../output-manager';
+import { VERCEL_DIR } from '../projects/link';
+import readJSONFile from '../read-json-file';
+import * as staticBuilder from './static-builder';
 
 export interface BuilderWithPkg {
   path: string;

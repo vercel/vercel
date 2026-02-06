@@ -47,7 +47,7 @@ export function readAuthConfig(): AuthConfig | null {
       return null;
     }
     return JSON.parse(content) as AuthConfig;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

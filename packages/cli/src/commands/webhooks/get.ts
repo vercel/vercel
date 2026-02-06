@@ -1,18 +1,18 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import formatDate from '../../util/format-date';
-import getWebhook from '../../util/webhooks/get-webhook';
-import getScope from '../../util/get-scope';
-import { getCommandName } from '../../util/pkg-name';
-import { validateJsonOutput } from '../../util/output-format';
-import { WebhooksGetTelemetryClient } from '../../util/telemetry/commands/webhooks/get';
 import output from '../../output-manager';
-import { getSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
+import formatDate from '../../util/format-date';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import { validateJsonOutput } from '../../util/output-format';
+import { getCommandName } from '../../util/pkg-name';
+import { WebhooksGetTelemetryClient } from '../../util/telemetry/commands/webhooks/get';
+import getWebhook from '../../util/webhooks/get-webhook';
+import { getSubcommand } from './command';
 
 export default async function get(client: Client, argv: string[]) {
   const telemetry = new WebhooksGetTelemetryClient({

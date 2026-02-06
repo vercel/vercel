@@ -1,8 +1,8 @@
+import type { Project } from '@vercel-internals/types';
 import type Client from '../client';
 import { ProjectNotFound } from '../errors-ts';
 import { ensureLink } from '../link/ensure-link';
 import getProjectByNameOrId from './get-project-by-id-or-name';
-import type { Project } from '@vercel-internals/types';
 
 export default async function getProjectByCwdOrLink({
   autoConfirm,

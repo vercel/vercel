@@ -1,5 +1,5 @@
-import fs from 'fs';
 import { spawnSync } from 'child_process';
+import fs from 'fs';
 
 const packagesDir = new URL('../packages/', import.meta.url);
 const ignoredPackages = [];

@@ -1,10 +1,10 @@
-import { parseArguments } from '../../util/get-args';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { help } from '../help';
 import { mcpCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
 import mcp from './mcp';
 
 export default async function main(client: Client) {

@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach, vitest } from 'vitest';
-
-import { client } from '../../../mocks/client';
+import { beforeEach, describe, expect, it, vitest } from 'vitest';
 import domains from '../../../../src/commands/domains';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { createDomain } from '../../../mocks/domains';
+import { useUser } from '../../../mocks/user';
 
 describe('domains transfer-in', () => {
   const username = 'UserName';

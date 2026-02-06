@@ -1,6 +1,6 @@
+import type { certsCommand } from '../../../../commands/certs/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { certsCommand } from '../../../../commands/certs/command';
 
 export class CertsTelemetryClient
   extends TelemetryClient

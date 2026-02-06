@@ -1,59 +1,59 @@
+import { cloneEnv } from './clone-env';
+import debug from './debug';
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
-import { NodejsLambda } from './nodejs-lambda';
-import { Prerender } from './prerender';
 import download, {
-  downloadFile,
   DownloadedFiles,
-  isSymbolicLink,
+  downloadFile,
   isDirectory,
+  isSymbolicLink,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
-import rename from './fs/rename';
 import {
-  spawnAsync,
-  execCommand,
-  spawnCommand,
-  walkParentDirs,
-  getScriptName,
-  installDependencies,
-  runPackageJsonScript,
-  runNpmInstall,
-  runBundleInstall,
-  runPipInstall,
-  runShellScript,
-  runCustomInstallCommand,
-  resetCustomInstallCommandSet,
-  getEnvForPackageManager,
-  getNodeVersion,
-  getPathForPackageManager,
-  detectPackageManager,
-  getSpawnOptions,
-  getNodeBinPath,
-  getNodeBinPaths,
-  scanParentDirs,
-  findPackageJson,
-  traverseUpDirectories,
-  PipInstallResult,
-} from './fs/run-user-scripts';
-import {
-  getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getLatestNodeVersion,
+  getSupportedBunVersion,
   getSupportedNodeVersion,
   isBunVersion,
-  getSupportedBunVersion,
 } from './fs/node-version';
+import rename from './fs/rename';
+import {
+  detectPackageManager,
+  execCommand,
+  findPackageJson,
+  getEnvForPackageManager,
+  getNodeBinPath,
+  getNodeBinPaths,
+  getNodeVersion,
+  getPathForPackageManager,
+  getScriptName,
+  getSpawnOptions,
+  installDependencies,
+  PipInstallResult,
+  resetCustomInstallCommandSet,
+  runBundleInstall,
+  runCustomInstallCommand,
+  runNpmInstall,
+  runPackageJsonScript,
+  runPipInstall,
+  runShellScript,
+  scanParentDirs,
+  spawnAsync,
+  spawnCommand,
+  traverseUpDirectories,
+  walkParentDirs,
+} from './fs/run-user-scripts';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
-import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 import { getServiceUrlEnvVars } from './get-service-url-env-vars';
-import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
+import { createLambda, getLambdaOptionsFromFunction, Lambda } from './lambda';
+import { NodejsLambda } from './nodejs-lambda';
+import { Prerender } from './prerender';
 import { validateNpmrc } from './validate-npmrc';
 
 export {
@@ -115,39 +115,31 @@ export {
   validateNpmrc,
 };
 
-export { EdgeFunction } from './edge-function';
-export { readConfigFile, getPackageJson } from './fs/read-config-file';
-export { normalizePath } from './fs/normalize-path';
-export { getOsRelease, getProvidedRuntime } from './os';
-
-export * from './should-serve';
-export * from './schemas';
-export * from './types';
-export * from './errors';
-
-export * from './trace';
-
-export { NODE_VERSIONS } from './fs/node-version';
-
-export { getInstalledPackageVersion } from './get-installed-package-version';
-
 export { defaultCachePathGlob } from './default-cache-path-glob';
-
-export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
-
+export { EdgeFunction } from './edge-function';
+export * from './errors';
 export {
-  BACKEND_FRAMEWORKS,
   BACKEND_BUILDERS,
-  UNIFIED_BACKEND_BUILDER,
+  BACKEND_FRAMEWORKS,
   BackendFramework,
-  isBackendFramework,
   isBackendBuilder,
+  isBackendFramework,
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
-  shouldUseExperimentalBackends,
+  isPythonFramework,
   PYTHON_FRAMEWORKS,
   PythonFramework,
-  isPythonFramework,
+  shouldUseExperimentalBackends,
+  UNIFIED_BACKEND_BUILDER,
 } from './framework-helpers';
-
+export { NODE_VERSIONS } from './fs/node-version';
+export { normalizePath } from './fs/normalize-path';
+export { getPackageJson, readConfigFile } from './fs/read-config-file';
+export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
+export { getInstalledPackageVersion } from './get-installed-package-version';
+export { getOsRelease, getProvidedRuntime } from './os';
 export * from './python';
+export * from './schemas';
+export * from './should-serve';
+export * from './trace';
+export * from './types';

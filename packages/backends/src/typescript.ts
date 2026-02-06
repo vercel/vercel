@@ -1,9 +1,9 @@
-import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
-import { extname, join } from 'node:path';
-import { Colors as c } from './cervel/utils.js';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { extname, join } from 'node:path';
 import type { Span } from '@vercel/build-utils/dist/trace/index.js';
+import { Colors as c } from './cervel/utils.js';
 
 const require_ = createRequire(import.meta.url);
 
@@ -107,7 +107,7 @@ const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
       paths: [args.workPath],
     });
     return pkgPath;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 };

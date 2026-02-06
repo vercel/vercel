@@ -1,7 +1,7 @@
-import yaml from 'js-yaml';
 import toml from '@iarna/toml';
-import { readFile } from 'fs-extra';
 import { isErrnoException } from '@vercel/error-utils';
+import { readFile } from 'fs-extra';
+import yaml from 'js-yaml';
 import { join } from 'path';
 import type { PackageJson } from '../types';
 
@@ -39,7 +39,7 @@ export async function readConfigFile<T>(
         } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
           return yaml.safeLoad(str, { filename: name }) as T;
         }
-      } catch (error: unknown) {
+      } catch (_error: unknown) {
         console.log(`Error while parsing config file: "${name}"`);
       }
     }
@@ -57,7 +57,7 @@ export async function getPackageJson(dir: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     return {};
   }
 }

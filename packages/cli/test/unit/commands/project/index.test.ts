@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import project from '../../../../src/commands/project';
 import * as list from '../../../../src/commands/project/list';
 import { client } from '../../../mocks/client';

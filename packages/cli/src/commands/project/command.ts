@@ -1,10 +1,10 @@
-import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
   jsonOption,
   nextOption,
   yesOption,
 } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const addSubcommand = {
   name: 'add',

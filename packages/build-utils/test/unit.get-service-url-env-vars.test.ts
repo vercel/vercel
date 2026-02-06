@@ -1,6 +1,6 @@
-import { getServiceUrlEnvVars } from '../src';
-import type { Service } from '../src';
 import { describe, expect, it } from 'vitest';
+import type { Service } from '../src';
+import { getServiceUrlEnvVars } from '../src';
 
 const createService = (overrides: Partial<Service>): Service => ({
   name: 'test',

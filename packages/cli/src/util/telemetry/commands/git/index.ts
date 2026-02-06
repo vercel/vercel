@@ -1,6 +1,6 @@
+import type { gitCommand } from '../../../../commands/git/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { gitCommand } from '../../../../commands/git/command';
 
 export class GitTelemetryClient
   extends TelemetryClient

@@ -1,9 +1,9 @@
 import type Client from '../client';
 import type {
+  BillingPlan,
   Integration,
   IntegrationProduct,
   Metadata,
-  BillingPlan,
 } from './types';
 
 export async function fetchBillingPlans(

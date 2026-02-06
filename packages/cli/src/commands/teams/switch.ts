@@ -1,17 +1,17 @@
+import type { GlobalConfig, Team } from '@vercel-internals/types';
 import chalk from 'chalk';
-import { emoji } from '../../util/emoji';
-import getUser from '../../util/get-user';
-import getTeams from '../../util/teams/get-teams';
-import listInput from '../../util/input/list';
-import type { Team, GlobalConfig } from '@vercel-internals/types';
-import { writeToConfigFile } from '../../util/config/files';
 import output from '../../output-manager';
-import { TeamsSwitchTelemetryClient } from '../../util/telemetry/commands/teams/switch';
 import type Client from '../../util/client';
-import { switchSubcommand } from './command';
+import { writeToConfigFile } from '../../util/config/files';
+import { emoji } from '../../util/emoji';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getUser from '../../util/get-user';
+import listInput from '../../util/input/list';
+import getTeams from '../../util/teams/get-teams';
+import { TeamsSwitchTelemetryClient } from '../../util/telemetry/commands/teams/switch';
+import { switchSubcommand } from './command';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {

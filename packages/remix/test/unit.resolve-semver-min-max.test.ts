@@ -1,5 +1,5 @@
+import { describe, expect, it } from 'vitest';
 import { resolveSemverMinMax } from '../src/utils';
-import { describe, it, expect } from 'vitest';
 
 describe('resolveSemverMinMax()', () => {
   it.each([
@@ -14,11 +14,13 @@ describe('resolveSemverMinMax()', () => {
     { min: '1.0.0', max: '2.0.0', version: '1.x.x', expected: '1.x.x' },
     { min: '1.0.0', max: '2.0.0', version: '2.x.x', expected: '2.x.x' },
     { min: '1.0.0', max: '2.0.0', version: '^2.0.0', expected: '^2.0.0' },
-  ])(
-    'Should return "$expected" for version "$version" (min=$min, max=$max)',
-    ({ min, max, version, expected }) => {
-      const actual = resolveSemverMinMax(min, max, version);
-      expect(actual).toEqual(expected);
-    }
-  );
+  ])('Should return "$expected" for version "$version" (min=$min, max=$max)', ({
+    min,
+    max,
+    version,
+    expected,
+  }) => {
+    const actual = resolveSemverMinMax(min, max, version);
+    expect(actual).toEqual(expected);
+  });
 });

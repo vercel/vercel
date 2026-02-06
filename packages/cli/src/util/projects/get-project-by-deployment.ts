@@ -1,13 +1,13 @@
-import chalk from 'chalk';
-import type Client from '../client';
 import type { Deployment, Project, Team } from '@vercel-internals/types';
-import getDeployment from '../get-deployment';
-import getProjectByNameOrId from './get-project-by-id-or-name';
-import getScope from '../get-scope';
-import getTeamById from '../teams/get-team-by-id';
-import { isValidName } from '../is-valid-name';
-import { ProjectNotFound } from '../errors-ts';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../client';
+import { ProjectNotFound } from '../errors-ts';
+import getDeployment from '../get-deployment';
+import getScope from '../get-scope';
+import { isValidName } from '../is-valid-name';
+import getTeamById from '../teams/get-team-by-id';
+import getProjectByNameOrId from './get-project-by-id-or-name';
 
 export default async function getProjectByDeployment({
   client,

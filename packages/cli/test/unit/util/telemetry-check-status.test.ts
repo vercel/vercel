@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { checkTelemetryStatus } from '../../../src/util/telemetry/check-status';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as configFilesUtil from '../../../src/util/config/files';
+import { checkTelemetryStatus } from '../../../src/util/telemetry/check-status';
 
 import { client } from '../../mocks/client';
 import '../../mocks/matchers';

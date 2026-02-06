@@ -1,5 +1,5 @@
-import { Headers } from 'node-fetch';
 import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
+import { Headers } from 'node-fetch';
 
 export function nodeHeadersToFetchHeaders(
   nodeHeaders: IncomingHttpHeaders | OutgoingHttpHeaders

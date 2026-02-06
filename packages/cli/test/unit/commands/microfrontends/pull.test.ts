@@ -1,16 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import { useUser } from '../../../mocks/user';
+import { describe, expect, it } from 'vitest';
 import microfrontends from '../../../../src/commands/microfrontends';
-import { client } from '../../../mocks/client';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { client } from '../../../mocks/client';
 import {
   useMicrofrontendsDeploymentNotFound,
   useMicrofrontendsForDeployment,
   useMicrofrontendsForProject,
   useMicrofrontendsNotEnabled,
 } from '../../../mocks/microfrontends';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('microfrontends pull', () => {
   describe('--help', () => {

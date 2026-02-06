@@ -1,18 +1,18 @@
-import { FilesMap } from './hashes';
-import nodeFetch, { RequestInit } from 'node-fetch';
-import { join, sep, relative, basename } from 'path';
-import { URL } from 'url';
-import ignore from 'ignore';
-import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, VercelConfig } from '../types';
-import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
-import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
   inferMicrofrontendsLocation,
 } from '@vercel/microfrontends/microfrontends/utils';
+import { Sema } from 'async-sema';
+import { readFile } from 'fs-extra';
+import ignore from 'ignore';
+import nodeFetch, { RequestInit } from 'node-fetch';
+import { basename, join, relative, sep } from 'path';
+import { URL } from 'url';
+import { pkgVersion } from '../pkg';
+import { VercelClientOptions, VercelConfig } from '../types';
+import { FilesMap } from './hashes';
+import readdir from './readdir-recursive';
 
 type Ignore = ReturnType<typeof ignore>;
 
@@ -65,17 +65,16 @@ export async function parseVercelConfig(
 
     return JSON.parse(jsonString);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(e);
 
     return {};
   }
 }
 
-const maybeRead = async function <T>(path: string, default_: T) {
+const maybeRead = async <T>(path: string, default_: T) => {
   try {
     return await readFile(path, 'utf8');
-  } catch (err) {
+  } catch (_err) {
     return default_;
   }
 };

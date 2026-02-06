@@ -1,5 +1,5 @@
-import { URLSearchParams } from 'url';
 import type { Deployment } from '@vercel-internals/types';
+import { URLSearchParams } from 'url';
 import type Client from '../client';
 
 type LegacyDeployment = {

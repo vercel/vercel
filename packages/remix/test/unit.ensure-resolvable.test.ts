@@ -1,7 +1,7 @@
-import { join } from 'path';
 import { promises as fs } from 'fs';
+import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 import { ensureResolvable } from '../src/utils';
-import { describe, it, expect } from 'vitest';
 
 const FIXTURES_DIR = join(__dirname, 'fixtures-legacy');
 

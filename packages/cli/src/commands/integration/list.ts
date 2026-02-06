@@ -1,20 +1,20 @@
-import chalk from 'chalk';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { getLinkedProject } from '../../util/projects/link';
-import type { Resource } from '../../util/integration-resource/types';
-import { getResources } from '../../util/integration-resource/get-resources';
-import { listSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import { validateLsArgs } from '../../util/validate-ls-args';
-import table from '../../util/output/table';
-import title from 'title';
 import type { Team } from '@vercel-internals/types';
-import { buildSSOLink } from '../../util/integration/build-sso-link';
-import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
+import chalk from 'chalk';
+import title from 'title';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import { buildSSOLink } from '../../util/integration/build-sso-link';
+import { getResources } from '../../util/integration-resource/get-resources';
+import type { Resource } from '../../util/integration-resource/types';
+import table from '../../util/output/table';
+import { getLinkedProject } from '../../util/projects/link';
+import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
+import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 export async function list(client: Client) {
   let parsedArguments = null;

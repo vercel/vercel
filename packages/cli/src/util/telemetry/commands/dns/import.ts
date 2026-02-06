@@ -1,6 +1,6 @@
+import type { importSubcommand } from '../../../../commands/dns/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { importSubcommand } from '../../../../commands/dns/command';
 
 export class DnsImportTelemetryClient
   extends TelemetryClient

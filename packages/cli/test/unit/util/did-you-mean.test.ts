@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import didYouMean from '../../../src/util/did-you-mean';
 import { commandNames } from '../../../src/commands';
+import didYouMean from '../../../src/util/did-you-mean';
 
 describe('didYouMean', () => {
   const examples = [

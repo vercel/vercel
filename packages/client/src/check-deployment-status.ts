@@ -1,20 +1,19 @@
 import sleep from 'sleep-promise';
-import { fetch, getApiDeploymentsUrl } from './utils';
-import { getPollingDelay } from './utils/get-polling-delay';
-import {
-  isDone,
-  isReady,
-  isFailed,
-  isAliasAssigned,
-  isAliasError,
-} from './utils/ready-state';
-import { createDebug } from './utils';
 import {
   Deployment,
-  VercelClientOptions,
   DeploymentBuild,
   DeploymentEventType,
+  VercelClientOptions,
 } from './types';
+import { createDebug, fetch, getApiDeploymentsUrl } from './utils';
+import { getPollingDelay } from './utils/get-polling-delay';
+import {
+  isAliasAssigned,
+  isAliasError,
+  isDone,
+  isFailed,
+  isReady,
+} from './utils/ready-state';
 
 interface DeploymentStatus {
   type: DeploymentEventType;
@@ -62,7 +61,6 @@ export function parseRetryAfterMs(response: any): number | null {
   }
 }
 
-/* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
   clientOptions: VercelClientOptions
@@ -101,7 +99,7 @@ export async function* checkDeploymentStatus(
       );
 
       retriesLeft--;
-      if (retriesLeft == 0) {
+      if (retriesLeft === 0) {
         break;
       }
 

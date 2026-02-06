@@ -1,22 +1,22 @@
-import type http from 'http';
-import type { ChildProcess } from 'child_process';
-import type { Lambda as FunLambda } from '@vercel/fun';
 import type {
   Builder as BuildConfig,
   BuildOptions,
-  PrepareCacheOptions,
-  ShouldServeOptions,
-  StartDevServerOptions,
-  StartDevServerResult,
   Env,
   FileBlob,
   FileFsRef,
   Lambda,
+  PrepareCacheOptions,
+  ShouldServeOptions,
+  StartDevServerOptions,
+  StartDevServerResult,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
+import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Lambda as FunLambda } from '@vercel/fun';
 import type { HandleValue, Route } from '@vercel/routing-utils';
 import type { ProjectSettings } from '@vercel-internals/types';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { ChildProcess } from 'child_process';
+import type http from 'http';
 import type { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
@@ -55,9 +55,10 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface HttpHandler {
-  (req: http.IncomingMessage, res: http.ServerResponse): void;
-}
+export type HttpHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) => void;
 
 export interface BuilderInputs {
   [path: string]: FileFsRef;

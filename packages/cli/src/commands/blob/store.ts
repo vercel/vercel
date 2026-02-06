@@ -1,7 +1,13 @@
+import output from '../../output-manager';
+import type { BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
+import { BlobStoreTelemetryClient } from '../../util/telemetry/commands/blob/store';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
 import {
   addStoreSubcommand,
@@ -9,15 +15,9 @@ import {
   removeStoreSubcommand,
   storeSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { getCommandAliases } from '..';
 import addStore from './store-add';
-import removeStore from './store-remove';
-import { BlobStoreTelemetryClient } from '../../util/telemetry/commands/blob/store';
-import { printError } from '../../util/error';
 import getStore from './store-get';
-import type { BlobRWToken } from '../../util/blob/token';
+import removeStore from './store-remove';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addStoreSubcommand),

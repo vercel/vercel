@@ -1,22 +1,23 @@
 const originalCwd = process.cwd();
-import { afterAll, beforeAll, afterEach } from 'vitest';
+
+import { afterAll, afterEach, beforeAll } from 'vitest';
 
 // Register Jest matcher extensions for CLI unit tests
 import './matchers';
 
+import ansiEscapes from 'ansi-escapes';
+import { listen } from 'async-listen';
 import chalk from 'chalk';
-import { PassThrough } from 'stream';
-import type { Server } from 'http';
-import { createServer } from 'http';
 import type { Express, ExpressRouter } from 'express';
 import express, { Router } from 'express';
-import { listen } from 'async-listen';
+import type { Server } from 'http';
+import { createServer } from 'http';
+import { PassThrough } from 'stream';
+import stripAnsi from 'strip-ansi';
+import output from '../../src/output-manager';
 import type { FetchOptions } from '../../src/util/client';
 import Client from '../../src/util/client';
-import stripAnsi from 'strip-ansi';
-import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
-import output from '../../src/output-manager';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -165,8 +166,6 @@ function setupMockServer(mockClient: MockClient): Express {
   // catch requests that were not intercepted
   app.use((req, res) => {
     const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
-    // eslint-disable-next-line no-console
-    console.warn(message);
     res.status(500).json({
       error: {
         code: 'mock_unimplemented',
@@ -176,7 +175,7 @@ function setupMockServer(mockClient: MockClient): Express {
   });
 
   // global error handling must be last
-  // @ts-ignore - this signature is actually valid
+  // @ts-expect-error - this signature is actually valid
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((error, _req, res, _next) => {
     res.status(500).json({

@@ -1,10 +1,10 @@
 import Ajv from 'ajv';
 import assert from 'assert';
-import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
 import fetch from 'node-fetch';
+import { join } from 'path';
 import { URL, URLSearchParams } from 'url';
+import { isString } from 'util';
 import frameworkList from '../src/frameworks';
 
 // bump timeout for Windows as network can be slower

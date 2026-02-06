@@ -9,7 +9,7 @@ const createWebSocket = url =>
     ws.onerror = reject;
   });
 
-let data = [...Array(4).keys()];
+const data = [...Array(4).keys()];
 
 export default async () => {
   const ws = await createWebSocket('wss://ws.postman-echo.com/raw');

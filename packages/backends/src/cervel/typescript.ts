@@ -1,9 +1,9 @@
-import { createRequire } from 'module';
 import { spawn } from 'child_process';
-import { extname, join } from 'path';
-import { Colors as c } from './utils.js';
 import { existsSync } from 'fs';
+import { createRequire } from 'module';
+import { extname, join } from 'path';
 import type { TypescriptOptions } from './types.js';
+import { Colors as c } from './utils.js';
 
 const require_ = createRequire(import.meta.url);
 
@@ -103,7 +103,7 @@ const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
       paths: [args.workPath],
     });
     return pkgPath;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 };

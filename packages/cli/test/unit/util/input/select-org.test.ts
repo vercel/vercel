@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
 import selectOrg from '../../../../src/util/input/select-org';
+import { client } from '../../../mocks/client';
 import { createTeam, useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 

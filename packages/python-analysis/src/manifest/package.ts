@@ -7,14 +7,14 @@ import { PythonAnalysisError } from '../util/error';
 import type { AbsPath, RelPath } from '../util/fs';
 import { isSubpath, normalizePath, readFileTextIfExists } from '../util/fs';
 import { parsePep440Constraint } from './pep440';
-import type { PipfileLike, PipfileLockLike } from './pipfile/types';
 import { PipfileLikeSchema, PipfileLockLikeSchema } from './pipfile/schema';
+import type { PipfileLike, PipfileLockLike } from './pipfile/types';
 import {
   convertPipfileLockToPyprojectToml,
   convertPipfileToPyprojectToml,
 } from './pipfile-parser';
-import type { PyProjectToml } from './pyproject/types';
 import { PyProjectTomlSchema } from './pyproject/schema';
+import type { PyProjectToml } from './pyproject/types';
 import type { PythonConstraint, PythonRequest } from './python-specifiers';
 import { convertRequirementsToPyprojectToml } from './requirements-txt-parser';
 import { UvConfigSchema } from './uv-config/schema';

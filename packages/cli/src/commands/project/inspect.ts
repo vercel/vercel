@@ -1,18 +1,18 @@
-import chalk from 'chalk';
 import { frameworkList } from '@vercel/frameworks';
-import { getCommandName } from '../../util/pkg-name';
-import { ProjectInspectTelemetryClient } from '../../util/telemetry/commands/project/inspect';
+import chalk from 'chalk';
 import output from '../../output-manager';
-import { inspectSubcommand } from './command';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import formatDate from '../../util/format-date';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { formatProject } from '../../util/projects/format-project';
 import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import getTeamById from '../../util/teams/get-team-by-id';
-import formatDate from '../../util/format-date';
-import type Client from '../../util/client';
+import { ProjectInspectTelemetryClient } from '../../util/telemetry/commands/project/inspect';
+import { inspectSubcommand } from './command';
 
 export default async function inspect(
   client: Client,

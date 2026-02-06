@@ -1,10 +1,10 @@
 import open from 'open';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import openCommand from '../../../../src/commands/open';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import openCommand from '../../../../src/commands/open';
+import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {

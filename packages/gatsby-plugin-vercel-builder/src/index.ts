@@ -4,13 +4,13 @@ import {
   type Rewrite,
 } from '@vercel/routing-utils';
 import { writeJson } from 'fs-extra';
-import { validateGatsbyState } from './schemas';
+import { join } from 'path';
 import {
-  createServerlessFunctions,
   createAPIRoutes,
+  createServerlessFunctions,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
-import { join } from 'path';
+import { validateGatsbyState } from './schemas';
 import type { Config } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
@@ -57,7 +57,7 @@ export async function generateVercelBuildOutputAPI3Output({
     // "static" directory needs to happen last since it moves "public"
     await createStaticDir(pathPrefix);
 
-    let trailingSlash: boolean | undefined = undefined;
+    let trailingSlash: boolean | undefined;
     if (gatsbyConfig.trailingSlash === 'always') {
       trailingSlash = true;
     } else if (gatsbyConfig.trailingSlash === 'never') {

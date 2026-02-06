@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
 import teamsSwitch from '../../../../src/commands/teams/switch';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { useTeam } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('switch', () => {
   describe('non-northstar', () => {

@@ -1,22 +1,22 @@
+import { strict as assert } from 'assert';
+import fs from 'fs-extra';
 import ms from 'ms';
 import path from 'path';
-import fs from 'fs-extra';
-import { strict as assert } from 'assert';
-import { getSupportedNodeVersion } from '../src/fs/node-version';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Files } from '../src';
 import {
   FileBlob,
-  getNodeVersion,
-  getLatestNodeVersion,
+  findPackageJson,
   getDiscontinuedNodeVersions,
+  getLatestNodeVersion,
+  getNodeVersion,
+  Prerender,
   rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  findPackageJson,
-  Prerender,
 } from '../src';
-import type { Files } from '../src';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getSupportedNodeVersion } from '../src/fs/node-version';
 
 vi.setConfig({ testTimeout: 10 * 1000 });
 
@@ -97,7 +97,7 @@ it('should only match supported node versions, otherwise throw an error', async 
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
 // eslint-disable-next-line jest/no-disabled-tests
-it.skip('should match all semver ranges', async () => {
+it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('16.x')).toHaveProperty('major', 16);

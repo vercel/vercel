@@ -1,6 +1,6 @@
+import { mkdtempSync } from 'fs';
 import os from 'os';
 import path from 'path';
-import { mkdtempSync } from 'fs';
 import {
   getMonorepoDefaultSettings,
   LocalFileSystemDetector,
@@ -44,55 +44,40 @@ describe('getMonorepoDefaultSettings', () => {
     ['nx-project-and-package-config-1', 'nx', false, 'app-10', false, false],
     ['nx-project-and-package-config-2', 'nx', false, 'app-9', false, false],
     ['nx-project-config', 'nx', false, 'app-8', false, false],
-  ])(
-    'fixture %s',
-    async (
-      fixture,
-      expectedResultKey,
-      isNpm,
-      packageName,
-      isRoot,
-      supportsInference
-    ) => {
-      const expectedResultMap: Record<string, Record<string, string>> = {
-        turbo: {
-          monorepoManager: 'turbo',
-          buildCommand:
-            isRoot || supportsInference
-              ? 'turbo run build'
-              : 'cd ../.. && turbo run build --filter={packages/app-1}...',
-          installCommand:
-            isNpm && isRoot
-              ? 'npm install'
-              : isNpm
-                ? 'npm install --prefix=../..'
-                : 'yarn install',
-          commandForIgnoringBuildStep: 'npx turbo-ignore',
-        },
-        nx: {
-          monorepoManager: 'nx',
-          buildCommand: `cd ../.. && npx nx build ${packageName}`,
-          installCommand: 'yarn install',
-        },
-      };
+  ])('fixture %s', async (fixture, expectedResultKey, isNpm, packageName, isRoot, supportsInference) => {
+    const expectedResultMap: Record<string, Record<string, string>> = {
+      turbo: {
+        monorepoManager: 'turbo',
+        buildCommand:
+          isRoot || supportsInference
+            ? 'turbo run build'
+            : 'cd ../.. && turbo run build --filter={packages/app-1}...',
+        installCommand:
+          isNpm && isRoot
+            ? 'npm install'
+            : isNpm
+              ? 'npm install --prefix=../..'
+              : 'yarn install',
+        commandForIgnoringBuildStep: 'npx turbo-ignore',
+      },
+      nx: {
+        monorepoManager: 'nx',
+        buildCommand: `cd ../.. && npx nx build ${packageName}`,
+        installCommand: 'yarn install',
+      },
+    };
 
-      const fs = new LocalFileSystemDetector(
-        path.join(
-          __dirname,
-          'fixtures',
-          'get-monorepo-default-settings',
-          fixture
-        )
-      );
-      const result = await getMonorepoDefaultSettings(
-        packageName,
-        isRoot ? '/' : 'packages/app-1',
-        isRoot ? '/' : '../..',
-        fs
-      );
-      expect(result).toStrictEqual(expectedResultMap[expectedResultKey]);
-    }
-  );
+    const fs = new LocalFileSystemDetector(
+      path.join(__dirname, 'fixtures', 'get-monorepo-default-settings', fixture)
+    );
+    const result = await getMonorepoDefaultSettings(
+      packageName,
+      isRoot ? '/' : 'packages/app-1',
+      isRoot ? '/' : '../..',
+      fs
+    );
+    expect(result).toStrictEqual(expectedResultMap[expectedResultKey]);
+  });
 
   test('returns null when neither nx nor turbo is detected', async () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'monorepo-test-'));

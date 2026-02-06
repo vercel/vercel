@@ -1,7 +1,7 @@
 import { parse } from 'tldts';
-import { InvalidDomain } from '../errors-ts';
-import isWildcardAlias from '../alias/is-wildcard-alias';
 import extractDomain from '../alias/extract-domain';
+import isWildcardAlias from '../alias/is-wildcard-alias';
+import { InvalidDomain } from '../errors-ts';
 
 export default function getWildcardCNSForAlias(alias: string) {
   if (isWildcardAlias(alias)) {

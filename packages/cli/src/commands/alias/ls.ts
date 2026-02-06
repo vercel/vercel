@@ -1,22 +1,22 @@
+import type { Alias } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
-import table from '../../util/output/table';
-import type Client from '../../util/client';
-import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
-import { validateJsonOutput } from '../../util/output-format';
-import { AliasListTelemetryClient } from '../../util/telemetry/commands/alias/list';
 import output from '../../output-manager';
-import { listSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
+import getAliases from '../../util/alias/get-aliases';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
+import { validateJsonOutput } from '../../util/output-format';
+import { getCommandName } from '../../util/pkg-name';
+import { AliasListTelemetryClient } from '../../util/telemetry/commands/alias/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
-import type { Alias } from '@vercel-internals/types';
+import { listSubcommand } from './command';
 
 export default async function ls(client: Client, argv: string[]) {
   let parsedArguments;

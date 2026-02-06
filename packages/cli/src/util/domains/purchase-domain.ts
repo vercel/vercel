@@ -1,9 +1,9 @@
-import * as ERRORS from '../errors-ts';
 import type Client from '../client';
-import { pollForOrder } from './get-order';
-import { getDomain } from './get-domain';
+import * as ERRORS from '../errors-ts';
 import getScope from '../get-scope';
 import type { ContactInformation } from './collect-contact-information';
+import { getDomain } from './get-domain';
+import { pollForOrder } from './get-order';
 
 type OrderResponse = {
   orderId: string;

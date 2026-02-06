@@ -1,6 +1,6 @@
+import type { balanceSubcommand } from '../../../../commands/integration/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { balanceSubcommand } from '../../../../commands/integration/command';
 
 export class IntegrationBalanceTelemetryClient
   extends TelemetryClient

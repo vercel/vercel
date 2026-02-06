@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import guidance from '../../../../src/commands/guidance';
-import { client } from '../../../mocks/client';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import { client } from '../../../mocks/client';
 
 describe('guidance', () => {
   const setSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');

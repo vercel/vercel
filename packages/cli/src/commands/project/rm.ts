@@ -1,14 +1,14 @@
 import chalk from 'chalk';
 import ms from 'ms';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
+import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
-import { getCommandName } from '../../util/pkg-name';
-import { ProjectRmTelemetryClient } from '../../util/telemetry/commands/project/rm';
-import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import { getCommandName } from '../../util/pkg-name';
+import { ProjectRmTelemetryClient } from '../../util/telemetry/commands/project/rm';
 import { removeSubcommand } from './command';
 
 const e = encodeURIComponent;

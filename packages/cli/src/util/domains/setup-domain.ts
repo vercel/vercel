@@ -1,13 +1,13 @@
-import { parse } from 'tldts';
-import { NowError } from '../now-error';
 import type { Domain } from '@vercel-internals/types';
-import * as ERRORS from '../errors-ts';
-import addDomain from './add-domain';
+import { parse } from 'tldts';
+import output from '../../output-manager';
+import extractDomain from '../alias/extract-domain';
 import type Client from '../client';
+import * as ERRORS from '../errors-ts';
+import { NowError } from '../now-error';
+import addDomain from './add-domain';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
-import extractDomain from '../alias/extract-domain';
-import output from '../../output-manager';
 
 export default async function setupDomain(
   client: Client,

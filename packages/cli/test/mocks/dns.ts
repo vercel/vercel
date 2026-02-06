@@ -21,7 +21,7 @@ export function useDns() {
 
   client.scenario.get('/v5/domains', (req, res) => {
     assert(typeof req.query.limit === 'string');
-    const limit = parseInt(req.query.limit);
+    const limit = parseInt(req.query.limit, 10);
     const domains = Array.from({ length: limit }, (_, k) =>
       createDomain(k.toString())
     );

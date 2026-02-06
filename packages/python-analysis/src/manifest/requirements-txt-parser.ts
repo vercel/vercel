@@ -18,6 +18,7 @@ import type {
   Requirement,
 } from 'pip-requirements-js';
 import { parsePipRequirementsFile } from 'pip-requirements-js';
+import { formatPep508 } from './pep508';
 import type { PyProjectToml } from './pyproject/types';
 import type {
   DependencySource,
@@ -25,7 +26,6 @@ import type {
   NormalizedRequirement,
 } from './requirement/types';
 import type { UvIndexEntry } from './uv-config/types';
-import { formatPep508 } from './pep508';
 
 /**
  * Parsed pip arguments from requirements file.

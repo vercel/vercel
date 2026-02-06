@@ -2,17 +2,17 @@ import type { JSONObject } from '@vercel-internals/types';
 
 // Re-export OpenAPI types for backwards compatibility
 export type {
-  OpenApiSpec,
-  PathItem,
-  Operation,
-  Parameter,
-  RequestBody,
-  MediaType,
-  Schema,
-  Response,
+  BodyField,
   CachedSpec,
   EndpointInfo,
-  BodyField,
+  MediaType,
+  OpenApiSpec,
+  Operation,
+  Parameter,
+  PathItem,
+  RequestBody,
+  Response,
+  Schema,
 } from '../../util/openapi';
 
 export interface RequestConfig {

@@ -1,22 +1,22 @@
+import { errorToString } from '@vercel/error-utils';
 import chalk from 'chalk';
 import { parse } from 'tldts';
-import { errorToString } from '@vercel/error-utils';
-import * as ERRORS from '../../util/errors-ts';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import collectContactInformation from '../../util/domains/collect-contact-information';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
-import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
 import purchaseDomain from '../../util/domains/purchase-domain';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
-import { DomainsBuyTelemetryClient } from '../../util/telemetry/commands/domains/buy';
-import type Client from '../../util/client';
-import { buySubcommand } from './command';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import collectContactInformation from '../../util/domains/collect-contact-information';
+import getScope from '../../util/get-scope';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { DomainsBuyTelemetryClient } from '../../util/telemetry/commands/domains/buy';
+import { buySubcommand } from './command';
 
 export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({

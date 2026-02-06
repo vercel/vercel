@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import remove from '../../../../src/commands/remove';
 import { client } from '../../../mocks/client';
+import { useDeployment } from '../../../mocks/deployment';
 import {
   defaultProject,
   useProject,
   useUnknownProject,
 } from '../../../mocks/project';
-import remove from '../../../../src/commands/remove';
-import { useDeployment } from '../../../mocks/deployment';
 import { useUser } from '../../../mocks/user';
 
 describe('remove', () => {

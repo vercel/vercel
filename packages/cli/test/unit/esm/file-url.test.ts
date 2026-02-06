@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isAbsolute } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { describe, expect, it } from 'vitest';
 
 /**
  * These tests validate file:// URL handling for ESM compatibility.

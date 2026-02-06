@@ -1,23 +1,23 @@
 import chalk from 'chalk';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import addDNSRecord from '../../util/dns/add-dns-record';
+import getDNSData from '../../util/dns/get-dns-data';
+import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
+import { printError } from '../../util/error';
 import {
-  DomainNotFound,
-  DNSPermissionDenied,
   DNSInvalidPort,
   DNSInvalidType,
+  DNSPermissionDenied,
+  DomainNotFound,
 } from '../../util/errors-ts';
-import addDNSRecord from '../../util/dns/add-dns-record';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
-import stamp from '../../util/output/stamp';
-import getDNSData from '../../util/dns/get-dns-data';
-import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
-import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
-import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
+import { addSubcommand } from './command';
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;

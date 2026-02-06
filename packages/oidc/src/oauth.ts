@@ -1,4 +1,4 @@
-import { hostname, platform, arch } from 'os';
+import { arch, hostname, platform } from 'os';
 
 const VERCEL_ISSUER = 'https://vercel.com';
 const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';

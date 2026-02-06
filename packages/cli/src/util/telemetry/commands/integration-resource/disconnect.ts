@@ -1,6 +1,6 @@
+import type { disconnectSubcommand } from '../../../../commands/integration-resource/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { disconnectSubcommand } from '../../../../commands/integration-resource/command';
 
 export class IntegrationResourceDisconnectTelemetryClient
   extends TelemetryClient

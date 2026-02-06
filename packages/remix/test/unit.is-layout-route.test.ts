@@ -1,5 +1,5 @@
+import { describe, expect, it } from 'vitest';
 import { isLayoutRoute } from '../src/utils';
-import { describe, it, expect } from 'vitest';
 
 describe('isLayoutRoute()', () => {
   const routes = [

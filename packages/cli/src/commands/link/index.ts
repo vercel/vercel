@@ -1,14 +1,14 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
-import cmd from '../../util/output/cmd';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ensureLink } from '../../util/link/ensure-link';
 import { ensureRepoLink } from '../../util/link/repo';
+import cmd from '../../util/output/cmd';
+import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { help } from '../help';
 import { linkCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import output from '../../output-manager';
-import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 
 export default async function link(client: Client) {
   let parsedArgs = null;

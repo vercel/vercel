@@ -1,11 +1,11 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { client } from '../../../mocks/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
 import { getDeploymentUrlAndToken } from '../../../../src/commands/curl/shared';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
 

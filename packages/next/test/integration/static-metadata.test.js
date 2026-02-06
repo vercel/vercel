@@ -13,7 +13,7 @@ jest.setTimeout(360000);
 
 describe('Static Metadata Integration Test', () => {
   // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should build static metadata and verify Prerender outputs', async () => {
+  it('should build static metadata and verify Prerender outputs', async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-static-metadata-test')
     );

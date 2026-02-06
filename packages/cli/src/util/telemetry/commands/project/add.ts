@@ -1,6 +1,6 @@
+import type { addSubcommand } from '../../../../commands/project/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { addSubcommand } from '../../../../commands/project/command';
 
 export class ProjectAddTelemetryClient
   extends TelemetryClient

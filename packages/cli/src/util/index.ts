@@ -1,23 +1,23 @@
-import qs from 'querystring';
-import { parse as parseUrl } from 'url';
+import type { ArchiveFormat, Dictionary } from '@vercel/client';
+import type { GitMetadata, Org } from '@vercel-internals/types';
 import retry from 'async-retry';
-import ms from 'ms';
-import fetch, { Headers } from 'node-fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import ua from './ua';
-import processDeployment from './deploy/process-deployment';
-import { responseError } from './error';
-import stamp from './output/stamp';
-import { APIError, BuildError } from './errors-ts';
-import printIndications from './print-indications';
-import type { GitMetadata, Org } from '@vercel-internals/types';
-import type { VercelConfig } from './dev/types';
+import ms from 'ms';
+import fetch, { Headers } from 'node-fetch';
+import qs from 'querystring';
+import { parse as parseUrl } from 'url';
+import output from '../output-manager';
 import type Client from './client';
 import { type FetchOptions, isJSONObject } from './client';
-import type { ArchiveFormat, Dictionary } from '@vercel/client';
-import output from '../output-manager';
+import processDeployment from './deploy/process-deployment';
+import type { VercelConfig } from './dev/types';
+import { responseError } from './error';
+import { APIError, BuildError } from './errors-ts';
+import stamp from './output/stamp';
+import printIndications from './print-indications';
 import sleep from './sleep';
+import ua from './ua';
 
 export interface NowOptions {
   client: Client;
@@ -104,7 +104,7 @@ export default class Now {
     path: string,
     {
       // Legacy
-      nowConfig: nowConfig = {},
+      nowConfig = {},
 
       // Latest
       name,

@@ -26,9 +26,6 @@ export default async function waitForPrompt(
 
   return new Promise<void>((resolve, reject) => {
     let mostRecentChunk = 'NO CHUNKS SO FAR';
-
-    // eslint-disable-next-line no-console
-    console.log('Waiting for prompt...');
     const handleTimeout = setTimeout(() => {
       cleanup();
       const promptErrorDetails = getPromptErrorDetails(
@@ -59,8 +56,6 @@ export default async function waitForPrompt(
       const chunk = stripAnsi(rawChunk.toString());
 
       mostRecentChunk = chunk;
-      // eslint-disable-next-line no-console
-      console.log('> ' + chunk);
       if (assertion(chunk)) {
         cleanup();
         resolve();

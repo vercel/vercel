@@ -1,13 +1,13 @@
-import type http from 'http';
+import type { User } from '@vercel-internals/types';
 import fs from 'fs-extra';
+import type http from 'http';
 import path from 'path';
 import { parse as parseUrl } from 'url';
 import { execCli } from './helpers/exec';
-import waitForPrompt from './helpers/wait-for-prompt';
+import formatOutput from './helpers/format-output';
 import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
-import formatOutput from './helpers/format-output';
-import type { User } from '@vercel-internals/types';
+import waitForPrompt from './helpers/wait-for-prompt';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
@@ -23,7 +23,7 @@ beforeEach(async () => {
   try {
     await fs.remove(getGlobalConfigPath());
     await fs.remove(getConfigAuthPath());
-  } catch (err) {
+  } catch (_err) {
     process.exit(1);
   }
 });
@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 function mockApi(user: Partial<User>) {
-  return function (req: http.IncomingMessage, res: http.ServerResponse) {
+  return (req: http.IncomingMessage, res: http.ServerResponse) => {
     const { url = '/', method } = req;
     const { pathname = '/', query = {} } = parseUrl(url, true);
     const securityCode = 'Bears Beets Battlestar Galactica';

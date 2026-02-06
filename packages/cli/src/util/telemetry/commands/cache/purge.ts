@@ -1,6 +1,6 @@
+import type { purgeSubcommand } from '../../../../commands/cache/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { purgeSubcommand } from '../../../../commands/cache/command';
 
 export class CachePurgeTelemetryClient
   extends TelemetryClient

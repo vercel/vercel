@@ -1,12 +1,12 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
 import output from '../../output-manager';
-import { addSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink, isValidUrl } from './shared';
+import type Client from '../../util/client';
+import stamp from '../../util/output/stamp';
+import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import putRedirects from '../../util/redirects/put-redirects';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
-import getRedirectVersions from '../../util/redirects/get-redirect-versions';
-import stamp from '../../util/output/stamp';
+import { addSubcommand } from './command';
+import { ensureProjectLink, isValidUrl, parseSubcommandArgs } from './shared';
 
 /**
  * Adds a new redirect to the current project and stages the changes for production.

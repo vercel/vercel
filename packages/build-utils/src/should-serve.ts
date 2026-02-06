@@ -23,5 +23,5 @@ export const shouldServe: ShouldServe = ({
 };
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
-  return Object.hasOwnProperty.call(obj, key);
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }

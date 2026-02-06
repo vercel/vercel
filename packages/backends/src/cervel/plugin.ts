@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
-import { extname, dirname, relative, join } from 'node:path';
-import type { Plugin } from 'rolldown';
+import { dirname, extname, join, relative } from 'node:path';
 import { exports as resolveExports } from 'resolve.exports';
+import type { Plugin } from 'rolldown';
 import type { PluginOptions } from './types.js';
 
 const CJS_SHIM_PREFIX = '\0cjs-shim:';

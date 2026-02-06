@@ -1,38 +1,38 @@
-import ms from 'ms';
-import chalk from 'chalk';
-import title from 'title';
-import table from '../../util/output/table';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import elapsed from '../../util/output/elapsed';
-import toHost from '../../util/to-host';
-import parseMeta from '../../util/parse-meta';
-import parsePolicy from '../../util/parse-policy';
-import { isValidName } from '../../util/is-valid-name';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
-import type Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
-import getScope from '../../util/get-scope';
-import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
-import { help } from '../help';
-import { listCommand } from './command';
-import parseTarget from '../../util/parse-target';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getDeployment from '../../util/get-deployment';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { formatProject } from '../../util/projects/format-project';
-import { formatEnvironment } from '../../util/target/format-environment';
-import { ListTelemetryClient } from '../../util/telemetry/commands/list';
-import { validateLsArgs } from '../../util/validate-ls-args';
-import { validateJsonOutput } from '../../util/output-format';
 import type {
   Deployment,
   PaginationOptions,
   Project,
 } from '@vercel-internals/types';
+import chalk from 'chalk';
+import ms from 'ms';
+import title from 'title';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { ProjectNotFound } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
+import getDeployment from '../../util/get-deployment';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import { isValidName } from '../../util/is-valid-name';
+import { ensureLink } from '../../util/link/ensure-link';
+import elapsed from '../../util/output/elapsed';
+import table from '../../util/output/table';
+import { validateJsonOutput } from '../../util/output-format';
+import parseMeta from '../../util/parse-meta';
+import parsePolicy from '../../util/parse-policy';
+import parseTarget from '../../util/parse-target';
+import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { formatEnvironment } from '../../util/target/format-environment';
+import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import toHost from '../../util/to-host';
+import { validateLsArgs } from '../../util/validate-ls-args';
+import { help } from '../help';
+import { listCommand } from './command';
 
 function toDate(timestamp: number): string {
   const date = new Date(timestamp);

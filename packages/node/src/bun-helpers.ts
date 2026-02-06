@@ -1,6 +1,6 @@
-import { debug } from '@vercel/build-utils';
-import { spawn, SpawnOptions } from 'child_process';
 import once from '@tootallnate/once';
+import { debug } from '@vercel/build-utils';
+import { SpawnOptions, spawn } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
 

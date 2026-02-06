@@ -4,14 +4,14 @@ import {
 } from '@vercel/build-utils/dist/framework-helpers';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  ServiceRuntime,
   ExperimentalServices,
-  ServiceDetectionError,
   ResolvedService,
+  ServiceDetectionError,
+  ServiceRuntime,
 } from './types';
 import {
-  RUNTIME_BUILDERS,
   ENTRYPOINT_EXTENSIONS,
+  RUNTIME_BUILDERS,
   STATIC_BUILDERS,
 } from './types';
 

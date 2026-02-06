@@ -1,10 +1,10 @@
-import glob from './fs/glob';
-import { BuildV3, Config } from './types';
-import type FileFsRef from './file-fs-ref';
-import type { Files } from './types';
-import { join } from 'node:path';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import type FileFsRef from './file-fs-ref';
+import glob from './fs/glob';
+import type { Files } from './types';
+import { BuildV3, Config } from './types';
 
 export function generateNodeBuilderFunctions(
   frameworkName: string,
@@ -49,7 +49,7 @@ export function generateNodeBuilderFunctions(
       },
       checks: opts?.checks ?? (() => {}),
     });
-    let version = undefined;
+    let version;
     try {
       const resolved = require_.resolve(`${frameworkName}/package.json`, {
         paths: [args.workPath],
@@ -58,7 +58,7 @@ export function generateNodeBuilderFunctions(
       if (frameworkVersion) {
         version = frameworkVersion;
       }
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
     res.output.framework = {

@@ -1,11 +1,11 @@
-import type FileRef from './file-ref';
-import type FileFsRef from './file-fs-ref';
+import type { HasField } from '@vercel/routing-utils';
+import type { EdgeFunction } from './edge-function';
 import type FileBlob from './file-blob';
+import type FileFsRef from './file-fs-ref';
+import type FileRef from './file-ref';
 import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
-import type { EdgeFunction } from './edge-function';
 import type { Span } from './trace';
-import type { HasField } from '@vercel/routing-utils';
 
 export interface Env {
   [name: string]: string | undefined;

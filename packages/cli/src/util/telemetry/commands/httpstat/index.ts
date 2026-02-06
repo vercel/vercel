@@ -1,6 +1,6 @@
+import type { httpstatCommand } from '../../../../commands/httpstat/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { httpstatCommand } from '../../../../commands/httpstat/command';
 
 export class HttpstatTelemetryClient
   extends TelemetryClient

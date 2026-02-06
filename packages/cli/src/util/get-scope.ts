@@ -1,8 +1,8 @@
+import type { Team } from '@vercel-internals/types';
 import type Client from './client';
+import { TeamDeleted } from './errors-ts';
 import getUser from './get-user';
 import getTeamById from './teams/get-team-by-id';
-import { TeamDeleted } from './errors-ts';
-import type { Team } from '@vercel-internals/types';
 
 interface GetScopeOptions {
   getTeam?: boolean;

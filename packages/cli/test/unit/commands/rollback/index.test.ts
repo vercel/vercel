@@ -1,16 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import chalk from 'chalk';
-import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
-import type { Request, Response } from 'express';
-import rollback from '../../../../src/commands/rollback';
 import type { LastAliasRequest } from '@vercel-internals/types';
+import chalk from 'chalk';
+import type { Request, Response } from 'express';
+import { describe, expect, it, vi } from 'vitest';
+import rollback from '../../../../src/commands/rollback';
+import sleep from '../../../../src/util/sleep';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
 import { useDeployment } from '../../../mocks/deployment';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import sleep from '../../../../src/util/sleep';
-import { vi } from 'vitest';
 
 vi.setConfig({ testTimeout: 60000 });
 

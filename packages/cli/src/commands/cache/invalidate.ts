@@ -1,14 +1,14 @@
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import { invalidateSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
+import plural from 'pluralize';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheInvalidateTelemetryClient } from '../../util/telemetry/commands/cache/invalidate';
-import plural from 'pluralize';
+import { invalidateSubcommand } from './command';
 
 export default async function invalidate(
   client: Client,

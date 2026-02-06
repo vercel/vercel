@@ -1,4 +1,4 @@
-import type { VercelRelatedProjects, RelatedProjectsOptions } from './types';
+import type { RelatedProjectsOptions, VercelRelatedProjects } from './types';
 
 export function relatedProjects(
   opts: RelatedProjectsOptions = {}

@@ -1,15 +1,15 @@
-import { relative, basename } from 'path';
+import { debug } from '@vercel/build-utils';
 import {
-  LocalFileSystemDetector,
   getMonorepoDefaultSettings,
+  LocalFileSystemDetector,
   MissingBuildPipeline,
   MissingBuildTarget,
 } from '@vercel/fs-detectors';
-import type { ProjectLinkAndSettings } from '../projects/project-settings';
+import { basename, relative } from 'path';
 import title from 'title';
-import type { PartialProjectSettings } from '../input/edit-project-settings';
-import { debug } from '@vercel/build-utils';
 import output from '../../output-manager';
+import type { PartialProjectSettings } from '../input/edit-project-settings';
+import type { ProjectLinkAndSettings } from '../projects/project-settings';
 
 export async function setMonorepoDefaultSettings(
   cwd: string,

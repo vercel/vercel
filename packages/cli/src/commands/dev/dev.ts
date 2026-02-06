@@ -1,27 +1,26 @@
-import chalk from 'chalk';
-import { resolve, join } from 'path';
-import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
-
-import DevServer from '../../util/dev/server';
-import { parseListen } from '../../util/dev/parse-listen';
-import type Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
-import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
-import param from '../../util/output/param';
-import { OUTPUT_DIR } from '../../util/build/write-build-result';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import chalk from 'chalk';
+import fs from 'fs-extra';
+import { join, resolve } from 'path';
 import output from '../../output-manager';
-import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
-import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
+import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import type Client from '../../util/client';
+import { parseListen } from '../../util/dev/parse-listen';
+import DevServer from '../../util/dev/server';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
-import {
-  tryDetectServices,
-  isExperimentalServicesEnabled,
-} from '../../util/projects/detect-services';
+import { pullEnvRecords } from '../../util/env/get-env-records';
+import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import { displayDetectedServices } from '../../util/input/display-services';
+import setupAndLink from '../../util/link/setup-and-link';
+import param from '../../util/output/param';
+import { getCommandName } from '../../util/pkg-name';
+import {
+  isExperimentalServicesEnabled,
+  tryDetectServices,
+} from '../../util/projects/detect-services';
+import { getLinkedProject } from '../../util/projects/link';
+import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 
 type Options = {
   '--listen': string;

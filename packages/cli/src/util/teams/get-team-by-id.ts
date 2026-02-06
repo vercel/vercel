@@ -1,5 +1,5 @@
-import type Client from '../client';
 import type { Team } from '@vercel-internals/types';
+import type Client from '../client';
 
 export const teamCache = new Map<string, Team>();
 

@@ -4,10 +4,10 @@
  * BSD-2 Copyright (c) 2014 Max Ogden and other contributors
  */
 
+import { streamToBuffer } from '@vercel/build-utils';
+import * as fs from 'fs-extra';
 import path from 'path';
 import pipe from 'promisepipe';
-import * as fs from 'fs-extra';
-import { streamToBuffer } from '@vercel/build-utils';
 import {
   type Entry,
   type ZipFile,
@@ -80,7 +80,7 @@ async function extractEntry(
 
   const mkdirOptions = { recursive: true };
   if (isDir) {
-    // @ts-ignore
+    // @ts-expect-error
     mkdirOptions.mode = procMode;
   }
   await fs.mkdir(destDir, mkdirOptions);

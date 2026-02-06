@@ -1,6 +1,6 @@
+import { hostname } from 'os';
 import { URL } from 'url';
 import type Client from '../client';
-import { hostname } from 'os';
 import { getTitleName } from '../pkg-name';
 import type { LoginResultSuccess } from './types';
 
@@ -19,7 +19,7 @@ export default function verify(
 
   if (!client.authConfig.token) {
     // Set the "name" of the Token that will be created
-    const hyphens = new RegExp('-', 'g');
+    const hyphens = /-/g;
     const host = hostname().replace(hyphens, ' ').replace('.local', '');
     const tokenName = `${getTitleName()} CLI on ${host} via ${provider}`;
     url.searchParams.set('tokenName', tokenName);

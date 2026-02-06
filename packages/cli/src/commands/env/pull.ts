@@ -1,33 +1,33 @@
+import { isErrnoException } from '@vercel/error-utils';
+import type { ProjectLinked } from '@vercel-internals/types';
 import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
+import { outputFile } from 'fs-extra';
+import JSONparse from 'json-parse-better-errors';
 import { resolve } from 'path';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import {
-  type EnvRecordsSource,
-  pullEnvRecords,
-} from '../../util/env/get-env-records';
 import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
-import { isErrnoException } from '@vercel/error-utils';
-import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import JSONparse from 'json-parse-better-errors';
-import { formatProject } from '../../util/projects/format-project';
-import type { ProjectLinked } from '@vercel-internals/types';
-import output from '../../output-manager';
-import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
-import { pullSubcommand } from './command';
+import {
+  type EnvRecordsSource,
+  pullEnvRecords,
+} from '../../util/env/get-env-records';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
+import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
 import { getLinkedProject } from '../../util/projects/link';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
+import { pullSubcommand } from './command';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -239,7 +239,7 @@ export async function envPullCommandLogic(
 function escapeValue(value: string | undefined) {
   return value
     ? value
-        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
+        .replace(/\n/g, '\\n') // combine newlines (unix) into one line
+        .replace(/\r/g, '\\r') // combine newlines (windows) into one line
     : '';
 }

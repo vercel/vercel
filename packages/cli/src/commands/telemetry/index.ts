@@ -1,24 +1,24 @@
-import { printError } from '../../util/error';
-import { parseArguments } from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import { type Command, help } from '../help';
-import status from './status';
-import enable from './enable';
-import disable from './disable';
-import flush from './flush';
-import {
-  disableSubcommand,
-  enableSubcommand,
-  statusSubcommand,
-  telemetryCommand,
-  flushSubcommand,
-} from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import { getCommandAliases } from '..';
+import { type Command, help } from '../help';
+import {
+  disableSubcommand,
+  enableSubcommand,
+  flushSubcommand,
+  statusSubcommand,
+  telemetryCommand,
+} from './command';
+import disable from './disable';
+import enable from './enable';
+import flush from './flush';
+import status from './status';
 
 const COMMAND_CONFIG = {
   status: getCommandAliases(statusSubcommand),

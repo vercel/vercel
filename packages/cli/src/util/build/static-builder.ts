@@ -1,6 +1,6 @@
-import minimatch from 'minimatch';
-import { shouldServe as defaultShouldServe } from '@vercel/build-utils';
 import type { BuildV2, Files, ShouldServe } from '@vercel/build-utils';
+import { shouldServe as defaultShouldServe } from '@vercel/build-utils';
+import minimatch from 'minimatch';
 
 export const version = 2;
 

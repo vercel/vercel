@@ -1,10 +1,10 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Files, glob, type BuildOptions } from '@vercel/build-utils';
+import { type BuildOptions, type Files, glob } from '@vercel/build-utils';
 import { findEntrypoint } from './find-entrypoint.js';
 import {
-  maybeExecBuildCommand,
   type downloadInstallAndBundle,
+  maybeExecBuildCommand,
 } from './utils.js';
 
 export const maybeDoBuildCommand = async (

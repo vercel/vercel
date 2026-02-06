@@ -1,3 +1,4 @@
+import createLineIterator from 'line-async-iterator';
 import { beforeEach, describe, expect, it } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
@@ -8,7 +9,6 @@ import {
 } from '../../../mocks/integration';
 import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import createLineIterator from 'line-async-iterator';
 
 describe('integration', () => {
   describe('balance', () => {

@@ -1,18 +1,18 @@
-import { mkdir, writeFile, unlink, access } from 'fs/promises';
-import { join, basename } from 'path';
+import { NowBuildError } from '@vercel/build-utils';
+import type { VercelConfig } from '@vercel/client';
+import type {
+  Header,
+  Redirect,
+  Rewrite,
+  RouteWithSrc,
+} from '@vercel/routing-utils';
 import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
+import { access, mkdir, unlink, writeFile } from 'fs/promises';
+import { basename, join } from 'path';
 import output from '../output-manager';
-import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
-import { NowBuildError } from '@vercel/build-utils';
-import type {
-  RouteWithSrc,
-  Rewrite,
-  Redirect,
-  Header,
-} from '@vercel/routing-utils';
-import type { VercelConfig } from '@vercel/client';
+import { VERCEL_DIR } from './projects/link';
 
 type RouteInput = RouteWithSrc | Rewrite | Redirect | Header;
 

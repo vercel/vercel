@@ -1,4 +1,3 @@
-import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -6,6 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { IntegrationResourceTelemetryClient } from '../../util/telemetry/commands/integration-resource';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
 import {
   createThresholdSubcommand,

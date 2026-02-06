@@ -1,6 +1,3 @@
-/* eslint-disable */
-import chrome from 'chrome-aws-lambda';
-import firebase from 'firebase';
 import fs from 'fs';
 import path from 'path';
 

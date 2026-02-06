@@ -33,8 +33,8 @@ export function useRedirects(
   withPagination: boolean = false
 ) {
   client.scenario.get('/v1/bulk-redirects', (req, res) => {
-    const page = parseInt(req.query.page as string) || 1;
-    const perPage = parseInt(req.query.per_page as string) || 50;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const perPage = parseInt(req.query.per_page as string, 10) || 50;
     const search = req.query.q as string;
 
     let redirects = Array.from({ length: count }, (_, i) => createRedirect(i));

@@ -1,55 +1,55 @@
-import fs from 'fs';
-import { promisify } from 'util';
-import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './runtime-version';
 import {
-  download,
-  glob,
-  Lambda,
-  FileBlob,
-  debug,
-  NowBuildError,
-  execCommand,
-  scanParentDirs,
-  getEnvForPackageManager,
-  isPythonFramework,
   type BuildOptions,
-  type GlobOptions,
   type BuildV3,
-  type Files,
-  type ShouldServe,
+  debug,
+  download,
+  execCommand,
+  FileBlob,
   FileFsRef,
+  type Files,
+  type GlobOptions,
+  getEnvForPackageManager,
+  glob,
+  isPythonFramework,
+  Lambda,
+  NowBuildError,
   PythonFramework,
+  readConfigFile,
+  type ShouldServe,
+  scanParentDirs,
 } from '@vercel/build-utils';
+import fs from 'fs';
+import { basename, dirname, join, parse } from 'path';
+import { promisify } from 'util';
 import {
   ensureUvProject,
-  resolveVendorDir,
-  mirrorSitePackagesIntoVendor,
-  installRequirementsFile,
   installRequirement,
+  installRequirementsFile,
+  mirrorSitePackagesIntoVendor,
+  resolveVendorDir,
 } from './install';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
-import { readConfigFile } from '@vercel/build-utils';
-import {
-  getSupportedPythonVersion,
-  DEFAULT_PYTHON_VERSION,
-  parseVersionTuple,
-  compareTuples,
-} from './version';
+import { VERCEL_RUNTIME_VERSION } from './runtime-version';
 import { startDevServer } from './start-dev-server';
 import {
-  runPyprojectScript,
-  findDir,
-  ensureVenv,
   createVenvEnv,
+  ensureVenv,
+  findDir,
+  runPyprojectScript,
 } from './utils';
+import { getUvBinaryOrInstall, UvRunner } from './uv';
+import {
+  compareTuples,
+  DEFAULT_PYTHON_VERSION,
+  getSupportedPythonVersion,
+  parseVersionTuple,
+} from './version';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 import {
-  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  PYTHON_CANDIDATE_ENTRYPOINTS,
 } from './entrypoint';
 
 export const version = 3;
@@ -258,7 +258,7 @@ export const build: BuildV3 = async ({
     try {
       const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
       lock = JSON.parse(json);
-    } catch (err) {
+    } catch (_err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',
         message: 'Unable to parse Pipfile.lock',
@@ -546,7 +546,7 @@ export const defaultShouldServe: ShouldServe = ({
 };
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
-  return Object.hasOwnProperty.call(obj, key);
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
 // Parses a .python-version file and returns the first non-empty, non-comment line.

@@ -1,10 +1,10 @@
 import { parse } from 'tldts';
-import { NowError } from '../now-error';
-import type Client from '../client';
+import output from '../../output-manager';
 import createCertForCns from '../certs/create-cert-for-cns';
+import type Client from '../client';
 import setupDomain from '../domains/setup-domain';
 import { InvalidDomain } from '../errors-ts';
-import output from '../../output-manager';
+import { NowError } from '../now-error';
 
 export default async function generateCertForDeploy(
   client: Client,

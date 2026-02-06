@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { isErrnoException } from '@vercel/error-utils';
+import { mkdirp, readdir, readFile, remove, stat, writeFile } from 'fs-extra';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { writeFile, readdir, mkdirp, stat, remove, readFile } from 'fs-extra';
+import { describe, expect, it } from 'vitest';
 import { merge } from '../../../../src/util/build/merge';
-import { isErrnoException } from '@vercel/error-utils';
 
 describe('merge()', () => {
   it('should move source to non-existent destination', async () => {

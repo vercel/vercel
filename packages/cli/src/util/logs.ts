@@ -1,15 +1,15 @@
 import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { format } from 'date-fns';
-import ms from 'ms';
 import jsonlines from 'jsonlines';
+import ms from 'ms';
 import split from 'split2';
+import stripAnsi from 'strip-ansi';
 import { URLSearchParams } from 'url';
-import type Client from '../util/client';
-import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
 import output from '../output-manager';
-import stripAnsi from 'strip-ansi';
+import type Client from '../util/client';
+import printEvents from './events';
 
 type Printer = (l: string) => void;
 

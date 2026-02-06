@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { determineAgent, KNOWN_AGENTS } from '../../src/index';
 import mockFs from 'mock-fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { determineAgent, KNOWN_AGENTS } from '../../src/index';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 

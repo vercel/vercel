@@ -1,6 +1,6 @@
-import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import path from 'path';
 import { VercelOidcTokenError } from './token-error';
 
 export function findRootDir(): string | null {
@@ -13,7 +13,7 @@ export function findRootDir(): string | null {
       }
       dir = path.dirname(dir);
     }
-  } catch (e) {
+  } catch (_e) {
     throw new VercelOidcTokenError(
       'Token refresh only supported in node server environments'
     );

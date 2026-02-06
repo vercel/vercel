@@ -1,29 +1,30 @@
 /* eslint-disable no-console */
-import ms from 'ms';
-import path from 'path';
+
 import { once } from 'node:events';
-import { URL } from 'url';
-import semVer from 'semver';
-import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
-import { execCli } from './helpers/exec';
+import fs from 'fs-extra';
+import ms from 'ms';
 import type { RequestInfo } from 'node-fetch';
 import fetch from 'node-fetch';
-import fs from 'fs-extra';
+import { homedir } from 'os';
+import path from 'path';
+import semVer from 'semver';
+import { URL } from 'url';
+import pkg from '../package.json';
+import humanizePath from '../src/util/humanize-path';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
-import humanizePath from '../src/util/humanize-path';
-import pkg from '../package.json';
-import waitForPrompt from './helpers/wait-for-prompt';
+import { apiFetch } from './helpers/api-fetch';
+import { execCli } from './helpers/exec';
+import formatOutput from './helpers/format-output';
+import { teamPromise, userPromise } from './helpers/get-account';
 import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
 import {
-  setupE2EFixture,
   prepareE2EFixtures,
+  setupE2EFixture,
 } from './helpers/setup-e2e-fixture';
-import formatOutput from './helpers/format-output';
 import type { DeploymentLike } from './helpers/types';
-import { teamPromise, userPromise } from './helpers/get-account';
-import { apiFetch } from './helpers/api-fetch';
+import waitForPrompt from './helpers/wait-for-prompt';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -39,7 +40,6 @@ const pickUrl = (stdout: string) => {
 };
 
 const waitForDeployment = async (href: RequestInfo) => {
-  console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
 
@@ -71,10 +71,7 @@ beforeAll(async () => {
   try {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
-  } catch (err) {
-    console.log('Failed test suite `beforeAll`');
-    console.log(err);
-
+  } catch (_err) {
     // force test suite to actually stop
     process.exit(1);
   }
@@ -84,7 +81,6 @@ afterAll(async () => {
   delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
 
   for (const tmpDir of listTmpDirs()) {
-    console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
 });
@@ -148,7 +144,7 @@ test('output the version', async () => {
 
 // https://linear.app/vercel/issue/ZERO-2736/turn-login-with-unregistered-user-test-in-a-unit-test
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('login with unregistered user', async () => {
+test('login with unregistered user', async () => {
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['login', `${session}@${session}.com`],
@@ -165,7 +161,7 @@ test.skip('login with unregistered user', async () => {
 
 // TODO: fix: --public does not make deployments public
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('ignore files specified in .nowignore', async () => {
+test('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
   const args = ['--debug', '--public', '--name', session, '--yes'];
@@ -183,7 +179,7 @@ test.skip('ignore files specified in .nowignore', async () => {
 
 // TODO: fix: --public does not make deployments public
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('ignore files specified in .nowignore via allowlist', async () => {
+test('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
   const args = ['--debug', '--public', '--name', session, '--yes'];
@@ -214,7 +210,7 @@ test('list the scopes', async () => {
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('domains inspect', async () => {
+test('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
     .toString()
@@ -265,7 +261,7 @@ test.skip('domains inspect', async () => {
 
 // Unblocking CI for incident fix
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('try to transfer-in a domain with "--code" option', async () => {
+test('try to transfer-in a domain with "--code" option', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     'domains',
     'transfer-in',
@@ -294,7 +290,7 @@ test('try to move an invalid domain', async () => {
 
 // TODO: fix: --public does not make deployments public
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('ensure we render a warning for deployments with no files', async () => {
+test('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
@@ -824,7 +820,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
 
 // TODO: This test is flaky, possibly due to the recent SIGTERM changes which now issue 500s
 // eslint-disable-next-line jest/no-disabled-tests
-test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
+test('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = await setupE2EFixture('lambda-with-3-second-timeout');
   const output = await execCli(binaryPath, [directory, '--yes']);
 

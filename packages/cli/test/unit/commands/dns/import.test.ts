@@ -1,9 +1,9 @@
-import { describe, afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { type fs, vol } from 'memfs';
-import { client } from '../../../mocks/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import dns from '../../../../src/commands/dns';
-import { useUser } from '../../../mocks/user';
+import { client } from '../../../mocks/client';
 import { useDns } from '../../../mocks/dns';
+import { useUser } from '../../../mocks/user';
 
 describe('dns import', () => {
   beforeEach(() => {

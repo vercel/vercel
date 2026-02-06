@@ -10,7 +10,7 @@
  * - Cache control headers with pretty-cache-header syntax
  */
 
-import { VercelConfig, routes, deploymentEnv } from '@vercel/config/v1';
+import { deploymentEnv, routes, VercelConfig } from '@vercel/config/v1';
 
 export const config: VercelConfig = {
   buildCommand: 'pnpm run generate-config',

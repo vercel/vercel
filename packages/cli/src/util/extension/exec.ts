@@ -1,12 +1,12 @@
-import which from 'which';
+import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
+import { errorToString } from '@vercel/error-utils';
+import { listen } from 'async-listen';
 import execa from 'execa';
 import { dirname } from 'path';
-import { listen } from 'async-listen';
-import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
-import { createProxy } from './proxy';
-import type Client from '../client';
+import which from 'which';
 import output from '../../output-manager';
-import { errorToString } from '@vercel/error-utils';
+import type Client from '../client';
+import { createProxy } from './proxy';
 
 /**
  * Attempts to execute a Vercel CLI Extension.

@@ -1,18 +1,18 @@
+import { streamToBufferChunks } from '@vercel/build-utils';
+import { isErrnoException } from '@vercel/error-utils';
 import { lstatSync } from 'fs-extra';
 import { isAbsolute, join, relative, sep } from 'path';
-import { hash, hashes, mapToObject } from './utils/hashes';
-import { upload } from './upload';
-import { buildFileTree, createDebug } from './utils';
-import { DeploymentError } from './errors';
-import { isErrnoException } from '@vercel/error-utils';
-import {
-  VercelClientOptions,
-  DeploymentOptions,
-  DeploymentEventType,
-} from './types';
-import { streamToBufferChunks } from '@vercel/build-utils';
 import tar from 'tar-fs';
 import { createGzip } from 'zlib';
+import { DeploymentError } from './errors';
+import {
+  DeploymentEventType,
+  DeploymentOptions,
+  VercelClientOptions,
+} from './types';
+import { upload } from './upload';
+import { buildFileTree, createDebug } from './utils';
+import { hash, hashes, mapToObject } from './utils/hashes';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(

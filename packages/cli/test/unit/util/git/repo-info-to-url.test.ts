@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { repoInfoToUrl } from '../../../../src/util/git/repo-info-to-url';
 import type { RepoInfo } from '../../../../src/util/git/connect-git-provider';
+import { repoInfoToUrl } from '../../../../src/util/git/repo-info-to-url';
 
 describe('repoInfoToUrl()', () => {
   it('should support "github" URL', () => {

@@ -1,6 +1,6 @@
-import { extname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import type { BuildOptions } from '@vercel/build-utils';
 
 export const resolveEntrypointAndFormat = async (

@@ -1,5 +1,5 @@
+import { describe, expect, it } from 'vitest';
 import { parseOsRelease } from '../src/os';
-import { describe, it, expect } from 'vitest';
 
 describe('getOsRelease()', () => {
   it('should parse `amazonlinux:2`', async () => {

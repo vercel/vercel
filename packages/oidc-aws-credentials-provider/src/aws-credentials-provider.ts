@@ -1,6 +1,6 @@
-import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
 import { fromWebToken } from '@aws-sdk/credential-provider-web-identity';
+import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import { getVercelOidcTokenSync } from '@vercel/oidc';
 
 /**

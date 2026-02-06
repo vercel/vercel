@@ -1,11 +1,11 @@
 import open from 'open';
 import { join } from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
 import bisect from '../../../../src/commands/bisect';
-import { useDeployment } from '../../../mocks/deployment';
 import { isWindows } from '../../../helpers/is-windows';
+import { client } from '../../../mocks/client';
+import { useDeployment } from '../../../mocks/deployment';
+import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {

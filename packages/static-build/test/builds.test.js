@@ -31,8 +31,9 @@ it(
       )
     ).toBeFalsy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           "@vercel/gatsby-plugin-vercel-analytics"
@@ -62,8 +63,9 @@ it(
       )
     ).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           "@vercel/gatsby-plugin-vercel-analytics"
@@ -95,8 +97,9 @@ it(
       )
     ).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           "gatsby-plugin-react-helmet",
@@ -129,8 +132,9 @@ it(
       )
     ).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           "@vercel/gatsby-plugin-vercel-analytics",
@@ -162,8 +166,9 @@ it(
       )
     ).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           Object {
@@ -198,8 +203,9 @@ it(
       )
     ).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           "gatsby-plugin-react-helmet",
@@ -227,8 +233,9 @@ it(
 
     expect(contents.some(name => name === 'gatsby-config.js')).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.js')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.js'))
+    ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
           Object {
@@ -264,8 +271,9 @@ it(
     expect(contents.some(name => name === 'gatsby-config.js')).toBeFalsy();
     expect(contents.some(name => name === 'gatsby-config.ts')).toBeTruthy();
 
-    expect(require(path.join(workPath, 'gatsby-config.ts')))
-      .toMatchInlineSnapshot(`
+    expect(
+      require(path.join(workPath, 'gatsby-config.ts'))
+    ).toMatchInlineSnapshot(`
       Object {
         "default": Object {
           "plugins": Array [
@@ -296,8 +304,9 @@ it(
     expect(contents.some(name => name === 'gatsby-config.ts')).toBeFalsy();
     expect(contents.some(name => name === 'gatsby-config.mjs')).toBeTruthy();
     // using `import` causes a seg fault.
-    expect(await fs.readFile(path.join(workPath, 'gatsby-config.mjs'), 'utf-8'))
-      .toBe(`import userConfig from "./gatsby-config.mjs.__vercel_builder_backup__.mjs";
+    expect(
+      await fs.readFile(path.join(workPath, 'gatsby-config.mjs'), 'utf-8')
+    ).toBe(`import userConfig from "./gatsby-config.mjs.__vercel_builder_backup__.mjs";
 
 // https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
 const preferDefault = (m) => (m && m.default) || m;
@@ -343,8 +352,9 @@ describe('when @vercel/speed-insights is present', () => {
 
       expect(contents.some(name => name === 'gatsby-config.js')).toBeTruthy();
 
-      expect(require(path.join(workPath, 'gatsby-config.js')))
-        .toMatchInlineSnapshot(`
+      expect(
+        require(path.join(workPath, 'gatsby-config.js'))
+      ).toMatchInlineSnapshot(`
       Object {
         "plugins": Array [],
       }

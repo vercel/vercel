@@ -1,12 +1,12 @@
-import chalk, { type Chalk } from 'chalk';
-import * as ansiEscapes from 'ansi-escapes';
-import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
-import renderLink from './link';
-import wait, { type StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
-import { removeEmoji } from '../emoji';
+import * as ansiEscapes from 'ansi-escapes';
+import chalk, { type Chalk } from 'chalk';
+import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import type * as tty from 'tty';
 import { inspect } from 'util';
+import { removeEmoji } from '../emoji';
+import renderLink from './link';
+import wait, { type StopSpinner } from './wait';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 

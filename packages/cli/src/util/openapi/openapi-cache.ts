@@ -1,19 +1,19 @@
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import getGlobalPathConfig from '../config/global-path';
 import output from '../../output-manager';
+import getGlobalPathConfig from '../config/global-path';
 import {
-  OPENAPI_URL,
   CACHE_FILE,
   CACHE_TTL_MS,
   FETCH_TIMEOUT_MS,
+  OPENAPI_URL,
 } from './constants';
 import type {
-  OpenApiSpec,
+  BodyField,
   CachedSpec,
   EndpointInfo,
+  OpenApiSpec,
   Schema,
-  BodyField,
 } from './types';
 
 /**

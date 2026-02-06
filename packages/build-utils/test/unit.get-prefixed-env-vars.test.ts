@@ -1,5 +1,5 @@
-import { getPrefixedEnvVars } from '../src';
 import { describe, expect, it } from 'vitest';
+import { getPrefixedEnvVars } from '../src';
 
 describe('Test `getPrefixedEnvVars()`', () => {
   const cases: Array<{

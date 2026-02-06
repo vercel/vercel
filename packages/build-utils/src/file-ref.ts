@@ -1,8 +1,8 @@
 import assert from 'assert';
-import fetch from 'node-fetch';
-import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
+import multiStream from 'multistream';
+import fetch from 'node-fetch';
 import { FileBase } from './types';
 
 interface FileRefOptions {

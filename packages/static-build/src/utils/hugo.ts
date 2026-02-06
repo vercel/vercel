@@ -1,5 +1,5 @@
-import fetch from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
+import fetch from 'node-fetch';
 
 export async function getHugoUrl(
   version: string,

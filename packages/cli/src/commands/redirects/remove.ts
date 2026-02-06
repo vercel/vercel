@@ -1,18 +1,18 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import stamp from '../../util/output/stamp';
+import deleteRedirects from '../../util/redirects/delete-redirects';
+import getRedirectVersions from '../../util/redirects/get-redirect-versions';
+import getRedirects from '../../util/redirects/get-redirects';
+import updateRedirectVersion from '../../util/redirects/update-redirect-version';
 import { removeSubcommand } from './command';
 import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  validateRequiredArgs,
   confirmAction,
+  ensureProjectLink,
+  parseSubcommandArgs,
+  validateRequiredArgs,
 } from './shared';
-import deleteRedirects from '../../util/redirects/delete-redirects';
-import getRedirects from '../../util/redirects/get-redirects';
-import getRedirectVersions from '../../util/redirects/get-redirect-versions';
-import updateRedirectVersion from '../../util/redirects/update-redirect-version';
-import stamp from '../../util/output/stamp';
 
 export default async function remove(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, removeSubcommand);

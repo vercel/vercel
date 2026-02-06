@@ -1,6 +1,6 @@
+import type { rollbackCommand } from '../../../../commands/rollback/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { rollbackCommand } from '../../../../commands/rollback/command';
 
 export class RollbackTelemetryClient
   extends TelemetryClient

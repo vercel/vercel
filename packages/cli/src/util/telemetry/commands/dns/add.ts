@@ -1,6 +1,6 @@
+import type { addSubcommand } from '../../../../commands/dns/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { addSubcommand } from '../../../../commands/dns/command';
 
 const ALLOWED_RECORD_TYPES = [
   'A',

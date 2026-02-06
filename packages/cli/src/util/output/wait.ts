@@ -1,5 +1,5 @@
-import ora from 'ora';
 import chalk from 'chalk';
+import ora from 'ora';
 import eraseLines from './erase-lines';
 
 export interface StopSpinner {

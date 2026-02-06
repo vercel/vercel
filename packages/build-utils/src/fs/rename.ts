@@ -1,4 +1,5 @@
 import { Files } from '../types';
+
 type Delegate = (name: string) => string;
 
 /**

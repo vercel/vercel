@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { client } from '../../mocks/client';
-import { useUser } from '../../mocks/user';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  fetchRequestLogs,
   fetchAllRequestLogs,
+  fetchRequestLogs,
   type RequestLogEntry,
 } from '../../../src/util/logs-v2';
+import { client } from '../../mocks/client';
+import { useUser } from '../../mocks/user';
 
 // API response format (what the server returns)
 interface ApiLogEntry {

@@ -1,10 +1,10 @@
+import chalk from 'chalk';
 import ms from 'ms';
 import { parse } from 'tldts';
-import chalk from 'chalk';
+import output from '../../output-manager';
 import * as ERRORS from '../errors-ts';
 import dnsTable from '../format-dns-table';
 import { getCommandName } from '../pkg-name';
-import output from '../../output-manager';
 
 export default function handleCertError<T>(
   error:

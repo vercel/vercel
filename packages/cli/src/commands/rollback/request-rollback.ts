@@ -1,10 +1,10 @@
 import chalk from 'chalk';
+import ms from 'ms';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
-import ms from 'ms';
 import rollbackStatus from './status';
-import output from '../../output-manager';
 
 /**
  * Requests a rollback and waits for it complete.

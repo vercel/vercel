@@ -5,8 +5,9 @@
  * `@vercel/build-utils` is marked as external because it's always an implicit
  * dependency when the Builder is invoked by `vercel build`.
  */
-import { join } from 'node:path';
+
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { esbuild } from './build.mjs';
 

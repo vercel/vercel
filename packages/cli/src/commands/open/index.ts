@@ -1,13 +1,13 @@
 import open from 'open';
-import { help } from '../help';
-import { openCommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import type Client from '../../util/client';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
 import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ensureLink } from '../../util/link/ensure-link';
 import { OpenTelemetryClient } from '../../util/telemetry/commands/open';
+import { help } from '../help';
+import { openCommand } from './command';
 
 export default async function openCommandHandler(
   client: Client

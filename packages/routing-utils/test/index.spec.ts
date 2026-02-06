@@ -1,17 +1,17 @@
-import assert from 'assert';
 import Ajv from 'ajv';
+import assert from 'assert';
 import {
-  Route,
-  normalizeRoutes,
-  isHandler,
-  routesSchema,
-  rewritesSchema,
-  redirectsSchema,
-  headersSchema,
   cleanUrlsSchema,
-  trailingSlashSchema,
   getTransformedRoutes,
   hasSchema,
+  headersSchema,
+  isHandler,
+  normalizeRoutes,
+  Route,
+  redirectsSchema,
+  rewritesSchema,
+  routesSchema,
+  trailingSlashSchema,
 } from '../src';
 
 const ajv = new Ajv();
@@ -262,7 +262,7 @@ describe('normalizeRoutes', () => {
   test('fails if dest is not string', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           dest: false,
         },
@@ -296,7 +296,7 @@ describe('normalizeRoutes', () => {
   test('fails if methods is not array', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           methods: false,
         },
@@ -330,7 +330,7 @@ describe('normalizeRoutes', () => {
   test('fails if methods is not string', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           methods: [false],
         },
@@ -364,7 +364,7 @@ describe('normalizeRoutes', () => {
   test('fails if headers is not an object', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           headers: false,
         },
@@ -398,7 +398,7 @@ describe('normalizeRoutes', () => {
   test('fails if header is not a string', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           headers: {
             test: false,
@@ -434,7 +434,7 @@ describe('normalizeRoutes', () => {
   test('fails if handle is not string', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           handle: false,
         },
@@ -468,7 +468,7 @@ describe('normalizeRoutes', () => {
   test('fails if continue is not boolean', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           continue: 'false',
         },
@@ -502,7 +502,7 @@ describe('normalizeRoutes', () => {
   test('fails if check is not boolean', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           check: 'false',
         },
@@ -536,7 +536,7 @@ describe('normalizeRoutes', () => {
   test('fails if status is not number', () => {
     assertError(
       [
-        // @ts-ignore
+        // @ts-expect-error
         {
           status: '404',
         },
@@ -571,7 +571,7 @@ describe('normalizeRoutes', () => {
     assertError(
       [
         {
-          // @ts-ignore
+          // @ts-expect-error
           doesNotExist: false,
         },
       ],

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { client } from '../../mocks/client';
-import { useUser } from '../../mocks/user';
-import { useTeam } from '../../mocks/team';
 import getScope from '../../../src/util/get-scope';
+import { client } from '../../mocks/client';
+import { useTeam } from '../../mocks/team';
+import { useUser } from '../../mocks/user';
 
 describe('getScope', () => {
   let mockTeam: ReturnType<typeof useTeam>;

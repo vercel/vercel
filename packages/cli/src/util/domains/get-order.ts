@@ -1,7 +1,7 @@
-import { isAPIError } from '../errors-ts';
 import type Client from '../client';
-import sleep from '../sleep';
+import { isAPIError } from '../errors-ts';
 import getScope from '../get-scope';
+import sleep from '../sleep';
 
 type Response = {
   orderId: string;

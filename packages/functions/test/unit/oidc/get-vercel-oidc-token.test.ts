@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { getVercelOidcTokenSync } from '../../../src/oidc';
 import { randomUUID } from 'node:crypto';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { getVercelOidcTokenSync } from '../../../src/oidc';
 
 describe('getVercelOidcTokenSync', () => {
   describe('when VERCEL_OIDC_TOKEN is present in the environment variables', () => {
@@ -10,7 +10,6 @@ describe('getVercelOidcTokenSync', () => {
       process.env.VERCEL_OIDC_TOKEN = token;
     });
     afterEach(() => {
-      // biome-ignore lint/performance/noDelete: necessary for test cleanup
       delete process.env.VERCEL_OIDC_TOKEN;
     });
 
@@ -24,7 +23,7 @@ describe('getVercelOidcTokenSync', () => {
 
     beforeEach(() => {
       globalThis[
-        // @ts-ignore
+        // @ts-expect-error
         Symbol.for(
           '@vercel/request-context'
         ) as unknown as keyof typeof globalThis
@@ -54,7 +53,7 @@ describe('getVercelOidcTokenSync', () => {
       process.env.VERCEL_OIDC_TOKEN = tokenFromEnv;
 
       globalThis[
-        // @ts-ignore
+        // @ts-expect-error
         Symbol.for(
           '@vercel/request-context'
         ) as unknown as keyof typeof globalThis
@@ -63,7 +62,6 @@ describe('getVercelOidcTokenSync', () => {
       };
     });
     afterEach(() => {
-      // biome-ignore lint/performance/noDelete: necessary for test cleanup
       delete process.env.VERCEL_OIDC_TOKEN;
       delete globalThis[
         Symbol.for(

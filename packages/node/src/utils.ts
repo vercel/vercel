@@ -6,7 +6,7 @@ import { extname } from 'path';
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
   https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
 */
-import { pathToRegexp as pathToRegexpCurrent, Key } from 'path-to-regexp';
+import { Key, pathToRegexp as pathToRegexpCurrent } from 'path-to-regexp';
 import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
 
 function cloneKeys(keys: Key[] | undefined): Key[] | undefined {

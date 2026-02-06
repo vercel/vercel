@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
-import $ from 'tinyspawn';
 import path from 'path';
+import $ from 'tinyspawn';
+import { expect, test } from 'vitest';
 
 (process.platform === 'win32' ? test.skip : test)(
   'docs are up to date',

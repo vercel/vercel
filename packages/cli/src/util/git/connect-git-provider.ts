@@ -1,12 +1,12 @@
-import { URL } from 'url';
-import type Client from '../client';
-import chalk from 'chalk';
-import link from '../output/link';
-import { isAPIError } from '../errors-ts';
 import type { Dictionary } from '@vercel/client';
 import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
+import chalk from 'chalk';
+import { URL } from 'url';
 import output from '../../output-manager';
+import type Client from '../client';
+import { isAPIError } from '../errors-ts';
 import list, { type ListChoice } from '../input/list';
+import link from '../output/link';
 
 export interface RepoInfo {
   url: string;

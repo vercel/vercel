@@ -1,21 +1,21 @@
-import { dirname, isAbsolute, join, relative } from 'node:path';
-import {
-  existsSync,
-  createWriteStream,
-  readFileSync,
-  unlinkSync,
-  mkdtempSync,
-  rmSync,
-} from 'node:fs';
 import { spawn } from 'node:child_process';
+import {
+  createWriteStream,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { z } from 'zod';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import {
   debug,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   type Span,
 } from '@vercel/build-utils';
+import { z } from 'zod';
 import {
   BEGIN_INTROSPECTION_RESULT,
   END_INTROSPECTION_RESULT,

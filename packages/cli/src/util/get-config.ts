@@ -1,16 +1,16 @@
-import path from 'path';
 import { fileNameSymbol } from '@vercel/client';
+import { isErrnoException } from '@vercel/error-utils';
+import path from 'path';
+import output from '../output-manager';
+import type { VercelConfig } from './dev/types';
 import {
-  CantParseJSONFile,
   CantFindConfig,
+  CantParseJSONFile,
   ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
 } from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
-import type { VercelConfig } from './dev/types';
-import { isErrnoException } from '@vercel/error-utils';
-import output from '../output-manager';
 
 let config: VercelConfig;
 

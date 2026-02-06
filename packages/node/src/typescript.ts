@@ -1,6 +1,6 @@
-import { createRequire } from 'module';
-import { relative, basename, dirname } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
+import { createRequire } from 'module';
+import { basename, dirname, relative } from 'path';
 import type _ts from 'typescript';
 
 /*
@@ -143,10 +143,9 @@ export function register(
     compiler = require_.resolve(options.compiler || 'typescript', {
       paths: [options.project || cwd],
     });
-  } catch (e) {
+  } catch (_e) {
     compiler = opts.useTypescript5 ? 'typescript5' : 'typescript';
   }
-  //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
   if (compiler === 'typescript' || compiler === 'typescript5') {
     console.log(
@@ -297,7 +296,7 @@ export function register(
     const service = ts.createLanguageService(serviceHost, registry);
 
     // Set the file contents into cache manually.
-    const updateMemoryCache = function (contents: string, fileName: string) {
+    const updateMemoryCache = (contents: string, fileName: string) => {
       const fileVersion = memoryCache.fileVersions.get(fileName) || 0;
 
       // Avoid incrementing cache when nothing has changed.
@@ -366,10 +365,8 @@ export function register(
 
   // determine the tsconfig.json path for a given folder
   function detectConfig(): string | undefined {
-    let configFileName: string | undefined = undefined;
-
     // Read project configuration when available.
-    configFileName = options.project
+    const configFileName = options.project
       ? ts.findConfigFile(normalizeSlashes(options.project), fileExists)
       : ts.findConfigFile(normalizeSlashes(cwd), fileExists);
 

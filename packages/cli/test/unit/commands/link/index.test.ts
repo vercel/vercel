@@ -1,31 +1,31 @@
 import { EOL } from 'node:os';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { basename, join } from 'path';
-import { readFile } from 'fs-extra';
 import {
-  readJSON,
   mkdirp,
+  pathExists,
+  readFile,
+  readJSON,
+  remove,
   writeFile,
   writeJSON,
-  pathExists,
-  remove,
 } from 'fs-extra';
-import link from '../../../../src/commands/link';
+import { basename, join } from 'path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import pull from '../../../../src/commands/env/pull';
+import link from '../../../../src/commands/link';
+import { ProjectNotFound } from '../../../../src/util/errors-ts';
+import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
 import {
   defaultProject,
   useProject,
   useUnknownProject,
 } from '../../../mocks/project';
-import {
-  setupTmpDir,
-  setupUnitFixture,
-} from '../../../helpers/setup-unit-fixture';
-import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../../../src/util/errors-ts';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 // Mock the env pull command
 vi.mock('../../../../src/commands/env/pull');

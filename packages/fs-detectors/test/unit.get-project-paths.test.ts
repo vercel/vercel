@@ -1,7 +1,7 @@
-import path from 'path';
 import { normalizePath } from '@vercel/build-utils';
-import { getProjectPaths, ProjectPath } from '../src/get-project-paths';
+import path from 'path';
 import { LocalFileSystemDetector } from '../src';
+import { getProjectPaths, ProjectPath } from '../src/get-project-paths';
 
 describe.each<{
   fixturePath: string;
@@ -40,27 +40,29 @@ describe.each<{
     resultPaths: ['./'],
     readdirCalls: 1,
   },
-])(
-  '`getProjectPaths()`',
-  ({ resultPaths, readdirCalls, fixturePath, skipPaths }) => {
-    const testName =
-      resultPaths.length > 0
-        ? `should detect ${resultPaths.join()} project${
-            resultPaths.length > 1 ? 's' : ''
-          } for ${fixturePath}`
-        : `should not detect any path for ${fixturePath}`;
+])('`getProjectPaths()`', ({
+  resultPaths,
+  readdirCalls,
+  fixturePath,
+  skipPaths,
+}) => {
+  const testName =
+    resultPaths.length > 0
+      ? `should detect ${resultPaths.join()} project${
+          resultPaths.length > 1 ? 's' : ''
+        } for ${fixturePath}`
+      : `should not detect any path for ${fixturePath}`;
 
-    it(testName, async () => {
-      const fixture = path.join(__dirname, 'fixtures', fixturePath);
-      const fs = new LocalFileSystemDetector(fixture);
-      const mockReaddir = jest.fn().mockImplementation(fs.readdir);
-      const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
-      fs.readdir = mockReaddir;
-      fs.hasPath = mockHasPath;
-      const actualPaths = await getProjectPaths({ fs, skipPaths });
-      const normalizedPaths = actualPaths.map(path => normalizePath(path));
-      expect(normalizedPaths).toEqual(resultPaths);
-      expect(fs.readdir).toHaveBeenCalledTimes(readdirCalls);
-    });
-  }
-);
+  it(testName, async () => {
+    const fixture = path.join(__dirname, 'fixtures', fixturePath);
+    const fs = new LocalFileSystemDetector(fixture);
+    const mockReaddir = jest.fn().mockImplementation(fs.readdir);
+    const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
+    fs.readdir = mockReaddir;
+    fs.hasPath = mockHasPath;
+    const actualPaths = await getProjectPaths({ fs, skipPaths });
+    const normalizedPaths = actualPaths.map(path => normalizePath(path));
+    expect(normalizedPaths).toEqual(resultPaths);
+    expect(fs.readdir).toHaveBeenCalledTimes(readdirCalls);
+  });
+});

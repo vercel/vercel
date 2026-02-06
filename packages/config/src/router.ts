@@ -1,6 +1,6 @@
 import { cacheHeader } from 'pretty-cache-header';
-import { validateRegexPattern, parseCronExpression } from './utils/validation';
 import type { Redirect, Rewrite } from './types';
+import { parseCronExpression, validateRegexPattern } from './utils/validation';
 
 /**
  * Type utility to extract path parameter names from a route pattern string.
@@ -1304,7 +1304,7 @@ export class Router {
                   if ('destination' in rule) {
                     return `  ${rule.source} → ${rule.destination}`;
                   }
-                  // @ts-ignore
+                  // @ts-expect-error
                   return `  ${rule.source}`;
                 })
                 .join('\n')

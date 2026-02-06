@@ -1,7 +1,11 @@
-import { join, posix as pathPosix } from 'path';
 import type { FileFsRef, PythonFramework } from '@vercel/build-utils';
-import { glob, debug, isPythonEntrypoint } from '@vercel/build-utils';
-import { readConfigFile } from '@vercel/build-utils';
+import {
+  debug,
+  glob,
+  isPythonEntrypoint,
+  readConfigFile,
+} from '@vercel/build-utils';
+import { join, posix as pathPosix } from 'path';
 
 export const PYTHON_ENTRYPOINT_FILENAMES = [
   'app',

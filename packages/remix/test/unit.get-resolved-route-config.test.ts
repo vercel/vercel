@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { getResolvedRouteConfig } from '../src/utils';
-import type { RouteManifest, RouteManifestEntry } from '../src/types';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import { describe, expect, it } from 'vitest';
+import type { RouteManifest, RouteManifestEntry } from '../src/types';
+import { getResolvedRouteConfig } from '../src/utils';
 
 describe('getResolvedRouteConfig()', () => {
   const staticConfigsMap = new Map<

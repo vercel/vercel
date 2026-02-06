@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NodejsLambda, FileBlob } from '../src';
+import { FileBlob, NodejsLambda } from '../src';
 
 describe('Test `NodejsLambda`', () => {
   it('should create an instance', () => {

@@ -1,8 +1,8 @@
-import os from 'node:os';
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import net from 'node:net';
-import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
+import os from 'node:os';
+import path from 'node:path';
+import { DetectorFilesystem, LocalFileSystemDetector } from '../src';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
 

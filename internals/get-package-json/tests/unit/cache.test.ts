@@ -1,6 +1,6 @@
-import { getPackageJSON } from '../../src/index';
 import fs from 'fs';
 import path from 'path';
+import { getPackageJSON } from '../../src/index';
 
 test('getPackageJSON caches read operations', () => {
   const expected = JSON.parse(

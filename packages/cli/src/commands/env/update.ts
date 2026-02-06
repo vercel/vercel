@@ -1,26 +1,26 @@
+import type { ProjectEnvVariable } from '@vercel-internals/types';
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import updateEnvRecord from '../../util/env/update-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import readStandardInput from '../../util/input/read-standard-input';
-import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
-import { validateEnvValue } from '../../util/env/validate-env';
-import formatEnvironments from '../../util/env/format-environments';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
-import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import output from '../../output-manager';
-import { EnvUpdateTelemetryClient } from '../../util/telemetry/commands/env/update';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import formatEnvironments from '../../util/env/format-environments';
+import getEnvRecords from '../../util/env/get-env-records';
+import { isKnownError } from '../../util/env/known-error';
+import updateEnvRecord from '../../util/env/update-env-record';
+import { validateEnvValue } from '../../util/env/validate-env';
+import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { updateSubcommand } from './command';
+import readStandardInput from '../../util/input/read-standard-input';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
-import type { ProjectEnvVariable } from '@vercel-internals/types';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import { EnvUpdateTelemetryClient } from '../../util/telemetry/commands/env/update';
+import { updateSubcommand } from './command';
 
 export default async function update(client: Client, argv: string[]) {
   let parsedArgs;
@@ -35,7 +35,6 @@ export default async function update(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArgs;
 
   const stdInput = await readStandardInput(client.stdin);
-  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvUpdateTelemetryClient({

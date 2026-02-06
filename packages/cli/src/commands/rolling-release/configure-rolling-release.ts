@@ -1,9 +1,9 @@
-import type Client from '../../util/client';
 import type {
   JSONObject,
   ProjectRollingRelease,
 } from '@vercel-internals/types';
 import output from '../../output-manager';
+import type Client from '../../util/client';
 
 /**
  * Requests a rolling release document.

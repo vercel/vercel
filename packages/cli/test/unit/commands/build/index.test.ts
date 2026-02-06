@@ -1,15 +1,22 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { getWriteableDirectory } from '@vercel/build-utils';
+import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
+import { execSync } from 'child_process';
 import fs from 'fs-extra';
 import { join } from 'path';
-import { getWriteableDirectory } from '@vercel/build-utils';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import build from '../../../../src/commands/build';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import { execSync } from 'child_process';
-import { vi } from 'vitest';
-import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -163,9 +170,7 @@ describe.skipIf(flakey)('build', () => {
     try {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.log('Symlinks not available, skipping test');
+    } catch (_e) {
       return;
     }
 
@@ -791,8 +796,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
-      console.log('Skipping test on Windows');
       return;
     }
     const cwd = fixture('discontinued-nodejs12.x');
@@ -908,36 +911,38 @@ describe.skipIf(flakey)('build', () => {
       version: '1.6.0',
       expected: false,
     },
-  ])(
-    'with instrumentation $dependency',
-    ({ fixtureName, dependency, version, expected }) => {
-      it(`should ${expected ? 'set' : 'not set'} VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION if ${dependency} version ${version} or higher is detected`, async () => {
-        const cwd = fixture(fixtureName);
-        const output = join(cwd, '.vercel/output');
-        client.cwd = cwd;
-        const exitCode = await build(client);
-        expect(exitCode).toEqual(0);
+  ])('with instrumentation $dependency', ({
+    fixtureName,
+    dependency,
+    version,
+    expected,
+  }) => {
+    it(`should ${expected ? 'set' : 'not set'} VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION if ${dependency} version ${version} or higher is detected`, async () => {
+      const cwd = fixture(fixtureName);
+      const output = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
 
-        const env = await fs.readJSON(join(output, 'static', 'env.json'));
-        expect(
-          Object.keys(env).includes(
-            'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
-          )
-        ).toEqual(expected);
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(
+        Object.keys(env).includes(
+          'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
+        )
+      ).toEqual(expected);
 
-        // "functions/api" directory has output Functions
-        const functions = await fs.readdir(join(output, 'functions/api'));
-        expect(functions.sort()).toEqual(['index.func']);
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['index.func']);
 
-        const vcConfig = await fs.readJSON(
-          join(output, 'functions/api/index.func/.vc-config.json')
-        );
-        expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
-          expected
-        );
-      });
-    }
-  );
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/index.func/.vc-config.json')
+      );
+      expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
+        expected
+      );
+    });
+  });
 
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
@@ -1002,9 +1007,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
-      // this test runs a build command with `mkdir -p` which is unsupported on Windows
-      // eslint-disable-next-line no-console
-      console.log('Skipping test on Windows');
       return;
     }
 
@@ -1209,10 +1211,10 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  describe('should find packages with different main/module/browser keys', function () {
+  describe('should find packages with different main/module/browser keys', () => {
     let output: string;
 
-    beforeAll(async function () {
+    beforeAll(async () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
 
       const cwd = fixture('import-from-main-keys');
@@ -1235,7 +1237,7 @@ describe.skipIf(flakey)('build', () => {
       ]);
     });
 
-    it('use-classic', async function () {
+    it('use-classic', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1247,7 +1249,7 @@ describe.skipIf(flakey)('build', () => {
       expect(packageDistFiles).toContain('index.js');
     });
 
-    it('use-main', async function () {
+    it('use-main', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1259,7 +1261,7 @@ describe.skipIf(flakey)('build', () => {
       expect(packageDistFiles).toContain('dist-main.js');
     });
 
-    it('use-module', async function () {
+    it('use-module', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1271,7 +1273,7 @@ describe.skipIf(flakey)('build', () => {
       expect(packageDistFiles).toContain('dist-module.js');
     });
 
-    it('use-browser', async function () {
+    it('use-browser', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1283,7 +1285,7 @@ describe.skipIf(flakey)('build', () => {
       expect(packageDistFiles).toContain('dist-browser.js');
     });
 
-    it('prefer-browser', async function () {
+    it('prefer-browser', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1295,7 +1297,7 @@ describe.skipIf(flakey)('build', () => {
       expect(packageDistFiles).toContain('dist-browser.js');
     });
 
-    it('prefer-main', async function () {
+    it('prefer-main', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1307,7 +1309,7 @@ describe.skipIf(flakey)('build', () => {
       expect(packageDistFiles).toContain('dist-main.js');
     });
 
-    it('prefer-module', async function () {
+    it('prefer-module', async () => {
       const packageDir = join(
         output,
         'functions/api',
@@ -1619,8 +1621,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
-      console.log('Skipping test on Windows');
       return;
     }
     const cwd = fixture('functions-symlink');

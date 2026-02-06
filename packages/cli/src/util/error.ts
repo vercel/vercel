@@ -1,10 +1,10 @@
-import type { Response } from 'node-fetch';
-import errorOutput from './output/error';
 import bytes from 'bytes';
+import type { Response } from 'node-fetch';
+import output from '../output-manager';
 import type { APIError } from './errors-ts';
 import { parseRetryAfterHeaderAsMillis } from './errors-ts';
+import errorOutput from './output/error';
 import { getCommandName } from './pkg-name';
-import output from '../output-manager';
 
 export const error = errorOutput;
 
@@ -28,7 +28,7 @@ export async function responseError(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = parsedBody;
     }
 
@@ -77,7 +77,7 @@ export async function responseErrorMessage(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = {};
     }
 

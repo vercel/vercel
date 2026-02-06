@@ -1,5 +1,5 @@
-import output from '../output-manager';
 import chalk from 'chalk';
+import output from '../output-manager';
 
 export function suggestNextCommands(commands: string[]) {
   output.print(

@@ -49,11 +49,7 @@ class WorkerOutput {
     );
     this.debugLog.push(`[${new Date().toISOString()}] [${type}] ${str}`);
     if (type === 'debug' && this.debugOutputEnabled) {
-      // eslint-disable-next-line no-console
-      console.error(`> '[debug] [${new Date().toISOString()}] ${str}`);
     } else if (type === 'error') {
-      // eslint-disable-next-line no-console
-      console.error(`Error: ${str}`);
     }
   }
 
@@ -161,8 +157,6 @@ if (process.connected) {
   output.debug("Notifying parent we're ready");
   process.send({ type: 'ready' });
 } else {
-  // eslint-disable-next-line no-console
-  console.error('No IPC bridge detected, exiting');
   process.exit(1);
 }
 
@@ -174,7 +168,7 @@ async function fileExists(file) {
 
 async function isRunning(lockFile) {
   try {
-    const pid = parseInt(await readFile(lockFile, 'utf-8'));
+    const pid = parseInt(await readFile(lockFile, 'utf-8'), 10);
     output.debug(`Found lock file with pid: ${pid}`);
 
     // checks for existence of a process; throws if not found

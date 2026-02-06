@@ -1,14 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import logout from '../../../../src/commands/logout';
-import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import _fetch, { type Response } from 'node-fetch';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import logout from '../../../../src/commands/logout';
 import {
   as,
-  VERCEL_CLI_CLIENT_ID,
   userAgent,
+  VERCEL_CLI_CLIENT_ID,
 } from '../../../../src/util/oauth';
-import { randomUUID } from 'node:crypto';
+import { client } from '../../../mocks/client';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({

@@ -1,7 +1,7 @@
-import { stringify } from 'querystring';
 import type { Cert } from '@vercel-internals/types';
-import * as ERRORS from '../errors-ts';
+import { stringify } from 'querystring';
 import type Client from '../client';
+import * as ERRORS from '../errors-ts';
 
 type Response = {
   certs: Cert[];

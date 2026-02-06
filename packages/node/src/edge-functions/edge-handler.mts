@@ -1,26 +1,26 @@
-import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
+import { buildToHeaders } from '@edge-runtime/node-utils';
+import { isError } from '@vercel/error-utils';
+import { EdgeRuntime, runServer } from 'edge-runtime';
+import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
+import esbuild from 'esbuild';
+import { readFileSync } from 'fs';
+import type { IncomingMessage } from 'http';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
+import { fileURLToPath } from 'url';
+import { Awaiter } from '../awaiter.js';
+import type { VercelProxyResponse } from '../types.js';
+import {
+  entrypointToOutputPath,
+  logError,
+  serializeBody,
+  WAIT_UNTIL_TIMEOUT,
+  waitUntilWarning,
+} from '../utils.js';
 import {
   createNodeCompatPlugin,
   NodeCompatBindings,
 } from './edge-node-compat-plugin.mjs';
-import { EdgeRuntime, runServer } from 'edge-runtime';
-import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
-import { isError } from '@vercel/error-utils';
-import { readFileSync } from 'fs';
-import {
-  serializeBody,
-  entrypointToOutputPath,
-  logError,
-  WAIT_UNTIL_TIMEOUT,
-  waitUntilWarning,
-} from '../utils.js';
-import esbuild from 'esbuild';
-import { buildToHeaders } from '@edge-runtime/node-utils';
-import type { VercelProxyResponse } from '../types.js';
-import type { IncomingMessage } from 'http';
-import { fileURLToPath } from 'url';
-import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
-import { Awaiter } from '../awaiter.js';
+import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -236,9 +236,9 @@ export async function createEdgeEventHandler(
   const server = result?.server;
   const onExit = result?.onExit;
 
-  const handler = async function (
+  const handler = async (
     request: IncomingMessage
-  ): Promise<VercelProxyResponse> {
+  ): Promise<VercelProxyResponse> => {
     if (!server) {
       // this error state is already logged, but we have to wait until here to exit the process
       // this matches the serverless function bridge launcher's behavior when

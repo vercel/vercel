@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { parse } from 'dotenv';
 import fs from 'fs-extra';
 import path from 'path';
-import { parse } from 'dotenv';
+import { describe, expect, it } from 'vitest';
 import env from '../../../../src/commands/env';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';

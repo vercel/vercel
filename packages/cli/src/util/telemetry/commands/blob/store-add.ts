@@ -1,5 +1,5 @@
-import { TelemetryClient } from '../..';
 import type { addStoreSubcommand } from '../../../../commands/blob/command';
+import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobAddStoreTelemetryClient

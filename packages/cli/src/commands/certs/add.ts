@@ -1,17 +1,17 @@
+import type { Cert } from '@vercel-internals/types';
 import chalk from 'chalk';
+import output from '../../output-manager';
+import createCertForCns from '../../util/certs/create-cert-for-cns';
+import createCertFromFile from '../../util/certs/create-cert-from-file';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import output from '../../output-manager';
-import createCertFromFile from '../../util/certs/create-cert-from-file';
-import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
 import { CertsAddTelemetryClient } from '../../util/telemetry/commands/certs/add';
 import { addSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
-import type { Cert } from '@vercel-internals/types';
 
 async function add(client: Client, argv: string[]): Promise<number> {
   const { telemetryEventStore } = client;

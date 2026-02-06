@@ -1,11 +1,11 @@
-import bytes from 'bytes';
-import type { Response } from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
+import { isError } from '@vercel/error-utils';
+import bytes from 'bytes';
+import chalk from 'chalk';
+import type { Response } from 'node-fetch';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
-import chalk from 'chalk';
-import { isError } from '@vercel/error-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -30,7 +30,7 @@ export class APIError extends Error {
     if (body) {
       for (const field of Object.keys(body)) {
         if (field !== 'message') {
-          // @ts-ignore
+          // @ts-expect-error
           this[field] = body[field];
         }
       }

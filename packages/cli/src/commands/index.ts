@@ -1,6 +1,8 @@
+import output from '../output-manager';
 import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
+import { blobCommand } from './blob/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
@@ -12,12 +14,13 @@ import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
+import type { Command } from './help';
 import { httpstatCommand } from './httpstat/command';
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
-import { integrationResourceCommand } from './integration-resource/command';
 import { integrationCommand } from './integration/command';
+import { integrationResourceCommand } from './integration-resource/command';
 import { linkCommand } from './link/command';
 import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
@@ -38,11 +41,8 @@ import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
-import { whoamiCommand } from './whoami/command';
-import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
-import type { Command } from './help';
-import output from '../output-manager';
+import { whoamiCommand } from './whoami/command';
 
 const commandsStructs = [
   aliasCommand,

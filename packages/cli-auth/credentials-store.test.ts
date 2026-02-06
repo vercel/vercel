@@ -1,11 +1,11 @@
-import { vi, test, describe, expect } from 'vitest';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import * as path from 'node:path';
+import { describe, expect, test, vi } from 'vitest';
 import {
   type Credentials,
   CredentialsStore,
   getGlobalPathConfig,
 } from './credentials-store';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import * as path from 'node:path';
 
 vi.mock('fs', async () => {
   const memfs = await import('memfs');

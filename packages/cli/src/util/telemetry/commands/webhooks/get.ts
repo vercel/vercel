@@ -1,6 +1,6 @@
+import type { getSubcommand } from '../../../../commands/webhooks/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { getSubcommand } from '../../../../commands/webhooks/command';
 
 export class WebhooksGetTelemetryClient
   extends TelemetryClient

@@ -1,16 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import fs from 'fs-extra';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { FileFsRef, glob, NodejsLambda } from '@vercel/build-utils';
 import execa from 'execa';
-import { FileFsRef, NodejsLambda, glob } from '@vercel/build-utils';
+import { mkdtemp, rm, writeFile } from 'fs/promises';
+import fs from 'fs-extra';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import build from '../../../../src/commands/build';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -110,8 +110,6 @@ async function extractAndExecuteCode(
     });
 
     fakeLambdaProcess.on('error', error => {
-      // eslint-disable-next-line no-console
-      console.error(error);
       reject(error);
     });
 

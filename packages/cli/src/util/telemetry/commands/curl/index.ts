@@ -1,6 +1,6 @@
+import type { curlCommand } from '../../../../commands/curl/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { curlCommand } from '../../../../commands/curl/command';
 
 export class CurlTelemetryClient
   extends TelemetryClient

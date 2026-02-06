@@ -231,7 +231,7 @@ it('Should build the serverless-config-monorepo-present example', async () => {
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
 // eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should opt-out of shared lambdas when routes are detected', async () => {
+it('Should opt-out of shared lambdas when routes are detected', async () => {
   const {
     buildResult: { output },
   } = await runBuildLambda(
@@ -256,7 +256,7 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
 
   const origLog = console.log;
 
-  console.log = function (...args) {
+  console.log = (...args) => {
     logs += args.join(' ');
     origLog(...args);
   };

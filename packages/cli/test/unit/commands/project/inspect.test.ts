@@ -1,12 +1,12 @@
 import assert from 'node:assert';
-import { describe, it, expect } from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import createLineIterator from 'line-async-iterator';
+import { describe, expect, it } from 'vitest';
 import projects from '../../../../src/commands/project';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('inspect', () => {
   describe('invalid argument', () => {

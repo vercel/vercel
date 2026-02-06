@@ -1,20 +1,20 @@
-import Ajv from 'ajv';
 import {
-  routesSchema,
+  buildsSchema,
+  functionsSchema,
+  getPrettyError,
+  NowBuildError,
+} from '@vercel/build-utils';
+import { fileNameSymbol } from '@vercel/client';
+import {
   cleanUrlsSchema,
   headersSchema,
   redirectsSchema,
   rewritesSchema,
+  routesSchema,
   trailingSlashSchema,
 } from '@vercel/routing-utils';
+import Ajv from 'ajv';
 import type { VercelConfig } from './dev/types';
-import {
-  functionsSchema,
-  buildsSchema,
-  NowBuildError,
-  getPrettyError,
-} from '@vercel/build-utils';
-import { fileNameSymbol } from '@vercel/client';
 
 const imagesSchema = {
   type: 'object',

@@ -1,6 +1,6 @@
+import type { inviteSubcommand } from '../../../../commands/teams/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { inviteSubcommand } from '../../../../commands/teams/command';
 
 export class TeamsInviteTelemetryClient
   extends TelemetryClient

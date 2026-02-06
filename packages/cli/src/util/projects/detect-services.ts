@@ -1,7 +1,7 @@
 import {
+  type DetectServicesResult,
   detectServices,
   LocalFileSystemDetector,
-  type DetectServicesResult,
 } from '@vercel/fs-detectors';
 
 export function isExperimentalServicesEnabled(): boolean {

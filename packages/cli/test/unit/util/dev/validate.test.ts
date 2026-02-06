@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
@@ -35,7 +35,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid rewrites due to additional property and offer suggestion', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       rewrites: [{ src: '/(.*)', dest: '/api/index.js' }],
     });
     expect(error!.message).toEqual(
@@ -48,7 +48,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid routes due to additional property and offer suggestion', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       routes: [{ source: '/(.*)', destination: '/api/index.js' }],
     });
     expect(error!.message).toEqual(
@@ -61,7 +61,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid routes array type', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       routes: { src: '/(.*)', dest: '/api/index.js' },
     });
     expect(error!.message).toEqual(
@@ -75,7 +75,7 @@ describe('validateConfig', () => {
   it('should error with invalid redirects array object', async () => {
     const error = validateConfig({
       redirects: [
-        // @ts-ignore
+        // @ts-expect-error
         {
           /* intentionally empty */
         },
@@ -91,7 +91,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid redirects.permanent poperty', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       redirects: [{ source: '/', destination: '/go', permanent: 'yes' }],
     });
     expect(error!.message).toEqual(
@@ -104,7 +104,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid cleanUrls type', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       cleanUrls: 'true',
     });
     expect(error!.message).toEqual(
@@ -117,7 +117,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid trailingSlash type', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       trailingSlash: [true],
     });
     expect(error!.message).toEqual(
@@ -130,7 +130,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid headers property', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       headers: [{ 'Content-Type': 'text/html' }],
     });
     expect(error!.message).toEqual(
@@ -143,7 +143,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid headers.source type', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       headers: [{ source: [{ 'Content-Type': 'text/html' }] }],
     });
     expect(error!.message).toEqual(
@@ -156,7 +156,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid headers additional property', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       headers: [{ source: '/', stuff: [{ 'Content-Type': 'text/html' }] }],
     });
     expect(error!.message).toEqual(
@@ -169,7 +169,7 @@ describe('validateConfig', () => {
 
   it('should error with invalid headers wrong nested headers type', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       headers: [{ source: '/', headers: [{ 'Content-Type': 'text/html' }] }],
     });
     expect(error!.message).toEqual(
@@ -183,7 +183,7 @@ describe('validateConfig', () => {
   it('should error with invalid headers wrong nested headers additional property', async () => {
     const error = validateConfig({
       headers: [
-        // @ts-ignore
+        // @ts-expect-error
         { source: '/', headers: [{ key: 'Content-Type', val: 'text/html' }] },
       ],
     });
@@ -289,7 +289,7 @@ describe('validateConfig', () => {
 
   it('should error when crons have missing schedule', () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       crons: [{ path: '/api/test.js' }],
     });
     expect(error!.message).toEqual(
@@ -302,7 +302,7 @@ describe('validateConfig', () => {
 
   it('should error when crons have missing path', () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error
       crons: [{ schedule: '* * * * *' }],
     });
     expect(error!.message).toEqual(
@@ -373,22 +373,22 @@ describe('validateConfig', () => {
     );
   });
 
-  it.each(['x86_64', 'arm64'] as const)(
-    'should not error with valid architecture: %s',
-    architecture => {
-      const error = validateConfig({
-        functions: {
-          'api/user.go': { architecture, memory: 128, maxDuration: 5 },
-        },
-      });
-      expect(error).toBeNull();
-    }
-  );
+  it.each([
+    'x86_64',
+    'arm64',
+  ] as const)('should not error with valid architecture: %s', architecture => {
+    const error = validateConfig({
+      functions: {
+        'api/user.go': { architecture, memory: 128, maxDuration: 5 },
+      },
+    });
+    expect(error).toBeNull();
+  });
 
   it('should error with invalid architecture', () => {
     const error = validateConfig({
       functions: {
-        // @ts-ignore
+        // @ts-expect-error
         'api/user.go': { architecture: 'invalid', memory: 128, maxDuration: 5 },
       },
     });
@@ -441,7 +441,7 @@ describe('validateConfig', () => {
   it('should error with invalid experimentalTriggers type', () => {
     const error = validateConfig({
       functions: {
-        // @ts-ignore
+        // @ts-expect-error
         'api/test.js': { experimentalTriggers: 'invalid' },
       },
     });
@@ -459,7 +459,7 @@ describe('validateConfig', () => {
         'api/test.js': {
           experimentalTriggers: [
             {
-              // @ts-ignore - Intentionally testing invalid type for runtime validation
+              // @ts-expect-error - Intentionally testing invalid type for runtime validation
               type: 'invalid.type',
               topic: 'test-topic',
               consumer: 'test-consumer',

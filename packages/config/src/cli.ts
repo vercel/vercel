@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { writeFileSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
-import { existsSync } from 'fs';
 import { validateStaticFields } from './utils/validation';
 
 /**

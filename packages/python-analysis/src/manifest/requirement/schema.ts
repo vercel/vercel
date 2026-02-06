@@ -11,8 +11,8 @@ import type { z } from 'zod';
 
 import {
   dependencySourceSchema as generatedDependencySourceSchema,
-  hashDigestSchema,
   normalizedRequirementSchema as generatedNormalizedRequirementSchema,
+  hashDigestSchema,
 } from './schema.zod';
 
 import type {

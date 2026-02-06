@@ -1,13 +1,13 @@
+import type { DNSRecordData } from '@vercel-internals/types';
 import type Client from '../client';
 import {
-  DomainNotFound,
-  DNSPermissionDenied,
+  DNSConflictingRecord,
   DNSInvalidPort,
   DNSInvalidType,
-  DNSConflictingRecord,
+  DNSPermissionDenied,
+  DomainNotFound,
   isAPIError,
 } from '../errors-ts';
-import type { DNSRecordData } from '@vercel-internals/types';
 
 type Response = {
   uid: string;

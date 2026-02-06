@@ -1,25 +1,25 @@
+import type { Domain } from '@vercel-internals/types';
 import chalk from 'chalk';
 import plural from 'pluralize';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import type { Domain } from '@vercel-internals/types';
-import type Client from '../../util/client';
-import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
-import removeAliasById from '../../util/alias/remove-alias-by-id';
-import removeDomainByName from '../../util/domains/remove-domain-by-name';
-import stamp from '../../util/output/stamp';
-import * as ERRORS from '../../util/errors-ts';
-import param from '../../util/output/param';
-import setCustomSuffix from '../../util/domains/set-custom-suffix';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/rm';
-import { removeSubcommand } from './command';
+import removeAliasById from '../../util/alias/remove-alias-by-id';
+import deleteCertById from '../../util/certs/delete-cert-by-id';
+import type Client from '../../util/client';
+import getDomainByName from '../../util/domains/get-domain-by-name';
+import removeDomainByName from '../../util/domains/remove-domain-by-name';
+import setCustomSuffix from '../../util/domains/set-custom-suffix';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
+import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/rm';
+import { removeSubcommand } from './command';
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetry = new DomainsRmTelemetryClient({

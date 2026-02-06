@@ -1,6 +1,6 @@
+import type { promoteCommand } from '../../../../commands/promote/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { promoteCommand } from '../../../../commands/promote/command';
 
 export class PromoteTelemetryClient
   extends TelemetryClient

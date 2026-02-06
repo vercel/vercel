@@ -1,7 +1,7 @@
-import path from 'path';
 import chalk from 'chalk';
-import { validateRootDirectory } from '../validate-paths';
+import path from 'path';
 import type Client from '../client';
+import { validateRootDirectory } from '../validate-paths';
 
 export async function inputRootDirectory(
   client: Client,

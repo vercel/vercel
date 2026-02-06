@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { transpile, writeFiles } from '@bytecodealliance/jco-transpile';
 
 const __dirname = dirname(dirname(fileURLToPath(import.meta.url)));

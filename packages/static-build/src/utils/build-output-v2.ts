@@ -1,18 +1,18 @@
-import path from 'path';
-import { pathExists, readJson, appendFile } from 'fs-extra';
-import { Route } from '@vercel/routing-utils';
 import {
-  Files,
-  FileFsRef,
-  debug,
-  glob,
-  EdgeFunction,
   BuildResultV2,
+  debug,
+  EdgeFunction,
+  FileFsRef,
+  Files,
+  glob,
 } from '@vercel/build-utils';
-import { isObjectEmpty } from './_shared';
-import { Project } from 'ts-morph';
-import { getConfig } from '@vercel/static-config';
 import { isErrnoException } from '@vercel/error-utils';
+import { Route } from '@vercel/routing-utils';
+import { getConfig } from '@vercel/static-config';
+import { appendFile, pathExists, readJson } from 'fs-extra';
+import path from 'path';
+import { Project } from 'ts-morph';
+import { isObjectEmpty } from './_shared';
 
 const BUILD_OUTPUT_DIR = '.output';
 const BRIDGE_MIDDLEWARE_V2_TO_V3 = `
@@ -85,7 +85,7 @@ export async function readBuildOutputDirectory({
           const project = new Project();
           const config = getConfig(project, middleware.file.fsPath);
           return config?.regions;
-        } catch (err) {
+        } catch (_err) {
           return undefined;
         }
       })(),

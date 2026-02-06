@@ -1,6 +1,6 @@
-import path from 'path';
 import fs from 'fs-extra';
 import ignore from 'ignore';
+import path from 'path';
 
 interface CodedError extends Error {
   code: string;
@@ -75,7 +75,7 @@ export default async function (
 
   const ignoreFilter: any = ignore().add(clearRelative(ignoreContents[0]!));
 
-  return function (p: string) {
+  return (p: string) => {
     // we should not ignore now.json and vercel.json if it asked to.
     // we depend on these files for building the app with sourceless
     if (p === 'now.json' || p === 'vercel.json') return false;

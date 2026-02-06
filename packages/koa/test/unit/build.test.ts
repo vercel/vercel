@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { findEntrypoint } from '../../src/build';
 import { FileFsRef } from '@vercel/build-utils';
 import { join } from 'path';
+import { describe, expect, it } from 'vitest';
+import { findEntrypoint } from '../../src/build';
 
 describe('koa builder', () => {
   it('should find entrypoint', async () => {

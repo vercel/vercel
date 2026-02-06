@@ -1,6 +1,6 @@
 import type { Framework } from '@vercel/frameworks';
-import { detectFrameworks } from '../detect-framework';
 import frameworkList from '@vercel/frameworks';
+import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type { ExperimentalServices, ServiceDetectionError } from './types';
 

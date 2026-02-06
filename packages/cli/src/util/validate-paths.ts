@@ -1,9 +1,9 @@
-import { lstat } from 'fs-extra';
 import chalk from 'chalk';
+import { lstat } from 'fs-extra';
 import { homedir } from 'os';
-import toHumanPath from './humanize-path';
-import type Client from './client';
 import output from '../output-manager';
+import type Client from './client';
+import toHumanPath from './humanize-path';
 
 /**
  * A helper function to validate the `rootDirectory` input.

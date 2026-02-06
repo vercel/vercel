@@ -1,7 +1,7 @@
 import { getContext } from '../get-context';
-import { CacheOptions, RuntimeCache } from './types';
-import { InMemoryCache } from './in-memory-cache';
 import { BuildCache } from './build-client';
+import { InMemoryCache } from './in-memory-cache';
+import { CacheOptions, RuntimeCache } from './types';
 
 const defaultKeyHashFunction = (key: string) => {
   let hash = 5381;
@@ -154,7 +154,7 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
     let timeout = 500;
     if (process.env.RUNTIME_CACHE_TIMEOUT) {
       const parsed = parseInt(process.env.RUNTIME_CACHE_TIMEOUT, 10);
-      if (!isNaN(parsed) && parsed > 0) {
+      if (!Number.isNaN(parsed) && parsed > 0) {
         timeout = parsed;
       } else {
         console.warn(

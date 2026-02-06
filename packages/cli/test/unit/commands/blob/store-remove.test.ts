@@ -1,9 +1,9 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import removeStore from '../../../../src/commands/blob/store-remove';
-import * as linkModule from '../../../../src/util/projects/link';
 import output from '../../../../src/output-manager';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
+import * as linkModule from '../../../../src/util/projects/link';
+import { client } from '../../../mocks/client';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');

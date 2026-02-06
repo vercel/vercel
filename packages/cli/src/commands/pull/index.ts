@@ -1,27 +1,26 @@
-import chalk from 'chalk';
 import { join } from 'node:path';
-import type Client from '../../util/client';
 import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
+import chalk from 'chalk';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
+import {
+  getEnvTargetPlaceholder,
+  isValidEnvTarget,
+} from '../../util/env/env-target';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import humanizePath from '../../util/humanize-path';
+import { ensureLink } from '../../util/link/ensure-link';
 import stamp from '../../util/output/stamp';
+import parseTarget from '../../util/parse-target';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link';
 import { writeProjectSettings } from '../../util/projects/project-settings';
-import { envPullCommandLogic } from '../env/pull';
-import {
-  isValidEnvTarget,
-  getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
-import { ensureLink } from '../../util/link/ensure-link';
-import humanizePath from '../../util/humanize-path';
-
-import { help } from '../help';
-import { pullCommand, type PullCommandFlags } from './command';
-import parseTarget from '../../util/parse-target';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
+import { envPullCommandLogic } from '../env/pull';
+import { help } from '../help';
+import { type PullCommandFlags, pullCommand } from './command';
 
 async function pullAllEnvFiles(
   environment: string,

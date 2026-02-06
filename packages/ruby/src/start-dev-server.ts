@@ -1,10 +1,10 @@
-import { spawn } from 'child_process';
-import type { ChildProcess } from 'child_process';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import which from 'which';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
+import type { ChildProcess } from 'child_process';
+import { spawn } from 'child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import which from 'which';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise
 function silenceNodeWarnings() {

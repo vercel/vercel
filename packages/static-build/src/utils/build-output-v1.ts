@@ -1,14 +1,14 @@
-import path from 'path';
-import { promises as fs } from 'fs';
-import { Route } from '@vercel/routing-utils';
 import {
-  Files,
-  Lambda,
-  NodeVersion,
-  NodejsLambda,
   debug,
+  Files,
   glob,
+  Lambda,
+  NodejsLambda,
+  NodeVersion,
 } from '@vercel/build-utils';
+import { Route } from '@vercel/routing-utils';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { BuildConfig, ImagesConfig, isObjectEmpty } from './_shared';
 
 const VERCEL_BUILD_OUTPUT = '.vercel_build_output';

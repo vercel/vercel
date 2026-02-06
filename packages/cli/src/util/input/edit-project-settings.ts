@@ -1,9 +1,9 @@
+import { type Framework, frameworkList } from '@vercel/frameworks';
+import type { ProjectSettings } from '@vercel-internals/types';
 import chalk from 'chalk';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import output from '../../output-manager';
 import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
-import type { ProjectSettings } from '@vercel-internals/types';
-import output from '../../output-manager';
 
 const settingMap = {
   buildCommand: 'Build Command',

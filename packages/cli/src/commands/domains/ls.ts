@@ -1,27 +1,26 @@
-import ms from 'ms';
+import type { Domain } from '@vercel-internals/types';
 import chalk from 'chalk';
+import ms from 'ms';
 import plural from 'pluralize';
-
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import getDomains from '../../util/domains/get-domains';
+import isDomainExternal from '../../util/domains/is-domain-external';
+import { printError } from '../../util/error';
+import { formatDateWithoutTime } from '../../util/format-date';
+import formatTable from '../../util/format-table';
+import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import formatTable from '../../util/format-table';
-import { formatDateWithoutTime } from '../../util/format-date';
-import type { Domain } from '@vercel-internals/types';
-import getCommandFlags from '../../util/get-command-flags';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
-import { getCommandName } from '../../util/pkg-name';
-import isDomainExternal from '../../util/domains/is-domain-external';
-import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import { validateJsonOutput } from '../../util/output-format';
-import output from '../../output-manager';
+import { getCommandName } from '../../util/pkg-name';
 import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
-import { listSubcommand } from './command';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetry = new DomainsLsTelemetryClient({

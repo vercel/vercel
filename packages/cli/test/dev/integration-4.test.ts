@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
-import { join } from 'path';
 import type { Response } from 'node-fetch';
+import { join } from 'path';
 import {
   fetch,
   fixture,
@@ -41,7 +41,6 @@ test(
   '[vercel dev] 30-next-image-optimization',
   testFixtureStdio('30-next-image-optimization', async (testPath: any) => {
     const toUrl = (url: any, w: any, q: any) => {
-      // @ts-ignore
       const query = new URLSearchParams();
       query.append('url', url);
       query.append('w', w);

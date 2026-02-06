@@ -1,7 +1,7 @@
-import { it, expect } from 'vitest';
-import { prepareFilesystem } from './test-utils';
-import { build } from '../../src';
 import { NodejsLambda } from '@vercel/build-utils/dist/nodejs-lambda';
+import { expect, it } from 'vitest';
+import { build } from '../../src';
+import { prepareFilesystem } from './test-utils';
 
 it.each([
   {

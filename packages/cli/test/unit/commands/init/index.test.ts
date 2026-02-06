@@ -1,12 +1,12 @@
-import init from '../../../../src/commands/init';
-import { client } from '../../../mocks/client';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import type { FetchOptions } from '../../../../src/util/client';
 import fs from 'fs-extra';
 import { Response } from 'node-fetch';
 import { join } from 'path';
-import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import init from '../../../../src/commands/init';
+import type { FetchOptions } from '../../../../src/util/client';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
 
 // path to mock tar
 const mockPath = join(

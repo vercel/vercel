@@ -1,24 +1,28 @@
 import {
-  FileFsRef,
-  Files,
+  Chain,
   Config,
   debug,
+  EdgeFunction,
+  File,
   FileBlob,
-  glob,
-  Lambda,
-  Prerender,
+  FileFsRef,
+  Files,
+  FlagDefinitions,
   getLambdaOptionsFromFunction,
   getPlatformEnv,
-  streamToBuffer,
-  NowBuildError,
-  isSymbolicLink,
-  NodejsLambda,
-  EdgeFunction,
+  glob,
   Images,
-  File,
-  FlagDefinitions,
-  Chain,
+  isSymbolicLink,
+  Lambda,
+  NodejsLambda,
+  NowBuildError,
+  Prerender,
+  streamToBuffer,
 } from '@vercel/build-utils';
+import type {
+  LambdaOptions,
+  LambdaOptionsWithFiles,
+} from '@vercel/build-utils/dist/lambda';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
   HasField,
@@ -29,35 +33,31 @@ import type {
 } from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
+import escapeStringRegexp from 'escape-string-regexp';
 import fs, { lstat, stat } from 'fs-extra';
+import { createRequire } from 'module';
 import path from 'path';
 import semver from 'semver';
-import url from 'url';
-import { createRequire } from 'module';
-import escapeStringRegexp from 'escape-string-regexp';
-import { htmlContentType } from '.';
-import textTable from 'text-table';
-import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
-import type {
-  LambdaOptions,
-  LambdaOptionsWithFiles,
-} from '@vercel/build-utils/dist/lambda';
-import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
-import { prettyBytes } from './pretty-bytes';
+import textTable from 'text-table';
+import url from 'url';
+import { htmlContentType } from '.';
 import {
-  MIB,
-  KIB,
-  LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
   INTERNAL_PAGES,
+  KIB,
+  LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
+  MIB,
 } from './constants';
+import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
+import { isDynamicRoute } from './is-dynamic-route';
 import {
   getContentTypeFromFile,
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
-import { isDynamicRoute } from './is-dynamic-route';
+import { prettyBytes } from './pretty-bytes';
+import { stringifySourceMap } from './sourcemapped';
 
 type stringMap = { [key: string]: string };
 
@@ -71,7 +71,7 @@ export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
  * Bun runtime has a lower limit than Node.js runtimes.
  */
 export function getMaxUncompressedLambdaSize(runtime: string): number {
-  if (!isNaN(Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE))) {
+  if (!Number.isNaN(Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE))) {
     return Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE);
   }
 
@@ -662,8 +662,7 @@ export async function getDynamicRoutes({
     return [];
   }
 
-  let getRouteRegex: ((pageName: string) => { re: RegExp }) | undefined =
-    undefined;
+  let getRouteRegex: ((pageName: string) => { re: RegExp }) | undefined;
 
   let getSortedRoutes:
     | ((normalizedPages: ReadonlyArray<string>) => string[])
@@ -1139,7 +1138,7 @@ export type NextRequiredServerFilesManifest = {
 /**
  * The rendering mode for a route.
  */
-export const enum RenderingMode {
+export enum RenderingMode {
   /**
    * `STATIC` rendering mode will output a fully static HTML page or error if
    * anything dynamic is used.
@@ -2526,7 +2525,7 @@ export const onPrerenderRoute =
         ? prerenderManifest.fallbackRoutes[routeKey]
         : prerenderManifest.blockingFallbackRoutes[routeKey];
       initialRevalidate = 1; // TODO: should Next.js provide this default?
-      // @ts-ignore
+      // @ts-expect-error
       if (initialRevalidate === false) {
         // Lazy routes cannot be "snapshotted" in time.
         throw new NowBuildError({
@@ -3092,7 +3091,7 @@ export const onPrerenderRoute =
 
       const normalizePathData = (pathData: string) => {
         if (
-          (srcRoute === '/' || srcRoute == '/index') &&
+          (srcRoute === '/' || srcRoute === '/index') &&
           pathData.endsWith(RSC_PREFETCH_SUFFIX)
         ) {
           delete lambdas[pathData];
@@ -3610,7 +3609,7 @@ export {
   normalizePackageJson,
   getNextConfig,
   getImagesConfig,
-  stringMap,
+  type stringMap,
   normalizePage,
   isDynamicRoute,
   getSourceFilePathFromPage,
@@ -4650,7 +4649,7 @@ export async function getServerActionMetaRoutes(
     }
 
     return routes;
-  } catch (error) {
+  } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
   }

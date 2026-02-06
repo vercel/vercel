@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { formatOption, jsonOption } from '../../../src/util/arg-common';
 import {
-  parseOutputFormat,
   getOutputFormat,
   isJsonOutput,
-  validateJsonOutput,
   OUTPUT_FORMATS,
+  parseOutputFormat,
+  validateJsonOutput,
 } from '../../../src/util/output-format';
-import { formatOption, jsonOption } from '../../../src/util/arg-common';
 
 describe('output-format', () => {
   describe('parseOutputFormat', () => {

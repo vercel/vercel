@@ -1,6 +1,6 @@
-import { describe, expect, it, afterEach, vi } from 'vitest';
-import { client } from '../../../mocks/client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../../src/commands/api';
+import { client } from '../../../mocks/client';
 
 describe('api', () => {
   afterEach(() => {

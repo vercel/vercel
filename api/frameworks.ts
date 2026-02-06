@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { withApiHandler } from './_lib/util/with-api-handler';
 import _frameworks, { Framework } from '../packages/frameworks';
+import { withApiHandler } from './_lib/util/with-api-handler';
 
 function getFrameworks(includeExperimental: boolean) {
   return (_frameworks as Framework[])
@@ -23,19 +23,18 @@ function getFrameworks(includeExperimental: boolean) {
     });
 }
 
-export default withApiHandler(async function (
-  req: VercelRequest,
-  res: VercelResponse
-) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Authorization, Accept, Content-Type'
-  );
+export default withApiHandler(
+  async (req: VercelRequest, res: VercelResponse) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Authorization, Accept, Content-Type'
+    );
 
-  const includeExperimental = req.query.includeExperimental === 'true';
-  const frameworks = getFrameworks(includeExperimental);
+    const includeExperimental = req.query.includeExperimental === 'true';
+    const frameworks = getFrameworks(includeExperimental);
 
-  return res.status(200).json(frameworks);
-});
+    return res.status(200).json(frameworks);
+  }
+);

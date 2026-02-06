@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  handleErrorSolvableWithArchive,
   archiveSuggestionText,
+  handleErrorSolvableWithArchive,
   UploadErrorMissingArchive,
 } from '../../../../src/util/deploy/process-deployment';
 

@@ -1,10 +1,9 @@
-import chalk from 'chalk';
-
 import type { Cert } from '@vercel-internals/types';
-import * as ERRORS from '../errors-ts';
-import type Client from '../client';
-import mapCertError from './map-cert-error';
+import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../client';
+import * as ERRORS from '../errors-ts';
+import mapCertError from './map-cert-error';
 
 export default async function startCertOrder(
   client: Client,

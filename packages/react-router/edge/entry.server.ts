@@ -1,12 +1,12 @@
 import { isbot } from 'isbot';
 import { createElement } from 'react';
 import {
-  renderToReadableStream,
-  type RenderToReadableStreamOptions,
   type RenderToPipeableStreamOptions,
+  type RenderToReadableStreamOptions,
+  renderToReadableStream,
 } from 'react-dom/server';
-import { ServerRouter } from 'react-router';
 import type { AppLoadContext, EntryContext } from 'react-router';
+import { ServerRouter } from 'react-router';
 
 export type RenderOptions = {
   [K in keyof RenderToReadableStreamOptions &
@@ -54,7 +54,6 @@ export async function handleRequest(
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new Response(body as any, {
     headers: responseHeaders,
     status: responseStatusCode,

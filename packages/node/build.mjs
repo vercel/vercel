@@ -1,5 +1,5 @@
+import { copyFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readFileSync, copyFileSync } from 'node:fs';
 import { esbuild } from '../../utils/build.mjs';
 
 const pkgPath = join(process.cwd(), 'package.json');

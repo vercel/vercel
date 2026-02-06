@@ -1,5 +1,5 @@
-import { packageName } from '../../util/pkg-name';
 import { forceOption } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const initCommand = {
   name: 'init',

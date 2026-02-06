@@ -1,8 +1,7 @@
-import path from 'path';
 import { existsSync } from 'fs';
-import { InvalidLocalConfig } from '../errors-ts';
-import { ConflictingConfigFiles } from '../errors-ts';
+import path from 'path';
 import getArgs from '../../util/get-args';
+import { ConflictingConfigFiles, InvalidLocalConfig } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';
 
 export default function getLocalPathConfig(prefix: string) {

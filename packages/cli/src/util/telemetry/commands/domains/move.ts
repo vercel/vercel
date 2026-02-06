@@ -1,6 +1,6 @@
+import type { moveSubcommand } from '../../../../commands/domains/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { moveSubcommand } from '../../../../commands/domains/command';
 
 export class DomainsMoveTelemetryClient
   extends TelemetryClient

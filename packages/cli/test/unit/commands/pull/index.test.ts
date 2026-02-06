@@ -1,7 +1,7 @@
 import assert from 'assert';
-import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
+import { describe, expect, it } from 'vitest';
 import pull from '../../../../src/commands/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';

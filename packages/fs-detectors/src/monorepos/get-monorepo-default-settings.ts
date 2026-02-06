@@ -1,10 +1,10 @@
-import { join } from 'path';
-import { monorepoManagers } from './monorepo-managers';
-import { packageManagers } from '../package-managers/package-managers';
-import { DetectorFilesystem } from '../detectors/filesystem';
-import { detectFramework } from '../detect-framework';
 import JSON5 from 'json5';
+import { join } from 'path';
 import semver from 'semver';
+import { detectFramework } from '../detect-framework';
+import { DetectorFilesystem } from '../detectors/filesystem';
+import { packageManagers } from '../package-managers/package-managers';
+import { monorepoManagers } from './monorepo-managers';
 
 export class MissingBuildPipeline extends Error {
   constructor(usesTasks: boolean) {

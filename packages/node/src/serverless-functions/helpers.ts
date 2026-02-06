@@ -1,10 +1,10 @@
-import type { ServerResponse, IncomingMessage } from 'http';
-import { serializeBody } from '../utils';
+import { parse as parseContentType } from 'content-type';
+import etag from 'etag';
+import type { IncomingMessage, ServerResponse } from 'http';
+import { parse as parseQS } from 'querystring';
 import { PassThrough } from 'stream';
 import { parse as parseURL } from 'url';
-import { parse as parseContentType } from 'content-type';
-import { parse as parseQS } from 'querystring';
-import etag from 'etag';
+import { serializeBody } from '../utils';
 
 type VercelRequestCookies = { [key: string]: string };
 type VercelRequestQuery = { [key: string]: string | string[] };
@@ -48,7 +48,7 @@ export function getBodyParser(body: Buffer, contentType: string | undefined) {
       try {
         const str = body.toString();
         return str ? JSON.parse(str) : {};
-      } catch (error) {
+      } catch (_error) {
         throw new ApiError(400, 'Invalid JSON');
       }
     }

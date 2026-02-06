@@ -1,24 +1,23 @@
 import chalk from 'chalk';
-
-import * as ERRORS from '../../util/errors-ts';
-import type Client from '../../util/client';
-import formatNSTable from '../../util/format-ns-table';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import { getDomain } from '../../util/domains/get-domain';
-import { getLinkedProject } from '../../util/projects/link';
-import { isPublicSuffix } from '../../util/domains/is-public-suffix';
-import { getDomainConfig } from '../../util/domains/get-domain-config';
-import { addDomainToProject } from '../../util/projects/add-domain-to-project';
-import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
-import code from '../../util/output/code';
 import output from '../../output-manager';
-import { DomainsAddTelemetryClient } from '../../util/telemetry/commands/domains/add';
-import { addSubcommand } from './command';
+import type Client from '../../util/client';
+import { getDomain } from '../../util/domains/get-domain';
+import { getDomainConfig } from '../../util/domains/get-domain-config';
+import { isPublicSuffix } from '../../util/domains/is-public-suffix';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
+import formatNSTable from '../../util/format-ns-table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import code from '../../util/output/code';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { addDomainToProject } from '../../util/projects/add-domain-to-project';
+import { getLinkedProject } from '../../util/projects/link';
+import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
+import { DomainsAddTelemetryClient } from '../../util/telemetry/commands/domains/add';
+import { addSubcommand } from './command';
 
 export default async function add(client: Client, argv: string[]) {
   const telemetry = new DomainsAddTelemetryClient({

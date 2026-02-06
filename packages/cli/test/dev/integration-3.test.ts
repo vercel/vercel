@@ -1,12 +1,12 @@
 import { spawnAsync } from '@vercel/build-utils';
 import assert from 'assert';
-import { resolve, delimiter } from 'path';
+import { delimiter, resolve } from 'path';
 import {
-  sleep,
-  shouldSkip,
-  fetchWithRetry,
   fetch,
+  fetchWithRetry,
   fixture,
+  shouldSkip,
+  sleep,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
@@ -103,8 +103,6 @@ test('[vercel dev] 08-hugo', async () => {
     );
     await tester();
   } else {
-    // eslint-disable-next-line no-console
-    console.log(`Skipping 08-hugo on platform ${process.platform}`);
   }
 });
 

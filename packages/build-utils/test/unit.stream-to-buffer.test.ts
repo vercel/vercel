@@ -1,6 +1,6 @@
-import { it, describe, expect } from 'vitest';
-import { streamToBufferChunks } from '../src/fs/stream-to-buffer';
 import { Readable } from 'stream';
+import { describe, expect, it } from 'vitest';
+import { streamToBufferChunks } from '../src/fs/stream-to-buffer';
 
 const MB = 1024 * 1024;
 

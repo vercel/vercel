@@ -1,20 +1,20 @@
-import chalk from 'chalk';
 import { isErrnoException } from '@vercel/error-utils';
-import type Client from '../../util/client';
-import output from '../../output-manager';
-import { ensureLink } from '../../util/link/ensure-link';
-import getScope from '../../util/get-scope';
-import { getOrCreateDeploymentProtectionToken } from './bypass-token';
-import { getLinkedProject } from '../../util/projects/link';
-import { getDeploymentUrlById } from './deployment-url';
 import type { ProjectLinked } from '@vercel-internals/types';
+import type arg from 'arg';
+import chalk from 'chalk';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { help } from '../help';
+import getScope from '../../util/get-scope';
+import { ensureLink } from '../../util/link/ensure-link';
 import { getCommandName } from '../../util/pkg-name';
+import { getLinkedProject } from '../../util/projects/link';
 import type { Command } from '../help';
-import type arg from 'arg';
+import { help } from '../help';
+import { getOrCreateDeploymentProtectionToken } from './bypass-token';
+import { getDeploymentUrlById } from './deployment-url';
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;

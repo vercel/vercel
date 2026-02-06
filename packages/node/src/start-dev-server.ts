@@ -1,18 +1,18 @@
-import url from 'url';
-import { createRequire } from 'module';
-import { promises as fsp } from 'fs';
-import { join, dirname, extname } from 'path';
-import _treeKill from 'tree-kill';
-import { promisify } from 'util';
 import {
   BunVersion,
-  walkParentDirs,
   getSupportedBunVersion,
   type StartDevServer,
+  walkParentDirs,
 } from '@vercel/build-utils';
 import { isErrnoException } from '@vercel/error-utils';
 import { getConfig } from '@vercel/static-config';
+import { promises as fsp } from 'fs';
+import { createRequire } from 'module';
+import { dirname, extname, join } from 'path';
+import _treeKill from 'tree-kill';
 import { Project } from 'ts-morph';
+import url from 'url';
+import { promisify } from 'util';
 import {
   forkDevServer,
   readMessage as readDevServerMessage,
@@ -195,7 +195,7 @@ export const startDevServer: StartDevServer = async opts => {
       if (runtime === 'bun') {
         try {
           process.kill(pid, 'SIGTERM');
-        } catch (err) {
+        } catch (_err) {
           // The process might have already exited, for example, if the application
           // handler threw an error. Try terminating the process to be sure.
           await treeKill(pid);

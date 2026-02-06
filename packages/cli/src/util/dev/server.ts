@@ -1,105 +1,101 @@
-import url, { URL } from 'url';
-import http from 'http';
-import fs from 'fs-extra';
-import ms from 'ms';
-import chalk from 'chalk';
-import fetch from 'node-fetch';
-import plural from 'pluralize';
-import rawBody from 'raw-body';
-import { listen } from 'async-listen';
-import minimatch from 'minimatch';
-import httpProxy from 'http-proxy-node16';
-import { randomBytes } from 'crypto';
-import serveHandler from 'serve-handler';
-import { watch, type FSWatcher } from 'chokidar';
-import { parse as parseDotenv } from 'dotenv';
-import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
-import directoryTemplate from 'serve-handler/src/directory';
-import getPort from 'get-port';
-import deepEqual from 'fast-deep-equal';
-import { checkForPort } from './port-utils';
-import npa from 'npm-package-arg';
-import type { ChildProcess } from 'child_process';
-import JSONparse from 'json-parse-better-errors';
-
-import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
-import {
-  getTransformedRoutes,
-  appendRoutesToPhase,
-  type HandleValue,
-  type Route,
-} from '@vercel/routing-utils';
 import {
   type Builder,
   cloneEnv,
   type Env,
-  getNodeBinPaths,
-  type StartDevServerResult,
   FileFsRef,
+  getNodeBinPaths,
   type PackageJson,
-  spawnCommand,
+  type StartDevServerResult,
   shouldUseExperimentalBackends,
+  spawnCommand,
 } from '@vercel/build-utils';
-import {
-  detectBuilders,
-  detectApiDirectory,
-  detectApiExtensions,
-  isOfficialRuntime,
-  type Service,
-} from '@vercel/fs-detectors';
-import { frameworkList } from '@vercel/frameworks';
-
-import cmd from '../output/cmd';
-import link from '../output/link';
-import { relative } from '../path-helpers';
-import getVercelConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors-ts';
-import { getVercelDirectory } from '../projects/link';
-import { staticFiles as getFiles } from '../get-files';
-import { validateConfig } from '../validate-config';
-import { devRouter, getRoutesTypes } from './router';
-import getMimeType from './mime-type';
-import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
-import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import output from '../../output-manager';
-
-// HTML templates
-import errorTemplate from './templates/error';
-import errorTemplateBase from './templates/error_base';
-import errorTemplate404 from './templates/error_404';
-import errorTemplate502 from './templates/error_502';
-import redirectTemplate from './templates/redirect';
-
-import type {
-  VercelConfig,
-  DevServerOptions,
-  BuildMatch,
-  BuildResult,
-  BuilderInputs,
-  BuilderOutput,
-  HttpHandler,
-  InvokePayload,
-  InvokeResult,
-  ListenSpec,
-  RouteResult,
-  HttpHeadersConfig,
-  EnvConfigs,
-} from './types';
-import type { ProjectSettings } from '@vercel-internals/types';
-import { treeKill } from '../tree-kill';
-import { ServicesOrchestrator } from './services-orchestrator';
-import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
-import { formatQueryString, parseQueryString } from './parse-query-string';
+import { fileNameSymbol, getVercelIgnore } from '@vercel/client';
 import {
   errorToString,
   isErrnoException,
   isError,
   isSpawnError,
 } from '@vercel/error-utils';
-import isURL from './is-url';
+import { frameworkList } from '@vercel/frameworks';
+import {
+  detectApiDirectory,
+  detectApiExtensions,
+  detectBuilders,
+  isOfficialRuntime,
+  type Service,
+} from '@vercel/fs-detectors';
+import {
+  appendRoutesToPhase,
+  getTransformedRoutes,
+  type HandleValue,
+  type Route,
+} from '@vercel/routing-utils';
+import type { ProjectSettings } from '@vercel-internals/types';
+import { listen } from 'async-listen';
+import chalk from 'chalk';
+import type { ChildProcess } from 'child_process';
+import { type FSWatcher, watch } from 'chokidar';
+import { randomBytes } from 'crypto';
+import { parse as parseDotenv } from 'dotenv';
+import deepEqual from 'fast-deep-equal';
+import fs from 'fs-extra';
+import getPort from 'get-port';
+import http from 'http';
+import httpProxy from 'http-proxy-node16';
+import JSONparse from 'json-parse-better-errors';
+import minimatch from 'minimatch';
+import ms from 'ms';
+import fetch from 'node-fetch';
+import npa from 'npm-package-arg';
+import path, { basename, dirname, extname, isAbsolute, join } from 'path';
+import plural from 'pluralize';
+import rawBody from 'raw-body';
+import serveHandler from 'serve-handler';
+import directoryTemplate from 'serve-handler/src/directory';
+import url, { URL } from 'url';
+import output from '../../output-manager';
+import getVercelConfigPath from '../config/local-path';
+import { MissingDotenvVarsError } from '../errors-ts';
+import { staticFiles as getFiles } from '../get-files';
+import cmd from '../output/cmd';
+import link from '../output/link';
+import { relative } from '../path-helpers';
+import { getVercelDirectory } from '../projects/link';
 import { pickOverrides } from '../projects/project-settings';
+import { treeKill } from '../tree-kill';
+import { validateConfig } from '../validate-config';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
+import { generateErrorMessage, generateHttpStatusDescription } from './errors';
+import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
+import isURL from './is-url';
+import getMimeType from './mime-type';
 import { replaceLocalhost } from './parse-listen';
+import { formatQueryString, parseQueryString } from './parse-query-string';
+import { checkForPort } from './port-utils';
+import { devRouter, getRoutesTypes } from './router';
+import { ServicesOrchestrator } from './services-orchestrator';
+// HTML templates
+import errorTemplate from './templates/error';
+import errorTemplate404 from './templates/error_404';
+import errorTemplate502 from './templates/error_502';
+import errorTemplateBase from './templates/error_base';
+import redirectTemplate from './templates/redirect';
+import type {
+  BuilderInputs,
+  BuilderOutput,
+  BuildMatch,
+  BuildResult,
+  DevServerOptions,
+  EnvConfigs,
+  HttpHandler,
+  HttpHeadersConfig,
+  InvokePayload,
+  InvokeResult,
+  ListenSpec,
+  RouteResult,
+  VercelConfig,
+} from './types';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -333,8 +329,6 @@ export default class DevServer {
             filesRemovedArray
           ).catch((err: Error) => {
             output.warn(`An error occurred while rebuilding \`${match.src}\`:`);
-            // eslint-disable-next-line no-console
-            console.error(err.stack);
           });
         } else {
           output.debug(
@@ -1385,9 +1379,6 @@ export default class DevServer {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
     } catch (err: unknown) {
-      // eslint-disable-next-line no-console
-      console.error(err);
-
       if (isError(err) && typeof err.stack === 'string') {
         output.debug(err.stack);
       }
@@ -2120,7 +2111,7 @@ export default class DevServer {
           ],
         });
 
-      case 'FileBlob':
+      case 'FileBlob': {
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
           'Content-Type': asset.contentType || getMimeType(assetKey),
@@ -2128,8 +2119,9 @@ export default class DevServer {
         this.setResponseHeaders(res, requestId, headers);
         res.end(asset.data);
         return;
+      }
 
-      case 'Lambda':
+      case 'Lambda': {
         if (!asset.fn) {
           // This is mostly to appease TypeScript since `fn` is an optional prop,
           // but this shouldn't really ever happen since we run the builds before
@@ -2178,9 +2170,7 @@ export default class DevServer {
             Action: 'Invoke',
             body: JSON.stringify(payload),
           });
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error(err);
+        } catch (_err) {
           await this.sendError(
             req,
             res,
@@ -2203,6 +2193,7 @@ export default class DevServer {
           resBody = result.body;
         }
         return res.end(resBody);
+      }
 
       default:
         // This shouldn't really ever happen...
@@ -2437,7 +2428,7 @@ function proxyPass(
   requestId: string,
   ignorePath: boolean = true
 ): void {
-  return devServer.proxy.web(
+  devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
@@ -2721,11 +2712,11 @@ function filterFrontendBuilds(build: Builder) {
 
 function hasNewRoutingProperties(vercelConfig: VercelConfig) {
   return (
-    typeof vercelConfig.cleanUrls !== undefined ||
-    typeof vercelConfig.headers !== undefined ||
-    typeof vercelConfig.redirects !== undefined ||
-    typeof vercelConfig.rewrites !== undefined ||
-    typeof vercelConfig.trailingSlash !== undefined
+    vercelConfig.cleanUrls !== undefined ||
+    vercelConfig.headers !== undefined ||
+    vercelConfig.redirects !== undefined ||
+    vercelConfig.rewrites !== undefined ||
+    vercelConfig.trailingSlash !== undefined
   );
 }
 

@@ -1,15 +1,15 @@
-import { it, expect, describe, beforeEach, vi } from 'vitest';
-import path from 'path';
+import { isObject } from '@vercel/error-utils';
+import fs from 'fs';
 import fetch_ from 'node-fetch';
+import path from 'path';
+import { once, Readable } from 'stream';
+import tar from 'tar-fs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createGunzip } from 'zlib';
+import { createDeployment } from '../src/index';
 import { generateNewToken } from './common';
 import { Deployment } from './types';
-import { createDeployment } from '../src/index';
-import { isObject } from '@vercel/error-utils';
 import { generateFakeFiles, setupTmpDir } from './util/generate-fake-files';
-import tar from 'tar-fs';
-import { createGunzip } from 'zlib';
-import { once, Readable } from 'stream';
-import fs from 'fs';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;

@@ -1,10 +1,10 @@
-import { join } from 'path';
-import { outputJSON, readFile } from 'fs-extra';
 import type { VercelConfig } from '@vercel/client';
-import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
-import type { PartialProjectSettings } from '../input/edit-project-settings';
-import type { Org, Project, ProjectLink } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
+import type { Org, Project, ProjectLink } from '@vercel-internals/types';
+import { outputJSON, readFile } from 'fs-extra';
+import { join } from 'path';
+import type { PartialProjectSettings } from '../input/edit-project-settings';
+import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 
 export type ProjectLinkAndSettings = Partial<ProjectLink> & {
   settings: {

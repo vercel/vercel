@@ -1,28 +1,28 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/error';
+import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
 import add from './add';
-import ls from './ls';
-import pull from './pull';
-import rm from './rm';
-import run, { needsHelpForRun } from './run';
-import update from './update';
 import {
-  envCommand,
   addSubcommand,
+  envCommand,
   listSubcommand,
   pullSubcommand,
   removeSubcommand,
   runSubcommand,
   updateSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
-import { getCommandAliases } from '..';
+import ls from './ls';
+import pull from './pull';
+import rm from './rm';
+import run, { needsHelpForRun } from './run';
+import update from './update';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),

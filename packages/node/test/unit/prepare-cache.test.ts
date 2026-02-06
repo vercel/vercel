@@ -1,6 +1,6 @@
-import { describe, test, expect } from 'vitest';
-import path from 'path';
 import assert from 'assert';
+import path from 'path';
+import { describe, expect, test } from 'vitest';
 import { prepareCache } from '../../src';
 
 describe('prepareCache()', () => {

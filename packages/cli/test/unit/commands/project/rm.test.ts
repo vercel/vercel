@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { useUser } from '../../../mocks/user';
+import { describe, expect, it } from 'vitest';
 import projects from '../../../../src/commands/project';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
+import { useUser } from '../../../mocks/user';
 
 describe('rm', () => {
   describe('--help', () => {

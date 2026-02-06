@@ -1,8 +1,7 @@
-import { join } from 'path';
 import { existsSync, promises } from 'fs';
-
-import { Framework } from './types';
+import { join } from 'path';
 import { readConfigFile } from './read-config-file';
+import { Framework } from './types';
 
 export * from './types';
 
@@ -156,11 +155,11 @@ export const frameworks = [
         const nowRoutes = JSON.parse(content);
         try {
           await unlink(nowRoutesPath);
-        } catch (err) {
+        } catch (_err) {
           // do nothing if deleting the file fails
         }
         return nowRoutes;
-      } catch (err) {
+      } catch (_err) {
         // if the file doesn't exist, we implement gatsby's recommendations
         // https://www.gatsbyjs.org/docs/caching
 

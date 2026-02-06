@@ -1,8 +1,8 @@
+import assert from 'assert';
 import chance from 'chance';
-import { client } from './client';
 import { beforeEach } from 'vitest';
 import { teamCache } from '../../src/util/teams/get-team-by-id';
-import assert from 'assert';
+import { client } from './client';
 
 export type Team = {
   id: string;

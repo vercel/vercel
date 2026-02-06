@@ -1,4 +1,4 @@
-import { detectServices, autoDetectServices } from '../src';
+import { autoDetectServices, detectServices } from '../src';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('autoDetectServices', () => {

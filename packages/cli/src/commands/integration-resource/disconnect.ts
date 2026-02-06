@@ -1,23 +1,23 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
-import { printError } from '../../util/error';
 import {
   disconnectResourceFromAllProjects,
   disconnectResourceFromProject,
 } from '../../util/integration-resource/disconnect-resource-from-project';
 import { getResources } from '../../util/integration-resource/get-resources';
-import { getLinkedProject } from '../../util/projects/link';
-import { IntegrationResourceDisconnectTelemetryClient } from '../../util/telemetry/commands/integration-resource/disconnect';
 import {
   CancelledError,
   FailedError,
   type Resource,
   type ResourceConnection,
 } from '../../util/integration-resource/types';
+import { getLinkedProject } from '../../util/projects/link';
+import { IntegrationResourceDisconnectTelemetryClient } from '../../util/telemetry/commands/integration-resource/disconnect';
 import { disconnectSubcommand } from './command';
 
 export async function disconnect(client: Client) {

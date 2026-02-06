@@ -1,6 +1,6 @@
+import type { Team, User } from '@vercel-internals/types';
 import retry from 'async-retry';
 import { apiFetch } from './api-fetch';
-import type { Team, User } from '@vercel-internals/types';
 
 export function getUser(retries = 3): Promise<User> {
   const url = `/v2/user`;

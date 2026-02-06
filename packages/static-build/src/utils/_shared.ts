@@ -1,5 +1,5 @@
-import { constants, PathLike, promises as fs } from 'fs';
 import { PackageJson } from '@vercel/build-utils';
+import { constants, promises as fs, PathLike } from 'fs';
 import path from 'path';
 
 export type ImagesConfig = {
@@ -30,7 +30,7 @@ export async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await fs.readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     return {};
   }
 }

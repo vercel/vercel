@@ -1,5 +1,5 @@
-import { describe, test, expect } from 'vitest';
-import { Headers, Response, Request } from 'node-fetch';
+import { Headers, Request, Response } from 'node-fetch';
+import { describe, expect, test } from 'vitest';
 import {
   getUrl,
   respond,

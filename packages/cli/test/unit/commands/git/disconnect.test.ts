@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { join } from 'path';
-import fs from 'fs-extra';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { client } from '../../../mocks/client';
-import git from '../../../../src/commands/git';
 import type { Project } from '@vercel-internals/types';
+import fs from 'fs-extra';
+import { join } from 'path';
+import { describe, expect, it } from 'vitest';
+import git from '../../../../src/commands/git';
+import { client } from '../../../mocks/client';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('git disconnect', () => {
   const fixture = (name: string) =>

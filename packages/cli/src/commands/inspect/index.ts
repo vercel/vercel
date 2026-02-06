@@ -1,30 +1,29 @@
-import type { Build, Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
+import type { Build, Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
 import { URL } from 'url';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
-import { displayBuildLogs } from '../../util/logs';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import readStandardInput from '../../util/input/read-standard-input';
+import { displayBuildLogs } from '../../util/logs';
 import buildsList from '../../util/output/builds';
 import elapsed from '../../util/output/elapsed';
 import indent from '../../util/output/indent';
-import { validateJsonOutput } from '../../util/output-format';
 import routesList from '../../util/output/routes';
+import { validateJsonOutput } from '../../util/output-format';
 import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
+import { InspectTelemetryClient } from '../../util/telemetry/commands/inspect';
 import { help } from '../help';
 import { inspectCommand } from './command';
-import output from '../../output-manager';
-
-import { InspectTelemetryClient } from '../../util/telemetry/commands/inspect';
 
 export default async function inspect(client: Client) {
   const { print, error, warn } = output;

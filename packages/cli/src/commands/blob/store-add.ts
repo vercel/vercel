@@ -1,14 +1,14 @@
-import type Client from '../../util/client';
-import output from '../../output-manager';
-import { getLinkedProject } from '../../util/projects/link';
-import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import chalk from 'chalk';
-import { getCommandName } from '../../util/pkg-name';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import { addStoreSubcommand } from './command';
-import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
+import { getCommandName } from '../../util/pkg-name';
+import { getLinkedProject } from '../../util/projects/link';
+import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
+import { addStoreSubcommand } from './command';
 
 export default async function addStore(
   client: Client,

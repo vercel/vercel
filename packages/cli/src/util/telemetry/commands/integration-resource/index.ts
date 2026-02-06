@@ -1,6 +1,6 @@
+import type { integrationResourceCommand } from '../../../../commands/integration-resource/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { integrationResourceCommand } from '../../../../commands/integration-resource/command';
 
 export class IntegrationResourceTelemetryClient
   extends TelemetryClient

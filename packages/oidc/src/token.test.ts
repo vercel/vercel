@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto';
-import { describe, beforeEach, test, vi, expect } from 'vitest';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as fs from 'fs';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 vi.mock('./token-io');
 
+import { refreshToken } from './token';
 import { findRootDir, getUserDataDir } from './token-io';
 import * as tokenUtil from './token-util';
-import { refreshToken } from './token';
 
 describe('refreshToken', () => {
   let rootDir: string;

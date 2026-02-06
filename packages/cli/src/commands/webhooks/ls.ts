@@ -1,21 +1,20 @@
-import ms from 'ms';
 import chalk from 'chalk';
+import ms from 'ms';
 import plural from 'pluralize';
-
-import type Client from '../../util/client';
-import getWebhooks from '../../util/webhooks/get-webhooks';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import formatTable from '../../util/format-table';
-import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
-import { WebhooksLsTelemetryClient } from '../../util/telemetry/commands/webhooks/ls';
-import { listSubcommand } from './command';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import formatTable from '../../util/format-table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import { validateJsonOutput } from '../../util/output-format';
+import { WebhooksLsTelemetryClient } from '../../util/telemetry/commands/webhooks/ls';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import getWebhooks from '../../util/webhooks/get-webhooks';
 import type { Webhook } from '../../util/webhooks/types';
+import { listSubcommand } from './command';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetry = new WebhooksLsTelemetryClient({

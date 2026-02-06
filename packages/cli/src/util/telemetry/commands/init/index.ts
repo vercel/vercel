@@ -1,6 +1,6 @@
+import type { initCommand } from '../../../../commands/init/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { initCommand } from '../../../../commands/init/command';
 
 export class InitTelemetryClient
   extends TelemetryClient

@@ -1,6 +1,6 @@
-import { getPackageJSON } from '../../../../../src/index';
 import fs from 'fs';
 import path from 'path';
+import { getPackageJSON } from '../../../../../src/index';
 
 test('getPackageJSON should return the package.json', () => {
   const expected = JSON.parse(

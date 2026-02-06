@@ -1,6 +1,6 @@
-import { readFile, writeFile, readdir, unlink, rename } from 'node:fs/promises';
-import doT from 'dot';
+import { readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import doT from 'dot';
 
 export async function compileDevTemplates() {
   const dirRoot = new URL('../', import.meta.url);

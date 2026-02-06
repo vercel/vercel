@@ -1,17 +1,18 @@
-import { describe, expect, test, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
+import * as alias from '../../../src/commands/alias/command';
+import { bisectCommand } from '../../../src/commands/bisect/command';
+import * as certs from '../../../src/commands/certs/command';
+import { deployCommand } from '../../../src/commands/deploy/command';
+import dev from '../../../src/commands/dev';
+import * as dns from '../../../src/commands/dns/command';
+import * as domains from '../../../src/commands/domains/command';
+import * as env from '../../../src/commands/env/command';
+import * as git from '../../../src/commands/git/command';
 import {
   help,
   lineToString,
   outputArrayToString,
 } from '../../../src/commands/help';
-import { deployCommand } from '../../../src/commands/deploy/command';
-import * as alias from '../../../src/commands/alias/command';
-import { bisectCommand } from '../../../src/commands/bisect/command';
-import * as certs from '../../../src/commands/certs/command';
-import * as dns from '../../../src/commands/dns/command';
-import * as domains from '../../../src/commands/domains/command';
-import * as env from '../../../src/commands/env/command';
-import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
 import * as integration from '../../../src/commands/integration/command';
@@ -29,7 +30,6 @@ import * as target from '../../../src/commands/target/command';
 import * as teams from '../../../src/commands/teams/command';
 import * as telemetry from '../../../src/commands/telemetry/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
-import dev from '../../../src/commands/dev';
 import { client } from '../../mocks/client';
 
 describe('help command', () => {
@@ -51,12 +51,12 @@ describe('help command', () => {
         line: ['a', '  ', '   ', 'b', 'c'],
         expected: 'a     b c',
       },
-    ])(
-      'should insert spaces between non-whitespace items only; $line',
-      ({ line, expected }) => {
-        expect(lineToString(line)).toBe(expected);
-      }
-    );
+    ])('should insert spaces between non-whitespace items only; $line', ({
+      line,
+      expected,
+    }) => {
+      expect(lineToString(line)).toBe(expected);
+    });
   });
 
   describe('outputArrayToString', () => {

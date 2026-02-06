@@ -1,6 +1,6 @@
 import { join } from 'path';
-import { validateNpmrc } from '../src/validate-npmrc';
 import { describe, expect, it } from 'vitest';
+import { validateNpmrc } from '../src/validate-npmrc';
 
 const fixture = (name: string) => join(__dirname, 'fixtures', '29-npmrc', name);
 

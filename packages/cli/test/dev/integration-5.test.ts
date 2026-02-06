@@ -1,15 +1,15 @@
-import { join } from 'path';
-import ms from 'ms';
+import assert from 'assert';
 import fs, { mkdirp } from 'fs-extra';
+import ms from 'ms';
+import { join } from 'path';
 import {
-  sleep,
   fetch,
   fixture,
+  sleep,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
-import assert from 'assert';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -23,9 +23,7 @@ test(
 
       const firstResponse = await fetch(`http://localhost:${port}`);
       validateResponseHeaders(firstResponse);
-      const body = await firstResponse.text();
-      // eslint-disable-next-line no-console
-      console.log(body);
+      const _body = await firstResponse.text();
       expect(firstResponse.status).toBe(404);
 
       await fs.writeFile(join(directory, 'index.txt'), 'hello');
@@ -174,8 +172,6 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
       await sleep(ms('3s'));
 
       if (Date.now() - start > ms('30s')) {
-        // eslint-disable-next-line no-console
-        console.log('stderr:', stderr.join(''));
         break;
       }
     }

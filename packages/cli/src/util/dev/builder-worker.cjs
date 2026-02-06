@@ -6,11 +6,7 @@
  */
 const { FileFsRef } = require('@vercel/build-utils');
 
-process.on('unhandledRejection', err => {
-  // eslint-disable-next-line no-console
-  console.error('Exiting builder due to build error:');
-  // eslint-disable-next-line no-console
-  console.error(err);
+process.on('unhandledRejection', _err => {
   process.exit(1);
 });
 

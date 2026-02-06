@@ -2,7 +2,7 @@
  * Get example list from extracted folder
  */
 
-import { lstatSync, existsSync, readdirSync } from 'fs';
+import { existsSync, lstatSync, readdirSync } from 'fs';
 
 const exists = (path: string) => existsSync(path);
 const isDotFile = (name: string) => name.startsWith('.');

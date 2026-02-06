@@ -1,6 +1,6 @@
+import type { rollingReleaseCommand } from '../../../../commands/rolling-release/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { rollingReleaseCommand } from '../../../../commands/rolling-release/command';
 
 export class RollingReleaseTelemetryClient
   extends TelemetryClient

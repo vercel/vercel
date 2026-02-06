@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getPaginationOpts } from '../../../src/util/get-pagination-opts';
 import getArgs from '../../../src/util/get-args';
+import { getPaginationOpts } from '../../../src/util/get-pagination-opts';
 
 describe('getOpts', () => {
   it('should throw an error if next not a number', async () => {

@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-
-import { client } from '../../../mocks/client';
 import domains from '../../../../src/commands/domains';
-import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { client } from '../../../mocks/client';
 import { useDomain } from '../../../mocks/domains';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('domains mv', () => {
   describe('--help', () => {

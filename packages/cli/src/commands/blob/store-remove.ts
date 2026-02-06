@@ -1,11 +1,11 @@
+import output from '../../output-manager';
+import type { BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import output from '../../output-manager';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { removeStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
-import type { BlobRWToken } from '../../util/blob/token';
+import { removeStoreSubcommand } from './command';
 
 export default async function removeStore(
   client: Client,

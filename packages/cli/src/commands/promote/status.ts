@@ -1,22 +1,22 @@
-import chalk from 'chalk';
-import type Client from '../../util/client';
 import type {
   Deployment,
   LastAliasRequest,
   PaginationOptions,
   Project,
 } from '@vercel-internals/types';
-import elapsed from '../../util/output/elapsed';
+import chalk from 'chalk';
+import ms from 'ms';
+import output from '../../output-manager';
+import renderAliasStatus from '../../util/alias/render-alias-status';
+import type Client from '../../util/client';
+import { ProjectNotFound } from '../../util/errors-ts';
 import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
+import getScope from '../../util/get-scope';
+import elapsed from '../../util/output/elapsed';
 import { packageName } from '../../util/pkg-name';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import getScope from '../../util/get-scope';
-import ms from 'ms';
-import { ProjectNotFound } from '../../util/errors-ts';
-import renderAliasStatus from '../../util/alias/render-alias-status';
 import sleep from '../../util/sleep';
-import output from '../../output-manager';
 import requestRollingRelease from '../rolling-release/request-rolling-release';
 
 interface DeploymentAlias {
@@ -205,7 +205,7 @@ async function renderJobFailed({
     output.error(
       `Failed to remap all aliases to the requested deployment ${name} (${toDeploymentId})`
     );
-  } catch (e) {
+  } catch (_e) {
     output.error(
       `Failed to remap all aliases to the requested deployment ${toDeploymentId}`
     );

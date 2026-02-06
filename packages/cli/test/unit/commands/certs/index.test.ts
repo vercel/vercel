@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { client } from '../../../mocks/client';
+import { describe, expect, it } from 'vitest';
 import certs from '../../../../src/commands/certs';
+import { client } from '../../../mocks/client';
 
 describe('certs', () => {
   describe('--help', () => {

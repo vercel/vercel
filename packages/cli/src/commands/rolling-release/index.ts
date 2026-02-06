@@ -1,7 +1,16 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import getSubcommand from '../../util/get-subcommand';
+import { getLinkedProject } from '../../util/projects/link';
+import { RollingReleaseTelemetryClient } from '../../util/telemetry/commands/rolling-release';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
+import abortRollingRelease from './abort-rolling-release';
+import approveRollingRelease from './approve-rolling-release';
 import {
   abortSubcommand,
   approveSubcommand,
@@ -11,19 +20,10 @@ import {
   rollingReleaseCommand,
   startSubcommand,
 } from './command';
+import completeRollingRelease from './complete-rolling-release';
+import configureRollingRelease from './configure-rolling-release';
 import requestRollingRelease from './request-rolling-release';
 import startRollingRelease from './start-rolling-release';
-import configureRollingRelease from './configure-rolling-release';
-import approveRollingRelease from './approve-rolling-release';
-import abortRollingRelease from './abort-rolling-release';
-import completeRollingRelease from './complete-rolling-release';
-import { printError } from '../../util/error';
-import output from '../../output-manager';
-import { RollingReleaseTelemetryClient } from '../../util/telemetry/commands/rolling-release';
-import { getLinkedProject } from '../../util/projects/link';
-import getSubcommand from '../../util/get-subcommand';
-import { getCommandAliases } from '..';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 
 const COMMAND_CONFIG = {
   configure: getCommandAliases(configureSubcommand),
@@ -99,11 +99,11 @@ export default async function rollingRelease(client: Client): Promise<number> {
           output.error('Missing required flag --cfg');
           return 1;
         }
-        let cfg = undefined;
+        let cfg;
         if (cfgString !== 'disable') {
           try {
             cfg = JSON.parse(cfgString);
-          } catch (error) {
+          } catch (_error) {
             output.error('Invalid JSON provided for --cfg option.');
             return 1;
           }
@@ -154,7 +154,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         );
         const dpl = subcommandFlags.flags['--dpl'];
         const currentStageIndex = subcommandFlags.flags['--currentStageIndex'];
-        const activeStageIndex = parseInt(currentStageIndex ?? '');
+        const activeStageIndex = parseInt(currentStageIndex ?? '', 10);
         if (!dpl) {
           output.error('Missing required flag --dpl');
           return 1;
@@ -163,7 +163,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
           output.error('Missing required flag --currentStageIndex');
           return 1;
         }
-        if (isNaN(activeStageIndex)) {
+        if (Number.isNaN(activeStageIndex)) {
           output.error('--currentStageIndex must be a valid number.');
           return 1;
         }

@@ -1,7 +1,7 @@
+import { rm, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { writeFile, rm } from 'fs/promises';
-import { readConfigFile } from '../src';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readConfigFile } from '../src';
 
 describe('Test `readConfigFile()`', () => {
   let logMessages: string[];

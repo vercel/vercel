@@ -1,7 +1,7 @@
-import os from 'os';
 import etag from 'etag';
-import { join } from 'path';
 import { copySync, existsSync } from 'fs-extra';
+import os from 'os';
+import { join } from 'path';
 import { getPageName } from './utils';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');

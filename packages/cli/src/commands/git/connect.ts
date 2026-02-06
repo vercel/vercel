@@ -1,25 +1,25 @@
 import type { Dictionary } from '@vercel/client';
+import type { Org, Project } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { join } from 'path';
-import type { Org, Project } from '@vercel-internals/types';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import link from '../../util/output/link';
-import { getCommandName } from '../../util/pkg-name';
-import {
-  type RepoInfo,
-  parseRepoUrl,
-  selectAndParseRemoteUrl,
-  printRemoteUrls,
-  checkExistsAndConnect,
-} from '../../util/git/connect-git-provider';
-import output from '../../output-manager';
-import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
-import { connectSubcommand } from './command';
+import {
+  checkExistsAndConnect,
+  parseRepoUrl,
+  printRemoteUrls,
+  type RepoInfo,
+  selectAndParseRemoteUrl,
+} from '../../util/git/connect-git-provider';
 import { ensureLink } from '../../util/link/ensure-link';
+import link from '../../util/output/link';
+import { getCommandName } from '../../util/pkg-name';
+import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
+import { connectSubcommand } from './command';
 
 interface ConnectArgParams {
   client: Client;

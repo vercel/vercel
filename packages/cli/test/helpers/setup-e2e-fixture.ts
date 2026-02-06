@@ -1,7 +1,7 @@
-import path from 'path';
 import fs from 'fs-extra';
-import prepareFixtures from './prepare';
+import path from 'path';
 import getGlobalDir from './get-global-dir';
+import prepareFixtures from './prepare';
 
 function getTmpFixturesDir() {
   return path.join(getGlobalDir(), 'tmp-fixtures');

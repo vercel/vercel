@@ -1,23 +1,23 @@
 import chalk from 'chalk';
 import { getSubdomain } from 'tldts';
-import * as ERRORS from '../../util/errors-ts';
-import type Client from '../../util/client';
+import output from '../../output-manager';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
-import dnsTable from '../../util/format-dns-table';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
+import handleCertError from '../../util/certs/handle-cert-error';
+import startCertOrder from '../../util/certs/start-cert-order';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import * as ERRORS from '../../util/errors-ts';
+import dnsTable from '../../util/format-dns-table';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import startCertOrder from '../../util/certs/start-cert-order';
-import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
-import output from '../../output-manager';
 import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/issue';
 import { issueSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/error';
 
 export default async function issue(
   client: Client,

@@ -1,6 +1,6 @@
+import type { domainsCommand } from '../../../../commands/domains/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { domainsCommand } from '../../../../commands/domains/command';
 
 export class DomainsTelemetryClient
   extends TelemetryClient

@@ -184,39 +184,44 @@ describe('detectServices', () => {
       expect(result.services[0].consumer).toBeUndefined();
     });
 
-    it.each(['1api', 'my service', 'my.service', 'api_', 'api-'])(
-      'should reject invalid service name "%s"',
-      async name => {
-        const fs = new VirtualFilesystem({
-          'vercel.json': JSON.stringify({
-            experimentalServices: {
-              [name]: { entrypoint: 'index.ts', routePrefix: '/' },
-            },
-          }),
-        });
-        const result = await detectServices({ fs });
+    it.each([
+      '1api',
+      'my service',
+      'my.service',
+      'api_',
+      'api-',
+    ])('should reject invalid service name "%s"', async name => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            [name]: { entrypoint: 'index.ts', routePrefix: '/' },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
 
-        expect(result.services).toEqual([]);
-        expect(result.errors[0].code).toBe('INVALID_SERVICE_NAME');
-      }
-    );
+      expect(result.services).toEqual([]);
+      expect(result.errors[0].code).toBe('INVALID_SERVICE_NAME');
+    });
 
-    it.each(['api', 'my-api', 'my_service', 'MyService'])(
-      'should accept valid service name "%s"',
-      async name => {
-        const fs = new VirtualFilesystem({
-          'vercel.json': JSON.stringify({
-            experimentalServices: {
-              [name]: { entrypoint: 'index.ts', routePrefix: '/' },
-            },
-          }),
-        });
-        const result = await detectServices({ fs });
+    it.each([
+      'api',
+      'my-api',
+      'my_service',
+      'MyService',
+    ])('should accept valid service name "%s"', async name => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            [name]: { entrypoint: 'index.ts', routePrefix: '/' },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
 
-        expect(result.services).toHaveLength(1);
-        expect(result.errors).toEqual([]);
-      }
-    );
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+    });
 
     it('should error when web service is missing routePrefix', async () => {
       const fs = new VirtualFilesystem({

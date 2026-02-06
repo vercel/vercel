@@ -1,21 +1,21 @@
+import type { Cert } from '@vercel-internals/types';
 import chalk from 'chalk';
 import ms from 'ms';
-import table from '../../util/output/table';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCerts from '../../util/certs/get-certs';
-import type { Cert } from '@vercel-internals/types';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { CertsLsTelemetryClient } from '../../util/telemetry/commands/certs/ls';
-import { listSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
+import getCerts from '../../util/certs/get-certs';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import table from '../../util/output/table';
+import { getCommandName } from '../../util/pkg-name';
+import { CertsLsTelemetryClient } from '../../util/telemetry/commands/certs/ls';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { listSubcommand } from './command';
 
 async function ls(client: Client, argv: string[]): Promise<number> {
   const { telemetryEventStore } = client;

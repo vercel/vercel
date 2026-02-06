@@ -1,17 +1,17 @@
+import type { PackageJson } from '@vercel/build-utils';
 import type {
-  Route,
   RouteWithHandle as Handler,
+  Route,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
-import type { PackageJson } from '@vercel/build-utils';
 import {
-  detectBuilders,
-  detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  detectBuilders,
+  detectOutputDirectory,
 } from '../src';
-import { REGEX_NON_VERCEL_PLATFORM_FILES } from '../src/detect-builders';
 import type { Options } from '../src/detect-builders';
+import { REGEX_NON_VERCEL_PLATFORM_FILES } from '../src/detect-builders';
 
 /**
  * calls `detectBuilders`, smooths over `builders` return type, throws when `errors` has a value
@@ -629,7 +629,7 @@ describe('Test `detectBuilders`', () => {
     const files = ['api/user.php'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
-      // @ts-ignore - allow bad type to be passed in
+      // @ts-expect-error - allow bad type to be passed in
       functions,
     });
 
@@ -719,7 +719,7 @@ describe('Test `detectBuilders`', () => {
     const files = ['api/test.js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
-      // @ts-ignore - allow bad type to be passed in
+      // @ts-expect-error - allow bad type to be passed in
       functions,
     });
 
@@ -734,7 +734,7 @@ describe('Test `detectBuilders`', () => {
     const files = ['api/test.js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
-      // @ts-ignore - allow bad type to be passed in
+      // @ts-expect-error - allow bad type to be passed in
       functions,
     });
 
@@ -1995,7 +1995,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const files = ['api/user.php'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
-      // @ts-ignore - allow bad type to be passed in
+      // @ts-expect-error - allow bad type to be passed in
       functions,
       featHandleMiss,
     });
@@ -2092,7 +2092,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const files = ['api/test.js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
-      // @ts-ignore - allow bad type to be passed in
+      // @ts-expect-error - allow bad type to be passed in
       functions,
       featHandleMiss,
     });
@@ -2108,7 +2108,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const files = ['api/test.js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
-      // @ts-ignore - allow bad type to be passed in
+      // @ts-expect-error - allow bad type to be passed in
       functions,
       featHandleMiss,
     });

@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest';
+import { expect, it } from 'vitest';
 import { cloneEnv } from '../src';
 
 it('should clone env with Path', () => {

@@ -1,6 +1,7 @@
 import Module from 'module';
-import { handle as handleHono } from '../hono.js';
 import { handle as handleExpress } from '../express.js';
+import { handle as handleHono } from '../hono.js';
+
 // Disabling network blocking logic while introspection is opt-in
 // import './block-network.js';
 

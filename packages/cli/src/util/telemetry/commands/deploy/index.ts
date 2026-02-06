@@ -1,8 +1,8 @@
-import { TelemetryClient } from '../..';
-import type { TelemetryMethods } from '../../types';
+import { VALID_ARCHIVE_FORMATS } from '@vercel/client';
 import type { deployCommand } from '../../../../commands/deploy/command';
 import { deprecatedArchiveSplitTgz } from '../../../../commands/deploy/command';
-import { VALID_ARCHIVE_FORMATS } from '@vercel/client';
+import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
 
 export class DeployTelemetryClient
   extends TelemetryClient

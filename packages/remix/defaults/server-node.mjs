@@ -1,10 +1,10 @@
-import {
-  createRequestHandler as createRemixRequestHandler,
-  createReadableStreamFromReadable,
-  writeReadableStreamToWritable,
-  installGlobals,
-} from '@remix-run/node';
 import * as build from '@remix-run/dev/server-build';
+import {
+  createReadableStreamFromReadable,
+  createRequestHandler as createRemixRequestHandler,
+  installGlobals,
+  writeReadableStreamToWritable,
+} from '@remix-run/node';
 
 installGlobals({
   nativeFetch:

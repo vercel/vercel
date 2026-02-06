@@ -1,10 +1,10 @@
-import title from 'title';
-import { formatEnvironment } from '../target/format-environment';
 import type {
   CustomEnvironment,
   ProjectEnvVariable,
   ProjectLinked,
 } from '@vercel-internals/types';
+import title from 'title';
+import { formatEnvironment } from '../target/format-environment';
 
 export default function formatEnvironments(
   link: ProjectLinked,

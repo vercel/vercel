@@ -1,7 +1,7 @@
-import { relative, join } from 'node:path';
-import { readFile, lstat } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 import { isNativeError } from 'node:util/types';
-import { FileFsRef, glob, debug, type Files } from '@vercel/build-utils';
+import { debug, FileFsRef, type Files, glob } from '@vercel/build-utils';
 import {
   nodeFileTrace as nft,
   resolve as nftResolveDependency,

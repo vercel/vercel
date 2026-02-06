@@ -1,10 +1,10 @@
+import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
+import { cloneEnv } from '@vercel/build-utils';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
-import { spawn } from 'node:child_process';
-import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
-import { cloneEnv } from '@vercel/build-utils';
 
 const LogLabel = `['telemetry']:`;
 

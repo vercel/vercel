@@ -1,7 +1,7 @@
-import { join } from 'path';
-import { promises as fs } from 'fs';
 import { BuildResultV2, Meta } from '@vercel/build-utils';
 import { Framework } from '@vercel/frameworks';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 
 const BUILD_OUTPUT_DIR = '.vercel/output';
 

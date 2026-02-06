@@ -18,6 +18,6 @@ export const deploymentCompletedStates: Deployment['readyState'][] = [
  * @returns `true` if in a pending deployment state, otherwise `false` if it's
  * ready/canceled/errored
  */
-export function isDeploying(readyState: Deployment['readyState']): Boolean {
+export function isDeploying(readyState: Deployment['readyState']): boolean {
   return deploymentInProgressStates.includes(readyState);
 }

@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import path from 'path';
-import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
-import { download, glob, FileBlob } from '../src';
+import fs, { readlink } from 'fs-extra';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { download, FileBlob, glob } from '../src';
 
 describe('download()', () => {
   let warningMessages: string[];

@@ -1,12 +1,12 @@
-import generateCertForDeploy from './generate-cert-for-deploy';
-import * as ERRORS_TS from '../errors-ts';
-import { NowError } from '../now-error';
-import mapCertError from '../certs/map-cert-error';
+import type { ArchiveFormat, DeploymentError } from '@vercel/client';
 import type { Org } from '@vercel-internals/types';
 import type Now from '..';
 import type { CreateOptions } from '..';
+import mapCertError from '../certs/map-cert-error';
 import type Client from '../client';
-import type { ArchiveFormat, DeploymentError } from '@vercel/client';
+import * as ERRORS_TS from '../errors-ts';
+import { NowError } from '../now-error';
+import generateCertForDeploy from './generate-cert-for-deploy';
 
 export default async function createDeploy(
   client: Client,

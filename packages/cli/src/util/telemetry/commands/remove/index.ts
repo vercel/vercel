@@ -1,6 +1,6 @@
+import type { removeCommand } from '../../../../commands/remove/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { removeCommand } from '../../../../commands/remove/command';
 
 export class RemoveTelemetryClient
   extends TelemetryClient

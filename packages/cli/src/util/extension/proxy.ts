@@ -1,14 +1,14 @@
-import { createServer } from 'http';
-import { Headers } from 'node-fetch';
-import type { HeadersInit } from 'node-fetch';
 import {
-  toOutgoingHeaders,
-  mergeIntoServerResponse,
   buildToHeaders,
+  mergeIntoServerResponse,
+  toOutgoingHeaders,
 } from '@edge-runtime/node-utils';
 import type { Server } from 'http';
-import type Client from '../client';
+import { createServer } from 'http';
+import type { HeadersInit } from 'node-fetch';
+import { Headers } from 'node-fetch';
 import output from '../../output-manager';
+import type Client from '../client';
 
 const toHeaders = buildToHeaders({
   Headers: Headers as unknown as typeof globalThis.Headers,

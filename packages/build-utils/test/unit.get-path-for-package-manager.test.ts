@@ -1,6 +1,6 @@
 import { delimiter } from 'path';
+import { describe, expect, test } from 'vitest';
 import { getPathForPackageManager } from '../src';
-import { describe, test, expect } from 'vitest';
 import { getNodeVersionByMajor } from '../src/fs/node-version';
 
 describe('Test `getPathForPackageManager()`', () => {

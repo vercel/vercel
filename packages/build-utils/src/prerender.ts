@@ -1,5 +1,5 @@
-import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
+import type { Chain, File, HasField } from './types';
 
 interface PrerenderOptions {
   expiration: number | false;

@@ -1,10 +1,10 @@
-import type { Prettify, ToTitleCase } from '../types';
 import type {
   Command,
   CommandArgument,
   CommandOption,
   PrimitiveConstructor,
 } from '../../commands/help';
+import type { Prettify, ToTitleCase } from '../types';
 
 // ToTelemetryOptionNameByType<'foo', BooleanConstructor> → 'trackCliFlagFoo'
 // ToTelemetryOptionNameByType<'foo', StringConstructor> → 'trackCliOptionFoo'

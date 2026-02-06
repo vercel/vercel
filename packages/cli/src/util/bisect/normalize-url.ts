@@ -1,4 +1,4 @@
-function hasScheme(url: string): Boolean {
+function hasScheme(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 

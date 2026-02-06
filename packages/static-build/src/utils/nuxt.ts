@@ -1,6 +1,6 @@
+import { PackageJson } from '@vercel/build-utils';
 import { join } from 'path';
 import { update } from 'rc9';
-import { PackageJson } from '@vercel/build-utils';
 import { DeepWriteable, readPackageJson, writePackageJson } from './_shared';
 
 // https://github.com/nuxt-modules/web-vitals

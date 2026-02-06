@@ -1,5 +1,5 @@
-import type Client from '../client';
 import chalk from 'chalk';
+import type Client from '../client';
 
 export type VercelAuthSetting = 'standard' | 'none';
 export const DEFAULT_VERCEL_AUTH_SETTING: VercelAuthSetting = 'standard';

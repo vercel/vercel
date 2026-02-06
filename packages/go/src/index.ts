@@ -1,51 +1,50 @@
-import execa from 'execa';
-import retry from 'async-retry';
-import { homedir, tmpdir } from 'os';
-import { spawn } from 'child_process';
-import { Readable } from 'stream';
 import once from '@tootallnate/once';
-import { basename, dirname, join, normalize, posix, relative } from 'path';
-import {
-  readFile,
-  writeFile,
-  lstat,
-  pathExists,
-  mkdirp,
-  move,
-  readlink,
-  remove,
-  rmdir,
-  readdir,
-  unlink,
-  copy,
-} from 'fs-extra';
 import {
   BuildOptions,
+  cloneEnv,
+  debug,
+  download,
   Files,
+  getProvidedRuntime,
+  getWriteableDirectory,
+  glob,
+  Lambda,
   PrepareCacheOptions,
   StartDevServerOptions,
   StartDevServerResult,
-  glob,
-  download,
-  Lambda,
-  getWriteableDirectory,
   shouldServe,
-  debug,
-  cloneEnv,
-  getProvidedRuntime,
 } from '@vercel/build-utils';
+import retry from 'async-retry';
+import { spawn } from 'child_process';
+import execa from 'execa';
+import {
+  copy,
+  lstat,
+  mkdirp,
+  move,
+  pathExists,
+  readdir,
+  readFile,
+  readlink,
+  remove,
+  rmdir,
+  unlink,
+  writeFile,
+} from 'fs-extra';
+import { homedir, tmpdir } from 'os';
+import { basename, dirname, join, normalize, posix, relative } from 'path';
+import { Readable } from 'stream';
 
 const TMP = tmpdir();
 
+import { detectGoEntrypoint, GO_CANDIDATE_ENTRYPOINTS } from './entrypoint';
 import {
-  localCacheDir,
   createGo,
-  getAnalyzedEntrypoint,
   GoWrapper,
+  getAnalyzedEntrypoint,
+  localCacheDir,
   OUT_EXTENSION,
 } from './go-helpers';
-
-import { GO_CANDIDATE_ENTRYPOINTS, detectGoEntrypoint } from './entrypoint';
 
 import {
   buildStandaloneServer,
@@ -601,7 +600,7 @@ async function cleanupFileSystem({
  * the work path root
  */
 async function findGoModPath(entrypointDir: string, workPath: string) {
-  let goModPath: string | undefined = undefined;
+  let goModPath: string | undefined;
   let isGoModInRootDir = false;
   let dir = entrypointDir;
 

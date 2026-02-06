@@ -1,20 +1,20 @@
-export type { Request, Geo } from './headers';
-export { geolocation, ipAddress } from './headers';
-export { getEnv } from './get-env';
-export { waitUntil } from './wait-until';
-export { rewrite, next } from './middleware';
+export { addCacheTag } from './addcachetag';
+export type { AddCacheTagApi } from './addcachetag/types';
 export { getCache } from './cache';
+export type { RuntimeCache } from './cache/types';
 export {
   attachDatabasePool,
   experimental_attachDatabasePool,
 } from './db-connections';
-export type { RuntimeCache } from './cache/types';
+export { getEnv } from './get-env';
+export type { Geo, Request } from './headers';
+export { geolocation, ipAddress } from './headers';
+export { next, rewrite } from './middleware';
 export {
-  invalidateByTag,
+  dangerouslyDeleteBySrcImage,
   dangerouslyDeleteByTag,
   invalidateBySrcImage,
-  dangerouslyDeleteBySrcImage,
+  invalidateByTag,
 } from './purge';
-export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';
-export { addCacheTag } from './addcachetag';
-export type { AddCacheTagApi } from './addcachetag/types';
+export type { DangerouslyDeleteOptions, PurgeApi } from './purge/types';
+export { waitUntil } from './wait-until';

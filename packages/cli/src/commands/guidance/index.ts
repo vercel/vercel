@@ -1,21 +1,21 @@
+import output from '../../output-manager';
+import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
+import { GuidanceTelemetryClient } from '../../util/telemetry/commands/guidance';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
-import status from './status';
-import enable from './enable';
-import disable from './disable';
 import {
   disableSubcommand,
   enableSubcommand,
-  statusSubcommand,
   guidanceCommand,
+  statusSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { GuidanceTelemetryClient } from '../../util/telemetry/commands/guidance';
-import output from '../../output-manager';
-import type Client from '../../util/client';
-import { getCommandAliases } from '..';
+import disable from './disable';
+import enable from './enable';
+import status from './status';
 
 const COMMAND_CONFIG = {
   status: getCommandAliases(statusSubcommand),

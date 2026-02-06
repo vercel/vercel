@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createRoutes, Router, deploymentEnv } from './router';
 import { cacheHeader } from 'pretty-cache-header';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createRoutes, deploymentEnv, Router } from './router';
 
 describe('Router', () => {
   let router: Router;

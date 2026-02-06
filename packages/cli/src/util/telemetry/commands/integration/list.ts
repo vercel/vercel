@@ -1,6 +1,6 @@
+import type { listSubcommand } from '../../../../commands/integration/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { listSubcommand } from '../../../../commands/integration/command';
 
 export class IntegrationListTelemetryClient
   extends TelemetryClient

@@ -1,24 +1,24 @@
 import chalk from 'chalk';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import stamp from '../../util/output/stamp';
+import getDomainByName from '../../util/domains/get-domain-by-name';
+import { getDomainConfig } from '../../util/domains/get-domain-config';
+import getDomainPrice from '../../util/domains/get-domain-price';
+import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import { printError } from '../../util/error';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
 import formatTable from '../../util/format-table';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import { getCommandName } from '../../util/pkg-name';
-import { getDomainConfig } from '../../util/domains/get-domain-config';
-import code from '../../util/output/code';
-import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
-import { DomainsInspectTelemetryClient } from '../../util/telemetry/commands/domains/inspect';
-import output from '../../output-manager';
-import { inspectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import code from '../../util/output/code';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
+import { DomainsInspectTelemetryClient } from '../../util/telemetry/commands/domains/inspect';
+import { inspectSubcommand } from './command';
 
 export default async function inspect(client: Client, argv: string[]) {
   const telemetry = new DomainsInspectTelemetryClient({

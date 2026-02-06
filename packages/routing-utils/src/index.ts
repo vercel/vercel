@@ -17,6 +17,7 @@ import {
   RouteApiError,
   RouteWithHandle,
 } from './types';
+
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
 export * from './schemas';
@@ -149,7 +150,7 @@ function checkRegexSyntax(
 ): string | null {
   try {
     new RegExp(src);
-  } catch (err) {
+  } catch (_err) {
     const prop = type === 'Route' ? 'src' : 'source';
     return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
@@ -173,7 +174,7 @@ function checkPatternSyntax(
   const destinationSegments = new Set<string>();
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
-  } catch (err) {
+  } catch (_err) {
     return {
       message: `${type} at index ${index} has invalid \`source\` pattern "${source}".`,
       link: 'https://vercel.link/invalid-route-source-pattern',
@@ -195,7 +196,7 @@ function checkPatternSyntax(
           destinationSegments.add(name)
         );
       }
-    } catch (err) {
+    } catch (_err) {
       // Since checkPatternSyntax() is a validation helper, we don't want to
       // replicate all possible URL parsing here so we consume the error.
       // If this really is an error, we'll throw later in convertRedirects().

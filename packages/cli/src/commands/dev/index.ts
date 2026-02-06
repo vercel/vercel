@@ -1,25 +1,24 @@
-import path from 'path';
-import chalk from 'chalk';
 import type { PackageJson } from '@vercel/build-utils';
-
-import { parseArguments } from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
+import { isErrnoException } from '@vercel/error-utils';
+import chalk from 'chalk';
+import path from 'path';
+import output from '../../output-manager';
 import type Client from '../../util/client';
-import { NowError } from '../../util/now-error';
+import readConfig from '../../util/config/read-config';
 import { printError } from '../../util/error';
+import { CantParseJSONFile } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import { NowError } from '../../util/now-error';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
-import dev from './dev';
-import readConfig from '../../util/config/read-config';
+import { getCommandName, packageName } from '../../util/pkg-name';
 import readJSONFile from '../../util/read-json-file';
-import { packageName, getCommandName } from '../../util/pkg-name';
-import { CantParseJSONFile } from '../../util/errors-ts';
-import { isErrnoException } from '@vercel/error-utils';
+import { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { help } from '../help';
 import { devCommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { DevTelemetryClient } from '../../util/telemetry/commands/dev';
+import dev from './dev';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],

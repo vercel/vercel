@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { join } from 'path';
-import { getVercelIgnore } from '../src';
 import { describe, it } from 'vitest';
+import { getVercelIgnore } from '../src';
 
 describe('Test `getVercelIgnore()`', () => {
   it('Should read `.nowignore`', async () => {

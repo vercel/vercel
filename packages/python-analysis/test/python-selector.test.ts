@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { Pep440Constraint } from '../src/manifest/pep440';
 import {
-  selectPython,
-  pythonVersionToString,
-  pep440ConstraintsToString,
-  implementationsMatch,
-  variantsMatch,
-  buildMatchesRequest,
   buildMatchesConstraint,
+  buildMatchesRequest,
+  implementationsMatch,
+  pep440ConstraintsToString,
+  pythonVersionToString,
+  selectPython,
+  variantsMatch,
 } from '../src/manifest/python-selector';
 import {
   PythonBuild,
@@ -16,7 +17,6 @@ import {
   PythonVariant,
   PythonVersion,
 } from '../src/manifest/python-specifiers';
-import { Pep440Constraint } from '../src/manifest/pep440';
 
 // Helper to create a PythonBuild for testing
 function makeBuild(

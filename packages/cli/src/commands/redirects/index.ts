@@ -1,30 +1,30 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/error';
+import { RedirectsTelemetryClient } from '../../util/telemetry/commands/redirects';
+import { getCommandAliases } from '..';
 import { type Command, help } from '../help';
-import list from './list';
-import listVersions from './list-versions';
 import add from './add';
-import upload from './upload';
-import remove from './remove';
-import promote from './promote';
-import restore from './restore';
 import {
-  redirectsCommand,
+  addSubcommand,
   listSubcommand,
   listVersionsSubcommand,
-  addSubcommand,
-  uploadSubcommand,
-  removeSubcommand,
   promoteSubcommand,
+  redirectsCommand,
+  removeSubcommand,
   restoreSubcommand,
+  uploadSubcommand,
 } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
-import { getCommandAliases } from '..';
-import { RedirectsTelemetryClient } from '../../util/telemetry/commands/redirects';
+import list from './list';
+import listVersions from './list-versions';
+import promote from './promote';
+import remove from './remove';
+import restore from './restore';
+import upload from './upload';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),

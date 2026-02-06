@@ -1,57 +1,57 @@
-import ms from 'ms';
-import path from 'path';
-import fetch from 'node-fetch';
-import getPort from 'get-port';
-import isPortReachable from 'is-port-reachable';
-import frameworks, { Framework } from '@vercel/frameworks';
-import {
-  spawn,
-  spawnSync,
-  type ChildProcess,
-  type SpawnOptions,
-} from 'child_process';
-import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
-import { cpus } from 'os';
 import {
   BuildV2,
-  Files,
   Config,
-  PackageJson,
-  PrepareCache,
-  glob,
+  cloneEnv,
+  debug,
+  defaultCachePathGlob,
   download,
   execCommand,
-  spawnCommand,
-  runNpmInstall,
+  Files,
   getEnvForPackageManager,
-  getPrefixedEnvVars,
-  getNodeBinPaths,
-  runBundleInstall,
-  runPipInstall,
-  runPackageJsonScript,
-  runShellScript,
-  getNodeVersion,
-  debug,
-  NowBuildError,
-  scanParentDirs,
-  cloneEnv,
   getInstalledPackageVersion,
-  defaultCachePathGlob,
+  getNodeBinPaths,
+  getNodeVersion,
+  getPrefixedEnvVars,
+  glob,
+  NowBuildError,
+  PackageJson,
+  PrepareCache,
+  runBundleInstall,
+  runNpmInstall,
+  runPackageJsonScript,
+  runPipInstall,
+  runShellScript,
+  scanParentDirs,
+  spawnCommand,
 } from '@vercel/build-utils';
-import type { Route, RouteWithSrc } from '@vercel/routing-utils';
-import * as BuildOutputV1 from './utils/build-output-v1';
-import * as BuildOutputV2 from './utils/build-output-v2';
-import * as BuildOutputV3 from './utils/build-output-v3';
-import * as GatsbyUtils from './utils/gatsby';
-import * as NuxtUtils from './utils/nuxt';
-import type { ImagesConfig, BuildConfig } from './utils/_shared';
-import treeKill from 'tree-kill';
+import frameworks, { Framework } from '@vercel/frameworks';
 import {
   detectFrameworkRecord,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
-import { getHugoUrl } from './utils/hugo';
+import type { Route, RouteWithSrc } from '@vercel/routing-utils';
+import {
+  type ChildProcess,
+  type SpawnOptions,
+  spawn,
+  spawnSync,
+} from 'child_process';
 import { once } from 'events';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'fs';
+import getPort from 'get-port';
+import isPortReachable from 'is-port-reachable';
+import ms from 'ms';
+import fetch from 'node-fetch';
+import { cpus } from 'os';
+import path from 'path';
+import treeKill from 'tree-kill';
+import type { BuildConfig, ImagesConfig } from './utils/_shared';
+import * as BuildOutputV1 from './utils/build-output-v1';
+import * as BuildOutputV2 from './utils/build-output-v2';
+import * as BuildOutputV3 from './utils/build-output-v3';
+import * as GatsbyUtils from './utils/gatsby';
+import { getHugoUrl } from './utils/hugo';
+import * as NuxtUtils from './utils/nuxt';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -87,7 +87,7 @@ function validateDistDir(distDir: string, workPath: string) {
       try {
         const vercelJson = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
         buildCommandExists = vercelJson.buildCommand !== undefined;
-      } catch (e) {
+      } catch (_e) {
         // Ignore JSON parse errors, fallback to default messaging
       }
     }
@@ -607,7 +607,7 @@ export const build: BuildV2 = async ({
       await GatsbyUtils.createPluginSymlinks(entrypointDir);
     }
 
-    let gemHome: string | undefined = undefined;
+    let gemHome: string | undefined;
     const pathList = [];
 
     if (isNpmInstall || (pkg && (buildCommand || devCommand))) {
@@ -712,7 +712,7 @@ export const build: BuildV2 = async ({
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
-        } catch (err) {
+        } catch (_err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );

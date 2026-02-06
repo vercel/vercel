@@ -1,4 +1,6 @@
 import bytes from 'bytes';
+import chalk from 'chalk';
+import { format } from 'date-fns';
 import output from '../../output-manager';
 import type { BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
@@ -6,10 +8,8 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
-import { getStoreSubcommand } from './command';
-import { format } from 'date-fns';
-import chalk from 'chalk';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
+import { getStoreSubcommand } from './command';
 
 export default async function getStore(
   client: Client,

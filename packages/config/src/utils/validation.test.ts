@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  validateRegexPattern,
-  parseCronExpression,
-  createCronExpression,
-  countCaptureGroups,
-  validateCaptureGroupReferences,
   type CronPart,
+  countCaptureGroups,
+  createCronExpression,
+  parseCronExpression,
+  validateCaptureGroupReferences,
+  validateRegexPattern,
 } from './validation';
 
 describe('Regex Validation', () => {

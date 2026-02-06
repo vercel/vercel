@@ -1,6 +1,6 @@
+import type { envCommand } from '../../../../commands/env/command';
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { envCommand } from '../../../../commands/env/command';
 
 export class EnvTelemetryClient
   extends TelemetryClient

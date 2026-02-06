@@ -1,19 +1,19 @@
-import { FilesMap } from './utils/hashes';
-import { generateQueryString } from './utils/query-string';
-import { isReady, isAliasAssigned } from './utils/ready-state';
 import { checkDeploymentStatus } from './check-deployment-status';
 import {
-  fetch,
-  prepareFiles,
-  createDebug,
-  getApiDeploymentsUrl,
-} from './utils';
-import {
   Deployment,
+  DeploymentEventType,
   DeploymentOptions,
   VercelClientOptions,
-  DeploymentEventType,
 } from './types';
+import {
+  createDebug,
+  fetch,
+  getApiDeploymentsUrl,
+  prepareFiles,
+} from './utils';
+import { FilesMap } from './utils/hashes';
+import { generateQueryString } from './utils/query-string';
+import { isAliasAssigned, isReady } from './utils/ready-state';
 
 async function* postDeployment(
   files: FilesMap,
@@ -66,10 +66,10 @@ async function* postDeployment(
       }
     );
 
-    let deployment = undefined;
+    let deployment;
     try {
       deployment = await response.json();
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Invalid JSON response');
     }
 

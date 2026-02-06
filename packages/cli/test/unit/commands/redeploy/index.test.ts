@@ -1,12 +1,12 @@
+import type { Deployment } from '@vercel-internals/types';
 import { describe, expect, it } from 'vitest';
-import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
 import redeploy from '../../../../src/commands/redeploy';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
 import { useDeployment } from '../../../mocks/deployment';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import type { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
   describe('--help', () => {

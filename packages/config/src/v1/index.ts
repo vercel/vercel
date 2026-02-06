@@ -1,17 +1,17 @@
-export { createRoutes, routes, Router } from '../router';
 export * from '../router';
-export { VercelConfig } from '../types';
+export { createRoutes, Router, routes } from '../router';
 export type {
+  Condition,
+  HeaderRule,
   Redirect,
   Rewrite,
-  HeaderRule,
-  Condition,
   RouteType,
 } from '../types';
+export { VercelConfig } from '../types';
 export {
-  validateStaticString,
   validateStaticBoolean,
-  validateStaticObject,
-  validateStaticStringArray,
   validateStaticFields,
+  validateStaticObject,
+  validateStaticString,
+  validateStaticStringArray,
 } from '../utils/validation';
