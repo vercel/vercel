@@ -234,7 +234,7 @@ function formatRoutesTable(
 ): string {
   const rows: string[][] = routes.map((rule, index) => {
     const typeLabels = getRouteTypeLabels(rule);
-    const status = rule.enabled === false ? chalk.gray('Disabled') : '';
+    const status = rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
     const prefix = actionSymbol || '';
     const colorFn =
       actionSymbol === '+'
@@ -275,7 +275,7 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
     const typeLabels = getRouteTypeLabels(rule);
     const syntaxLabel = getSrcSyntaxLabel(rule);
     const statusText =
-      rule.enabled === false ? chalk.gray('Disabled') : chalk.green('Enabled');
+      rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
     const stagedText = rule.staged ? chalk.yellow(' (staged)') : '';
 
     lines.push(
