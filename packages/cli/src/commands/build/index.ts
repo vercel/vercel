@@ -535,6 +535,11 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
+  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
+    const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
+    await emitFlagsDefinitions(cwd, process.env);
+  }
+
   // Get a list of source files
   const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
