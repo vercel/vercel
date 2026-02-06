@@ -111,6 +111,8 @@ const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
 // related PR: https://github.com/vercel/next.js/pull/84643
 const IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION = 'v16.0.0';
+// this version is minimum our Vercel adapter expects to match
+const MINIMUM_NEXT_ADAPTER_VERSION = 'v16.2.0-canary.28';
 
 export const MAX_AGE_ONE_YEAR = 31536000;
 
@@ -511,9 +513,8 @@ export const build: BuildV2 = async buildOptions => {
   if (
     // integration tests expect outputs object
     !process.env.NEXT_BUILDER_INTEGRATION &&
-    process.env.NEXT_ENABLE_ADAPTER
-    // TODO: replace above opt-in with Next.js version
-    // semver.gte(nextVersion, '16.1.1-canary.18', { includePrerelease: true })
+    process.env.NEXT_ENABLE_ADAPTER &&
+    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
   ) {
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
     env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
