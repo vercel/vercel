@@ -184,7 +184,7 @@ describe('detectServices', () => {
       expect(result.services[0].consumer).toBeUndefined();
     });
 
-    it.each(['1api', 'my service', 'my.service'])(
+    it.each(['1api', 'my service', 'my.service', 'api_', 'api-'])(
       'should reject invalid service name "%s"',
       async name => {
         const fs = new VirtualFilesystem({

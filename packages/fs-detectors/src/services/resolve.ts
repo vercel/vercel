@@ -15,7 +15,7 @@ import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
-const SERVICE_NAME_REGEX = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 
 /**
  * Validate a service configuration from vercel.json experimentalServices.
@@ -27,7 +27,7 @@ export function validateServiceConfig(
   if (!SERVICE_NAME_REGEX.test(name)) {
     return {
       code: 'INVALID_SERVICE_NAME',
-      message: `Service name "${name}" is invalid. Names must start with a letter and contain only alphanumeric characters, hyphens, and underscores.`,
+      message: `Service name "${name}" is invalid. Names must start with a letter, end with an alphanumeric character, and contain only alphanumeric characters, hyphens, and underscores.`,
       serviceName: name,
     };
   }
