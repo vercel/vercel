@@ -67,7 +67,7 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { ProxyAgent } from 'proxy-agent';
+import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -83,6 +83,18 @@ const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
 const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+
+// Check if proxy environment variables are configured
+function hasProxyConfig(): boolean {
+  return [
+    'HTTP_PROXY',
+    'HTTPS_PROXY',
+    'http_proxy',
+    'https_proxy',
+    'ALL_PROXY',
+    'all_proxy',
+  ].some(v => process.env[v]);
+}
 
 /*
   By default, node throws EPIPE errors if process.stdout is being written to
@@ -343,8 +355,14 @@ const main = async () => {
   // Shared API `Client` instance for all sub-commands to utilize
   // When an agent is detected, --non-interactive is effectively the default
   const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
+
+  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
+  const agent = hasProxyConfig()
+    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
+    : new HttpsAgent({ keepAlive: true });
+
   client = new Client({
-    agent: new ProxyAgent({ keepAlive: true }),
+    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
