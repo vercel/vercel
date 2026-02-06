@@ -102,6 +102,81 @@ describe('routes reorder', () => {
     await expect(client.stderr).toOutput('already at position');
   });
 
+  it('should reorder with --position after:<id>', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      'after:route-3-id',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Moved');
+  });
+
+  it('should reorder with --position before:<id>', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 4',
+      '--position',
+      'before:route-2-id',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Moved');
+  });
+
+  it('should error on invalid position', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      'invalid',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('Invalid position');
+  });
+
+  it('should reorder with --position first alias', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 3',
+      '--position',
+      'first',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Moved');
+  });
+
+  it('should reorder with --position last alias', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      'last',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Moved');
+  });
+
   it('should error when no args provided', async () => {
     useStageRoutes();
     client.setArgv('routes', 'reorder');

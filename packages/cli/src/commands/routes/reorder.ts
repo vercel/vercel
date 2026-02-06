@@ -80,50 +80,62 @@ export default async function reorder(client: Client, argv: string[]) {
   } else if (lastFlag) {
     targetIndex = routes.length - 1;
   } else if (positionFlag) {
-    try {
-      const pos = parsePosition(positionFlag, routes.length);
-
-      if (pos.placement === 'start') {
-        // Check for numeric position encoded in referenceId
-        if (pos.referenceId?.startsWith('__numeric:')) {
-          targetIndex = parseInt(pos.referenceId.slice(10), 10) - 1; // 1-based to 0-based
-        } else {
-          targetIndex = 0;
-        }
-      } else if (pos.placement === 'end') {
-        targetIndex = routes.length - 1;
-      } else if (pos.placement === 'after' && pos.referenceId) {
-        const refIndex = routes.findIndex(r => r.id === pos.referenceId);
-        if (refIndex === -1) {
-          output.error(
-            `Reference route "${pos.referenceId}" not found. Run ${chalk.cyan(
-              getCommandName('routes list')
-            )} to see route IDs.`
-          );
+    // Handle 'first'/'last' aliases
+    if (positionFlag === 'first') {
+      targetIndex = 0;
+    } else if (positionFlag === 'last') {
+      targetIndex = routes.length - 1;
+    } else {
+      // Try numeric position (1-based)
+      const num = parseInt(positionFlag, 10);
+      if (!isNaN(num) && String(num) === positionFlag) {
+        if (num < 1) {
+          output.error('Position must be 1 or greater.');
           return 1;
         }
-        targetIndex = refIndex + 1;
-        if (targetIndex >= routes.length) targetIndex = routes.length - 1;
-      } else if (pos.placement === 'before' && pos.referenceId) {
-        const refIndex = routes.findIndex(r => r.id === pos.referenceId);
-        if (refIndex === -1) {
-          output.error(
-            `Reference route "${pos.referenceId}" not found. Run ${chalk.cyan(
-              getCommandName('routes list')
-            )} to see route IDs.`
-          );
-          return 1;
-        }
-        targetIndex = refIndex;
+        targetIndex = Math.min(num - 1, routes.length - 1);
       } else {
-        output.error('Invalid position specification.');
-        return 1;
+        // Delegate to shared parsePosition for start/end/before/after
+        try {
+          const pos = parsePosition(positionFlag);
+
+          if (pos.placement === 'start') {
+            targetIndex = 0;
+          } else if (pos.placement === 'end') {
+            targetIndex = routes.length - 1;
+          } else if (pos.placement === 'after' && pos.referenceId) {
+            const refIndex = routes.findIndex(r => r.id === pos.referenceId);
+            if (refIndex === -1) {
+              output.error(
+                `Reference route "${pos.referenceId}" not found. Run ${chalk.cyan(
+                  getCommandName('routes list')
+                )} to see route IDs.`
+              );
+              return 1;
+            }
+            targetIndex = Math.min(refIndex + 1, routes.length - 1);
+          } else if (pos.placement === 'before' && pos.referenceId) {
+            const refIndex = routes.findIndex(r => r.id === pos.referenceId);
+            if (refIndex === -1) {
+              output.error(
+                `Reference route "${pos.referenceId}" not found. Run ${chalk.cyan(
+                  getCommandName('routes list')
+                )} to see route IDs.`
+              );
+              return 1;
+            }
+            targetIndex = refIndex;
+          } else {
+            output.error('Invalid position specification.');
+            return 1;
+          }
+        } catch (e) {
+          output.error(
+            `${e instanceof Error ? e.message : 'Invalid position'}. Usage: ${getCommandName('routes reorder <name-or-id> --position <pos>')}`
+          );
+          return 1;
+        }
       }
-    } catch (e) {
-      output.error(
-        `${e instanceof Error ? e.message : 'Invalid position'}. Usage: ${getCommandName('routes reorder <name-or-id> --position <pos>')}`
-      );
-      return 1;
     }
   } else {
     // Interactive mode: show current routes and ask for position
