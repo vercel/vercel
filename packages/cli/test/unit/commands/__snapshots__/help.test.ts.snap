@@ -1117,7 +1117,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
-
+"
    ▲ vercel dev [dir] [options]
 
   Starts the \`vercel dev\` server.                                               
