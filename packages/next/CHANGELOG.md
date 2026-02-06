@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.25
+
+### Patch Changes
+
+- [next] Apply routes-manifest onMatchHeaders ([#14903](https://github.com/vercel/vercel/pull/14903))
+
+- Make adapters flag explicit value for opt-in ([#14905](https://github.com/vercel/vercel/pull/14905))
+
 ## 4.15.24
 
 ### Patch Changes
