@@ -1118,7 +1118,7 @@ export const build: BuildV2 = async buildOptions => {
           continue: true,
           important: true,
         },
-        ...onMatchHeaders.map(h => ({ ...h, important: true })),
+        ...onMatchHeaders,
 
         // error handling
         ...(output[path.posix.join('./', entryDirectory, '404')] ||
