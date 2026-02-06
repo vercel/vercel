@@ -10,6 +10,7 @@ import {
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
+  getServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -534,6 +535,11 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
+  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
+    const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
+    await emitFlagsDefinitions(cwd, process.env);
+  }
+
   // Get a list of source files
   const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
@@ -592,6 +598,24 @@ async function doBuild(
 
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
+
+    // Inject service URL environment variables so they're available during builds.
+    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+    // these env vars are baked into the client bundle so they can be accessed in the client code.
+    // User-defined env vars take precedence and won't be overwritten.
+    if (detectedServices && detectedServices.length > 0) {
+      const serviceUrlEnvVars = getServiceUrlEnvVars({
+        services: detectedServices,
+        frameworkList,
+        currentEnv: process.env,
+        deploymentUrl: process.env.VERCEL_URL,
+      });
+
+      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+        process.env[key] = value;
+        output.debug(`Injected service URL env var: ${key}=${value}`);
+      }
+    }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     zeroConfigRoutes.push(

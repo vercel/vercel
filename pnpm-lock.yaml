@@ -1695,8 +1695,8 @@ importers:
         version: 1.1.1
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.3
-        version: 0.0.1-beta.3(next@16.1.6)
+        specifier: 0.0.1-beta.5
+        version: 0.0.1-beta.5(next@16.1.6)
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -2007,6 +2007,10 @@ importers:
         version: 2.0.1(@types/node@20.11.0)
 
   packages/python:
+    dependencies:
+      '@vercel/python-analysis':
+        specifier: workspace:*
+        version: link:../python-analysis
     devDependencies:
       '@renovatebot/pep440':
         specifier: 4.2.1
@@ -6279,8 +6283,8 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.3(next@16.1.6):
-    resolution: {integrity: sha512-LHVCr1MNmlWaSD7bqB/p8Gs7kj22ej6NtHN9LRzRaNtI0hdAG22QfAluOCvx88NhFtyX0Ik16iK4bsrechHzyg==}
+  /@next-community/adapter-vercel@0.0.1-beta.5(next@16.1.6):
+    resolution: {integrity: sha512-r/+209HdUzVGP//cmpe5ugkI52pr2olUi0GRxcj+rJZu9FA59lynuUuKUsXHPNmvbcCr8xGHjT4cSVNbbBf1vg==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'

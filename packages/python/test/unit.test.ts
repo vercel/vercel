@@ -47,6 +47,29 @@ const origPath = process.env.PATH;
 /** Tracks mock Python versions for uv python list output */
 let mockInstalledVersions: string[] = [];
 
+/** Creates a mock UvRunner class for tests */
+function createMockUvRunner(options?: {
+  onSync?: () => void;
+  onPip?: () => void;
+  onLock?: () => void;
+}) {
+  return class MockUvRunner {
+    constructor() {}
+    getPath() {
+      return '/mock/uv';
+    }
+    async sync() {
+      options?.onSync?.();
+    }
+    async pip() {
+      options?.onPip?.();
+    }
+    async lock() {
+      options?.onLock?.();
+    }
+  };
+}
+
 vi.setConfig({ testTimeout: 30 * 1000 });
 
 beforeEach(() => {
@@ -623,7 +646,7 @@ function makeMockPython(version: string) {
     'utf8'
   );
 
-  // mock uv: handle `python list` command and also ensure uv.lock exists for other commands
+  // mock uv: handle `python list` command, succeed for all other commands
   const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
   if (isWin) {
     const uvWinScript = [
@@ -632,9 +655,6 @@ function makeMockPython(version: string) {
       'if "%1"=="python" if "%2"=="list" (',
       `  type "${uvPythonListFile}"`,
       '  exit /b 0',
-      ')',
-      'if not exist "uv.lock" (',
-      '  echo [mock]>uv.lock',
       ')',
       'rem always succeed',
       'exit /b 0',
@@ -648,9 +668,6 @@ function makeMockPython(version: string) {
       'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
       `  /bin/cat "${uvPythonListFile}"`,
       '  exit 0',
-      'fi',
-      'if [ ! -f "uv.lock" ]; then',
-      '  echo "[mock]" > uv.lock',
       'fi',
       '# always succeed',
       'exit 0',
@@ -885,23 +902,18 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
     // Setup mocked Python + uv
     makeMockPython('3.9');
 
-    // Override the mock uv binary to emulate workspace behavior: write the lockfile
-    // at the workspace root (two levels up from apps/python-app2).
-    // Also handle `python list` command for version detection.
+    // Override the mock uv binary to emulate workspace behavior.
+    // The lock command will create uv.lock at workspace root via repoRoot setup.
     const isWin = process.platform === 'win32';
     const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
     const uvPythonListFile = path.join(tmpPythonDir, 'uv-python-list.json');
     if (isWin) {
       const uvWinScript = [
         '@echo off',
-        'rem mock uv binary (workspace): write uv.lock at workspace root',
+        'rem mock uv binary (workspace)',
         'if "%1"=="python" if "%2"=="list" (',
         `  type "${uvPythonListFile}"`,
         '  exit /b 0',
-        ')',
-        'set LOCK=..\\..\\uv.lock',
-        'if not exist "%LOCK%" (',
-        '  echo [mock]>"%LOCK%"',
         ')',
         'exit /b 0',
         '',
@@ -910,13 +922,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
     } else {
       const uvPosixScript = [
         '#!/bin/sh',
-        '# mock uv binary (workspace): write uv.lock at workspace root',
+        '# mock uv binary (workspace)',
         'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
         `  /bin/cat "${uvPythonListFile}"`,
         '  exit 0',
-        'fi',
-        'if [ ! -f "../../uv.lock" ]; then',
-        '  echo "[mock]" > ../../uv.lock',
         'fi',
         'exit 0',
         '',
@@ -924,6 +933,9 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       fs.writeFileSync(uvBin, uvPosixScript, 'utf8');
       fs.chmodSync(uvBin, 0o755);
     }
+
+    // Create uv.lock at workspace root (repoRoot) to simulate workspace lockfile
+    fs.writeFileSync(path.join(repoRoot, 'uv.lock'), '[mock]\n', 'utf8');
 
     const files = {
       'main.py': new FileBlob({
@@ -1092,13 +1104,30 @@ describe('fastapi entrypoint discovery - positive cases', () => {
 });
 
 describe('pyproject.toml entrypoint detection', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    vi.doUnmock('../src/uv');
+  });
+
   it('resolves FastAPI entrypoint from pyproject scripts (uvicorn module:attr)', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
     const workPath = path.join(
       tmpdir(),
       `python-pyproject-fastapi-${Date.now()}`
     );
     fs.mkdirSync(path.join(workPath, 'backend', 'api'), { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'pyproject.toml': new FileBlob({
@@ -1109,7 +1138,7 @@ describe('pyproject.toml entrypoint detection', () => {
       }),
     } as Record<string, FileBlob>;
 
-    const result = await build({
+    const result = await buildWithMocks({
       workPath,
       files,
       entrypoint: 'missing.py',
@@ -1129,12 +1158,20 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 
   it('resolves Flask entrypoint from pyproject scripts (module:attr -> .py)', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
     const workPath = path.join(
       tmpdir(),
       `python-pyproject-flask-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'pyproject.toml': new FileBlob({
@@ -1145,7 +1182,7 @@ describe('pyproject.toml entrypoint detection', () => {
       }),
     } as Record<string, FileBlob>;
 
-    const result = await build({
+    const result = await buildWithMocks({
       workPath,
       files,
       entrypoint: 'missing.py',
@@ -1165,9 +1202,17 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 
   it('falls back to package __init__.py when module path has no .py file', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
     const workPath = path.join(tmpdir(), `python-pyproject-init-${Date.now()}`);
     fs.mkdirSync(path.join(workPath, 'backend', 'server'), { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'pyproject.toml': new FileBlob({
@@ -1178,7 +1223,7 @@ describe('pyproject.toml entrypoint detection', () => {
       }),
     } as Record<string, FileBlob>;
 
-    const result = await build({
+    const result = await buildWithMocks({
       workPath,
       files,
       entrypoint: 'missing.py',
@@ -1415,7 +1460,7 @@ describe('.python-version file priority', () => {
     );
   });
 
-  it('warns and falls back to default when .python-version has invalid content', async () => {
+  it('throws error when .python-version has invalid content', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       '.python-version': new FileBlob({ data: 'invalid-version\n' }),
@@ -1424,24 +1469,16 @@ describe('.python-version file priority', () => {
       }),
     } as Record<string, FileBlob>;
 
-    await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'handler.py',
-      meta: { isDev: false },
-      config: {},
-      repoRootPath: mockWorkPath,
-    });
-
-    // Should warn about invalid .python-version and fall back to default
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Warning: Python version "invalid-version" detected in .python-version is invalid'
-      )
-    );
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using python version: 3.12')
-    );
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/could not parse \.python-version file/i);
   });
 });
 
@@ -1824,12 +1861,7 @@ describe('custom install hooks', () => {
       await vi.importActual<typeof import('../src/uv')>('../src/uv');
     vi.doMock('../src/uv', () => ({
       ...realUv,
-      UvRunner: class MockUvRunner {
-        constructor() {}
-        async sync() {
-          mockUvSync();
-        }
-      },
+      UvRunner: createMockUvRunner({ onSync: mockUvSync }),
     }));
 
     // Import after mocks are configured
