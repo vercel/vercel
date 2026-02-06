@@ -723,6 +723,11 @@ async function doBuild(
       }
 
       const isFrontendBuilder = build.config && 'framework' in build.config;
+      // For services builds, the builder framework is set by the service resolver,
+      // the project-level framework is 'services'.
+      const builderFramework =
+        build.config?.framework ?? projectSettings.framework;
+
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
@@ -731,7 +736,7 @@ async function doBuild(
             installCommand: projectSettings.installCommand ?? undefined,
             devCommand: projectSettings.devCommand ?? undefined,
             buildCommand: projectSettings.buildCommand ?? undefined,
-            framework: projectSettings.framework,
+            framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
           }

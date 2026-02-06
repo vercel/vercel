@@ -59,6 +59,7 @@ export async function getPyprojectEntrypoint(
 
 /**
  * Detect a Python entrypoint for any Python framework using AST-based detection.
+ * Searches within `workPath` only — callers handle workspace scoping.
  */
 export async function detectGenericPythonEntrypoint(
   workPath: string,
@@ -81,11 +82,8 @@ export async function detectGenericPythonEntrypoint(
     }
 
     // Search candidate locations using AST-based detection
-    const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
-
-    for (const candidate of candidates) {
+    for (const candidate of PYTHON_CANDIDATE_ENTRYPOINTS) {
+      if (!fsFiles[candidate]) continue;
       const isValid = await isPythonEntrypoint(fsFiles[candidate] as FileFsRef);
       if (isValid) {
         debug(`Detected Python entrypoint: ${candidate}`);
@@ -102,17 +100,44 @@ export async function detectGenericPythonEntrypoint(
 }
 
 /**
- * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
+ * Run the full detection pipeline (AST candidates + pyproject.toml) in a single directory.
+ * Returns a path relative to `dir`.
+ */
+async function detectInDir(
+  dir: string,
+  entrypoint: string
+): Promise<string | null> {
+  const detected = await detectGenericPythonEntrypoint(dir, entrypoint);
+  if (detected) return detected;
+  return getPyprojectEntrypoint(dir);
+}
+
+/**
+ * Detect a Python entrypoint path for a given framework relative to workPath,
+ * or return null if not found.
+ *
+ * When the configured entrypoint is in a subdirectory (e.g. `backend/index.py`
+ * for a services workspace), we scope detection to that workspace first, then
+ * fall back to the project root.
  */
 export async function detectPythonEntrypoint(
   _framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
 ): Promise<string | null> {
-  const entrypoint = await detectGenericPythonEntrypoint(
-    workPath,
-    configuredEntrypoint
-  );
-  if (entrypoint) return entrypoint;
-  return await getPyprojectEntrypoint(workPath);
+  const workspaceDir = pathPosix.dirname(configuredEntrypoint);
+  const hasWorkspace = workspaceDir && workspaceDir !== '.';
+
+  // When the entrypoint is in a subdirectory, scope detection there first
+  if (hasWorkspace) {
+    const localEntrypoint = pathPosix.basename(configuredEntrypoint);
+    const result = await detectInDir(
+      join(workPath, workspaceDir),
+      localEntrypoint
+    );
+    if (result) return pathPosix.join(workspaceDir, result);
+  }
+
+  // Fall back to the project root
+  return detectInDir(workPath, configuredEntrypoint);
 }
