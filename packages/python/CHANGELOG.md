@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
 ## 6.6.0
 
 ### Minor Changes

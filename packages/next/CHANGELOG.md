@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.24
+
+### Patch Changes
+
+- Add version gate for adapters opt-in ([#14896](https://github.com/vercel/vercel/pull/14896))
+
 ## 4.15.23
 
 ### Patch Changes
