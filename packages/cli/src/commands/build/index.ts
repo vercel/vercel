@@ -534,8 +534,8 @@ async function doBuild(
   ) {
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
-  
-  if (process.env.VERCEL_BUILD_EMIT_FLAG_DEFINITIONS === '1') {
+
+  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
     const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
     await emitFlagsDefinitions(cwd, process.env);
   }
