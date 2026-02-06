@@ -72,4 +72,12 @@ describe('routes delete', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Route A');
   });
+
+  it('should work with rm alias', async () => {
+    useDeleteRoute();
+    client.setArgv('routes', 'rm', 'Route A', '--yes');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Deleted');
+  });
 });
