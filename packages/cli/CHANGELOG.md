@@ -1,5 +1,18 @@
 # vercel
 
+## 50.13.0
+
+### Minor Changes
+
+- Adds experimental support for embedding Vercel Flags definitions during build. ([#14838](https://github.com/vercel/vercel/pull/14838))
+
+  When `VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1` is set, the CLI scans environment variables for Vercel Flags SDK keys (prefixed with `vf_`) and fetches their flag definitions. The definitions are written to a synthetic `@vercel/flags-definitions` module in `node_modules` that can be imported at runtime.
+
+### Patch Changes
+
+- Updated dependencies [[`a172b3c68ba75bf8f9e517fe476cebe2e32bdb8c`](https://github.com/vercel/vercel/commit/a172b3c68ba75bf8f9e517fe476cebe2e32bdb8c), [`d59e76b47c3a491afe5dff6ee76224ed77ac8d74`](https://github.com/vercel/vercel/commit/d59e76b47c3a491afe5dff6ee76224ed77ac8d74)]:
+  - @vercel/next@4.15.25
+
 ## 50.12.3
 
 ### Patch Changes
