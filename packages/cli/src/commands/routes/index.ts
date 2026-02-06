@@ -14,6 +14,10 @@ import {
   listVersionsSubcommand,
   inspectSubcommand,
   addSubcommand,
+  deleteSubcommand,
+  enableSubcommand,
+  disableSubcommand,
+  reorderSubcommand,
   publishSubcommand,
   restoreSubcommand,
   discardSubcommand,
@@ -28,6 +32,10 @@ const COMMAND_CONFIG = {
   'list-versions': getCommandAliases(listVersionsSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
+  delete: getCommandAliases(deleteSubcommand),
+  enable: getCommandAliases(enableSubcommand),
+  disable: getCommandAliases(disableSubcommand),
+  reorder: getCommandAliases(reorderSubcommand),
   publish: getCommandAliases(publishSubcommand),
   restore: getCommandAliases(restoreSubcommand),
   'discard-staging': getCommandAliases(discardSubcommand),
@@ -107,6 +115,38 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'delete':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(deleteSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      return (await import('./delete')).default(client, args);
+    case 'enable':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(enableSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandEnable(subcommandOriginal);
+      return (await import('./enable')).default(client, args);
+    case 'disable':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(disableSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandDisable(subcommandOriginal);
+      return (await import('./disable')).default(client, args);
+    case 'reorder':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(reorderSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandReorder(subcommandOriginal);
+      return (await import('./reorder')).default(client, args);
     case 'publish':
       if (needHelp) {
         telemetry.trackCliFlagHelp('routes', subcommandOriginal);

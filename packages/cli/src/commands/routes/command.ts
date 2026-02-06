@@ -447,6 +447,151 @@ export const discardSubcommand = {
   ],
 } as const;
 
+export const deleteSubcommand = {
+  name: 'delete',
+  aliases: ['rm'],
+  description: 'Delete one or more routing rules',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete a route by name',
+      value: `${packageName} routes delete "Old Redirect"`,
+    },
+    {
+      name: 'Delete a route by ID',
+      value: `${packageName} routes delete abc123`,
+    },
+    {
+      name: 'Delete multiple routes',
+      value: `${packageName} routes delete "Route A" "Route B"`,
+    },
+    {
+      name: 'Delete without confirmation',
+      value: `${packageName} routes delete "Old Route" --yes`,
+    },
+  ],
+} as const;
+
+export const enableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Enable a disabled routing rule',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Enable a route by name',
+      value: `${packageName} routes enable "API Proxy"`,
+    },
+    {
+      name: 'Enable a route by ID',
+      value: `${packageName} routes enable abc123`,
+    },
+  ],
+} as const;
+
+export const disableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Disable a routing rule without deleting it',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Disable a route by name',
+      value: `${packageName} routes disable "API Proxy"`,
+    },
+    {
+      name: 'Disable a route by ID',
+      value: `${packageName} routes disable abc123`,
+    },
+  ],
+} as const;
+
+export const reorderSubcommand = {
+  name: 'reorder',
+  aliases: ['move'],
+  description: 'Move a routing rule to a different position',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'position',
+      description:
+        'Target position: start, end, a number (1-based), before:<id>, after:<id>',
+      shorthand: null,
+      type: String,
+      argument: 'POSITION',
+      deprecated: false,
+    },
+    {
+      name: 'first',
+      description: 'Move to the first position (highest priority)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'last',
+      description: 'Move to the last position (lowest priority)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when reordering',
+    },
+  ],
+  examples: [
+    {
+      name: 'Move to first position',
+      value: `${packageName} routes reorder "Catch All" --first`,
+    },
+    {
+      name: 'Move to last position',
+      value: `${packageName} routes reorder "Catch All" --last`,
+    },
+    {
+      name: 'Move to a specific position',
+      value: `${packageName} routes reorder "API Proxy" --position 3`,
+    },
+    {
+      name: 'Move after another route',
+      value: `${packageName} routes reorder "API Proxy" --position after:route-id-123`,
+    },
+    {
+      name: 'Interactive reorder (prompts for position)',
+      value: `${packageName} routes reorder "API Proxy"`,
+    },
+  ],
+} as const;
+
 export const routesCommand = {
   name: 'routes',
   aliases: [],
@@ -458,6 +603,10 @@ export const routesCommand = {
     listVersionsSubcommand,
     inspectSubcommand,
     addSubcommand,
+    deleteSubcommand,
+    enableSubcommand,
+    disableSubcommand,
+    reorderSubcommand,
     publishSubcommand,
     restoreSubcommand,
     discardSubcommand,

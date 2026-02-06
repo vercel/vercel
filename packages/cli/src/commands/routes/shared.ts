@@ -12,6 +12,7 @@ import type {
   RouteType,
   RoutePosition,
   RouteVersion,
+  RoutePosition,
 } from '../../util/routes/types';
 
 export interface ParsedSubcommand {
@@ -301,6 +302,173 @@ export function getRouteTypeDisplayLabel(route: RoutingRule): string | null {
   };
 
   return typeLabels[route.routeType] ?? null;
+}
+
+/**
+ * Resolves a single route identifier (name or ID) to a RoutingRule.
+ * Tries exact ID match first, then case-insensitive name match.
+ * If multiple routes match, prompts the user to select interactively.
+ * Returns null if not found or selection is cancelled.
+ */
+export async function resolveRoute(
+  client: Client,
+  routes: RoutingRule[],
+  identifier: string
+): Promise<RoutingRule | null> {
+  // Exact ID match
+  const byId = routes.find(r => r.id === identifier);
+  if (byId) return byId;
+
+  // Case-insensitive name match
+  const query = identifier.toLowerCase();
+  const matches = routes.filter(
+    r =>
+      r.name.toLowerCase() === query ||
+      r.name.toLowerCase().includes(query) ||
+      r.id.toLowerCase().includes(query)
+  );
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  if (matches.length === 1) {
+    return matches[0];
+  }
+
+  // Multiple matches — interactive disambiguation
+  const selectedId = await client.input.select({
+    message: `Multiple routes match "${identifier}". Select one:`,
+    choices: matches.map(route => ({
+      value: route.id,
+      name: `${route.name} ${chalk.gray(`(${route.route.src})`)}`,
+    })),
+  });
+
+  return matches.find(r => r.id === selectedId) ?? null;
+}
+
+/**
+ * Resolves multiple route identifiers to RoutingRules.
+ * Returns null if any identifier cannot be resolved.
+ * Deduplicates resolved routes by ID.
+ */
+export async function resolveRoutes(
+  client: Client,
+  routes: RoutingRule[],
+  identifiers: string[]
+): Promise<RoutingRule[] | null> {
+  const resolved = new Map<string, RoutingRule>();
+
+  for (const identifier of identifiers) {
+    const route = await resolveRoute(client, routes, identifier);
+    if (!route) {
+      output.error(
+        `No route found matching "${identifier}". Run ${chalk.cyan(
+          getCommandName('routes list')
+        )} to see all routes.`
+      );
+      return null;
+    }
+    resolved.set(route.id, route);
+  }
+
+  return Array.from(resolved.values());
+}
+
+/**
+ * Offers to auto-promote if this is the only staged change.
+ * Used after delete, enable, disable, reorder, and add operations.
+ */
+export async function offerAutoPromote(
+  client: Client,
+  projectId: string,
+  version: RouteVersion,
+  hadExistingStagingVersion: boolean,
+  opts: { teamId?: string; skipPrompts?: boolean }
+): Promise<void> {
+  // Dynamic import to avoid circular dependencies
+  const { default: updateRouteVersion } = await import(
+    '../../util/routes/update-route-version'
+  );
+  const { default: stamp } = await import('../../util/output/stamp');
+
+  if (!hadExistingStagingVersion && !opts.skipPrompts) {
+    output.print('\n');
+    const shouldPromote = await client.input.confirm(
+      'This is the only staged change. Promote to production now?',
+      false
+    );
+
+    if (shouldPromote) {
+      const promoteStamp = stamp();
+      output.spinner('Promoting to production');
+
+      await updateRouteVersion(client, projectId, version.id, 'promote', {
+        teamId: opts.teamId,
+      });
+
+      output.log(
+        `${chalk.cyan('Promoted')} to production ${chalk.gray(promoteStamp())}`
+      );
+    }
+  } else if (hadExistingStagingVersion) {
+    output.warn(
+      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
+    );
+  }
+}
+
+/**
+ * Parses a position string into a RoutePosition object.
+ * Supports: start, end, after:<id>, before:<id>, and numeric positions (1-based).
+ */
+export function parsePosition(
+  position: string,
+  totalRoutes?: number
+): RoutePosition {
+  if (position === 'start' || position === 'first') {
+    return { placement: 'start' };
+  }
+  if (position === 'end' || position === 'last') {
+    return { placement: 'end' };
+  }
+
+  // Check for numeric position (1-based)
+  const num = parseInt(position, 10);
+  if (!isNaN(num) && String(num) === position) {
+    if (num < 1) {
+      throw new Error('Position must be 1 or greater');
+    }
+    if (totalRoutes !== undefined && num > totalRoutes) {
+      return { placement: 'end' };
+    }
+    // Convert 1-based to placement: position 1 = start, last = end
+    if (num === 1) {
+      return { placement: 'start' };
+    }
+    // For numeric positions > 1, we'll handle this in the reorder command
+    // by computing the target index directly
+    return { placement: 'start', referenceId: `__numeric:${num}` };
+  }
+
+  if (position.startsWith('after:')) {
+    const referenceId = position.slice(6);
+    if (!referenceId) {
+      throw new Error('Position "after:" requires a route ID');
+    }
+    return { placement: 'after', referenceId };
+  }
+  if (position.startsWith('before:')) {
+    const referenceId = position.slice(7);
+    if (!referenceId) {
+      throw new Error('Position "before:" requires a route ID');
+    }
+    return { placement: 'before', referenceId };
+  }
+  throw new Error(
+    `Invalid position: "${position}". Use: start, end, first, last, a number, after:<id>, or before:<id>`
+  );
 }
 
 /**
