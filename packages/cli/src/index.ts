@@ -146,7 +146,11 @@ const main = async () => {
   try {
     parsedArgs = parseArguments(
       process.argv,
-      { '--version': Boolean, '-v': '--version' },
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--non-interactive': Boolean,
+      },
       { permissive: true }
     );
     const isDebugging = parsedArgs.flags['--debug'];
@@ -337,6 +341,8 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize
+  // When an agent is detected, --non-interactive is effectively the default
+  const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
@@ -351,6 +357,7 @@ const main = async () => {
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
+    nonInteractive,
   });
 
   // The `--cwd` flag is respected for all sub-commands
