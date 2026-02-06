@@ -192,7 +192,9 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
   if (requestContext?.waitUntil) {
     requestContext.waitUntil(promise);
   } else {
-    console.warn('Pool release event triggered outside of request scope.');
+    if (DEBUG) {
+      console.warn('Pool release event triggered outside of request scope.');
+    }
   }
 }
 
