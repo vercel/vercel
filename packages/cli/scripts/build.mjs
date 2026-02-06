@@ -77,10 +77,12 @@ const jsoncParserPlugin = {
 
 // Build entry points:
 // - src/index.ts (main entry)
+// - src/help.ts (standalone help for fast --help)
 // - src/commands-bulk.ts (non-priority commands bundle)
 // - src/commands/[priority]/index.ts (priority command entry points)
 const entryPoints = [
   join(cwd, 'src/index.ts'),
+  join(cwd, 'src/help.ts'),
   join(cwd, 'src/commands-bulk.ts'),
   ...PRIORITY_COMMANDS.map(cmd => join(cwd, `src/commands/${cmd}/index.ts`)),
 ];
@@ -145,3 +147,9 @@ copyFileSync(
   new URL('get-latest-worker.cjs', distRoot)
 );
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
+
+// Generate version.mjs for fast --version lookup
+writeFileSync(
+  new URL('version.mjs', distRoot),
+  `export const version = ${JSON.stringify(pkg.version)};\n`
+);
