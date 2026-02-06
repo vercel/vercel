@@ -51,9 +51,7 @@ export default async function pull(client: Client): Promise<number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(pullSubcommand.options);
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
-      permissive: true,
-    });
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;

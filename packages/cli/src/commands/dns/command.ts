@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { limitOption, nextOption } from '../../util/arg-common';
+import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const importSubcommand = {
   name: 'import',
@@ -62,7 +62,12 @@ export const removeSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a DNS record',
+    },
+  ],
   examples: [],
 } as const;
 
