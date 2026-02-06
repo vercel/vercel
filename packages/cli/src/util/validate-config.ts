@@ -278,6 +278,10 @@ const serviceConfigSchema = {
  */
 const experimentalServicesSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: serviceConfigSchema,
 };
 
@@ -289,6 +293,10 @@ const experimentalServicesSchema = {
  */
 const experimentalServiceGroupsSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: {
     type: 'array',
     items: {
