@@ -236,6 +236,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandQuery(actual: string) {
+    this.trackCliCommand({
+      command: 'query',
+      value: actual,
+    });
+  }
+
   trackCliCommandRollback(actual: string) {
     this.trackCliCommand({
       command: 'rollback',

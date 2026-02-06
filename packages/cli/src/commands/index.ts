@@ -29,6 +29,7 @@ import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
+import { queryCommand } from './query/command';
 import { redeployCommand } from './redeploy/command';
 import { redirectsCommand } from './redirects/command';
 import { removeCommand } from './remove/command';
@@ -76,6 +77,7 @@ const commandsStructs = [
   projectCommand,
   promoteCommand,
   pullCommand,
+  queryCommand,
   redeployCommand,
   redirectsCommand,
   removeCommand,

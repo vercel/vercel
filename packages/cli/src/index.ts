@@ -778,6 +778,11 @@ const main = async () => {
           telemetry.trackCliCommandPull(userSuppliedSubCommand);
           func = require('./commands/pull').default;
           break;
+        case 'q':
+        case 'query':
+          telemetry.trackCliCommandQuery(userSuppliedSubCommand);
+          func = require('./commands/query').default;
+          break;
         case 'redeploy':
           telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
           func = require('./commands/redeploy').default;
