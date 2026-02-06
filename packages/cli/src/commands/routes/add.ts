@@ -2,10 +2,14 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { addSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  parsePosition,
+  offerAutoPromote,
+} from './shared';
 import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
-import updateRouteVersion from '../../util/routes/update-route-version';
 import { parseConditions } from '../../util/routes/parse-conditions';
 import {
   collectTransforms,
@@ -122,35 +126,6 @@ function buildConditionValue(
   if (operator === 'contains') return `.*${escapedValue}.*`;
   // 'eq'
   return `^${escapedValue}$`;
-}
-
-/**
- * Parses a position string into a RoutePosition object.
- */
-function parsePosition(position: string): RoutePosition {
-  if (position === 'start') {
-    return { placement: 'start' };
-  }
-  if (position === 'end') {
-    return { placement: 'end' };
-  }
-  if (position.startsWith('after:')) {
-    const referenceId = position.slice(6);
-    if (!referenceId) {
-      throw new Error('Position "after:" requires a route ID');
-    }
-    return { placement: 'after', referenceId };
-  }
-  if (position.startsWith('before:')) {
-    const referenceId = position.slice(7);
-    if (!referenceId) {
-      throw new Error('Position "before:" requires a route ID');
-    }
-    return { placement: 'before', referenceId };
-  }
-  throw new Error(
-    `Invalid position: "${position}". Use: start, end, after:<id>, or before:<id>`
-  );
 }
 
 /**
@@ -703,31 +678,14 @@ export default async function add(client: Client, argv: string[]) {
 
     output.print(`\n  ${chalk.bold('Staging version:')} ${version.id}\n`);
 
-    // Auto-promote logic
-    if (!existingStagingVersion && !skipPrompts) {
-      output.print('\n');
-      const shouldPromote = await client.input.confirm(
-        'This is the only staged change. Promote to production now?',
-        false
-      );
-
-      if (shouldPromote) {
-        const promoteStamp = stamp();
-        output.spinner('Promoting to production');
-
-        await updateRouteVersion(client, project.id, version.id, 'promote', {
-          teamId,
-        });
-
-        output.log(
-          `${chalk.cyan('Promoted')} to production ${chalk.gray(promoteStamp())}`
-        );
-      }
-    } else if (existingStagingVersion) {
-      output.warn(
-        `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
-      );
-    }
+    // Auto-promote offer
+    await offerAutoPromote(
+      client,
+      project.id,
+      version,
+      !!existingStagingVersion,
+      { teamId, skipPrompts }
+    );
 
     return 0;
   } catch (e: unknown) {
