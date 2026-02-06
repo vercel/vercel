@@ -1263,6 +1263,7 @@ export async function serverBuild({
             // functions. In Next.js minimal mode, they aren't used (the builder reads them and
             // generates the config.json for Vercel)
             manifestData.headers = [];
+            manifestData.onMatchHeaders = [];
             delete manifestData.deploymentId;
           } else if (
             manifest === 'server/pages-manifest.json' &&
