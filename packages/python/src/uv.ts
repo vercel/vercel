@@ -147,6 +147,19 @@ export class UvRunner {
     await this.runUvCmd(args, projectDir, venvPath);
   }
 
+  /**
+   * Run a `uv pip` command (e.g., `uv pip install`).
+   */
+  async pip(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+  }): Promise<void> {
+    const { venvPath, projectDir, args } = options;
+    const fullArgs = ['pip', ...args];
+    await this.runUvCmd(fullArgs, projectDir, venvPath);
+  }
+
   private async runUvCmd(
     args: string[],
     cwd: string,
