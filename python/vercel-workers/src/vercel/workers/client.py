@@ -110,8 +110,11 @@ def subscribe(
         def user_worker(message, metadata): ...
     """
 
+    topic_filter: Callable[[str | None], bool] | None
     if isinstance(topic, str):
-        topic_filter = lambda t, expected=topic: t == expected
+        def topic_filter(t: str | None) -> bool:
+            return t == topic
+
         topic_desc = topic
     elif isinstance(topic, tuple):
         topic_desc, topic_filter = topic
