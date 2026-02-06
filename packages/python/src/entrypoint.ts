@@ -116,28 +116,28 @@ async function detectInDir(
  * Detect a Python entrypoint path for a given framework relative to workPath,
  * or return null if not found.
  *
- * When the configured entrypoint is in a subdirectory (e.g. `backend/index.py`
- * for a services workspace), we scope detection to that workspace first, then
- * fall back to the project root.
+ * When a `serviceWorkspace` is provided (e.g. `"backend"` from the service
+ * resolver), detection is scoped to that directory
  */
 export async function detectPythonEntrypoint(
   _framework: PythonFramework,
   workPath: string,
-  configuredEntrypoint: string
+  configuredEntrypoint: string,
+  serviceWorkspace?: string
 ): Promise<string | null> {
-  const workspaceDir = pathPosix.dirname(configuredEntrypoint);
-  const hasWorkspace = workspaceDir && workspaceDir !== '.';
+  if (serviceWorkspace) {
+    const workspacePath = join(workPath, serviceWorkspace);
+    // Strip the workspace prefix to get the local entrypoint
+    // e.g. "backend/index.py" → "index.py"
+    const localEntrypoint = configuredEntrypoint.startsWith(
+      serviceWorkspace + '/'
+    )
+      ? configuredEntrypoint.slice(serviceWorkspace.length + 1)
+      : configuredEntrypoint;
 
-  // When the entrypoint is in a subdirectory, scope detection there first
-  if (hasWorkspace) {
-    const localEntrypoint = pathPosix.basename(configuredEntrypoint);
-    const result = await detectInDir(
-      join(workPath, workspaceDir),
-      localEntrypoint
-    );
-    if (result) return pathPosix.join(workspaceDir, result);
+    const result = await detectInDir(workspacePath, localEntrypoint);
+    return result ? pathPosix.join(serviceWorkspace, result) : null;
   }
 
-  // Fall back to the project root
   return detectInDir(workPath, configuredEntrypoint);
 }

@@ -179,6 +179,9 @@ export function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (!isRoot) {
+    builderConfig.serviceWorkspace = workspace;
+  }
 
   return {
     name,

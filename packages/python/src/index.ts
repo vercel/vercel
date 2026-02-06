@@ -110,6 +110,9 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
+  console.log('BUILDING PYTHON');
+  console.log('framework', framework);
+
   // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
   if (isPythonFramework(framework)) {
     const {
@@ -166,7 +169,8 @@ export const build: BuildV3 = async ({
     const detected = await detectPythonEntrypoint(
       config.framework as PythonFramework,
       workPath,
-      entrypoint
+      entrypoint,
+      config.serviceWorkspace as string | undefined
     );
     if (detected) {
       debug(
