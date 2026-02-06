@@ -1,5 +1,34 @@
 # vercel
 
+## 50.12.2
+
+### Patch Changes
+
+- Add source and defaultResourceName query params to legacy integration add web UI path ([#14868](https://github.com/vercel/vercel/pull/14868))
+
+- [services] build time service url env vars ([#14893](https://github.com/vercel/vercel/pull/14893))
+
+- Updated dependencies [[`fc357e11cb4b00ab8ec413a0ea3586a87e733f0e`](https://github.com/vercel/vercel/commit/fc357e11cb4b00ab8ec413a0ea3586a87e733f0e), [`84f121190813b2840a6a16279dcaa75dcb2872cd`](https://github.com/vercel/vercel/commit/84f121190813b2840a6a16279dcaa75dcb2872cd), [`ff320caa5c8a0857aad0b989699207a6a703256f`](https://github.com/vercel/vercel/commit/ff320caa5c8a0857aad0b989699207a6a703256f)]:
+  - @vercel/build-utils@13.3.2
+  - @vercel/go@3.4.0
+  - @vercel/backends@0.0.29
+  - @vercel/elysia@0.1.31
+  - @vercel/express@0.1.40
+  - @vercel/fastify@0.1.34
+  - @vercel/h3@0.1.40
+  - @vercel/hono@0.2.34
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.14
+  - @vercel/nestjs@0.2.35
+  - @vercel/next@4.15.23
+  - @vercel/node@5.5.32
+  - @vercel/python@6.6.0
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/ruby@2.2.5
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.33
+
 ## 50.12.1
 
 ### Patch Changes
