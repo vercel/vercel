@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import { readFile, writeFile, pathExists, copy } from 'fs-extra';
 import {
   BuildOptions,
@@ -74,12 +74,15 @@ export async function buildStandaloneServer({
     CGO_ENABLED: '0',
   });
 
-  const { goModPath } = await findGoModPath(workPath, workPath);
-  const modulePath = goModPath ? dirname(goModPath) : workPath;
+  // Search for go.mod starting from the entrypoint's directory (not the
+  // project root) so that service workspaces with their own go.mod are found.
+  const entrypointDir = join(workPath, dirname(entrypoint));
+  const { goModPath } = await findGoModPath(entrypointDir, workPath);
+  const modulePath = goModPath ? dirname(goModPath) : entrypointDir;
 
   const go = await createGo({
     modulePath,
-    opts: { cwd: workPath, env },
+    opts: { cwd: modulePath, env },
     workPath,
   });
 
@@ -87,11 +90,11 @@ export async function buildStandaloneServer({
   const userServerPath = join(outDir, 'user-server');
   const bootstrapPath = join(outDir, 'executable');
 
-  // Determine build target based on entrypoint location
-  // - main.go at root: build '.'
-  // - cmd/api/main.go: build './cmd/api'
-  const buildTarget =
-    entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
+  // Determine build target relative to the module directory (where go.mod lives).
+  // e.g. if go.mod is in services/go-api/ and entrypoint is services/go-api/main.go → '.'
+  //      if go.mod is at root and entrypoint is cmd/api/main.go → './cmd/api'
+  const relToModule = relative(modulePath, join(workPath, dirname(entrypoint)));
+  const buildTarget = relToModule ? './' + relToModule : '.';
 
   debug(
     `Building user Go server (${architecture}): go build ${buildTarget} -> ${userServerPath}`
@@ -183,7 +186,7 @@ export async function startStandaloneDevServer(
   opts: StartDevServerOptions,
   resolvedEntrypoint: string
 ): Promise<StartDevServerResult> {
-  const { workPath, meta = {} } = opts;
+  const { workPath, meta = {}, onStdout, onStderr } = opts;
 
   // Use a random port in the ephemeral range
   const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
@@ -192,21 +195,45 @@ export async function startStandaloneDevServer(
     PORT: String(port),
   });
 
-  // Determine run target based on entrypoint location
-  // - main.go at root: go run .
-  // - cmd/api/main.go: go run ./cmd/api
-  const runTarget =
-    resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
+  // Find go.mod starting from the entrypoint's directory so that service
+  // workspaces with their own go.mod are resolved correctly.
+  const entrypointDir = join(workPath, dirname(resolvedEntrypoint));
+  const { goModPath } = await findGoModPath(entrypointDir, workPath);
+  const goCwd = goModPath ? dirname(goModPath) : entrypointDir;
+
+  // Determine run target relative to the module directory (where go.mod lives).
+  const relToModule = relative(
+    goCwd,
+    join(workPath, dirname(resolvedEntrypoint))
+  );
+  const runTarget = relToModule ? './' + relToModule : '.';
 
   debug(
-    `Starting standalone Go dev server: go run ${runTarget} (port ${port})`
+    `Starting standalone Go dev server: go run ${runTarget} (cwd=${goCwd}, port ${port})`
   );
 
   const child = spawn('go', ['run', runTarget], {
-    cwd: workPath,
+    cwd: goCwd,
     env,
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+
+  // Route stdout/stderr through the provided callbacks (service logger)
+  // so output gets the proper [service-name] prefix
+  if (child.stdout) {
+    if (onStdout) {
+      child.stdout.on('data', onStdout);
+    } else {
+      child.stdout.pipe(process.stdout);
+    }
+  }
+  if (child.stderr) {
+    if (onStderr) {
+      child.stderr.on('data', onStderr);
+    } else {
+      child.stderr.pipe(process.stderr);
+    }
+  }
 
   // Give the server time to start
   await new Promise(resolve => setTimeout(resolve, 2000));
