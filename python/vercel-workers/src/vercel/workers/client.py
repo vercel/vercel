@@ -70,8 +70,20 @@ class SendMessageResult(TypedDict):
 @dataclass
 class _Subscription:
     func: WorkerCallable
-    topic: str | None = None
+    topic_filter: Callable[[str | None], bool] | None = None
+    topic_desc: str | None = None
     consumer: str | None = None
+
+    def matches(
+        self, topic: str | None, consumer: str | None = None, *, ignore_consumer: bool = False
+    ) -> bool:
+        if self.topic_filter is not None:
+            if not self.topic_filter(topic):
+                return False
+        if not ignore_consumer and self.consumer is not None:
+            if self.consumer != consumer:
+                return False
+        return True
 
 
 _subscriptions: list[_Subscription] = []
@@ -80,7 +92,7 @@ _subscriptions: list[_Subscription] = []
 def subscribe(
     _func: WorkerCallable | None = None,
     *,
-    topic: str | None = None,
+    topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
     consumer: str | None = None,
 ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
     """
@@ -93,10 +105,26 @@ def subscribe(
 
         @subscribe(topic="events", consumer="billing")
         def billing_worker(message, metadata): ...
+
+        @subscribe(topic=("user-*", lambda t: t.startswith("user-")))
+        def user_worker(message, metadata): ...
     """
 
+    if isinstance(topic, str):
+        topic_filter = lambda t, expected=topic: t == expected
+        topic_desc = topic
+    elif isinstance(topic, tuple):
+        topic_desc, topic_filter = topic
+    else:
+        topic_filter = None
+        topic_desc = None
+
     def decorator(func: WorkerCallable) -> WorkerCallable:
-        _subscriptions.append(_Subscription(func=func, topic=topic, consumer=consumer))
+        _subscriptions.append(
+            _Subscription(
+                func=func, topic_filter=topic_filter, topic_desc=topic_desc, consumer=consumer
+            )
+        )
 
         @wraps(func)
         def wrapper(message: Any, metadata: MessageMetadata) -> Any:
@@ -141,10 +169,7 @@ def _select_subscriptions(
 ) -> Iterable[_Subscription]:
     # Match by topic and consumer (unless consumer is ignored).
     explicit_matches = [
-        s
-        for s in _subscriptions
-        if (s.topic is None or s.topic == topic)
-        and (ignore_consumer or s.consumer is None or s.consumer == consumer)
+        s for s in _subscriptions if s.matches(topic, consumer, ignore_consumer=ignore_consumer)
     ]
     return explicit_matches
 
@@ -204,10 +229,10 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     # In dev mode, surface a clear error when there are worker functions but none of
     # them are subscribed to the requested topic. This helps catch mismatches between
     # the queue name used in send() and the topics configured via @subscribe.
-    matching_for_topic = [s for s in _subscriptions if s.topic is None or s.topic == queue_name]
+    matching_for_topic = [s for s in _subscriptions if s.matches(queue_name, ignore_consumer=True)]
     if not matching_for_topic:
         available_topics = sorted(
-            {s.topic for s in _subscriptions if s.topic is not None},
+            {s.topic_desc for s in _subscriptions if s.topic_desc is not None},
         )
         raise RuntimeError(
             "No worker subscriptions found for topic "
