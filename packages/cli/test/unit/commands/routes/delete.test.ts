@@ -80,4 +80,17 @@ describe('routes delete', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Deleted');
   });
+
+  it('should verify delete body contains correct route IDs', async () => {
+    useDeleteRoute();
+    client.setArgv('routes', 'delete', 'Route A', 'Route B', '--yes');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const { capturedBodies } = await import('../../../mocks/routes');
+    const body = capturedBodies.delete as any;
+    expect(body.routeIds).toContain('route-a-id');
+    expect(body.routeIds).toContain('route-b-id');
+    expect(body.routeIds).toHaveLength(2);
+  });
 });

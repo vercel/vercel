@@ -56,4 +56,26 @@ describe('routes enable', () => {
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('No route found');
   });
+
+  it('should send enabled: true in PATCH body', async () => {
+    useEditRoute();
+    client.setArgv('routes', 'enable', 'Disabled Route');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const { capturedBodies } = await import('../../../mocks/routes');
+    const body = capturedBodies.edit as any;
+    expect(body.route.enabled).toBe(true);
+  });
+
+  it('should handle API error gracefully', async () => {
+    const { useEditRouteWithApiError } = await import(
+      '../../../mocks/routes'
+    );
+    useEditRouteWithApiError();
+    client.setArgv('routes', 'enable', 'Test Route');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('not enabled');
+  });
 });

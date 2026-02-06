@@ -246,5 +246,126 @@ describe('routes edit', () => {
       expect(exitCode).toEqual(0);
       await expect(client.stderr).toOutput('Updated');
     });
+
+    it('should remove destination with --no-dest', async () => {
+      useEditRoute();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--no-dest',
+        '--action',
+        'set-status',
+        '--status',
+        '403'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('Updated');
+    });
+
+    it('should remove status with --no-status', async () => {
+      useEditRoute();
+      // Disabled Route is createRoute(1) which has status: 301
+      client.setArgv('routes', 'edit', 'Disabled Route', '--no-status');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput('Updated');
+    });
+
+    it('should verify PATCH body contains correct name change', async () => {
+      useEditRoute();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--name',
+        'New Name'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const { capturedBodies } = await import('../../../mocks/routes');
+      const body = capturedBodies.edit as any;
+      expect(body.route.name).toBe('New Name');
+    });
+
+    it('should verify PATCH body contains enabled: true for enabled route', async () => {
+      useEditRoute();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--description',
+        'New desc'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const { capturedBodies } = await import('../../../mocks/routes');
+      const body = capturedBodies.edit as any;
+      expect(body.route.enabled).toBe(true);
+    });
+
+    it('should handle API error gracefully', async () => {
+      const { useEditRouteWithApiError } = await import(
+        '../../../mocks/routes'
+      );
+      useEditRouteWithApiError();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Test Route',
+        '--name',
+        'New Name'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('not enabled');
+    });
+
+    it('should error when --action redirect without --status', async () => {
+      useEditRoute();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--action',
+        'redirect',
+        '--dest',
+        '/new'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('requires --status');
+    });
+
+    it('should error when --action rewrite without --dest', async () => {
+      useEditRoute();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--action',
+        'rewrite'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('requires --dest');
+    });
+
+    it('should error on invalid syntax value', async () => {
+      useEditRoute();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--syntax',
+        'invalid'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid syntax');
+    });
   });
 });

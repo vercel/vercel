@@ -701,6 +701,76 @@ describe('routes add', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
 
+    it('should error when --action rewrite without --dest', async () => {
+      useAddRoute();
+      client.setArgv(
+        'routes',
+        'add',
+        'My Route',
+        '--src',
+        '/path',
+        '--action',
+        'rewrite',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+      await expect(client.stderr).toOutput('requires --dest');
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error when --action redirect without --dest', async () => {
+      useAddRoute();
+      client.setArgv(
+        'routes',
+        'add',
+        'My Route',
+        '--src',
+        '/path',
+        '--action',
+        'redirect',
+        '--status',
+        '301',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+      await expect(client.stderr).toOutput('requires --dest');
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error when --action set-status without --status', async () => {
+      useAddRoute();
+      client.setArgv(
+        'routes',
+        'add',
+        'My Route',
+        '--src',
+        '/path',
+        '--action',
+        'set-status',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+      await expect(client.stderr).toOutput('requires --status');
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error when --action is invalid', async () => {
+      useAddRoute();
+      client.setArgv(
+        'routes',
+        'add',
+        'My Route',
+        '--src',
+        '/path',
+        '--action',
+        'foobar',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+      await expect(client.stderr).toOutput('Invalid action type');
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
     it('should error on status code below 100', async () => {
       useAddRoute();
 
