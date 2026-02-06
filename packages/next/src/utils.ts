@@ -263,6 +263,7 @@ type RoutesManifestOld = {
         fallback: (Rewrite & RoutesManifestRegex)[];
       };
   headers?: (Header & RoutesManifestRegex)[];
+  onMatchHeaders?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: RoutesManifestRoute[];
   staticRoutes: RoutesManifestRoute[];
   version: 1 | 2 | 3;

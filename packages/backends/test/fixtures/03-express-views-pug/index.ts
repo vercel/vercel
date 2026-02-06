@@ -6,6 +6,7 @@ const app = express();
 // Set view engine and views directory
 app.set('view engine', 'pug');
 app.set('views', join(__dirname, 'pug-views'));
+// app.set('views', join(process.cwd(), 'pug-views'));
 
 app.get('/', (req, res) => {
   res.render('index', { title: 'Home', message: 'Hello from Pug!' });

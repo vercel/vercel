@@ -1,5 +1,17 @@
 # @vercel/python-analysis
 
+## 0.3.1
+
+### Patch Changes
+
+- fix ESM/CJS cross-compatibility ([#14869](https://github.com/vercel/vercel/pull/14869))
+
+## 0.3.0
+
+### Minor Changes
+
+- initial implementation of Python semantic analysis in Rust ([#14690](https://github.com/vercel/vercel/pull/14690))
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,46 @@
 # @vercel/fs-detectors
 
+## 5.8.2
+
+### Patch Changes
+
+- Updated dependencies [[`84f121190813b2840a6a16279dcaa75dcb2872cd`](https://github.com/vercel/vercel/commit/84f121190813b2840a6a16279dcaa75dcb2872cd)]:
+  - @vercel/frameworks@3.17.0
+
+## 5.8.1
+
+### Patch Changes
+
+- [services] `vercel dev` will add the known framework prefix to env vars for services ([#14866](https://github.com/vercel/vercel/pull/14866))
+
+## 5.8.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- [services] add `services` to `config.json` ([#14847](https://github.com/vercel/vercel/pull/14847))
+
+## 5.7.22
+
+### Patch Changes
+
+- [services] static-build frontends support ([#14819](https://github.com/vercel/vercel/pull/14819))
+
+## 5.7.21
+
+### Patch Changes
+
+- Move backends builder detection to detectBuilders phase ([#14830](https://github.com/vercel/vercel/pull/14830))
+
+## 5.7.20
+
+### Patch Changes
+
+- Added experimental services support in the CLI new project flow. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set and a project's `vercel.json` contains `experimentalServices`, the CLI will detect and display the configured services during project setup, automatically selecting the "services" framework preset. ([#14776](https://github.com/vercel/vercel/pull/14776))
+
 ## 5.7.19
 
 ### Patch Changes

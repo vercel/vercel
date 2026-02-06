@@ -68,17 +68,25 @@ export class UvRunner {
       );
     }
 
+    // Only apply the startsWith filter when in Vercel Build Image
+    // (local builds use system Python paths, not /uv/python/)
+    if (process.env.VERCEL_BUILD_IMAGE) {
+      pyList = pyList.filter(
+        entry =>
+          entry.path !== null &&
+          entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
+          entry.implementation === 'cpython'
+      );
+    } else {
+      pyList = pyList.filter(
+        entry => entry.path !== null && entry.implementation === 'cpython'
+      );
+    }
+
     return new Set(
-      pyList
-        .filter(
-          entry =>
-            entry.path !== null &&
-            entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
-            entry.implementation === 'cpython'
-        )
-        .map(
-          entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
-        )
+      pyList.map(
+        entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
+      )
     );
   }
 
@@ -137,6 +145,19 @@ export class UvRunner {
     const args = ['add', '--active', '-r', requirementsPath];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
     await this.runUvCmd(args, projectDir, venvPath);
+  }
+
+  /**
+   * Run a `uv pip` command (e.g., `uv pip install`).
+   */
+  async pip(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+  }): Promise<void> {
+    const { venvPath, projectDir, args } = options;
+    const fullArgs = ['pip', ...args];
+    await this.runUvCmd(fullArgs, projectDir, venvPath);
   }
 
   private async runUvCmd(

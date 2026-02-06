@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.24",
+  "version": "0.0.29",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -11,11 +11,9 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./package.json": "./package.json",
-    "./introspection/loaders/cjs": "./dist/introspection/loaders/cjs.cjs",
-    "./introspection/loaders/esm": "./dist/introspection/loaders/esm.mjs",
-    "./introspection/loaders/hooks": "./dist/introspection/loaders/hooks.mjs",
-    "./introspection/loaders/rolldown-esm": "./dist/introspection/loaders/rolldown-esm.mjs",
-    "./introspection/loaders/rolldown-hooks": "./dist/introspection/loaders/rolldown-hooks.mjs"
+    "./rolldown/esm": "./dist/rolldown/esm.mjs",
+    "./rolldown/hooks": "./dist/rolldown/hooks.mjs",
+    "./rolldown/cjs-hooks": "./dist/rolldown/cjs-hooks.cjs"
   },
   "repository": {
     "type": "git",

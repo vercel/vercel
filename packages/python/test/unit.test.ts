@@ -1,4 +1,35 @@
 import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type MockInstance,
+} from 'vitest';
+import fs from 'fs-extra';
+import path from 'path';
+import { tmpdir } from 'os';
+
+const tmpPythonDir = path.join(
+  tmpdir(),
+  `vc-test-python-${Math.floor(Math.random() * 1e6)}`
+);
+
+// For tests that exercise the build pipeline, we don't care about the actual
+// vendored dependencies, only that the build completes and the handler exists.
+// Mock out mirroring of site-packages so tests don't depend on a real venv.
+vi.mock('../src/install', async () => {
+  const real =
+    await vi.importActual<typeof import('../src/install')>('../src/install');
+  return {
+    ...real,
+    mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+  };
+});
+
+// Imports after mocks are set up (vitest hoists vi.mock calls)
+import {
   getSupportedPythonVersion,
   DEFAULT_PYTHON_VERSION,
   resetInstalledPythonsCache,
@@ -7,26 +38,7 @@ import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { createPyprojectToml } from '../src/install';
-import fs from 'fs-extra';
-import path from 'path';
-import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
-
-// For tests that exercise the build pipeline, we don't care about the actual
-// vendored dependencies, only that the build completes and the handler exists.
-// Mock out mirroring of site-packages so tests don't depend on a real venv.
-jest.mock('../src/install', () => {
-  const real = jest.requireActual('../src/install');
-  return {
-    ...real,
-    mirrorSitePackagesIntoVendor: jest.fn(async () => ({})),
-  };
-});
-
-const tmpPythonDir = path.join(
-  tmpdir(),
-  `vc-test-python-${Math.floor(Math.random() * 1e6)}`
-);
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
 const realDateNow = Date.now.bind(global.Date);
@@ -35,7 +47,30 @@ const origPath = process.env.PATH;
 /** Tracks mock Python versions for uv python list output */
 let mockInstalledVersions: string[] = [];
 
-jest.setTimeout(30 * 1000);
+/** Creates a mock UvRunner class for tests */
+function createMockUvRunner(options?: {
+  onSync?: () => void;
+  onPip?: () => void;
+  onLock?: () => void;
+}) {
+  return class MockUvRunner {
+    constructor() {}
+    getPath() {
+      return '/mock/uv';
+    }
+    async sync() {
+      options?.onSync?.();
+    }
+    async pip() {
+      options?.onPip?.();
+    }
+    async lock() {
+      options?.onLock?.();
+    }
+  };
+}
+
+vi.setConfig({ testTimeout: 30 * 1000 });
 
 beforeEach(() => {
   warningMessages = [];
@@ -309,7 +344,7 @@ describe('.python-version file support', () => {
   it('logs correct source name when using .python-version', () => {
     makeMockPython('3.11');
     // Spy on console.log to verify the message
-    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       getSupportedPythonVersion({
         declaredPythonVersion: {
@@ -485,7 +520,6 @@ it('should select latest supported installed version and warn when invalid Piplo
 });
 
 it('should throw if uv not found', () => {
-  process.env.PATH = '.';
   expect(() =>
     getSupportedPythonVersion({
       declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
@@ -612,7 +646,7 @@ function makeMockPython(version: string) {
     'utf8'
   );
 
-  // mock uv: handle `python list` command and also ensure uv.lock exists for other commands
+  // mock uv: handle `python list` command, succeed for all other commands
   const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
   if (isWin) {
     const uvWinScript = [
@@ -621,9 +655,6 @@ function makeMockPython(version: string) {
       'if "%1"=="python" if "%2"=="list" (',
       `  type "${uvPythonListFile}"`,
       '  exit /b 0',
-      ')',
-      'if not exist "uv.lock" (',
-      '  echo [mock]>uv.lock',
       ')',
       'rem always succeed',
       'exit /b 0',
@@ -635,11 +666,8 @@ function makeMockPython(version: string) {
       '#!/bin/sh',
       '# mock uv binary',
       'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
-      `  cat "${uvPythonListFile}"`,
+      `  /bin/cat "${uvPythonListFile}"`,
       '  exit 0',
-      'fi',
-      'if [ ! -f "uv.lock" ]; then',
-      '  echo "[mock]" > uv.lock',
       'fi',
       '# always succeed',
       'exit 0',
@@ -874,23 +902,18 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
     // Setup mocked Python + uv
     makeMockPython('3.9');
 
-    // Override the mock uv binary to emulate workspace behavior: write the lockfile
-    // at the workspace root (two levels up from apps/python-app2).
-    // Also handle `python list` command for version detection.
+    // Override the mock uv binary to emulate workspace behavior.
+    // The lock command will create uv.lock at workspace root via repoRoot setup.
     const isWin = process.platform === 'win32';
     const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.cmd' : ''}`);
     const uvPythonListFile = path.join(tmpPythonDir, 'uv-python-list.json');
     if (isWin) {
       const uvWinScript = [
         '@echo off',
-        'rem mock uv binary (workspace): write uv.lock at workspace root',
+        'rem mock uv binary (workspace)',
         'if "%1"=="python" if "%2"=="list" (',
         `  type "${uvPythonListFile}"`,
         '  exit /b 0',
-        ')',
-        'set LOCK=..\\..\\uv.lock',
-        'if not exist "%LOCK%" (',
-        '  echo [mock]>"%LOCK%"',
         ')',
         'exit /b 0',
         '',
@@ -899,13 +922,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
     } else {
       const uvPosixScript = [
         '#!/bin/sh',
-        '# mock uv binary (workspace): write uv.lock at workspace root',
+        '# mock uv binary (workspace)',
         'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
-        `  cat "${uvPythonListFile}"`,
+        `  /bin/cat "${uvPythonListFile}"`,
         '  exit 0',
-        'fi',
-        'if [ ! -f "../../uv.lock" ]; then',
-        '  echo "[mock]" > ../../uv.lock',
         'fi',
         'exit 0',
         '',
@@ -913,6 +933,9 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       fs.writeFileSync(uvBin, uvPosixScript, 'utf8');
       fs.chmodSync(uvBin, 0o755);
     }
+
+    // Create uv.lock at workspace root (repoRoot) to simulate workspace lockfile
+    fs.writeFileSync(path.join(repoRoot, 'uv.lock'), '[mock]\n', 'utf8');
 
     const files = {
       'main.py': new FileBlob({
@@ -1081,13 +1104,30 @@ describe('fastapi entrypoint discovery - positive cases', () => {
 });
 
 describe('pyproject.toml entrypoint detection', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    vi.doUnmock('../src/uv');
+  });
+
   it('resolves FastAPI entrypoint from pyproject scripts (uvicorn module:attr)', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
     const workPath = path.join(
       tmpdir(),
       `python-pyproject-fastapi-${Date.now()}`
     );
     fs.mkdirSync(path.join(workPath, 'backend', 'api'), { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'pyproject.toml': new FileBlob({
@@ -1098,7 +1138,7 @@ describe('pyproject.toml entrypoint detection', () => {
       }),
     } as Record<string, FileBlob>;
 
-    const result = await build({
+    const result = await buildWithMocks({
       workPath,
       files,
       entrypoint: 'missing.py',
@@ -1118,12 +1158,20 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 
   it('resolves Flask entrypoint from pyproject scripts (module:attr -> .py)', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
     const workPath = path.join(
       tmpdir(),
       `python-pyproject-flask-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'pyproject.toml': new FileBlob({
@@ -1134,7 +1182,7 @@ describe('pyproject.toml entrypoint detection', () => {
       }),
     } as Record<string, FileBlob>;
 
-    const result = await build({
+    const result = await buildWithMocks({
       workPath,
       files,
       entrypoint: 'missing.py',
@@ -1154,9 +1202,17 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 
   it('falls back to package __init__.py when module path has no .py file', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
     const workPath = path.join(tmpdir(), `python-pyproject-init-${Date.now()}`);
     fs.mkdirSync(path.join(workPath, 'backend', 'server'), { recursive: true });
-    makeMockPython('3.9');
 
     const files = {
       'pyproject.toml': new FileBlob({
@@ -1167,7 +1223,7 @@ describe('pyproject.toml entrypoint detection', () => {
       }),
     } as Record<string, FileBlob>;
 
-    const result = await build({
+    const result = await buildWithMocks({
       workPath,
       files,
       entrypoint: 'missing.py',
@@ -1189,13 +1245,13 @@ describe('pyproject.toml entrypoint detection', () => {
 
 describe('python version fallback logging', () => {
   let mockWorkPath: string;
-  let consoleLogSpy: jest.SpyInstance;
+  let consoleLogSpy: MockInstance;
 
   beforeEach(() => {
     mockWorkPath = path.join(tmpdir(), `python-version-log-${Date.now()}`);
     fs.mkdirSync(mockWorkPath, { recursive: true });
     makeMockPython('3.11');
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -1278,8 +1334,8 @@ describe('python version fallback logging', () => {
 
 describe('.python-version file priority', () => {
   let mockWorkPath: string;
-  let consoleLogSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
+  let consoleLogSpy: MockInstance;
+  let consoleWarnSpy: MockInstance;
 
   beforeEach(() => {
     mockWorkPath = path.join(
@@ -1290,8 +1346,8 @@ describe('.python-version file priority', () => {
     makeMockPython('3.10');
     makeMockPython('3.11');
     makeMockPython('3.12');
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -1404,7 +1460,7 @@ describe('.python-version file priority', () => {
     );
   });
 
-  it('warns and falls back to default when .python-version has invalid content', async () => {
+  it('throws error when .python-version has invalid content', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       '.python-version': new FileBlob({ data: 'invalid-version\n' }),
@@ -1413,30 +1469,22 @@ describe('.python-version file priority', () => {
       }),
     } as Record<string, FileBlob>;
 
-    await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'handler.py',
-      meta: { isDev: false },
-      config: {},
-      repoRootPath: mockWorkPath,
-    });
-
-    // Should warn about invalid .python-version and fall back to default
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Warning: Python version "invalid-version" detected in .python-version is invalid'
-      )
-    );
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using python version: 3.12')
-    );
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/could not parse \.python-version file/i);
   });
 });
 
 describe('.python-version file auto-creation', () => {
   let mockWorkPath: string;
-  let consoleLogSpy: jest.SpyInstance;
+  let consoleLogSpy: MockInstance;
 
   beforeEach(() => {
     mockWorkPath = path.join(
@@ -1448,7 +1496,7 @@ describe('.python-version file auto-creation', () => {
     makeMockPython('3.11');
     makeMockPython('3.12');
     makeMockPython('3.13');
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -1577,30 +1625,31 @@ describe('.python-version file auto-creation', () => {
 });
 
 describe('uv install path', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.doUnmock('which');
+    vi.doUnmock('execa');
+    vi.doUnmock('../src/install');
+  });
+
   it('uses uv to install requirement (no fallback to pip)', async () => {
-    jest.resetModules();
+    const mockExeca: any = vi.fn(async () => ({ stdout: '' }));
+    mockExeca.stdout = vi.fn(async () => '');
 
-    let installRequirement: any;
-    let mockExeca: any;
+    vi.doMock('which', () => ({
+      default: { sync: vi.fn(() => '/mock/uv') },
+    }));
 
-    jest.isolateModules(() => {
-      jest.doMock('which', () => ({
-        __esModule: true,
-        default: { sync: jest.fn(() => '/mock/uv') },
-      }));
+    vi.doMock('execa', () => ({
+      default: mockExeca,
+    }));
 
-      jest.doMock('execa', () => {
-        const fn: any = jest.fn(async () => ({ stdout: '' }));
-        fn.stdout = jest.fn(async () => '');
-        mockExeca = fn;
-        return { __esModule: true, default: fn };
-      });
-
-      // Import after mocks are set
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require('../src/install');
-      installRequirement = mod.installRequirement;
-    });
+    // Clear the hoisted mock and re-import fresh
+    vi.doUnmock('../src/install');
+    const { installRequirement } = await import('../src/install');
 
     const workPath = path.join(tmpdir(), `python-uv-test-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1631,80 +1680,46 @@ describe('uv install path', () => {
 });
 
 describe('custom install hooks', () => {
-  // Helper to generate mock uv python list JSON for isolated module tests
-  const mockUvPythonListJson = JSON.stringify([
-    {
-      key: 'cpython-3.12.0-linux-x86_64-gnu',
-      version: '3.12.0',
-      version_parts: { major: 3, minor: 12, patch: 0 },
-      path: '/uv/python/bin/python3.12',
-      symlink: null,
-      url: null,
-      os: 'linux',
-      variant: 'default',
-      implementation: 'cpython',
-      arch: 'x86_64',
-      libc: 'gnu',
-    },
-  ]);
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.12');
+  });
+
+  afterEach(() => {
+    vi.doUnmock('which');
+    vi.doUnmock('execa');
+    vi.doUnmock('@vercel/build-utils');
+    vi.doUnmock('../src/install');
+    vi.doUnmock('../src/index');
+    vi.doUnmock('../src/uv');
+  });
 
   it('uses projectSettings.installCommand instead of uv install for FastAPI', async () => {
-    jest.resetModules();
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
 
-    let buildWithMocks: any;
-    let mockExecCommand: jest.Mock = jest.fn();
-    let mockEnsureUvProject: jest.Mock = jest.fn();
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
 
-    jest.isolateModules(() => {
-      jest.doMock('@vercel/build-utils', () => {
-        const real = jest.requireActual('@vercel/build-utils');
-        mockExecCommand = jest.fn(async () => {});
-        return {
-          __esModule: true,
-          ...real,
-          execCommand: mockExecCommand,
-        };
-      });
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
 
-      jest.doMock('../src/install', () => {
-        const real = jest.requireActual('../src/install');
-        mockEnsureUvProject = jest.fn(async () => ({
-          projectDir: '/mock/project',
-          pyprojectPath: '/mock/project/pyproject.toml',
-          lockPath: '/mock/project/uv.lock',
-        }));
-        return {
-          __esModule: true,
-          ...real,
-          ensureUvProject: mockEnsureUvProject,
-        };
-      });
-
-      // Mock child_process to return mock uv python list output
-      jest.doMock('child_process', () => {
-        const real = jest.requireActual('child_process');
-        return {
-          ...real,
-          execSync: jest.fn((cmd: string) => {
-            if (cmd.includes('uv python list')) {
-              return mockUvPythonListJson;
-            }
-            return real.execSync(cmd);
-          }),
-        };
-      });
-
-      // Mock which to return a path for uv
-      jest.doMock('which', () => ({
-        __esModule: true,
-        default: { sync: jest.fn(() => '/mock/uv') },
-      }));
-
-      // Import after mocks are configured
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require('../src/index');
-      buildWithMocks = mod.build;
-    });
+    // Import after mocks are configured
+    const { build: buildWithMocks } = await import('../src/index');
 
     const workPath = path.join(tmpdir(), `python-custom-install-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1743,62 +1758,31 @@ describe('custom install hooks', () => {
   });
 
   it('uses pyproject.toml install script when no projectSettings.installCommand', async () => {
-    jest.resetModules();
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
 
-    let buildWithMocks: any;
-    let mockExecCommand: jest.Mock = jest.fn();
-    let mockEnsureUvProject: jest.Mock = jest.fn();
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
 
-    jest.isolateModules(() => {
-      jest.doMock('@vercel/build-utils', () => {
-        const real = jest.requireActual('@vercel/build-utils');
-        mockExecCommand = jest.fn(async () => {});
-        return {
-          __esModule: true,
-          ...real,
-          execCommand: mockExecCommand,
-        };
-      });
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
 
-      jest.doMock('../src/install', () => {
-        const real = jest.requireActual('../src/install');
-        mockEnsureUvProject = jest.fn(async () => ({
-          projectDir: '/mock/project',
-          pyprojectPath: '/mock/project/pyproject.toml',
-          lockPath: '/mock/project/uv.lock',
-        }));
-        return {
-          __esModule: true,
-          ...real,
-          ensureUvProject: mockEnsureUvProject,
-        };
-      });
-
-      // Mock child_process to return mock uv python list output
-      jest.doMock('child_process', () => {
-        const real = jest.requireActual('child_process');
-        return {
-          ...real,
-          execSync: jest.fn((cmd: string) => {
-            if (cmd.includes('uv python list')) {
-              return mockUvPythonListJson;
-            }
-            return real.execSync(cmd);
-          }),
-        };
-      });
-
-      // Mock which to return a path for uv
-      jest.doMock('which', () => ({
-        __esModule: true,
-        default: { sync: jest.fn(() => '/mock/uv') },
-      }));
-
-      // Import after mocks are configured
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require('../src/index');
-      buildWithMocks = mod.build;
-    });
+    // Import after mocks are configured
+    const { build: buildWithMocks } = await import('../src/index');
 
     const workPath = path.join(
       tmpdir(),
@@ -1848,62 +1832,40 @@ describe('custom install hooks', () => {
   });
 
   it('falls back to uv install when no custom install is configured', async () => {
-    jest.resetModules();
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
+    const mockUvSync = vi.fn(async () => {});
 
-    let buildWithMocks: any;
-    let mockExecCommand: jest.Mock = jest.fn();
-    let mockEnsureUvProject: jest.Mock = jest.fn();
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
 
-    jest.isolateModules(() => {
-      jest.doMock('@vercel/build-utils', () => {
-        const real = jest.requireActual('@vercel/build-utils');
-        mockExecCommand = jest.fn(async () => {});
-        return {
-          __esModule: true,
-          ...real,
-          execCommand: mockExecCommand,
-        };
-      });
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
 
-      jest.doMock('../src/install', () => {
-        const real = jest.requireActual('../src/install');
-        mockEnsureUvProject = jest.fn(async () => ({
-          projectDir: '/mock/project',
-          pyprojectPath: '/mock/project/pyproject.toml',
-          lockPath: '/mock/project/uv.lock',
-        }));
-        return {
-          __esModule: true,
-          ...real,
-          ensureUvProject: mockEnsureUvProject,
-        };
-      });
+    // Mock UvRunner to prevent actual uv sync commands
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({ onSync: mockUvSync }),
+    }));
 
-      // Mock child_process to return mock uv python list output
-      jest.doMock('child_process', () => {
-        const real = jest.requireActual('child_process');
-        return {
-          ...real,
-          execSync: jest.fn((cmd: string) => {
-            if (cmd.includes('uv python list')) {
-              return mockUvPythonListJson;
-            }
-            return real.execSync(cmd);
-          }),
-        };
-      });
-
-      // Mock which to return a path for uv
-      jest.doMock('which', () => ({
-        __esModule: true,
-        default: { sync: jest.fn(() => '/mock/uv') },
-      }));
-
-      // Import after mocks are configured
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require('../src/index');
-      buildWithMocks = mod.build;
-    });
+    // Import after mocks are configured
+    const { build: buildWithMocks } = await import('../src/index');
 
     const workPath = path.join(
       tmpdir(),
@@ -1932,6 +1894,8 @@ describe('custom install hooks', () => {
 
     // No custom install -> uv-based install should be used
     expect(mockEnsureUvProject).toHaveBeenCalled();
+    // uv sync should have been called
+    expect(mockUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
   });
