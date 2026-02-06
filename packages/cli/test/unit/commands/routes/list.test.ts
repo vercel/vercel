@@ -194,8 +194,32 @@ describe('routes list', () => {
       client.setArgv('routes', 'list', '--expand');
       const exitCode = await routes(client);
       expect(exitCode, 'exit code for "routes list --expand"').toEqual(0);
-      // Default routes have no srcSyntax, so should show 'Regex' (the default)
       await expect(client.stderr).toOutput('Regex');
+    });
+
+    it('should show Enabled and Disabled status in table view', async () => {
+      useRoutes(4); // Route 0: disabled (index%3===0), Route 1: enabled, Route 2: enabled, Route 3: disabled
+      client.setArgv('routes', 'list');
+      const exitCode = await routes(client);
+      expect(exitCode, 'exit code for "routes list"').toEqual(0);
+      // Route 0 is disabled, appears first in table; Route 1 is enabled
+      await expect(client.stderr).toOutput('Disabled');
+    });
+
+    it('should show transforms in expanded view', async () => {
+      useRoutes(1); // Route 0 has a request header transform
+      client.setArgv('routes', 'list', '--expand');
+      const exitCode = await routes(client);
+      expect(exitCode, 'exit code for "routes list --expand"').toEqual(0);
+      await expect(client.stderr).toOutput('Transforms');
+    });
+
+    it('should show conditions in expanded view', async () => {
+      useRoutes(2); // Route 1 has a has condition
+      client.setArgv('routes', 'list', '--expand');
+      const exitCode = await routes(client);
+      expect(exitCode, 'exit code for "routes list --expand"').toEqual(0);
+      await expect(client.stderr).toOutput('Has conditions');
     });
   });
 });

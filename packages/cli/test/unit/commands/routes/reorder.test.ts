@@ -185,4 +185,74 @@ describe('routes reorder', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Moved');
   });
+
+  it('should error when only one route exists', async () => {
+    const { useStageRoutesWithSingleRoute } = await import(
+      '../../../mocks/routes'
+    );
+    useStageRoutesWithSingleRoute();
+    client.setArgv('routes', 'reorder', 'Only Route', '--first', '--yes');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('only one route');
+  });
+
+  it('should error when reference route not found for after:', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      'after:nonexistent-id',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('not found');
+  });
+
+  it('should error when reference route not found for before:', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      'before:nonexistent-id',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('not found');
+  });
+
+  it('should verify PUT body has routes in correct order when moving to first', async () => {
+    useStageRoutes();
+    client.setArgv('routes', 'reorder', 'Route 3', '--first', '--yes');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const { capturedBodies } = await import('../../../mocks/routes');
+    const body = capturedBodies.stage as any;
+    expect(body.overwrite).toBe(true);
+    // Route 3 (originally index 2) should now be first
+    expect(body.routes[0].name).toBe('Route 3');
+    expect(body.routes[1].name).toBe('Route 1');
+  });
+
+  it('should error on position 0', async () => {
+    useStageRoutes();
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      '0',
+      '--yes'
+    );
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('must be 1 or greater');
+  });
 });
