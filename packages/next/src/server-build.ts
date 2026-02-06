@@ -130,6 +130,7 @@ export async function serverBuild({
   afterFilesRewrites,
   fallbackRewrites,
   headers,
+  onMatchHeaders,
   dataRoutes,
   hasIsr404Page,
   hasIsr500Page,
@@ -180,6 +181,7 @@ export async function serverBuild({
   entryDirectory: string;
   outputDirectory: string;
   headers: Route[];
+  onMatchHeaders: Route[];
   workPath: string;
   beforeFilesRewrites: Route[];
   afterFilesRewrites: Route[];
@@ -2812,6 +2814,7 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
+      ...onMatchHeaders,
       {
         src: path.posix.join('/', entryDirectory, '/index(?:/)?'),
         headers: {

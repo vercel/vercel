@@ -701,6 +701,7 @@ export const build: BuildV2 = async buildOptions => {
   );
 
   const headers: Route[] = [];
+  const onMatchHeaders: Route[] = [];
   const beforeFilesRewrites: Route[] = [];
   const afterFilesRewrites: Route[] = [];
   const fallbackRewrites: Route[] = [];
@@ -776,6 +777,9 @@ export const build: BuildV2 = async buildOptions => {
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
         }
+        if (routesManifest.onMatchHeaders) {
+          onMatchHeaders.push(...convertHeaders(routesManifest.onMatchHeaders));
+        }
 
         // This applies the _next match prevention for redirects and
         // also allows matching the trailingSlash setting automatically
@@ -813,6 +817,9 @@ export const build: BuildV2 = async buildOptions => {
           );
           headers.forEach((r, i) =>
             updateRouteSrc(r, i, routesManifest.headers || [])
+          );
+          onMatchHeaders.forEach((r, i) =>
+            updateRouteSrc(r, i, routesManifest.onMatchHeaders || [])
           );
         }
 
@@ -1111,6 +1118,7 @@ export const build: BuildV2 = async buildOptions => {
           continue: true,
           important: true,
         },
+        ...onMatchHeaders,
 
         // error handling
         ...(output[path.posix.join('./', entryDirectory, '404')] ||
@@ -1578,6 +1586,7 @@ export const build: BuildV2 = async buildOptions => {
         isCorrectLocaleAPIRoutes,
         pagesDir,
         headers,
+        onMatchHeaders,
         beforeFilesRewrites,
         afterFilesRewrites,
         fallbackRewrites,
@@ -2846,6 +2855,7 @@ export const build: BuildV2 = async buildOptions => {
         continue: true,
         important: true,
       },
+      ...onMatchHeaders,
 
       // error handling
       ...(isLegacy
