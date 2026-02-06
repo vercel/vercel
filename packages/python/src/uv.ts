@@ -254,20 +254,26 @@ export async function findUvBinary(pythonPath: string): Promise<string | null> {
     debug('Failed to resolve Python user scripts directory', err);
   }
 
-  try {
-    const candidates: string[] = [];
-    if (!isWin) {
-      candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
-      candidates.push('/usr/local/bin/uv');
-      candidates.push('/opt/homebrew/bin/uv');
-    } else {
-      candidates.push('C:\\Users\\Public\\uv\\uv.exe');
+  // On Vercel build image, do not use fixed fallback paths (/usr/local/bin/uv, etc.).
+  // Some build containers do not have uv at those locations, which causes
+  // "spawn /usr/local/bin/uv ENOENT". Prefer returning null so getUvBinaryOrInstall
+  // will install uv via pip into the Python user scripts dir (e.g. ~/.local/bin/uv).
+  if (!process.env.VERCEL_BUILD_IMAGE) {
+    try {
+      const candidates: string[] = [];
+      if (!isWin) {
+        candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
+        candidates.push('/usr/local/bin/uv');
+        candidates.push('/opt/homebrew/bin/uv');
+      } else {
+        candidates.push('C:\\Users\\Public\\uv\\uv.exe');
+      }
+      for (const p of candidates) {
+        if (fs.existsSync(p)) return p;
+      }
+    } catch (err) {
+      debug('Failed to resolve uv fallback paths', err);
     }
-    for (const p of candidates) {
-      if (fs.existsSync(p)) return p;
-    }
-  } catch (err) {
-    debug('Failed to resolve uv fallback paths', err);
   }
 
   return null;
