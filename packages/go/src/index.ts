@@ -159,7 +159,11 @@ export async function build(options: BuildOptions) {
 
     // Standalone server mode when framework is 'go' or 'services'
     if (config?.framework === 'go' || config?.framework === 'services') {
-      const resolvedEntrypoint = await detectGoEntrypoint(workPath, entrypoint);
+      const resolvedEntrypoint = await detectGoEntrypoint(
+        workPath,
+        entrypoint,
+        config.serviceWorkspace as string | undefined
+      );
       if (!resolvedEntrypoint) {
         throw new Error(
           `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
@@ -850,7 +854,8 @@ export async function startDevServer(
   if (config?.framework === 'go' || config?.framework === 'services') {
     const resolvedEntrypoint = await detectGoEntrypoint(
       workPath,
-      entrypointWithExt
+      entrypointWithExt,
+      config?.serviceWorkspace as string | undefined
     );
     if (!resolvedEntrypoint) {
       throw new Error(
