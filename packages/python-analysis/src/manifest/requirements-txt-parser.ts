@@ -7,7 +7,7 @@ const PRIMARY_INDEX_NAME = 'primary';
 /** Prefix for extra index names when --extra-index-url is specified */
 const EXTRA_INDEX_PREFIX = 'extra-';
 
-import { normalize } from 'node:path';
+import { normalize, basename } from 'node:path';
 
 import type {
   EnvironmentMarker,
@@ -39,6 +39,8 @@ export interface PipOptions {
   indexUrl?: string;
   /** Extra index URLs (--extra-index-url) */
   extraIndexUrls: string[];
+  /** Local path dependencies (e.g., ./wheels/pkg.whl) */
+  localPaths: string[];
 }
 
 /**
@@ -143,6 +145,7 @@ function extractPipArguments(fileContent: string): {
     requirementFiles: [],
     constraintFiles: [],
     extraIndexUrls: [],
+    localPaths: [],
   };
 
   const lines = fileContent.split(/\r?\n/);
@@ -164,6 +167,14 @@ function extractPipArguments(fileContent: string): {
     while (fullLine.endsWith('\\') && i + linesConsumed + 1 < lines.length) {
       linesConsumed++;
       fullLine = fullLine.slice(0, -1) + lines[i + linesConsumed].trim();
+    }
+
+    // Detect local path requirements before passing to pip-requirements-js,
+    // which cannot parse them (e.g., ./wheels/pkg-1.0.0-py3-none-any.whl).
+    if (isLocalPathRequirement(fullLine)) {
+      options.localPaths.push(fullLine);
+      i += linesConsumed;
+      continue;
     }
 
     const extracted = tryExtractPipArgument(fullLine, options);
@@ -334,6 +345,8 @@ export function convertRequirementsToPyprojectToml(
 
   if (deps.length > 0) {
     pyproject.project = {
+      name: 'app',
+      version: '0.1.0',
       dependencies: deps,
     };
   }
@@ -426,6 +439,7 @@ function parseRequirementsFileInternal(
     constraintFiles: [...options.constraintFiles],
     indexUrl: options.indexUrl,
     extraIndexUrls: [...options.extraIndexUrls],
+    localPaths: [...options.localPaths],
   };
 
   for (const req of requirements) {
@@ -447,6 +461,15 @@ function parseRequirementsFileInternal(
         norm.hashes = hashes;
       }
       normalized.push(norm);
+    }
+  }
+
+  // Convert local path dependencies (filtered out before pip-requirements-js)
+  // into normalized requirements with source information.
+  for (const localPath of mergedOptions.localPaths) {
+    const req = normalizeLocalPathDep(localPath);
+    if (req) {
+      normalized.push(req);
     }
   }
 
@@ -670,6 +693,63 @@ function isEnvironmentMarkerNode(
   // A node has 'and' or 'or' as the operator
   const op = (marker as EnvironmentMarkerNode).operator;
   return op === 'and' || op === 'or';
+}
+
+/**
+ * Check if a line represents a local path requirement.
+ * Local paths start with ./, ../, or / (absolute Unix paths).
+ */
+function isLocalPathRequirement(line: string): boolean {
+  if (line.startsWith('./') || line.startsWith('../') || line.startsWith('/')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Parse a wheel filename to extract package name and version.
+ *
+ * Wheel filename format (PEP 427):
+ *   {name}-{version}(-{build})?-{python}-{abi}-{platform}.whl
+ *
+ * @returns Parsed name and version, or null if not a valid wheel filename
+ */
+function parseWheelFilename(
+  filePath: string
+): { name: string; version: string } | null {
+  const filename = basename(filePath);
+  if (!filename.endsWith('.whl')) return null;
+
+  const base = filename.slice(0, -4);
+  const parts = base.split('-');
+  // Minimum 5 parts: name-version-python-abi-platform
+  if (parts.length < 5) return null;
+
+  return {
+    // Wheel filenames use underscores; normalize to hyphens (PEP 503)
+    name: parts[0].replace(/_/g, '-'),
+    version: parts[1],
+  };
+}
+
+/**
+ * Normalize a local file path into a NormalizedRequirement.
+ * Currently supports .whl files with well-defined naming conventions.
+ */
+function normalizeLocalPathDep(
+  localPath: string
+): NormalizedRequirement | null {
+  const trimmed = localPath.trim();
+  const wheelInfo = parseWheelFilename(trimmed);
+  if (wheelInfo) {
+    return {
+      name: wheelInfo.name,
+      source: { path: trimmed },
+    };
+  }
+  // Non-wheel local paths (directories, tarballs) are not yet supported
+  // in the requirements.txt→pyproject.toml conversion.
+  return null;
 }
 
 function formatMarkerValue(value: string): string {

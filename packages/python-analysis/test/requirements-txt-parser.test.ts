@@ -239,6 +239,7 @@ requests==2.28.0
       requirementFiles: [],
       constraintFiles: [],
       extraIndexUrls: [],
+      localPaths: [],
     });
   });
 
@@ -249,6 +250,7 @@ requests==2.28.0
       requirementFiles: [],
       constraintFiles: [],
       extraIndexUrls: [],
+      localPaths: [],
     });
   });
 
@@ -263,6 +265,7 @@ requests==2.28.0
       requirementFiles: [],
       constraintFiles: [],
       extraIndexUrls: [],
+      localPaths: [],
     });
   });
 
@@ -569,6 +572,8 @@ requests==2.28.0
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask>=2.0.0', 'requests==2.28.0'],
       },
     });
@@ -648,6 +653,8 @@ requests==2.28.0 --hash=sha256:def456 --hash=sha256:ghi789
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask==2.0.0', 'requests==2.28.0'],
       },
     });
@@ -671,6 +678,8 @@ django>=4.0
 
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask>=2.0.0', 'requests==2.28.0', 'django>=4.0'],
       },
     });
