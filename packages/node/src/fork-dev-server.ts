@@ -79,21 +79,11 @@ export async function forkDevServer(options: {
       nodeOptions += ' --no-warnings';
     }
 
-    const tsNodePath = options.require_.resolve('ts-node');
-    const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
-    const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
+    const tsxPath = pathToFileURL(options.require_.resolve('tsx'));
 
     if (options.maybeTranspile) {
-      if (options.isTypeScript) {
-        nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
-          nodeOptions || ''
-        }`;
-      } else {
-        if (options.isEsm) {
-          // no transform needed because Node.js supports ESM natively
-        } else {
-          nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
-        }
+      if (options.isTypeScript || !options.isEsm) {
+        nodeOptions = `--import ${tsxPath} ${nodeOptions || ''}`;
       }
     }
 
@@ -105,10 +95,6 @@ export async function forkDevServer(options: {
         VERCEL_DEV_CONFIG: JSON.stringify(options.config),
         VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
         VERCEL_DEV_PUBLIC_DIR: options.publicDir || '',
-        TS_NODE_TRANSPILE_ONLY: '1',
-        TS_NODE_COMPILER_OPTIONS: options.tsConfig?.compilerOptions
-          ? JSON.stringify(options.tsConfig.compilerOptions)
-          : undefined,
         NODE_OPTIONS: nodeOptions,
       }),
       stdio: options.printLogs ? 'pipe' : undefined,
