@@ -1,5 +1,22 @@
 # @vercel/build-utils
 
+## 13.3.2
+
+### Patch Changes
+
+- Improve memory efficiency in `FileBlob.fromStream()` by avoiding unnecessary buffer copies when chunks are already Buffers ([#14701](https://github.com/vercel/vercel/pull/14701))
+
+- [services] build time service url env vars ([#14893](https://github.com/vercel/vercel/pull/14893))
+
+- Updated dependencies [[`7a747344dfb778a650da2ee5f7fba8c974098b42`](https://github.com/vercel/vercel/commit/7a747344dfb778a650da2ee5f7fba8c974098b42)]:
+  - @vercel/python-analysis@0.3.1
+
+## 13.3.1
+
+### Patch Changes
+
+- Replace Python-based AST parser with WASM-based `@vercel/python-analysis` for detecting Python entrypoints. This eliminates the need for a Python runtime when analyzing Python files for WSGI/ASGI application patterns. ([#14843](https://github.com/vercel/vercel/pull/14843))
+
 ## 13.3.0
 
 ### Minor Changes

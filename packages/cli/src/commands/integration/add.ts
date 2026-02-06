@@ -193,14 +193,19 @@ function provisionResourceViaWebUI(
   teamId: string,
   integrationId: string,
   productId: string,
-  projectId?: string
+  projectId?: string,
+  resourceName?: string
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('integrationId', integrationId);
   url.searchParams.set('productId', productId);
+  url.searchParams.set('source', 'cli');
   if (projectId) {
     url.searchParams.set('projectId', projectId);
+  }
+  if (resourceName) {
+    url.searchParams.set('defaultResourceName', resourceName);
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
@@ -267,7 +272,8 @@ async function provisionResourceViaCLI(
         teamId,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink?.project?.id,
+        name
       );
     }
 
@@ -505,6 +511,7 @@ function handleManualVerificationAction(
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('authorizationId', authorizationId);
+  url.searchParams.set('source', 'cli');
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   open(url.href);

@@ -72,4 +72,84 @@ describe('dns rm', () => {
       ]);
     });
   });
+
+  describe('--yes', () => {
+    it('skips the confirmation prompt', async () => {
+      const recordId = '1';
+      client.scenario.get(`/v5/domains/records/${recordId}`, (req, res) => {
+        res.json({
+          id: '1',
+          type: 'A',
+          value: '',
+          mxPriority: '1',
+          domain: {
+            domainName: 'example.com',
+          },
+          createdAt: '1729878610745',
+          name: 'Example',
+        });
+      });
+      client.scenario.delete(
+        `/v3/domains/:domain?/records/${recordId}`,
+        (req, res) => {
+          res.json({});
+        }
+      );
+      client.setArgv('dns', 'rm', recordId, '--yes');
+      const exitCode = await dns(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:remove',
+          value: 'rm',
+        },
+        {
+          key: 'argument:recordId',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('supports -y shorthand', async () => {
+      const recordId = '1';
+      client.scenario.get(`/v5/domains/records/${recordId}`, (req, res) => {
+        res.json({
+          id: '1',
+          type: 'A',
+          value: '',
+          mxPriority: '1',
+          domain: {
+            domainName: 'example.com',
+          },
+          createdAt: '1729878610745',
+          name: 'Example',
+        });
+      });
+      client.scenario.delete(
+        `/v3/domains/:domain?/records/${recordId}`,
+        (req, res) => {
+          res.json({});
+        }
+      );
+      client.setArgv('dns', 'rm', recordId, '-y');
+      const exitCode = await dns(client);
+      expect(exitCode).toEqual(0);
+    });
+  });
+
+  describe('errors', () => {
+    it('rejects unknown flags', async () => {
+      client.setArgv('dns', 'rm', 'rec_123', '--unknown');
+      const exitCode = await dns(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: unknown or unexpected option: --unknown'
+      );
+    });
+  });
 });

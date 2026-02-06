@@ -23,12 +23,12 @@
       "mustContain": "Loading..."
     },
     {
-      "path": "/_next/data/testing-build-id/ebay/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/ebay/first.json",
       "status": 200,
       "mustContain": "\"params\":"
     },
     {
-      "path": "/_next/data/testing-build-id/ebay/first.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/ebay/first.json",
       "status": 200,
       "mustContain": "\"random\":"
     },

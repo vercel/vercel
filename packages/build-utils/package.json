@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "13.3.0",
+  "version": "13.3.2",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -17,6 +17,9 @@
     "vitest-unit": "glob --absolute 'test/unit.*test.ts'",
     "vitest-e2e": "glob --absolute 'test/integration*.test.ts'",
     "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vercel/python-analysis": "workspace:*"
   },
   "devDependencies": {
     "@iarna/toml": "2.2.3",
