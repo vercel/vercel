@@ -219,10 +219,10 @@ process.on('message', async m => {
   }
 });
 
-// Do not exit on signals, so other interruption handlers
-// can perform their cleanup routine.
 process.on('SIGTERM', async () => {
   if (onExit) {
     await onExit();
   }
+
+  process.exit(0);
 });
