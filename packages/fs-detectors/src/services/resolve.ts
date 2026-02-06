@@ -167,6 +167,10 @@ export function resolveConfiguredService(
       : routePrefix;
     builderConfig.routePrefix = stripped || '.';
   }
+  // Pass workspace to builder config for builders that need to know the service's workspace
+  if (workspace && workspace !== '.') {
+    builderConfig.workspace = workspace;
+  }
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
