@@ -36,7 +36,11 @@ import {
 } from '../src/version';
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  findUvBinary,
+} from '../src/uv';
 import { createPyprojectToml } from '../src/install';
 import { FileBlob } from '@vercel/build-utils';
 let warningMessages: string[];
@@ -1898,6 +1902,73 @@ describe('custom install hooks', () => {
     expect(mockUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('findUvBinary', () => {
+  const origPathEnv = process.env.PATH;
+  let testDir: string;
+
+  beforeEach(() => {
+    testDir = path.join(
+      tmpdir(),
+      `vc-test-uv-bin-${Math.floor(Math.random() * 1e6)}`
+    );
+    fs.mkdirSync(testDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    process.env.PATH = origPathEnv;
+    if (fs.existsSync(testDir)) {
+      fs.removeSync(testDir);
+    }
+  });
+
+  it('returns path when uv binary is executable', async () => {
+    const isWin = process.platform === 'win32';
+    const uvBin = path.join(testDir, `uv${isWin ? '.cmd' : ''}`);
+    if (isWin) {
+      fs.writeFileSync(uvBin, '@echo off\r\necho uv 0.1.0\r\n', 'utf8');
+    } else {
+      fs.writeFileSync(uvBin, '#!/bin/sh\necho "uv 0.1.0"\n', 'utf8');
+      fs.chmodSync(uvBin, 0o755);
+    }
+    process.env.PATH = testDir;
+
+    const result = await findUvBinary('/usr/bin/python3');
+    expect(result).toBe(uvBin);
+  });
+
+  it('skips a non-executable uv binary and returns null', async () => {
+    const isWin = process.platform === 'win32';
+    if (isWin) {
+      // On Windows files are always "executable", so write a script that fails
+      const uvBin = path.join(testDir, 'uv.cmd');
+      fs.writeFileSync(uvBin, '@echo off\r\nexit /b 1\r\n', 'utf8');
+    } else {
+      const uvBin = path.join(testDir, 'uv');
+      fs.writeFileSync(uvBin, '#!/bin/sh\necho "uv 0.1.0"\n', 'utf8');
+      // Intentionally do NOT chmod +x
+    }
+    process.env.PATH = testDir;
+
+    const result = await findUvBinary('/usr/bin/python3');
+    expect(result).toBeNull();
+  });
+
+  it('skips a broken uv binary that exits non-zero', async () => {
+    const isWin = process.platform === 'win32';
+    const uvBin = path.join(testDir, `uv${isWin ? '.cmd' : ''}`);
+    if (isWin) {
+      fs.writeFileSync(uvBin, '@echo off\r\nexit /b 1\r\n', 'utf8');
+    } else {
+      fs.writeFileSync(uvBin, '#!/bin/sh\nexit 1\n', 'utf8');
+      fs.chmodSync(uvBin, 0o755);
+    }
+    process.env.PATH = testDir;
+
+    const result = await findUvBinary('/usr/bin/python3');
+    expect(result).toBeNull();
   });
 });
 

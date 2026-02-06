@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import { join } from 'path';
 import { delimiter as pathDelimiter } from 'path';
 import execa from 'execa';
@@ -230,15 +230,30 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
   }
 }
 
+function verifyUvBinary(uvPath: string): boolean {
+  try {
+    execFileSync(uvPath, ['--version'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return true;
+  } catch (err) {
+    debug(
+      `Found uv at "${uvPath}" but failed to execute: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return false;
+  }
+}
+
 export async function findUvBinary(pythonPath: string): Promise<string | null> {
+  const candidates: string[] = [];
+
   const found = which.sync('uv', { nothrow: true });
-  if (found) return found;
+  if (found) candidates.push(found);
 
   try {
     const globalScriptsDir = await getGlobalScriptsDir(pythonPath);
     if (globalScriptsDir) {
-      const uvPath = join(globalScriptsDir, uvExec);
-      if (fs.existsSync(uvPath)) return uvPath;
+      candidates.push(join(globalScriptsDir, uvExec));
     }
   } catch (err) {
     debug('Failed to resolve Python global scripts directory', err);
@@ -247,27 +262,24 @@ export async function findUvBinary(pythonPath: string): Promise<string | null> {
   try {
     const userScriptsDir = await getUserScriptsDir(pythonPath);
     if (userScriptsDir) {
-      const uvPath = join(userScriptsDir, uvExec);
-      if (fs.existsSync(uvPath)) return uvPath;
+      candidates.push(join(userScriptsDir, uvExec));
     }
   } catch (err) {
     debug('Failed to resolve Python user scripts directory', err);
   }
 
-  try {
-    const candidates: string[] = [];
-    if (!isWin) {
-      candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
-      candidates.push('/usr/local/bin/uv');
-      candidates.push('/opt/homebrew/bin/uv');
-    } else {
-      candidates.push('C:\\Users\\Public\\uv\\uv.exe');
+  if (!isWin) {
+    candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
+    candidates.push('/usr/local/bin/uv');
+    candidates.push('/opt/homebrew/bin/uv');
+  } else {
+    candidates.push('C:\\Users\\Public\\uv\\uv.exe');
+  }
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && verifyUvBinary(candidate)) {
+      return candidate;
     }
-    for (const p of candidates) {
-      if (fs.existsSync(p)) return p;
-    }
-  } catch (err) {
-    debug('Failed to resolve uv fallback paths', err);
   }
 
   return null;
