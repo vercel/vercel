@@ -586,6 +586,8 @@ uvicorn[standard]>=0.20.0
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['uvicorn[standard]>=0.20.0'],
       },
     });
@@ -598,6 +600,8 @@ mypackage @ https://example.com/package.zip
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['mypackage @ https://example.com/package.zip'],
       },
     });
@@ -649,12 +653,12 @@ pywin32>=300 ; sys_platform == "win32"
     const content = `
 flask==2.0.0 --hash=sha256:abc123
 requests==2.28.0 --hash=sha256:def456 --hash=sha256:ghi789
+        name: 'app',
+        version: '0.1.0',
 `;
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
-        name: 'app',
-        version: '0.1.0',
         dependencies: ['flask==2.0.0', 'requests==2.28.0'],
       },
     });
