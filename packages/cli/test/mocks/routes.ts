@@ -456,6 +456,205 @@ export function useRoutesWithDiffForPublish() {
   });
 }
 
+export function useDeleteRoute() {
+  // Return 4 routes that can be deleted
+  const routes = [
+    { ...createRoute(0), name: 'Route A', id: 'route-a-id' },
+    { ...createRoute(1), name: 'Route B', id: 'route-b-id' },
+    { ...createRoute(2), name: 'Route C', id: 'route-c-id' },
+    { ...createRoute(3), name: 'Route D', id: 'route-d-id', enabled: false },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      routes,
+      version: {
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: true,
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'staging-version',
+            isLive: false,
+            isStaging: true,
+            ruleCount: routes.length,
+          },
+          {
+            id: 'live-version',
+            isLive: true,
+            isStaging: false,
+            ruleCount: routes.length,
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.delete('/v1/projects/:projectId/routes', (req, res) => {
+    const body = req.body as { routeIds: string[] };
+
+    // Validate all IDs exist
+    const missing = body.routeIds.filter(
+      id => !routes.find(r => r.id === id)
+    );
+    if (missing.length > 0) {
+      res.status(400).json({
+        error: { message: `Routes not found: ${missing.join(', ')}` },
+      });
+      return;
+    }
+
+    res.json({
+      deletedCount: body.routeIds.length,
+      version: {
+        id: 'new-staging-version',
+        s3Key: 'routes/staging.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        isLive: false,
+        ruleCount: routes.length - body.routeIds.length,
+      },
+    });
+  });
+}
+
+export function useEditRoute() {
+  const routes = [
+    { ...createRoute(0), name: 'Enabled Route', id: 'enabled-route-id', enabled: true },
+    { ...createRoute(1), name: 'Disabled Route', id: 'disabled-route-id', enabled: false },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      routes,
+      version: {
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: true,
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'staging-version',
+            isLive: false,
+            isStaging: true,
+            ruleCount: routes.length,
+          },
+          {
+            id: 'live-version',
+            isLive: true,
+            isStaging: false,
+            ruleCount: routes.length,
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.patch('/v1/projects/:projectId/routes/:routeId', (req, res) => {
+    const body = req.body as { route?: { enabled?: boolean; name?: string } };
+
+    res.json({
+      route: {
+        id: req.params.routeId,
+        name: body.route?.name ?? 'Updated Route',
+        enabled: body.route?.enabled ?? true,
+        staged: true,
+        route: { src: '^/test$' },
+      },
+      version: {
+        id: 'new-staging-version',
+        s3Key: 'routes/staging.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        isLive: false,
+        ruleCount: routes.length,
+      },
+    });
+  });
+}
+
+export function useStageRoutes() {
+  const routes = [
+    { ...createRoute(0), name: 'Route 1', id: 'route-1-id' },
+    { ...createRoute(1), name: 'Route 2', id: 'route-2-id' },
+    { ...createRoute(2), name: 'Route 3', id: 'route-3-id' },
+    { ...createRoute(3), name: 'Route 4', id: 'route-4-id' },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      routes,
+      version: {
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: true,
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'staging-version',
+            isLive: false,
+            isStaging: true,
+            ruleCount: routes.length,
+          },
+          {
+            id: 'live-version',
+            isLive: true,
+            isStaging: false,
+            ruleCount: routes.length,
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.put('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      version: {
+        id: 'new-staging-version',
+        s3Key: 'routes/staging.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        isLive: false,
+        ruleCount: routes.length,
+      },
+    });
+  });
+}
+
 export function useRoutesForInspect() {
   const detailedRoutes = [
     {
