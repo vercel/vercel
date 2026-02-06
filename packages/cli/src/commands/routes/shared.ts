@@ -7,6 +7,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { Command } from '../help';
+import type { RoutePosition, RouteVersion } from '../../util/routes/types';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -141,4 +142,76 @@ export function formatTransform(transform: {
   }
 
   return parts.join(' ');
+}
+
+/**
+ * Parses a position string into an API-compatible RoutePosition object.
+ * Supports: start, end, after:<id>, before:<id>.
+ */
+export function parsePosition(position: string): RoutePosition {
+  if (position === 'start') {
+    return { placement: 'start' };
+  }
+  if (position === 'end') {
+    return { placement: 'end' };
+  }
+  if (position.startsWith('after:')) {
+    const referenceId = position.slice(6);
+    if (!referenceId) {
+      throw new Error('Position "after:" requires a route ID');
+    }
+    return { placement: 'after', referenceId };
+  }
+  if (position.startsWith('before:')) {
+    const referenceId = position.slice(7);
+    if (!referenceId) {
+      throw new Error('Position "before:" requires a route ID');
+    }
+    return { placement: 'before', referenceId };
+  }
+  throw new Error(
+    `Invalid position: "${position}". Use: start, end, after:<id>, or before:<id>`
+  );
+}
+
+/**
+ * Offers to auto-promote if this is the only staged change.
+ * Used after add, delete, enable, disable, and reorder operations.
+ */
+export async function offerAutoPromote(
+  client: Client,
+  projectId: string,
+  version: RouteVersion,
+  hadExistingStagingVersion: boolean,
+  opts: { teamId?: string; skipPrompts?: boolean }
+): Promise<void> {
+  const { default: updateRouteVersion } = await import(
+    '../../util/routes/update-route-version'
+  );
+  const { default: stamp } = await import('../../util/output/stamp');
+
+  if (!hadExistingStagingVersion && !opts.skipPrompts) {
+    output.print('\n');
+    const shouldPromote = await client.input.confirm(
+      'This is the only staged change. Promote to production now?',
+      false
+    );
+
+    if (shouldPromote) {
+      const promoteStamp = stamp();
+      output.spinner('Promoting to production');
+
+      await updateRouteVersion(client, projectId, version.id, 'promote', {
+        teamId: opts.teamId,
+      });
+
+      output.log(
+        `${chalk.cyan('Promoted')} to production ${chalk.gray(promoteStamp())}`
+      );
+    }
+  } else if (hadExistingStagingVersion) {
+    output.warn(
+      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
+    );
+  }
 }
