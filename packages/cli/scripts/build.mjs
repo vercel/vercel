@@ -135,10 +135,6 @@ for (const cmd of PRIORITY_COMMANDS) {
 // Copy a few static files into `dist`
 const distRoot = new URL('dist/', repoRoot);
 copyFileSync(
-  new URL('src/util/projects/VERCEL_DIR_README.txt', repoRoot),
-  new URL('VERCEL_DIR_README.txt', distRoot)
-);
-copyFileSync(
   new URL('src/util/dev/builder-worker.cjs', repoRoot),
   new URL('builder-worker.cjs', distRoot)
 );
