@@ -9,8 +9,24 @@ import {
   saveToken,
 } from './token-util';
 
-export async function refreshToken(): Promise<void> {
-  const { projectId, teamId } = findProjectInfo();
+export async function refreshToken(existingToken?: string): Promise<void> {
+  let projectId: string | undefined;
+  let teamId: string | undefined;
+
+  if (existingToken) {
+    // Extract project info from existing token (unverified decode)
+    const payload = getTokenPayload(existingToken);
+    projectId = payload.project_id;
+    teamId = payload.owner_id;
+  }
+
+  if (!projectId) {
+    // Fall back to filesystem if no token or token doesn't have project info
+    const info = findProjectInfo();
+    projectId = info.projectId;
+    teamId = info.teamId;
+  }
+
   let maybeToken = loadToken(projectId);
 
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {

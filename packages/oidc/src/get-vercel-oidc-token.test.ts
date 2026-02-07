@@ -65,22 +65,27 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     );
   });
 
-  test('should throw helpful error when project.json is missing', async () => {
+  test('should throw helpful error when project.json is missing and no existing token', async () => {
     fs.writeFileSync(
       path.join(cliDataDir, 'auth.json'),
       JSON.stringify({ token: 'test-auth-token' })
     );
 
-    process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
+    // Use an expired token WITHOUT project_id/owner_id to simulate a token
+    // that can't provide project info, forcing filesystem fallback
+    process.env.VERCEL_OIDC_TOKEN = createExpiredTokenWithoutProjectInfo();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
       /project\.json not found, have you linked your project with `vc link\?`/
     );
   });
 
-  test('should throw helpful error when root directory cannot be found', async () => {
+  test('should throw helpful error when root directory cannot be found and no existing token', async () => {
     vi.mocked(findRootDir).mockReturnValue(null);
-    process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
+
+    // Use an expired token WITHOUT project_id/owner_id to simulate a token
+    // that can't provide project info, forcing filesystem fallback
+    process.env.VERCEL_OIDC_TOKEN = createExpiredTokenWithoutProjectInfo();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
       /Unable to find project root directory\. Have you linked your project with `vc link\?`/
@@ -187,6 +192,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
       sub: 'test-sub',
       name: 'test-name',
       exp: Date.now() / 1000 - 1000,
+      project_id: projectId,
+      owner_id: teamId,
     });
     vi.spyOn(tokenUtil, 'saveToken').mockImplementation(() => {
       throw new Error('EACCES: permission denied');
@@ -205,6 +212,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
       sub: 'test-sub',
       name: 'test-name',
       exp: Date.now() / 1000 + 43200,
+      project_id: projectId,
+      owner_id: teamId,
     });
 
     const token = await getVercelOidcToken();
@@ -230,11 +239,15 @@ describe('getVercelOidcToken - Error Scenarios', () => {
         sub: 'test-sub',
         name: 'test-name',
         exp: Date.now() / 1000 - 1000,
+        project_id: projectId,
+        owner_id: teamId,
       })
       .mockReturnValue({
         sub: 'test-sub',
         name: 'test-name',
         exp: Date.now() / 1000 + 43200,
+        project_id: projectId,
+        owner_id: teamId,
       });
 
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
@@ -244,7 +257,10 @@ describe('getVercelOidcToken - Error Scenarios', () => {
   });
 });
 
-function createExpiredToken(): string {
+function createExpiredToken(
+  projectId = 'test-project-id',
+  ownerId = 'test-team-id'
+): string {
   const header = Buffer.from(
     JSON.stringify({ alg: 'RS256', typ: 'JWT' })
   ).toString('base64url');
@@ -253,12 +269,18 @@ function createExpiredToken(): string {
       sub: 'test-sub',
       exp: 1,
       iat: 1,
+      project_id: projectId,
+      owner_id: ownerId,
     })
   ).toString('base64url');
   return `${header}.${payload}.fake_signature`;
 }
 
-function createValidToken(value = 'valid-token'): string {
+function createValidToken(
+  value = 'valid-token',
+  projectId = 'test-project-id',
+  ownerId = 'test-team-id'
+): string {
   const header = Buffer.from(
     JSON.stringify({ alg: 'RS256', typ: 'JWT' })
   ).toString('base64url');
@@ -267,7 +289,24 @@ function createValidToken(value = 'valid-token'): string {
       sub: 'test-sub',
       exp: Math.floor(Date.now() / 1000) + 43200,
       iat: Math.floor(Date.now() / 1000),
+      project_id: projectId,
+      owner_id: ownerId,
     })
   ).toString('base64url');
   return `${header}.${payload}.fake_signature_${value}`;
+}
+
+function createExpiredTokenWithoutProjectInfo(): string {
+  const header = Buffer.from(
+    JSON.stringify({ alg: 'RS256', typ: 'JWT' })
+  ).toString('base64url');
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub: 'test-sub',
+      exp: 1,
+      iat: 1,
+      // No project_id or owner_id - forces filesystem fallback
+    })
+  ).toString('base64url');
+  return `${header}.${payload}.fake_signature`;
 }
