@@ -46,13 +46,11 @@ export async function esbuild(
     throw new Error(`Failed to load "${configPath}`);
   }
 
-  const entryPoints =
-    opts.entryPoints ??
-    (opts.bundle
-      ? // When bundling, assume `src/index.ts` is the entrypoint file
-        [path.join(cwd, 'src/index.ts')]
-      : // When not bundling, compile all files referenced by the `tsconfig.json` file
-        tsconfig.fileNames);
+  const entryPoints = opts.bundle
+    ? // When bundling, assume `src/index.ts` is the entrypoint file
+      [path.join(cwd, 'src/index.ts')]
+    : // When not bundling, compile all files referenced by the `tsconfig.json` file
+      tsconfig.fileNames;
 
   let outdir = opts.outfile ? undefined : tsconfig.options.outDir;
 
