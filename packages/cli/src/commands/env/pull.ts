@@ -129,6 +129,25 @@ export default async function pull(
     source
   );
 
+  // Prompt to generate agent files if running from an AI agent
+  const { promptAndGenerateAgentFiles } = await import(
+    '../../util/agent-files'
+  );
+  const agentResult = await promptAndGenerateAgentFiles({
+    cwd: client.cwd,
+    projectName: link.project.name,
+    orgSlug: link.org.slug,
+    client,
+    output,
+  });
+  if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
+    output.print(
+      chalk.dim(
+        `Generated agent configuration files with Vercel best practices\n`
+      )
+    );
+  }
+
   return 0;
 }
 

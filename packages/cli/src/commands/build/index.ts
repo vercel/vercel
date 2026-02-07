@@ -360,6 +360,22 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan.stop();
     }
 
+    // Prompt to generate agent files if running from an AI agent
+    const { promptAndGenerateAgentFiles } = await import(
+      '../../util/agent-files'
+    );
+    const agentResult = await promptAndGenerateAgentFiles({
+      cwd,
+      projectName: project.projectName,
+      client,
+      output,
+    });
+    if (agentResult?.status === 'generated' && agentResult.files.length > 0) {
+      output.print(
+        `${prependEmoji('Generated agent configuration files', emoji('success'))}\n`
+      );
+    }
+
     return 0;
   } catch (err: any) {
     output.prettyError(err);
