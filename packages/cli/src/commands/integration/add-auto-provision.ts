@@ -5,10 +5,10 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { selectProduct } from '../../util/integration/select-product';
 import type {
   AcceptedPolicies,
   AutoProvisionResult,
-  IntegrationProduct,
 } from '../../util/integration/types';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import cmd from '../../util/output/cmd';
@@ -18,9 +18,14 @@ import { getLinkedProject } from '../../util/projects/link';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import { createMetadataWizard } from './wizard';
 
+export interface AddAutoProvisionOptions {
+  productSlug?: string;
+}
+
 export async function addAutoProvision(
   client: Client,
-  integrationSlug: string
+  integrationSlug: string,
+  options: AddAutoProvisionOptions = {}
 ) {
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
@@ -57,19 +62,14 @@ export async function addAutoProvision(
     return 1;
   }
 
-  // 3. Select product (or use only one if single product)
-  let product: IntegrationProduct;
-  if (integration.products.length === 1) {
-    product = integration.products[0];
-  } else {
-    product = await client.input.select({
-      message: 'Select a product',
-      choices: integration.products.map(p => ({
-        name: p.name,
-        value: p,
-        description: p.shortDescription,
-      })),
-    });
+  // 3. Select product (by slug, single auto-select, or interactive prompt)
+  const product = await selectProduct(
+    client,
+    integration.products,
+    options.productSlug
+  );
+  if (!product) {
+    return 1;
   }
 
   output.log(

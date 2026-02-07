@@ -20,6 +20,17 @@ export const addSubcommand = {
         `${packageName} integration add acme`,
       ],
     },
+    {
+      name: 'Install a specific product from an integration',
+      value: [
+        `${packageName} integration add <integration>/<product>`,
+        `${packageName} integration add acme/acme-redis`,
+      ],
+    },
+    {
+      name: 'Show available products for an integration',
+      value: `${packageName} integration add acme --help`,
+    },
   ],
 } as const;
 
@@ -159,5 +170,10 @@ export const integrationCommand = {
     openSubcommand,
     removeSubcommand,
   ],
-  examples: [],
+  examples: [
+    {
+      name: 'Install a specific product from an integration',
+      value: `${packageName} integration add acme/acme-redis`,
+    },
+  ],
 } as const;

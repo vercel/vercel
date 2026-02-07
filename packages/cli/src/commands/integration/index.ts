@@ -20,6 +20,8 @@ import {
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
+import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { formatProductHelp } from '../../util/integration/format-product-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -72,6 +74,24 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(addSubcommand);
+
+        // Dynamic help: if an integration slug is provided, fetch and show available products
+        const rawArg = subArgs[0];
+        if (rawArg) {
+          // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
+          const integrationSlug = rawArg.split('/')[0];
+          try {
+            const integration = await fetchIntegration(client, integrationSlug);
+            const products = integration.products ?? [];
+            if (products.length > 1) {
+              output.print(formatProductHelp(integrationSlug, products));
+            }
+          } catch (err: unknown) {
+            output.debug(
+              `Failed to fetch integration for dynamic help: ${err}`
+            );
+          }
+        }
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);

@@ -462,4 +462,98 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
     });
   });
+
+  describe('product slash syntax', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should select product by slug and skip prompt', async () => {
+      client.setArgv('integration', 'add', 'acme-two-products/acme-a');
+      const exitCodePromise = integrationCommand(client);
+
+      // Should NOT show "Select a product" prompt
+      await expect(client.stderr).toOutput(
+        `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
+      );
+
+      await expect(client.stderr).toOutput('What is the name of the resource?');
+      client.stdin.write('test-resource\n');
+
+      await expect(client.stderr).toOutput('Version');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Region');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should select second product by slug', async () => {
+      client.setArgv('integration', 'add', 'acme-two-products/acme-b');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        `Installing Acme Product B by Acme Integration Two Products under ${team.slug}`
+      );
+
+      await expect(client.stderr).toOutput('What is the name of the resource?');
+      client.stdin.write('test-resource\n');
+
+      await expect(client.stderr).toOutput('successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should error when product slug not found', async () => {
+      client.setArgv('integration', 'add', 'acme-two-products/nonexistent');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Product "nonexistent" not found. Available products: acme-a, acme-b'
+      );
+    });
+
+    it('should error on empty product slug after slash', async () => {
+      client.setArgv('integration', 'add', 'acme/');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid format. Expected: <integration-name>/<product-slug>'
+      );
+    });
+
+    it('should error on empty integration slug before slash', async () => {
+      client.setArgv('integration', 'add', '/product');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid format. Expected: <integration-name>/<product-slug>'
+      );
+    });
+
+    it('should work with single-product integration and explicit slug', async () => {
+      client.setArgv('integration', 'add', 'acme/acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        `Installing Acme Product by Acme Integration under ${team.slug}`
+      );
+
+      await expect(client.stderr).toOutput('What is the name of the resource?');
+      client.stdin.write('test-resource\n');
+
+      await expect(client.stderr).toOutput('Choose your region');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+  });
 });

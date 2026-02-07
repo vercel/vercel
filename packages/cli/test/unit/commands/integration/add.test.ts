@@ -41,6 +41,59 @@ describe('integration', () => {
           },
         ]);
       });
+
+      describe('dynamic product help', () => {
+        beforeEach(() => {
+          useIntegration({ withInstallation: false });
+        });
+
+        it('should show available products for multi-product integration', async () => {
+          client.setArgv('integration', 'add', 'acme-two-products', '--help');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(0);
+          const output = client.getFullOutput();
+          expect(output).toContain('Available products for');
+          expect(output).toContain('acme-a');
+          expect(output).toContain('acme-b');
+          expect(output).toContain(
+            'vercel integration add acme-two-products/<product-slug>'
+          );
+        });
+
+        it('should not show product listing for single-product integration', async () => {
+          client.setArgv('integration', 'add', 'acme', '--help');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(0);
+          // Single product — should NOT show product listing
+          const output = client.getFullOutput();
+          expect(output).not.toContain('Available products for');
+        });
+
+        it('should show available products when slash syntax is used with --help', async () => {
+          client.setArgv(
+            'integration',
+            'add',
+            'acme-two-products/acme-a',
+            '--help'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(0);
+          const output = client.getFullOutput();
+          // Should strip product slug and still fetch the integration for dynamic help
+          expect(output).toContain('Available products for');
+          expect(output).toContain('acme-a');
+          expect(output).toContain('acme-b');
+        });
+
+        it('should fall back to standard help when integration not found', async () => {
+          client.setArgv('integration', 'add', 'does-not-exist', '--help');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(0);
+          // Should still show standard help without errors
+          const output = client.getFullOutput();
+          expect(output).not.toContain('Available products for');
+        });
+      });
     });
 
     describe('[name]', () => {
@@ -576,6 +629,68 @@ describe('integration', () => {
         });
       });
 
+      describe('product slash syntax', () => {
+        beforeEach(() => {
+          useIntegration({ withInstallation: false });
+        });
+
+        it('should select product by slug with slash syntax', async () => {
+          client.setArgv('integration', 'add', 'acme-two-products/acme-a');
+          const exitCodePromise = integrationCommand(client);
+          // Should skip "Select a product" prompt and go straight to installing
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Terms have not been accepted. Open Vercel Dashboard?'
+          );
+          client.stdin.write('n\n');
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+        });
+
+        it('should error when product slug is not found', async () => {
+          client.setArgv('integration', 'add', 'acme-two-products/nonexistent');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Product "nonexistent" not found. Available products: acme-a, acme-b'
+          );
+        });
+
+        it('should error when slash syntax has empty product slug', async () => {
+          client.setArgv('integration', 'add', 'acme/');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid format. Expected: <integration-name>/<product-slug>'
+          );
+        });
+
+        it('should error when slash syntax has empty integration slug', async () => {
+          client.setArgv('integration', 'add', '/product');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid format. Expected: <integration-name>/<product-slug>'
+          );
+        });
+
+        it('should work with single-product integration and explicit slug', async () => {
+          client.setArgv('integration', 'add', 'acme/acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Terms have not been accepted. Open Vercel Dashboard?'
+          );
+          client.stdin.write('n\n');
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+        });
+      });
+
       describe('errors', () => {
         it('should error when no integration arugment was passed', async () => {
           client.setArgv('integration', 'add');
@@ -638,7 +753,9 @@ describe('integration', () => {
           client.setArgv('integration', 'add', 'acme-no-products');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
-          await expect(client.stderr).toOutput('Error: Product not found');
+          await expect(client.stderr).toOutput(
+            'Error: Integration "acme-no-products" is not a Marketplace integration'
+          );
         });
       });
     });
