@@ -1,5 +1,12 @@
 # @vercel/cervel
 
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`9bf27beab1fe4f1f6d6126679f2687c209594027`](https://github.com/vercel/vercel/commit/9bf27beab1fe4f1f6d6126679f2687c209594027)]:
+  - @vercel/backends@0.0.30
+
 ## 0.0.16
 
 ### Patch Changes

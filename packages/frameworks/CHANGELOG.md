@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.17.1
+
+### Patch Changes
+
+- [services] remove empty detectors ([#14914](https://github.com/vercel/vercel/pull/14914))
+
 ## 3.17.0
 
 ### Minor Changes
