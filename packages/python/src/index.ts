@@ -86,6 +86,8 @@ export const build: BuildV3 = async ({
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
 
+  debug(`workPath: ${workPath}`);
+
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
