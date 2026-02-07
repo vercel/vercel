@@ -25,7 +25,7 @@ export default async function ls(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;

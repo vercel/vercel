@@ -1,16 +1,21 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+import chalk from 'chalk';
 
-exports[`base level help output > help 1`] = `
-"
-  ▲ vercel [options] <command | path>
+// Hardcoded to avoid importing pkg.ts which pulls in more dependencies
+const packageName = 'vercel';
+const logo = '▲';
 
-  For deploy command help, run \`vercel deploy --help\`
+export const help = () => `
+  ${chalk.bold(`${logo} ${packageName}`)} [options] <command | path>
 
-  Commands:
+  ${chalk.dim('For deploy command help, run `vercel deploy --help`')}
 
-    Basic
+  ${chalk.dim('Commands:')}
 
-      deploy               [path]      Performs a deployment (default)
+    ${chalk.dim('Basic')}
+
+      deploy               [path]      Performs a deployment ${chalk.bold(
+        '(default)'
+      )}
       build                            Build the project locally into './vercel/output'
       cache                [cmd]       Manages cache for your current Project
       dev                              Start a local development server
@@ -32,7 +37,7 @@ exports[`base level help output > help 1`] = `
       rollback             [url|id]    Quickly revert back to a previous deployment
       switch               [scope]     Switches between different scopes
 
-    Advanced
+    ${chalk.dim('Advanced')}
 
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
@@ -52,35 +57,42 @@ exports[`base level help output > help 1`] = `
       blob                 [cmd]       Manages your Blob stores and files
       webhooks             [cmd]       Manages webhooks [beta]
 
-  Global Options:
+  ${chalk.dim('Global Options:')}
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     --cwd                          Current working directory
-    -A FILE, --local-config=FILE   Path to the local \`vercel.json\` file
-    -Q DIR, --global-config=DIR    Path to the global \`.vercel\` directory
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+      'FILE'
+    )}   Path to the local ${'`vercel.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+      'DIR'
+    )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
     --non-interactive              Run without interactive prompts (default when agent detected)
     -S, --scope                    Set a custom scope
-    -t TOKEN, --token=TOKEN        Login token
+    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
+      'TOKEN'
+    )}        Login token
 
-  Examples:
+  ${chalk.dim('Examples:')}
 
-  – Deploy the current directory
+  ${chalk.gray('–')} Deploy the current directory
 
-    $ vercel
+    ${chalk.cyan(`$ ${packageName}`)}
 
-  – Deploy a custom path
+  ${chalk.gray('–')} Deploy a custom path
 
-    $ vercel /usr/src/project
+    ${chalk.cyan(`$ ${packageName} /usr/src/project`)}
 
-  – Deploy with Environment Variables
+  ${chalk.gray('–')} Deploy with Environment Variables
 
-    $ vercel -e NODE_ENV=production
+    ${chalk.cyan(`$ ${packageName} -e NODE_ENV=production`)}
 
-  – Show the usage information for the sub command \`list\`
+  ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
+    '`list`'
+  )}
 
-    $ vercel help list
-"
+    ${chalk.cyan(`$ ${packageName} help list`)}
 `;
