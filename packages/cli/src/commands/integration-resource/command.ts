@@ -144,6 +144,10 @@ export const integrationResourceCommand = {
   description: 'Manage marketplace integration resources',
   options: [],
   arguments: [],
-  subcommands: [disconnectSubcommand, removeSubcommand],
+  subcommands: [
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    removeSubcommand,
+  ],
   examples: [],
 } as const;

@@ -441,6 +441,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('integration balance subcommand', () => {
+      it('integration balance subcommand help column width 120', () => {
+        expect(
+          help(integration.balanceSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration-resource help output snapshots', () => {
@@ -473,6 +483,16 @@ describe('help command', () => {
       it('integration-resource remove subcommand help column width 120', () => {
         expect(
           help(integrationResource.removeSubcommand, {
+            columns: 120,
+            parent: integrationResource.integrationResourceCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration-resource create-threshold subcommand', () => {
+      it('integration-resource create-threshold subcommand help column width 120', () => {
+        expect(
+          help(integrationResource.createThresholdSubcommand, {
             columns: 120,
             parent: integrationResource.integrationResourceCommand,
           })

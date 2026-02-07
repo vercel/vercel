@@ -23,9 +23,11 @@
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 /packages/config                         @vercel/ci-cd @vercel/edge-ingress @pranavkarthik10 @MatthewStanciu
 /packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/marketplace
+/packages/cli/src/commands/integration-resource/ @vercel/ci-cd @vercel/marketplace
 /packages/cli/src/util/integration/      @vercel/ci-cd @vercel/marketplace
 /packages/cli/test/mocks/integration.ts  @vercel/ci-cd @vercel/marketplace
 /packages/cli/test/unit/commands/integration/ @vercel/ci-cd @vercel/marketplace
+/packages/cli/test/unit/commands/integration-resource/ @vercel/ci-cd @vercel/marketplace
 /packages/python*                        @vercel/ci-cd @vercel/team-python
 /python                                  @vercel/ci-cd @vercel/team-python
 /.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python
