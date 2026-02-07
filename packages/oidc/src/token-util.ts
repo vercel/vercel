@@ -89,6 +89,46 @@ export async function getVercelCliToken(
   }
 }
 
+/**
+ * Resolves a project identifier (ID or slug) to a project ID.
+ * If the input starts with 'prj_', it's assumed to be an ID and returned directly.
+ * Otherwise, calls the Vercel API to resolve the slug to an ID.
+ *
+ * @param authToken - The authentication token to use for API calls
+ * @param projectIdOrSlug - Either a project ID (prj_*) or a project slug
+ * @param teamId - Optional team ID to scope the project lookup
+ * @returns The resolved project ID
+ * @throws {VercelOidcTokenError} If the project cannot be resolved
+ */
+export async function resolveProjectId(
+  authToken: string,
+  projectIdOrSlug: string,
+  teamId?: string
+): Promise<string> {
+  // Fast path: if it's already an ID, return it
+  if (projectIdOrSlug.startsWith('prj_')) {
+    return projectIdOrSlug;
+  }
+
+  // Resolve slug to ID via API
+  const url = `https://api.vercel.com/v9/projects/${encodeURIComponent(projectIdOrSlug)}${teamId ? `?teamId=${teamId}` : ''}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new VercelOidcTokenError(
+      `Failed to resolve project "${projectIdOrSlug}": ${res.statusText}`
+    );
+  }
+
+  const project = await res.json();
+  return project.id;
+}
+
 interface VercelTokenResponse {
   token: string;
 }

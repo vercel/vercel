@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getVercelCliToken } from './token-util';
+import { getVercelCliToken, resolveProjectId } from './token-util';
 import * as authConfig from './auth-config';
 import * as oauth from './oauth';
 import {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
+import { VercelOidcTokenError } from './token-error';
 
 vi.mock('fs');
 vi.mock('./token-io', () => ({
@@ -239,5 +240,117 @@ describe('getVercelCliToken', () => {
     const writeCall = vi.mocked(authConfig.writeAuthConfig).mock.calls[0][0];
     expect(writeCall.expiresAt).toBeGreaterThanOrEqual(beforeCall + 7200);
     expect(writeCall.expiresAt).toBeLessThanOrEqual(afterCall + 7200);
+  });
+});
+
+describe('resolveProjectId', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should return ID directly if it starts with prj_', async () => {
+    const projectId = 'prj_abc123';
+    const fetchSpy = vi.spyOn(global, 'fetch');
+    const result = await resolveProjectId('test-token', projectId);
+
+    expect(result).toBe(projectId);
+    // Should not make any API calls
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('should resolve slug to ID via API', async () => {
+    const projectSlug = 'my-project';
+    const projectId = 'prj_xyz789';
+    const authToken = 'test-auth-token';
+
+    const mockResponse = {
+      ok: true,
+      json: async () => ({ id: projectId, name: projectSlug }),
+    } as Response;
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+    const result = await resolveProjectId(authToken, projectSlug);
+
+    expect(result).toBe(projectId);
+    expect(global.fetch).toHaveBeenCalledWith(
+      `https://api.vercel.com/v9/projects/${projectSlug}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      }
+    );
+  });
+
+  it('should include teamId in query string when provided', async () => {
+    const projectSlug = 'my-project';
+    const projectId = 'prj_xyz789';
+    const teamId = 'team_abc123';
+    const authToken = 'test-auth-token';
+
+    const mockResponse = {
+      ok: true,
+      json: async () => ({ id: projectId, name: projectSlug }),
+    } as Response;
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+    const result = await resolveProjectId(authToken, projectSlug, teamId);
+
+    expect(result).toBe(projectId);
+    expect(global.fetch).toHaveBeenCalledWith(
+      `https://api.vercel.com/v9/projects/${projectSlug}?teamId=${teamId}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      }
+    );
+  });
+
+  it('should throw VercelOidcTokenError if API call fails', async () => {
+    const projectSlug = 'my-project';
+    const authToken = 'test-auth-token';
+
+    const mockResponse = {
+      ok: false,
+      statusText: 'Not Found',
+    } as Response;
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+    await expect(resolveProjectId(authToken, projectSlug)).rejects.toThrow(
+      VercelOidcTokenError
+    );
+    await expect(resolveProjectId(authToken, projectSlug)).rejects.toThrow(
+      'Failed to resolve project "my-project": Not Found'
+    );
+  });
+
+  it('should URL encode project slug', async () => {
+    const projectSlug = 'my project with spaces';
+    const projectId = 'prj_xyz789';
+    const authToken = 'test-auth-token';
+
+    const mockResponse = {
+      ok: true,
+      json: async () => ({ id: projectId, name: projectSlug }),
+    } as Response;
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+    await resolveProjectId(authToken, projectSlug);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      `https://api.vercel.com/v9/projects/${encodeURIComponent(projectSlug)}`,
+      expect.any(Object)
+    );
   });
 });

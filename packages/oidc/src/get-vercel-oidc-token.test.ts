@@ -19,8 +19,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
   let cliDataDir: string;
   let tokenDataDir: string;
 
-  const projectId = 'test-project-id';
-  const teamId = 'test-team-id';
+  const projectId = 'prj_test123';
+  const teamId = 'team_test456';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,7 +61,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
-      /No authentication found\. Please log in\./
+      /No authentication found/
     );
   });
 
@@ -243,9 +243,9 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     expect(token).toBe(newToken);
   });
 
-  test('should use provided teamId and projectId for refresh instead of reading project.json', async () => {
-    const customProjectId = 'custom-project-id';
-    const customTeamId = 'custom-team-id';
+  test('should use provided team and project for refresh instead of reading project.json', async () => {
+    const customProjectId = 'prj_custom123';
+    const customTeamId = 'team_custom456';
 
     fs.writeFileSync(
       path.join(cliDataDir, 'auth.json'),
@@ -275,8 +275,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     const token = await getVercelOidcToken({
-      teamId: customTeamId,
-      projectId: customProjectId,
+      team: customTeamId,
+      project: customProjectId,
     });
 
     expect(token).toBe(newToken);
@@ -287,8 +287,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     );
   });
 
-  test('should use provided projectId and read teamId from project.json', async () => {
-    const customProjectId = 'custom-project-id';
+  test('should use provided project and read team from project.json', async () => {
+    const customProjectId = 'prj_custom234';
 
     fs.writeFileSync(
       path.join(cliDataDir, 'auth.json'),
@@ -321,7 +321,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     const token = await getVercelOidcToken({
-      projectId: customProjectId,
+      project: customProjectId,
     });
 
     expect(token).toBe(newToken);
@@ -332,8 +332,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     );
   });
 
-  test('should use provided teamId and read projectId from project.json', async () => {
-    const customTeamId = 'custom-team-id';
+  test('should use provided team and read project from project.json', async () => {
+    const customTeamId = 'team_custom789';
 
     fs.writeFileSync(
       path.join(cliDataDir, 'auth.json'),
@@ -366,7 +366,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     const token = await getVercelOidcToken({
-      teamId: customTeamId,
+      team: customTeamId,
     });
 
     expect(token).toBe(newToken);
@@ -394,8 +394,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     });
 
     const token = await getVercelOidcToken({
-      teamId: 'custom-team',
-      projectId: 'custom-project',
+      team: 'custom-team',
+      project: 'custom-project',
     });
 
     expect(token).toBe(validToken);

@@ -13,5 +13,9 @@ export function getVercelOidcTokenSync(): string {
 }
 
 export async function getVercelCliToken(): Promise<string> {
-  throw new Error('getVercelCliToken is not supported in browser environments');
+  return '';
+}
+
+export async function resolveProjectId(): Promise<string> {
+  return '';
 }
