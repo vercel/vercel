@@ -24,9 +24,6 @@
     "vitest-unit": "glob --absolute 'test/unit.test.ts'",
     "type-check": "tsc --noEmit"
   },
-  "dependencies": {
-    "@vercel/python-analysis": "workspace:*"
-  },
   "devDependencies": {
     "@renovatebot/pep440": "4.2.1",
     "@types/execa": "^0.9.0",
