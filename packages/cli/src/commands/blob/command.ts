@@ -105,6 +105,15 @@ export const putSubcommand = {
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the uploaded blob (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [],
 } as const;
@@ -121,6 +130,50 @@ export const delSubcommand = {
   ],
   options: [],
   examples: [],
+} as const;
+
+export const getSubcommand = {
+  name: 'get',
+  aliases: [],
+  description: 'Get a blob from the Blob store',
+  arguments: [
+    {
+      name: 'urlOrPathname',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description:
+        "Access level for the blob (required). Must be 'public' or 'private'",
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
+    {
+      name: 'output',
+      shorthand: 'o',
+      type: String,
+      deprecated: false,
+      description: 'Output file path to save the blob content',
+      argument: 'STRING',
+    },
+  ],
+  examples: [
+    {
+      name: 'Get a public blob by URL',
+      value:
+        'vercel blob get https://example.blob.vercel-storage.com/file.txt --access public',
+    },
+    {
+      name: 'Get a private blob and save to file',
+      value:
+        'vercel blob get my-file.txt --access private --output ./downloaded.txt',
+    },
+  ],
 } as const;
 
 export const copySubcommand = {
@@ -164,6 +217,15 @@ export const copySubcommand = {
         'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
       argument: 'Number',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the copied blob (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [],
 } as const;
@@ -188,6 +250,15 @@ export const addStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description: 'Access level for the Blob store (default: "public")',
+      argument: 'STRING',
+      choices: ['private', 'public'],
+    },
   ],
   examples: [
     {
@@ -197,6 +268,14 @@ export const addStoreSubcommand = {
     {
       name: 'Create a blob store in a specific region',
       value: 'vercel blob store add my-store --region cdg1',
+    },
+    {
+      name: 'Create a private blob store',
+      value: 'vercel blob store add my-store --access private',
+    },
+    {
+      name: 'Create a public blob store',
+      value: 'vercel blob store add my-store --access public',
     },
   ],
 } as const;
@@ -247,6 +326,7 @@ export const blobCommand = {
   subcommands: [
     listSubcommand,
     putSubcommand,
+    getSubcommand,
     delSubcommand,
     copySubcommand,
     storeSubcommand,

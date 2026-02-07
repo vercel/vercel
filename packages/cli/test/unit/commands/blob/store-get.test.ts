@@ -36,6 +36,7 @@ describe('blob store get', () => {
         updatedAt: 1672531200000, // 2023-01-01 00:00:00
         billingState: 'active',
         size: 1048576, // 1MB
+        access: 'public',
       },
     });
 
@@ -170,6 +171,7 @@ describe('blob store get', () => {
           updatedAt: 1672531200000, // 2023-01-01 00:00:00 UTC
           billingState: 'active',
           size: 2097152, // 2MB
+          access: 'public',
         },
       });
 
@@ -182,7 +184,7 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
+          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z\nAccess: Public'
         )
       );
       expect(formatSpy).toHaveBeenCalledWith(
@@ -205,6 +207,7 @@ describe('blob store get', () => {
           updatedAt: Date.now(),
           billingState: 'active',
           size: 1024,
+          access: 'public',
         },
       });
 
@@ -229,6 +232,7 @@ describe('blob store get', () => {
             updatedAt: Date.now(),
             billingState,
             size: 1024,
+            access: 'public',
           },
         });
 
@@ -238,6 +242,56 @@ describe('blob store get', () => {
           expect.stringContaining('Billing State: Inactive')
         );
       }
+    });
+
+    it('should display public access correctly', async () => {
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_access_test_123',
+          name: 'Access Test Store',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          billingState: 'active',
+          size: 1024,
+          access: 'public',
+        },
+      });
+
+      const exitCode = await getStore(
+        client,
+        ['store_access_test_123'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining('Access: Public')
+      );
+    });
+
+    it('should display private access correctly', async () => {
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_access_test_456',
+          name: 'Private Access Store',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          billingState: 'active',
+          size: 1024,
+          access: 'private',
+        },
+      });
+
+      const exitCode = await getStore(
+        client,
+        ['store_access_test_456'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining('Access: Private')
+      );
     });
 
     const sizeCases = [
@@ -258,6 +312,7 @@ describe('blob store get', () => {
             updatedAt: Date.now(),
             billingState: 'active',
             size,
+            access: 'public',
           },
         });
 
@@ -483,6 +538,7 @@ describe('blob store get', () => {
           updatedAt: 1672531200000,
           billingState: 'active',
           size: 1024,
+          access: 'public',
         },
         {
           id: 'store_format_test_456',
@@ -491,6 +547,7 @@ describe('blob store get', () => {
           updatedAt: 1640995200000,
           billingState: 'suspended',
           size: 0,
+          access: 'private',
         },
       ];
 

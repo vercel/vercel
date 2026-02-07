@@ -66,4 +66,13 @@ export class BlobPutTelemetryClient
       this.trackCliFlag('force');
     }
   }
+
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
 }
