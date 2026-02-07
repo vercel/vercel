@@ -67,7 +67,7 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
+import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -83,18 +83,6 @@ const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
 const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
-
-// Check if proxy environment variables are configured
-function hasProxyConfig(): boolean {
-  return [
-    'HTTP_PROXY',
-    'HTTPS_PROXY',
-    'http_proxy',
-    'https_proxy',
-    'ALL_PROXY',
-    'all_proxy',
-  ].some(v => process.env[v]);
-}
 
 /*
   By default, node throws EPIPE errors if process.stdout is being written to
@@ -355,14 +343,8 @@ const main = async () => {
   // Shared API `Client` instance for all sub-commands to utilize
   // When an agent is detected, --non-interactive is effectively the default
   const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
-
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
-  const agent = hasProxyConfig()
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
-
   client = new Client({
-    agent,
+    agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -669,82 +651,67 @@ const main = async () => {
     if (subcommand) {
       let func: any;
       switch (targetCommand) {
-        // Priority commands - separate bundles for fast loading
-        case 'deploy':
-          telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
-          telemetry.trackCliDefaultDeploy(defaultDeploy);
-          func = (await import('./commands/deploy/index.js')).default;
-          break;
-        case 'dev':
-          telemetry.trackCliCommandDev(userSuppliedSubCommand);
-          func = (await import('./commands/dev/index.js')).default;
-          break;
-        case 'env':
-          telemetry.trackCliCommandEnv(userSuppliedSubCommand);
-          func = (await import('./commands/env/index.js')).default;
-          break;
-        case 'build':
-          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
-          func = (await import('./commands/build/index.js')).default;
-          break;
-        case 'list':
-          telemetry.trackCliCommandList(userSuppliedSubCommand);
-          func = (await import('./commands/list/index.js')).default;
-          break;
-        case 'link':
-          telemetry.trackCliCommandLink(userSuppliedSubCommand);
-          func = (await import('./commands/link/index.js')).default;
-          break;
-
-        // Non-priority commands - loaded from bulk bundle
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).alias;
+          func = require('./commands/alias').default;
           break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).api;
+          func = require('./commands/api').default;
           break;
         case 'bisect':
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).bisect;
+          func = require('./commands/bisect').default;
           break;
         case 'blob':
           telemetry.trackCliCommandBlob(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).blob;
+          func = require('./commands/blob').default;
           break;
-        case 'init':
-          telemetry.trackCliCommandInit(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).init;
+        case 'build':
+          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
+          func = require('./commands/build').default;
           break;
         case 'cache':
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).cache;
+          func = require('./commands/cache').default;
           break;
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).certs;
+          func = require('./commands/certs').default;
           break;
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).curl;
+          func = require('./commands/curl').default;
+          break;
+        case 'deploy':
+          telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
+          telemetry.trackCliDefaultDeploy(defaultDeploy);
+          func = require('./commands/deploy').default;
+          break;
+        case 'dev':
+          telemetry.trackCliCommandDev(userSuppliedSubCommand);
+          func = require('./commands/dev').default;
           break;
         case 'dns':
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).dns;
+          func = require('./commands/dns').default;
           break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).domains;
+          func = require('./commands/domains').default;
+          break;
+        case 'env':
+          telemetry.trackCliCommandEnv(userSuppliedSubCommand);
+          func = require('./commands/env').default;
           break;
         case 'git':
           telemetry.trackCliCommandGit(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).git;
+          func = require('./commands/git').default;
           break;
         case 'guidance':
           if (process.env.FF_GUIDANCE_MODE) {
             telemetry.trackCliCommandGuidance(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).guidance;
+            func = require('./commands/guidance').default;
             break;
           } else {
             func = null;
@@ -752,107 +719,117 @@ const main = async () => {
           }
         case 'httpstat':
           telemetry.trackCliCommandHttpstat(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).httpstat;
+          func = require('./commands/httpstat').default;
+          break;
+        case 'init':
+          telemetry.trackCliCommandInit(userSuppliedSubCommand);
+          func = require('./commands/init').default;
+          break;
+        case 'inspect':
+          telemetry.trackCliCommandInspect(userSuppliedSubCommand);
+          func = require('./commands/inspect').default;
           break;
         case 'install':
           telemetry.trackCliCommandInstall(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).install;
+          func = require('./commands/install').default;
           break;
         case 'integration':
           telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).integration;
+          func = require('./commands/integration').default;
           break;
         case 'integration-resource':
           telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).integrationResource;
+          func = require('./commands/integration-resource').default;
+          break;
+        case 'link':
+          telemetry.trackCliCommandLink(userSuppliedSubCommand);
+          func = require('./commands/link').default;
+          break;
+        case 'list':
+          telemetry.trackCliCommandList(userSuppliedSubCommand);
+          func = require('./commands/list').default;
+          break;
+        case 'logs':
+          telemetry.trackCliCommandLogs(userSuppliedSubCommand);
+          func = require('./commands/logs').default;
           break;
         case 'mcp':
-          func = (await import('./commands-bulk.js')).mcp;
-          break;
-        case 'logout':
-          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).logout;
+          func = require('./commands/mcp').default;
           break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);
           func = (c: Client) =>
-            import('./commands-bulk.js').then(m =>
-              m.login(c, { shouldParseArgs: true })
-            );
+            require('./commands/login').default(c, { shouldParseArgs: true });
           break;
-        case 'inspect':
-          telemetry.trackCliCommandInspect(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).inspect;
-          break;
-        case 'logs':
-          telemetry.trackCliCommandLogs(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).logs;
+        case 'logout':
+          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
+          func = require('./commands/logout').default;
           break;
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).microfrontends;
+          func = require('./commands/microfrontends').default;
           break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).open;
+          func = require('./commands/open').default;
           break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).project;
+          func = require('./commands/project').default;
           break;
         case 'promote':
           telemetry.trackCliCommandPromote(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).promote;
+          func = require('./commands/promote').default;
           break;
         case 'pull':
           telemetry.trackCliCommandPull(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).pull;
+          func = require('./commands/pull').default;
           break;
         case 'redeploy':
           telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).redeploy;
+          func = require('./commands/redeploy').default;
           break;
         case 'redirects':
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).redirects;
+          func = require('./commands/redirects').default;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).remove;
+          func = require('./commands/remove').default;
           break;
         case 'rollback':
           telemetry.trackCliCommandRollback(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).rollback;
+          func = require('./commands/rollback').default;
           break;
         case 'rr':
         case 'release':
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).rollingRelease;
+          func = require('./commands/rolling-release').default;
           break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).target;
+          func = require('./commands/target').default;
           break;
         case 'teams':
           telemetry.trackCliCommandTeams(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).teams;
+          func = require('./commands/teams').default;
           break;
         case 'telemetry':
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).telemetry;
+          func = require('./commands/telemetry').default;
           break;
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).upgrade;
+          func = require('./commands/upgrade').default;
           break;
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).webhooks;
+          func = require('./commands/webhooks').default;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).whoami;
+          func = require('./commands/whoami').default;
           break;
         default:
           func = null;
