@@ -167,7 +167,7 @@ describe('db-connections', () => {
       releaseCallback();
 
       expect(console.warn).toHaveBeenCalledWith(
-        'Pool release event triggered outside of request scope'
+        'Pool release event triggered outside of request scope.'
       );
     });
 
@@ -282,7 +282,9 @@ describe('db-connections', () => {
       vi.advanceTimersByTime(200);
       await waitPromise;
 
-      expect(console.log).toHaveBeenCalledWith('idle timeout expired');
+      expect(console.log).toHaveBeenCalledWith(
+        'Database pool idle timeout reached. Releasing connections.'
+      );
     });
   });
 

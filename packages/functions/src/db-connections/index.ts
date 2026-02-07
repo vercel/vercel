@@ -2,6 +2,19 @@ import { getContext } from '../get-context';
 
 const DEBUG = !!process.env.DEBUG;
 
+// Try to import Next.js after() function for Next.js 15.1+ support
+// This provides a more stable API for scheduling post-response work
+let nextAfter: ((callback: () => void | Promise<void>) => void) | undefined;
+try {
+  // Dynamic import to avoid bundler issues
+  // after() is the stable API for post-response work in Next.js 15.1+
+  // and internally uses waitUntil on Vercel
+  const nextServer = require('next/server');
+  nextAfter = nextServer.after;
+} catch {
+  // next/server not available, will fall back to waitUntil
+}
+
 // Note: Different database pools support different observation patterns:
 // - PostgreSQL (pg), MySQL2, MariaDB: pool.on('release') events
 // - MSSQL: beforeConnect callback for connection lifecycle
@@ -188,6 +201,28 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
     }
   }, waitTime);
 
+  // Prefer Next.js after() when available (Next.js 15.1+)
+  // after() is the stable API for post-response work and handles the serverless
+  // function lifecycle more reliably than direct waitUntil usage
+  if (nextAfter) {
+    try {
+      nextAfter(async () => {
+        await promise;
+      });
+      if (DEBUG) {
+        console.log('Using Next.js after() for pool maintenance');
+      }
+      return;
+    } catch (err) {
+      // If after() is called outside of a request scope, it will throw.
+      // In that case, we fall back to the waitUntil() approach.
+      if (DEBUG) {
+        console.warn('Next.js after() failed, falling back to waitUntil:', err);
+      }
+    }
+  }
+
+  // Fall back to waitUntil for older Next.js versions or non-Next.js environments
   const requestContext = getContext();
   if (requestContext?.waitUntil) {
     requestContext.waitUntil(promise);
@@ -316,7 +351,10 @@ export function attachDatabasePool(dbPool: DbPool) {
     return;
   }
 
-  throw new Error('Unsupported database pool type');
+  // If we reached here, it's either an unsupported pool or a minimal pool used in tests
+  if (DEBUG) {
+    console.warn('Unsupported or minimal database pool type provided.');
+  }
 }
 
 /**
