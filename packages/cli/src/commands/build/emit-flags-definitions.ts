@@ -1,14 +1,24 @@
-import { NowBuildError } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { NowBuildError } from '@vercel/build-utils';
 import fetch from 'node-fetch';
 import output from '../../output-manager';
 import pkg from '../../util/pkg';
 
 const FLAGS_HOST = 'https://flags.vercel.com';
-const FLAGS_DEFINITIONS_VERSION = '1.0.0';
 
 type BundledDefinitions = Record<string, unknown>;
+
+/**
+ * Fast, non-cryptographic hash (djb2). Returns an unsigned 32-bit hex string.
+ */
+function djb2(str: string): string {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(16);
+}
 
 /**
  * Obfuscates SDK key for logging (shows first 18 chars)
@@ -74,11 +84,6 @@ function generateDefinitionsModule(
   lines.push('export function get(sdkKey) {');
   lines.push('  return map[sdkKey]?.() ?? null;');
   lines.push('}');
-  lines.push('');
-  lines.push(
-    `export const version = ${JSON.stringify(FLAGS_DEFINITIONS_VERSION)};`
-  );
-
   return lines.join('\n');
 }
 
@@ -97,6 +102,9 @@ export async function emitFlagsDefinitions(
 
   // Collect unique SDK keys from environment variables
   // Supports both direct SDK keys (vf_ prefix) and flags: format
+  //
+  // Also sort in the end so the produced package.json hash is consistent.
+  // independent from the order of env vars.
   const sdkKeys = Array.from(
     Object.values(env).reduce<Set<string>>((acc, value) => {
       if (typeof value === 'string') {
@@ -112,7 +120,7 @@ export async function emitFlagsDefinitions(
       }
       return acc;
     }, new Set<string>())
-  );
+  ).sort();
 
   output.debug(`vercel-flags: found ${sdkKeys.length} SDK keys`);
 
@@ -157,23 +165,21 @@ export async function emitFlagsDefinitions(
     fetchPromise
   );
 
-  // Generate the JS module
+  // Generate the JS module (without version), hash it, then regenerate with version
   const definitionsJs = generateDefinitionsModule(sdkKeys, values);
+  const packageVersion = `1.0.0-${djb2(definitionsJs)}`;
 
   // Write to node_modules/@vercel/flags-definitions/
   const storageDir = join(cwd, 'node_modules', '@vercel', 'flags-definitions');
   const indexPath = join(storageDir, 'index.js');
   const dtsPath = join(storageDir, 'index.d.ts');
   const packageJsonPath = join(storageDir, 'package.json');
-  const dts = [
-    'export function get(sdkKey: string): Record<string, unknown> | null;',
-    'export const version: string;',
-    '',
-  ].join('\n');
+  const dts =
+    'export function get(sdkKey: string): Record<string, unknown> | null;\n';
 
   const packageJson = {
     name: '@vercel/flags-definitions',
-    version: FLAGS_DEFINITIONS_VERSION,
+    version: packageVersion,
     type: 'module',
     main: './index.js',
     types: './index.d.ts',
