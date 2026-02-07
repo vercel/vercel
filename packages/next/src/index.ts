@@ -1529,8 +1529,7 @@ export const build: BuildV2 = async buildOptions => {
           'incremental' ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
           true ||
-        requiredServerFilesManifest?.config?.cacheComponents === true ||
-        true
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     // When this is true, then it means all routes are PPR enabled.
