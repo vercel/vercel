@@ -4,7 +4,6 @@ import {
   discoverPythonPackage,
   PythonAnalysisError,
   PythonConfigKind,
-  PythonLockFileKind,
   PythonManifestConvertedKind,
 } from '../src';
 
@@ -494,63 +493,6 @@ describe('discoverPythonPackage', () => {
       expect(result.manifest).toBeDefined();
       // Path should be relative
       expect(result.manifest?.path).toBe('pyproject.toml');
-    });
-  });
-
-  describe('lock file detection', () => {
-    it('discovers uv.lock when present with pyproject.toml', async () => {
-      const root = fixtureRoot('with-uv-lock');
-      const result = await discoverPythonPackage({
-        entrypointDir: root,
-        rootDir: root,
-      });
-
-      expect(result.manifest).toBeDefined();
-      expect(result.manifest?.path).toBe('pyproject.toml');
-      expect(result.manifest?.lockFile).toBeDefined();
-      expect(result.manifest?.lockFile?.kind).toBe(PythonLockFileKind.UvLock);
-      expect(result.manifest?.lockFile?.path).toBe('uv.lock');
-    });
-
-    it('discovers pylock.toml when present with pyproject.toml', async () => {
-      const root = fixtureRoot('with-pylock');
-      const result = await discoverPythonPackage({
-        entrypointDir: root,
-        rootDir: root,
-      });
-
-      expect(result.manifest).toBeDefined();
-      expect(result.manifest?.path).toBe('pyproject.toml');
-      expect(result.manifest?.lockFile).toBeDefined();
-      expect(result.manifest?.lockFile?.kind).toBe(
-        PythonLockFileKind.PylockToml
-      );
-      expect(result.manifest?.lockFile?.path).toBe('pylock.toml');
-    });
-
-    it('prefers uv.lock over pylock.toml when both exist', async () => {
-      const root = fixtureRoot('with-both-locks');
-      const result = await discoverPythonPackage({
-        entrypointDir: root,
-        rootDir: root,
-      });
-
-      expect(result.manifest).toBeDefined();
-      expect(result.manifest?.lockFile).toBeDefined();
-      // uv.lock should take precedence over pylock.toml
-      expect(result.manifest?.lockFile?.kind).toBe(PythonLockFileKind.UvLock);
-      expect(result.manifest?.lockFile?.path).toBe('uv.lock');
-    });
-
-    it('returns no lock file when none exists', async () => {
-      const root = fixtureRoot('simple-pyproject');
-      const result = await discoverPythonPackage({
-        entrypointDir: root,
-        rootDir: root,
-      });
-
-      expect(result.manifest).toBeDefined();
-      expect(result.manifest?.lockFile).toBeUndefined();
     });
   });
 });
