@@ -152,10 +152,12 @@ describe('db-connections', () => {
       releaseCallback();
 
       expect(waitUntilMock).toHaveBeenCalledWith(expect.any(Promise));
-      expect(console.log).toHaveBeenCalledWith('Client released from pool');
+      // Note: Debug logs are only shown when DEBUG env var is set at module load time
     });
 
-    test('warns when pool release triggered outside request scope', () => {
+    test('does not log warning outside request scope when DEBUG is not set', () => {
+      // DEBUG is evaluated at module load time, so we verify the default behavior
+      // which is to NOT log warnings (fixes log spam issue #14825)
       const pgPool = {
         options: { idleTimeoutMillis: 1000 },
         on: vi.fn(),
@@ -166,7 +168,8 @@ describe('db-connections', () => {
       const releaseCallback = pgPool.on.mock.calls[0][1];
       releaseCallback();
 
-      expect(console.warn).toHaveBeenCalledWith(
+      // Without DEBUG at module load, the warning should NOT be logged
+      expect(console.warn).not.toHaveBeenCalledWith(
         'Pool release event triggered outside of request scope.'
       );
     });
@@ -253,7 +256,7 @@ describe('db-connections', () => {
       setTimeoutSpy.mockRestore();
     });
 
-    test('timeout expires and logs message', async () => {
+    test('timeout expires and resolves promise', async () => {
       const waitUntilMock = vi.fn();
       let resolvePromise: (value: void) => void;
       const waitPromise = new Promise<void>(resolve => {
@@ -282,9 +285,9 @@ describe('db-connections', () => {
       vi.advanceTimersByTime(200);
       await waitPromise;
 
-      expect(console.log).toHaveBeenCalledWith(
-        'Database pool idle timeout reached. Releasing connections.'
-      );
+      // Verify that the timeout mechanism worked (promise resolved)
+      expect(waitUntilMock).toHaveBeenCalled();
+      // Note: Debug logs are only shown when DEBUG env var is set at module load time
     });
   });
 
@@ -313,11 +316,10 @@ describe('db-connections', () => {
         expect.any(Function)
       );
 
+      // Verify callback can be invoked without error
       const releaseCallback = mysqlPool.on.mock.calls[0][1];
-      releaseCallback();
-      expect(console.log).toHaveBeenCalledWith(
-        'MySQL client released from pool'
-      );
+      expect(() => releaseCallback()).not.toThrow();
+      // Note: Debug logs are only shown when DEBUG env var is set at module load time
     });
 
     test('attaches release listener to MySQL2/MariaDB pool', () => {
@@ -333,11 +335,10 @@ describe('db-connections', () => {
         expect.any(Function)
       );
 
+      // Verify callback can be invoked without error
       const releaseCallback = mysql2Pool.on.mock.calls[0][1];
-      releaseCallback();
-      expect(console.log).toHaveBeenCalledWith(
-        'MySQL2/MariaDB client released from pool'
-      );
+      expect(() => releaseCallback()).not.toThrow();
+      // Note: Debug logs are only shown when DEBUG env var is set at module load time
     });
 
     test('attaches connectionCheckedOut listener to MongoDB pool', () => {
@@ -353,11 +354,10 @@ describe('db-connections', () => {
         expect.any(Function)
       );
 
+      // Verify callback can be invoked without error
       const checkedOutCallback = mongoPool.on.mock.calls[0][1];
-      checkedOutCallback();
-      expect(console.log).toHaveBeenCalledWith(
-        'MongoDB connection checked out'
-      );
+      expect(() => checkedOutCallback()).not.toThrow();
+      // Note: Debug logs are only shown when DEBUG env var is set at module load time
     });
 
     test('attaches end listener to Redis pool', () => {
@@ -370,9 +370,10 @@ describe('db-connections', () => {
 
       expect(redisPool.on).toHaveBeenCalledWith('end', expect.any(Function));
 
+      // Verify callback can be invoked without error
       const endCallback = redisPool.on.mock.calls[0][1];
-      endCallback();
-      expect(console.log).toHaveBeenCalledWith('Redis connection ended');
+      expect(() => endCallback()).not.toThrow();
+      // Note: Debug logs are only shown when DEBUG env var is set at module load time
     });
 
     test('clears existing timeout when attaching new pool', () => {
