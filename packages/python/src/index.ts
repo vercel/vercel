@@ -391,7 +391,7 @@ export const build: BuildV3 = async ({
   debug(`Installing ${runtimeDep}`);
   await uv.pip({
     venvPath,
-    projectDir: join(workPath, entryDirectory),
+    projectDir: entryDirectory,
     args: ['install', runtimeDep],
   });
 
