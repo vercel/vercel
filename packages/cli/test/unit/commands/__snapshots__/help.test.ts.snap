@@ -2871,6 +2871,35 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 "
 `;
 
+exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration balance integration
+
+  Shows the balances and thresholds of a specified marketplace integration                                              
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show the balance(s) & threshold(s) of a marketplace integration
+
+    $ vercel integration balance <integration-name>
+    $ vercel integration balance acme
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration help column width 40 1`] = `
 "
   ▲ vercel integration command
@@ -2879,23 +2908,33 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add     name         Installs 
-                       a        
-                       marketpl…
-                       integrat…
-  list    [project]    Lists all
-                       resources
-                       from     
-                       marketpl…
-                       integrat…
-  open    name         Opens a  
-                       marketpl…
-                       integrat…
-                       dashboard
-  remove  integration  Uninstal…
-                       a        
-                       marketpl…
-                       integrat…
+  add      name         Installs
+                        a       
+                        marketp…
+                        integra…
+  balance  integration  Shows   
+                        the     
+                        balances
+                        and     
+                        thresho…
+                        of a    
+                        specifi…
+                        marketp…
+                        integra…
+  list     [project]    Lists   
+                        all     
+                        resourc…
+                        from    
+                        marketp…
+                        integra…
+  open     name         Opens a 
+                        marketp…
+                        integra…
+                        dashboa…
+  remove   integration  Uninsta…
+                        a       
+                        marketp…
+                        integra…
 
 
   Global Options:
@@ -2957,10 +2996,13 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add     name         Installs a marketplace integration               
-  list    [project]    Lists all resources from marketplace integrations
-  open    name         Opens a marketplace integration's dashboard      
-  remove  integration  Uninstalls a marketplace integration             
+  add      name         Installs a marketplace integration              
+  balance  integration  Shows the balances and thresholds of a specified
+                        marketplace integration                         
+  list     [project]    Lists all resources from marketplace            
+                        integrations                                    
+  open     name         Opens a marketplace integration's dashboard     
+  remove   integration  Uninstalls a marketplace integration            
 
 
   Global Options:
@@ -2990,10 +3032,11 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add     name         Installs a marketplace integration                                                       
-  list    [project]    Lists all resources from marketplace integrations                                        
-  open    name         Opens a marketplace integration's dashboard                                              
-  remove  integration  Uninstalls a marketplace integration                                                     
+  add      name         Installs a marketplace integration                                                      
+  balance  integration  Shows the balances and thresholds of a specified marketplace integration                
+  list     [project]    Lists all resources from marketplace integrations                                       
+  open     name         Opens a marketplace integration's dashboard                                             
+  remove   integration  Uninstalls a marketplace integration                                                    
 
 
   Global Options:
@@ -3059,6 +3102,41 @@ exports[`help command > integration help output snapshots > integration list sub
 "
 `;
 
+exports[`help command > integration-resource help output snapshots > integration-resource create-threshold subcommand > integration-resource create-threshold subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration-resource create-threshold resource minimum spend limit [options]
+
+  Creates a threshold for a resource (or installation, if the integration uses installation-level thresholds)           
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when creating a threshold                                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - create threshold
+
+    $ vercel integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]
+    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000
+    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000 --yes
+
+"
+`;
+
 exports[`help command > integration-resource help output snapshots > integration-resource disconnect subcommand > integration-resource disconnect subcommand help column width 120 1`] = `
 "
   ▲ vercel integration-resource disconnect resource [project] [options]
@@ -3115,20 +3193,34 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Commands:
 
-  disconnect  resource [project]  …
-                                  a
-                                  …
-                                  …
-                                  a
-                                  …
-                                  …
-                                  …
-                                  …
-                                  …
-  remove      resource            …
-                                  …
-                                  …
-                                  …
+  create-threshold  resource minimum spend limit  …
+                                                  a
+                                                  …
+                                                  …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+  disconnect        resource [project]            …
+                                                  a
+                                                  …
+                                                  …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
 
 
   Global Options:
@@ -3190,9 +3282,17 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Commands:
 
-  disconnect  resource [project]  Disconnect a resource from a project, 
-                                  or the current project                
-  remove      resource            Delete an integration resource        
+  create-threshold  resource minimum spend limit  Creates a threshold   
+                                                  for a resource (or    
+                                                  installation, if the  
+                                                  integration uses      
+                                                  installation-level    
+                                                  thresholds)           
+  disconnect        resource [project]            Disconnect a resource 
+                                                  from a project, or the
+                                                  current project       
+  remove            resource                      Delete an integration 
+                                                  resource              
 
 
   Global Options:
@@ -3222,8 +3322,10 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Commands:
 
-  disconnect  resource [project]  Disconnect a resource from a project, or the current project                  
-  remove      resource            Delete an integration resource                                                
+  create-threshold  resource minimum spend limit  Creates a threshold for a resource (or installation, if the   
+                                                  integration uses installation-level thresholds)               
+  disconnect        resource [project]            Disconnect a resource from a project, or the current project  
+  remove            resource                      Delete an integration resource                                
 
 
   Global Options:
