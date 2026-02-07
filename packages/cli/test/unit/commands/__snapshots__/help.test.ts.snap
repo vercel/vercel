@@ -2885,6 +2885,7 @@ exports[`help command > integration help output snapshots > integration balance 
   -h,  --help                 Output usage information                                                                  
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2985,6 +2986,12 @@ exports[`help command > integration help output snapshots > integration help col
                               number    
 
 
+  Examples:
+
+  - Install a specific product from an integration
+
+    $ vercel integration add acme/acme-redis
+
 "
 `;
 
@@ -3021,6 +3028,12 @@ exports[`help command > integration help output snapshots > integration help col
   -v,  --version              Output the version number                         
 
 
+  Examples:
+
+  - Install a specific product from an integration
+
+    $ vercel integration add acme/acme-redis
+
 "
 `;
 
@@ -3052,6 +3065,12 @@ exports[`help command > integration help output snapshots > integration help col
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Install a specific product from an integration
+
+    $ vercel integration add acme/acme-redis
 
 "
 `;
@@ -3121,6 +3140,7 @@ exports[`help command > integration-resource help output snapshots > integration
   -h,  --help                 Output usage information                                                                  
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 

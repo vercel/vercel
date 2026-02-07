@@ -22,6 +22,7 @@ import { connectResourceToProject } from '../../util/integration-resource/connec
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { selectProduct } from '../../util/integration/select-product';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import { createAuthorization } from '../../util/integration/create-authorization';
@@ -40,16 +41,33 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const rawArg = args[0];
 
-  if (!integrationSlug) {
+  if (!rawArg) {
     output.error('You must pass an integration slug');
     return 1;
   }
 
+  // Parse optional product slug from "integration/product" syntax
+  let integrationSlug: string;
+  let productSlug: string | undefined;
+  const slashIndex = rawArg.indexOf('/');
+  if (slashIndex !== -1) {
+    integrationSlug = rawArg.substring(0, slashIndex);
+    productSlug = rawArg.substring(slashIndex + 1);
+    if (!integrationSlug || !productSlug) {
+      output.error(
+        'Invalid format. Expected: <integration-name>/<product-slug>'
+      );
+      return 1;
+    }
+  } else {
+    integrationSlug = rawArg;
+  }
+
   // Auto-provision: completely separate code path
   if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
-    return await addAutoProvision(client, integrationSlug);
+    return await addAutoProvision(client, integrationSlug, { productSlug });
   }
 
   const { contextName, team } = await getScope(client);
@@ -73,7 +91,7 @@ export async function add(client: Client, args: string[]) {
     telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
   }
 
-  if (!integration.products) {
+  if (!integration.products?.length) {
     output.error(
       `Integration "${integrationSlug}" is not a Marketplace integration`
     );
@@ -81,12 +99,23 @@ export async function add(client: Client, args: string[]) {
   }
 
   const [productResult, installationsResult] = await Promise.allSettled([
-    selectProduct(client, integration),
+    selectProduct(client, integration.products, productSlug),
     fetchInstallations(client, integration),
   ]);
 
-  if (productResult.status === 'rejected' || !productResult.value) {
-    output.error('Product not found');
+  if (productResult.status === 'rejected') {
+    output.error(
+      `Failed to select product: ${(productResult.reason as Error).message}`
+    );
+    return 1;
+  }
+
+  if (!productResult.value) {
+    if (!productSlug) {
+      // Only print generic error when no slug was specified.
+      // When a slug was provided, selectProduct already printed a specific error.
+      output.error('Product not found');
+    }
     return 1;
   }
 
@@ -315,29 +344,6 @@ async function provisionResourceViaCLI(
     output.error((error as Error).message);
     return 1;
   }
-}
-
-async function selectProduct(client: Client, integration: Integration) {
-  const products = integration.products;
-
-  if (!products?.length) {
-    return;
-  }
-
-  if (products.length === 1) {
-    return products[0];
-  }
-
-  const selected = await client.input.select({
-    message: 'Select a product',
-    choices: products.map(product => ({
-      description: product.shortDescription,
-      name: product.name,
-      value: product,
-    })),
-  });
-
-  return selected;
 }
 
 async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
