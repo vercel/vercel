@@ -388,7 +388,9 @@ export const build: BuildV3 = async ({
   const runtimeDep =
     baseEnv.VERCEL_RUNTIME_PYTHON ||
     `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
-  debug(`Installing ${runtimeDep}`);
+  console.log(
+    `Installing ${runtimeDep} cwd=${entryDirectory} root=${workPath}`
+  );
   await uv.pip({
     venvPath,
     projectDir: entryDirectory,
