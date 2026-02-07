@@ -5,7 +5,9 @@
 export class AccessTokenMissingError extends Error {
   name = 'AccessTokenMissingError';
   constructor() {
-    super('No authentication found. Please log in.');
+    super(
+      'No authentication found. Please log in with the Vercel CLI (vercel login).'
+    );
   }
 }
 
