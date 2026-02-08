@@ -221,18 +221,22 @@ export async function startStandaloneDevServer(
   // Route stdout/stderr through the provided callbacks (service logger)
   // so output gets the proper [service-name] prefix
   if (child.stdout) {
-    if (onStdout) {
-      child.stdout.on('data', onStdout);
-    } else {
-      child.stdout.pipe(process.stdout);
-    }
+    child.stdout.on('data', data => {
+      if (onStdout) {
+        onStdout(data);
+      } else {
+        process.stdout.write(data);
+      }
+    });
   }
   if (child.stderr) {
-    if (onStderr) {
-      child.stderr.on('data', onStderr);
-    } else {
-      child.stderr.pipe(process.stderr);
-    }
+    child.stderr.on('data', data => {
+      if (onStderr) {
+        onStderr(data);
+      } else {
+        process.stderr.write(data);
+      }
+    });
   }
 
   // Give the server time to start
