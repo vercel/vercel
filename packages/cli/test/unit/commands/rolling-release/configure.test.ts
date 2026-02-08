@@ -19,6 +19,10 @@ describe('parseDuration', () => {
     expect(parseDuration('2h')).toBe(120);
   });
 
+  it('should parse days', () => {
+    expect(parseDuration('1d')).toBe(1440);
+  });
+
   it('should treat plain numbers as minutes', () => {
     expect(parseDuration('5')).toBe(5);
     expect(parseDuration('30')).toBe(30);
@@ -352,38 +356,47 @@ describe('rolling-release configure', () => {
   describe('interactive mode', () => {
     it('should disable via interactive prompt', async () => {
       client.setArgv('rolling-release', 'configure');
-      client.input.select = vi.fn().mockResolvedValue('disable');
+      const exitCodePromise = rollingRelease(client);
 
-      const exitCode = await rollingRelease(client);
-
-      expect(exitCode).toBe(0);
-      expect(client.input.select).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Would you like to enable or disable rolling releases?',
-        })
+      await expect(client.stderr).toOutput(
+        'Would you like to enable or disable rolling releases?'
       );
+      client.events.keypress('down'); // select "Disable"
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Successfully disabled');
+      expect(await exitCodePromise).toBe(0);
       expect(patchBody).toEqual({ enabled: false });
     });
 
     it('should enable automatic rolling release via interactive prompt', async () => {
       client.setArgv('rolling-release', 'configure');
+      const exitCodePromise = rollingRelease(client);
 
-      client.input.select = vi
-        .fn()
-        .mockResolvedValueOnce('enable')
-        .mockResolvedValueOnce('automatic');
-      client.input.text = vi
-        .fn()
-        .mockResolvedValueOnce('10') // percentage
-        .mockResolvedValueOnce('5m'); // duration
-      client.input.confirm = vi
-        .fn()
-        .mockResolvedValueOnce(false) // don't add another stage
-        .mockResolvedValueOnce(true); // apply config
+      await expect(client.stderr).toOutput(
+        'Would you like to enable or disable rolling releases?'
+      );
+      client.stdin.write('\n'); // select "Enable" (default)
 
-      const exitCode = await rollingRelease(client);
+      await expect(client.stderr).toOutput('How should stages advance?');
+      client.stdin.write('\n'); // select "automatic" (default)
 
-      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Enter traffic percentage for stage 1'
+      );
+      client.stdin.write('10\n');
+
+      await expect(client.stderr).toOutput('Enter duration for this stage');
+      client.stdin.write('5m\n');
+
+      await expect(client.stderr).toOutput('Add another stage?');
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('Apply this configuration?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Successfully configured');
+      expect(await exitCodePromise).toBe(0);
       expect(patchBody).toEqual({
         enabled: true,
         advancementType: 'automatic',
@@ -396,24 +409,38 @@ describe('rolling-release configure', () => {
 
     it('should enable manual-approval with multiple stages via interactive prompt', async () => {
       client.setArgv('rolling-release', 'configure');
+      const exitCodePromise = rollingRelease(client);
 
-      client.input.select = vi
-        .fn()
-        .mockResolvedValueOnce('enable')
-        .mockResolvedValueOnce('manual-approval');
-      client.input.text = vi
-        .fn()
-        .mockResolvedValueOnce('10') // stage 1 percentage
-        .mockResolvedValueOnce('50'); // stage 2 percentage
-      client.input.confirm = vi
-        .fn()
-        .mockResolvedValueOnce(true) // add another stage
-        .mockResolvedValueOnce(false) // don't add another stage
-        .mockResolvedValueOnce(true); // apply config
+      await expect(client.stderr).toOutput(
+        'Would you like to enable or disable rolling releases?'
+      );
+      client.stdin.write('\n'); // select "Enable" (default)
 
-      const exitCode = await rollingRelease(client);
+      await expect(client.stderr).toOutput('How should stages advance?');
+      client.events.keypress('down'); // select "manual-approval"
+      client.stdin.write('\n');
 
-      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Enter traffic percentage for stage 1'
+      );
+      client.stdin.write('10\n');
+
+      await expect(client.stderr).toOutput('Add another stage?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Enter traffic percentage for stage 2'
+      );
+      client.stdin.write('50\n');
+
+      await expect(client.stderr).toOutput('Add another stage?');
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('Apply this configuration?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Successfully configured');
+      expect(await exitCodePromise).toBe(0);
       expect(patchBody).toEqual({
         enabled: true,
         advancementType: 'manual-approval',
@@ -427,21 +454,29 @@ describe('rolling-release configure', () => {
 
     it('should cancel when user declines to apply', async () => {
       client.setArgv('rolling-release', 'configure');
-
-      client.input.select = vi
-        .fn()
-        .mockResolvedValueOnce('enable')
-        .mockResolvedValueOnce('automatic');
-      client.input.text = vi
-        .fn()
-        .mockResolvedValueOnce('10')
-        .mockResolvedValueOnce('5m');
-      client.input.confirm = vi
-        .fn()
-        .mockResolvedValueOnce(false) // no more stages
-        .mockResolvedValueOnce(false); // decline to apply
-
       const exitCodePromise = rollingRelease(client);
+
+      await expect(client.stderr).toOutput(
+        'Would you like to enable or disable rolling releases?'
+      );
+      client.stdin.write('\n'); // select "Enable"
+
+      await expect(client.stderr).toOutput('How should stages advance?');
+      client.stdin.write('\n'); // select "automatic"
+
+      await expect(client.stderr).toOutput(
+        'Enter traffic percentage for stage 1'
+      );
+      client.stdin.write('10\n');
+
+      await expect(client.stderr).toOutput('Enter duration for this stage');
+      client.stdin.write('5m\n');
+
+      await expect(client.stderr).toOutput('Add another stage?');
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('Apply this configuration?');
+      client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput('Configuration cancelled.');
       expect(await exitCodePromise).toBe(0);

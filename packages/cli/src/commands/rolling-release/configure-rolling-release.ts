@@ -1,3 +1,4 @@
+import ms from 'ms';
 import type Client from '../../util/client';
 import type {
   JSONObject,
@@ -12,16 +13,26 @@ export type ConfigureResult =
 
 /**
  * Parses a duration string (e.g. "5m", "1h", "10") into minutes.
- * Returns undefined if the string is invalid.
+ * Returns undefined if the string is invalid or zero/negative.
  */
 export function parseDuration(value: string): number | undefined {
-  const match = value.match(/^(\d+)(m|h)?$/);
-  if (!match) return undefined;
-  const num = parseInt(match[1], 10);
-  if (isNaN(num) || num <= 0) return undefined;
-  const unit = match[2];
-  if (unit === 'h') return num * 60;
-  return num;
+  if (!value) {
+    return undefined;
+  }
+  // Reject seconds and milliseconds — minimum granularity is minutes
+  if (/^\d+(s|ms)$/i.test(value)) {
+    return undefined;
+  }
+  // Treat bare numbers as minutes
+  const milliseconds = ms(/^\d+$/.test(value) ? `${value}m` : value);
+  if (milliseconds === undefined || milliseconds <= 0) {
+    return undefined;
+  }
+  const minutes = Math.round(milliseconds / 60000);
+  if (minutes <= 0) {
+    return undefined;
+  }
+  return minutes;
 }
 
 function parseStageFlags(
@@ -55,7 +66,7 @@ function parseStageFlags(
       if (duration === undefined) {
         return {
           stages: null,
-          error: `Invalid duration "${parts[1]}". Use a format like "5m", "1h", or a plain number (minutes).`,
+          error: `Invalid duration "${parts[1]}". Use minutes (e.g. "5m"), hours (e.g. "1h"), or days (e.g. "1d"). Seconds are not supported.`,
         };
       }
       stages.push({ targetPercentage: percentage, duration });
@@ -141,7 +152,7 @@ async function interactiveConfigure(client: Client): Promise<ConfigureResult> {
         validate: (val: string) => {
           const parsed = parseDuration(val);
           if (parsed === undefined) {
-            return 'Invalid duration. Use a format like "5m", "1h", or a plain number (minutes).';
+            return 'Invalid duration. Use minutes (e.g. "5m"), hours (e.g. "1h"), or days (e.g. "1d"). Seconds are not supported.';
           }
           return true;
         },
