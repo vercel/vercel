@@ -10,6 +10,12 @@ ENV['RAILS_ENV'] ||= 'production'
 ENV['RACK_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
 
+# Resolve to absolute path and set CWD to the entrypoint's directory so that
+# relative requires (e.g. require './app') work when the entrypoint is in a
+# subdirectory (service workspaces). For root-level entrypoints this is a no-op.
+$entrypoint = File.expand_path($entrypoint)
+Dir.chdir(File.dirname($entrypoint))
+
 def rack_handler(httpMethod, path, body, headers)
   require 'rack'
 

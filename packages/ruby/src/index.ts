@@ -24,6 +24,7 @@ import {
   type ShouldServe,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
+import { detectRubyEntrypoint, RUBY_CANDIDATE_ENTRYPOINTS } from './entrypoint';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -171,6 +172,23 @@ export const build: BuildV3 = async ({
   meta = {},
 }) => {
   await download(files, workPath, meta);
+
+  // Framework preset mode: detect entrypoint within service workspace
+  if (config?.framework === 'ruby' || config?.framework === 'services') {
+    const resolvedEntrypoint = await detectRubyEntrypoint(
+      workPath,
+      entrypoint,
+      config.serviceWorkspace as string | undefined
+    );
+    if (!resolvedEntrypoint) {
+      throw new Error(
+        `No Ruby entrypoint found. Expected one of: ${RUBY_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    debug(`Using Ruby framework entrypoint: ${resolvedEntrypoint}`);
+    entrypoint = resolvedEntrypoint;
+  }
+
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
