@@ -5,6 +5,7 @@ import { join, dirname } from 'path';
 import which from 'which';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
+import { detectRubyEntrypoint, RUBY_CANDIDATE_ENTRYPOINTS } from './entrypoint';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise
 function silenceNodeWarnings() {
@@ -147,11 +148,52 @@ async function run(
   });
 }
 
+function createLogListener(
+  callback: ((buf: Buffer) => void) | undefined,
+  stream: NodeJS.WriteStream
+): (buf: Buffer) => void {
+  return (buf: Buffer) => {
+    if (callback) {
+      callback(buf);
+    } else {
+      const s = buf.toString();
+      for (const line of s.split(/\r?\n/)) {
+        if (line) {
+          stream.write(line.endsWith('\n') ? line : line + '\n');
+        }
+      }
+    }
+  };
+}
+
 export const startDevServer: StartDevServer = async opts => {
-  const { entrypoint: rawEntrypoint, workPath, meta = {} } = opts;
+  const {
+    entrypoint: rawEntrypoint,
+    workPath,
+    meta = {},
+    config,
+    onStdout,
+    onStderr,
+  } = opts;
+
+  // Framework preset / services mode: detect Ruby entrypoint
+  let entrypoint = rawEntrypoint;
+  if (config?.framework === 'ruby' || config?.framework === 'services') {
+    const resolvedEntrypoint = await detectRubyEntrypoint(
+      workPath,
+      rawEntrypoint,
+      config?.serviceWorkspace as string | undefined
+    );
+    if (!resolvedEntrypoint) {
+      throw new Error(
+        `No Ruby entrypoint found. Expected one of: ${RUBY_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    entrypoint = resolvedEntrypoint;
+  }
 
   // Ruby dev server only supports Rack (.ru) entrypoints for now
-  if (!rawEntrypoint.endsWith('.ru')) {
+  if (!entrypoint.endsWith('.ru')) {
     // If user configured a non-.ru entrypoint, do not start a dev server
     // so another builder or static can handle it.
     return null;
@@ -160,7 +202,6 @@ export const startDevServer: StartDevServer = async opts => {
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
 
-  const entrypoint = rawEntrypoint;
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
 
   const serverKey = `${workPath}::${entrypoint}::ruby`;
@@ -263,20 +304,8 @@ export const startDevServer: StartDevServer = async opts => {
           });
           childProcess = child;
 
-          stdoutLogListener = (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line)
-                process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          };
-          stderrLogListener = (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line)
-                process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          };
+          stdoutLogListener = createLogListener(onStdout, process.stdout);
+          stderrLogListener = createLogListener(onStderr, process.stderr);
           child.stdout?.on('data', stdoutLogListener);
           child.stderr?.on('data', stderrLogListener);
 
