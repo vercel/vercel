@@ -1119,6 +1119,9 @@ export async function createLambdaFromPseudoLayers({
 // https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
 export type NextConfigRuntime = {
   pageExtensions: string[];
+  // experimental.cacheComponents has been moved out of experimental
+  // at https://github.com/vercel/next.js/pull/85035
+  cacheComponents?: boolean;
   experimental?: {
     cacheComponents?: boolean;
     clientParamParsingOrigins?: string[];
