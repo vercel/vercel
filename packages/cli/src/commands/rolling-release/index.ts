@@ -13,7 +13,9 @@ import {
 } from './command';
 import requestRollingRelease from './request-rolling-release';
 import startRollingRelease from './start-rolling-release';
-import configureRollingRelease from './configure-rolling-release';
+import configureRollingRelease, {
+  buildConfigurePayload,
+} from './configure-rolling-release';
 import approveRollingRelease from './approve-rolling-release';
 import abortRollingRelease from './abort-rolling-release';
 import completeRollingRelease from './complete-rolling-release';
@@ -93,25 +95,36 @@ export default async function rollingRelease(client: Client): Promise<number> {
           subcommandArgs,
           getFlagsSpecification(configureSubcommand.options)
         );
+
         const cfgString = subcommandFlags.flags['--cfg'];
-        if (!cfgString) {
-          output.error('Missing required flag --cfg');
-          return 1;
+        const enableFlag = subcommandFlags.flags['--enable'];
+        const disableFlag = subcommandFlags.flags['--disable'];
+        const advancementType = subcommandFlags.flags['--advancement-type'];
+        const stageFlags = subcommandFlags.flags['--stage'];
+
+        telemetry.trackCliFlagEnable(enableFlag);
+        telemetry.trackCliFlagDisable(disableFlag);
+        telemetry.trackCliOptionAdvancementType(advancementType);
+        telemetry.trackCliOptionStage(stageFlags);
+
+        const configResult = await buildConfigurePayload({
+          client,
+          cfgString,
+          enableFlag,
+          disableFlag,
+          advancementType,
+          stageFlags,
+        });
+
+        if (configResult.exitCode !== undefined) {
+          return configResult.exitCode;
         }
-        let cfg = undefined;
-        if (cfgString !== 'disable') {
-          try {
-            cfg = JSON.parse(cfgString);
-          } catch (error) {
-            output.error('Invalid JSON provided for --cfg option.');
-            return 1;
-          }
-        }
+
         await configureRollingRelease({
           client,
           projectId: project.id,
           teamId: org.id,
-          rollingReleaseConfig: cfg,
+          rollingReleaseConfig: configResult.config,
         });
         break;
       }
