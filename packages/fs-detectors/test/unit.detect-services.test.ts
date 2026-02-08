@@ -109,9 +109,11 @@ describe('detectServices', () => {
         routePrefix: '/admin',
       });
 
-      // Non-root services generate rewrites, root service generates default
+      // Non-root runtime services generate rewrites.
+      // The root Next.js service is a route-owning builder — it produces its
+      // own route table, so no synthetic routes are generated for it.
       expect(result.routes.rewrites).toHaveLength(2);
-      expect(result.routes.defaults).toHaveLength(1);
+      expect(result.routes.defaults).toHaveLength(0);
     });
 
     it('should default type to web', async () => {

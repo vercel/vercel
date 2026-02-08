@@ -5,7 +5,7 @@ import type {
   ResolvedService,
   ServicesRoutes,
 } from './types';
-import { isStaticBuild, readVercelConfig } from './utils';
+import { isRouteOwningBuilder, isStaticBuild, readVercelConfig } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 
@@ -99,8 +99,21 @@ export async function detectServices(
  * routes match before broader ones. For example, `/api/users` must be checked
  * before `/api`, which must be checked before the catch-all `/`.
  *
- * - Static/SPA services: SPA fallback routes to index.html
- * - Serverless services: Rewrite to the function entrypoint
+ * Three categories of builders are handled:
+ *
+ * - **Static/SPA services** (`@vercel/static-build`, `@vercel/static`):
+ *   SPA fallback routes to index.html under the service prefix.
+ *
+ * - **V3 runtime services** (`@vercel/python`, `@vercel/go`, etc.):
+ *   Prefix rewrites to the function entrypoint with `check: true`.
+ *
+ * - **Route-owning V2 builders** (`@vercel/next`, `@vercel/backends`, etc.):
+ *   These produce their own full route table with handle phases. The services
+ *   system does NOT generate synthetic catch-all rewrites for them — we rely
+ *   on the builder's own `routes[]`, which are correctly scoped via
+ *   workspace-rooted invocation (routePrefix="/") or the framework's basePath
+ *   mechanism (routePrefix!="/").
+ *
  * - Cron/Worker services: TODO - internal routes under `/_svc/`
  */
 export function generateServicesRoutes(
@@ -123,6 +136,12 @@ export function generateServicesRoutes(
   for (const service of sortedWebServices) {
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
+
+    // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
+    // own route tables. Skip synthetic route generation for them.
+    if (isRouteOwningBuilder(service)) {
+      continue;
+    }
 
     if (isStaticBuild(service)) {
       // Static/SPA service: serve index.html for client-side routing

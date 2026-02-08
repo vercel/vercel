@@ -27,6 +27,27 @@ export function isStaticBuild(service: ResolvedService): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
 }
 
+const RUNTIME_BUILDER_SET = new Set(Object.values(RUNTIME_BUILDERS));
+
+/**
+ * Determines if a service uses a "route-owning" V2 builder.
+ *
+ * Route-owning builders (e.g., `@vercel/next`, `@vercel/backends`) produce
+ * their own full route table with handle phases (filesystem, miss, rewrite,
+ * hit, error). The services system should NOT generate synthetic catch-all
+ * rewrites for them — instead, we rely on the builder's own `routes[]`.
+ *
+ * A builder is route-owning if it is NOT a static builder (`@vercel/static-build`,
+ * `@vercel/static`) and NOT a V3 runtime builder (`@vercel/python`, `@vercel/go`,
+ * `@vercel/ruby`, `@vercel/rust`, `@vercel/node`).
+ */
+export function isRouteOwningBuilder(service: ResolvedService): boolean {
+  const builderUse = service.builder.use;
+  return (
+    !STATIC_BUILDERS.has(builderUse) && !RUNTIME_BUILDER_SET.has(builderUse)
+  );
+}
+
 /**
  * Infer runtime from available service configuration.
  *

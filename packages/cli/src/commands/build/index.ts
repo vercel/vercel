@@ -695,6 +695,20 @@ async function doBuild(
   }
   const diagnostics: Files = {};
 
+  // For services builds: create a lookup map from builder.src to Service
+  // so we can resolve the service for each build and compute workspace-scoped
+  // workPath, entrypoint, and files.
+  const hasDetectedServices =
+    detectedServices !== undefined && detectedServices.length > 0;
+  const servicesByBuilderSrc = new Map<string, Service>();
+  if (hasDetectedServices) {
+    for (const service of detectedServices!) {
+      if (service.builder.src) {
+        servicesByBuilderSrc.set(service.builder.src, service);
+      }
+    }
+  }
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -706,13 +720,66 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
+      // --- Services workspace-rooted build setup ---
+      // When a service lives in a subdirectory (workspace !== '.'), we need to:
+      // 1. Set workPath to the service's workspace directory
+      // 2. Strip the workspace prefix from the entrypoint
+      // 3. Scope the files map to only include files within the workspace
+      // This ensures builders like Next.js receive the correct workPath and
+      // entrypoint, so their routes are emitted relative to the workspace root
+      // (not polluted with the workspace directory prefix).
+      const service = hasDetectedServices
+        ? servicesByBuilderSrc.get(build.src)
+        : undefined;
+
+      let buildWorkPath = workPath;
+      let buildEntrypoint = build.src;
+      let buildFiles: Files = filesMap;
+
+      if (service && service.workspace !== '.') {
+        const wsPrefix = service.workspace + '/';
+        buildWorkPath = join(workPath, service.workspace);
+
+        // Strip workspace prefix from entrypoint:
+        // e.g., "frontend/package.json" → "package.json"
+        buildEntrypoint = build.src.startsWith(wsPrefix)
+          ? build.src.slice(wsPrefix.length)
+          : build.src;
+
+        // Scope files to the service workspace — re-key paths relative to
+        // the workspace root so builders see "package.json" not "frontend/package.json"
+        buildFiles = {};
+        for (const [filePath, file] of Object.entries(filesMap)) {
+          if (filePath.startsWith(wsPrefix)) {
+            buildFiles[filePath.slice(wsPrefix.length)] = file;
+          }
+        }
+
+        output.debug(
+          `Service "${service.name}": workspace-rooted build at "${buildWorkPath}", ` +
+            `entrypoint "${buildEntrypoint}" (original: "${build.src}")`
+        );
+      }
+
+      // Set VERCEL_PROJECT_SETTINGS_* env vars.
+      // For services: use service-specific values instead of project-level settings
+      // (the project-level framework is "services", which is meaningless to individual builders).
+      const settingsForEnv = service
+        ? {
+            buildCommand: service.buildCommand ?? undefined,
+            installCommand: service.installCommand ?? undefined,
+            outputDirectory: projectSettings.outputDirectory ?? undefined,
+            nodeVersion: projectSettings.nodeVersion ?? undefined,
+          }
+        : projectSettings;
+
       for (const key of [
         'buildCommand',
         'installCommand',
         'outputDirectory',
         'nodeVersion',
       ] as const) {
-        const value = projectSettings[key];
+        const value = settingsForEnv[key];
         if (typeof value === 'string') {
           const envKey =
             `VERCEL_PROJECT_SETTINGS_` +
@@ -724,17 +791,38 @@ async function doBuild(
 
       const isFrontendBuilder = build.config && 'framework' in build.config;
       const buildConfig: Config = isZeroConfig
-        ? {
-            outputDirectory: projectSettings.outputDirectory ?? undefined,
-            ...build.config,
-            projectSettings,
-            installCommand: projectSettings.installCommand ?? undefined,
-            devCommand: projectSettings.devCommand ?? undefined,
-            buildCommand: projectSettings.buildCommand ?? undefined,
-            framework: projectSettings.framework,
-            nodeVersion: projectSettings.nodeVersion,
-            bunVersion: localConfig.bunVersion ?? undefined,
-          }
+        ? service
+          ? {
+              // Services build: use service-specific config from resolution.
+              // build.config already contains framework, routePrefix, memory, etc.
+              ...build.config,
+              zeroConfig: true,
+              // Override project-level settings with service-specific ones.
+              // The project-level framework is "services" which must NOT be
+              // propagated to individual builders.
+              projectSettings: {
+                ...projectSettings,
+                framework: service.framework ?? null,
+                buildCommand: service.buildCommand ?? null,
+                installCommand: service.installCommand ?? null,
+              },
+              installCommand: service.installCommand ?? undefined,
+              buildCommand: service.buildCommand ?? undefined,
+              framework: service.framework ?? undefined,
+              nodeVersion: projectSettings.nodeVersion,
+              bunVersion: localConfig.bunVersion ?? undefined,
+            }
+          : {
+              outputDirectory: projectSettings.outputDirectory ?? undefined,
+              ...build.config,
+              projectSettings,
+              installCommand: projectSettings.installCommand ?? undefined,
+              devCommand: projectSettings.devCommand ?? undefined,
+              buildCommand: projectSettings.buildCommand ?? undefined,
+              framework: projectSettings.framework,
+              nodeVersion: projectSettings.nodeVersion,
+              bunVersion: localConfig.bunVersion ?? undefined,
+            }
         : {
             ...(build.config || {}),
             bunVersion: localConfig.bunVersion ?? undefined,
@@ -745,9 +833,9 @@ async function doBuild(
       });
 
       const buildOptions: BuildOptions = {
-        files: filesMap,
-        entrypoint: build.src,
-        workPath,
+        files: buildFiles,
+        entrypoint: buildEntrypoint,
+        workPath: buildWorkPath,
         repoRootPath,
         config: buildConfig,
         meta,
@@ -774,7 +862,10 @@ async function doBuild(
             f => f.slug === buildConfig.framework
           );
           if (framework) {
-            const defaultRoutes = await getFrameworkRoutes(framework, workPath);
+            const defaultRoutes = await getFrameworkRoutes(
+              framework,
+              buildWorkPath
+            );
             buildResult.routes = defaultRoutes;
           }
         }
@@ -817,7 +908,9 @@ async function doBuild(
         buildResult.output &&
         (isBackendBuilder(build) || build.use === '@vercel/python')
       ) {
-        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
+        // Use service workspace path for routes.json lookup, since the builder
+        // writes routes.json relative to its workPath
+        const routesJsonPath = join(buildWorkPath, '.vercel', 'routes.json');
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
@@ -901,7 +994,7 @@ async function doBuild(
               builderPkg,
               vercelConfig: localConfig,
               standalone,
-              workPath,
+              workPath: buildWorkPath,
             })
           )
           .then(
