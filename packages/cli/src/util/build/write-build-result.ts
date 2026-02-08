@@ -9,6 +9,7 @@ import {
   resolve,
   posix,
 } from 'path';
+import deepEqual from 'fast-deep-equal';
 import {
   type Builder,
   type BuildResultV2,
@@ -54,6 +55,14 @@ interface FunctionConfiguration {
   maxDuration?: number;
   experimentalTriggers?: TriggerEvent[];
   supportsCancellation?: boolean;
+}
+
+/**
+ * Tracks a written function along with its configuration.
+ */
+interface ExistingFunctionEntry {
+  config: FunctionConfiguration | undefined;
+  path: string;
 }
 
 export async function writeBuildResult(args: {
@@ -173,18 +182,25 @@ async function writeBuildResultV2(args: {
     );
   }
 
-  const existingFunctions = new Map<Lambda | EdgeFunction, string>();
+  const existingFunctions = new Map<
+    Lambda | EdgeFunction,
+    ExistingFunctionEntry[]
+  >();
   const overrides: Record<string, PathOverride> = {};
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
+      const functionConfiguration = await getLambdaOptionsFromFunction({
+        sourceFile: normalizedPath,
+        config: vercelConfig ?? undefined,
+      });
       await writeLambda(
         repoRootPath,
         outputDir,
         output,
         normalizedPath,
-        undefined,
+        functionConfiguration,
         existingFunctions,
         standalone
       );
@@ -257,11 +273,16 @@ async function writeBuildResultV2(args: {
         vercelConfig?.cleanUrls
       );
     } else if (isEdgeFunction(output)) {
+      const functionConfiguration = await getLambdaOptionsFromFunction({
+        sourceFile: normalizedPath,
+        config: vercelConfig ?? undefined,
+      });
       await writeEdgeFunction(
         repoRootPath,
         outputDir,
         output,
         normalizedPath,
+        functionConfiguration,
         existingFunctions,
         standalone
       );
@@ -387,6 +408,7 @@ async function writeBuildResultV3(args: {
       outputDir,
       output,
       path,
+      functionConfiguration,
       undefined,
       standalone
     );
@@ -402,6 +424,7 @@ async function writeBuildResultV3(args: {
  * If the filename does not have a file extension then one attempts to be inferred
  * from the extension of the `fsPath`.
  *
+ * @param outputDir The path of the `.vercel/output` directory
  * @param file The `File` instance to write
  * @param path The URL path where the `File` can be accessed from
  * @param overrides Record of override configuration when a File is renamed or has other metadata
@@ -461,27 +484,37 @@ async function writeStaticFile(
 
 /**
  * If the `fn` Lambda or Edge function has already been written to
- * the filesystem at a different location, then create a symlink
- * to the previous location instead of copying the files again.
+ * the filesystem at a different location with an identical configuration,
+ * then create a symlink to the previous location instead of copying the files again.
  *
- * @param outputPath The path of the `.vercel/output` directory
+ * @param outputDir The path of the `.vercel/output` directory
  * @param dest The path of destination function's `.func` directory
  * @param fn The Lambda or EdgeFunction instance to create the symlink for
+ * @param functionConfiguration The function configuration for this instance
  * @param existingFunctions Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeFunctionSymlink(
   outputDir: string,
   dest: string,
   fn: Lambda | EdgeFunction,
-  existingFunctions: Map<Lambda | EdgeFunction, string>
+  functionConfiguration: FunctionConfiguration | undefined,
+  existingFunctions: Map<Lambda | EdgeFunction, ExistingFunctionEntry[]>
 ) {
-  const existingPath = existingFunctions.get(fn);
+  const entries = existingFunctions.get(fn);
 
   // Function has not been written to the filesystem, so bail
-  if (!existingPath) return false;
+  if (!entries) return false;
+
+  // Find an entry with a matching function configuration
+  const matchingEntry = entries.find(entry =>
+    deepEqual(entry.config, functionConfiguration)
+  );
+
+  // No matching configuration found, so bail
+  if (!matchingEntry) return false;
 
   const destDir = dirname(dest);
-  const targetDest = join(outputDir, 'functions', `${existingPath}.func`);
+  const targetDest = join(outputDir, 'functions', `${matchingEntry.path}.func`);
   const target = relative(destDir, targetDest);
   await fs.mkdirp(destDir);
   await fs.symlink(target, dest);
@@ -491,9 +524,10 @@ async function writeFunctionSymlink(
 /**
  * Serializes the `EdgeFunction` instance to the file system.
  *
- * @param outputPath The path of the `.vercel/output` directory
+ * @param outputDir The path of the `.vercel/output` directory
  * @param edgeFunction The `EdgeFunction` instance
  * @param path The URL path where the `EdgeFunction` can be accessed from
+ * @param functionConfiguration (optional) Extra configuration to apply to the function
  * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeEdgeFunction(
@@ -501,7 +535,8 @@ async function writeEdgeFunction(
   outputDir: string,
   edgeFunction: EdgeFunction,
   path: string,
-  existingFunctions?: Map<Lambda | EdgeFunction, string>,
+  functionConfiguration?: FunctionConfiguration,
+  existingFunctions?: Map<Lambda | EdgeFunction, ExistingFunctionEntry[]>,
   standalone: boolean = false
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
@@ -512,12 +547,15 @@ async function writeEdgeFunction(
         outputDir,
         dest,
         edgeFunction,
+        functionConfiguration,
         existingFunctions
       )
     ) {
       return;
     }
-    existingFunctions.set(edgeFunction, path);
+    const entries = existingFunctions.get(edgeFunction) ?? [];
+    entries.push({ config: functionConfiguration, path });
+    existingFunctions.set(edgeFunction, entries);
   }
 
   await fs.mkdirp(dest);
@@ -554,7 +592,7 @@ async function writeEdgeFunction(
 /**
  * Writes the file references from the `Lambda` instance to the file system.
  *
- * @param outputPath The path of the `.vercel/output` directory
+ * @param outputDir The path of the `.vercel/output` directory
  * @param lambda The `Lambda` instance
  * @param path The URL path where the `Lambda` can be accessed from
  * @param functionConfiguration (optional) Extra configuration to apply to the function's `.vc-config.json` file
@@ -566,18 +604,26 @@ async function writeLambda(
   lambda: Lambda,
   path: string,
   functionConfiguration?: FunctionConfiguration,
-  existingFunctions?: Map<Lambda | EdgeFunction, string>,
+  existingFunctions?: Map<Lambda | EdgeFunction, ExistingFunctionEntry[]>,
   standalone: boolean = false
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
   if (existingFunctions) {
     if (
-      await writeFunctionSymlink(outputDir, dest, lambda, existingFunctions)
+      await writeFunctionSymlink(
+        outputDir,
+        dest,
+        lambda,
+        functionConfiguration,
+        existingFunctions
+      )
     ) {
       return;
     }
-    existingFunctions.set(lambda, path);
+    const entries = existingFunctions.get(lambda) ?? [];
+    entries.push({ config: functionConfiguration, path });
+    existingFunctions.set(lambda, entries);
   }
 
   await fs.mkdirp(dest);

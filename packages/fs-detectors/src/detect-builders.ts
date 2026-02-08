@@ -154,7 +154,7 @@ export async function detectBuilders(
   const sortedFiles = files.sort(sortFiles);
   const apiSortedFiles = files.sort(sortFilesBySegmentCount);
 
-  // Keep track of functions that are used
+  // Keep track of functions that are used by API builders
   const usedFunctions = new Set<string>();
 
   const addToUsedFunctions = (builder: Builder) => {
@@ -320,24 +320,6 @@ export async function detectBuilders(
         },
       };
     }
-  }
-
-  const unusedFunctionError = checkUnusedFunctions(
-    frontendBuilder,
-    usedFunctions,
-    options
-  );
-
-  if (unusedFunctionError) {
-    return {
-      builders: null,
-      errors: [unusedFunctionError],
-      warnings,
-      redirectRoutes: null,
-      defaultRoutes: null,
-      rewriteRoutes: null,
-      errorRoutes: null,
-    };
   }
 
   // Exclude the middleware builder for Next.js apps since @vercel/next
@@ -733,80 +715,6 @@ function validateFunctions({ functions = {} }: Options) {
         };
       }
     }
-  }
-
-  return null;
-}
-
-function checkUnusedFunctions(
-  frontendBuilder: Builder | null,
-  usedFunctions: Set<string>,
-  options: Options
-): ErrorResponse | null {
-  const unusedFunctions = new Set(
-    Object.keys(options.functions || {}).filter(key => !usedFunctions.has(key))
-  );
-
-  if (!unusedFunctions.size) {
-    return null;
-  }
-
-  // Next.js can use functions only for `src/pages` or `pages`
-  if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
-    for (const fnKey of unusedFunctions.values()) {
-      if (
-        fnKey.startsWith('pages/') ||
-        fnKey.startsWith('src/pages') ||
-        fnKey.startsWith('app/') ||
-        fnKey.startsWith('src/app/') ||
-        fnKey.startsWith('middleware') ||
-        fnKey.startsWith('src/middleware')
-      ) {
-        unusedFunctions.delete(fnKey);
-      } else {
-        return {
-          code: 'unused_function',
-          message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions.`,
-          action: 'Learn More',
-          link: 'https://vercel.link/unmatched-function-pattern',
-        };
-      }
-    }
-  }
-  if (
-    frontendBuilder &&
-    (isOfficialRuntime('express', frontendBuilder.use) ||
-      isOfficialRuntime('hono', frontendBuilder.use))
-  ) {
-    // Copied from builder entrypoint detection
-    const validFilenames = [
-      'app',
-      'index',
-      'server',
-      'src/app',
-      'src/index',
-      'src/server',
-    ];
-    const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
-    const validEntrypoints = validFilenames.flatMap(filename =>
-      validExtensions.map(extension => `${filename}.${extension}`)
-    );
-    for (const fnKey of unusedFunctions.values()) {
-      if (validEntrypoints.includes(fnKey)) {
-        unusedFunctions.delete(fnKey);
-      }
-    }
-  }
-
-  if (unusedFunctions.size) {
-    const [fnKey] = Array.from(unusedFunctions);
-
-    return {
-      code: 'unused_function',
-      message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
-      action: 'Learn More',
-      link: 'https://vercel.link/unmatched-function-pattern',
-    };
   }
 
   return null;
