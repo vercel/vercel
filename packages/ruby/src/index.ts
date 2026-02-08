@@ -18,12 +18,13 @@ import {
   walkParentDirs,
   cloneEnv,
   FileBlob,
+  readConfigFile,
   type GlobOptions,
   type Files,
   type BuildV3,
   type ShouldServe,
 } from '@vercel/build-utils';
-import { installBundler } from './install-ruby';
+import { installBundler, type DeclaredRubyVersion } from './install-ruby';
 import { detectRubyEntrypoint, RUBY_CANDIDATE_ENTRYPOINTS } from './entrypoint';
 
 async function matchPaths(
@@ -65,6 +66,7 @@ async function prepareGemfile(
   // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
   // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
   // We must correct to the actual version in the build container.
+  patchRuby('ruby "~> 3.4.x"', 'ruby "~> 3.4.0"');
   patchRuby('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"');
   patchRuby('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"');
   patchRuby('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"');
@@ -162,6 +164,157 @@ async function bundleInstall(
   }
 }
 
+/**
+ * Detect the declared Ruby version from version/tool config files.
+ * Looks in the entrypoint directory first, then walks up to the workPath root.
+ *
+ * Priority:
+ *   1. `.ruby-version` (highest — used by rbenv, mise, rvm)
+ *   2. `.tool-versions` (mise/asdf legacy format)
+ *   3. `mise.toml` / `.mise.toml` (mise native config)
+ *
+ * The Gemfile `ruby` directive is handled separately in `getRubyPath`.
+ */
+async function detectDeclaredRubyVersion(
+  workPath: string,
+  entrypointFsDirname: string
+): Promise<DeclaredRubyVersion | undefined> {
+  // 1. Check for .ruby-version file
+  const rubyVersionPath = await walkParentDirs({
+    base: workPath,
+    start: entrypointFsDirname,
+    filename: '.ruby-version',
+  });
+  if (rubyVersionPath) {
+    try {
+      const content = await readFile(
+        join(rubyVersionPath, '.ruby-version'),
+        'utf8'
+      );
+      const version = parseRubyVersionFile(content);
+      if (version) {
+        debug(`Found Ruby version "${version}" in .ruby-version`);
+        return { version, source: '.ruby-version' };
+      }
+    } catch (err) {
+      debug('Failed to read .ruby-version file');
+    }
+  }
+
+  // 2. Check for .tool-versions file (mise/asdf format)
+  const toolVersionsPath = await walkParentDirs({
+    base: workPath,
+    start: entrypointFsDirname,
+    filename: '.tool-versions',
+  });
+  if (toolVersionsPath) {
+    try {
+      const content = await readFile(
+        join(toolVersionsPath, '.tool-versions'),
+        'utf8'
+      );
+      const version = parseToolVersionsFile(content);
+      if (version) {
+        debug(`Found Ruby version "${version}" in .tool-versions`);
+        return { version, source: '.tool-versions' };
+      }
+    } catch (err) {
+      debug('Failed to read .tool-versions file');
+    }
+  }
+
+  // 3. Check for mise.toml or .mise.toml (mise native config)
+  // mise.toml takes precedence over .mise.toml (same as mise's own resolution)
+  for (const filename of ['mise.toml', '.mise.toml']) {
+    const miseTomlPath = await walkParentDirs({
+      base: workPath,
+      start: entrypointFsDirname,
+      filename,
+    });
+    if (miseTomlPath) {
+      try {
+        const version = await parseRubyFromMiseToml(
+          join(miseTomlPath, filename)
+        );
+        if (version) {
+          debug(`Found Ruby version "${version}" in ${filename}`);
+          return { version, source: 'mise.toml' };
+        }
+      } catch (err) {
+        debug(`Failed to read ${filename}`);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Parse a `.ruby-version` file and return the first non-empty, non-comment line.
+ * Strips optional `ruby-` prefix (e.g. "ruby-3.4.1" → "3.4.1").
+ */
+function parseRubyVersionFile(content: string): string | undefined {
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    // Strip optional "ruby-" prefix (rbenv/rvm convention)
+    return trimmed.replace(/^ruby-/, '');
+  }
+  return undefined;
+}
+
+/**
+ * Parse a `.tool-versions` file (mise/asdf format) for a Ruby version.
+ * Format: `ruby 3.4.1`
+ */
+function parseToolVersionsFile(content: string): string | undefined {
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const match = trimmed.match(/^ruby\s+(.+)/);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Parse a `mise.toml` or `.mise.toml` file for a Ruby version.
+ *
+ * Supported formats:
+ *   [tools]
+ *   ruby = "3.4.1"
+ *   ruby = "3.4"
+ *   ruby = ["3.4.1", "3.3"]     # uses first entry
+ *   ruby = { version = "3.4" }  # table with version key (mise extended syntax)
+ */
+async function parseRubyFromMiseToml(
+  filePath: string
+): Promise<string | undefined> {
+  interface MiseToml {
+    tools?: {
+      ruby?: string | string[] | { version?: string };
+    };
+  }
+
+  const config = await readConfigFile<MiseToml>(filePath);
+  if (!config?.tools?.ruby) return undefined;
+
+  const ruby = config.tools.ruby;
+  if (typeof ruby === 'string') {
+    return ruby.trim() || undefined;
+  }
+  if (Array.isArray(ruby) && ruby.length > 0) {
+    return String(ruby[0]).trim() || undefined;
+  }
+  if (typeof ruby === 'object' && 'version' in ruby && ruby.version) {
+    return String(ruby.version).trim() || undefined;
+  }
+
+  return undefined;
+}
+
 export const version = 3;
 
 export const build: BuildV3 = async ({
@@ -204,11 +357,17 @@ export const build: BuildV3 = async ({
     await writeFile(gemfilePath, `source "https://rubygems.org"${EOL}`);
   }
 
+  // Detect Ruby version from .ruby-version or .tool-versions files
+  const declaredVersion = await detectDeclaredRubyVersion(
+    workPath,
+    entrypointFsDirname
+  );
+
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
-    await installBundler(meta, gemfileContents);
+    await installBundler(meta, gemfileContents, declaredVersion);
 
   process.env.GEM_HOME = gemHome;
 
