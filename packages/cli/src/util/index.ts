@@ -53,6 +53,7 @@ export interface CreateOptions {
   noWait?: boolean;
   withFullLogs?: boolean;
   autoAssignCustomDomains?: boolean;
+  agentName?: string;
 }
 
 export interface RemoveOptions {
@@ -128,6 +129,7 @@ export default class Now {
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
+      agentName,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -149,6 +151,7 @@ export default class Now {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      actor: agentName,
       autoAssignCustomDomains,
     };
 

@@ -524,6 +524,7 @@ export default async (client: Client): Promise<number> => {
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
+      agentName: client.agentName,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
