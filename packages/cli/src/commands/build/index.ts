@@ -780,12 +780,14 @@ async function doBuild(
         'nodeVersion',
       ] as const) {
         const value = settingsForEnv[key];
+        const envKey =
+          `VERCEL_PROJECT_SETTINGS_` +
+          key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
         if (typeof value === 'string') {
-          const envKey =
-            `VERCEL_PROJECT_SETTINGS_` +
-            key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
           process.env[envKey] = value;
           output.debug(`Setting env ${envKey} to "${value}"`);
+        } else {
+          delete process.env[envKey];
         }
       }
 
