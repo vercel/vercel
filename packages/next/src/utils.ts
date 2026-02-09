@@ -263,6 +263,7 @@ type RoutesManifestOld = {
         fallback: (Rewrite & RoutesManifestRegex)[];
       };
   headers?: (Header & RoutesManifestRegex)[];
+  onMatchHeaders?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: RoutesManifestRoute[];
   staticRoutes: RoutesManifestRoute[];
   version: 1 | 2 | 3;
@@ -1118,6 +1119,9 @@ export async function createLambdaFromPseudoLayers({
 // https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
 export type NextConfigRuntime = {
   pageExtensions: string[];
+  // experimental.cacheComponents has been moved out of experimental
+  // at https://github.com/vercel/next.js/pull/85035
+  cacheComponents?: boolean;
   experimental?: {
     cacheComponents?: boolean;
     clientParamParsingOrigins?: string[];
@@ -2725,7 +2729,9 @@ export const onPrerenderRoute =
       !isBlocking &&
       (!isNotFound || static404Page) &&
       dataRoute &&
-      (!isAppClientParamParsingEnabled || prefetchDataRoute)
+      // When this is an App route, either isAppClientParamParsingEnabled is disabled
+      // or there's a prefetchDataRoute
+      (!isAppPathRoute || !isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
@@ -3170,66 +3176,74 @@ export const onPrerenderRoute =
           routesManifest?.rsc?.dynamicRSCPrerender &&
           routesManifest?.ppr?.chain?.headers
         ) {
-          let contentType = rscContentTypeHeader;
-          if (postponedState) {
-            contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
-              rscContentTypeHeader
-            )}`;
-          }
+          const shouldSkipDynamicRsc =
+            Boolean(prefetchDataRoute) && !postponedState;
+          if (shouldSkipDynamicRsc) {
+            // Ensure the data route is still registered using the static
+            // prerender (with fallback) so the .rsc build output is uploaded.
+            prerenders[normalizePathData(outputPathData)] = prerender;
+          } else {
+            let contentType = rscContentTypeHeader;
+            if (postponedState) {
+              contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+                rscContentTypeHeader
+              )}`;
+            }
 
-          // If client param parsing is enabled, we follow the same logic as the
-          // HTML allowQuery as it's already going to vary based on if there's a
-          // static shell generated or if there's fallback root params. If there
-          // are fallback root params, and we can serve a fallback, then we
-          // should follow the same logic for the dynamic RSC routes.
-          //
-          // If client param parsing is not enabled, we have to use the
-          // allowQuery because the RSC payloads will contain dynamic segment
-          // values.
-          const rdcRSCAllowQuery = isAppClientParamParsingEnabled
-            ? htmlAllowQuery
-            : allowQuery;
+            // If client param parsing is enabled, we follow the same logic as the
+            // HTML allowQuery as it's already going to vary based on if there's a
+            // static shell generated or if there's fallback root params. If there
+            // are fallback root params, and we can serve a fallback, then we
+            // should follow the same logic for the dynamic RSC routes.
+            //
+            // If client param parsing is not enabled, we have to use the
+            // allowQuery because the RSC payloads will contain dynamic segment
+            // values.
+            const rdcRSCAllowQuery = isAppClientParamParsingEnabled
+              ? htmlAllowQuery
+              : allowQuery;
 
-          // Use the fallback value for the RSC route if the route doesn't
-          // vary based on the route parameters and there's an actual postponed
-          // state to fallback to.
-          let fallback: FileBlob | null = null;
-          if (
-            rdcRSCAllowQuery &&
-            rdcRSCAllowQuery.length === 0 &&
-            postponedState
-          ) {
-            fallback = new FileBlob({
-              data: postponedState,
-              contentType,
+            // Use the fallback value for the RSC route if the route doesn't
+            // vary based on the route parameters and there's an actual postponed
+            // state to fallback to.
+            let fallback: FileBlob | null = null;
+            if (
+              rdcRSCAllowQuery &&
+              rdcRSCAllowQuery.length === 0 &&
+              postponedState
+            ) {
+              fallback = new FileBlob({
+                data: postponedState,
+                contentType,
+              });
+            }
+
+            prerenders[normalizePathData(outputPathData)] = new Prerender({
+              expiration: initialRevalidate,
+              staleExpiration: initialExpire,
+              lambda,
+              allowQuery: rdcRSCAllowQuery,
+              fallback,
+              group: prerenderGroup,
+              bypassToken: prerenderManifest.bypassToken,
+              experimentalBypassFor,
+              allowHeader,
+              chain: {
+                outputPath: normalizePathData(outputPathData),
+                headers: routesManifest.ppr.chain.headers,
+              },
+              ...(isNotFound ? { initialStatus: 404 } : {}),
+              initialHeaders: {
+                ...initialHeaders,
+                'content-type': contentType,
+                // Dynamic RSC requests cannot be cached, so we explicity set it
+                // here to ensure that the response is not cached by the browser.
+                'cache-control':
+                  'private, no-store, no-cache, max-age=0, must-revalidate',
+                vary: rscVaryHeader,
+              },
             });
           }
-
-          prerenders[normalizePathData(outputPathData)] = new Prerender({
-            expiration: initialRevalidate,
-            staleExpiration: initialExpire,
-            lambda,
-            allowQuery: rdcRSCAllowQuery,
-            fallback,
-            group: prerenderGroup,
-            bypassToken: prerenderManifest.bypassToken,
-            experimentalBypassFor,
-            allowHeader,
-            chain: {
-              outputPath: normalizePathData(outputPathData),
-              headers: routesManifest.ppr.chain.headers,
-            },
-            ...(isNotFound ? { initialStatus: 404 } : {}),
-            initialHeaders: {
-              ...initialHeaders,
-              'content-type': contentType,
-              // Dynamic RSC requests cannot be cached, so we explicity set it
-              // here to ensure that the response is not cached by the browser.
-              'cache-control':
-                'private, no-store, no-cache, max-age=0, must-revalidate',
-              vary: rscVaryHeader,
-            },
-          });
         }
       }
 
@@ -3277,6 +3291,35 @@ export const onPrerenderRoute =
               ? htmlAllowQuery
               : allowQuery;
 
+            // No initial headers here means that the fallback is being served
+            // and it should infer the initial headers from the base metadata
+            // file which will be the ones which include the cache tags for
+            // the fallback render. Failing to do this will result in
+            // producing build output entries without any cache tags which are
+            // then therefore unexpirable.
+            let segmentInitialHeaders = initialHeaders;
+            if (
+              (isBlocking || isFallback) &&
+              'headers' in meta &&
+              typeof meta.headers === 'object' &&
+              meta.headers !== null
+            ) {
+              const metaHeaders = meta.headers as Record<string, string>;
+              const hasMissingMetaHeader =
+                !segmentInitialHeaders ||
+                Object.keys(metaHeaders).some(
+                  key => segmentInitialHeaders?.[key] == null
+                );
+              if (hasMissingMetaHeader) {
+                // Merge to fill any missing meta headers without overriding
+                // segment-specific values.
+                segmentInitialHeaders = {
+                  ...metaHeaders,
+                  ...segmentInitialHeaders,
+                };
+              }
+            }
+
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
                 path.join(
@@ -3285,13 +3328,15 @@ export const onPrerenderRoute =
                 ) + prefetchSegmentSuffix;
 
               // Only use the fallback value when the allowQuery is defined and
-              // is empty, which means that the segments do not vary based on
-              // the route parameters. This is safer than ensuring that we only
-              // use the fallback when this is not a fallback because we know in
-              // this new logic that it doesn't vary based on the route
-              // parameters and therefore can be used for all requests instead.
+              // either: (1) it is empty, meaning segments do not vary by params,
+              // or (2) client param parsing is enabled, meaning the segment
+              // payloads are safe to reuse across params.
               let fallback: FileFsRef | null = null;
-              if (segmentAllowQuery && segmentAllowQuery.length === 0) {
+              const shouldAttachSegmentFallback =
+                segmentAllowQuery &&
+                (segmentAllowQuery.length === 0 ||
+                  isAppClientParamParsingEnabled);
+              if (shouldAttachSegmentFallback) {
                 const fsPath = path.join(
                   segmentsDir,
                   segmentPath + prefetchSegmentSuffix
@@ -3317,7 +3362,7 @@ export const onPrerenderRoute =
                 experimentalBypassFor: undefined,
 
                 initialHeaders: {
-                  ...initialHeaders,
+                  ...segmentInitialHeaders,
                   vary: rscVaryHeader,
                   'content-type': rscContentTypeHeader,
                   [rscDidPostponeHeader]: '2',

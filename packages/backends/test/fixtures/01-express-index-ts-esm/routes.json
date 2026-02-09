@@ -1,0 +1,37 @@
+[
+  {
+    "handle": "filesystem"
+  },
+  {
+    "src": "^(?:\\/user\\/([^\\/]+))(?:\\/$)?$",
+    "dest": "/user/:id",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/user\\/([^\\/]+)\\/echo2)(?:\\/$)?$",
+    "dest": "/user/:id/echo2",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/user\\/([^\\/]+)\\/posts)(?:\\/$)?$",
+    "dest": "/user/:id/posts",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/blog\\/([\\s\\S]+))(?:\\/$)?$",
+    "dest": "/blog/*slugs",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/"
+  }
+]

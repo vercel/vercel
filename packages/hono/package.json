@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hono",
-  "version": "0.2.27",
+  "version": "0.2.35",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -34,7 +34,7 @@
   "devDependencies": {
     "@types/fs-extra": "11",
     "@types/jest": "27.5.1",
-    "@types/node": "14.18.33",
+    "@types/node": "20.11.0",
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",

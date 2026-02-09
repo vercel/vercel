@@ -1,5 +1,61 @@
 # @vercel/elysia
 
+## 0.1.32
+
+### Patch Changes
+
+- Updated dependencies [[`f708ca65bccf6942bcd8501f34101e659aa256d6`](https://github.com/vercel/vercel/commit/f708ca65bccf6942bcd8501f34101e659aa256d6)]:
+  - @vercel/node@5.5.33
+
+## 0.1.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.32
+
+## 0.1.30
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.31
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.30
+
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.29
+
+## 0.1.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.28
+
+## 0.1.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.27
+
+## 0.1.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.26
+
 ## 0.1.24
 
 ### Patch Changes

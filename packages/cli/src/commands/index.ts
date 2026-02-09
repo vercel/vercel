@@ -1,4 +1,5 @@
 import { aliasCommand } from './alias/command';
+import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
@@ -40,11 +41,13 @@ import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
+import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
 const commandsStructs = [
   aliasCommand,
+  apiCommand,
   blobCommand,
   bisectCommand,
   buildCommand,
@@ -84,6 +87,7 @@ const commandsStructs = [
   teamsCommand,
   telemetryCommand,
   upgradeCommand,
+  webhooksCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

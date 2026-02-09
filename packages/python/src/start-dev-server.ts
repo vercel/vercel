@@ -8,7 +8,7 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
-import { getLatestPythonVersion } from './version';
+import { getDefaultPythonVersion } from './version';
 import { isInVirtualEnv, useVirtualEnv } from './utils';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
@@ -53,6 +53,24 @@ const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
 
 const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
 const WSGI_SHIM_MODULE = 'vc_init_dev_wsgi';
+
+function createLogListener(
+  callback: ((buf: Buffer) => void) | undefined,
+  stream: NodeJS.WriteStream
+): (buf: Buffer) => void {
+  return (buf: Buffer) => {
+    if (callback) {
+      callback(buf);
+    } else {
+      const s = buf.toString();
+      for (const line of s.split(/\r?\n/)) {
+        if (line) {
+          stream.write(line.endsWith('\n') ? line : line + '\n');
+        }
+      }
+    }
+  };
+}
 
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
@@ -159,7 +177,14 @@ function createDevWsgiShim(
 }
 
 export const startDevServer: StartDevServer = async opts => {
-  const { entrypoint: rawEntrypoint, workPath, meta = {}, config } = opts;
+  const {
+    entrypoint: rawEntrypoint,
+    workPath,
+    meta = {},
+    config,
+    onStdout,
+    onStderr,
+  } = opts;
 
   // Only start a dev server for FastAPI or Flask for now
   const framework = config?.framework;
@@ -238,7 +263,7 @@ export const startDevServer: StartDevServer = async opts => {
     // Now spawn the actual server process
     await new Promise<void>((resolve, reject) => {
       let resolved = false;
-      const { pythonPath: systemPython } = getLatestPythonVersion(meta);
+      const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
       let pythonCmd = systemPython;
       const venv = isInVirtualEnv();
 
@@ -300,22 +325,8 @@ export const startDevServer: StartDevServer = async opts => {
         });
         childProcess = child;
 
-        stdoutLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
-        stderrLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
+        stdoutLogListener = createLogListener(onStdout, process.stdout);
+        stderrLogListener = createLogListener(onStderr, process.stderr);
         child.stdout?.on('data', stdoutLogListener);
         child.stderr?.on('data', stderrLogListener);
 
@@ -391,22 +402,8 @@ export const startDevServer: StartDevServer = async opts => {
         });
         childProcess = child;
 
-        stdoutLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
-        stderrLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
+        stdoutLogListener = createLogListener(onStdout, process.stdout);
+        stderrLogListener = createLogListener(onStderr, process.stderr);
         child.stdout?.on('data', stdoutLogListener);
         child.stderr?.on('data', stderrLogListener);
 

@@ -6,6 +6,7 @@ describe('index', () => {
       new Map([
         ['alias', 'alias'],
         ['aliases', 'alias'],
+        ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
         ['build', 'build'],
@@ -62,6 +63,8 @@ describe('index', () => {
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
         ['upgrade', 'upgrade'],
+        ['webhook', 'webhooks'],
+        ['webhooks', 'webhooks'],
         ['whoami', 'whoami'],
       ])
     );

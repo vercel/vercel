@@ -4122,6 +4122,213 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Ruby',
+    slug: 'ruby',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/ruby.svg',
+    tagline:
+      'A dynamic, open source programming language with a focus on simplicity and productivity.',
+    description:
+      'A generic Ruby application deployed as a serverless function.',
+    website: 'https://www.ruby-lang.org',
+    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
+    ignoreRuntimes: ['@vercel/ruby'],
+    detectors: {
+      every: [
+        {
+          path: 'config.ru',
+        },
+        {
+          path: 'Gemfile',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`bundle install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/config',
+      },
+    ],
+  },
+  {
+    name: 'Rust',
+    slug: 'rust',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/rust.svg',
+    tagline:
+      'A language empowering everyone to build reliable and efficient software.',
+    description:
+      'A generic Rust application deployed as a serverless function.',
+    website: 'https://www.rust-lang.org',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
+    name: 'Node',
+    slug: 'node',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/node.svg',
+    tagline:
+      "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine.",
+    description:
+      'A generic Node.js application deployed as a serverless function.',
+    website: 'https://nodejs.org',
+    useRuntime: { src: 'server.ts', use: '@vercel/backends' },
+    ignoreRuntimes: ['@vercel/node'],
+    detectors: {
+      every: [
+        {
+          path: 'server.ts',
+        },
+        {
+          path: 'package.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`npm run dev` or `npx ts-node server.ts`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
+    name: 'Go',
+    slug: 'go',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
+    tagline: 'An open-source programming language supported by Google.',
+    description: 'A generic Go application deployed as a serverless function.',
+    website: 'https://go.dev',
+    useRuntime: { src: 'index.go', use: '@vercel/go' },
+    ignoreRuntimes: ['@vercel/go'],
+    detectors: {
+      every: [
+        {
+          path: 'go.mod',
+        },
+      ],
+      some: [
+        {
+          path: 'main.go',
+        },
+        {
+          path: 'cmd/api/main.go',
+        },
+        {
+          path: 'cmd/server/main.go',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`go mod download`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`go run .` or `go run ./cmd/api`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
@@ -4131,7 +4338,6 @@ export const frameworks = [
     description:
       'Multiple services deployed as serverless functions within your project.',
     website: 'https://vercel.com',
-    detectors: {},
     settings: {
       installCommand: {
         placeholder: 'None',

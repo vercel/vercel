@@ -146,7 +146,11 @@ const main = async () => {
   try {
     parsedArgs = parseArguments(
       process.argv,
-      { '--version': Boolean, '-v': '--version' },
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--non-interactive': Boolean,
+      },
       { permissive: true }
     );
     const isDebugging = parsedArgs.flags['--debug'];
@@ -195,13 +199,11 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['curl'];
+  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
-        `${getTitleName()} CLI ${
-          pkg.version
-        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
+        `${getTitleName()} CLI ${pkg.version} | ${chalk.bold(targetOrSubcommand)} is in beta — https://vercel.com/feedback`
       )}\n`
     );
   } else {
@@ -308,8 +310,8 @@ const main = async () => {
     },
   });
 
-  const { agent } = await determineAgent();
-  telemetry.trackAgenticUse(agent?.name);
+  const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
@@ -339,6 +341,8 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize
+  // When an agent is detected, --non-interactive is effectively the default
+  const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
@@ -351,6 +355,9 @@ const main = async () => {
     localConfigPath,
     argv: process.argv,
     telemetryEventStore,
+    isAgent,
+    agentName: detectedAgent?.name,
+    nonInteractive,
   });
 
   // The `--cwd` flag is respected for all sub-commands
@@ -449,6 +456,14 @@ const main = async () => {
       });
       return 1;
     }
+  }
+
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  if (
+    typeof parsedArgs.flags['--token'] !== 'string' &&
+    process.env.VERCEL_TOKEN
+  ) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
   }
 
   if (
@@ -640,6 +655,10 @@ const main = async () => {
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = require('./commands/alias').default;
           break;
+        case 'api':
+          telemetry.trackCliCommandApi(userSuppliedSubCommand);
+          func = require('./commands/api').default;
+          break;
         case 'bisect':
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = require('./commands/bisect').default;
@@ -808,6 +827,10 @@ const main = async () => {
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = require('./commands/upgrade').default;
           break;
+        case 'webhooks':
+          telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
+          func = require('./commands/webhooks').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
@@ -911,39 +934,65 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    // Print update information, if available
-    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
-      // Check if an update is available. If so, `latest` will contain a string
-      // of the latest version, otherwise `undefined`.
+    const shouldCheckForUpdates =
+      !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+
+    if (shouldCheckForUpdates) {
       const latest = getLatestVersion({
         pkg,
       });
       if (latest) {
-        const changelog = 'https://github.com/vercel/vercel/releases';
-        const errorMsg =
-          exitCode && exitCode !== 2
-            ? chalk.magenta(
-                `\n\nThe latest update ${chalk.italic(
-                  'may'
-                )} fix any errors that occurred.`
-              )
-            : '';
-        output.print(
-          box(
-            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
-              `v${latest}`
-            )}
+        const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
+
+        if (isTTY) {
+          // Interactive mode: prompt user to update now
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  ` The latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+
+          output.print(
+            `\nUpdate available for Vercel CLI (${chalk.gray(
+              `v${pkg.version}`
+            )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
+          );
+          output.print(
+            `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
+          );
+
+          const shouldUpgrade = await client.input.confirm(
+            'Would you like to upgrade now?',
+            true
+          );
+
+          if (shouldUpgrade) {
+            const upgradeExitCode = await executeUpgrade();
+            process.exitCode = upgradeExitCode;
+            return;
+          }
+        } else {
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  `\n\nThe latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+          output.print(
+            box(
+              `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+                `v${latest}`
+              )}
 Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
-          )
-        );
-        output.print('\n');
-
-        // Prompt user to upgrade now
-        if (await client.input.confirm('Upgrade now?', true)) {
-          const upgradeExitCode = await executeUpgrade();
-          process.exitCode = upgradeExitCode;
-          return;
+            )
+          );
+          output.print('\n');
         }
       }
     }

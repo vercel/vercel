@@ -1,0 +1,8 @@
+{
+  "name": "@repo/echo-with-dep",
+  "version": "0.0.0",
+  "dependencies": {
+    "jsonwebtoken": "9.0.3",
+    "cowsay": "1.6.0"
+  }
+}

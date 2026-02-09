@@ -1,9 +1,22 @@
 {
   "name": "@vercel/python-analysis",
-  "version": "0.1.1",
-  "main": "./dist/index.js",
+  "version": "0.3.2",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "imports": {
+    "#wasm/*": "./dist/wasm/*"
+  },
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
@@ -16,14 +29,16 @@
     "directory": "packages/python-analysis"
   },
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "pnpm generate:schemas && pnpm build:wasm && node scripts/build.mjs",
+    "build:wasm": "node scripts/build-wasm.mjs",
     "generate:schemas": "ts-to-zod --all",
-    "prebuild": "pnpm generate:schemas",
-    "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
-    "test-unit": "pnpm test test/*.test.ts",
+    "test": "vitest run --config ../../vitest.config.mts",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@bytecodealliance/preview2-shim": "0.17.6",
     "@renovatebot/pep440": "4.2.1",
     "fs-extra": "11.1.1",
     "js-yaml": "4.1.1",
@@ -33,11 +48,11 @@
     "zod": "3.22.4"
   },
   "devDependencies": {
+    "@bytecodealliance/jco-transpile": "0.1.1",
     "@types/fs-extra": "11.0.4",
-    "@types/jest": "27.4.1",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "14.18.33",
-    "jest-junit": "16.0.0",
-    "ts-to-zod": "^3"
+    "@types/node": "20.11.0",
+    "ts-to-zod": "^3",
+    "vitest": "2.1.4"
   }
 }

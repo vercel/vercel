@@ -196,6 +196,18 @@ export type StartDevServerOptions = BuildOptions & {
    * Directory to serve static files from in dev mode
    */
   publicDir?: string;
+  /**
+   * Optional callback for stdout output from the dev server process.
+   * If provided, the builder should forward stdout to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStdout?: (data: Buffer) => void;
+  /**
+   * Optional callback for stderr output from the dev server process.
+   * If provided, the builder should forward stderr to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStderr?: (data: Buffer) => void;
 };
 
 export interface StartDevServerSuccess {
@@ -522,6 +534,26 @@ export interface Cron {
   schedule: string;
 }
 
+export interface Service {
+  name: string;
+  type: ServiceType;
+  group?: string;
+  workspace: string;
+  entrypoint?: string;
+  framework?: string;
+  builder: Builder;
+  runtime?: string;
+  buildCommand?: string;
+  installCommand?: string;
+  /* web service config */
+  routePrefix?: string;
+  /* cron service config */
+  schedule?: string;
+  /* worker service config */
+  topic?: string;
+  consumer?: string;
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
@@ -650,6 +682,13 @@ export interface TriggerEvent {
    * Behavior when not specified depends on the server's default configuration.
    */
   initialDelaySeconds?: number;
+
+  /**
+   * Maximum number of concurrent executions for this consumer (OPTIONAL)
+   * Must be at least 1 if specified.
+   * Behavior when not specified depends on the server's default configuration.
+   */
+  maxConcurrency?: number;
 }
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';

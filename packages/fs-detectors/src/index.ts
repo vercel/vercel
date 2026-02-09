@@ -3,13 +3,27 @@ export {
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  type Options as DetectBuildersOptions,
 } from './detect-builders';
 export {
   detectServices,
-  type DetectServicesOptions,
-  type DetectServicesResult,
-  type ResolvedService,
-} from './services';
+  generateServicesRoutes,
+} from './services/detect-services';
+export { autoDetectServices } from './services/auto-detect';
+export type {
+  AutoDetectOptions,
+  AutoDetectResult,
+} from './services/auto-detect';
+export { isStaticBuild } from './services/utils';
+export { getServicesBuilders } from './services/get-services-builders';
+export type {
+  DetectServicesOptions,
+  DetectServicesResult,
+  ResolvedService,
+  Service,
+  ServicesRoutes,
+  ServiceDetectionError,
+} from './services/types';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
   detectFramework,

@@ -8,7 +8,7 @@
   ],
   "probes": [
     {
-      "path": "/docs/_next/data/testing-build-id/index.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/index.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -17,7 +17,7 @@
       "mustNotContain": "<html"
     },
     {
-      "path": "/docs/_next/data/testing-build-id/dynamic/static.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/dynamic/static.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -27,7 +27,7 @@
       }
     },
     {
-      "path": "/docs/_next/data/testing-build-id/team-1/slug-1.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/team-1/slug-1.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -37,7 +37,7 @@
       }
     },
     {
-      "path": "/docs/_next/data/testing-build-id/dynamic/id-1.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/dynamic/id-1.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -47,7 +47,7 @@
       }
     },
     {
-      "path": "/docs/_next/data/testing-build-id/rewrite-to-site.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/rewrite-to-site.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -88,7 +88,7 @@
       "mustContain": "About Page"
     },
     {
-      "path": "/docs/_next/data/testing-build-id/after-file-rewrite.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/after-file-rewrite.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": "1"
@@ -96,7 +96,7 @@
       "mustContain": "page\":\"about\""
     },
     {
-      "path": "/docs/_next/data/testing-build-id/after-file-rewrite-auto-static-dynamic.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/after-file-rewrite-auto-static-dynamic.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": "1"
@@ -107,7 +107,7 @@
       "mustContain": "{}"
     },
     {
-      "path": "/docs/_next/data/testing-build-id/redirect-me.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/redirect-me.json",
       "status": 307,
       "fetchOptions": {
         "redirect": "manual"
@@ -117,7 +117,7 @@
       }
     },
     {
-      "path": "/docs/_next/data/testing-build-id/_sites/subdomain-1.json",
+      "path": "/docs/_next/data/build-TfctsWXpff2fKS/_sites/subdomain-1.json",
       "status": 200,
       "fetchOptions": {
         "redirect": "manual"

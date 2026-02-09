@@ -1,5 +1,89 @@
 # @vercel/next
 
+## 4.15.27
+
+### Patch Changes
+
+- Update Next.js adapter version ([#14922](https://github.com/vercel/vercel/pull/14922))
+
+## 4.15.26
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14909](https://github.com/vercel/vercel/pull/14909))
+
+- Strip routes-manifest.json for determinism more ([#14908](https://github.com/vercel/vercel/pull/14908))
+
+## 4.15.25
+
+### Patch Changes
+
+- [next] Apply routes-manifest onMatchHeaders ([#14903](https://github.com/vercel/vercel/pull/14903))
+
+- Make adapters flag explicit value for opt-in ([#14905](https://github.com/vercel/vercel/pull/14905))
+
+## 4.15.24
+
+### Patch Changes
+
+- Add version gate for adapters opt-in ([#14896](https://github.com/vercel/vercel/pull/14896))
+
+## 4.15.23
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14888](https://github.com/vercel/vercel/pull/14888))
+
+- Fix pages-manifest.json when using i18n ([#14878](https://github.com/vercel/vercel/pull/14878))
+
+## 4.15.22
+
+### Patch Changes
+
+- Remove 404.html prerenders from serverless function ([#14836](https://github.com/vercel/vercel/pull/14836))
+
+## 4.15.21
+
+### Patch Changes
+
+- Strip routes-manifest.json for determinism ([#14783](https://github.com/vercel/vercel/pull/14783))
+
+- Update Next.js adapter version ([#14801](https://github.com/vercel/vercel/pull/14801))
+
+## 4.15.20
+
+### Patch Changes
+
+- Fix assertion for cacheComponents with getStaticProps route ([#14807](https://github.com/vercel/vercel/pull/14807))
+
+## 4.15.19
+
+### Patch Changes
+
+- Revert "[next] Remove 404.html prerenders from functions" ([#14793](https://github.com/vercel/vercel/pull/14793))
+
+- ensure static .rsc outputs are served as fallbacks ([#14770](https://github.com/vercel/vercel/pull/14770))
+
+## 4.15.18
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14773](https://github.com/vercel/vercel/pull/14773))
+
+## 4.15.17
+
+### Patch Changes
+
+- fix segment fallback initial headers to properly include cache tags for expiration ([#14695](https://github.com/vercel/vercel/pull/14695))
+
+## 4.15.16
+
+### Patch Changes
+
+- Add Next.js adapter opt-in behind flag ([#14574](https://github.com/vercel/vercel/pull/14574))
+
+- attach segment fallbacks when client param parsing is enabled ([#14689](https://github.com/vercel/vercel/pull/14689))
+
 ## 4.15.15
 
 ### Patch Changes

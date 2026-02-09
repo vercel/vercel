@@ -9,9 +9,16 @@ import type {
   Config,
   BuilderFunctions,
   ProjectSettings,
+  Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
-import { isPythonEntrypoint } from '@vercel/build-utils';
+import {
+  isPythonEntrypoint,
+  BACKEND_BUILDERS,
+  UNIFIED_BACKEND_BUILDER,
+  isExperimentalBackendsEnabled,
+} from '@vercel/build-utils';
+import { getServicesBuilders } from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -113,7 +120,17 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  services?: Service[];
 }> {
+  const { projectSettings = {} } = options;
+  const { framework } = projectSettings;
+
+  if (framework === 'services') {
+    return getServicesBuilders({
+      workPath: options.workPath,
+    });
+  }
+
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
@@ -147,8 +164,7 @@ export async function detectBuilders(
 
   const absolutePathCache = new Map<string, string>();
 
-  const { projectSettings = {} } = options;
-  const { buildCommand, outputDirectory, framework } = projectSettings;
+  const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
@@ -351,11 +367,12 @@ export async function detectBuilders(
   if (frontendBuilder) {
     // Add @vercel/static build for public files for server-based frameworks
     // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
-    // This applies to Express, Hono, and any Python-based server frameworks.
+    // This applies to Express, Hono, Go, and Python-based server frameworks.
     if (
       frontendBuilder?.use === '@vercel/express' ||
       frontendBuilder?.use === '@vercel/hono' ||
-      frontendBuilder?.use === '@vercel/python'
+      frontendBuilder?.use === '@vercel/python' ||
+      frontendBuilder?.use === '@vercel/go'
     ) {
       builders.push({
         src: 'public/**/*',
@@ -592,7 +609,13 @@ function detectFrontBuilder(
   const f = slugToFramework.get(framework || '');
   if (f && f.useRuntime) {
     const { src, use } = f.useRuntime;
-    return { src, use: `${use}${withTag}`, config };
+    // Replace framework-specific backend builders with the unified backend builder
+    // when experimental backends is enabled
+    const shouldUseUnifiedBackend =
+      isExperimentalBackendsEnabled() &&
+      BACKEND_BUILDERS.includes(use as (typeof BACKEND_BUILDERS)[number]);
+    const finalUse = shouldUseUnifiedBackend ? UNIFIED_BACKEND_BUILDER : use;
+    return { src, use: `${finalUse}${withTag}`, config };
   }
 
   // Entrypoints for other frameworks

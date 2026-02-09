@@ -1,5 +1,89 @@
 # @vercel/python
 
+## 6.8.0
+
+### Minor Changes
+
+- fix a build regression on projects with changed rootDirectory ([#14931](https://github.com/vercel/vercel/pull/14931))
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
+## 6.6.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- Skip filtering system pythons on local vercel builds. ([#14858](https://github.com/vercel/vercel/pull/14858))
+
+## 6.5.1
+
+### Patch Changes
+
+- switch tests to vitest ([#14853](https://github.com/vercel/vercel/pull/14853))
+
+## 6.5.0
+
+### Minor Changes
+
+- vendor Python runtime dependencies ([#14827](https://github.com/vercel/vercel/pull/14827))
+
+- Bump vercel-runtime version automatically on its releases ([#14842](https://github.com/vercel/vercel/pull/14842))
+
+## 6.4.2
+
+### Patch Changes
+
+- Fix issue when .python-version file is provided without a pyproject.toml ([#14811](https://github.com/vercel/vercel/pull/14811))
+
+## 6.4.1
+
+### Patch Changes
+
+- Preserve error code when re-throwing errors in UvRunner methods ([#14796](https://github.com/vercel/vercel/pull/14796))
+
+## 6.4.0
+
+### Minor Changes
+
+- Enable support for python 3.13 and 3.14 runtimes ([#14740](https://github.com/vercel/vercel/pull/14740))
+
+  Preserves the current behaviour of "falling back" to python3.12 when an unsupported version of python is selected
+
+## 6.3.2
+
+### Patch Changes
+
+- Revert removing pip from the isInstalled check ([#14728](https://github.com/vercel/vercel/pull/14728))
+
+## 6.3.1
+
+### Patch Changes
+
+- isInstalled check only needs to check for python on the path. ([#14712](https://github.com/vercel/vercel/pull/14712))
+
+## 6.3.0
+
+### Minor Changes
+
+- enable standalone python-runtime behind a feature flag ([#14673](https://github.com/vercel/vercel/pull/14673))
+
+### Patch Changes
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
 ## 6.2.1
 
 ### Patch Changes

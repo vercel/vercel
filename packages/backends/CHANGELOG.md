@@ -1,5 +1,70 @@
 # @vercel/backends
 
+## 0.0.30
+
+### Patch Changes
+
+- [backends] Re-add bun support ([#14916](https://github.com/vercel/vercel/pull/14916))
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.3.3
+
+## 0.0.29
+
+### Patch Changes
+
+- Updated dependencies [[`fc357e11cb4b00ab8ec413a0ea3586a87e733f0e`](https://github.com/vercel/vercel/commit/fc357e11cb4b00ab8ec413a0ea3586a87e733f0e), [`ff320caa5c8a0857aad0b989699207a6a703256f`](https://github.com/vercel/vercel/commit/ff320caa5c8a0857aad0b989699207a6a703256f)]:
+  - @vercel/build-utils@13.3.2
+
+## 0.0.28
+
+### Patch Changes
+
+- [backends]: Improve cjs interop in monorepos ([#14846](https://github.com/vercel/vercel/pull/14846))
+
+- Updated dependencies [[`f45189244c2ca28083b0077532be4e2d9945faf0`](https://github.com/vercel/vercel/commit/f45189244c2ca28083b0077532be4e2d9945faf0)]:
+  - @vercel/build-utils@13.3.1
+
+## 0.0.27
+
+### Patch Changes
+
+- Updated dependencies [[`3ee91bd6782888e626486c706dcba65fd51ba0e5`](https://github.com/vercel/vercel/commit/3ee91bd6782888e626486c706dcba65fd51ba0e5), [`ce9208286ed6d29d6764ea4d290680ad98e65d22`](https://github.com/vercel/vercel/commit/ce9208286ed6d29d6764ea4d290680ad98e65d22)]:
+  - @vercel/build-utils@13.3.0
+
+## 0.0.26
+
+### Patch Changes
+
+- Updated dependencies [[`4500f1f482cdc19e0904be3b0e5922ceffc6de62`](https://github.com/vercel/vercel/commit/4500f1f482cdc19e0904be3b0e5922ceffc6de62), [`6d87d02723d4385ed1d08bb855fcc43f9466a984`](https://github.com/vercel/vercel/commit/6d87d02723d4385ed1d08bb855fcc43f9466a984)]:
+  - @vercel/build-utils@13.2.17
+
+## 0.0.25
+
+### Patch Changes
+
+- Improve handling of cjs/esm interop during imports ([#14798](https://github.com/vercel/vercel/pull/14798))
+
+## 0.0.24
+
+### Patch Changes
+
+- Improve handling of cjs/esm interop during imports ([#14730](https://github.com/vercel/vercel/pull/14730))
+
+- Updated dependencies [[`3df0f7787542be38aa74f3ccfa744a724a6dde80`](https://github.com/vercel/vercel/commit/3df0f7787542be38aa74f3ccfa744a724a6dde80)]:
+  - @vercel/cervel@0.0.11
+  - @vercel/introspection@0.0.10
+
+## 0.0.23
+
+### Patch Changes
+
+- Add tracing for backends builder usage ([#14671](https://github.com/vercel/vercel/pull/14671))
+
+- Updated dependencies [[`6782a7a16c33dd56873a78a687f0ab4870466fc7`](https://github.com/vercel/vercel/commit/6782a7a16c33dd56873a78a687f0ab4870466fc7), [`31a5321f0914f09236d1100c962dfeb201885302`](https://github.com/vercel/vercel/commit/31a5321f0914f09236d1100c962dfeb201885302), [`8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4`](https://github.com/vercel/vercel/commit/8e4b946e795ae36f7b9984edbc5d8cd4887e6fc4)]:
+  - @vercel/introspection@0.0.10
+  - @vercel/cervel@0.0.10
+
 ## 0.0.22
 
 ### Patch Changes

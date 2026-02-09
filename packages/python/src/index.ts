@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
+import { VERCEL_RUNTIME_VERSION } from './runtime-version';
 import {
   download,
   glob,
@@ -21,16 +22,20 @@ import {
   PythonFramework,
 } from '@vercel/build-utils';
 import {
-  getUvBinaryOrInstall,
-  runUvSync,
   ensureUvProject,
   resolveVendorDir,
   mirrorSitePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
 } from './install';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
-import { getSupportedPythonVersion } from './version';
+import {
+  getSupportedPythonVersion,
+  DEFAULT_PYTHON_VERSION,
+  parseVersionTuple,
+  compareTuples,
+} from './version';
 import { startDevServer } from './start-dev-server';
 import {
   runPyprojectScript,
@@ -80,6 +85,8 @@ export const build: BuildV3 = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+
+  debug(`workPath: ${workPath}`);
 
   workPath = await downloadFilesInWorkPath({
     workPath,
@@ -195,12 +202,39 @@ export const build: BuildV3 = async ({
     fsFiles,
   });
 
-  // Determine Python version from pyproject.toml or Pipfile.lock if present.
+  const pythonVersionFileDir = findDir({
+    file: '.python-version',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+
+  // Determine Python version from .python-version, pyproject.toml, or Pipfile.lock if present.
   let declaredPythonVersion:
-    | { version: string; source: 'Pipfile.lock' | 'pyproject.toml' }
+    | {
+        version: string;
+        source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
+      }
     | undefined;
 
-  if (pyprojectDir) {
+  // .python-version is the highest priority because its what uv will use to select dependencies
+  if (pythonVersionFileDir) {
+    try {
+      const content = await readFile(
+        join(pythonVersionFileDir, '.python-version'),
+        'utf8'
+      );
+      const version = parsePythonVersionFile(content);
+      if (version) {
+        declaredPythonVersion = { version, source: '.python-version' };
+        debug(`Found Python version ${version} in .python-version`);
+      }
+    } catch (err) {
+      debug('Failed to read .python-version file', err);
+    }
+  }
+
+  if (!declaredPythonVersion && pyprojectDir) {
     let requiresPython: string | undefined;
     try {
       const pyproject = await readConfigFile<{
@@ -217,7 +251,9 @@ export const build: BuildV3 = async ({
       };
       debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
     }
-  } else if (pipfileLockDir) {
+  }
+
+  if (!declaredPythonVersion && pipfileLockDir) {
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
@@ -242,6 +278,26 @@ export const build: BuildV3 = async ({
     declaredPythonVersion,
   });
 
+  // Write a .python-version file on behalf of the user when:
+  // no .python-version file exists and the required version in pyproject.toml
+  // is <= DEFAULT_PYTHON_VERSION
+  const selectedVersionTuple = parseVersionTuple(pythonVersion.version);
+  const defaultVersionTuple = parseVersionTuple(DEFAULT_PYTHON_VERSION);
+  if (
+    !pythonVersionFileDir &&
+    pyprojectDir &&
+    declaredPythonVersion?.source === 'pyproject.toml' &&
+    selectedVersionTuple &&
+    defaultVersionTuple &&
+    compareTuples(selectedVersionTuple, defaultVersionTuple) <= 0
+  ) {
+    const pythonVersionFilePath = join(pyprojectDir, '.python-version');
+    await writeFile(pythonVersionFilePath, `${pythonVersion.version}\n`);
+    console.log(
+      `Writing .python-version file with version ${pythonVersion.version}`
+    );
+  }
+
   fsFiles = await glob('**', workPath);
 
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
@@ -252,106 +308,95 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
-  // If a custom install command is configured for Python frameworks, treat it as
-  // an override for the default dependency installation: run the command inside
-  // the build virtualenv
-  const hasCustomInstallCommand =
-    isPythonFramework(framework) && !!projectInstallCommand;
+  const baseEnv = spawnEnv || process.env;
+  const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
-  let useRuntime = false;
+  pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
-  if (hasCustomInstallCommand) {
-    const baseEnv = spawnEnv || process.env;
-    const pythonEnv = createVenvEnv(venvPath, baseEnv);
-    pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
-
-    const installCommand = projectInstallCommand as string;
-    console.log(`Running "install" command: \`${installCommand}\`...`);
-    await execCommand(installCommand, {
+  // If a custom install command is configured, treat it as an override for
+  // the default dependency installation: run the command inside the build
+  // virtualenv
+  let assumeDepsInstalled = false;
+  if (projectInstallCommand) {
+    console.log(`Running "install" command: \`${projectInstallCommand}\`...`);
+    await execCommand(projectInstallCommand, {
       env: pythonEnv,
       cwd: workPath,
     });
+    assumeDepsInstalled = true;
   } else {
-    // If a pyproject install script is configured for Python frameworks, treat it as
-    // an override for the default dependency installation: run the script inside
-    // the build virtualenv.
-    let ranPyprojectInstall = false;
-    if (isPythonFramework(framework)) {
-      const baseEnv = spawnEnv || process.env;
-      const pythonEnv = createVenvEnv(venvPath, baseEnv);
-      pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
-
-      ranPyprojectInstall = await runPyprojectScript(
-        workPath,
-        ['vercel-install', 'now-install', 'install'],
-        pythonEnv,
-        /* useUserVirtualEnv */ false
-      );
-    }
-
-    if (!ranPyprojectInstall) {
-      // Default installation path: use uv to normalize manifests into a uv.lock and
-      // sync dependencies into the virtualenv, including required runtime deps.
-      let uvPath: string;
-      try {
-        uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
-        console.log(`Using uv at "${uvPath}"`);
-      } catch (err) {
-        console.log('Failed to install or locate uv');
-        throw new Error(
-          `uv is required for this project but failed to install: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      }
-
-      const baseEnv = spawnEnv || process.env;
-      useRuntime = !!baseEnv.VERCEL_RUNTIME_PYTHON_ENABLED;
-
-      const runtimeDependencies = [];
-
-      if (useRuntime) {
-        runtimeDependencies.push(
-          baseEnv.VERCEL_RUNTIME_PYTHON || 'vercel-runtime==0.1.0'
-        );
-      }
-
-      // Runtime framework dependencies are managed via the uv project so that the
-      // lockfile is the single source of truth for all installed packages. These
-      // are intentionally unpinned so they can resolve alongside user-declared
-      // dependencies (for example, modern Flask versions that require newer
-      // Werkzeug releases).
-      runtimeDependencies.push('werkzeug>=1.0.1');
-      if (framework !== 'flask') {
-        runtimeDependencies.push('uvicorn>=0.24');
-      }
-
-      // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
-      // for consistent installation logic and idempotency.
-      const { projectDir } = await ensureUvProject({
-        workPath,
-        entryDirectory,
-        fsFiles,
-        repoRootPath,
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        uvPath,
-        venvPath,
-        meta,
-        runtimeDependencies,
-      });
-
-      // Use the generated/normalized uv.lock as the canonical source of truth and
-      // sync it into the venv. Re-running this with the same lockfile is idempotent
-      // and prunes any unused dependencies from the virtualenv.
-      await runUvSync({
-        uvPath,
-        venvPath,
-        projectDir,
-        locked: true,
-      });
-    }
+    // Check and run a custom vercel install command from project manifest.
+    // This will return `false` if no script was ran.
+    assumeDepsInstalled = await runPyprojectScript(
+      workPath,
+      ['vercel-install', 'now-install', 'install'],
+      pythonEnv,
+      /* useUserVirtualEnv */ false
+    );
   }
+
+  let uv: UvRunner;
+  try {
+    const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+    console.log(`Using uv at "${uvPath}"`);
+    uv = new UvRunner(uvPath);
+  } catch (err) {
+    console.log('Failed to install or locate uv');
+    throw new Error(
+      `uv is required for this project but failed to install: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+
+  if (!assumeDepsInstalled) {
+    // Default installation path: use uv to normalize manifests into a uv.lock and
+    // sync dependencies into the virtualenv, including required runtime deps.
+    // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
+    // for consistent installation logic and idempotency.
+    const { projectDir } = await ensureUvProject({
+      workPath,
+      entryDirectory,
+      fsFiles,
+      repoRootPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      pythonVersion: pythonVersion.version,
+      uv,
+      venvPath,
+      meta,
+    });
+
+    // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
+    // so we can use `uv sync` to install dependencies into the active
+    // virtual environment.
+    await uv.sync({
+      venvPath,
+      projectDir,
+      locked: true,
+    });
+  }
+
+  // Ensure correct version of vercel-runtime is installed.
+  //
+  // We intentionally do not inject vercel-runtime into the manifest
+  // as that would result in surprising modifications in working
+  // directories when running `vercel build` locally.
+  //
+  // Note: running sync removes any package that is not in the lockfile or
+  // manifest, which means that it is NOT SAFE to re-run `uv sync` at any
+  // point after as that would effectively remove vercel-runtime from the
+  // bundle rendering the function inoperable.
+  const runtimeDep =
+    baseEnv.VERCEL_RUNTIME_PYTHON ||
+    `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
+  debug(`Installing ${runtimeDep}`);
+  await uv.pip({
+    venvPath,
+    projectDir: join(workPath, entryDirectory),
+    args: ['install', runtimeDep],
+  });
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -361,9 +406,7 @@ export const build: BuildV3 = async ({
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
-  let handlerPyContents: string;
-  if (useRuntime) {
-    handlerPyContents = `
+  const runtimeTrampoline = `
 import importlib
 import os
 import os.path
@@ -401,14 +444,6 @@ if os.path.isdir(_vendor):
 
 from vercel_runtime.vc_init import vc_handler
 `;
-  } else {
-    const originalPyPath = join(__dirname, '..', 'vc_init.py');
-    const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
-    handlerPyContents = originalHandlerPyContents
-      .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-      .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
-      .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
-  }
 
   const predefinedExcludes = [
     '.git/**',
@@ -454,7 +489,7 @@ from vercel_runtime.vc_init import vc_handler
   // need our `server.py` to be called something else
   const handlerPyFilename = 'vc__handler__python';
 
-  files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
+  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
 
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails
@@ -519,6 +554,18 @@ export const defaultShouldServe: ShouldServe = ({
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
+}
+
+// Parses a .python-version file and returns the first non-empty, non-comment line.
+// Supports both exact versions (e.g. "3.12") and version specifiers (e.g. ">=3.12").
+function parsePythonVersionFile(content: string): string | undefined {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    return trimmed;
+  }
+  return undefined;
 }
 
 // internal only - expect breaking changes if other packages depend on these exports

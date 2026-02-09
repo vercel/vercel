@@ -1,6 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, yesOption } from '../../util/arg-common';
+import { forceOption, formatOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -19,6 +19,7 @@ export const listSubcommand = {
     },
   ],
   options: [
+    formatOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -56,6 +57,11 @@ export const addSubcommand = {
       ...forceOption,
       description: 'Force overwrites when a command would normally fail',
       shorthand: null,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when adding an Environment Variable',
     },
     {
       name: 'guidance',

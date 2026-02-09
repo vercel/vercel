@@ -43,6 +43,12 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import { tryDetectServices } from '../projects/detect-services';
+import {
+  displayDetectedServices,
+  displayServiceErrors,
+  displayServicesConfigNote,
+} from '../input/display-services';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -51,6 +57,7 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
+  pullEnv?: boolean;
 }
 
 export default async function setupAndLink(
@@ -63,6 +70,7 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
+    pullEnv = true,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -150,7 +158,8 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm
+      autoConfirm,
+      pullEnv
     );
     return { status: 'linked', org, project };
   }
@@ -176,10 +185,20 @@ export default async function setupAndLink(
   const isZeroConfig =
     !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
+  // Check for experimental services (gated by VERCEL_USE_EXPERIMENTAL_SERVICES env var)
+  const servicesResult = await tryDetectServices(pathWithRootDirectory);
+
   try {
     let settings: ProjectSettings = {};
 
-    if (isZeroConfig) {
+    if (servicesResult) {
+      displayDetectedServices(servicesResult.services);
+      if (servicesResult.errors.length > 0) {
+        displayServiceErrors(servicesResult.errors);
+      }
+      displayServicesConfigNote();
+      settings.framework = 'services';
+    } else if (isZeroConfig) {
       const localConfigurationOverrides: PartialProjectSettings = {
         buildCommand: localConfig?.buildCommand,
         devCommand: localConfig?.devCommand,

@@ -1,9 +1,10 @@
-import { bold, gray } from 'chalk';
+import { bold, gray, red, yellow, bgRed, white } from 'chalk';
 import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
 import input from '@inquirer/input';
 import password from '@inquirer/password';
+import search from '@inquirer/search';
 import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -63,6 +64,14 @@ export interface ClientOptions extends Stdio {
   localConfigPath?: string;
   agent?: Agent;
   telemetryEventStore: TelemetryEventStore;
+  /** Whether the CLI is being run by an AI agent */
+  isAgent?: boolean;
+  /** Name of the agent running the CLI (e.g., 'claude', 'cursor') */
+  agentName?: string;
+  /** Run without interactive prompts; true when --non-interactive or when agent is detected */
+  nonInteractive?: boolean;
+  /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
+  dangerouslySkipPermissions?: boolean;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -100,6 +109,14 @@ export default class Client extends EventEmitter implements Stdio {
   requestIdCounter: number;
   input;
   telemetryEventStore: TelemetryEventStore;
+  /** Whether the CLI is being run by an AI agent */
+  isAgent: boolean;
+  /** Name of the agent running the CLI */
+  agentName?: string;
+  /** Run without interactive prompts; true when --non-interactive or when agent is detected */
+  nonInteractive: boolean;
+  /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
+  dangerouslySkipPermissions: boolean;
 
   constructor(opts: ClientOptions) {
     super();
@@ -115,6 +132,10 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
     this.telemetryEventStore = opts.telemetryEventStore;
+    this.isAgent = opts.isAgent ?? false;
+    this.agentName = opts.agentName;
+    this.nonInteractive = opts.nonInteractive ?? this.isAgent;
+    this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
 
     const theme = {
       prefix: gray('?'),
@@ -142,6 +163,11 @@ export default class Client extends EventEmitter implements Stdio {
         ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
         select<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
+      search: <T>(opts: Parameters<typeof search<T>>[0]) =>
+        search<T>(
           { theme, ...opts },
           { input: this.stdin, output: this.stderr }
         ),
@@ -230,6 +256,75 @@ export default class Client extends EventEmitter implements Stdio {
     writeToAuthConfigFile(this.authConfig);
   }
 
+  /**
+   * Confirms DELETE operations with the user.
+   *
+   * - DELETE operations always require confirmation (unless --dangerously-skip-permissions is used)
+   * - When running under an AI agent with --dangerously-skip-permissions,
+   *   a warning is displayed for visibility
+   *
+   * @returns true if the operation should proceed, false if canceled
+   */
+  async confirmMutatingOperation(
+    url: string,
+    method: string | undefined
+  ): Promise<boolean> {
+    const normalizedMethod = (method || 'GET').toUpperCase();
+    const isDelete = normalizedMethod === 'DELETE';
+
+    // Only DELETE operations require confirmation
+    if (!isDelete) {
+      return true;
+    }
+
+    // Show agent mode warning when --dangerously-skip-permissions is used
+    if (this.isAgent && this.dangerouslySkipPermissions) {
+      const agentInfo = this.agentName ? ` (${this.agentName})` : '';
+      output.print('\n');
+      output.print(
+        bgRed(white(bold(' ⚠ WARNING '))) +
+          red(bold(' AGENT MODE - DELETE CONFIRMATION BYPASSED\n'))
+      );
+      output.print(
+        yellow(
+          `  An AI agent${agentInfo} is executing a ${bold('DELETE')} request with --dangerously-skip-permissions flag.\n`
+        )
+      );
+      output.print(yellow(`  This operation will delete data: ${bold(url)}\n`));
+      output.print(
+        yellow(
+          `  The --dangerously-skip-permissions flag has bypassed the confirmation prompt.\n\n`
+        )
+      );
+    }
+
+    // If --dangerously-skip-permissions flag is set, skip confirmation
+    if (this.dangerouslySkipPermissions) {
+      return true;
+    }
+
+    // Check if we have a TTY for interactive prompts
+    if (!this.stdin.isTTY) {
+      output.error(
+        `DELETE operations require confirmation. Use ${bold('--dangerously-skip-permissions')} to skip confirmation in non-interactive mode.`
+      );
+      return false;
+    }
+
+    // Prompt for DELETE confirmation
+    const message = `You are about to perform a ${red(bold('DELETE'))} operation on:\n  ${bold(url)}\n\nAre you sure you want to proceed?`;
+
+    output.print('\n');
+    const confirmed = await this.input.confirm(message, false);
+    output.print('\n');
+
+    if (!confirmed) {
+      output.log('Operation canceled by user.');
+    }
+
+    return confirmed;
+  }
+
   private async _fetch(_url: string, opts: FetchOptions = {}) {
     const url = new URL(_url, this.apiUrl);
 
@@ -302,7 +397,20 @@ export default class Client extends EventEmitter implements Stdio {
         } else if (typeof error.retryAfterMs === 'number') {
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out
-          await sleep(error.retryAfterMs);
+          //
+          // The `Retry-After` header from the api tells us when the next rate
+          // limit token is available. There may only be a single rate limit
+          // token available at that time. Add a random skew to prevent creating
+          // a thundering herd.
+          //
+          // Many of our APIs use 1 minute rate limit buckets, so 30s of skew is
+          // likely more than enough.
+          //
+          // Note: The `async-retry` library already provides some random skew
+          // by default, but it provides much less skew, because it's not aware
+          // of rate limits.
+          const randomSkewMs = 30_000 * Math.random();
+          await sleep(error.retryAfterMs + randomSkewMs);
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
