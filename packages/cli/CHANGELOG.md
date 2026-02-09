@@ -1,5 +1,41 @@
 # vercel
 
+## 50.13.2
+
+### Patch Changes
+
+- [services] add service name validation ([#14907](https://github.com/vercel/vercel/pull/14907))
+
+- fix(cli): correct permissive issues ([#14881](https://github.com/vercel/vercel/pull/14881))
+
+- Fix environment variable auto-pull during project linking to not interfere with explicit environment targeting. ([#14818](https://github.com/vercel/vercel/pull/14818))
+
+  - `vercel pull --environment=X` no longer auto-pulls development env vars during linking
+  - Skip env pull prompt in non-TTY environments (CI) during `vercel link`
+
+- Adding non-interactive mode for agents ([#14880](https://github.com/vercel/vercel/pull/14880))
+
+- Updated dependencies [[`d887f6cba4db5caf1cb320d94d6118da678c4bd3`](https://github.com/vercel/vercel/commit/d887f6cba4db5caf1cb320d94d6118da678c4bd3), [`12b2f08c4271133c784f276bc933592b28204af2`](https://github.com/vercel/vercel/commit/12b2f08c4271133c784f276bc933592b28204af2), [`2d61173cd73860fedc23edc0552c86d0e21fccd3`](https://github.com/vercel/vercel/commit/2d61173cd73860fedc23edc0552c86d0e21fccd3), [`f708ca65bccf6942bcd8501f34101e659aa256d6`](https://github.com/vercel/vercel/commit/f708ca65bccf6942bcd8501f34101e659aa256d6), [`9bf27beab1fe4f1f6d6126679f2687c209594027`](https://github.com/vercel/vercel/commit/9bf27beab1fe4f1f6d6126679f2687c209594027)]:
+  - @vercel/next@4.15.27
+  - @vercel/python@6.8.0
+  - @vercel/node@5.5.33
+  - @vercel/backends@0.0.30
+  - @vercel/static-build@2.8.34
+  - @vercel/build-utils@13.3.3
+  - @vercel/elysia@0.1.32
+  - @vercel/express@0.1.41
+  - @vercel/fastify@0.1.35
+  - @vercel/h3@0.1.41
+  - @vercel/hono@0.2.35
+  - @vercel/koa@0.1.15
+  - @vercel/nestjs@0.2.36
+  - @vercel/go@3.4.0
+  - @vercel/hydrogen@1.3.5
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/ruby@2.2.5
+  - @vercel/rust@1.0.5
+
 ## 50.13.1
 
 ### Patch Changes

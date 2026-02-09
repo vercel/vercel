@@ -154,19 +154,22 @@ export class ServicesOrchestrator {
     for (const [name, service] of this.managedServices) {
       output.debug(`Stopping service "${name}" (PID: ${service.pid})`);
 
-      if (service.shutdown) {
-        stopPromises.push(
-          service.shutdown().catch(err => {
+      // For some builders (e.g. @vercel/python) `shutdown` is defined as no-op,
+      // so we'll try to be nice at first, but then proceed with killing the tree.
+      const stopService = async () => {
+        if (service.shutdown) {
+          await service.shutdown().catch(err => {
             output.debug(`Failed to shutdown service "${name}": ${err}`);
-          })
-        );
-      } else if (service.pid) {
-        stopPromises.push(
-          treeKill(service.pid).catch(err => {
-            output.debug(`Failed to stop service "${name}": ${err}`);
-          })
-        );
-      }
+          });
+        }
+
+        if (service.pid) {
+          await treeKill(service.pid).catch(err => {
+            output.debug(`Failed to kill service "${name}": ${err}`);
+          });
+        }
+      };
+      stopPromises.push(stopService());
 
       service.logger.cleanup();
     }

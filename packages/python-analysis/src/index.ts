@@ -20,7 +20,6 @@ export { containsAppOrHandler } from './semantic/entrypoints';
 export type {
   PythonConfig,
   PythonConfigs,
-  PythonLockFile,
   PythonManifest,
   PythonManifestOrigin,
   PythonPackage,
@@ -30,20 +29,9 @@ export type {
 export {
   discoverPythonPackage,
   PythonConfigKind,
-  PythonLockFileKind,
   PythonManifestConvertedKind,
   PythonManifestKind,
 } from './manifest/package';
-
-// =============================================================================
-// Manifest serialization utilities
-// =============================================================================
-
-export {
-  createMinimalManifest,
-  stringifyManifest,
-  type CreateMinimalManifestOptions,
-} from './manifest/serialize';
 
 // =============================================================================
 // Python selection (runtime + types)

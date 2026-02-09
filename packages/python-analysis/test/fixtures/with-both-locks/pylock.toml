@@ -1,3 +1,0 @@
-# PEP 751 lock file
-lock-version = "1.0"
-requires-python = ">=3.10"

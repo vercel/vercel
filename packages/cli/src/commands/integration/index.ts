@@ -2,6 +2,7 @@ import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -22,6 +23,8 @@ import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 import { discover } from './discover';
+import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { formatProductHelp } from '../../util/integration/format-product-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -75,10 +78,40 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(addSubcommand);
+
+        // Dynamic help: if an integration slug is provided, fetch and show available products
+        const rawArg = subArgs[0];
+        if (rawArg) {
+          // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
+          const integrationSlug = rawArg.split('/')[0];
+          try {
+            const integration = await fetchIntegration(client, integrationSlug);
+            const products = integration.products ?? [];
+            if (products.length > 1) {
+              output.print(formatProductHelp(integrationSlug, products));
+            }
+          } catch (err: unknown) {
+            output.debug(
+              `Failed to fetch integration for dynamic help: ${err}`
+            );
+          }
+        }
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, subArgs);
+
+      // Parse add-specific flags from subArgs (which contains everything after 'add')
+      const addFlagsSpec = getFlagsSpecification(addSubcommand.options);
+      let addParsedArgs;
+      try {
+        addParsedArgs = parseArguments(subArgs, addFlagsSpec);
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+      const resourceName = addParsedArgs.flags['--name'] as string | undefined;
+
+      return add(client, addParsedArgs.args, resourceName);
     }
     case 'list': {
       if (needHelp) {

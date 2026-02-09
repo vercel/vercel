@@ -86,6 +86,8 @@ export const build: BuildV3 = async ({
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
 
+  debug(`workPath: ${workPath}`);
+
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
@@ -355,9 +357,14 @@ export const build: BuildV3 = async ({
     const { projectDir } = await ensureUvProject({
       workPath,
       entryDirectory,
+      fsFiles,
       repoRootPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       pythonVersion: pythonVersion.version,
       uv,
+      venvPath,
+      meta,
     });
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
@@ -386,7 +393,7 @@ export const build: BuildV3 = async ({
   debug(`Installing ${runtimeDep}`);
   await uv.pip({
     venvPath,
-    projectDir: entryDirectory,
+    projectDir: join(workPath, entryDirectory),
     args: ['install', runtimeDep],
   });
 

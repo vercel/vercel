@@ -1528,14 +1528,16 @@ export const build: BuildV2 = async buildOptions => {
         requiredServerFilesManifest.config.experimental?.ppr ===
           'incremental' ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
-          true
+          true ||
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     // When this is true, then it means all routes are PPR enabled.
     const isAppFullPPREnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
-          true
+          true ||
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     const isAppClientSegmentCacheEnabled =

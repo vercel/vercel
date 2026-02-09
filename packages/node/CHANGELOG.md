@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 5.5.33
+
+### Patch Changes
+
+- Remove TypeScript 4 and use TypeScript 5 as the default built-in compiler. Replace ts-node with tsx for dev server transpilation. ([#14892](https://github.com/vercel/vercel/pull/14892))
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.3.3
+
 ## 5.5.32
 
 ### Patch Changes
