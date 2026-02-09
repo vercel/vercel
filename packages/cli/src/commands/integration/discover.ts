@@ -91,10 +91,6 @@ export async function discover(client: Client) {
     return 1;
   }
 
-  output.debug(
-    `integration discover: fetched ${integrations.length} integrations and ${categories.length} categories`
-  );
-
   const categoryTitleById = new Map<string, string>(
     categories.map(category => [category.id, category.title])
   );
@@ -117,15 +113,6 @@ export async function discover(client: Client) {
         })),
       };
     });
-
-  if (categories.length === 0) {
-    const integrationsWithTags = integrations.filter(
-      integration => (integration.tagIds?.length ?? 0) > 0
-    ).length;
-    output.debug(
-      `integration discover: ${integrationsWithTags} integrations include tagIds, but category lookup is empty`
-    );
-  }
 
   output.stopSpinner();
 
