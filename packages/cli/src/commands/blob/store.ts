@@ -54,7 +54,7 @@ export async function store(client: Client, rwToken: BlobRWToken) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('blob store', subcommand);
     output.print(help(storeSubcommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -68,7 +68,7 @@ export async function store(client: Client, rwToken: BlobRWToken) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob store', subcommandOriginal);
         printHelp(addStoreSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
@@ -77,7 +77,7 @@ export async function store(client: Client, rwToken: BlobRWToken) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob store', subcommandOriginal);
         printHelp(removeStoreSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
@@ -86,7 +86,7 @@ export async function store(client: Client, rwToken: BlobRWToken) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob store', subcommandOriginal);
         printHelp(getStoreSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandGet(subcommandOriginal);
