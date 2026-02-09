@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { isActionRequiredPayload } from '../../../../src/util/agent-output';
 import selectOrg from '../../../../src/util/input/select-org';
@@ -108,17 +108,27 @@ describe('selectOrg', () => {
       client.nonInteractive = false;
     });
 
-    it('returns ActionRequiredPayload when multiple teams and no current team', async () => {
-      const result = await selectOrg(client, 'Which scope?', false);
-      expect(isActionRequiredPayload(result)).toBe(true);
-      if (!isActionRequiredPayload(result)) return;
-      expect(result.status).toBe('action_required');
-      expect(result.reason).toBe('missing_scope');
-      expect(result.message).toContain('Multiple teams');
-      expect(Array.isArray(result.choices)).toBe(true);
-      expect(result.choices!.length).toBeGreaterThanOrEqual(2);
-      expect(Array.isArray(result.next)).toBe(true);
-      expect(result.next!.length).toBe(result.choices!.length);
+    it('outputs action_required JSON and exits when multiple teams and no current team', async () => {
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((() => {}) as (code?: number) => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await selectOrg(client, 'Which scope?', false);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(isActionRequiredPayload(payload)).toBe(true);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(payload.message).toContain('Multiple teams');
+      expect(Array.isArray(payload.choices)).toBe(true);
+      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(Array.isArray(payload.next)).toBe(true);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 

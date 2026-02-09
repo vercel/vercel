@@ -35,37 +35,36 @@ describe('ensureLink', () => {
     setupAndLink = setupAndLinkModule.default as ReturnType<typeof vi.fn>;
   });
 
-  it('calls outputActionRequired and process.exit(1) when not linked and setupAndLink returns action_required', async () => {
-    const actionRequiredPayload = {
-      status: 'action_required' as const,
-      reason: 'missing_scope',
-      message: 'Multiple teams available. Provide --team or --scope.',
-      choices: [{ id: 'team-1', name: 'team-one' }],
-      next: [{ command: 'vercel link --scope team-one' }],
-    };
-
+  it('passes client.nonInteractive to setupAndLink when opts.nonInteractive is not set', async () => {
     vi.mocked(getLinkedProject).mockResolvedValue({
       status: 'not_linked',
       org: null,
       project: null,
     });
-    vi.mocked(setupAndLink).mockResolvedValue(actionRequiredPayload);
-
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as () => never) as unknown as {
-      mockRestore: () => void;
-    };
-    const agentOutput = await import('../../../../src/util/agent-output');
-    const outputActionRequired = vi.mocked(agentOutput.outputActionRequired);
-
-    await ensureLink('pull', client, client.cwd, {});
-
-    expect(outputActionRequired).toHaveBeenCalledWith(
-      client,
-      actionRequiredPayload
+    const setupAndLinkModule = await import(
+      '../../../../src/util/link/setup-and-link'
     );
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    const setupAndLinkFn = setupAndLinkModule.default as ReturnType<
+      typeof vi.fn
+    >;
+    vi.mocked(setupAndLinkFn).mockResolvedValue({
+      status: 'linked',
+      org: { id: 'o1', slug: 'team', type: 'team' as const },
+      project: { id: 'p1', name: 'proj' },
+    });
+
+    (client as { nonInteractive: boolean }).nonInteractive = true;
+    await ensureLink('deploy', client, '/cwd', {});
+    (client as { nonInteractive: boolean }).nonInteractive = false;
+
+    expect(setupAndLinkFn).toHaveBeenCalledWith(
+      client,
+      '/cwd',
+      expect.objectContaining({
+        link: { status: 'not_linked', org: null, project: null },
+        nonInteractive: true,
+      })
+    );
   });
 
   it('calls setupAndLink when link is not_linked', async () => {
@@ -84,6 +83,7 @@ describe('ensureLink', () => {
 
     expect(setupAndLink).toHaveBeenCalledWith(client, '/some/cwd', {
       link: { status: 'not_linked', org: null, project: null },
+      nonInteractive: false,
       projectName: 'my-app',
     });
   });
@@ -99,7 +99,7 @@ describe('ensureLink', () => {
       };
     });
 
-    it('calls process.exit with code when link is error', async () => {
+    it('calls process.exit with code when link is error and client.nonInteractive', async () => {
       vi.mocked(getLinkedProject).mockResolvedValue({
         status: 'error',
         exitCode: 1,
@@ -113,12 +113,14 @@ describe('ensureLink', () => {
       >;
       vi.mocked(setupAndLink).mockClear();
 
+      (client as { nonInteractive: boolean }).nonInteractive = true;
       await ensureLink('deploy', client, client.cwd, {});
+      (client as { nonInteractive: boolean }).nonInteractive = false;
 
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
-    it('calls process.exit(0) when user aborts (setupAndLink returns not_linked)', async () => {
+    it('returns 0 when user aborts (setupAndLink returns not_linked)', async () => {
       vi.mocked(getLinkedProject).mockResolvedValue({
         status: 'not_linked',
         org: null,
@@ -134,9 +136,10 @@ describe('ensureLink', () => {
         status: 'not_linked',
       });
 
-      await ensureLink('deploy', client, client.cwd, {});
+      const result = await ensureLink('deploy', client, client.cwd, {});
 
-      expect(exitSpy).toHaveBeenCalledWith(0);
+      expect(exitSpy).not.toHaveBeenCalled();
+      expect(result).toBe(0);
     });
 
     it('returns ProjectLinked when linked', async () => {

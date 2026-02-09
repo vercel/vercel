@@ -9,9 +9,9 @@ import output from '../../output-manager';
 
 /**
  * Checks if a project is already linked and if not, links the project and
- * validates the link response. Exits (process.exit) when the user aborts,
- * when an error occurs, or when non-interactive and scope/project choice is
- * required; otherwise returns the linked project.
+ * validates the link response. When non-interactive and an error occurs,
+ * exits (process.exit); otherwise returns the linked project or a numeric
+ * exit code (0 for user abort, non-zero for error).
  *
  * @param commandName - The name of the current command to print in the
  * event of an error
@@ -21,7 +21,7 @@ import output from '../../output-manager';
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
- * @returns {Promise<ProjectLinked | number>} The linked project (or the process exits)
+ * @returns {Promise<ProjectLinked | number>} The linked project or exit code (or process exits when nonInteractive and error)
  */
 export async function ensureLink(
   commandName: string,
@@ -30,7 +30,9 @@ export async function ensureLink(
   opts: SetupAndLinkOptions = {}
 ): Promise<ProjectLinked | number> {
   let { link } = opts;
-  const nonInteractive = opts.nonInteractive ?? false;
+  // All commands respect global --non-interactive; link can override via opts
+  const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;
+  opts.nonInteractive = nonInteractive;
   if (!link) {
     link = await getLinkedProject(client, cwd);
     opts.link = link;
