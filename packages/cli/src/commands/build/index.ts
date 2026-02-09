@@ -695,9 +695,6 @@ async function doBuild(
   }
   const diagnostics: Files = {};
 
-  // For services builds: create a lookup map from builder.src to Service
-  // so we can resolve the service for each build and compute workspace-scoped
-  // workPath, entrypoint, and files.
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
   const servicesByBuilderSrc = new Map<string, Service>();
@@ -720,8 +717,8 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
-      // --- Services workspace-rooted build setup ---
-      // When a service lives in a subdirectory (workspace !== '.'), we need to:
+      // When a service lives in a subdirectory, e.g. /frontend
+      // (workspace !== '.'), we need to:
       // 1. Set workPath to the service's workspace directory
       // 2. Strip the workspace prefix from the entrypoint
       // 3. Scope the files map to only include files within the workspace
@@ -792,6 +789,11 @@ async function doBuild(
       }
 
       const isFrontendBuilder = build.config && 'framework' in build.config;
+      // For services builds, the builder framework is set by the service resolver,
+      // the project-level framework is 'services'.
+      const builderFramework =
+        build.config?.framework ?? projectSettings.framework;
+
       let buildConfig: Config;
 
       if (isZeroConfig) {
@@ -811,7 +813,7 @@ async function doBuild(
             },
             installCommand: service.installCommand ?? undefined,
             buildCommand: service.buildCommand ?? undefined,
-            framework: service.framework ?? undefined,
+            framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
           };

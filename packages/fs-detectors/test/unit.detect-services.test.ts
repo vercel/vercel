@@ -80,6 +80,29 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toHaveLength(1);
     });
 
+    it('should not confuse entrypoint with workspace when paths share a prefix', async () => {
+      // Edge case: workspace is "api" and entrypoint is "api/handler.go"
+      // (meaning the file lives at api/api/handler.go in the repo).
+      // The entrypoint must always be treated as workspace-relative.
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'my-api': {
+              workspace: 'api',
+              entrypoint: 'api/handler.go',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+      // builder.src should be "api/api/handler.go" (workspace + entrypoint)
+      expect(result.services[0].builder.src).toBe('api/api/handler.go');
+    });
+
     it('should detect multiple services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

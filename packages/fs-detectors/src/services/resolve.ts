@@ -152,9 +152,11 @@ export function resolveConfiguredService(
         : `/${config.routePrefix}`
       : undefined;
 
-  // Ensure builder.src is fully qualified for non-root workspaces
+  // Ensure builder.src is fully qualified for non-root workspaces.
+  // Always prepend — the entrypoint in the config is relative to the workspace,
+  // never repo-root-relative.
   const isRoot = workspace === '.';
-  if (!isRoot && !builderSrc.startsWith(workspace + '/')) {
+  if (!isRoot) {
     builderSrc = posixPath.join(workspace, builderSrc);
   }
 
