@@ -15,6 +15,8 @@ import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
+const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+
 /**
  * Validate a service configuration from vercel.json experimentalServices.
  */
@@ -22,6 +24,13 @@ export function validateServiceConfig(
   name: string,
   config: ExperimentalServiceConfig
 ): ServiceDetectionError | null {
+  if (!SERVICE_NAME_REGEX.test(name)) {
+    return {
+      code: 'INVALID_SERVICE_NAME',
+      message: `Service name "${name}" is invalid. Names must start with a letter, end with an alphanumeric character, and contain only alphanumeric characters, hyphens, and underscores.`,
+      serviceName: name,
+    };
+  }
   if (!config || typeof config !== 'object') {
     return {
       code: 'INVALID_SERVICE_CONFIG',
@@ -135,8 +144,13 @@ export function resolveConfiguredService(
     builderSrc = config.entrypoint!;
   }
 
-  // routePrefix is required for web services
-  const routePrefix = type === 'web' ? config.routePrefix : undefined;
+  // routePrefix is required for web services; normalize to always start with /
+  const routePrefix =
+    type === 'web' && config.routePrefix
+      ? config.routePrefix.startsWith('/')
+        ? config.routePrefix
+        : `/${config.routePrefix}`
+      : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces
   const isRoot = workspace === '.';
@@ -152,6 +166,19 @@ export function resolveConfiguredService(
 
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
   const runtime = isStaticBuild ? undefined : inferredRuntime;
+
+  // Pass routePrefix to builder config as a filesystem mountpoint.
+  // static-build uses this to prefix output paths: '.' = root, 'admin' = /admin/
+  // We strip the leading slash since it's a relative path, not a URL.
+  if (routePrefix) {
+    const stripped = routePrefix.startsWith('/')
+      ? routePrefix.slice(1)
+      : routePrefix;
+    builderConfig.routePrefix = stripped || '.';
+  }
+  if (config.framework) {
+    builderConfig.framework = config.framework;
+  }
 
   return {
     name,

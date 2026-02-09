@@ -81,12 +81,12 @@
     },
 
     {
-      "path": "/_next/data/testing-build-id/index.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/index.json",
       "status": 200,
       "mustContain": "\"hello\":\"world\""
     },
     {
-      "path": "/_next/data/testing-build-id/index.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/index.json",
       "status": 200,
       "mustContain": "\"hello\":\"world\""
     },
@@ -114,12 +114,12 @@
       "mustContain": "one-more"
     },
     {
-      "path": "/_next/data/testing-build-id/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another.json",
       "status": 200,
       "mustContain": "another"
     },
     {
-      "path": "/_next/data/testing-build-id/one-more.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/one-more.json",
       "status": 200,
       "mustContain": "one-more"
     }

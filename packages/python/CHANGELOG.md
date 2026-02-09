@@ -1,5 +1,45 @@
 # @vercel/python
 
+## 6.8.0
+
+### Minor Changes
+
+- fix a build regression on projects with changed rootDirectory ([#14931](https://github.com/vercel/vercel/pull/14931))
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
+## 6.6.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- Skip filtering system pythons on local vercel builds. ([#14858](https://github.com/vercel/vercel/pull/14858))
+
+## 6.5.1
+
+### Patch Changes
+
+- switch tests to vitest ([#14853](https://github.com/vercel/vercel/pull/14853))
+
+## 6.5.0
+
+### Minor Changes
+
+- vendor Python runtime dependencies ([#14827](https://github.com/vercel/vercel/pull/14827))
+
+- Bump vercel-runtime version automatically on its releases ([#14842](https://github.com/vercel/vercel/pull/14842))
+
 ## 6.4.2
 
 ### Patch Changes

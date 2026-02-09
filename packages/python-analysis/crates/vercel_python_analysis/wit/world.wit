@@ -1,0 +1,12 @@
+package vercel:python-analysis;
+
+/// Semantic analysis of Python source code
+world python-analysis {
+    /// Check if Python source code contains or exports:
+    /// - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
+    /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
+    ///
+    /// Returns true if found, false otherwise.
+    /// Returns false for invalid Python syntax.
+    export contains-app-or-handler: func(source: string) -> bool;
+}

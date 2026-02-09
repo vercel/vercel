@@ -1,9 +1,8 @@
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { esbuild } from '../../../utils/build.mjs';
+import { esbuild, getDependencies } from '../../../utils/build.mjs';
 import { compileDevTemplates } from './compile-templates.mjs';
 import { createRequire } from 'node:module';
-import path from 'node:path';
 
 const repoRoot = new URL('../', import.meta.url);
 
@@ -29,17 +28,11 @@ createConstants();
 // Compile the `doT.js` template files for `vercel dev`
 await compileDevTemplates();
 
-const pkgPath = join(process.cwd(), 'package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-const externals = [
-  ...Object.keys(pkg.dependencies || {}),
-  ...Object.keys(pkg.peerDependencies || {}),
-];
 const require = createRequire(import.meta.url);
 await esbuild({
   bundle: true,
   format: 'esm',
-  external: externals,
+  external: getDependencies(),
   banner: {
     // Shim for CommonJS globals in ESM
     js: `
@@ -65,7 +58,7 @@ const __dirname = __dirname_(__filename);
             readFileSync(pkgJsonPath, 'utf8')
           );
           const entryRel = module ?? main ?? 'index.js';
-          const entryAbs = path.join(path.dirname(pkgJsonPath), entryRel);
+          const entryAbs = join(dirname(pkgJsonPath), entryRel);
           return { path: entryAbs, namespace: 'file' };
         });
       },

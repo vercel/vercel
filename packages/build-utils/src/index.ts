@@ -51,6 +51,7 @@ import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
+import { getServiceUrlEnvVars } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
@@ -98,6 +99,7 @@ export {
   getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
+  getServiceUrlEnvVars,
   streamToBuffer,
   streamToBufferChunks,
   debug,
@@ -135,6 +137,8 @@ export { generateNodeBuilderFunctions } from './generate-node-builder-functions'
 
 export {
   BACKEND_FRAMEWORKS,
+  BACKEND_BUILDERS,
+  UNIFIED_BACKEND_BUILDER,
   BackendFramework,
   isBackendFramework,
   isBackendBuilder,

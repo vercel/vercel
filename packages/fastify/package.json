@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fastify",
-  "version": "0.1.30",
+  "version": "0.1.35",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
