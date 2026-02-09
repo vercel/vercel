@@ -19,6 +19,17 @@ vercel inspect <url> --wait        # wait for completion
 vercel inspect <url> --logs        # show build logs
 ```
 
+## `vercel curl` — Access Preview Deployments
+
+**Use `vercel curl` to access preview deploys.** It handles deployment protection automatically — no need to disable protection or manage bypass secrets.
+
+```bash
+vercel curl /api/health --deployment $PREVIEW_URL
+vercel curl /api/data --deployment $PREVIEW_URL -- -X POST -d '{"key":"value"}'
+```
+
+**Do not disable deployment protection.** Use `vercel curl` instead.
+
 ## Finding Regressions
 
 `vercel bisect` performs a binary search across deployments to find which one introduced a problem:

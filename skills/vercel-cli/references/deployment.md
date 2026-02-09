@@ -59,7 +59,7 @@ vercel curl /api/health --deployment $PREVIEW_URL
 
 ```bash
 URL=$(vercel --prod --skip-domain)   # deploy without domain assignment
-curl $URL                            # verify
+vercel curl / --deployment $URL      # verify (handles deployment protection)
 vercel promote $URL                  # promote to production
 ```
 

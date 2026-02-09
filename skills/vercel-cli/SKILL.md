@@ -41,9 +41,9 @@ Use this to route to the correct reference file:
 - **CI/CD automation** → `references/ci-automation.md`
 - **Domains or DNS** → `references/domains-and-dns.md`
 - **Projects or teams** → `references/projects-and-teams.md`
-- **Logs or debugging** → `references/monitoring.md`
+- **Logs, debugging, or accessing preview deploys** → `references/monitoring-and-debugging.md`
 - **Blob storage** → `references/storage.md`
-- **Access a preview deployment** → use `vercel curl` (see `references/advanced.md`)
+- **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
 - **CLI doesn't have a command for it** → use `vercel api` as a fallback (see `references/advanced.md`)
 - **Advanced (API, integrations, webhooks)** → `references/advanced.md`
 - **Global flags** → `references/global-options.md`
