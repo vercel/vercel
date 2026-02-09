@@ -82,12 +82,18 @@ describe('outputActionRequired', () => {
     message: 'Choose a scope.',
     reason: 'missing_scope',
   };
-  let exitSpy: ReturnType<typeof vi.spyOn>;
-  let logSpy: ReturnType<typeof vi.spyOn>;
+  let exitSpy: { mockRestore: () => void };
+  let logSpy: { mockRestore: () => void };
 
   beforeEach(() => {
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
-    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never) as unknown as {
+      mockRestore: () => void;
+    };
+    logSpy = vi
+      .spyOn(console, 'log')
+      .mockImplementation(() => {}) as unknown as { mockRestore: () => void };
   });
 
   afterEach(() => {

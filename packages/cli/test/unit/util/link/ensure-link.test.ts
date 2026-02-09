@@ -21,8 +21,8 @@ describe('ensureLink', () => {
     const setupAndLinkModule = await import(
       '../../../../src/util/link/setup-and-link'
     );
-    getLinkedProject = linkModule.getLinkedProject;
-    setupAndLink = setupAndLinkModule.default;
+    getLinkedProject = linkModule.getLinkedProject as ReturnType<typeof vi.fn>;
+    setupAndLink = setupAndLinkModule.default as ReturnType<typeof vi.fn>;
   });
 
   it('returns action_required payload when not linked and setupAndLink returns action_required', async () => {
