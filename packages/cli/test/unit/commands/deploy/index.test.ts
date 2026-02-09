@@ -1190,6 +1190,22 @@ describe('deploy', () => {
         },
       ]);
     });
+    it('passes agentName from client', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.agentName = 'test-agent';
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            agentName: 'test-agent',
+          }),
+        })
+      );
+    });
     it('--confirm', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--confirm');
