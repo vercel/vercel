@@ -54,12 +54,12 @@ describe('integration', () => {
       await expect(client.stderr).toOutput(
         '> Available marketplace integrations:'
       );
-      await expect(client.stderr).toOutput('Neon');
+      await expect(client.stderr).toOutput('Neon (neon)');
       await expect(client.stderr).toOutput(
-        'Serverless Postgres with branching'
+        'Description: Serverless Postgres with branching'
       );
-      await expect(client.stderr).toOutput('Storage, DevTools');
-      await expect(client.stderr).toOutput('Postgres');
+      await expect(client.stderr).toOutput('Categories: Storage, DevTools');
+      await expect(client.stderr).toOutput('Products: Postgres');
     });
 
     it('continues when categories endpoint fails', async () => {

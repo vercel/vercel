@@ -130,7 +130,12 @@ export async function discover(client: Client, args: string[]) {
     return 0;
   }
 
-  output.log('Available marketplace integrations:\n' + formatTable(results));
+  const useCompactFormat =
+    client.stderr.columns > 0 && client.stderr.columns < 120;
+  const formattedOutput = useCompactFormat
+    ? formatCompactList(results)
+    : formatTable(results);
+  output.log('Available marketplace integrations:\n' + formattedOutput);
   return 0;
 }
 
@@ -162,4 +167,31 @@ function formatTable(
     ],
     { hsep: 4 }
   );
+}
+
+function formatCompactList(
+  integrations: {
+    slug: string;
+    name: string;
+    description: string;
+    category: string[];
+    products: { name: string }[];
+  }[]
+) {
+  return integrations
+    .map(integration => {
+      const categories =
+        integration.category.length > 0 ? integration.category.join(', ') : '-';
+      const products =
+        integration.products.length > 0
+          ? integration.products.map(product => product.name).join(', ')
+          : '-';
+      return [
+        `${chalk.bold(integration.name)} (${integration.slug})`,
+        `  Description: ${integration.description || '-'}`,
+        `  Categories: ${categories}`,
+        `  Products: ${products}`,
+      ].join('\n');
+    })
+    .join('\n\n');
 }
