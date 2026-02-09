@@ -364,7 +364,7 @@ describe('detectServices', () => {
   });
 
   describe('static/SPA service routing', () => {
-    it('should generate SPA fallback for static service at root', async () => {
+    it('should generate default SPA routes for framework without defaultRoutes (vite)', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -381,7 +381,7 @@ describe('detectServices', () => {
       expect(isStaticBuild(result.services[0])).toBe(true);
       expect(result.errors).toEqual([]);
 
-      // Root static service gets filesystem handler + SPA fallback in defaults
+      // Vite has no defaultRoutes, so we get the generic SPA fallback
       expect(result.routes.defaults).toHaveLength(2);
       expect(result.routes.defaults[0]).toEqual({ handle: 'filesystem' });
       expect(result.routes.defaults[1]).toEqual({
@@ -390,7 +390,63 @@ describe('detectServices', () => {
       });
     });
 
-    it('should generate SPA fallback for static service at prefix', async () => {
+    it('should use framework defaultRoutes for root static service (create-react-app)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'create-react-app',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(isStaticBuild(result.services[0])).toBe(true);
+      expect(result.errors).toEqual([]);
+
+      // Create React App has defaultRoutes with caching headers, so we get those
+      // instead of just the generic SPA fallback
+      expect(result.routes.defaults.length).toBeGreaterThan(2);
+      // Should include filesystem handler
+      expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
+      // Should include the SPA fallback (with cache headers for CRA)
+      const spaRoute = result.routes.defaults.find(
+        r => 'dest' in r && r.dest === '/index.html'
+      );
+      expect(spaRoute).toBeDefined();
+    });
+
+    it('should error when framework with defaultRoutes is mounted at prefix (create-react-app)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'create-react-app',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(isStaticBuild(result.services[0])).toBe(true);
+
+      // Frameworks with defaultRoutes cannot be mounted at a prefix
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'FRAMEWORK_PREFIX_NOT_SUPPORTED',
+        serviceName: 'admin',
+      });
+      // No routes generated for this service
+      expect(result.routes.rewrites).toHaveLength(0);
+    });
+
+    it('should allow framework without defaultRoutes at prefix (vite)', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -408,10 +464,39 @@ describe('detectServices', () => {
       expect(isStaticBuild(result.services[0])).toBe(true);
       expect(result.errors).toEqual([]);
 
-      // Prefixed static service gets SPA fallback in rewrites
-      expect(result.routes.rewrites).toHaveLength(1);
-      expect(result.routes.rewrites[0]).toEqual({
-        src: '^/admin(?:/.*)?$',
+      // Vite has no defaultRoutes, so it supports prefix mounting
+      // We get simple SPA routes prefixed for the service
+      expect(result.routes.rewrites).toHaveLength(2);
+      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/admin(?:/(.*))?$',
+        dest: '/admin/index.html',
+      });
+    });
+
+    it('should allow framework with matching SPA defaultRoutes at prefix (svelte)', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            admin: {
+              workspace: 'apps/admin',
+              framework: 'svelte',
+              routePrefix: '/admin',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+
+      // Svelte HAS defaultRoutes, but they match DEFAULT_SPA_ROUTES
+      // so it's safe to mount at a prefix
+      expect(result.routes.rewrites).toHaveLength(2);
+      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/admin(?:/(.*))?$',
         dest: '/admin/index.html',
       });
     });
@@ -494,21 +579,52 @@ describe('detectServices', () => {
       expect(isStaticBuild(expressApi!)).toBe(false);
 
       // Function service and prefixed static service get rewrites
-      expect(result.routes.rewrites).toHaveLength(2);
+      // admin-panel gets 2 prefixed routes (filesystem + SPA fallback)
+      // express-api gets 1 rewrite
+      expect(result.routes.rewrites).toHaveLength(3);
       expect(result.routes.rewrites).toContainEqual({
         src: '^/api(?:/.*)?$',
         dest: '/api/index.js',
         check: true,
       });
+      // Prefixed static service gets prefixed framework routes
+      expect(result.routes.rewrites).toContainEqual({ handle: 'filesystem' });
       expect(result.routes.rewrites).toContainEqual({
-        src: '^/admin(?:/.*)?$',
+        src: '^/admin(?:/(.*))?$',
         dest: '/admin/index.html',
       });
 
-      // Root static service gets filesystem + SPA fallback in defaults
+      // Root static service gets default SPA routes (vite has no defaultRoutes)
       expect(result.routes.defaults).toHaveLength(2);
       expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
       expect(result.routes.defaults).toContainEqual({
+        src: '/(.*)',
+        dest: '/index.html',
+      });
+    });
+
+    it('should use default SPA routes when no framework specified', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              builder: '@vercel/static-build',
+              entrypoint: 'package.json',
+              routePrefix: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(isStaticBuild(result.services[0])).toBe(true);
+      expect(result.errors).toEqual([]);
+
+      // No framework = default SPA fallback
+      expect(result.routes.defaults).toHaveLength(2);
+      expect(result.routes.defaults[0]).toEqual({ handle: 'filesystem' });
+      expect(result.routes.defaults[1]).toEqual({
         src: '/(.*)',
         dest: '/index.html',
       });

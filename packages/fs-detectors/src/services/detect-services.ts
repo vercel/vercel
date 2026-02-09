@@ -4,8 +4,15 @@ import type {
   DetectServicesResult,
   ResolvedService,
   ServicesRoutes,
+  ServiceDetectionError,
 } from './types';
-import { isStaticBuild, readVercelConfig } from './utils';
+import {
+  isStaticBuild,
+  readVercelConfig,
+  getFrameworkDefaultRoutes,
+  frameworkSupportsPrefixMount,
+  getPrefixedSpaRoutes,
+} from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 
@@ -55,11 +62,13 @@ export async function detectServices(
 
     if (autoResult.services) {
       const result = resolveAllConfiguredServices(autoResult.services);
-      const routes = generateServicesRoutes(result.services);
+      const { routes, errors: routeErrors } = await generateServicesRoutes(
+        result.services
+      );
       return {
         services: result.services,
         routes,
-        errors: result.errors,
+        errors: [...result.errors, ...routeErrors],
         warnings: [],
       };
     }
@@ -82,14 +91,21 @@ export async function detectServices(
   const result = resolveAllConfiguredServices(configuredServices);
 
   // Generate routes
-  const routes = generateServicesRoutes(result.services);
+  const { routes, errors: routeErrors } = await generateServicesRoutes(
+    result.services
+  );
 
   return {
     services: result.services,
     routes,
-    errors: result.errors,
+    errors: [...result.errors, ...routeErrors],
     warnings: [],
   };
+}
+
+interface GenerateRoutesResult {
+  routes: ServicesRoutes;
+  errors: ServiceDetectionError[];
 }
 
 /**
@@ -99,17 +115,19 @@ export async function detectServices(
  * routes match before broader ones. For example, `/api/users` must be checked
  * before `/api`, which must be checked before the catch-all `/`.
  *
- * - Static/SPA services: SPA fallback routes to index.html
+ * - Static/SPA services at root: Use framework's defaultRoutes
+ * - Static/SPA services at prefix: Use simple SPA fallback (if framework supports it)
  * - Serverless services: Rewrite to the function entrypoint
  * - Cron/Worker services: TODO - internal routes under `/_svc/`
  */
-export function generateServicesRoutes(
+export async function generateServicesRoutes(
   services: ResolvedService[]
-): ServicesRoutes {
+): Promise<GenerateRoutesResult> {
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
   const crons: Route[] = [];
   const workers: Route[] = [];
+  const errors: ServiceDetectionError[] = [];
 
   // Filter and sort web services by prefix length (longest first)
   // so more specific routes match before broader ones.
@@ -125,15 +143,27 @@ export function generateServicesRoutes(
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
 
     if (isStaticBuild(service)) {
-      // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
-        defaults.push({ handle: 'filesystem' });
-        defaults.push({ src: '/(.*)', dest: '/index.html' });
+        // Root static service: use framework's full defaultRoutes
+        const frameworkRoutes = await getFrameworkDefaultRoutes(
+          service.framework
+        );
+        defaults.push(...frameworkRoutes);
       } else {
-        rewrites.push({
-          src: `^/${normalizedPrefix}(?:/.*)?$`,
-          dest: `/${normalizedPrefix}/index.html`,
-        });
+        // Prefixed static service: check if framework supports prefix mounting
+        if (!frameworkSupportsPrefixMount(service.framework)) {
+          errors.push({
+            code: 'FRAMEWORK_PREFIX_NOT_SUPPORTED',
+            message:
+              `Framework "${service.framework}" cannot be mounted at prefix "${routePrefix}". ` +
+              `Frameworks with custom routing (like "${service.framework}") must use routePrefix: "/"`,
+            serviceName: service.name,
+          });
+          continue;
+        }
+        // Framework supports prefix: use simple SPA fallback
+        const prefixedRoutes = getPrefixedSpaRoutes(normalizedPrefix);
+        rewrites.push(...prefixedRoutes);
       }
     } else {
       // Function service: rewrite to the function entrypoint
@@ -155,5 +185,5 @@ export function generateServicesRoutes(
     }
   }
 
-  return { rewrites, defaults, crons, workers };
+  return { routes: { rewrites, defaults, crons, workers }, errors };
 }
