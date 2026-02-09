@@ -12,6 +12,7 @@ import { pullSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import type { ProjectLinked } from '@vercel-internals/types';
 
 interface MicrofrontendsConfig {
   $schema: string;
@@ -31,7 +32,8 @@ export default async function pull(client: Client): Promise<number> {
   if (typeof link === 'number') {
     return link;
   }
-  const { project, org, repoRoot } = link;
+
+  const { project, org, repoRoot } = link as ProjectLinked;
 
   let currentDirectory: string;
   if (repoRoot) {

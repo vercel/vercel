@@ -4,11 +4,14 @@ import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { packageName } from '../pkg-name';
-import type { ActionRequiredPayload } from '../agent-output';
+import {
+  outputActionRequired,
+  type ActionRequiredPayload,
+} from '../agent-output';
 
 type Choice = { name: string; value: Org };
 
-export type SelectOrgResult = Org | ActionRequiredPayload;
+export type SelectOrgResult = Org;
 
 export default async function selectOrg(
   client: Client,
@@ -67,7 +70,8 @@ export default async function selectOrg(
         command: `${packageName} link --scope ${c.value.slug}`,
       })),
     };
-    return actionRequired;
+    outputActionRequired(client, actionRequired);
+    process.exit(1);
   }
 
   if (autoConfirm) {

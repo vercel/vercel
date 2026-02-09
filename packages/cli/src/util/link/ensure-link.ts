@@ -4,60 +4,8 @@ import param from '../output/param';
 import { getCommandName } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
-import type {
-  ProjectLinked,
-  ProjectNotLinked,
-  ProjectLinkedError,
-} from '@vercel-internals/types';
-import {
-  type ActionRequiredPayload,
-  outputActionRequired,
-} from '../agent-output';
+import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
-
-type ProjectLinkResult =
-  | ProjectLinked
-  | ProjectNotLinked
-  | ActionRequiredPayload
-  | ProjectLinkedError
-  | number
-  | undefined;
-
-export function isProjectLinked(link: ProjectLinkResult): boolean {
-  return (
-    typeof link === 'object' &&
-    link !== null &&
-    'status' in link &&
-    link.status === 'linked'
-  );
-}
-
-export function isProjectNotLinked(link: ProjectLinkResult): boolean {
-  return (
-    typeof link === 'object' &&
-    link !== null &&
-    'status' in link &&
-    link.status === 'not_linked'
-  );
-}
-
-export function isProjectLinkActionRequired(link: ProjectLinkResult): boolean {
-  return (
-    typeof link === 'object' &&
-    link !== null &&
-    'status' in link &&
-    link.status === 'action_required'
-  );
-}
-
-export function isProjectLinkedError(link: ProjectLinkResult): boolean {
-  return (
-    typeof link === 'object' &&
-    link !== null &&
-    'status' in link &&
-    link.status === 'error'
-  );
-}
 
 /**
  * Checks if a project is already linked and if not, links the project and
@@ -73,14 +21,14 @@ export function isProjectLinkedError(link: ProjectLinkResult): boolean {
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
- * @returns {Promise<ProjectLinkResult>} The linked project (or the process exits)
+ * @returns {Promise<ProjectLinked | number>} The linked project (or the process exits)
  */
 export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
   opts: SetupAndLinkOptions = {}
-): Promise<ProjectLinkResult> {
+): Promise<ProjectLinked | number> {
   let { link } = opts;
   const nonInteractive = opts.nonInteractive ?? false;
   if (!link) {
@@ -88,20 +36,19 @@ export async function ensureLink(
     opts.link = link;
   }
 
-  if ((isProjectLinked(link) && opts.forceDelete) || isProjectNotLinked(link)) {
-    link = (await setupAndLink(client, cwd, opts)) as ProjectLinkResult;
+  if (
+    (link.status === 'linked' && opts.forceDelete) ||
+    link.status === 'not_linked'
+  ) {
+    link = await setupAndLink(client, cwd, opts);
 
-    if (link && isProjectLinkActionRequired(link)) {
-      outputActionRequired(client, link);
-      process.exit(1);
-    }
-    if (isProjectNotLinked(link)) {
+    if (link.status === 'not_linked') {
       // User aborted project linking questions
-      process.exit(0);
+      return 0;
     }
   }
 
-  if (isProjectLinkedError(link)) {
+  if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
       output.error(
         `Command ${getCommandName(
@@ -112,7 +59,7 @@ export async function ensureLink(
     if (nonInteractive) {
       process.exit(link.exitCode);
     }
-    return link;
+    return link.exitCode;
   }
 
   return link;

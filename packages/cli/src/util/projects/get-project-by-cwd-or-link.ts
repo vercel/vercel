@@ -1,13 +1,8 @@
 import type Client from '../client';
 import { ProjectNotFound } from '../errors-ts';
-import {
-  ensureLink,
-  isProjectLinked,
-  isProjectLinkedError,
-  isProjectNotLinked,
-} from '../link/ensure-link';
+import { ensureLink } from '../link/ensure-link';
 import getProjectByNameOrId from './get-project-by-id-or-name';
-import type { Project, ProjectLinked } from '@vercel-internals/types';
+import type { Project } from '@vercel-internals/types';
 
 export default async function getProjectByCwdOrLink({
   autoConfirm,
@@ -46,17 +41,5 @@ export default async function getProjectByCwdOrLink({
     throw err;
   }
 
-  if (isProjectLinked(linkedProject)) {
-    return (linkedProject as ProjectLinked).project;
-  }
-
-  if (isProjectNotLinked(linkedProject)) {
-    throw new Error('Project not linked');
-  }
-
-  if (isProjectLinkedError(linkedProject)) {
-    throw new Error('Project linked error');
-  }
-
-  throw new Error('Unknown error');
+  return linkedProject.project;
 }

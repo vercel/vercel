@@ -11,7 +11,6 @@ import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
-import { isActionRequiredPayload, outputActionRequired } from '../agent-output';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
@@ -122,10 +121,6 @@ export async function ensureRepoLink(
       'Which scope should contain your Project(s)?',
       yes
     );
-    if (isActionRequiredPayload(org)) {
-      outputActionRequired(client, org);
-      return;
-    }
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     // Use getGitConfigPath to correctly resolve the config path for

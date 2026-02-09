@@ -99,6 +99,7 @@ export default async function link(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
     });
+
     if (typeof link === 'number') {
       return link;
     }

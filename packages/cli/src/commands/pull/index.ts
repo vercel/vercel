@@ -121,7 +121,8 @@ export async function pullCommandLogic(
   if (typeof link === 'number') {
     return link;
   }
-  const { project, org, repoRoot } = link;
+
+  const { project, org, repoRoot } = link as ProjectLinked;
 
   let currentDirectory: string;
   if (repoRoot) {
@@ -135,7 +136,7 @@ export async function pullCommandLogic(
   const pullResultCode = await pullAllEnvFiles(
     environment,
     client,
-    link,
+    link as ProjectLinked,
     flags,
     currentDirectory
   );

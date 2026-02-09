@@ -481,8 +481,7 @@ export type ProjectLinkedError = {
 export type ProjectLinkResult =
   | ProjectLinked
   | ProjectNotLinked
-  | ProjectLinkedError
-  | ActionRequiredPayload;
+  | ProjectLinkedError;
 
 /**
  * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.

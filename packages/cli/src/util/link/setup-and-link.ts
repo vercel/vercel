@@ -1,11 +1,7 @@
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
-import type {
-  ProjectLinkResult,
-  ProjectSettings,
-  Org,
-} from '@vercel-internals/types';
+import type { ProjectSettings, Org } from '@vercel-internals/types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -15,10 +11,6 @@ import {
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
-import {
-  isActionRequiredPayload,
-  type ActionRequiredPayload,
-} from '../agent-output';
 import type Client from '../client';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
@@ -58,7 +50,7 @@ import {
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   forceDelete?: boolean;
-  link?: ProjectLinkResult | number;
+  link?: ProjectLinkResult;
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
@@ -83,7 +75,7 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
   }: SetupAndLinkOptions
-): Promise<ProjectLinkResult | ActionRequiredPayload> {
+): Promise<ProjectLinkResult> {
   const { config } = client;
 
   if (!isDirectory(path)) {
@@ -98,13 +90,7 @@ export default async function setupAndLink(
   let newProjectName: string;
   let org;
 
-  if (
-    !forceDelete &&
-    typeof link === 'object' &&
-    link !== null &&
-    'status' in link &&
-    link.status === 'linked'
-  ) {
+  if (!forceDelete && link.status === 'linked') {
     return link;
   }
 
@@ -137,9 +123,6 @@ export default async function setupAndLink(
       'Which scope should contain your project?',
       autoConfirm || nonInteractive
     );
-    if (isActionRequiredPayload(org)) {
-      return org;
-    }
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {
