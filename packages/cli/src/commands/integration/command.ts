@@ -20,6 +20,17 @@ export const addSubcommand = {
         `${packageName} integration add acme`,
       ],
     },
+    {
+      name: 'Install a specific product from an integration',
+      value: [
+        `${packageName} integration add <integration>/<product>`,
+        `${packageName} integration add acme/acme-redis`,
+      ],
+    },
+    {
+      name: 'Show available products for an integration',
+      value: `${packageName} integration add acme --help`,
+    },
   ],
 } as const;
 
@@ -99,7 +110,7 @@ export const balanceSubcommand = {
   name: 'balance',
   aliases: [],
   description:
-    'Shows the balances and thresholds of specified marketplace integration',
+    'Shows the balances and thresholds of a specified marketplace integration',
   arguments: [
     {
       name: 'integration',
@@ -154,9 +165,15 @@ export const integrationCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    balanceSubcommand,
     listSubcommand,
     openSubcommand,
     removeSubcommand,
   ],
-  examples: [],
+  examples: [
+    {
+      name: 'Install a specific product from an integration',
+      value: `${packageName} integration add acme/acme-redis`,
+    },
+  ],
 } as const;

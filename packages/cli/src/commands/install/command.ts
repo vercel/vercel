@@ -18,5 +18,9 @@ export const installCommand: Command = {
       name: 'Install an integration from the marketplace',
       value: `${packageName} install acme`,
     },
+    {
+      name: 'Install a specific product',
+      value: `${packageName} install acme/acme-redis`,
+    },
   ],
 };
