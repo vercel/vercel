@@ -70,7 +70,7 @@ getVercelOidcToken()
 
 ```js
 // Using the OIDC token with explicit team and project
-getVercelOidcToken({ teamId: 'team_abc', projectId: 'prj_xyz' })
+getVercelOidcToken({ team: 'my-team', project: 'prj_xyz' })
   .then(token => {
     console.log('OIDC Token:', token);
   })
@@ -93,7 +93,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-packages/oidc/dist/get-vercel-oidc-token.d.ts:60
+packages/oidc/dist/get-vercel-oidc-token.d.ts:61
 
 ---
 
@@ -130,4 +130,4 @@ The OIDC token.
 
 #### Defined in
 
-packages/oidc/dist/get-vercel-oidc-token.d.ts:82
+packages/oidc/dist/get-vercel-oidc-token.d.ts:83
