@@ -66,7 +66,7 @@ export function setupCurlLikeCommand(
 
   if (parsedArgs.flags['--help']) {
     print(help(command, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   // Remove command name from the args list

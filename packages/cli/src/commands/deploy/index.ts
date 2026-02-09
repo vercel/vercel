@@ -130,7 +130,7 @@ export default async (client: Client): Promise<number> => {
   if (parsedArguments.flags['--help']) {
     telemetryClient.trackCliFlagHelp('deploy');
     output.print(help(deployCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   if (parsedArguments.args[0] === deployCommand.name) {

@@ -17,7 +17,7 @@ describe('env pull', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

@@ -12,7 +12,7 @@ describe('webhooks ls', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = webhooks(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

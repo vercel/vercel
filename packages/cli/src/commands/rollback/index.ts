@@ -41,7 +41,7 @@ export default async (client: Client): Promise<number> => {
   if (!parsedArgs.args[1] && needHelp) {
     telemetry.trackCliFlagHelp('rollback');
     output.print(help(rollbackCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   // validate the timeout
@@ -63,7 +63,7 @@ export default async (client: Client): Promise<number> => {
             parent: rollbackCommand,
           })
         );
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({

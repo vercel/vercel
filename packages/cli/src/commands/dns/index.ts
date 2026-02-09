@@ -56,7 +56,7 @@ export default async function dns(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('dns', subcommand);
     output.print(help(dnsCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -70,7 +70,7 @@ export default async function dns(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
@@ -78,7 +78,7 @@ export default async function dns(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(importSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandImport(subcommandOriginal);
       return importZone(client, args);
@@ -86,7 +86,7 @@ export default async function dns(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
@@ -94,7 +94,7 @@ export default async function dns(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);

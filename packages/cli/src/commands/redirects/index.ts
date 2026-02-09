@@ -65,7 +65,7 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('redirects');
     output.print(help(redirectsCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -82,7 +82,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
@@ -90,7 +90,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(listVersionsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandListVersions(subcommandOriginal);
       return listVersions(client, args);
@@ -98,7 +98,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
@@ -106,7 +106,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(uploadSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandUpload(subcommandOriginal);
       return upload(client, args);
@@ -114,7 +114,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client, args);
@@ -122,7 +122,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(promoteSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPromote(subcommandOriginal);
       return promote(client, args);
@@ -130,7 +130,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(restoreSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRestore(subcommandOriginal);
       return restore(client, args);

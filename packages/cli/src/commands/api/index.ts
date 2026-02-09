@@ -75,7 +75,7 @@ export default async function api(client: Client): Promise<number> {
           columns: client.stderr.columns,
         })
       );
-      return 2;
+      return 0;
     }
 
     telemetryClient.trackCliSubcommandList();
@@ -93,7 +93,7 @@ export default async function api(client: Client): Promise<number> {
   if (needHelp) {
     telemetryClient.trackCliFlagHelp('api');
     output.print(help(apiCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   // Set dangerously-skip-permissions flag for DELETE confirmation handling

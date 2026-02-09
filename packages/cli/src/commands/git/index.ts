@@ -41,7 +41,7 @@ export default async function main(client: Client) {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('git', subcommand);
     output.print(help(gitCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
