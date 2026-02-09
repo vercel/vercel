@@ -5,101 +5,68 @@
     "turbo-cache-key.json",
     "package.json",
     "test/lib/**",
-    "utils/build.mjs"
+    "utils/build.mjs",
   ],
   "envMode": "loose",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "outputLogs": "new-only",
-      "outputs": [
-        "dist/**"
-      ]
+      "outputs": ["dist/**"],
     },
     "vitest-unit": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "vitest-unit-node-24": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "vitest-run": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "vitest-e2e": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "vitest-e2e-node-20": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test-e2e-node-all-versions": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test-unit": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test-dev": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test-cli": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test-e2e": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test-next-local": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "test": {
-      "dependsOn": [
-        "build"
-      ],
-      "outputLogs": "new-only"
+      "dependsOn": ["build"],
+      "outputLogs": "new-only",
     },
     "type-check": {
-      "dependsOn": [
-        "source",
-        "^build"
-      ]
+      "dependsOn": ["source", "^build"],
     },
     "source": {
-      "dependsOn": [
-        "^source"
-      ]
-    }
-  }
+      "dependsOn": ["^source"],
+    },
+  },
 }
