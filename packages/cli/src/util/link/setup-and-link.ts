@@ -63,6 +63,7 @@ export interface SetupAndLinkOptions {
   projectId?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
+  pullEnv?: boolean;
 }
 
 export default async function setupAndLink(
@@ -77,6 +78,7 @@ export default async function setupAndLink(
     projectName = basename(path),
     projectId,
     nonInteractive = false,
+    pullEnv = true,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult | ActionRequiredPayload> {
   const { config } = client;
@@ -191,7 +193,8 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm
+      autoConfirm,
+      pullEnv
     );
     return { status: 'linked', org, project };
   }

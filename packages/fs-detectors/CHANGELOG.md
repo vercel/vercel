@@ -1,5 +1,27 @@
 # @vercel/fs-detectors
 
+## 5.8.3
+
+### Patch Changes
+
+- [services] add service name validation ([#14907](https://github.com/vercel/vercel/pull/14907))
+
+- Updated dependencies [[`712badd017d01fd1f8cb51980752ecda18540b78`](https://github.com/vercel/vercel/commit/712badd017d01fd1f8cb51980752ecda18540b78)]:
+  - @vercel/frameworks@3.17.1
+
+## 5.8.2
+
+### Patch Changes
+
+- Updated dependencies [[`84f121190813b2840a6a16279dcaa75dcb2872cd`](https://github.com/vercel/vercel/commit/84f121190813b2840a6a16279dcaa75dcb2872cd)]:
+  - @vercel/frameworks@3.17.0
+
+## 5.8.1
+
+### Patch Changes
+
+- [services] `vercel dev` will add the known framework prefix to env vars for services ([#14866](https://github.com/vercel/vercel/pull/14866))
+
 ## 5.8.0
 
 ### Minor Changes

@@ -47,7 +47,6 @@ import cmd from './util/output/cmd';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
-import getCommonArgs from './util/arg-common';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
@@ -78,7 +77,6 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
-import open from 'open';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -146,10 +144,15 @@ const main = async () => {
   let parsedArgs;
 
   try {
-    // Use the single global options spec so all global flags are defined in one place (arg-common.ts)
-    parsedArgs = parseArguments(process.argv, getCommonArgs(), {
-      permissive: true,
-    });
+    parsedArgs = parseArguments(
+      process.argv,
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--non-interactive': Boolean,
+      },
+      { permissive: true }
+    );
     const isDebugging = parsedArgs.flags['--debug'];
     const isNoColor = parsedArgs.flags['--no-color'];
     output.initialize({
@@ -453,6 +456,14 @@ const main = async () => {
       });
       return 1;
     }
+  }
+
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  if (
+    typeof parsedArgs.flags['--token'] !== 'string' &&
+    process.env.VERCEL_TOKEN
+  ) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
   }
 
   if (
@@ -945,23 +956,19 @@ main()
               `v${pkg.version}`
             )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
           );
+          output.print(
+            `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
+          );
 
-          const action = await client.input.expand({
-            message: 'What would you like to do?',
-            default: 'u',
-            choices: [
-              { key: 'u', name: 'Upgrade now', value: 'upgrade' },
-              { key: 'c', name: 'View changelog', value: 'changelog' },
-              { key: 's', name: 'Skip', value: 'skip' },
-            ],
-          });
+          const shouldUpgrade = await client.input.confirm(
+            'Would you like to upgrade now?',
+            true
+          );
 
-          if (action === 'upgrade') {
+          if (shouldUpgrade) {
             const upgradeExitCode = await executeUpgrade();
             process.exitCode = upgradeExitCode;
             return;
-          } else if (action === 'changelog') {
-            await open(changelog);
           }
         } else {
           const errorMsg =

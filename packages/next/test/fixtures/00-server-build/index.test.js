@@ -98,7 +98,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(isNaN(initialRandom)).toBe(false);
 
         const dataRes = await fetch(
-          `${ctx.deploymentUrl}/_next/data/testing-build-id${urlPath}.json${
+          `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS${urlPath}.json${
             query || ''
           }`
         );

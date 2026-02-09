@@ -1,5 +1,21 @@
 # @vercel/python
 
+## 6.8.0
+
+### Minor Changes
+
+- fix a build regression on projects with changed rootDirectory ([#14931](https://github.com/vercel/vercel/pull/14931))
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
 ## 6.6.0
 
 ### Minor Changes
