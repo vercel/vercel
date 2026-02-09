@@ -12,10 +12,7 @@ import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import type Client from '../../util/client';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
@@ -198,15 +195,11 @@ export default async function list(client: Client) {
     }
     project = p;
   } else {
-    const linkOrExit = handleEnsureLinkResult(
-      client,
-      await ensureLink('list', client, client.cwd, { autoConfirm })
-    );
-    if (typeof linkOrExit === 'number') {
-      return linkOrExit;
-    }
-    project = linkOrExit.project;
-    client.config.currentTeam = linkOrExit.org.id;
+    const link = await ensureLink('list', client, client.cwd, {
+      autoConfirm,
+    });
+    project = link.project;
+    client.config.currentTeam = link.org.id;
   }
 
   if (!contextName) {

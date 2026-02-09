@@ -9,10 +9,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;
@@ -50,14 +47,9 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
-  const linkOrExit = handleEnsureLinkResult(
-    client,
-    await ensureLink('git', client, client.cwd, { autoConfirm })
-  );
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-  const { org, project } = linkOrExit;
+  const { org, project } = await ensureLink('git', client, client.cwd, {
+    autoConfirm,
+  });
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (project.link) {

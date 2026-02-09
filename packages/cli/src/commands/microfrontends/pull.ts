@@ -3,10 +3,7 @@ import { join } from 'node:path';
 import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import { emoji, prependEmoji } from '../../util/emoji';
 import humanizePath from '../../util/humanize-path';
 import stamp from '../../util/output/stamp';
@@ -30,15 +27,11 @@ const VERCEL_DIR = '.vercel';
 const VERCEL_DIR_MICROFRONTENDS = 'microfrontends.json';
 
 export default async function pull(client: Client): Promise<number> {
-  const linkOrExit = handleEnsureLinkResult(
+  const { project, org, repoRoot } = await ensureLink(
+    'microfrontends',
     client,
-    await ensureLink('microfrontends', client, client.cwd)
+    client.cwd
   );
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-
-  const { project, org, repoRoot } = linkOrExit;
 
   let currentDirectory: string;
   if (repoRoot) {

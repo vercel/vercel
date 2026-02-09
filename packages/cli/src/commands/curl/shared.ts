@@ -2,10 +2,7 @@ import chalk from 'chalk';
 import { isErrnoException } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import output from '../../output-manager';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
@@ -165,12 +162,7 @@ export async function getDeploymentUrlAndToken(
     throw err;
   }
 
-  const linkOrExit = handleEnsureLinkResult(client, link);
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-
-  const { project } = linkOrExit;
+  const { project } = link;
 
   const linkedProject = await getLinkedProject(client, client.cwd);
 
@@ -227,7 +219,7 @@ export async function getDeploymentUrlAndToken(
     try {
       deploymentProtectionToken =
         protectionBypassFlag ??
-        (await getOrCreateDeploymentProtectionToken(client, linkOrExit));
+        (await getOrCreateDeploymentProtectionToken(client, link));
     } catch (err) {
       output.error(
         `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`
@@ -239,6 +231,6 @@ export async function getDeploymentUrlAndToken(
   return {
     fullUrl,
     deploymentProtectionToken,
-    link: linkOrExit,
+    link,
   };
 }

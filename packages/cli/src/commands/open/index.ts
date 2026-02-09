@@ -6,10 +6,7 @@ import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import { OpenTelemetryClient } from '../../util/telemetry/commands/open';
 
 export default async function openCommandHandler(
@@ -50,15 +47,7 @@ export default async function openCommandHandler(
   }
 
   // Ensure the project is linked (this will validate the link but won't prompt if already linked)
-  const linkOrExit = handleEnsureLinkResult(
-    client,
-    await ensureLink('open', client, client.cwd)
-  );
-
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-  const link = linkOrExit;
+  const link = await ensureLink('open', client, client.cwd);
 
   if (link.status !== 'linked' || !link.org || !link.project) {
     output.error('This command requires a linked project. Please run:');

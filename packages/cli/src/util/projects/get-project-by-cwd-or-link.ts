@@ -1,6 +1,5 @@
 import type Client from '../client';
 import { ProjectNotFound } from '../errors-ts';
-import { isActionRequiredPayload, outputActionRequired } from '../agent-output';
 import { ensureLink } from '../link/ensure-link';
 import getProjectByNameOrId from './get-project-by-id-or-name';
 import type { Project } from '@vercel-internals/types';
@@ -26,7 +25,7 @@ export default async function getProjectByCwdOrLink({
     return project;
   }
 
-  // ensure the current directory is a linked project
+  // ensure the current directory is a linked project (exits if not)
   const linkedProject = await ensureLink(
     commandName,
     client,
@@ -35,20 +34,6 @@ export default async function getProjectByCwdOrLink({
       autoConfirm,
     }
   );
-
-  if (typeof linkedProject === 'number') {
-    const err: NodeJS.ErrnoException = new Error('Link project error');
-    err.code = 'ERR_LINK_PROJECT';
-    throw err;
-  }
-  if (isActionRequiredPayload(linkedProject)) {
-    outputActionRequired(client, linkedProject);
-    const err: NodeJS.ErrnoException = new Error(
-      'Link project action required'
-    );
-    err.code = 'ERR_LINK_PROJECT';
-    throw err;
-  }
 
   return linkedProject.project;
 }

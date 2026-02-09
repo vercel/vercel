@@ -12,10 +12,7 @@ import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
@@ -117,17 +114,10 @@ export async function pullCommandLogic(
   environment: string,
   flags: PullCommandFlags
 ): Promise<number> {
-  const linkOrExit = handleEnsureLinkResult(
-    client,
-    await ensureLink('pull', client, cwd, {
-      autoConfirm,
-      pullEnv: false,
-    })
-  );
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-  const link = linkOrExit;
+  const link = await ensureLink('pull', client, cwd, {
+    autoConfirm,
+    pullEnv: false,
+  });
 
   const { project, org, repoRoot } = link;
 

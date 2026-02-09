@@ -1,10 +1,7 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import { ensureRepoLink } from '../../util/link/repo';
 import getTeams from '../../util/teams/get-teams';
 import { help } from '../help';
@@ -94,20 +91,14 @@ export default async function link(client: Client) {
     // Only use non-interactive behavior when the flag is explicitly enabled (link stays interactive otherwise)
     const linkNonInteractive = client.argv.includes('--non-interactive');
 
-    const linkOrExit = handleEnsureLinkResult(
-      client,
-      await ensureLink('link', client, cwd, {
-        autoConfirm: yes || linkNonInteractive,
-        forceDelete: true,
-        projectName: parsedArgs.flags['--project'],
-        projectId: parsedArgs.flags['--project-id'],
-        successEmoji: 'success',
-        nonInteractive: linkNonInteractive,
-      })
-    );
-    if (typeof linkOrExit === 'number') {
-      return linkOrExit;
-    }
+    await ensureLink('link', client, cwd, {
+      autoConfirm: yes || linkNonInteractive,
+      forceDelete: true,
+      projectName: parsedArgs.flags['--project'],
+      projectId: parsedArgs.flags['--project-id'],
+      successEmoji: 'success',
+      nonInteractive: linkNonInteractive,
+    });
   }
 
   return 0;

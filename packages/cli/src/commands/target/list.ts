@@ -4,10 +4,7 @@ import table from '../../util/output/table';
 import output from '../../output-manager';
 import { listSubcommand, targetCommand } from './command';
 import { validateLsArgs } from '../../util/validate-ls-args';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { validateJsonOutput } from '../../util/output-format';
@@ -90,14 +87,7 @@ export default async function list(client: Client, argv: string[]) {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const linkOrExit = handleEnsureLinkResult(
-    client,
-    await ensureLink(targetCommand.name, client, cwd)
-  );
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-  const link = linkOrExit;
+  const link = await ensureLink(targetCommand.name, client, cwd);
 
   const start = Date.now();
   const projectSlugLink = formatProject(link.org.slug, link.project.name);

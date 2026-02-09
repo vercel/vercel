@@ -5,37 +5,14 @@ import { getCommandName } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
-import {
-  type ActionRequiredPayload,
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../agent-output';
+import { outputActionRequired } from '../agent-output';
 import output from '../../output-manager';
-
-export type EnsureLinkResult = ProjectLinked | number | ActionRequiredPayload;
-
-/**
- * Handles EnsureLinkResult: returns an exit code to return, or the ProjectLinked.
- * When result is action_required, outputs JSON and exits (or returns 1 if not nonInteractive).
- * Callers can do: const linkOrExit = handleEnsureLinkResult(client, await ensureLink(...)); if (typeof linkOrExit === 'number') return linkOrExit; const link = linkOrExit;
- */
-export function handleEnsureLinkResult(
-  client: Client,
-  result: EnsureLinkResult
-): number | ProjectLinked {
-  if (typeof result === 'number') {
-    return result;
-  }
-  if (isActionRequiredPayload(result)) {
-    outputActionRequired(client, result);
-    return 1;
-  }
-  return result;
-}
 
 /**
  * Checks if a project is already linked and if not, links the project and
- * validates the link response.
+ * validates the link response. Exits (process.exit) when the user aborts,
+ * when an error occurs, or when non-interactive and scope/project choice is
+ * required; otherwise returns the linked project.
  *
  * @param commandName - The name of the current command to print in the
  * event of an error
@@ -45,15 +22,14 @@ export function handleEnsureLinkResult(
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
- * @returns {Promise<ProjectLinked|number|ActionRequiredPayload>} Returns a numeric exit code when aborted or
- * error, action_required payload when non-interactive and scope/project choice needed, otherwise the linked project
+ * @returns {Promise<ProjectLinked>} The linked project (or the process exits)
  */
 export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
   opts: SetupAndLinkOptions = {}
-): Promise<EnsureLinkResult> {
+): Promise<ProjectLinked> {
   let { link } = opts;
   if (!link) {
     link = await getLinkedProject(client, cwd);
@@ -72,12 +48,13 @@ export async function ensureLink(
       'status' in result &&
       result.status === 'action_required'
     ) {
-      return result;
+      outputActionRequired(client, result);
+      process.exit(1);
     }
 
     if (result.status === 'not_linked') {
       // User aborted project linking questions
-      return 0;
+      process.exit(0);
     }
     link = result;
   }
@@ -90,7 +67,7 @@ export async function ensureLink(
         )} requires confirmation. Use option ${param('--yes')} to confirm.`
       );
     }
-    return link.exitCode;
+    process.exit(link.exitCode);
   }
 
   return link;

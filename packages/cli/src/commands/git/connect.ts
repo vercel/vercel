@@ -19,10 +19,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
-import {
-  ensureLink,
-  handleEnsureLinkResult,
-} from '../../util/link/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 
 interface ConnectArgParams {
   client: Client;
@@ -82,14 +79,9 @@ export default async function connect(client: Client, argv: string[]) {
   const repoArg = args[0];
   telemetry.trackCliArgumentGitUrl(repoArg);
 
-  const linkOrExit = handleEnsureLinkResult(
-    client,
-    await ensureLink('git', client, client.cwd, { autoConfirm: confirm })
-  );
-  if (typeof linkOrExit === 'number') {
-    return linkOrExit;
-  }
-  const { project, org } = linkOrExit;
+  const { project, org } = await ensureLink('git', client, client.cwd, {
+    autoConfirm: confirm,
+  });
 
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
