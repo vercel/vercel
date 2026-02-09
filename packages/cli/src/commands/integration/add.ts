@@ -17,39 +17,68 @@ import type {
 } from '../../util/integration/types';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
+import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import { addAutoProvision } from './add-auto-provision';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { selectProduct } from '../../util/integration/select-product';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
-export async function add(client: Client, args: string[]) {
+export async function add(
+  client: Client,
+  args: string[],
+  resourceNameArg?: string
+) {
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+  telemetry.trackCliOptionName(resourceNameArg);
 
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const rawArg = args[0];
 
-  if (!integrationSlug) {
+  if (!rawArg) {
     output.error('You must pass an integration slug');
     return 1;
   }
 
+  // Parse optional product slug from "integration/product" syntax
+  let integrationSlug: string;
+  let productSlug: string | undefined;
+  const slashIndex = rawArg.indexOf('/');
+  if (slashIndex !== -1) {
+    integrationSlug = rawArg.substring(0, slashIndex);
+    productSlug = rawArg.substring(slashIndex + 1);
+    if (!integrationSlug || !productSlug) {
+      output.error(
+        'Invalid format. Expected: <integration-name>/<product-slug>'
+      );
+      return 1;
+    }
+  } else {
+    integrationSlug = rawArg;
+  }
+
+  // Note: Resource name validation happens after product selection
+  // to apply product-specific validation rules
+
   // Auto-provision: completely separate code path
   if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
-    return await addAutoProvision(client, integrationSlug);
+    return await addAutoProvision(client, integrationSlug, resourceNameArg, {
+      productSlug,
+    });
   }
 
   const { contextName, team } = await getScope(client);
@@ -70,10 +99,13 @@ export async function add(client: Client, args: string[]) {
     );
     return 1;
   } finally {
-    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
+    telemetry.trackCliArgumentIntegration(
+      integrationSlug,
+      knownIntegrationSlug
+    );
   }
 
-  if (!integration.products) {
+  if (!integration.products?.length) {
     output.error(
       `Integration "${integrationSlug}" is not a Marketplace integration`
     );
@@ -81,12 +113,23 @@ export async function add(client: Client, args: string[]) {
   }
 
   const [productResult, installationsResult] = await Promise.allSettled([
-    selectProduct(client, integration),
+    selectProduct(client, integration.products, productSlug),
     fetchInstallations(client, integration),
   ]);
 
-  if (productResult.status === 'rejected' || !productResult.value) {
-    output.error('Product not found');
+  if (productResult.status === 'rejected') {
+    output.error(
+      `Failed to select product: ${(productResult.reason as Error).message}`
+    );
+    return 1;
+  }
+
+  if (!productResult.value) {
+    if (!productSlug) {
+      // Only print generic error when no slug was specified.
+      // When a slug was provided, selectProduct already printed a specific error.
+      output.error('Product not found');
+    }
     return 1;
   }
 
@@ -123,6 +166,14 @@ export async function add(client: Client, args: string[]) {
   const metadataSchema = product.metadataSchema;
   const metadataWizard = createMetadataWizard(metadataSchema);
 
+  // Resolve and validate resource name
+  const nameResult = resolveResourceName(product.slug, resourceNameArg);
+  if ('error' in nameResult) {
+    output.error(nameResult.error);
+    return 1;
+  }
+  const { resourceName } = nameResult;
+
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
   // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
@@ -149,7 +200,8 @@ export async function add(client: Client, args: string[]) {
         team.id,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink?.project?.id,
+        resourceName
       );
     }
 
@@ -162,7 +214,8 @@ export async function add(client: Client, args: string[]) {
     integration,
     installation,
     product,
-    metadataWizard
+    metadataWizard,
+    resourceName
   );
 }
 
@@ -193,17 +246,23 @@ function provisionResourceViaWebUI(
   teamId: string,
   integrationId: string,
   productId: string,
-  projectId?: string
+  projectId?: string,
+  resourceName?: string
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('integrationId', integrationId);
   url.searchParams.set('productId', productId);
+  url.searchParams.set('source', 'cli');
   if (projectId) {
     url.searchParams.set('projectId', projectId);
   }
+  if (resourceName) {
+    url.searchParams.set('defaultResourceName', resourceName);
+  }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.debug(`Opening URL: ${url.href}`);
   open(url.href);
 }
 
@@ -213,12 +272,9 @@ async function provisionResourceViaCLI(
   integration: Integration,
   installation: IntegrationInstallation,
   product: IntegrationProduct,
-  metadataWizard: MetadataWizard
+  metadataWizard: MetadataWizard,
+  name: string
 ) {
-  const name = await client.input.text({
-    message: 'What is the name of the resource?',
-  });
-
   const metadata = await metadataWizard.run(client);
 
   let billingPlans: BillingPlan[] | undefined;
@@ -267,7 +323,8 @@ async function provisionResourceViaCLI(
         teamId,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink?.project?.id,
+        name
       );
     }
 
@@ -309,29 +366,6 @@ async function provisionResourceViaCLI(
     output.error((error as Error).message);
     return 1;
   }
-}
-
-async function selectProduct(client: Client, integration: Integration) {
-  const products = integration.products;
-
-  if (!products?.length) {
-    return;
-  }
-
-  if (products.length === 1) {
-    return products[0];
-  }
-
-  const selected = await client.input.select({
-    message: 'Select a product',
-    choices: products.map(product => ({
-      description: product.shortDescription,
-      name: product.name,
-      value: product,
-    })),
-  });
-
-  return selected;
 }
 
 async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
@@ -505,8 +539,10 @@ function handleManualVerificationAction(
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('authorizationId', authorizationId);
+  url.searchParams.set('source', 'cli');
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.debug(`Opening URL: ${url.href}`);
   open(url.href);
 }
 
@@ -540,7 +576,7 @@ async function provisionStorageProduct(
   } finally {
     output.stopSpinner();
   }
-  output.log(`${product.name} successfully provisioned`);
+  output.log(`${product.name} successfully provisioned: ${chalk.bold(name)}`);
 
   const projectLink = await getOptionalLinkedProject(client);
 

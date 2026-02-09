@@ -18,7 +18,7 @@
       "mustContain": "{\"runtime\":\"nodejs\"}"
     },
     {
-      "path": "/_next/data/testing-build-id/dynamic/static.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/dynamic/static.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -28,7 +28,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/team-1/slug-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/team-1/slug-1.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -38,7 +38,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/dynamic/id-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/dynamic/id-1.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -48,7 +48,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/rewrite-to-site.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/rewrite-to-site.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": 1
@@ -89,7 +89,7 @@
       "mustContain": "About Page"
     },
     {
-      "path": "/_next/data/testing-build-id/after-file-rewrite.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/after-file-rewrite.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": "1"
@@ -97,7 +97,7 @@
       "mustContain": "page\":\"about\""
     },
     {
-      "path": "/_next/data/testing-build-id/after-file-rewrite-auto-static-dynamic.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/after-file-rewrite-auto-static-dynamic.json",
       "status": 200,
       "headers": {
         "x-nextjs-data": "1"
@@ -108,7 +108,7 @@
       "mustContain": "{}"
     },
     {
-      "path": "/_next/data/testing-build-id/redirect-me.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/redirect-me.json",
       "status": 307,
       "fetchOptions": {
         "redirect": "manual"
@@ -118,7 +118,7 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/_sites/subdomain-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/_sites/subdomain-1.json",
       "status": 200,
       "fetchOptions": {
         "redirect": "manual"

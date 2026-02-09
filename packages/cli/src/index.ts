@@ -78,7 +78,6 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
-import open from 'open';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -453,6 +452,14 @@ const main = async () => {
       });
       return 1;
     }
+  }
+
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  if (
+    typeof parsedArgs.flags['--token'] !== 'string' &&
+    process.env.VERCEL_TOKEN
+  ) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
   }
 
   if (
@@ -945,23 +952,19 @@ main()
               `v${pkg.version}`
             )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
           );
+          output.print(
+            `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
+          );
 
-          const action = await client.input.expand({
-            message: 'What would you like to do?',
-            default: 'u',
-            choices: [
-              { key: 'u', name: 'Upgrade now', value: 'upgrade' },
-              { key: 'c', name: 'View changelog', value: 'changelog' },
-              { key: 's', name: 'Skip', value: 'skip' },
-            ],
-          });
+          const shouldUpgrade = await client.input.confirm(
+            'Would you like to upgrade now?',
+            true
+          );
 
-          if (action === 'upgrade') {
+          if (shouldUpgrade) {
             const upgradeExitCode = await executeUpgrade();
             process.exitCode = upgradeExitCode;
             return;
-          } else if (action === 'changelog') {
-            await open(changelog);
           }
         } else {
           const errorMsg =

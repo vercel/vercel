@@ -221,6 +221,21 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  'aws-apg': {
+    id: 'aws-apg',
+    name: 'Aurora Postgres',
+    slug: 'aws-apg',
+    products: [
+      {
+        id: 'aws-apg-product',
+        name: 'Aurora Postgres',
+        slug: 'aws-apg',
+        type: 'storage',
+        shortDescription: 'Amazon Aurora PostgreSQL',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-external': {
     id: 'acme-external',
     name: 'Acme Integration External',
@@ -417,6 +432,20 @@ const integrationPlans: Record<string, unknown> = {
           },
         ],
         disabled: true,
+      },
+    ],
+  },
+  'aws-apg': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Aurora PostgreSQL Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
       },
     ],
   },

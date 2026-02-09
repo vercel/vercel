@@ -57,6 +57,7 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
+  pullEnv?: boolean;
 }
 
 export default async function setupAndLink(
@@ -69,6 +70,7 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
+    pullEnv = true,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -156,7 +158,8 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm
+      autoConfirm,
+      pullEnv
     );
     return { status: 'linked', org, project };
   }
