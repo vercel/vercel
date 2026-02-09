@@ -37,6 +37,7 @@ export async function sdkKeys(client: Client): Promise<number> {
   try {
     // Skip 'node', 'cli.js', 'flags', 'sdk-keys' to get the subcommand args
     parsedArgs = parseArguments(client.argv.slice(4), flagsSpecification, {
+      // eslint-disable-next-line no-restricted-syntax -- this is a routing file, not a leaf command
       permissive: true,
     });
   } catch (err) {
