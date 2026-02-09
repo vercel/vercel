@@ -23,6 +23,14 @@ export class FlagsSdkKeysTelemetryClient extends TelemetryClient {
   }
 }
 
+export class FlagsSdkKeysLsTelemetryClient extends TelemetryClient {
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
+}
+
 export class FlagsSdkKeysAddTelemetryClient extends TelemetryClient {
   trackCliOptionType(type: string | undefined) {
     if (type) {

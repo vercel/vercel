@@ -5,10 +5,98 @@ import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import { useFlags, defaultFlags } from '../../../mocks/flags';
+import { useFlags } from '../../../mocks/flags';
+import type { Flag } from '../../../../src/util/flags/types';
+
+// Helper to create fresh flag data for each test
+function createTestFlags(): Flag[] {
+  return [
+    {
+      id: 'flag_abc123',
+      slug: 'my-feature',
+      description: 'My awesome feature flag',
+      kind: 'boolean',
+      state: 'active',
+      variants: [
+        { id: 'off', value: false, label: 'Off' },
+        { id: 'on', value: true, label: 'On' },
+      ],
+      environments: {
+        production: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'off' },
+          pausedOutcome: { type: 'variant', variantId: 'off' },
+          rules: [],
+        },
+        preview: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'on' },
+          pausedOutcome: { type: 'variant', variantId: 'off' },
+          rules: [],
+        },
+        development: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'on' },
+          pausedOutcome: { type: 'variant', variantId: 'off' },
+          rules: [],
+        },
+      },
+      createdAt: Date.now() - 86400000,
+      updatedAt: Date.now() - 3600000,
+      createdBy: 'user_123',
+      projectId: 'vercel-flags-test',
+      ownerId: 'team_dummy',
+      revision: 1,
+      seed: 12345,
+      typeName: 'flag',
+    },
+    {
+      id: 'flag_def456',
+      slug: 'another-feature',
+      description: 'Another feature flag',
+      kind: 'string',
+      state: 'active',
+      variants: [
+        { id: 'default', value: 'control', label: 'Control' },
+        { id: 'variant-a', value: 'variant-a', label: 'Variant A' },
+      ],
+      environments: {
+        production: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'default' },
+          pausedOutcome: { type: 'variant', variantId: 'default' },
+          rules: [],
+        },
+        preview: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'default' },
+          pausedOutcome: { type: 'variant', variantId: 'default' },
+          rules: [],
+        },
+        development: {
+          active: true,
+          fallthrough: { type: 'variant', variantId: 'default' },
+          pausedOutcome: { type: 'variant', variantId: 'default' },
+          rules: [],
+        },
+      },
+      createdAt: Date.now() - 172800000,
+      updatedAt: Date.now() - 7200000,
+      createdBy: 'user_123',
+      projectId: 'vercel-flags-test',
+      ownerId: 'team_dummy',
+      revision: 2,
+      seed: 67890,
+      typeName: 'flag',
+    },
+  ];
+}
 
 describe('flags archive', () => {
+  let testFlags: Flag[];
+
   beforeEach(() => {
+    testFlags = createTestFlags();
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -16,7 +104,7 @@ describe('flags archive', () => {
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
     });
-    useFlags();
+    useFlags(testFlags);
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     client.cwd = cwd;
   });
@@ -40,7 +128,7 @@ describe('flags archive', () => {
   });
 
   it('tracks `archive` subcommand', async () => {
-    client.setArgv('flags', 'archive', defaultFlags[0].slug, '--yes');
+    client.setArgv('flags', 'archive', testFlags[0].slug, '--yes');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -60,7 +148,7 @@ describe('flags archive', () => {
   });
 
   it('archives a flag successfully with --yes', async () => {
-    client.setArgv('flags', 'archive', defaultFlags[0].slug, '--yes');
+    client.setArgv('flags', 'archive', testFlags[0].slug, '--yes');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
   });
@@ -79,16 +167,11 @@ describe('flags archive', () => {
   });
 
   it('warns when flag is already archived', async () => {
-    // Set flag to archived (mock uses defaultFlags reference)
-    const originalState = defaultFlags[0].state;
-    defaultFlags[0].state = 'archived';
+    testFlags[0].state = 'archived';
 
-    client.setArgv('flags', 'archive', defaultFlags[0].slug, '--yes');
+    client.setArgv('flags', 'archive', testFlags[0].slug, '--yes');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain('already archived');
-
-    // Restore original state for other tests
-    defaultFlags[0].state = originalState;
   });
 });

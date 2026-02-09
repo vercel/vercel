@@ -16,6 +16,13 @@ export const listSubcommand = {
       description: 'Filter flags by state (active or archived)',
       argument: 'STATE',
     },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
   ],
   examples: [
     {
@@ -25,6 +32,10 @@ export const listSubcommand = {
     {
       name: 'List archived flags',
       value: `${packageName} flags ls --state archived`,
+    },
+    {
+      name: 'List flags as JSON',
+      value: `${packageName} flags ls --json`,
     },
   ],
 } as const;
@@ -220,11 +231,23 @@ export const sdkKeysListSubcommand = {
   aliases: ['ls'],
   description: 'List all SDK keys for the current project',
   arguments: [],
-  options: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
   examples: [
     {
       name: 'List all SDK keys',
       value: `${packageName} flags sdk-keys ls`,
+    },
+    {
+      name: 'List SDK keys as JSON',
+      value: `${packageName} flags sdk-keys ls --json`,
     },
   ],
 } as const;
@@ -315,6 +338,8 @@ export const flagsCommand = {
   name: 'flags',
   aliases: [],
   description: 'Manage feature flags for a Vercel project',
+  // Hidden during initial rollout. Will be unhidden once the feature is
+  // generally available and public documentation is published.
   hidden: true,
   arguments: [],
   subcommands: [

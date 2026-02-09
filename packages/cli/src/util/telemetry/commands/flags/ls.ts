@@ -9,4 +9,10 @@ export class FlagsLsTelemetryClient extends TelemetryClient {
       });
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

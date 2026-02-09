@@ -37,8 +37,10 @@ export default async function ls(
 
   const { flags } = parsedArgs;
   const state = (flags['--state'] as 'active' | 'archived') || 'active';
+  const json = flags['--json'] as boolean | undefined;
 
   telemetryClient.trackCliOptionState(state);
+  telemetryClient.trackCliFlagJson(json);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -63,7 +65,12 @@ export default async function ls(
     const flagsList = await getFlags(client, project.id, state);
     output.stopSpinner();
 
-    if (flagsList.length === 0) {
+    // Sort by updatedAt descending (most recently updated first)
+    const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    if (json) {
+      outputJson(client, sortedFlags);
+    } else if (flagsList.length === 0) {
       output.log(
         `No ${state} feature flags found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
@@ -71,8 +78,6 @@ export default async function ls(
       output.log(
         `${plural('feature flag', flagsList.length, true)} found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
-      // Sort by updatedAt descending (most recently updated first)
-      const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
       printFlagsTable(sortedFlags);
     }
   } catch (err) {
@@ -82,6 +87,22 @@ export default async function ls(
   }
 
   return 0;
+}
+
+function outputJson(client: Client, flags: Flag[]) {
+  const jsonOutput = {
+    flags: flags.map(flag => ({
+      id: flag.id,
+      slug: flag.slug,
+      description: flag.description ?? null,
+      kind: flag.kind,
+      state: flag.state,
+      variants: flag.variants,
+      createdAt: flag.createdAt,
+      updatedAt: flag.updatedAt,
+    })),
+  };
+  client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }
 
 function printFlagsTable(flags: Flag[]) {

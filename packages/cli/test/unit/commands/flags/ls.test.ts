@@ -76,4 +76,41 @@ describe('flags ls', () => {
       ]);
     });
   });
+
+  describe('--json', () => {
+    it('outputs valid JSON with flag data', async () => {
+      client.setArgv('flags', 'ls', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const parsed = JSON.parse(output);
+
+      expect(parsed).toHaveProperty('flags');
+      expect(parsed.flags).toHaveLength(2);
+      expect(parsed.flags[0]).toHaveProperty('slug');
+      expect(parsed.flags[0]).toHaveProperty('kind');
+      expect(parsed.flags[0]).toHaveProperty('state');
+      expect(parsed.flags[0]).toHaveProperty('variants');
+    });
+
+    it('tracks telemetry for --json', async () => {
+      client.setArgv('flags', 'ls', '--json');
+      await flags(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:ls',
+          value: 'ls',
+        },
+        {
+          key: 'option:state',
+          value: 'active',
+        },
+        {
+          key: 'flag:json',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
 });

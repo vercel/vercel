@@ -9,6 +9,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getSdkKeys } from '../../util/flags/sdk-keys';
 import formatTable from '../../util/format-table';
 import output from '../../output-manager';
+import { FlagsSdkKeysLsTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
 import { sdkKeysListSubcommand } from './command';
 import type { SdkKey } from '../../util/flags/types';
 import { formatProject } from '../../util/projects/format-project';
@@ -17,15 +18,27 @@ export default async function sdkKeysLs(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  const telemetryClient = new FlagsSdkKeysLsTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(
     sdkKeysListSubcommand.options
   );
   try {
-    parseArguments(argv, flagsSpecification);
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;
   }
+
+  const { flags } = parsedArgs;
+  const json = flags['--json'] as boolean | undefined;
+
+  telemetryClient.trackCliFlagJson(json);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -48,7 +61,12 @@ export default async function sdkKeysLs(
     const keys = await getSdkKeys(client, project.id);
     output.stopSpinner();
 
-    if (keys.length === 0) {
+    // Sort by createdAt descending (most recently created first)
+    const sortedKeys = keys.sort((a, b) => b.createdAt - a.createdAt);
+
+    if (json) {
+      outputSdkKeysJson(client, sortedKeys);
+    } else if (keys.length === 0) {
       output.log(`No SDK keys found for ${projectSlugLink}`);
       output.log(
         `\nCreate one with: ${getCommandName('flags sdk-keys add --type server --environment production')}`
@@ -57,8 +75,6 @@ export default async function sdkKeysLs(
       output.log(
         `${chalk.bold(keys.length)} SDK key${keys.length === 1 ? '' : 's'} found for ${projectSlugLink}`
       );
-      // Sort by createdAt descending (most recently created first)
-      const sortedKeys = keys.sort((a, b) => b.createdAt - a.createdAt);
       printSdkKeysTable(sortedKeys);
     }
   } catch (err) {
@@ -68,6 +84,20 @@ export default async function sdkKeysLs(
   }
 
   return 0;
+}
+
+function outputSdkKeysJson(client: Client, keys: SdkKey[]) {
+  const jsonOutput = {
+    sdkKeys: keys.map(key => ({
+      hashKey: key.hashKey,
+      type: key.type,
+      environment: key.environment,
+      label: key.label ?? null,
+      createdAt: key.createdAt,
+      updatedAt: key.updatedAt,
+    })),
+  };
+  client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }
 
 function printSdkKeysTable(keys: SdkKey[]) {

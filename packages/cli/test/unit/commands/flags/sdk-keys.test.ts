@@ -69,6 +69,43 @@ describe('flags sdk-keys', () => {
       const exitCode = await flags(client);
       expect(exitCode).toEqual(0);
     });
+
+    describe('--json', () => {
+      it('outputs valid JSON with SDK key data', async () => {
+        client.setArgv('flags', 'sdk-keys', 'ls', '--json');
+        const exitCode = await flags(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const parsed = JSON.parse(output);
+
+        expect(parsed).toHaveProperty('sdkKeys');
+        expect(parsed.sdkKeys).toHaveLength(2);
+        expect(parsed.sdkKeys[0]).toHaveProperty('hashKey');
+        expect(parsed.sdkKeys[0]).toHaveProperty('type');
+        expect(parsed.sdkKeys[0]).toHaveProperty('environment');
+        expect(parsed.sdkKeys[0]).toHaveProperty('createdAt');
+      });
+
+      it('tracks telemetry for --json', async () => {
+        client.setArgv('flags', 'sdk-keys', 'ls', '--json');
+        await flags(client);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:sdk-keys',
+            value: 'sdk-keys',
+          },
+          {
+            key: 'subcommand:ls',
+            value: 'ls',
+          },
+          {
+            key: 'flag:json',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
   });
 
   describe('add', () => {
