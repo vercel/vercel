@@ -9,6 +9,7 @@ import { transform } from 'oxc-transform';
 export const nft = async (
   args: Pick<BuildOptions, 'workPath' | 'repoRootPath'> & {
     ignoreNodeModules: boolean;
+    ignore?: string | string[] | undefined;
     localBuildFiles: Set<string>;
     files: Files;
     span: Span;
@@ -18,15 +19,21 @@ export const nft = async (
   const nftSpan = args.span.child('vc.builder.backends.nft');
 
   const runNft = async () => {
+    const ignorePatterns = [
+      ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
+      ...(args.ignore
+        ? Array.isArray(args.ignore)
+          ? args.ignore
+          : [args.ignore]
+        : []),
+    ];
     const nftResult = await nodeFileTrace(Array.from(args.localBuildFiles), {
       base: args.repoRootPath,
       processCwd: args.workPath,
       ts: true,
       mixedModules: true,
       conditions: args.conditions,
-      ignore: args.ignoreNodeModules
-        ? path => path.includes('node_modules')
-        : undefined,
+      ignore: ignorePatterns.length > 0 ? ignorePatterns : undefined,
       async readFile(fsPath) {
         try {
           let source: string | Buffer = await readFile(fsPath);

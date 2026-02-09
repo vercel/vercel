@@ -68,6 +68,20 @@ export const build: BuildV2 = async args => {
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
+    const functionConfig = args.config.functions?.[entrypoint];
+    if (functionConfig) {
+      const normalizeArray = (value: any) =>
+        Array.isArray(value) ? value : value ? [value] : [];
+      args.config.includeFiles = [
+        ...normalizeArray(args.config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      args.config.excludeFiles = [
+        ...normalizeArray(args.config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
+
     // Always run rolldown, even if the user has provided a build command
     // It's very fast and we use it for introspection.
     const rolldownResult = await rolldown({
@@ -104,9 +118,25 @@ export const build: BuildV2 = async args => {
       localBuildFiles,
       files,
       ignoreNodeModules: false,
+      ignore: args.config.excludeFiles,
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    // Add includeFiles from vercel.json functions config to lambda files
+    const includeFiles = args.config.includeFiles
+      ? Array.isArray(args.config.includeFiles)
+        ? args.config.includeFiles
+        : [args.config.includeFiles]
+      : [];
+    const baseDir = args.repoRootPath || args.workPath;
+    for (const pattern of includeFiles) {
+      const matched = await glob(pattern, baseDir);
+      for (const [relPath, entry] of Object.entries(matched)) {
+        files[relPath] = entry;
+      }
+    }
+
     const introspectionResult = await introspectionPromise;
     await typescriptPromise;
 

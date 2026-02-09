@@ -14,7 +14,10 @@ const PLUGIN_NAME = 'vercel:backends';
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
 
 export const rolldown = async (
-  args: Pick<BuildOptions, 'entrypoint' | 'workPath' | 'repoRootPath'> & {
+  args: Pick<
+    BuildOptions,
+    'entrypoint' | 'workPath' | 'repoRootPath' | 'config'
+  > & {
     span?: Span;
   }
 ) => {
@@ -76,7 +79,7 @@ export const rolldown = async (
       try {
         const importResult = resolveExports(pkgJson, subpath, {
           require: false,
-          conditions: ['node', 'import'],
+          conditions: ['bun', 'node', 'import'],
         });
         if (
           importResult?.some(
@@ -88,7 +91,7 @@ export const rolldown = async (
 
         const requireResult = resolveExports(pkgJson, subpath, {
           require: true,
-          conditions: ['node', 'require'],
+          conditions: ['bun', 'node', 'require'],
         });
         if (
           requireResult?.some(
@@ -304,6 +307,7 @@ module.exports = requireFromContext('${pkgName}');
     files,
     span: rolldownSpan ?? new Span({ name: 'vc.builder.backends.nft' }),
     ignoreNodeModules: true,
+    ignore: args.config.excludeFiles,
   });
 
   if (!handler) {
