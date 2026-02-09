@@ -1455,6 +1455,25 @@ function normalizeServiceRoutePrefix(routePrefix: string): string {
   return prefix;
 }
 
+/**
+ * Build a synthetic `entrypoint` key used only when merging builder route tables
+ * in services mode.
+ *
+ * `mergeRoutes()` sorts builder routes by `entrypoint` lexicographically. If we
+ * used the real build src (file paths), ordering would be unrelated to URL
+ * specificity. In services mode we instead want more specific prefixes (longer
+ * routePrefix) to win before broader ones.
+ *
+ * So we create the following key for merge ordering:
+ *   `svc:${sortKey}:${normalizedPrefix}:${serviceName}:${buildSrc}`
+ *
+ * Example:
+ *   "/api/fastapi" (len 12) -> "svc:09988:/api/fastapi:fastapi-api:services/fastapi-api/main.py"
+ *   "/api"         (len 4)  -> "svc:09996:/api:api:services/api/index.ts"
+ *
+ * This key is only for merge ordering. It does not change build entrypoints,
+ * output paths, or routing destinations.
+ */
 function getServicesMergeEntrypoint(
   service: Service,
   buildSrc: string
@@ -1462,13 +1481,6 @@ function getServicesMergeEntrypoint(
   const routePrefix =
     typeof service.routePrefix === 'string' ? service.routePrefix : '/';
   const normalized = normalizeServiceRoutePrefix(routePrefix);
-  // Why a synthetic entrypoint?
-  // `mergeRoutes()` sorts builder routes by `entrypoint` lexicographically (ascending),
-  // which is fine for single-builder projects. In services mode we need a stable,
-  // deterministic precedence by routePrefix specificity (longest first) so more
-  // specific services win over broader ones.
-  //
-  // Encode prefix specificity into the sort key by sorting on (10000 - len).
   const sortKey = String(10000 - normalized.length).padStart(5, '0');
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
 }
