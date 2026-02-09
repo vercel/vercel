@@ -10,9 +10,9 @@
 ### Functions
 
 - [getContext](README.md#getcontext)
-- [getVercelToken](README.md#getvercelclitoken)
 - [getVercelOidcToken](README.md#getverceloidctoken)
 - [getVercelOidcTokenSync](README.md#getverceloidctokensync)
+- [getVercelToken](README.md#getverceltoken)
 
 ## Functions
 
@@ -27,26 +27,6 @@
 #### Defined in
 
 [packages/oidc/src/get-context.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-context.ts#L7)
-
----
-
-### getVercelToken
-
-▸ **getVercelToken**(`options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
-
-#### Parameters
-
-| Name       | Type                    |
-| :--------- | :---------------------- |
-| `options?` | `GetVercelTokenOptions` |
-
-#### Returns
-
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
-
-#### Defined in
-
-[packages/oidc/src/token-util.ts:35](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L35)
 
 ---
 
@@ -86,7 +66,7 @@ getVercelOidcToken()
 
 ```js
 // Using the OIDC token with explicit team and project
-getVercelOidcToken({ teamId: 'team_abc', projectId: 'prj_xyz' })
+getVercelOidcToken({ team: 'my-team', project: 'prj_xyz' })
   .then(token => {
     console.log('OIDC Token:', token);
   })
@@ -109,7 +89,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[packages/oidc/src/get-vercel-oidc-token.ts:64](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L64)
+[packages/oidc/src/get-vercel-oidc-token.ts:65](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L65)
 
 ---
 
@@ -146,4 +126,24 @@ The OIDC token.
 
 #### Defined in
 
-[packages/oidc/src/get-vercel-oidc-token.ts:124](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L124)
+[packages/oidc/src/get-vercel-oidc-token.ts:125](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L125)
+
+---
+
+### getVercelToken
+
+▸ **getVercelToken**(`options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+
+#### Parameters
+
+| Name       | Type                    |
+| :--------- | :---------------------- |
+| `options?` | `GetVercelTokenOptions` |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+
+#### Defined in
+
+[packages/oidc/src/token-util.ts:35](https://github.com/vercel/vercel/blob/main/packages/oidc/src/token-util.ts#L35)
