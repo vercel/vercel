@@ -11,13 +11,11 @@ import {
 
 type Choice = { name: string; value: Org };
 
-export type SelectOrgResult = Org;
-
 export default async function selectOrg(
   client: Client,
   question: string,
   autoConfirm?: boolean
-): Promise<SelectOrgResult> {
+): Promise<Org> {
   const {
     config: { currentTeam },
   } = client;

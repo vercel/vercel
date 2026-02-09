@@ -53,8 +53,8 @@ export default async function disconnect(client: Client, argv: string[]) {
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
-  const { org, project } = linkedProject;
 
+  const { org, project } = linkedProject;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (project.link) {

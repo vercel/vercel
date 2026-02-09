@@ -18,7 +18,6 @@ import type {
   CustomEnvironmentBranchMatcher,
   CustomEnvironmentType,
   Project,
-  ProjectLinked,
 } from '@vercel-internals/types';
 
 function formatBranchMatcher(
@@ -94,20 +93,17 @@ export default async function list(client: Client, argv: string[]) {
   }
 
   const start = Date.now();
-  const projectSlugLink = formatProject(
-    (link as ProjectLinked).org.slug,
-    (link as ProjectLinked).project.name
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
 
   const url = `/projects/${encodeURIComponent(
-    (link as ProjectLinked).project.id
+    link.project.id
   )}/custom-environments`;
 
   let { environments: result } = (await client.fetch(url, {
     method: 'GET',
-    accountId: (link as ProjectLinked).org.id,
+    accountId: link.org.id,
   })) as {
     environments: CustomEnvironment[];
   };
@@ -146,15 +142,8 @@ export default async function list(client: Client, argv: string[]) {
         ...result.flatMap(target => {
           return [
             [
-              formatEnvironment(
-                (link as ProjectLinked).org.slug,
-                (link as ProjectLinked).project.name,
-                target
-              ),
-              BRANCH_TRACKING_MAP[target.type](
-                (link as ProjectLinked).project,
-                target
-              ),
+              formatEnvironment(link.org.slug, link.project.name, target),
+              BRANCH_TRACKING_MAP[target.type](link.project, target),
               TYPE_MAP[target.type],
               chalk.gray(
                 target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
