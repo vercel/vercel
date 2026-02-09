@@ -17,6 +17,16 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 
+function normalizeRoutePrefix(routePrefix: string): string {
+  let normalized = routePrefix.startsWith('/')
+    ? routePrefix
+    : `/${routePrefix}`;
+  if (normalized !== '/' && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized || '/';
+}
+
 /**
  * Validate a service configuration from vercel.json experimentalServices.
  */
@@ -217,6 +227,7 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
 } {
   const resolved: ResolvedService[] = [];
   const errors: ServiceDetectionError[] = [];
+  const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
     const serviceConfig = services[name];
@@ -228,6 +239,23 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
     }
 
     const service = resolveConfiguredService(name, serviceConfig);
+
+    if (service.type === 'web' && typeof service.routePrefix === 'string') {
+      const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
+      const existingServiceName = webServicesByRoutePrefix.get(
+        normalizedRoutePrefix
+      );
+      if (existingServiceName) {
+        errors.push({
+          code: 'DUPLICATE_ROUTE_PREFIX',
+          message: `Web services "${existingServiceName}" and "${name}" cannot share routePrefix "${normalizedRoutePrefix}".`,
+          serviceName: name,
+        });
+        continue;
+      }
+      webServicesByRoutePrefix.set(normalizedRoutePrefix, name);
+    }
+
     resolved.push(service);
   }
 

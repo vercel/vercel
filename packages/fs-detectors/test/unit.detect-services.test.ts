@@ -285,6 +285,53 @@ describe('detectServices', () => {
       expect(result.errors[0].code).toBe('MISSING_ROUTE_PREFIX');
       expect(result.errors[0].serviceName).toBe('api');
     });
+
+    it('should error when two web services share normalized routePrefix', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.ts',
+              routePrefix: '/api',
+            },
+            'api-trailing': {
+              entrypoint: 'api/alt.ts',
+              routePrefix: '/api/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'DUPLICATE_ROUTE_PREFIX',
+        serviceName: 'api-trailing',
+      });
+    });
+
+    it('should allow nested web routePrefix values', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.ts',
+              routePrefix: '/api',
+            },
+            fastapi: {
+              framework: 'fastapi',
+              entrypoint: 'api/fastapi/main.py',
+              routePrefix: '/api/fastapi',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(2);
+      expect(result.errors).toEqual([]);
+    });
   });
 
   describe('cron services', () => {

@@ -43,6 +43,7 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  isRouteOwningBuilder,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -59,6 +60,7 @@ import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { scrubArgv } from '../../util/build/scrub-argv';
+import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
@@ -975,6 +977,21 @@ async function doBuild(
             output.error(`Failed to read routes.json: ${error}`);
           }
         }
+      }
+
+      if (
+        hasDetectedServices &&
+        service &&
+        isRouteOwningBuilder(service) &&
+        'routes' in buildResult &&
+        Array.isArray(buildResult.routes) &&
+        detectedServices
+      ) {
+        buildResult.routes = scopeRoutesToServiceOwnership({
+          routes: buildResult.routes as Route[],
+          owner: service,
+          allServices: detectedServices,
+        });
       }
 
       // Store the build result to generate the final `config.json` after
