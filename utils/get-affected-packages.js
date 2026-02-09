@@ -163,7 +163,7 @@ function shouldRunAllE2ETests(changedFiles) {
   // Infrastructure files that affect e2e tests across packages
   const infrastructurePatterns = [
     /^\.github\/workflows\//, // CI workflow changes
-    /^turbo\.json$/, // Turbo config changes
+    /^turbo\.jsonc$/, // Turbo config changes
     /^package\.json$/, // Root package.json changes
     /^pnpm-lock\.yaml$/, // Dependency changes
     /^utils\/.*\.js$/, // Build/test utility changes
