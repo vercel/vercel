@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'path';
-import { remove } from 'fs-extra';
+import { remove, outputJSON, mkdirp } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
 import {
@@ -15,58 +15,101 @@ import { isWindows } from '../../../helpers/is-windows';
 // these tests can take upwards of 190s on macos-latest
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
+/**
+ * Creates an isolated cwd with stub @vercel/node and @vercel/next that have
+ * package.json (so resolution finds them in "project's node_modules") but no
+ * dist/, so require(main) fails. Reproduces CI where peer deps are not built.
+ */
+async function createIsolatedCwdWithUnbuiltBuilders(): Promise<string> {
+  const cwd = await getWriteableDirectory();
+  const nodeDir = join(cwd, 'node_modules', '@vercel', 'node');
+  const nextDir = join(cwd, 'node_modules', '@vercel', 'next');
+  await mkdirp(nodeDir);
+  await mkdirp(nextDir);
+  await outputJSON(join(nodeDir, 'package.json'), {
+    name: '@vercel/node',
+    version: vercelNodePkg.version,
+    main: './dist/index',
+  });
+  await outputJSON(join(nextDir, 'package.json'), {
+    name: '@vercel/next',
+    version: vercelNextPkg.version,
+    main: './dist/index',
+  });
+  return cwd;
+}
+
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
-    const specs = new Set(['@vercel/node', '@vercel/next']);
-    const builders = await importBuilders(specs, process.cwd());
-    expect(builders.size).toEqual(2);
-    // Check package name matches (version may differ between local workspace and npm)
-    expect(builders.get('@vercel/node')?.pkg.name).toEqual(vercelNodePkg.name);
-    expect(builders.get('@vercel/next')?.pkg.name).toEqual(vercelNextPkg.name);
-    expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
-      'function'
-    );
-    expect(typeof builders.get('@vercel/next')?.builder.build).toEqual(
-      'function'
-    );
+    const cwd = await createIsolatedCwdWithUnbuiltBuilders();
+    try {
+      const specs = new Set(['@vercel/node', '@vercel/next']);
+      const builders = await importBuilders(specs, cwd);
+      expect(builders.size).toEqual(2);
+      // Check package name matches (version may differ between local workspace and npm)
+      expect(builders.get('@vercel/node')?.pkg.name).toEqual(
+        vercelNodePkg.name
+      );
+      expect(builders.get('@vercel/next')?.pkg.name).toEqual(
+        vercelNextPkg.name
+      );
+      expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
+        'function'
+      );
+      expect(typeof builders.get('@vercel/next')?.builder.build).toEqual(
+        'function'
+      );
+    } finally {
+      await remove(cwd);
+    }
   });
 
   it('should import built-in Builders using `@latest`', async () => {
-    const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
-    const builders = await importBuilders(specs, process.cwd());
-    expect(builders.size).toEqual(2);
-    // Check package name matches (version may differ between local workspace and npm)
-    expect(builders.get('@vercel/node@latest')?.pkg.name).toEqual(
-      vercelNodePkg.name
-    );
-    expect(builders.get('@vercel/next@latest')?.pkg.name).toEqual(
-      vercelNextPkg.name
-    );
-    expect(typeof builders.get('@vercel/node@latest')?.builder.build).toEqual(
-      'function'
-    );
-    expect(typeof builders.get('@vercel/next@latest')?.builder.build).toEqual(
-      'function'
-    );
+    const cwd = await createIsolatedCwdWithUnbuiltBuilders();
+    try {
+      const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
+      const builders = await importBuilders(specs, cwd);
+      expect(builders.size).toEqual(2);
+      // Check package name matches (version may differ between local workspace and npm)
+      expect(builders.get('@vercel/node@latest')?.pkg.name).toEqual(
+        vercelNodePkg.name
+      );
+      expect(builders.get('@vercel/next@latest')?.pkg.name).toEqual(
+        vercelNextPkg.name
+      );
+      expect(typeof builders.get('@vercel/node@latest')?.builder.build).toEqual(
+        'function'
+      );
+      expect(typeof builders.get('@vercel/next@latest')?.builder.build).toEqual(
+        'function'
+      );
+    } finally {
+      await remove(cwd);
+    }
   });
 
   it('should import built-in Builders using `@canary`', async () => {
-    const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
-    const builders = await importBuilders(specs, process.cwd());
-    expect(builders.size).toEqual(2);
-    // Check package name matches (version may differ between local workspace and npm)
-    expect(builders.get('@vercel/node@canary')?.pkg.name).toEqual(
-      vercelNodePkg.name
-    );
-    expect(builders.get('@vercel/next@canary')?.pkg.name).toEqual(
-      vercelNextPkg.name
-    );
-    expect(typeof builders.get('@vercel/node@canary')?.builder.build).toEqual(
-      'function'
-    );
-    expect(typeof builders.get('@vercel/next@canary')?.builder.build).toEqual(
-      'function'
-    );
+    const cwd = await createIsolatedCwdWithUnbuiltBuilders();
+    try {
+      const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
+      const builders = await importBuilders(specs, cwd);
+      expect(builders.size).toEqual(2);
+      // Check package name matches (version may differ between local workspace and npm)
+      expect(builders.get('@vercel/node@canary')?.pkg.name).toEqual(
+        vercelNodePkg.name
+      );
+      expect(builders.get('@vercel/next@canary')?.pkg.name).toEqual(
+        vercelNextPkg.name
+      );
+      expect(typeof builders.get('@vercel/node@canary')?.builder.build).toEqual(
+        'function'
+      );
+      expect(typeof builders.get('@vercel/next@canary')?.builder.build).toEqual(
+        'function'
+      );
+    } finally {
+      await remove(cwd);
+    }
   });
 
   // this test creates symlinks which require admin by default on Windows
