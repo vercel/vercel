@@ -95,6 +95,32 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const discoverSubcommand = {
+  name: 'discover',
+  aliases: [],
+  description: 'Discover available marketplace integrations',
+  arguments: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Discover marketplace integrations',
+      value: [`${packageName} integration discover`],
+    },
+    {
+      name: 'Discover marketplace integrations as JSON',
+      value: [`${packageName} integration discover --json`],
+    },
+  ],
+} as const;
+
 export const balanceSubcommand = {
   name: 'balance',
   aliases: [],
@@ -155,6 +181,7 @@ export const integrationCommand = {
   subcommands: [
     addSubcommand,
     listSubcommand,
+    discoverSubcommand,
     openSubcommand,
     removeSubcommand,
   ],
