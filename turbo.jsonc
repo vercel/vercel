@@ -1,3 +1,4 @@
+// cache counter: 1
 {
   "$schema": "https://turborepo.org/schema.json",
   "globalDependencies": [
@@ -9,63 +10,96 @@
   "envMode": "loose",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "outputLogs": "new-only",
-      "outputs": ["dist/**"]
+      "outputs": [
+        "dist/**"
+      ]
     },
     "vitest-unit": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "vitest-unit-node-24": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "vitest-run": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "vitest-e2e": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "vitest-e2e-node-20": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test-e2e-node-all-versions": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test-unit": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test-dev": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test-cli": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test-e2e": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test-next-local": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "outputLogs": "new-only"
     },
     "type-check": {
-      "dependsOn": ["source", "^build"]
+      "dependsOn": [
+        "source",
+        "^build"
+      ]
     },
     "source": {
-      "dependsOn": ["^source"]
+      "dependsOn": [
+        "^source"
+      ]
     }
   }
 }
