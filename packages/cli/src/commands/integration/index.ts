@@ -38,8 +38,9 @@ export default async function main(client: Client) {
       store: client.telemetryEventStore,
     },
   });
+  const rawArgs = client.argv.slice(2);
   const { args, flags } = parseArguments(
-    client.argv.slice(2),
+    rawArgs,
     getFlagsSpecification(integrationCommand.options),
     { permissive: true }
   );
@@ -49,7 +50,9 @@ export default async function main(client: Client) {
     args: subArgs,
   } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
-  const needHelp = flags['--help'];
+  const needHelp = Boolean(
+    flags['--help'] || rawArgs.includes('--help') || rawArgs.includes('-h')
+  );
 
   function printHelp(command: Command) {
     output.print(
