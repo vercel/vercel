@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import { useIntegrationDiscover } from '../../../mocks/integration';
@@ -23,11 +23,8 @@ describe('integration', () => {
       });
     });
 
-    beforeEach(() => {
-      useIntegrationDiscover();
-    });
-
     it('returns formatted json output', async () => {
+      useIntegrationDiscover();
       client.setArgv('integration', 'discover', '--json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
@@ -47,18 +44,18 @@ describe('integration', () => {
     });
 
     it('returns a human-readable table by default', async () => {
+      useIntegrationDiscover();
       client.setArgv('integration', 'discover');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
-      await expect(client.stderr).toOutput(
-        '> Available marketplace integrations:'
-      );
-      await expect(client.stderr).toOutput('Neon (neon)');
-      await expect(client.stderr).toOutput(
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Available marketplace integrations:');
+      expect(stderr).toContain('Neon (neon)');
+      expect(stderr).toContain(
         'Description: Serverless Postgres with branching'
       );
-      await expect(client.stderr).toOutput('Products: Postgres');
+      expect(stderr).toContain('Products: Postgres');
     });
 
     it('continues when categories endpoint fails', async () => {
@@ -67,7 +64,8 @@ describe('integration', () => {
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
-      await expect(client.stderr).toOutput(
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
         'WARN! Failed to fetch integration categories. Continuing without categories: Response Error (404)'
       );
 
@@ -91,18 +89,21 @@ describe('integration', () => {
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
 
-      await expect(client.stderr).toOutput(
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
         'Error: Failed to fetch marketplace integrations: Response Error (500)'
       );
     });
 
     it('accepts global debug flag before command', async () => {
+      useIntegrationDiscover();
       client.setArgv('--debug', 'integration', 'discover', '--json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
     });
 
     it('tracks telemetry for subcommand and --json', async () => {
+      useIntegrationDiscover();
       client.setArgv('integration', 'discover', '--json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
