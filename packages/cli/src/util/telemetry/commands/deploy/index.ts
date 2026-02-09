@@ -144,4 +144,13 @@ export class DeployTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackDeploymentId(id: string | undefined) {
+    if (id) {
+      this.trackCommandOutput({
+        key: 'deployment-id',
+        value: id,
+      });
+    }
+  }
 }
