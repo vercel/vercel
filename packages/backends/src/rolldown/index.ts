@@ -79,7 +79,7 @@ export const rolldown = async (
       try {
         const importResult = resolveExports(pkgJson, subpath, {
           require: false,
-          conditions: ['bun', 'node', 'import'],
+          conditions: ['node', 'import'],
         });
         if (
           importResult?.some(
@@ -91,7 +91,7 @@ export const rolldown = async (
 
         const requireResult = resolveExports(pkgJson, subpath, {
           require: true,
-          conditions: ['bun', 'node', 'require'],
+          conditions: ['node', 'require'],
         });
         if (
           requireResult?.some(
@@ -128,6 +128,10 @@ export const rolldown = async (
     return builtinModules.includes(normalizedId);
   };
 
+  const isBunBuiltin = (id: string) => {
+    return id === 'bun' || id.startsWith('bun:');
+  };
+
   const isLocalImport = (id: string) => {
     return !id.startsWith('node:') && !id.includes('node_modules');
   };
@@ -151,6 +155,11 @@ export const rolldown = async (
               id: id.startsWith('node:') ? id : `node:${id}`,
               external: true,
             };
+          }
+
+          // Handle bun builtins (e.g. `bun`, `bun:sqlite`, `bun:ffi`)
+          if (isBunBuiltin(id)) {
+            return { id, external: true };
           }
 
           // Track local files for NFT
