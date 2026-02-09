@@ -70,8 +70,6 @@ export const build: BuildV2 = async args => {
 
     const functionConfig = args.config.functions?.[entrypoint];
     if (functionConfig) {
-      const normalizeArray = (value: any) =>
-        Array.isArray(value) ? value : value ? [value] : [];
       args.config.includeFiles = [
         ...normalizeArray(args.config.includeFiles),
         ...normalizeArray(functionConfig.includeFiles),
@@ -123,15 +121,13 @@ export const build: BuildV2 = async args => {
       span: buildSpan,
     });
 
-    // Add includeFiles from vercel.json functions config to lambda files
-    const includeFiles = args.config.includeFiles
-      ? Array.isArray(args.config.includeFiles)
-        ? args.config.includeFiles
-        : [args.config.includeFiles]
-      : [];
     const baseDir = args.repoRootPath || args.workPath;
-    for (const pattern of includeFiles) {
-      const matched = await glob(pattern, baseDir);
+    const includeResults = await Promise.all(
+      normalizeArray(args.config.includeFiles).map(pattern =>
+        glob(pattern, baseDir)
+      )
+    );
+    for (const matched of includeResults) {
       for (const [relPath, entry] of Object.entries(matched)) {
         files[relPath] = entry;
       }
@@ -186,3 +182,6 @@ export const build: BuildV2 = async args => {
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+const normalizeArray = (value: any) =>
+  Array.isArray(value) ? value : value ? [value] : [];
