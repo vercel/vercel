@@ -166,7 +166,7 @@ export async function getDeploymentUrlAndToken(
     return link;
   }
 
-  const { project } = link as ProjectLinked;
+  const { project } = link;
 
   const linkedProject = await getLinkedProject(client, client.cwd);
 

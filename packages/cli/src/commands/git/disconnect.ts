@@ -10,7 +10,6 @@ import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
-import type { ProjectLinked } from '@vercel-internals/types';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;
@@ -54,7 +53,7 @@ export default async function disconnect(client: Client, argv: string[]) {
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
-  const { org, project } = linkedProject as ProjectLinked;
+  const { org, project } = linkedProject;
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 

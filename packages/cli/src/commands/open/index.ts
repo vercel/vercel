@@ -8,7 +8,6 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { OpenTelemetryClient } from '../../util/telemetry/commands/open';
-import type { ProjectLinked } from '@vercel-internals/types';
 
 export default async function openCommandHandler(
   client: Client
@@ -60,7 +59,7 @@ export default async function openCommandHandler(
     return 1;
   }
 
-  const { org, project } = link as ProjectLinked;
+  const { org, project } = link;
   const projectUrl = `https://vercel.com/${org.slug}/${project.name}`;
 
   output.log(`Opening ${projectUrl} in your browser...`);

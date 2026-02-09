@@ -48,6 +48,7 @@ export default async function dev(
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
     });
+
     if (link.status === 'not_linked') {
       // User aborted project linking questions
       return 0;
