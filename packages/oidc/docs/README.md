@@ -10,7 +10,7 @@
 ### Functions
 
 - [getContext](README.md#getcontext)
-- [getVercelCliToken](README.md#getvercelclitoken)
+- [getVercelToken](README.md#getvercelclitoken)
 - [getVercelOidcToken](README.md#getverceloidctoken)
 - [getVercelOidcTokenSync](README.md#getverceloidctokensync)
 
@@ -30,15 +30,15 @@
 
 ---
 
-### getVercelCliToken
+### getVercelToken
 
-▸ **getVercelCliToken**(`options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+▸ **getVercelToken**(`options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
 
 #### Parameters
 
-| Name       | Type                       |
-| :--------- | :------------------------- |
-| `options?` | `GetVercelCliTokenOptions` |
+| Name       | Type                    |
+| :--------- | :---------------------- |
+| `options?` | `GetVercelTokenOptions` |
 
 #### Returns
 

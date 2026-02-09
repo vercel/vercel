@@ -2,7 +2,7 @@ import { VercelOidcTokenError } from './token-error';
 import {
   findProjectInfo,
   getTokenPayload,
-  getVercelCliToken,
+  getVercelToken,
   getVercelOidcToken,
   isExpired,
   loadToken,
@@ -60,7 +60,7 @@ export async function refreshToken(
     !maybeToken ||
     isExpired(getTokenPayload(maybeToken.token), options?.expirationBufferMs)
   ) {
-    const authToken = await getVercelCliToken({
+    const authToken = await getVercelToken({
       expirationBufferMs: options?.expirationBufferMs,
     });
 

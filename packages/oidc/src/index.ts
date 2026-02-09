@@ -7,4 +7,4 @@ export {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
-export { getVercelCliToken } from './token-util';
+export { getVercelToken } from './token-util';
