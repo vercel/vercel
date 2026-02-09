@@ -6,11 +6,20 @@ export class IntegrationAddTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addSubcommand>
 {
-  trackCliArgumentName(v: string | undefined, known?: boolean) {
+  trackCliArgumentIntegration(v: string | undefined, known?: boolean) {
     if (v) {
       this.trackCliArgument({
-        arg: 'name',
+        arg: 'integration',
         value: known ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionName(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'name',
+        value: this.redactedValue,
       });
     }
   }

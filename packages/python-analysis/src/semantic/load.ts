@@ -1,11 +1,9 @@
 /**
- * CommonJS-compatible wrapper around the WASM compilation output of
+ * ES module wrapper around the WASM compilation output of
  * the Rust-based analyzer.
- *
- * Uses dynamic import() to load ESM modules. When running in Jest,
- * requires NODE_OPTIONS='--experimental-vm-modules' to be set.
  */
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
 type ModuleType = typeof import('#wasm/vercel_python_analysis.js');
@@ -21,6 +19,7 @@ let wasmLoadPromise: Promise<RootType> | null = null;
 let wasmDir: string | null = null;
 function getWasmDir(): string {
   if (wasmDir === null) {
+    const require = createRequire(import.meta.url);
     const wasmModulePath = require.resolve(WASM_MODULE_PATH);
     wasmDir = dirname(wasmModulePath);
   }

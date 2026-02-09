@@ -8,7 +8,6 @@ import {
   Meta,
   debug,
   glob,
-  readConfigFile,
   traverseUpDirectories,
 } from '@vercel/build-utils';
 import { getVenvPythonBin, findDir } from './utils';
@@ -256,35 +255,6 @@ interface EnsureUvProjectParams {
   uv: UvRunner;
   venvPath: string;
   meta: Meta;
-  runtimeDependencies: string[];
-}
-
-function getDependencyName(spec: string): string {
-  const match = spec.match(/^[A-Za-z0-9_.-]+/);
-  return match ? match[0].toLowerCase() : spec.toLowerCase();
-}
-
-async function filterMissingRuntimeDependencies({
-  pyprojectPath,
-  runtimeDependencies,
-}: {
-  pyprojectPath: string;
-  runtimeDependencies: string[];
-}): Promise<string[]> {
-  let declared: string[] = [];
-  try {
-    const config = await readConfigFile<{
-      project?: { dependencies?: string[] };
-    }>(pyprojectPath);
-    declared = config?.project?.dependencies || [];
-  } catch (err) {
-    debug('Failed to parse pyproject.toml when filtering runtime deps', err);
-  }
-  const declaredNames = new Set(declared.map(getDependencyName));
-  return runtimeDependencies.filter(spec => {
-    const name = getDependencyName(spec);
-    return !declaredNames.has(name);
-  });
 }
 
 function findUvLockUpwards(
@@ -318,7 +288,6 @@ export async function ensureUvProject({
   uv,
   venvPath,
   meta,
-  runtimeDependencies,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
   const uvPath = uv.getPath();
 
@@ -433,20 +402,6 @@ export async function ensureUvProject({
       pythonVersion,
     });
     await uv.lock(projectDir);
-  }
-
-  if (runtimeDependencies.length) {
-    const missingRuntimeDeps = await filterMissingRuntimeDependencies({
-      pyprojectPath,
-      runtimeDependencies,
-    });
-    if (missingRuntimeDeps.length) {
-      await uv.addDependencies({
-        venvPath,
-        projectDir,
-        dependencies: missingRuntimeDeps,
-      });
-    }
   }
 
   // Re-resolve lockfile in case earlier operations (uv add/lock) wrote it at a

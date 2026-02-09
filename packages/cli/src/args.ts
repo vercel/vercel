@@ -37,6 +37,7 @@ export const help = () => `
     ${chalk.dim('Advanced')}
 
       alias                [cmd]       Manages your domain aliases
+      api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
       bisect                           Use binary search to find the deployment that introduced a bug
       certs                [cmd]       Manages your SSL certificates
       curl                 [path]      cURL requests to your linked project's deployment [beta]
@@ -66,6 +67,7 @@ export const help = () => `
     )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
+    --non-interactive              Run without interactive prompts (default when agent detected)
     -S, --scope                    Set a custom scope
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
       'TOKEN'
