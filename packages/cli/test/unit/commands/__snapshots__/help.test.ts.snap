@@ -2909,7 +2909,7 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add      name         Installs
+  add      integration  Installs
                         a       
                         marketp…
                         integra…
@@ -3003,7 +3003,7 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add      name         Installs a marketplace integration              
+  add      integration  Installs a marketplace integration              
   balance  integration  Shows the balances and thresholds of a specified
                         marketplace integration                         
   list     [project]    Lists all resources from marketplace            
@@ -3045,7 +3045,7 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add      name         Installs a marketplace integration                                                      
+  add      integration  Installs a marketplace integration                                                      
   balance  integration  Shows the balances and thresholds of a specified marketplace integration                
   list     [project]    Lists all resources from marketplace integrations                                       
   open     name         Opens a marketplace integration's dashboard                                             

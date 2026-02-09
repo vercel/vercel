@@ -7,14 +7,24 @@ export const addSubcommand = {
   description: 'Installs a marketplace integration',
   arguments: [
     {
-      name: 'name',
+      name: 'integration',
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'name',
+      description:
+        'Custom name for the resource (auto-generated if not provided)',
+      shorthand: 'n',
+      type: String,
+      deprecated: false,
+      argument: 'NAME',
+    },
+  ],
   examples: [
     {
-      name: 'Install a marketplace integration',
+      name: 'Install a marketplace integration (auto-generates resource name)',
       value: [
         `${packageName} integration add <integration-name>`,
         `${packageName} integration add acme`,
@@ -25,6 +35,13 @@ export const addSubcommand = {
       value: [
         `${packageName} integration add <integration>/<product>`,
         `${packageName} integration add acme/acme-redis`,
+      ],
+    },
+    {
+      name: 'Install with a custom resource name',
+      value: [
+        `${packageName} integration add acme --name my-database`,
+        `${packageName} integration add acme -n my-database`,
       ],
     },
     {

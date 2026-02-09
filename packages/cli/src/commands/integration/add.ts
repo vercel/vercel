@@ -17,6 +17,7 @@ import type {
 } from '../../util/integration/types';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
+import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import { addAutoProvision } from './add-auto-provision';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
@@ -29,12 +30,17 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
-export async function add(client: Client, args: string[]) {
+export async function add(
+  client: Client,
+  args: string[],
+  resourceNameArg?: string
+) {
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+  telemetry.trackCliOptionName(resourceNameArg);
 
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
@@ -65,9 +71,14 @@ export async function add(client: Client, args: string[]) {
     integrationSlug = rawArg;
   }
 
+  // Note: Resource name validation happens after product selection
+  // to apply product-specific validation rules
+
   // Auto-provision: completely separate code path
   if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
-    return await addAutoProvision(client, integrationSlug, { productSlug });
+    return await addAutoProvision(client, integrationSlug, resourceNameArg, {
+      productSlug,
+    });
   }
 
   const { contextName, team } = await getScope(client);
@@ -88,7 +99,10 @@ export async function add(client: Client, args: string[]) {
     );
     return 1;
   } finally {
-    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
+    telemetry.trackCliArgumentIntegration(
+      integrationSlug,
+      knownIntegrationSlug
+    );
   }
 
   if (!integration.products?.length) {
@@ -152,6 +166,14 @@ export async function add(client: Client, args: string[]) {
   const metadataSchema = product.metadataSchema;
   const metadataWizard = createMetadataWizard(metadataSchema);
 
+  // Resolve and validate resource name
+  const nameResult = resolveResourceName(product.slug, resourceNameArg);
+  if ('error' in nameResult) {
+    output.error(nameResult.error);
+    return 1;
+  }
+  const { resourceName } = nameResult;
+
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
   // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
@@ -178,7 +200,8 @@ export async function add(client: Client, args: string[]) {
         team.id,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink?.project?.id,
+        resourceName
       );
     }
 
@@ -191,7 +214,8 @@ export async function add(client: Client, args: string[]) {
     integration,
     installation,
     product,
-    metadataWizard
+    metadataWizard,
+    resourceName
   );
 }
 
@@ -238,6 +262,7 @@ function provisionResourceViaWebUI(
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.debug(`Opening URL: ${url.href}`);
   open(url.href);
 }
 
@@ -247,12 +272,9 @@ async function provisionResourceViaCLI(
   integration: Integration,
   installation: IntegrationInstallation,
   product: IntegrationProduct,
-  metadataWizard: MetadataWizard
+  metadataWizard: MetadataWizard,
+  name: string
 ) {
-  const name = await client.input.text({
-    message: 'What is the name of the resource?',
-  });
-
   const metadata = await metadataWizard.run(client);
 
   let billingPlans: BillingPlan[] | undefined;
@@ -520,6 +542,7 @@ function handleManualVerificationAction(
   url.searchParams.set('source', 'cli');
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.debug(`Opening URL: ${url.href}`);
   open(url.href);
 }
 
@@ -553,7 +576,7 @@ async function provisionStorageProduct(
   } finally {
     output.stopSpinner();
   }
-  output.log(`${product.name} successfully provisioned`);
+  output.log(`${product.name} successfully provisioned: ${chalk.bold(name)}`);
 
   const projectLink = await getOptionalLinkedProject(client);
 
