@@ -17,7 +17,6 @@ This includes cases where no refresh token is available.
 
 ### Properties
 
-- [cause](RefreshAccessTokenFailedError.md#cause)
 - [message](RefreshAccessTokenFailedError.md#message)
 - [name](RefreshAccessTokenFailedError.md#name)
 - [stack](RefreshAccessTokenFailedError.md#stack)
@@ -46,19 +45,9 @@ Error.constructor
 
 #### Defined in
 
-[packages/oidc/src/auth-errors.ts:21](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L21)
-
-## Properties
-
-### cause
-
-• `Optional` **cause**: `unknown`
-
-#### Defined in
-
 [packages/oidc/src/auth-errors.ts:20](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L20)
 
----
+## Properties
 
 ### message
 

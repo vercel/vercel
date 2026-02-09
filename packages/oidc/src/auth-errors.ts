@@ -17,9 +17,8 @@ export class AccessTokenMissingError extends Error {
  */
 export class RefreshAccessTokenFailedError extends Error {
   name = 'RefreshAccessTokenFailedError';
-  cause?: unknown;
   constructor(cause?: unknown) {
-    super('Failed to refresh authentication token.');
-    this.cause = cause;
+    // @ts-expect-error - typescript is outdated, this is the spec-compliant way.
+    super('Failed to refresh authentication token.', { cause });
   }
 }
