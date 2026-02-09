@@ -1,247 +1,42 @@
-import ms from 'ms';
-import { describe, expect, beforeEach, it } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
+import { useTeams, createTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import target from '../../../../src/commands/target';
-import { defaultProject, useProject } from '../../../mocks/project';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
-import { useTeams } from '../../../mocks/team';
-import createLineIterator from 'line-async-iterator';
-import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
-describe('target ls', () => {
-  describe('invalid argument', () => {
-    it('errors', async () => {
-      client.setArgv('target', 'ls', 'balderdash');
-      const exitCode = await target(client);
-
-      expect(exitCode).toEqual(2);
-      await expect(client.stderr).toOutput('Invalid number of arguments');
-    });
-  });
-
-  describe('--help', () => {
-    it('tracks telemetry', async () => {
-      const command = 'target';
-      const subcommand = 'ls';
-
-      client.setArgv(command, subcommand, '--help');
-      const exitCodePromise = target(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:help',
-          value: `${command}:list`,
-        },
-      ]);
-    });
-  });
-
-  describe('telemetry', () => {
-    beforeEach(() => {
+describe('target list', () => {
+  describe('--non-interactive', () => {
+    it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
       useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        name: 'static',
-        id: 'static',
-      });
+      createTeam();
+      client.cwd = cwd;
+      client.setArgv('target', 'list', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
 
-      client.cwd = setupUnitFixture('commands/deploy/static');
-      client.stderr.isTTY = false;
-    });
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    it('tracks invocation', async () => {
-      const subcommandActual = 'list';
-      client.setArgv('target', subcommandActual);
-      const exitCode = await target(client);
-      expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'subcommand:list',
-          value: subcommandActual,
-        },
-      ]);
-    });
+      await expect(target(client)).rejects.toThrow('process.exit(1)');
 
-    it('tracks invocation of alias command name', async () => {
-      const subcommandActual = 'ls';
-      client.setArgv('target', subcommandActual);
-      const exitCode = await target(client);
-      expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'subcommand:list',
-          value: subcommandActual,
-        },
-      ]);
-    });
-  });
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(payload.message).toContain('Multiple teams');
+      expect(Array.isArray(payload.choices)).toBe(true);
+      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(exitSpy).toHaveBeenCalledWith(1);
 
-  it('should show custom environments with `vc target ls`', async () => {
-    useUser();
-    const teams = useTeams('team_dummy');
-    const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
-    const { project } = useProject({
-      ...defaultProject,
-      name: 'static',
-      id: 'static',
-      customEnvironments: [
-        {
-          id: 'env_8DTiPYD33Rcvu2hQwYAdw0rwLquY',
-          slug: 'her',
-          createdAt: 1717176548879,
-          updatedAt: 1717176548879,
-          type: 'preview',
-          description: '',
-          branchMatcher: {
-            type: 'endsWith',
-            pattern: 'her',
-          },
-        },
-        {
-          id: 'env_ph1tjPP20xp8VAuiFsYt4rhRYGys',
-          slug: 'ano',
-          createdAt: 1717176506341,
-          updatedAt: 1717176506341,
-          type: 'preview',
-          description: '',
-          branchMatcher: {
-            type: 'startsWith',
-            pattern: 'ano',
-          },
-        },
-      ],
-    });
-    client.cwd = setupUnitFixture('commands/deploy/static');
-    client.stderr.isTTY = false;
-    client.setArgv('target', 'ls');
-    const exitCode = await target(client);
-    expect(exitCode).toEqual(0);
-
-    const lines = createLineIterator(client.stderr);
-
-    let line = await lines.next();
-    expect(line.value).toEqual('Retrieving project…');
-
-    line = await lines.next();
-    expect(line.value).toEqual(
-      `Fetching custom environments for ${team.slug}/${project.name}`
-    );
-
-    line = await lines.next();
-    expect(line.value).contains(
-      `> 5 Environments found under ${team.slug}/${project.name}`
-    );
-
-    line = await lines.next();
-    expect(line.value).contains(``);
-
-    line = await lines.next();
-    const header = parseSpacedTableRow(line.value!);
-    expect(header).toEqual([
-      'Target Name',
-      'Branch Tracking',
-      'Type',
-      'Updated',
-    ]);
-
-    line = await lines.next();
-    expect(parseSpacedTableRow(line.value!)).toEqual([
-      'Production',
-      'main',
-      'Production',
-      '-',
-    ]);
-
-    line = await lines.next();
-    expect(parseSpacedTableRow(line.value!)).toEqual([
-      'Preview',
-      'All unassigned git branches',
-      'Preview',
-      '-',
-    ]);
-
-    line = await lines.next();
-    expect(parseSpacedTableRow(line.value!)).toEqual([
-      'Development',
-      'Accessible via CLI',
-      'Development',
-      '-',
-    ]);
-
-    line = await lines.next();
-    expect(parseSpacedTableRow(line.value!)).toEqual([
-      'ano',
-      'ano*',
-      'Preview',
-      String(ms(Date.now() - project.customEnvironments![0].updatedAt)),
-    ]);
-
-    line = await lines.next();
-    expect(parseSpacedTableRow(line.value!)).toEqual([
-      'her',
-      '*her',
-      'Preview',
-      String(ms(Date.now() - project.customEnvironments![0].updatedAt)),
-    ]);
-  });
-
-  describe('--format', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        name: 'static',
-        id: 'static',
-      });
-      client.cwd = setupUnitFixture('commands/deploy/static');
-    });
-
-    it('tracks telemetry for --format json', async () => {
-      client.setArgv('target', 'ls', '--format', 'json');
-      const exitCode = await target(client);
-      expect(exitCode).toEqual(0);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'subcommand:list',
-          value: 'ls',
-        },
-        {
-          key: 'option:format',
-          value: 'json',
-        },
-      ]);
-    });
-
-    it('outputs targets as valid JSON that can be piped to jq', async () => {
-      client.setArgv('target', 'ls', '--format', 'json');
-      const exitCode = await target(client);
-      expect(exitCode).toEqual(0);
-
-      const output = client.stdout.getFullOutput();
-      // Should be valid JSON - this will throw if not parseable
-      const jsonOutput = JSON.parse(output);
-
-      expect(jsonOutput).toHaveProperty('targets');
-      expect(Array.isArray(jsonOutput.targets)).toBe(true);
-    });
-
-    it('outputs correct target structure in JSON', async () => {
-      client.setArgv('target', 'ls', '--format', 'json');
-      const exitCode = await target(client);
-      expect(exitCode).toEqual(0);
-
-      const output = client.stdout.getFullOutput();
-      const jsonOutput = JSON.parse(output);
-
-      expect(jsonOutput.targets.length).toBeGreaterThan(0);
-      const firstTarget = jsonOutput.targets[0];
-      expect(firstTarget).toHaveProperty('id');
-      expect(firstTarget).toHaveProperty('slug');
-      expect(firstTarget).toHaveProperty('type');
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 });

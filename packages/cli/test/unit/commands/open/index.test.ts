@@ -3,8 +3,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { useTeams, createTeam } from '../../../mocks/team';
 import openCommand from '../../../../src/commands/open';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 vi.mock('open', () => {
   return {
@@ -44,6 +45,24 @@ describe('open', () => {
       expect(client.getFullOutput()).toContain(
         'Opens the current project in the Vercel Dashboard'
       );
+    });
+  });
+
+  describe('--non-interactive', () => {
+    it('returns 1 when not linked (open checks link before ensureLink)', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      createTeam();
+      client.cwd = cwd;
+      client.setArgv('open', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await openCommand(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.getFullOutput()).toContain('requires a linked project');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 

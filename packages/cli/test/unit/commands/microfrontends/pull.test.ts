@@ -1,10 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { useUser } from '../../../mocks/user';
 import microfrontends from '../../../../src/commands/microfrontends';
 import { client } from '../../../mocks/client';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupUnitFixture,
+  setupTmpDir,
+} from '../../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { useTeams, createTeam } from '../../../mocks/team';
 import {
   useMicrofrontendsDeploymentNotFound,
   useMicrofrontendsForDeployment,
@@ -13,6 +16,40 @@ import {
 } from '../../../mocks/microfrontends';
 
 describe('microfrontends pull', () => {
+  describe('--non-interactive', () => {
+    it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      createTeam();
+      client.cwd = cwd;
+      client.setArgv('microfrontends', 'pull', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(microfrontends(client)).rejects.toThrow('process.exit(1)');
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(payload.message).toContain('Multiple teams');
+      expect(Array.isArray(payload.choices)).toBe(true);
+      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'microfrontends';
