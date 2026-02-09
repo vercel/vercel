@@ -1,14 +1,21 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
 import { ensureRepoLink } from '../../util/link/repo';
-import { help } from '../help';
-import { linkCommand } from './command';
+import { type Command, help } from '../help';
+import { linkCommand, listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
+import { getCommandAliases } from '..';
+import ls from './ls';
+
+const COMMAND_CONFIG = {
+  ls: getCommandAliases(listSubcommand),
+};
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -17,11 +24,19 @@ export default async function link(client: Client) {
 
   // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (error) {
     printError(error);
     return 1;
   }
+
+  const subArgs = parsedArgs.args.slice(1);
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    subArgs,
+    COMMAND_CONFIG
+  );
 
   const telemetry = new LinkTelemetryClient({
     opts: {
@@ -29,10 +44,33 @@ export default async function link(client: Client) {
     },
   });
 
-  if (parsedArgs.flags['--help']) {
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('link');
     output.print(help(linkCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
+  }
+
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: linkCommand, columns: client.stderr.columns })
+    );
+  }
+
+  if (subcommand === 'ls') {
+    if (needHelp) {
+      telemetry.trackCliFlagHelp('link', subcommandOriginal);
+      printHelp(listSubcommand);
+      return 2;
+    }
+    return ls(client, args);
+  }
+
+  if (needHelp) {
+    telemetry.trackCliFlagHelp('link');
+    output.print(help(linkCommand, { columns: client.stderr.columns }));
+    return 2;
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);

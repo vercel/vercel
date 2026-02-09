@@ -1,11 +1,30 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, yesOption } from '../../util/arg-common';
+import { confirmOption, formatOption, yesOption } from '../../util/arg-common';
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List linked Vercel projects in the current directory',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List all linked projects',
+      value: `${packageName} link ls`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} link ls --format json`,
+    },
+  ],
+} as const;
 
 export const linkCommand = {
   name: 'link',
   aliases: [],
   description: 'Link a local directory to a Vercel Project.',
   arguments: [],
+  subcommands: [listSubcommand],
   options: [
     {
       name: 'repo',

@@ -1,0 +1,21 @@
+{
+  "orgId": "team_monorepo",
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_dashboard",
+      "name": "monorepo-dashboard",
+      "directory": "apps/dashboard"
+    },
+    {
+      "id": "prj_marketing",
+      "name": "monorepo-marketing",
+      "directory": "apps/marketing"
+    },
+    {
+      "id": "prj_lib",
+      "name": "monorepo-lib",
+      "directory": "packages/lib"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "orgId": "team_mixed",
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_web_repo",
+      "name": "mixed-web",
+      "directory": "apps/web"
+    },
+    {
+      "id": "prj_api",
+      "name": "mixed-api",
+      "directory": "apps/api"
+    }
+  ]
+}
