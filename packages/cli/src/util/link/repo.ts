@@ -117,16 +117,15 @@ export async function ensureRepoLink(
       return;
     }
 
-    const orgResult = await selectOrg(
+    const org = await selectOrg(
       client,
       'Which scope should contain your Project(s)?',
       yes
     );
-    if (isActionRequiredPayload(orgResult)) {
-      outputActionRequired(client, orgResult);
+    if (isActionRequiredPayload(org)) {
+      outputActionRequired(client, org);
       return;
     }
-    const org = orgResult;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     // Use getGitConfigPath to correctly resolve the config path for

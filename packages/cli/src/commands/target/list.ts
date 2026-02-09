@@ -88,7 +88,9 @@ export default async function list(client: Client, argv: string[]) {
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
   const link = await ensureLink(targetCommand.name, client, cwd);
-
+  if (typeof link === 'number') {
+    return link;
+  }
   const start = Date.now();
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 

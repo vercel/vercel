@@ -15,7 +15,10 @@ import {
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
-import type { ActionRequiredPayload } from '../agent-output';
+import {
+  isActionRequiredPayload,
+  type ActionRequiredPayload,
+} from '../agent-output';
 import type Client from '../client';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
@@ -26,7 +29,7 @@ import {
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';
-import selectOrg, { type SelectOrgResult } from '../input/select-org';
+import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
@@ -55,7 +58,7 @@ import {
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   forceDelete?: boolean;
-  link?: ProjectLinkResult;
+  link?: ProjectLinkResult | number;
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
@@ -95,7 +98,13 @@ export default async function setupAndLink(
   let newProjectName: string;
   let org;
 
-  if (!forceDelete && link.status === 'linked') {
+  if (
+    !forceDelete &&
+    typeof link === 'object' &&
+    link !== null &&
+    'status' in link &&
+    link.status === 'linked'
+  ) {
     return link;
   }
 
@@ -123,31 +132,27 @@ export default async function setupAndLink(
   }
 
   try {
-    const orgResult: SelectOrgResult = await selectOrg(
+    org = await selectOrg(
       client,
       'Which scope should contain your project?',
       autoConfirm || nonInteractive
     );
-    if (
-      typeof orgResult === 'object' &&
-      orgResult !== null &&
-      'status' in orgResult &&
-      orgResult.status === 'action_required'
-    ) {
-      return orgResult;
+    if (isActionRequiredPayload(org)) {
+      return org;
     }
-    org = orgResult as Org;
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {
         output.prettyError(err);
         return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
       }
+
       if (err.code === 'TEAM_DELETED') {
         output.prettyError(err);
         return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
       }
     }
+
     throw err;
   }
 

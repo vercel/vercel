@@ -262,6 +262,9 @@ export default async (client: Client): Promise<number> => {
       paths,
     }),
   });
+  if (typeof link === 'number') {
+    return link;
+  }
 
   const { org, project } = link;
   const rootDirectory = project.rootDirectory;

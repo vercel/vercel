@@ -91,7 +91,7 @@ export default async function link(client: Client) {
     // Only use non-interactive behavior when the flag is explicitly enabled (link stays interactive otherwise)
     const linkNonInteractive = client.argv.includes('--non-interactive');
 
-    await ensureLink('link', client, cwd, {
+    const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes || linkNonInteractive,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
@@ -99,6 +99,9 @@ export default async function link(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
     });
+    if (typeof link === 'number') {
+      return link;
+    }
   }
 
   return 0;

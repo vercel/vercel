@@ -79,9 +79,13 @@ export default async function connect(client: Client, argv: string[]) {
   const repoArg = args[0];
   telemetry.trackCliArgumentGitUrl(repoArg);
 
-  const { project, org } = await ensureLink('git', client, client.cwd, {
+  const linkedProject = await ensureLink('git', client, client.cwd, {
     autoConfirm: confirm,
   });
+  if (typeof linkedProject === 'number') {
+    return linkedProject;
+  }
+  const { project, org } = linkedProject;
 
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;

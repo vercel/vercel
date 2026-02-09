@@ -49,6 +49,9 @@ export default async function openCommandHandler(
   // Ensure the project is linked (this will validate the link but won't prompt if already linked)
   const link = await ensureLink('open', client, client.cwd);
 
+  if (typeof link === 'number') {
+    return link;
+  }
   if (link.status !== 'linked' || !link.org || !link.project) {
     output.error('This command requires a linked project. Please run:');
     output.print('  vercel link\n');

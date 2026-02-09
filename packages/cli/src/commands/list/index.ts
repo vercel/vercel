@@ -198,6 +198,7 @@ export default async function list(client: Client) {
     const link = await ensureLink('list', client, client.cwd, {
       autoConfirm,
     });
+    if (typeof link === 'number') return link;
     project = link.project;
     client.config.currentTeam = link.org.id;
   }

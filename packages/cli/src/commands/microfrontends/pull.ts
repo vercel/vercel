@@ -27,11 +27,11 @@ const VERCEL_DIR = '.vercel';
 const VERCEL_DIR_MICROFRONTENDS = 'microfrontends.json';
 
 export default async function pull(client: Client): Promise<number> {
-  const { project, org, repoRoot } = await ensureLink(
-    'microfrontends',
-    client,
-    client.cwd
-  );
+  const link = await ensureLink('microfrontends', client, client.cwd);
+  if (typeof link === 'number') {
+    return link;
+  }
+  const { project, org, repoRoot } = link;
 
   let currentDirectory: string;
   if (repoRoot) {

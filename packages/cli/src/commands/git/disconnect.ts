@@ -47,9 +47,13 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
-  const { org, project } = await ensureLink('git', client, client.cwd, {
+  const linkedProject = await ensureLink('git', client, client.cwd, {
     autoConfirm,
   });
+  if (typeof linkedProject === 'number') {
+    return linkedProject;
+  }
+  const { org, project } = linkedProject;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (project.link) {

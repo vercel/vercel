@@ -118,7 +118,9 @@ export async function pullCommandLogic(
     autoConfirm,
     pullEnv: false,
   });
-
+  if (typeof link === 'number') {
+    return link;
+  }
   const { project, org, repoRoot } = link;
 
   let currentDirectory: string;
