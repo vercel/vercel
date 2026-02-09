@@ -570,6 +570,10 @@ export default async (client: Client): Promise<number> => {
       parsedArchive ? 'tgz' : undefined
     );
 
+    if (deployment && !(deployment instanceof Error)) {
+      telemetryClient.trackDeploymentId(deployment.id);
+    }
+
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment.message);
       return 1;

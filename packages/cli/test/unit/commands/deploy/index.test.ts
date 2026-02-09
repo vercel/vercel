@@ -1209,6 +1209,19 @@ describe('deploy', () => {
         },
       ]);
     });
+    it('tracks deployment id from response', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'output:deployment-id',
+          value: 'dpl_archive_test',
+        },
+      ]);
+    });
   });
 
   describe('first deploy', () => {
