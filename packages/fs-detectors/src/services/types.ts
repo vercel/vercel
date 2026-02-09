@@ -102,3 +102,20 @@ export const STATIC_BUILDERS = new Set([
   '@vercel/static-build',
   '@vercel/static',
 ]);
+
+/**
+ * Builders that produce their own full route table with handle phases
+ * (filesystem, miss, rewrite, hit, error).
+ *
+ * In services mode we generally avoid generating synthetic catch-all routes
+ * for builders that provide their own routing. At service-detection time we
+ * only have the builder "use" string (not the loaded module), so this is an
+ * explicit allow-list for known route-table builders.
+ *
+ * NOTE: This is an explicit positive set because we can't check
+ * `builder.version` at service detection time.
+ */
+export const ROUTE_OWNING_BUILDERS = new Set([
+  '@vercel/next',
+  '@vercel/backends',
+]);

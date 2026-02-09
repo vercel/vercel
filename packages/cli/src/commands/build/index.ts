@@ -790,43 +790,48 @@ async function doBuild(
       }
 
       const isFrontendBuilder = build.config && 'framework' in build.config;
-      const buildConfig: Config = isZeroConfig
-        ? service
-          ? {
-              // Services build: use service-specific config from resolution.
-              // build.config already contains framework, routePrefix, memory, etc.
-              ...build.config,
-              zeroConfig: true,
-              // Override project-level settings with service-specific ones.
-              // The project-level framework is "services" which must NOT be
-              // propagated to individual builders.
-              projectSettings: {
-                ...projectSettings,
-                framework: service.framework ?? null,
-                buildCommand: service.buildCommand ?? null,
-                installCommand: service.installCommand ?? null,
-              },
-              installCommand: service.installCommand ?? undefined,
-              buildCommand: service.buildCommand ?? undefined,
-              framework: service.framework ?? undefined,
-              nodeVersion: projectSettings.nodeVersion,
-              bunVersion: localConfig.bunVersion ?? undefined,
-            }
-          : {
-              outputDirectory: projectSettings.outputDirectory ?? undefined,
-              ...build.config,
-              projectSettings,
-              installCommand: projectSettings.installCommand ?? undefined,
-              devCommand: projectSettings.devCommand ?? undefined,
-              buildCommand: projectSettings.buildCommand ?? undefined,
-              framework: projectSettings.framework,
-              nodeVersion: projectSettings.nodeVersion,
-              bunVersion: localConfig.bunVersion ?? undefined,
-            }
-        : {
-            ...(build.config || {}),
+      let buildConfig: Config;
+
+      if (isZeroConfig) {
+        if (service) {
+          // Services build: use service-specific config from resolution.
+          // build.config already contains framework, routePrefix, memory, etc.
+          buildConfig = {
+            ...build.config,
+            // Override project-level settings with service-specific ones.
+            // The project-level framework is "services" which must NOT be
+            // propagated to individual builders.
+            projectSettings: {
+              ...projectSettings,
+              framework: service.framework ?? null,
+              buildCommand: service.buildCommand ?? null,
+              installCommand: service.installCommand ?? null,
+            },
+            installCommand: service.installCommand ?? undefined,
+            buildCommand: service.buildCommand ?? undefined,
+            framework: service.framework ?? undefined,
+            nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
           };
+        } else {
+          buildConfig = {
+            outputDirectory: projectSettings.outputDirectory ?? undefined,
+            ...build.config,
+            projectSettings,
+            installCommand: projectSettings.installCommand ?? undefined,
+            devCommand: projectSettings.devCommand ?? undefined,
+            buildCommand: projectSettings.buildCommand ?? undefined,
+            framework: projectSettings.framework,
+            nodeVersion: projectSettings.nodeVersion,
+            bunVersion: localConfig.bunVersion ?? undefined,
+          };
+        }
+      } else {
+        buildConfig = {
+          ...(build.config || {}),
+          bunVersion: localConfig.bunVersion ?? undefined,
+        };
+      }
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,
@@ -853,6 +858,7 @@ async function doBuild(
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
         if (
+          !hasDetectedServices &&
           buildConfig.zeroConfig &&
           isFrontendBuilder &&
           'output' in buildResult &&
@@ -1105,10 +1111,25 @@ async function doBuild(
   )
     .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
     .map(b => {
+      const build = b[0];
+      const buildResult = b[1] as BuildResultV2Typical;
+      let entrypoint = build.src!;
+
+      if (hasDetectedServices && typeof build.src === 'string') {
+        const service = servicesByBuilderSrc.get(build.src);
+        if (
+          service &&
+          service.type === 'web' &&
+          typeof service.routePrefix === 'string'
+        ) {
+          entrypoint = getServicesMergeEntrypoint(service, build.src);
+        }
+      }
+
       return {
-        use: b[0].use,
-        entrypoint: b[0].src!,
-        routes: (b[1] as BuildResultV2Typical).routes,
+        use: build.use,
+        entrypoint,
+        routes: buildResult.routes,
       };
     });
   if (zeroConfigRoutes.length) {
@@ -1403,4 +1424,30 @@ async function getFrameworkRoutes(
     routes = framework.defaultRoutes;
   }
   return routes;
+}
+
+function normalizeServiceRoutePrefix(routePrefix: string): string {
+  let prefix = routePrefix.startsWith('/') ? routePrefix : `/${routePrefix}`;
+  if (prefix !== '/' && prefix.endsWith('/')) {
+    prefix = prefix.slice(0, -1);
+  }
+  return prefix;
+}
+
+function getServicesMergeEntrypoint(
+  service: Service,
+  buildSrc: string
+): string {
+  const routePrefix =
+    typeof service.routePrefix === 'string' ? service.routePrefix : '/';
+  const normalized = normalizeServiceRoutePrefix(routePrefix);
+  // Why a synthetic entrypoint?
+  // `mergeRoutes()` sorts builder routes by `entrypoint` lexicographically (ascending),
+  // which is fine for single-builder projects. In services mode we need a stable,
+  // deterministic precedence by routePrefix specificity (longest first) so more
+  // specific services win over broader ones.
+  //
+  // Encode prefix specificity into the sort key by sorting on (10000 - len).
+  const sortKey = String(10000 - normalized.length).padStart(5, '0');
+  return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
 }

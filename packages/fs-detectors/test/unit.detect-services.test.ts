@@ -1,5 +1,30 @@
-import { detectServices, isStaticBuild } from '../src';
+import { detectServices, isStaticBuild, isRouteOwningBuilder } from '../src';
+import type { Route } from '@vercel/routing-utils';
 import VirtualFilesystem from './virtual-file-system';
+
+/**
+ * Simplified route matcher for testing services-generated routes.
+ *
+ * The real routing engine (dev server `devRouter`) uses PCRE with
+ * case-insensitive matching and handle phases. This simplified version
+ * is correct for the patterns produced by `generateServicesRoutes`
+ * (e.g., `^/admin(?:/.*)?$`) which are plain regex without PCRE
+ * extensions, named captures, or `has`/`missing` conditions.
+ */
+function findMatchingRoute(
+  routes: Route[],
+  pathname: string
+): (Route & { src: string; dest: string }) | undefined {
+  for (const route of routes) {
+    if ('src' in route && typeof route.src === 'string') {
+      const regex = new RegExp(route.src);
+      if (regex.test(pathname)) {
+        return route as Route & { src: string; dest: string };
+      }
+    }
+  }
+  return undefined;
+}
 
 describe('detectServices', () => {
   describe('with no vercel.json', () => {
@@ -473,8 +498,8 @@ describe('detectServices', () => {
               framework: 'vite',
               routePrefix: '/admin',
             },
-            'express-api': {
-              entrypoint: 'api/index.js',
+            'gin-api': {
+              entrypoint: 'api/index.go',
               routePrefix: '/api',
             },
           },
@@ -487,19 +512,19 @@ describe('detectServices', () => {
 
       const frontend = result.services.find(s => s.name === 'frontend');
       const adminPanel = result.services.find(s => s.name === 'admin-panel');
-      const expressApi = result.services.find(s => s.name === 'express-api');
+      const ginApi = result.services.find(s => s.name === 'gin-api');
 
       // Vite services should be static builds
       expect(isStaticBuild(frontend!)).toBe(true);
       expect(isStaticBuild(adminPanel!)).toBe(true);
-      // Node entrypoint should be a function
-      expect(isStaticBuild(expressApi!)).toBe(false);
+      // Go entrypoint should be a function
+      expect(isStaticBuild(ginApi!)).toBe(false);
 
       // Function service and prefixed static service get rewrites
       expect(result.routes.rewrites).toHaveLength(2);
       expect(result.routes.rewrites).toContainEqual({
         src: '^/api(?:/.*)?$',
-        dest: '/api/index.js',
+        dest: '/api/index',
         check: true,
       });
       expect(result.routes.rewrites).toContainEqual({
@@ -513,6 +538,213 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toContainEqual({
         src: '/(.*)',
         dest: '/index.html',
+      });
+    });
+  });
+
+  describe('complex multi-service project routing', () => {
+    //   web          → Next.js            at /               (route-owning)
+    //   admin        → Vite               at /admin          (static/SPA)
+    //   dashboard    → Next.js            at /dashboard      (route-owning)
+    //   docs         → Docusaurus         at /docs           (static)
+    //   gin-api      → @vercel/go         at /api/gin        (runtime)
+    //   fastapi-api  → @vercel/python     at /api/fastapi    (runtime)
+    const SERVICES_CONFIG = {
+      web: {
+        workspace: 'apps/web',
+        framework: 'nextjs',
+        routePrefix: '/',
+      },
+      admin: {
+        workspace: 'apps/admin',
+        framework: 'vite',
+        routePrefix: '/admin',
+      },
+      dashboard: {
+        workspace: 'apps/dashboard',
+        framework: 'nextjs',
+        routePrefix: '/dashboard',
+      },
+      docs: {
+        workspace: 'apps/docs',
+        framework: 'docusaurus-2',
+        routePrefix: '/docs',
+      },
+      'gin-api': {
+        entrypoint: 'services/gin-api/index.go',
+        routePrefix: '/api/gin',
+      },
+      'fastapi-api': {
+        framework: 'fastapi',
+        entrypoint: 'services/fastapi-api/main.py',
+        routePrefix: '/api/fastapi',
+      },
+    };
+
+    let services: Awaited<ReturnType<typeof detectServices>>['services'];
+    let rewrites: Route[];
+    let defaults: Route[];
+
+    beforeAll(async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: SERVICES_CONFIG,
+        }),
+      });
+      const result = await detectServices({ fs });
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(6);
+      services = result.services;
+      rewrites = result.routes.rewrites;
+      defaults = result.routes.defaults;
+    });
+
+    // -- Builder category classification --
+
+    it('should classify Next.js services as route-owning', () => {
+      const web = services.find(s => s.name === 'web')!;
+      const dashboard = services.find(s => s.name === 'dashboard')!;
+      expect(isRouteOwningBuilder(web)).toBe(true);
+      expect(isRouteOwningBuilder(dashboard)).toBe(true);
+    });
+
+    it('should classify Vite and Docusaurus as static builds', () => {
+      const admin = services.find(s => s.name === 'admin')!;
+      const docs = services.find(s => s.name === 'docs')!;
+      expect(isStaticBuild(admin)).toBe(true);
+      expect(isStaticBuild(docs)).toBe(true);
+      expect(isRouteOwningBuilder(admin)).toBe(false);
+      expect(isRouteOwningBuilder(docs)).toBe(false);
+    });
+
+    it('should classify entrypoint-based services as runtime (not route-owning, not static)', () => {
+      const ginApi = services.find(s => s.name === 'gin-api')!;
+      const fastapiApi = services.find(s => s.name === 'fastapi-api')!;
+      expect(isStaticBuild(ginApi)).toBe(false);
+      expect(isStaticBuild(fastapiApi)).toBe(false);
+      expect(isRouteOwningBuilder(ginApi)).toBe(false);
+      expect(isRouteOwningBuilder(fastapiApi)).toBe(false);
+    });
+
+    // -- Synthetic route generation --
+
+    it('should NOT generate synthetic routes for route-owning builders', () => {
+      // Next.js services (web at /, dashboard at /dashboard) should have
+      // no synthetic rewrites or defaults generated for them.
+      const allRoutes = [...rewrites, ...defaults];
+      for (const route of allRoutes) {
+        if ('dest' in route && typeof route.dest === 'string') {
+          // No route should point to Next.js builder sources
+          expect(route.dest).not.toContain('apps/web');
+          expect(route.dest).not.toContain('apps/dashboard');
+        }
+      }
+    });
+
+    it('should generate rewrite routes for non-root static and runtime services', () => {
+      // admin (static), docs (static), gin-api (runtime), fastapi-api (runtime)
+      // All are non-root, so they get rewrites (not defaults).
+      expect(rewrites.length).toBe(4);
+    });
+
+    it('should generate no default routes (root is route-owning Next.js)', () => {
+      // The root service is Next.js (route-owning), so no defaults are generated.
+      expect(defaults).toHaveLength(0);
+    });
+
+    // -- Synthetic route regex matching --
+
+    describe('rewrite route matching', () => {
+      it.each([
+        ['/admin', 'admin'],
+        ['/admin/', 'admin'],
+        ['/admin/settings', 'admin'],
+        ['/admin/users/123', 'admin'],
+      ])('should match "%s" to admin service SPA fallback', pathname => {
+        const match = findMatchingRoute(rewrites, pathname);
+        expect(match).toBeDefined();
+        expect(match!.dest).toBe('/admin/index.html');
+        expect(match).not.toHaveProperty('check');
+      });
+
+      it.each([
+        ['/docs', 'docs'],
+        ['/docs/', 'docs'],
+        ['/docs/getting-started', 'docs'],
+        ['/docs/architecture/api-services', 'docs'],
+      ])('should match "%s" to docs service SPA fallback', pathname => {
+        const match = findMatchingRoute(rewrites, pathname);
+        expect(match).toBeDefined();
+        expect(match!.dest).toBe('/docs/index.html');
+        expect(match).not.toHaveProperty('check');
+      });
+
+      it.each([
+        ['/api/gin', 'gin-api'],
+        ['/api/gin/', 'gin-api'],
+        ['/api/gin/users', 'gin-api'],
+        ['/api/gin/users/123/posts', 'gin-api'],
+      ])('should match "%s" to gin-api function rewrite', pathname => {
+        const match = findMatchingRoute(rewrites, pathname);
+        expect(match).toBeDefined();
+        expect(match!.dest).toBe('/services/gin-api/index');
+        expect(match!).toHaveProperty('check', true);
+      });
+
+      it.each([
+        ['/api/fastapi', 'fastapi-api'],
+        ['/api/fastapi/', 'fastapi-api'],
+        ['/api/fastapi/users', 'fastapi-api'],
+        ['/api/fastapi/items/42', 'fastapi-api'],
+      ])('should match "%s" to fastapi-api function rewrite', pathname => {
+        const match = findMatchingRoute(rewrites, pathname);
+        expect(match).toBeDefined();
+        expect(match!.dest).toBe('/services/fastapi-api/main');
+        expect(match!).toHaveProperty('check', true);
+      });
+    });
+
+    describe('route isolation (no cross-service matching)', () => {
+      it.each(['/', '/about', '/contact', '/dashboard', '/dashboard/settings'])(
+        'should NOT match "%s" to any synthetic rewrite (owned by Next.js)',
+        pathname => {
+          const match = findMatchingRoute(rewrites, pathname);
+          expect(match).toBeUndefined();
+        }
+      );
+
+      it('should not match /admin-panel to admin service', () => {
+        // /admin-panel is NOT under /admin/ — it's a different path
+        const match = findMatchingRoute(rewrites, '/admin-panel');
+        expect(match).toBeUndefined();
+      });
+
+      it('should not match /api to any API service', () => {
+        // /api is not under /api/gin or /api/fastapi
+        const match = findMatchingRoute(rewrites, '/api');
+        expect(match).toBeUndefined();
+      });
+
+      it('should not match /api/other to gin or fastapi service', () => {
+        const match = findMatchingRoute(rewrites, '/api/other');
+        expect(match).toBeUndefined();
+      });
+    });
+
+    describe('rewrite ordering (longest prefix first)', () => {
+      it('should order rewrites with most specific prefixes first', () => {
+        // /api/gin and /api/fastapi (length 8-12) should come
+        // before /admin and /docs (length 6 and 5)
+        const prefixLengths = rewrites
+          .filter(
+            (r): r is Route & { src: string } =>
+              'src' in r && typeof r.src === 'string'
+          )
+          .map(r => r.src.length);
+
+        for (let i = 1; i < prefixLengths.length; i++) {
+          expect(prefixLengths[i - 1]).toBeGreaterThanOrEqual(prefixLengths[i]);
+        }
       });
     });
   });

@@ -158,7 +158,10 @@ export function resolveConfiguredService(
     builderSrc = posixPath.join(workspace, builderSrc);
   }
 
-  const builderConfig: Record<string, unknown> = {};
+  // Services are built via the zero-config pipeline (multiple builders, merged routes).
+  // Ensure `zeroConfig` is set on the Builder spec so downstream steps (like
+  // CLI `writeBuildResultV3()`) can compute correct extensionless function paths.
+  const builderConfig: Record<string, unknown> = { zeroConfig: true };
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;
