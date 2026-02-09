@@ -138,18 +138,20 @@ function formatTable(
   integrations: {
     slug: string;
     name: string;
+    description: string;
     category: string[];
     products: { name: string }[];
   }[]
 ) {
   return table(
     [
-      ['Name', 'Slug', 'Categories', 'Products'].map(header =>
+      ['Name', 'Slug', 'Description', 'Categories', 'Products'].map(header =>
         chalk.bold(chalk.cyan(header))
       ),
       ...integrations.map(integration => [
         integration.name,
         integration.slug,
+        integration.description || chalk.gray('-'),
         integration.category.length > 0
           ? integration.category.join(', ')
           : chalk.gray('-'),

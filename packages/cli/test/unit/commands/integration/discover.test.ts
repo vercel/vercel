@@ -55,6 +55,9 @@ describe('integration', () => {
         '> Available marketplace integrations:'
       );
       await expect(client.stderr).toOutput('Neon');
+      await expect(client.stderr).toOutput(
+        'Serverless Postgres with branching'
+      );
       await expect(client.stderr).toOutput('Storage, DevTools');
       await expect(client.stderr).toOutput('Postgres');
     });
