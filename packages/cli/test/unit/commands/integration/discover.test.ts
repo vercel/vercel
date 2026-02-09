@@ -58,7 +58,6 @@ describe('integration', () => {
       await expect(client.stderr).toOutput(
         'Description: Serverless Postgres with branching'
       );
-      await expect(client.stderr).toOutput('Categories: Storage, DevTools');
       await expect(client.stderr).toOutput('Products: Postgres');
     });
 

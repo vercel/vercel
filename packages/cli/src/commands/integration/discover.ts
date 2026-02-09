@@ -144,22 +144,18 @@ function formatTable(
     slug: string;
     name: string;
     description: string;
-    category: string[];
     products: { name: string }[];
   }[]
 ) {
   return table(
     [
-      ['Name', 'Slug', 'Description', 'Categories', 'Products'].map(header =>
+      ['Name', 'Slug', 'Description', 'Products'].map(header =>
         chalk.bold(chalk.cyan(header))
       ),
       ...integrations.map(integration => [
         integration.name,
         integration.slug,
         integration.description || chalk.gray('-'),
-        integration.category.length > 0
-          ? integration.category.join(', ')
-          : chalk.gray('-'),
         integration.products.length > 0
           ? integration.products.map(product => product.name).join(', ')
           : chalk.gray('-'),
@@ -174,14 +170,11 @@ function formatCompactList(
     slug: string;
     name: string;
     description: string;
-    category: string[];
     products: { name: string }[];
   }[]
 ) {
   return integrations
     .map(integration => {
-      const categories =
-        integration.category.length > 0 ? integration.category.join(', ') : '-';
       const products =
         integration.products.length > 0
           ? integration.products.map(product => product.name).join(', ')
@@ -189,7 +182,6 @@ function formatCompactList(
       return [
         `${chalk.bold(integration.name)} (${integration.slug})`,
         `  Description: ${integration.description || '-'}`,
-        `  Categories: ${categories}`,
         `  Products: ${products}`,
       ].join('\n');
     })
