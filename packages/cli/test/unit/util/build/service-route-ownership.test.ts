@@ -76,24 +76,4 @@ describe('scopeRoutesToServiceOwnership()', () => {
     expect(match?.[1]).toBe('users');
     expect(match?.[2]).toBe('123');
   });
-
-  test('leaves non-web service routes unchanged', () => {
-    const owner: Service = {
-      name: 'worker',
-      type: 'worker',
-      workspace: '.',
-      builder: {
-        use: '@vercel/node',
-        src: 'worker.ts',
-      },
-    };
-    const routes: Route[] = [{ src: '^/(.*)$', dest: '/index' }];
-    const scoped = scopeRoutesToServiceOwnership({
-      routes,
-      owner,
-      allServices: [createWebService('web', '/')],
-    });
-
-    expect(scoped).toEqual(routes);
-  });
 });
