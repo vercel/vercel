@@ -1976,3 +1976,404 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
     });
   });
 });
+
+// --------------------------------------------------------------------------
+// Runtime Dependency Installation Tests
+// --------------------------------------------------------------------------
+// These tests cover the new functionality for handling Python Lambda functions
+// that exceed the 250MB uncompressed size limit by deferring public dependency
+// installation to runtime.
+// --------------------------------------------------------------------------
+
+import {
+  calculateBundleSize,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+} from '../src/install';
+import {
+  classifyPackages,
+  generateRuntimeRequirements,
+  getProjectNameFromPyproject,
+} from '../src/packages';
+import { renderTrampoline } from '../src/trampoline';
+import { FileFsRef } from '@vercel/build-utils';
+
+describe('runtime dependency installation support', () => {
+  describe('calculateBundleSize', () => {
+    it('calculates size from FileFsRef objects', async () => {
+      const tempDir = path.join(tmpdir(), `size-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Create test files with known sizes
+      const file1Path = path.join(tempDir, 'file1.txt');
+      const file2Path = path.join(tempDir, 'file2.txt');
+      fs.writeFileSync(file1Path, 'a'.repeat(100)); // 100 bytes
+      fs.writeFileSync(file2Path, 'b'.repeat(200)); // 200 bytes
+
+      const files = {
+        'file1.txt': new FileFsRef({ fsPath: file1Path }),
+        'file2.txt': new FileFsRef({ fsPath: file2Path }),
+      };
+
+      try {
+        const size = await calculateBundleSize(files);
+        expect(size).toBe(300);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('calculates size from FileBlob objects', async () => {
+      const files = {
+        'file1.txt': new FileBlob({ data: 'a'.repeat(100) }),
+        'file2.txt': new FileBlob({ data: Buffer.from('b'.repeat(200)) }),
+      };
+
+      const size = await calculateBundleSize(files);
+      expect(size).toBe(300);
+    });
+
+    it('returns 0 for empty files object', async () => {
+      const size = await calculateBundleSize({});
+      expect(size).toBe(0);
+    });
+  });
+  describe('classifyPackages', () => {
+    it('classifies PyPI packages as public', async () => {
+      const tempDir = path.join(tmpdir(), `classify-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      const lockPath = path.join(tempDir, 'uv.lock');
+
+      // Create a simple uv.lock with a PyPI package
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      fs.writeFileSync(lockPath, lockContent);
+
+      try {
+        const result = await classifyPackages({ lockPath });
+        expect(result.publicPackages).toContain('requests');
+        expect(result.privatePackages).not.toContain('requests');
+        expect(result.packageVersions['requests']).toBe('2.31.0');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('classifies git source packages as private', async () => {
+      const tempDir = path.join(tmpdir(), `classify-git-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      const lockPath = path.join(tempDir, 'uv.lock');
+
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-private-pkg"
+version = "1.0.0"
+
+[package.source]
+git = "https://github.com/myorg/private-pkg.git"
+`;
+      fs.writeFileSync(lockPath, lockContent);
+
+      try {
+        const result = await classifyPackages({ lockPath });
+        expect(result.privatePackages).toContain('my-private-pkg');
+        expect(result.publicPackages).not.toContain('my-private-pkg');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('classifies path source packages as private', async () => {
+      const tempDir = path.join(tmpdir(), `classify-path-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      const lockPath = path.join(tempDir, 'uv.lock');
+
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "local-pkg"
+version = "0.1.0"
+
+[package.source]
+path = "./packages/local-pkg"
+`;
+      fs.writeFileSync(lockPath, lockContent);
+
+      try {
+        const result = await classifyPackages({ lockPath });
+        expect(result.privatePackages).toContain('local-pkg');
+        expect(result.publicPackages).not.toContain('local-pkg');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('classifies non-PyPI registry packages as private', async () => {
+      const tempDir = path.join(
+        tmpdir(),
+        `classify-registry-test-${Date.now()}`
+      );
+      fs.mkdirSync(tempDir, { recursive: true });
+      const lockPath = path.join(tempDir, 'uv.lock');
+
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "internal-pkg"
+version = "1.0.0"
+
+[package.source]
+registry = "https://private.pypi.mycompany.com/simple"
+`;
+      fs.writeFileSync(lockPath, lockContent);
+
+      try {
+        const result = await classifyPackages({ lockPath });
+        expect(result.privatePackages).toContain('internal-pkg');
+        expect(result.publicPackages).not.toContain('internal-pkg');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('returns empty classification for missing lock file', async () => {
+      const result = await classifyPackages({
+        lockPath: '/nonexistent/uv.lock',
+      });
+      expect(result.privatePackages).toHaveLength(0);
+      expect(result.publicPackages).toHaveLength(0);
+    });
+
+    it('excludes specified packages from classification', async () => {
+      const tempDir = path.join(
+        tmpdir(),
+        `classify-exclude-test-${Date.now()}`
+      );
+      fs.mkdirSync(tempDir, { recursive: true });
+      const lockPath = path.join(tempDir, 'uv.lock');
+
+      // Create a uv.lock with a project package and a dependency
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      fs.writeFileSync(lockPath, lockContent);
+
+      try {
+        const result = await classifyPackages({
+          lockPath,
+          excludePackages: ['my-app'],
+        });
+        // my-app should be excluded entirely
+        expect(result.publicPackages).not.toContain('my-app');
+        expect(result.privatePackages).not.toContain('my-app');
+        expect(result.packageVersions['my-app']).toBeUndefined();
+        // requests should still be classified
+        expect(result.publicPackages).toContain('requests');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+  });
+
+  describe('getProjectNameFromPyproject', () => {
+    it('reads project name from pyproject.toml', async () => {
+      const tempDir = path.join(tmpdir(), `pyproject-name-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+
+      const content = `
+[project]
+name = "my-awesome-project"
+version = "1.0.0"
+`;
+      fs.writeFileSync(pyprojectPath, content);
+
+      try {
+        const name = await getProjectNameFromPyproject(pyprojectPath);
+        expect(name).toBe('my-awesome-project');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('handles single quotes in project name', async () => {
+      const tempDir = path.join(
+        tmpdir(),
+        `pyproject-single-quote-test-${Date.now()}`
+      );
+      fs.mkdirSync(tempDir, { recursive: true });
+      const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+
+      const content = `
+[project]
+name = 'single-quoted-name'
+version = "1.0.0"
+`;
+      fs.writeFileSync(pyprojectPath, content);
+
+      try {
+        const name = await getProjectNameFromPyproject(pyprojectPath);
+        expect(name).toBe('single-quoted-name');
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('returns undefined for missing file', async () => {
+      const name = await getProjectNameFromPyproject(
+        '/nonexistent/pyproject.toml'
+      );
+      expect(name).toBeUndefined();
+    });
+
+    it('returns undefined when project name is missing', async () => {
+      const tempDir = path.join(
+        tmpdir(),
+        `pyproject-no-name-test-${Date.now()}`
+      );
+      fs.mkdirSync(tempDir, { recursive: true });
+      const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+
+      const content = `
+[tool.uv]
+dev-dependencies = []
+`;
+      fs.writeFileSync(pyprojectPath, content);
+
+      try {
+        const name = await getProjectNameFromPyproject(pyprojectPath);
+        expect(name).toBeUndefined();
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+  });
+
+  describe('generateRuntimeRequirements', () => {
+    it('generates requirements file content with versions', () => {
+      const classification = {
+        privatePackages: ['private-pkg'],
+        publicPackages: ['requests', 'flask'],
+        packageVersions: {
+          'private-pkg': '1.0.0',
+          requests: '2.31.0',
+          flask: '3.0.0',
+        },
+      };
+
+      const content = generateRuntimeRequirements(classification);
+      expect(content).toContain('requests==2.31.0');
+      expect(content).toContain('flask==3.0.0');
+      expect(content).not.toContain('private-pkg');
+    });
+
+    it('generates empty requirements for no public packages', () => {
+      const classification = {
+        privatePackages: ['private-pkg'],
+        publicPackages: [],
+        packageVersions: { 'private-pkg': '1.0.0' },
+      };
+
+      const content = generateRuntimeRequirements(classification);
+      expect(content).toContain('# Auto-generated');
+      expect(content).not.toContain('==');
+    });
+  });
+
+  describe('LAMBDA_SIZE_THRESHOLD_BYTES', () => {
+    it('is set to 240MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(240 * 1024 * 1024);
+    });
+  });
+});
+
+describe('renderTrampoline', () => {
+  it('renders template with basic variables', () => {
+    const result = renderTrampoline({
+      moduleName: 'api.handler',
+      entrypointWithSuffix: 'api/handler.py',
+      vendorDir: '_vendor',
+      runtimeInstallEnabled: false,
+      uvBundleDir: '_uv',
+    });
+
+    expect(result).toContain('__VC_HANDLER_MODULE_NAME": "api.handler"');
+    expect(result).toContain('__VC_HANDLER_ENTRYPOINT": "api/handler.py"');
+    expect(result).toContain('_vendor_rel = "_vendor"');
+    expect(result).toContain('from vercel_runtime.vc_init import vc_handler');
+  });
+
+  it('includes runtime install code when enabled', () => {
+    const result = renderTrampoline({
+      moduleName: 'handler',
+      entrypointWithSuffix: 'handler.py',
+      vendorDir: '_vendor',
+      runtimeInstallEnabled: true,
+      uvBundleDir: '_uv',
+    });
+
+    expect(result).toContain('import subprocess');
+    expect(result).toContain('import time');
+    expect(result).toContain('_deps_dir = "/tmp/_vc_deps_overflow"');
+    expect(result).toContain('_uv_path = os.path.join(_here, "_uv", "uv")');
+    expect(result).toContain('Runtime dependency installation failed');
+    // Check for production logging
+    expect(result).toContain('Installing runtime dependencies...');
+    expect(result).toContain('Runtime dependencies installed in');
+    expect(result).toContain('Using cached runtime dependencies');
+  });
+
+  it('excludes runtime install code when disabled', () => {
+    const result = renderTrampoline({
+      moduleName: 'handler',
+      entrypointWithSuffix: 'handler.py',
+      vendorDir: '_vendor',
+      runtimeInstallEnabled: false,
+      uvBundleDir: '_uv',
+    });
+
+    expect(result).not.toContain('import subprocess');
+    expect(result).not.toContain('import time');
+    expect(result).not.toContain('_deps_dir = "/tmp/_vc_deps_overflow"');
+    expect(result).not.toContain('Runtime dependency installation failed');
+    expect(result).not.toContain('Installing runtime dependencies...');
+  });
+
+  it('uses custom uvBundleDir in runtime install code', () => {
+    const result = renderTrampoline({
+      moduleName: 'handler',
+      entrypointWithSuffix: 'handler.py',
+      vendorDir: '_vendor',
+      runtimeInstallEnabled: true,
+      uvBundleDir: 'custom_uv_dir',
+    });
+
+    expect(result).toContain(
+      '_uv_path = os.path.join(_here, "custom_uv_dir", "uv")'
+    );
+    expect(result).toContain(
+      '_requirements = os.path.join(_here, "custom_uv_dir", "_runtime_requirements.txt")'
+    );
+  });
+});

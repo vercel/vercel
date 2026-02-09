@@ -1,0 +1,104 @@
+import importlib
+import os
+import os.path
+import site
+import sys
+
+_here = os.path.dirname(__file__)
+
+os.environ.update(
+    {
+        "__VC_HANDLER_MODULE_NAME": "{{moduleName}}",
+        "__VC_HANDLER_ENTRYPOINT": "{{entrypointWithSuffix}}",
+        "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "{{entrypointWithSuffix}}"),
+        "__VC_HANDLER_VENDOR_DIR": "{{vendorDir}}",
+    }
+)
+
+# {{#runtimeInstallEnabled}}
+import subprocess
+import time
+
+_deps_dir = "/tmp/_vc_deps_overflow"
+_marker = os.path.join(_deps_dir, ".installed")
+
+if not os.path.exists(_marker):
+    # Cold start: install dependencies using bundled uv
+    _uv_path = os.path.join(_here, "{{uvBundleDir}}", "uv")
+    _requirements = os.path.join(_here, "{{uvBundleDir}}", "_runtime_requirements.txt")
+
+    print("Installing runtime dependencies...")
+    _install_start = time.time()
+
+    try:
+        os.makedirs(_deps_dir, exist_ok=True)
+        _result = subprocess.run(
+            [
+                _uv_path,
+                "pip",
+                "install",
+                "--no-cache",
+                "--no-config",
+                "--only-binary=:all:",
+                "--target",
+                _deps_dir,
+                "-r",
+                _requirements,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        _install_duration = time.time() - _install_start
+        print(f"Runtime dependencies installed in {_install_duration:.2f}s")
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(
+            f"Runtime dependency installation failed.\n"
+            f"Command: {' '.join(e.cmd)}\n"
+            f"Exit code: {e.returncode}\n"
+            f"Stdout: {e.stdout}\n"
+            f"Stderr: {e.stderr}"
+        ) from e
+    except Exception as e:
+        raise RuntimeError(
+            f"Runtime dependency installation failed with unexpected error: {e}"
+        ) from e
+
+    # Mark installation complete for warm starts
+    open(_marker, "w").close()
+else:
+    print("Using cached runtime dependencies")
+
+# Add runtime-installed deps to path
+if os.path.isdir(_deps_dir):
+    site.addsitedir(_deps_dir)
+    # Move to front of path
+    try:
+        while _deps_dir in sys.path:
+            sys.path.remove(_deps_dir)
+    except ValueError:
+        pass
+    sys.path.insert(0, _deps_dir)
+# {{/runtimeInstallEnabled}}
+
+_vendor_rel = "{{vendorDir}}"
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ("", _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
+
+from vercel_runtime.vc_init import vc_handler

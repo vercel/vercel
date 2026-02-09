@@ -14,6 +14,9 @@ import { getVenvPythonBin, findDir } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
 
+// 240mb leaves room for dependencies and code after unzipping in Lambda's 250mb limit
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 240 * 1024 * 1024;
+
 const isWin = process.platform === 'win32';
 
 const makeDependencyCheckCode = (dependency: string) => `
@@ -654,6 +657,136 @@ export async function mirrorSitePackagesIntoVendor({
     }
   } catch (err) {
     console.log('Failed to collect site-packages from virtual environment');
+    throw err;
+  }
+
+  return vendorFiles;
+}
+
+/**
+ * Calculate the total uncompressed size of files in a Files object.
+ * This is used to determine if the Lambda bundle exceeds the size threshold.
+ */
+export async function calculateBundleSize(files: Files): Promise<number> {
+  let totalSize = 0;
+
+  for (const filePath of Object.keys(files)) {
+    const file = files[filePath];
+    if ('fsPath' in file && file.fsPath) {
+      try {
+        const stats = await fs.promises.stat(file.fsPath);
+        totalSize += stats.size;
+      } catch (err) {
+        debug(`Failed to stat file ${file.fsPath}: ${err}`);
+      }
+    } else if ('data' in file) {
+      // FileBlob with data
+      const data = (file as { data: string | Buffer }).data;
+      totalSize +=
+        typeof data === 'string' ? Buffer.byteLength(data) : data.length;
+    }
+  }
+
+  return totalSize;
+}
+
+/**
+ * Mirror only private packages from site-packages into the vendor directory.
+ * Used when runtime installation is enabled to bundle only private dependencies.
+ *
+ * @param venvPath Path to the virtual environment
+ * @param vendorDirName Name of the vendor directory
+ * @param privatePackages List of private package names to include
+ * @returns Files object containing only private package files
+ */
+export async function mirrorPrivatePackagesIntoVendor({
+  venvPath,
+  vendorDirName,
+  privatePackages,
+}: {
+  venvPath: string;
+  vendorDirName: string;
+  privatePackages: string[];
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+
+  if (privatePackages.length === 0) {
+    debug('No private packages to bundle');
+    return vendorFiles;
+  }
+
+  // Normalize package names for comparison (PEP 503: lowercase, replace - and _ with -)
+  const normalizePackageName = (name: string): string =>
+    name.toLowerCase().replace(/[-_.]+/g, '-');
+
+  const privatePackageSet = new Set(privatePackages.map(normalizePackageName));
+
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        // Skip __pycache__ and .pyc files
+        if (entry.name === '__pycache__' || entry.name.endsWith('.pyc')) {
+          continue;
+        }
+
+        // Check if this entry belongs to a private package
+        // Package directories are named like: package_name or package_name-version.dist-info
+        const entryBaseName = entry.name
+          .replace(/-[\d.]+\.dist-info$/, '')
+          .replace(/\.dist-info$/, '')
+          .replace(/-[\d.]+\.egg-info$/, '')
+          .replace(/\.egg-info$/, '');
+
+        const normalizedEntry = normalizePackageName(entryBaseName);
+
+        // Include if it matches a private package
+        const isPrivate = privatePackageSet.has(normalizedEntry);
+
+        if (isPrivate) {
+          const entryPath = join(dir, entry.name);
+
+          if (entry.isDirectory()) {
+            // Recursively add all files in the directory
+            const dirFiles = await glob('**', entryPath);
+            for (const relativePath of Object.keys(dirFiles)) {
+              if (
+                relativePath.endsWith('.pyc') ||
+                relativePath.includes('__pycache__')
+              ) {
+                continue;
+              }
+
+              const srcFsPath = join(entryPath, relativePath);
+              const bundlePath = join(
+                vendorDirName,
+                entry.name,
+                relativePath
+              ).replace(/\\/g, '/');
+              vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+            }
+          } else {
+            // Single file
+            const bundlePath = join(vendorDirName, entry.name).replace(
+              /\\/g,
+              '/'
+            );
+            vendorFiles[bundlePath] = new FileFsRef({ fsPath: entryPath });
+          }
+        }
+      }
+    }
+
+    debug(
+      `Bundled ${Object.keys(vendorFiles).length} files from private packages`
+    );
+  } catch (err) {
+    console.log('Failed to collect private packages from virtual environment');
     throw err;
   }
 

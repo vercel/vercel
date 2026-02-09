@@ -7,6 +7,29 @@ import os from 'os';
 import which from 'which';
 import { debug } from '@vercel/build-utils';
 
+/**
+ * Represents a package entry from uv.lock with source information.
+ */
+export interface UvLockPackage {
+  name: string;
+  version: string;
+  source?: {
+    registry?: string;
+    url?: string;
+    git?: string;
+    path?: string;
+    editable?: string;
+  };
+}
+
+/**
+ * Parsed uv.lock file structure.
+ */
+export interface UvLockFile {
+  version?: number;
+  package?: UvLockPackage[];
+}
+
 export const UV_VERSION = '0.9.22';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
@@ -325,4 +348,90 @@ export function getProtectedUvEnv(
     ...baseEnv,
     UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
   };
+}
+
+/**
+ * Directory name where the uv binary will be bundled in the Lambda package.
+ * This is used for runtime dependency installation.
+ */
+export const UV_BUNDLE_DIR = '_uv';
+
+/**
+ * Get the path to the uv binary for bundling into the Lambda package.
+ * Uses `which` to find uv in PATH, or falls back to known locations.
+ *
+ * @param pythonPath Path to Python interpreter (used for fallback resolution)
+ * @returns Path to the uv binary
+ * @throws Error if uv binary cannot be found
+ */
+export async function getUvBinaryForBundling(
+  pythonPath: string
+): Promise<string> {
+  const uvPath = await findUvBinary(pythonPath);
+  if (!uvPath) {
+    throw new Error(
+      'Cannot find uv binary for bundling. ' +
+        'Ensure uv is installed and available in PATH.'
+    );
+  }
+
+  // Resolve symlinks to get the actual binary path.
+  // This is important because in Vercel's build container,
+  // /usr/local/bin/uv is a symlink to /uv/uv. If we don't resolve it,
+  // the Lambda will contain a symlink rather than the actual binary.
+  const resolvedPath = await fs.promises.realpath(uvPath);
+  return resolvedPath;
+}
+
+/**
+ * Parse a uv.lock file (TOML format) to extract package information.
+ * This is a simplified TOML parser that handles the specific structure of uv.lock.
+ */
+export async function parseUvLockFile(lockPath: string): Promise<UvLockFile> {
+  const content = await fs.promises.readFile(lockPath, 'utf8');
+  const packages: UvLockPackage[] = [];
+
+  // Split into package blocks - each [[package]] section
+  const packageBlocks = content.split(/\[\[package\]\]/);
+
+  for (const block of packageBlocks.slice(1)) {
+    // Skip the header section before first [[package]]
+    const pkg: UvLockPackage = { name: '', version: '' };
+
+    // Parse name
+    const nameMatch = block.match(/^name\s*=\s*"([^"]+)"/m);
+    if (nameMatch) pkg.name = nameMatch[1];
+
+    // Parse version
+    const versionMatch = block.match(/^version\s*=\s*"([^"]+)"/m);
+    if (versionMatch) pkg.version = versionMatch[1];
+
+    // Parse source section if present
+    const sourceSection = block.match(/\[package\.source\]([\s\S]*?)(?=\[|$)/);
+    if (sourceSection) {
+      pkg.source = {};
+      const sourceContent = sourceSection[1];
+
+      const registryMatch = sourceContent.match(/registry\s*=\s*"([^"]+)"/);
+      if (registryMatch) pkg.source.registry = registryMatch[1];
+
+      const urlMatch = sourceContent.match(/url\s*=\s*"([^"]+)"/);
+      if (urlMatch) pkg.source.url = urlMatch[1];
+
+      const gitMatch = sourceContent.match(/git\s*=\s*"([^"]+)"/);
+      if (gitMatch) pkg.source.git = gitMatch[1];
+
+      const pathMatch = sourceContent.match(/path\s*=\s*"([^"]+)"/);
+      if (pathMatch) pkg.source.path = pathMatch[1];
+
+      const editableMatch = sourceContent.match(/editable\s*=\s*"([^"]+)"/);
+      if (editableMatch) pkg.source.editable = editableMatch[1];
+    }
+
+    if (pkg.name && pkg.version) {
+      packages.push(pkg);
+    }
+  }
+
+  return { package: packages };
 }

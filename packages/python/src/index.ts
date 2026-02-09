@@ -25,10 +25,23 @@ import {
   ensureUvProject,
   resolveVendorDir,
   mirrorSitePackagesIntoVendor,
+  mirrorPrivatePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
+  calculateBundleSize,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
 } from './install';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
+import {
+  classifyPackages,
+  generateRuntimeRequirements,
+  getProjectNameFromPyproject,
+} from './packages';
+import {
+  UvRunner,
+  getUvBinaryOrInstall,
+  getUvBinaryForBundling,
+  UV_BUNDLE_DIR,
+} from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import {
   getSupportedPythonVersion,
@@ -43,6 +56,7 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
+import { renderTrampoline } from './trampoline';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -349,12 +363,16 @@ export const build: BuildV3 = async ({
     );
   }
 
+  // Track the lock file path for package classification (used when runtime install is enabled)
+  let uvLockPath: string | null = null;
+  let uvPyprojectPath: string | null = null;
+
   if (!assumeDepsInstalled) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.
-    const { projectDir } = await ensureUvProject({
+    const { projectDir, pyprojectPath, lockPath } = await ensureUvProject({
       workPath,
       entryDirectory,
       fsFiles,
@@ -366,6 +384,9 @@ export const build: BuildV3 = async ({
       venvPath,
       meta,
     });
+
+    uvLockPath = lockPath;
+    uvPyprojectPath = pyprojectPath;
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
     // so we can use `uv sync` to install dependencies into the active
@@ -406,45 +427,6 @@ export const build: BuildV3 = async ({
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
-  const runtimeTrampoline = `
-import importlib
-import os
-import os.path
-import site
-import sys
-
-_here = os.path.dirname(__file__)
-
-os.environ.update({
-  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
-  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
-  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-})
-
-_vendor_rel = '${vendorDir}'
-_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
-
-if os.path.isdir(_vendor):
-    # Process .pth files like a real site-packages dir
-    site.addsitedir(_vendor)
-
-    # Move _vendor to the front (after script dir if present)
-    try:
-        while _vendor in sys.path:
-            sys.path.remove(_vendor)
-    except ValueError:
-        pass
-
-    # Put vendored deps ahead of site-packages but after the script dir
-    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
-    sys.path.insert(idx, _vendor)
-
-    importlib.invalidate_caches()
-
-from vercel_runtime.vc_init import vc_handler
-`;
-
   const predefinedExcludes = [
     '.git/**',
     '.gitignore',
@@ -477,13 +459,142 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
 
-  const vendorFiles = await mirrorSitePackagesIntoVendor({
+  // Bundle dependencies
+  const allVendorFiles = await mirrorSitePackagesIntoVendor({
     venvPath,
     vendorDirName: vendorDir,
   });
-  for (const [p, f] of Object.entries(vendorFiles)) {
-    files[p] = f;
+
+  // Calculate the total bundle size with all dependencies
+  const tempFilesForSizing: Files = { ...files };
+  for (const [p, f] of Object.entries(allVendorFiles)) {
+    tempFilesForSizing[p] = f;
   }
+  const totalBundleSize = await calculateBundleSize(tempFilesForSizing);
+  const totalBundleSizeMB = (totalBundleSize / (1024 * 1024)).toFixed(2);
+  debug(`Total bundle size: ${totalBundleSizeMB} MB`);
+
+  // Determine if runtime dependency installation is needed
+  let runtimeInstallEnabled = false;
+  let runtimeRequirementsContent: string | undefined;
+
+  // Check if the experimental runtime install feature is enabled
+  const runtimeInstallFeatureEnabled =
+    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === '1' ||
+    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === 'true';
+
+  if (
+    runtimeInstallFeatureEnabled &&
+    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+    uvLockPath
+  ) {
+    console.log(
+      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
+        `Enabling runtime dependency installation.`
+    );
+
+    // Get the project name from pyproject.toml to exclude it from runtime installation.
+    // The project's own package is listed in uv.lock but doesn't exist on PyPI.
+    const excludePackages: string[] = [];
+    if (uvPyprojectPath) {
+      const projectName = await getProjectNameFromPyproject(uvPyprojectPath);
+      if (projectName) {
+        excludePackages.push(projectName);
+        debug(
+          `Excluding project package "${projectName}" from runtime installation`
+        );
+      }
+    }
+
+    // Classify packages into private (must bundle) and public (can runtime-install)
+    const classification = await classifyPackages({
+      lockPath: uvLockPath,
+      excludePackages,
+    });
+    debug(
+      `Package classification: ${classification.privatePackages.length} private, ` +
+        `${classification.publicPackages.length} public`
+    );
+
+    if (classification.publicPackages.length > 0) {
+      runtimeInstallEnabled = true;
+
+      // Bundle only private packages and vercel-runtime
+      const privatePackagesWithRuntime = [
+        ...classification.privatePackages,
+        'vercel-runtime',
+        'vercel_runtime',
+      ];
+
+      const privateVendorFiles = await mirrorPrivatePackagesIntoVendor({
+        venvPath,
+        vendorDirName: vendorDir,
+        privatePackages: privatePackagesWithRuntime,
+      });
+
+      // Add private package files only
+      for (const [p, f] of Object.entries(privateVendorFiles)) {
+        files[p] = f;
+      }
+
+      // Generate runtime requirements file
+      runtimeRequirementsContent = generateRuntimeRequirements(classification);
+      const runtimeRequirementsPath = `${UV_BUNDLE_DIR}/_runtime_requirements.txt`;
+      files[runtimeRequirementsPath] = new FileBlob({
+        data: runtimeRequirementsContent,
+      });
+
+      // Bundle the uv binary for runtime installation
+      try {
+        const uvBinaryPath = await getUvBinaryForBundling(
+          pythonVersion.pythonPath
+        );
+
+        // Copy the uv binary into workPath so FileFsRef can reference it correctly.
+        // This is necessary because FileFsRef uses relative paths from workPath,
+        // and the uv binary is located outside the project (e.g., /uv/uv or /usr/local/bin/uv).
+        const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
+        const uvLocalPath = join(uvBundleDir, 'uv');
+        await fs.promises.mkdir(uvBundleDir, { recursive: true });
+        await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+        await fs.promises.chmod(uvLocalPath, 0o755);
+
+        const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+        files[uvBundlePath] = new FileFsRef({
+          fsPath: uvLocalPath,
+          mode: 0o100755, // Regular file + executable
+        });
+        debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+      } catch (err) {
+        console.log(
+          `Warning: Failed to bundle uv binary: ${err instanceof Error ? err.message : String(err)}`
+        );
+        console.log('Falling back to bundling all dependencies.');
+        runtimeInstallEnabled = false;
+      }
+
+      if (runtimeInstallEnabled) {
+        console.log('Runtime dependency installation enabled.');
+      }
+    } else {
+      console.log(
+        'All packages are private; cannot reduce bundle size via runtime installation.'
+      );
+    }
+  } else {
+    // Bundle all dependencies since we're not doing runtime installation
+    for (const [p, f] of Object.entries(allVendorFiles)) {
+      files[p] = f;
+    }
+  }
+
+  const runtimeTrampoline = renderTrampoline({
+    moduleName,
+    entrypointWithSuffix,
+    vendorDir,
+    runtimeInstallEnabled,
+    uvBundleDir: UV_BUNDLE_DIR,
+  });
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
