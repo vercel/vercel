@@ -25,9 +25,11 @@
 /packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/marketplace
 /packages/cli/src/commands/integration-resource/ @vercel/ci-cd @vercel/marketplace
 /packages/cli/src/util/integration/      @vercel/ci-cd @vercel/marketplace
+/packages/cli/src/util/telemetry/commands/integration/ @vercel/ci-cd @vercel/marketplace
 /packages/cli/test/mocks/integration.ts  @vercel/ci-cd @vercel/marketplace
 /packages/cli/test/unit/commands/integration/ @vercel/ci-cd @vercel/marketplace
 /packages/cli/test/unit/commands/integration-resource/ @vercel/ci-cd @vercel/marketplace
+/packages/cli/test/unit/util/integration/ @vercel/ci-cd @vercel/marketplace
 /packages/python*                        @vercel/ci-cd @vercel/team-python
 /python                                  @vercel/ci-cd @vercel/team-python
 /.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python

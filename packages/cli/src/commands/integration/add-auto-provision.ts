@@ -11,6 +11,7 @@ import type {
   AutoProvisionResult,
 } from '../../util/integration/types';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
+import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import cmd from '../../util/output/cmd';
 import indent from '../../util/output/indent';
 import { packageName } from '../../util/pkg-name';
@@ -25,6 +26,7 @@ export interface AddAutoProvisionOptions {
 export async function addAutoProvision(
   client: Client,
   integrationSlug: string,
+  resourceNameArg?: string,
   options: AddAutoProvisionOptions = {}
 ) {
   const telemetry = new IntegrationAddTelemetryClient({
@@ -40,6 +42,8 @@ export async function addAutoProvision(
     return 1;
   }
 
+  telemetry.trackCliOptionName(resourceNameArg);
+
   // 2. Fetch integration
   let integration;
   let knownIntegrationSlug = false;
@@ -52,7 +56,10 @@ export async function addAutoProvision(
     );
     return 1;
   } finally {
-    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
+    telemetry.trackCliArgumentIntegration(
+      integrationSlug,
+      knownIntegrationSlug
+    );
   }
 
   if (!integration.products?.length) {
@@ -83,11 +90,13 @@ export async function addAutoProvision(
   const metadataWizard = createMetadataWizard(product.metadataSchema);
   output.debug(`Metadata wizard supported: ${metadataWizard.isSupported}`);
 
-  // 4. Get resource name
-  const resourceName = await client.input.text({
-    message: 'What is the name of the resource?',
-    validate: value => (value.trim() ? true : 'Resource name is required'),
-  });
+  // 4. Resolve and validate resource name
+  const nameResult = resolveResourceName(product.slug, resourceNameArg);
+  if ('error' in nameResult) {
+    output.error(nameResult.error);
+    return 1;
+  }
+  const { resourceName } = nameResult;
 
   // 5. Collect metadata (if supported, otherwise let server use defaults)
   const metadata = metadataWizard.isSupported
@@ -199,7 +208,9 @@ export async function addAutoProvision(
   );
   output.debug(`Installation: ${JSON.stringify(result.installation, null, 2)}`);
   output.debug(`Billing plan: ${JSON.stringify(result.billingPlan, null, 2)}`);
-  output.success(`${product.name} successfully provisioned`);
+  output.success(
+    `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
+  );
 
   // 10. Link to project (prompt)
   const projectLink = await getOptionalLinkedProject(client);
@@ -222,7 +233,9 @@ export async function addAutoProvision(
   });
   output.debug(`Selected environments: ${JSON.stringify(environments)}`);
 
-  output.spinner(`Connecting to ${chalk.bold(projectLink.project.name)}...`);
+  output.spinner(
+    `Connecting ${chalk.bold(resourceName)} to ${chalk.bold(projectLink.project.name)}...`
+  );
   output.debug(
     `Connecting resource ${result.resource.id} to project ${projectLink.project.id}`
   );
