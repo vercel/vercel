@@ -357,14 +357,9 @@ export const build: BuildV3 = async ({
     const { projectDir } = await ensureUvProject({
       workPath,
       entryDirectory,
-      fsFiles,
       repoRootPath,
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
       pythonVersion: pythonVersion.version,
       uv,
-      venvPath,
-      meta,
     });
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
