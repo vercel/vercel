@@ -26,12 +26,12 @@ type IntegrationCategory = {
   title: string;
 };
 
-export async function discover(client: Client) {
+export async function discover(client: Client, args: string[]) {
   let parsedArguments = null;
   const flagsSpecification = getFlagsSpecification(discoverSubcommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(args, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
@@ -43,11 +43,7 @@ export async function discover(client: Client) {
     },
   });
 
-  const positionalArgs = parsedArguments.args.filter(
-    arg => arg !== 'integration' && arg !== 'discover'
-  );
-
-  if (positionalArgs.length > 0) {
+  if (parsedArguments.args.length > 0) {
     output.error(
       'Invalid number of arguments. Usage: `vercel integration discover`'
     );

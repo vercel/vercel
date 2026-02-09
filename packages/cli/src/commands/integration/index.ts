@@ -38,9 +38,8 @@ export default async function main(client: Client) {
       store: client.telemetryEventStore,
     },
   });
-  const rawArgs = client.argv.slice(2);
   const { args, flags } = parseArguments(
-    rawArgs,
+    client.argv.slice(2),
     getFlagsSpecification(integrationCommand.options),
     { permissive: true }
   );
@@ -50,9 +49,7 @@ export default async function main(client: Client) {
     args: subArgs,
   } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
-  const needHelp = Boolean(
-    flags['--help'] || rawArgs.includes('--help') || rawArgs.includes('-h')
-  );
+  const needHelp = flags['--help'];
 
   function printHelp(command: Command) {
     output.print(
@@ -99,7 +96,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandDiscover(subcommandOriginal);
-      return discover(client);
+      return discover(client, subArgs);
     }
     case 'balance': {
       if (needHelp) {
