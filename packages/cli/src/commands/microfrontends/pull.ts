@@ -3,6 +3,10 @@ import { join } from 'node:path';
 import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { ensureLink } from '../../util/link/ensure-link';
 import { emoji, prependEmoji } from '../../util/emoji';
 import humanizePath from '../../util/humanize-path';
@@ -30,6 +34,10 @@ export default async function pull(client: Client): Promise<number> {
   const link = await ensureLink('microfrontends', client, client.cwd);
   if (typeof link === 'number') {
     return link;
+  }
+  if (isActionRequiredPayload(link)) {
+    outputActionRequired(client, link);
+    return 1;
   }
 
   const { project, org, repoRoot } = link;

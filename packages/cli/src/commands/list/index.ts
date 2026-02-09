@@ -12,6 +12,10 @@ import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import type Client from '../../util/client';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -199,6 +203,10 @@ export default async function list(client: Client) {
       autoConfirm,
     });
     if (typeof link === 'number') return link;
+    if (isActionRequiredPayload(link)) {
+      outputActionRequired(client, link);
+      return 1;
+    }
     project = link.project;
     client.config.currentTeam = link.org.id;
   }

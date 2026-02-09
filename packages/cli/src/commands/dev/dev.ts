@@ -8,6 +8,10 @@ import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
@@ -42,17 +46,22 @@ export default async function dev(
   let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(client, cwd, {
+    const setupResult = await setupAndLink(client, cwd, {
       autoConfirm: opts['--yes'],
       link,
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
     });
 
-    if (link.status === 'not_linked') {
+    if (isActionRequiredPayload(setupResult)) {
+      outputActionRequired(client, setupResult);
+      return 1;
+    }
+    if (setupResult.status === 'not_linked') {
       // User aborted project linking questions
       return 0;
     }
+    link = setupResult;
   }
 
   if (link.status === 'error') {

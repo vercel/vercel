@@ -2,6 +2,10 @@ import chalk from 'chalk';
 import { isErrnoException } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
@@ -164,6 +168,10 @@ export async function getDeploymentUrlAndToken(
 
   if (typeof link === 'number') {
     return link;
+  }
+  if (isActionRequiredPayload(link)) {
+    outputActionRequired(client, link);
+    return 1;
   }
 
   const { project } = link;

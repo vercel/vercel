@@ -18,6 +18,10 @@ import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/con
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
 
@@ -84,6 +88,10 @@ export default async function connect(client: Client, argv: string[]) {
   });
   if (typeof linkedProject === 'number') {
     return linkedProject;
+  }
+  if (isActionRequiredPayload(linkedProject)) {
+    outputActionRequired(client, linkedProject);
+    return 1;
   }
   const { project, org } = linkedProject;
 

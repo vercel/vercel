@@ -12,6 +12,10 @@ import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
@@ -120,6 +124,10 @@ export async function pullCommandLogic(
   });
   if (typeof link === 'number') {
     return link;
+  }
+  if (isActionRequiredPayload(link)) {
+    outputActionRequired(client, link);
+    return 1;
   }
 
   const { project, org, repoRoot } = link;

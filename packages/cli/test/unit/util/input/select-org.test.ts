@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
+import { isActionRequiredPayload } from '../../../../src/util/agent-output';
 import selectOrg from '../../../../src/util/input/select-org';
 import { createTeam, useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -95,6 +96,32 @@ describe('selectOrg', () => {
     });
   });
 
+  describe('non-interactive mode', () => {
+    beforeEach(() => {
+      user = useUser({ version: 'northstar' });
+      useTeam();
+      createTeam(); // second team so choices.length > 1
+      client.nonInteractive = true;
+    });
+
+    afterEach(() => {
+      client.nonInteractive = false;
+    });
+
+    it('returns ActionRequiredPayload when multiple teams and no current team', async () => {
+      const result = await selectOrg(client, 'Which scope?', false);
+      expect(isActionRequiredPayload(result)).toBe(true);
+      if (!isActionRequiredPayload(result)) return;
+      expect(result.status).toBe('action_required');
+      expect(result.reason).toBe('missing_scope');
+      expect(result.message).toContain('Multiple teams');
+      expect(Array.isArray(result.choices)).toBe(true);
+      expect(result.choices!.length).toBeGreaterThanOrEqual(2);
+      expect(Array.isArray(result.next)).toBe(true);
+      expect(result.next!.length).toBe(result.choices!.length);
+    });
+  });
+
   describe('without current team', () => {
     let team2: ReturnType<typeof createTeam>;
 
@@ -113,6 +140,9 @@ describe('selectOrg', () => {
       client.stdin.write('\r'); // Return key
 
       const result = await selectOrgPromise;
+      if (isActionRequiredPayload(result)) {
+        throw new Error('Unexpected action_required in interactive test');
+      }
       expect(result.id).toBe(team2.id);
       expect(user.defaultTeamId).toBe(team2.id);
     });

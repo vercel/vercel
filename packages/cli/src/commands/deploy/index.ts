@@ -69,6 +69,10 @@ import { deployCommand, deprecatedArchiveSplitTgz } from './command';
 import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
@@ -264,6 +268,10 @@ export default async (client: Client): Promise<number> => {
   });
   if (typeof link === 'number') {
     return link;
+  }
+  if (isActionRequiredPayload(link)) {
+    outputActionRequired(client, link);
+    return 1;
   }
 
   const { org, project } = link;

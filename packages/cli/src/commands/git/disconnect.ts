@@ -9,6 +9,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
+import {
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../../util/agent-output';
 import { ensureLink } from '../../util/link/ensure-link';
 
 export default async function disconnect(client: Client, argv: string[]) {
@@ -53,7 +57,10 @@ export default async function disconnect(client: Client, argv: string[]) {
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
-
+  if (isActionRequiredPayload(linkedProject)) {
+    outputActionRequired(client, linkedProject);
+    return 1;
+  }
   const { org, project } = linkedProject;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 

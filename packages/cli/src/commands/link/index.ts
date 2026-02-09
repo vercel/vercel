@@ -3,6 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
 import { ensureRepoLink } from '../../util/link/repo';
+import getTeams from '../../util/teams/get-teams';
 import { help } from '../help';
 import { linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -70,19 +71,35 @@ export default async function link(client: Client) {
       return 1;
     }
   } else {
-    // When --team is provided, set currentTeam so selectOrg uses it as default (avoids action_required when non-interactive)
+    // Prefer the validated team ID set by the global handler (--team/--scope). When it is not set
+    // (e.g. no scope passed), currentTeam may be undefined or from saved config. If the user passed
+    // --team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
+    // has a default; never set a raw slug (always use team ID).
     const teamFlag = parsedArgs.flags['--team'];
-    if (typeof teamFlag === 'string') {
-      client.config.currentTeam = teamFlag;
+    if (typeof teamFlag === 'string' && !client.config.currentTeam) {
+      try {
+        const teams = await getTeams(client);
+        const related = teams.find(
+          t => t.id === teamFlag || t.slug === teamFlag
+        );
+        if (related) {
+          client.config.currentTeam = related.id;
+        }
+      } catch {
+        // Let ensureLink/selectOrg handle missing team or API errors
+      }
     }
 
+    // Only use non-interactive behavior when the flag is explicitly enabled (link stays interactive otherwise)
+    const linkNonInteractive = client.argv.includes('--non-interactive');
+
     const link = await ensureLink('link', client, cwd, {
-      autoConfirm: yes || client.nonInteractive,
+      autoConfirm: yes || linkNonInteractive,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
       projectId: parsedArgs.flags['--project-id'],
       successEmoji: 'success',
-      nonInteractive: client.nonInteractive,
+      nonInteractive: linkNonInteractive,
     });
 
     if (typeof link === 'number') {

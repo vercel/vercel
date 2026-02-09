@@ -16,6 +16,20 @@ export interface ActionRequiredPayload {
 }
 
 /**
+ * Type guard for ActionRequiredPayload (e.g. from ensureLink or selectOrg).
+ */
+export function isActionRequiredPayload(
+  value: unknown
+): value is ActionRequiredPayload {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'status' in value &&
+    (value as ActionRequiredPayload).status === 'action_required'
+  );
+}
+
+/**
  * Structured payload for errors in non-interactive mode.
  */
 export interface AgentErrorPayload {
