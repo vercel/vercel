@@ -1,4 +1,5 @@
 import type Client from './client';
+import { packageName } from './pkg-name';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -40,8 +41,59 @@ export interface AgentErrorPayload {
 }
 
 /**
+ * Builds the invoking CLI command with --scope set to the given slug
+ * (strips existing --scope/--team from argv so the result is canonical).
+ */
+export function buildCommandWithScope(
+  argv: string[],
+  scopeSlug: string,
+  pkgName: string = packageName
+): string {
+  const args = argv.slice(2);
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--scope' || args[i] === '--team') {
+      i++;
+      continue;
+    }
+    out.push(args[i]);
+  }
+  out.push('--scope', scopeSlug);
+  return `${pkgName} ${out.join(' ')}`;
+}
+
+/**
+ * Enriches an action_required payload so next[] includes both:
+ * - Link command per choice (so the agent can link once for future commands).
+ * - Invoking command with --scope per choice (so the agent can retry the same command without linking).
+ * Pass argv from the current process (e.g. client.argv) to build the invoking command.
+ */
+export function enrichActionRequiredWithInvokingCommand(
+  payload: ActionRequiredPayload,
+  argv: string[]
+): ActionRequiredPayload {
+  if (!payload.choices?.length) {
+    return payload;
+  }
+  const next: Array<{ command: string; when?: string }> = [];
+  for (const choice of payload.choices) {
+    const slug = choice.name;
+    next.push({
+      command: `${packageName} link --scope ${slug}`,
+      when: 'Link first (then run any command without --scope)',
+    });
+    next.push({
+      command: buildCommandWithScope(argv, slug),
+      when: 'Run this command with scope (no link)',
+    });
+  }
+  return { ...payload, next };
+}
+
+/**
  * When client.nonInteractive, writes the action_required payload as a single
  * JSON line to stdout and exits with exitCode (default 1).
+ * The payload's next[] is enriched with both link commands and the invoking command with --scope.
  * In interactive mode, does nothing (caller should show prompts or errors as usual).
  */
 export function outputActionRequired(
@@ -52,8 +104,12 @@ export function outputActionRequired(
   if (!client.nonInteractive) {
     return;
   }
+  const enriched = enrichActionRequiredWithInvokingCommand(
+    payload,
+    client.argv
+  );
   // eslint-disable-next-line no-console
-  console.log(JSON.stringify(payload));
+  console.log(JSON.stringify(enriched));
   process.exit(exitCode);
 }
 

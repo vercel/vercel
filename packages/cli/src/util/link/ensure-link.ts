@@ -5,10 +5,33 @@ import { getCommandName } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
-import type { ActionRequiredPayload } from '../agent-output';
+import {
+  type ActionRequiredPayload,
+  isActionRequiredPayload,
+  outputActionRequired,
+} from '../agent-output';
 import output from '../../output-manager';
 
 export type EnsureLinkResult = ProjectLinked | number | ActionRequiredPayload;
+
+/**
+ * Handles EnsureLinkResult: returns an exit code to return, or the ProjectLinked.
+ * When result is action_required, outputs JSON and exits (or returns 1 if not nonInteractive).
+ * Callers can do: const linkOrExit = handleEnsureLinkResult(client, await ensureLink(...)); if (typeof linkOrExit === 'number') return linkOrExit; const link = linkOrExit;
+ */
+export function handleEnsureLinkResult(
+  client: Client,
+  result: EnsureLinkResult
+): number | ProjectLinked {
+  if (typeof result === 'number') {
+    return result;
+  }
+  if (isActionRequiredPayload(result)) {
+    outputActionRequired(client, result);
+    return 1;
+  }
+  return result;
+}
 
 /**
  * Checks if a project is already linked and if not, links the project and

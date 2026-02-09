@@ -18,12 +18,11 @@ import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/con
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import {
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../../util/agent-output';
 import { connectSubcommand } from './command';
-import { ensureLink } from '../../util/link/ensure-link';
+import {
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 
 interface ConnectArgParams {
   client: Client;
@@ -83,17 +82,14 @@ export default async function connect(client: Client, argv: string[]) {
   const repoArg = args[0];
   telemetry.trackCliArgumentGitUrl(repoArg);
 
-  const linkedProject = await ensureLink('git', client, client.cwd, {
-    autoConfirm: confirm,
-  });
-  if (typeof linkedProject === 'number') {
-    return linkedProject;
+  const linkOrExit = handleEnsureLinkResult(
+    client,
+    await ensureLink('git', client, client.cwd, { autoConfirm: confirm })
+  );
+  if (typeof linkOrExit === 'number') {
+    return linkOrExit;
   }
-  if (isActionRequiredPayload(linkedProject)) {
-    outputActionRequired(client, linkedProject);
-    return 1;
-  }
-  const { project, org } = linkedProject;
+  const { project, org } = linkOrExit;
 
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;

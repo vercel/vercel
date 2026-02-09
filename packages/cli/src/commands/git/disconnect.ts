@@ -10,10 +10,9 @@ import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import {
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../../util/agent-output';
-import { ensureLink } from '../../util/link/ensure-link';
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;
@@ -51,17 +50,14 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
-  const linkedProject = await ensureLink('git', client, client.cwd, {
-    autoConfirm,
-  });
-  if (typeof linkedProject === 'number') {
-    return linkedProject;
+  const linkOrExit = handleEnsureLinkResult(
+    client,
+    await ensureLink('git', client, client.cwd, { autoConfirm })
+  );
+  if (typeof linkOrExit === 'number') {
+    return linkOrExit;
   }
-  if (isActionRequiredPayload(linkedProject)) {
-    outputActionRequired(client, linkedProject);
-    return 1;
-  }
-  const { org, project } = linkedProject;
+  const { org, project } = linkOrExit;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (project.link) {

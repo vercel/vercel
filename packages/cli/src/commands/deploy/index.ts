@@ -70,10 +70,9 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import {
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../../util/agent-output';
-import { ensureLink } from '../../util/link/ensure-link';
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -257,22 +256,22 @@ export default async (client: Client): Promise<number> => {
 
   // Retrieve `project` and `org` from linked Project.
   // If not linked, prompt user to set up a new Project.
-  const link = await ensureLink('deploy', client, cwd, {
-    autoConfirm,
-    setupMsg: 'Set up and deploy',
-    projectName: getProjectName({
-      nameParam: parsedArguments.flags['--name'],
-      nowConfig: localConfig,
-      paths,
-    }),
-  });
-  if (typeof link === 'number') {
-    return link;
+  const linkOrExit = handleEnsureLinkResult(
+    client,
+    await ensureLink('deploy', client, cwd, {
+      autoConfirm,
+      setupMsg: 'Set up and deploy',
+      projectName: getProjectName({
+        nameParam: parsedArguments.flags['--name'],
+        nowConfig: localConfig,
+        paths,
+      }),
+    })
+  );
+  if (typeof linkOrExit === 'number') {
+    return linkOrExit;
   }
-  if (isActionRequiredPayload(link)) {
-    outputActionRequired(client, link);
-    return 1;
-  }
+  const link = linkOrExit;
 
   const { org, project } = link;
   const rootDirectory = project.rootDirectory;

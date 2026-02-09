@@ -5,10 +5,9 @@ import output from '../../output-manager';
 import { listSubcommand, targetCommand } from './command';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import {
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../../util/agent-output';
-import { ensureLink } from '../../util/link/ensure-link';
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { validateJsonOutput } from '../../util/output-format';
@@ -91,14 +90,14 @@ export default async function list(client: Client, argv: string[]) {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const link = await ensureLink(targetCommand.name, client, cwd);
-  if (typeof link === 'number') {
-    return link;
+  const linkOrExit = handleEnsureLinkResult(
+    client,
+    await ensureLink(targetCommand.name, client, cwd)
+  );
+  if (typeof linkOrExit === 'number') {
+    return linkOrExit;
   }
-  if (isActionRequiredPayload(link)) {
-    outputActionRequired(client, link);
-    return 1;
-  }
+  const link = linkOrExit;
 
   const start = Date.now();
   const projectSlugLink = formatProject(link.org.slug, link.project.name);

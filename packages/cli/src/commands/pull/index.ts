@@ -13,10 +13,9 @@ import {
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
 import {
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../../util/agent-output';
-import { ensureLink } from '../../util/link/ensure-link';
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
@@ -118,17 +117,17 @@ export async function pullCommandLogic(
   environment: string,
   flags: PullCommandFlags
 ): Promise<number> {
-  const link = await ensureLink('pull', client, cwd, {
-    autoConfirm,
-    pullEnv: false,
-  });
-  if (typeof link === 'number') {
-    return link;
+  const linkOrExit = handleEnsureLinkResult(
+    client,
+    await ensureLink('pull', client, cwd, {
+      autoConfirm,
+      pullEnv: false,
+    })
+  );
+  if (typeof linkOrExit === 'number') {
+    return linkOrExit;
   }
-  if (isActionRequiredPayload(link)) {
-    outputActionRequired(client, link);
-    return 1;
-  }
+  const link = linkOrExit;
 
   const { project, org, repoRoot } = link;
 

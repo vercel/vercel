@@ -1,7 +1,11 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { ensureLink } from '../../../../src/util/link/ensure-link';
+import {
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../../../src/util/link/ensure-link';
 import { client } from '../../../mocks/client';
 import { isActionRequiredPayload } from '../../../../src/util/agent-output';
+import type * as AgentOutputModule from '../../../../src/util/agent-output';
 
 vi.mock('../../../../src/util/projects/link', () => ({
   getLinkedProject: vi.fn(),
@@ -10,6 +14,16 @@ vi.mock('../../../../src/util/projects/link', () => ({
 vi.mock('../../../../src/util/link/setup-and-link', () => ({
   default: vi.fn(),
 }));
+
+vi.mock('../../../../src/util/agent-output', async importOriginal => {
+  const actual = await (
+    importOriginal as () => Promise<typeof AgentOutputModule>
+  )();
+  return {
+    ...actual,
+    outputActionRequired: vi.fn(),
+  };
+});
 
 describe('ensureLink', () => {
   let getLinkedProject: ReturnType<typeof vi.fn>;
@@ -69,6 +83,41 @@ describe('ensureLink', () => {
     expect(setupAndLink).toHaveBeenCalledWith(client, '/some/cwd', {
       link: { status: 'not_linked', org: null, project: null },
       projectName: 'my-app',
+    });
+  });
+
+  describe('handleEnsureLinkResult', () => {
+    let outputActionRequired: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+      const agentOutput = await import('../../../../src/util/agent-output');
+      outputActionRequired = vi.mocked(agentOutput.outputActionRequired);
+    });
+
+    it('returns exit code when result is number', () => {
+      expect(handleEnsureLinkResult(client, 0)).toBe(0);
+      expect(handleEnsureLinkResult(client, 1)).toBe(1);
+    });
+
+    it('calls outputActionRequired and returns 1 when result is action_required', () => {
+      const payload = {
+        status: 'action_required' as const,
+        message: 'Choose scope.',
+        reason: 'missing_scope',
+      };
+      const out = handleEnsureLinkResult(client, payload);
+      expect(outputActionRequired).toHaveBeenCalledWith(client, payload);
+      expect(out).toBe(1);
+    });
+
+    it('returns ProjectLinked when result is linked', () => {
+      const linked = {
+        status: 'linked' as const,
+        org: { id: 'o1', slug: 'team', type: 'team' as const },
+        project: { id: 'p1', name: 'proj' },
+      };
+      const out = handleEnsureLinkResult(client, linked as any);
+      expect(out).toBe(linked);
     });
   });
 });

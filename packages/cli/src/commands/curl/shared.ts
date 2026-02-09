@@ -3,10 +3,9 @@ import { isErrnoException } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import {
-  isActionRequiredPayload,
-  outputActionRequired,
-} from '../../util/agent-output';
-import { ensureLink } from '../../util/link/ensure-link';
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
@@ -166,15 +165,12 @@ export async function getDeploymentUrlAndToken(
     throw err;
   }
 
-  if (typeof link === 'number') {
-    return link;
-  }
-  if (isActionRequiredPayload(link)) {
-    outputActionRequired(client, link);
-    return 1;
+  const linkOrExit = handleEnsureLinkResult(client, link);
+  if (typeof linkOrExit === 'number') {
+    return linkOrExit;
   }
 
-  const { project } = link;
+  const { project } = linkOrExit;
 
   const linkedProject = await getLinkedProject(client, client.cwd);
 
@@ -231,7 +227,7 @@ export async function getDeploymentUrlAndToken(
     try {
       deploymentProtectionToken =
         protectionBypassFlag ??
-        (await getOrCreateDeploymentProtectionToken(client, link));
+        (await getOrCreateDeploymentProtectionToken(client, linkOrExit));
     } catch (err) {
       output.error(
         `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`
@@ -243,6 +239,6 @@ export async function getDeploymentUrlAndToken(
   return {
     fullUrl,
     deploymentProtectionToken,
-    link,
+    link: linkOrExit,
   };
 }

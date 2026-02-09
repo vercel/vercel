@@ -2,6 +2,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   isActionRequiredPayload,
   outputActionRequired,
+  buildCommandWithScope,
+  enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
 import type Client from '../../../src/util/client';
@@ -120,5 +122,64 @@ describe('outputActionRequired', () => {
     const client = { nonInteractive: true } as Client;
     outputActionRequired(client, payload, 2);
     expect(exitSpy).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('buildCommandWithScope', () => {
+  it('appends --scope when argv has no scope', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--yes'];
+    expect(buildCommandWithScope(argv, 'my-team')).toBe(
+      'vercel deploy --yes --scope my-team'
+    );
+  });
+
+  it('replaces existing --scope with the given slug', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--scope', 'old-team'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --scope new-team'
+    );
+  });
+
+  it('replaces --team with --scope', () => {
+    const argv = ['/node', '/vc.js', 'pull', '--team', 'old-team'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel pull --scope new-team'
+    );
+  });
+});
+
+describe('enrichActionRequiredWithInvokingCommand', () => {
+  it('adds link and invoking command with scope for each choice', () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      message: 'Choose scope.',
+      choices: [
+        { id: 'team_1', name: 'team-a' },
+        { id: 'team_2', name: 'team-b' },
+      ],
+      next: [],
+    };
+    const argv = ['/node', '/vc.js', 'deploy'];
+    const out = enrichActionRequiredWithInvokingCommand(payload, argv);
+    expect(out.next).toHaveLength(4);
+    expect(out.next![0]).toEqual({
+      command: 'vercel link --scope team-a',
+      when: 'Link first (then run any command without --scope)',
+    });
+    expect(out.next![1].command).toBe('vercel deploy --scope team-a');
+    expect(out.next![1].when).toBe('Run this command with scope (no link)');
+    expect(out.next![2].command).toBe('vercel link --scope team-b');
+    expect(out.next![3].command).toBe('vercel deploy --scope team-b');
+  });
+
+  it('returns payload unchanged when no choices', () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      message: 'Something.',
+      next: [{ command: 'vercel login' }],
+    };
+    const out = enrichActionRequiredWithInvokingCommand(payload, []);
+    expect(out).toBe(payload);
+    expect(out.next).toHaveLength(1);
   });
 });

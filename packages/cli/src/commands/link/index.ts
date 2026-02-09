@@ -1,7 +1,10 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
-import { ensureLink } from '../../util/link/ensure-link';
+import {
+  ensureLink,
+  handleEnsureLinkResult,
+} from '../../util/link/ensure-link';
 import { ensureRepoLink } from '../../util/link/repo';
 import getTeams from '../../util/teams/get-teams';
 import { help } from '../help';
@@ -10,8 +13,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
-import { outputActionRequired } from '../../util/agent-output';
-import type { ActionRequiredPayload } from '../../util/agent-output';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -93,26 +94,19 @@ export default async function link(client: Client) {
     // Only use non-interactive behavior when the flag is explicitly enabled (link stays interactive otherwise)
     const linkNonInteractive = client.argv.includes('--non-interactive');
 
-    const link = await ensureLink('link', client, cwd, {
-      autoConfirm: yes || linkNonInteractive,
-      forceDelete: true,
-      projectName: parsedArgs.flags['--project'],
-      projectId: parsedArgs.flags['--project-id'],
-      successEmoji: 'success',
-      nonInteractive: linkNonInteractive,
-    });
-
-    if (typeof link === 'number') {
-      return link;
-    }
-    if (
-      typeof link === 'object' &&
-      link !== null &&
-      'status' in link &&
-      (link as ActionRequiredPayload).status === 'action_required'
-    ) {
-      outputActionRequired(client, link as ActionRequiredPayload);
-      return 1;
+    const linkOrExit = handleEnsureLinkResult(
+      client,
+      await ensureLink('link', client, cwd, {
+        autoConfirm: yes || linkNonInteractive,
+        forceDelete: true,
+        projectName: parsedArgs.flags['--project'],
+        projectId: parsedArgs.flags['--project-id'],
+        successEmoji: 'success',
+        nonInteractive: linkNonInteractive,
+      })
+    );
+    if (typeof linkOrExit === 'number') {
+      return linkOrExit;
     }
   }
 
