@@ -413,6 +413,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'account',
     'login',
     'logout',
     'help',
@@ -651,6 +652,10 @@ const main = async () => {
     if (subcommand) {
       let func: any;
       switch (targetCommand) {
+        case 'account':
+          telemetry.trackCliCommandAccount(userSuppliedSubCommand);
+          func = require('./commands/account').default;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = require('./commands/alias').default;

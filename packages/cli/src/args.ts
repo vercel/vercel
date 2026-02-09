@@ -25,7 +25,8 @@ export const help = () => `
       integration          [cmd]       Manages your Marketplace integrations
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
-      login                [email]     Logs into your account or creates a new one
+      account              [cmd]       Create a Vercel account
+      login                [email]     Logs into your account
       logout                           Logs out of your account
       open                             Opens the current project in the Vercel Dashboard
       promote              [url|id]    Promote an existing deployment to current
