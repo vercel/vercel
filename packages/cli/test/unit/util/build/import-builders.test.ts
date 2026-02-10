@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -18,13 +18,13 @@ vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 describe('importBuilders()', () => {
   let cwd: string = '';
   beforeEach(async () => {
-    // Isolated cwd with no project node_modules so resolution uses the install
-    // path (peer deps → .vercel/builders), avoiding monorepo workspace linkage.
+    // Isolated cwd so tests do not depend on monorepo workspace linkage.
     cwd = await getWriteableDirectory();
   });
   afterEach(async () => {
     await remove(cwd);
   });
+
   it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
     const builders = await importBuilders(specs, cwd);
