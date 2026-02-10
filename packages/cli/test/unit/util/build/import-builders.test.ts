@@ -236,12 +236,9 @@ describe('resolveBuilders()', () => {
   });
 
   // Tests for peerDependencies version resolution
-  // Note: In the monorepo, peerDep builders are installed via workspace, so we can't
-  // easily test "builder not found" scenarios for them. We test the following:
   // 1. Non-peerDep builders keep original spec (no version appended)
   // 2. Explicit versions are preserved
   // 3. The actual peerDep resolution is tested via importBuilders which exercises the full flow
-
   it('should keep original spec for builders NOT in peerDeps', async () => {
     const cwd = await getWriteableDirectory();
     const buildersDir = join(cwd, '.vercel', 'builders');
