@@ -14,7 +14,7 @@ import { getVenvPythonBin, findDir } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
 
-// 240mb leaves room for dependencies and code after unzipping in Lambda's 250mb limit
+// Leave some room so we don't accidentally exceed Lambda limits due to overhead from zipping, other files, etc.
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 240 * 1024 * 1024;
 
 const isWin = process.platform === 'win32';
@@ -258,10 +258,6 @@ interface EnsureUvProjectParams {
   uv: UvRunner;
   venvPath: string;
   meta: Meta;
-  /**
-   * When true, generates a uv.lock file for Pipfile and requirements.txt projects.
-   * This enables runtime dependency installation for these project types.
-   */
   generateLockFile?: boolean;
 }
 
@@ -703,13 +699,8 @@ export async function calculateBundleSize(files: Files): Promise<number> {
 }
 
 /**
- * Mirror only private packages from site-packages into the vendor directory.
+ * Mirror only private packages from site-packages into the _vendor directory.
  * Used when runtime installation is enabled to bundle only private dependencies.
- *
- * @param venvPath Path to the virtual environment
- * @param vendorDirName Name of the vendor directory
- * @param privatePackages List of private package names to include
- * @returns Files object containing only private package files
  */
 export async function mirrorPrivatePackagesIntoVendor({
   venvPath,

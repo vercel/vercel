@@ -2,13 +2,12 @@ import fs from 'fs';
 import { debug } from '@vercel/build-utils';
 import { parseUvLockFile, UvLockPackage } from './uv';
 
-/**
- * Read the project name from a pyproject.toml file.
- * Returns undefined if the file doesn't exist or the name cannot be parsed.
- *
- * @param pyprojectPath Path to the pyproject.toml file
- * @returns The project name, or undefined if not found
- */
+export interface PackageClassification {
+  privatePackages: string[];
+  publicPackages: string[];
+  packageVersions: Record<string, string>;
+}
+
 export async function getProjectNameFromPyproject(
   pyprojectPath: string
 ): Promise<string | undefined> {
@@ -39,34 +38,17 @@ export async function getProjectNameFromPyproject(
 }
 
 /**
- * Result of package classification.
- */
-export interface PackageClassification {
-  /** Packages that should be bundled (private packages) */
-  privatePackages: string[];
-  /** Packages that can be installed at runtime (public PyPI packages) */
-  publicPackages: string[];
-  /** Package name to version mapping for generating requirements */
-  packageVersions: Record<string, string>;
-}
-
-/**
- * Known PyPI registry URL patterns.
- * Packages from these sources are considered "public" and safe to install at runtime.
- */
-const PYPI_REGISTRY_PATTERNS = [
-  'https://pypi.org',
-  'https://files.pythonhosted.org',
-  'pypi.org',
-];
-
-/**
  * Check if a registry URL is a public PyPI registry.
  */
 function isPublicPyPIRegistry(registryUrl: string | undefined): boolean {
+  const pypiRegistryPatterns = [
+    'https://pypi.org',
+    'https://files.pythonhosted.org',
+    'pypi.org',
+  ];
   if (!registryUrl) return true; // Default registry is PyPI
   const normalized = registryUrl.toLowerCase();
-  return PYPI_REGISTRY_PATTERNS.some(pattern => normalized.includes(pattern));
+  return pypiRegistryPatterns.some(pattern => normalized.includes(pattern));
 }
 
 /**
@@ -78,52 +60,24 @@ function isPublicPyPIRegistry(registryUrl: string | undefined): boolean {
  * - Editable installs
  */
 function isPrivatePackageSource(source: UvLockPackage['source']): boolean {
-  if (!source) return false; // No source means PyPI default
-
-  // Git sources are private
+  if (!source) return false;
   if (source.git) return true;
-
-  // Local paths are private
   if (source.path) return true;
-
-  // Editable installs are private
   if (source.editable) return true;
-
-  // URL sources (direct URLs) are private
   if (source.url) return true;
-
-  // Check registry - non-PyPI registries are private
   if (source.registry && !isPublicPyPIRegistry(source.registry)) {
     return true;
   }
-
   return false;
 }
 
-/**
- * Options for classifying packages.
- */
 export interface ClassifyPackagesOptions {
-  /** Path to the uv.lock file */
   lockPath: string;
-  /** Package names to exclude from classification (e.g., the project's own package) */
   excludePackages?: string[];
 }
 
 /**
  * Classify packages from a uv.lock file into private and public categories.
- *
- * Private packages (always bundled):
- * - Packages from non-PyPI registries (private mirrors, custom indexes)
- * - Packages from git repositories
- * - Packages from local file paths
- * - Editable installs
- *
- * Public packages (can be runtime-installed):
- * - Packages from PyPI (https://pypi.org)
- *
- * @param options Classification options including lock path and packages to exclude
- * @returns Classification of packages into private and public
  */
 export async function classifyPackages(
   options: ClassifyPackagesOptions
@@ -170,7 +124,7 @@ export async function classifyPackages(
     }
   } catch (err) {
     debug(`Failed to parse uv.lock file: ${err}`);
-    // On parse failure, treat all as public (safer - will be installed at runtime)
+    // On parse failure, treat all as public
   }
 
   return { privatePackages, publicPackages, packageVersions };
@@ -179,19 +133,13 @@ export async function classifyPackages(
 /**
  * Generate a requirements.txt content for runtime installation.
  * Only includes public packages that will be installed at runtime.
- *
- * @param classification Package classification result
- * @returns Requirements file content
  */
 export function generateRuntimeRequirements(
   classification: PackageClassification
 ): string {
   const lines: string[] = [
     '# Auto-generated requirements for runtime installation',
-    '# These packages were excluded from the Lambda bundle due to size constraints',
-    '# and will be installed at runtime using uv.',
-    '#',
-    '# Private packages are bundled in _vendor and are NOT listed here.',
+    '# Private packages are bundled in _vendor and are not listed here.',
     '',
   ];
 

@@ -481,21 +481,19 @@ export const build: BuildV3 = async ({
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
   // Determine if runtime dependency installation is needed
-  let runtimeInstallEnabled = false;
-  let runtimeRequirementsContent: string | undefined;
-
-  if (
+  let runtimeInstallEnabled =
     runtimeInstallFeatureEnabled &&
     totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-    uvLockPath
-  ) {
+    uvLockPath !== null;
+  let runtimeRequirementsContent: string | undefined;
+
+  if (runtimeInstallEnabled && uvLockPath) {
     console.log(
       `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
         `Enabling runtime dependency installation.`
     );
 
-    // Get the project name from pyproject.toml to exclude it from runtime installation.
-    // The project's own package is listed in uv.lock but doesn't exist on PyPI.
+    // Exclude the project name from runtime installation requirements.
     const excludePackages: string[] = [];
     if (uvPyprojectPath) {
       const projectName = await getProjectNameFromPyproject(uvPyprojectPath);
@@ -507,7 +505,6 @@ export const build: BuildV3 = async ({
       }
     }
 
-    // Classify packages into private (must bundle) and public (can runtime-install)
     const classification = await classifyPackages({
       lockPath: uvLockPath,
       excludePackages,
@@ -518,8 +515,6 @@ export const build: BuildV3 = async ({
     );
 
     if (classification.publicPackages.length > 0) {
-      runtimeInstallEnabled = true;
-
       // Bundle only private packages and vercel-runtime
       const privatePackagesWithRuntime = [
         ...classification.privatePackages,
@@ -533,27 +528,23 @@ export const build: BuildV3 = async ({
         privatePackages: privatePackagesWithRuntime,
       });
 
-      // Add private package files only
       for (const [p, f] of Object.entries(privateVendorFiles)) {
         files[p] = f;
       }
 
-      // Generate runtime requirements file
+      // Everything else gets put into _runtime_requirements.txt for installation at runtime
       runtimeRequirementsContent = generateRuntimeRequirements(classification);
       const runtimeRequirementsPath = `${UV_BUNDLE_DIR}/_runtime_requirements.txt`;
       files[runtimeRequirementsPath] = new FileBlob({
         data: runtimeRequirementsContent,
       });
 
-      // Bundle the uv binary for runtime installation
+      // Add the uv binary to the lambda zip
       try {
         const uvBinaryPath = await getUvBinaryForBundling(
           pythonVersion.pythonPath
         );
 
-        // Copy the uv binary into workPath so FileFsRef can reference it correctly.
-        // This is necessary because FileFsRef uses relative paths from workPath,
-        // and the uv binary is located outside the project (e.g., /uv/uv or /usr/local/bin/uv).
         const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
         const uvLocalPath = join(uvBundleDir, 'uv');
         await fs.promises.mkdir(uvBundleDir, { recursive: true });
@@ -567,16 +558,19 @@ export const build: BuildV3 = async ({
         });
         debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
       } catch (err) {
-        console.log(
-          `Warning: Failed to bundle uv binary: ${err instanceof Error ? err.message : String(err)}`
-        );
-        console.log('Falling back to bundling all dependencies.');
-        runtimeInstallEnabled = false;
+        throw new NowBuildError({
+          code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+          message: `Failed to bundle uv binary for runtime installation: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        });
       }
     } else {
-      console.log(
-        'All packages are private; cannot reduce bundle size via runtime installation.'
-      );
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          'Bundle size exceeds limit but no public packages found for runtime installation.',
+      });
     }
   } else {
     // Bundle all dependencies since we're not doing runtime installation
