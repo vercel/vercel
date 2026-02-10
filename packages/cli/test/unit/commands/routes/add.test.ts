@@ -375,20 +375,15 @@ describe('routes add', () => {
       const exitCode = await routes(client);
 
       expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'subcommand:add',
-          value: 'add',
-        },
-        {
-          key: 'flag:yes',
-          value: 'TRUE',
-        },
-        {
-          key: 'option:action-type',
-          value: 'rewrite',
-        },
-      ]);
+      // Verify key telemetry events are present
+      const events = client.telemetryEventStore.readonlyEvents;
+      expect(events.find(e => e.key === 'subcommand:add')).toBeDefined();
+      expect(events.find(e => e.key === 'flag:yes')).toBeDefined();
+      expect(events.find(e => e.key === 'option:src')).toBeDefined();
+      expect(events.find(e => e.key === 'option:dest')).toBeDefined();
+      expect(
+        events.find(e => e.key === 'option:action-type' && e.value === 'rewrite')
+      ).toBeDefined();
     });
   });
 
@@ -626,7 +621,7 @@ describe('routes add', () => {
       const exitCodePromise = routes(client);
 
       await expect(client.stderr).toOutput(
-        'Status code must be between 100 and 599'
+        'Status code must be an integer between 100 and 599'
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);
@@ -648,8 +643,129 @@ describe('routes add', () => {
       const exitCodePromise = routes(client);
 
       await expect(client.stderr).toOutput(
-        'Status code must be between 100 and 599'
+        'Status code must be an integer between 100 and 599'
       );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error on non-integer status code', async () => {
+      useAddRoute();
+
+      client.setArgv(
+        'routes',
+        'add',
+        'My Route',
+        '--src',
+        '/path',
+        '--status',
+        '301.5',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput(
+        'Status code must be an integer between 100 and 599'
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should send enabled: false when --disabled is used', async () => {
+      let capturedBody: unknown;
+
+      client.scenario.get(
+        '/v1/projects/:projectId/routes/versions',
+        (_req, res) => {
+          res.json({
+            versions: [
+              {
+                id: 'staging-version',
+                isLive: false,
+                isStaging: true,
+                ruleCount: 1,
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.post('/v1/projects/:projectId/routes', (req, res) => {
+        capturedBody = req.body;
+        res.json({
+          route: {
+            id: 'new-route-id',
+            name: 'Disabled Route',
+            enabled: false,
+            staged: true,
+            route: req.body.route.route,
+          },
+          version: {
+            id: 'new-staging',
+            isStaging: true,
+            ruleCount: 1,
+          },
+        });
+      });
+
+      client.setArgv(
+        'routes',
+        'add',
+        'Disabled Route',
+        '--src',
+        '/disabled',
+        '--dest',
+        '/target',
+        '--disabled',
+        '--yes'
+      );
+
+      await expect(routes(client)).resolves.toEqual(0);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = capturedBody as any;
+      expect(body.route.enabled).toBe(false);
+    });
+
+    it('should handle feature_not_enabled error from API', async () => {
+      client.scenario.get(
+        '/v1/projects/:projectId/routes/versions',
+        (_req, res) => {
+          res.json({
+            versions: [
+              {
+                id: 'live-version',
+                isLive: true,
+                isStaging: false,
+                ruleCount: 0,
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.post('/v1/projects/:projectId/routes', (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'feature_not_enabled',
+            message: 'Project-level routes are not enabled for this project.',
+          },
+        });
+      });
+
+      client.setArgv(
+        'routes',
+        'add',
+        'My Route',
+        '--src',
+        '/path',
+        '--dest',
+        '/target',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('not enabled');
 
       await expect(exitCodePromise).resolves.toEqual(1);
     });

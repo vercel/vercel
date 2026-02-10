@@ -171,9 +171,44 @@ export default async function add(client: Client, argv: string[]) {
   // Track initial flags
   telemetry.trackCliFlagYes(skipPrompts);
   telemetry.trackCliFlagDisabled(flags['--disabled'] as boolean | undefined);
+  telemetry.trackCliArgumentName(args[0]);
+  telemetry.trackCliOptionSrc(flags['--src'] as string | undefined);
   telemetry.trackCliOptionSyntax(flags['--syntax'] as string | undefined);
-  telemetry.trackCliOptionPosition(flags['--position'] as string | undefined);
+  telemetry.trackCliOptionDest(flags['--dest'] as string | undefined);
   telemetry.trackCliOptionStatus(flags['--status'] as number | undefined);
+  telemetry.trackCliOptionPosition(flags['--position'] as string | undefined);
+  telemetry.trackCliOptionDescription(
+    flags['--description'] as string | undefined
+  );
+  telemetry.trackCliOptionSetResponseHeader(
+    flags['--set-response-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionAppendResponseHeader(
+    flags['--append-response-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionDeleteResponseHeader(
+    flags['--delete-response-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionSetRequestHeader(
+    flags['--set-request-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionAppendRequestHeader(
+    flags['--append-request-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionDeleteRequestHeader(
+    flags['--delete-request-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionSetRequestQuery(
+    flags['--set-request-query'] as [string] | undefined
+  );
+  telemetry.trackCliOptionAppendRequestQuery(
+    flags['--append-request-query'] as [string] | undefined
+  );
+  telemetry.trackCliOptionDeleteRequestQuery(
+    flags['--delete-request-query'] as [string] | undefined
+  );
+  telemetry.trackCliOptionHas(flags['--has'] as [string] | undefined);
+  telemetry.trackCliOptionMissing(flags['--missing'] as [string] | undefined);
 
   // Check for existing staging version (for auto-promote logic)
   const { versions } = await getRouteVersions(client, project.id, { teamId });
@@ -309,7 +344,6 @@ export default async function add(client: Client, argv: string[]) {
 
     // --- Action selection loop ---
     const availableActions = [...ALL_ACTION_CHOICES];
-    let hasExclusiveAction = false;
     let actionCount = 0;
 
     while (true) {
@@ -406,7 +440,6 @@ export default async function add(client: Client, argv: string[]) {
         c => c.value === actionType
       );
       if (selectedChoice?.exclusive) {
-        hasExclusiveAction = true;
         // Remove all exclusive actions from available choices
         const exclusiveValues = ALL_ACTION_CHOICES.filter(c => c.exclusive).map(
           c => c.value
@@ -476,9 +509,12 @@ export default async function add(client: Client, argv: string[]) {
   const finalStatus = flags['--status'] as number | undefined;
 
   // Validate status code range
-  if (finalStatus !== undefined && (finalStatus < 100 || finalStatus > 599)) {
+  if (
+    finalStatus !== undefined &&
+    (!Number.isInteger(finalStatus) || finalStatus < 100 || finalStatus > 599)
+  ) {
     output.error(
-      `Status code must be between 100 and 599. Usage: ${getCommandName('routes add "Name" --src "/path" --status 404')}`
+      `Status code must be an integer between 100 and 599. Usage: ${getCommandName('routes add "Name" --src "/path" --status 404')}`
     );
     return 1;
   }
@@ -769,7 +805,7 @@ async function collectInteractiveConditions(
         operator as ConditionOperator,
         hostInput,
       );
-      conditionValue = `host:${compiledValue ?? '.*'}`;
+      conditionValue = `host:${compiledValue}`;
     } else {
       const key = await client.input.text({
         message: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} name:`,
