@@ -6,10 +6,10 @@ Load the Vercel CLI skill and help with project deployment and management.
 
 ## Workflow
 
-### Step 1: Load cli skill
+### Step 1: Load vercel-cli skill
 
 ```
-skill({ name: 'cli' })
+skill({ name: 'vercel-cli' })
 ```
 
 ### Step 2: Identify task type from user request
