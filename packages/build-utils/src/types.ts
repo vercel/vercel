@@ -407,7 +407,7 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    experimentalTriggers?: TriggerEvent[];
+    experimentalTriggers?: TriggerEventInput[];
     supportsCancellation?: boolean;
   };
 }
@@ -682,10 +682,10 @@ interface TriggerEventBase {
 }
 
 /**
- * Queue trigger event for Vercel's queue system (v1beta).
+ * Queue trigger input event for v1beta (from vercel.json config).
  * Requires explicit consumer name.
  */
-export interface TriggerEventV1 extends TriggerEventBase {
+export interface TriggerEventInputV1 extends TriggerEventBase {
   /** Event type - must be "queue/v1beta" (REQUIRED) */
   type: 'queue/v1beta';
 
@@ -694,20 +694,32 @@ export interface TriggerEventV1 extends TriggerEventBase {
 }
 
 /**
- * Queue trigger event for Vercel's queue system (v2beta).
+ * Queue trigger input event for v2beta (from vercel.json config).
  * Consumer name is implicitly derived from the function path.
  * Only one trigger per function is allowed.
  */
-export interface TriggerEventV2 extends TriggerEventBase {
+export interface TriggerEventInputV2 extends TriggerEventBase {
   /** Event type - must be "queue/v2beta" (REQUIRED) */
   type: 'queue/v2beta';
 }
 
 /**
- * Queue trigger event for Vercel's queue system.
- * Supports both v1beta (explicit consumer) and v2beta (implicit consumer from function path).
+ * Queue trigger input event from vercel.json config.
+ * v1beta requires explicit consumer, v2beta derives consumer from function path.
  */
-export type TriggerEvent = TriggerEventV1 | TriggerEventV2;
+export type TriggerEventInput = TriggerEventInputV1 | TriggerEventInputV2;
+
+/**
+ * Processed queue trigger event for Lambda.
+ * Consumer is always present (explicitly provided for v1beta, derived for v2beta).
+ */
+export interface TriggerEvent extends TriggerEventBase {
+  /** Event type */
+  type: 'queue/v1beta' | 'queue/v2beta';
+
+  /** Name of the consumer group for this trigger (always present in processed output) */
+  consumer: string;
+}
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 

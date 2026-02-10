@@ -7,7 +7,7 @@ import {
   TriggerEvent,
   sanitizeConsumerName,
 } from '../src/lambda';
-import type { Files, TriggerEventV1, TriggerEventV2 } from '../src/types';
+import type { Files } from '../src/types';
 import { FileBlob, glob, spawnAsync } from '../src';
 import { describe, expect, it } from 'vitest';
 
@@ -106,7 +106,7 @@ describe('Lambda', () => {
     const files: Files = {};
 
     it('should create Lambda with minimal queue trigger', () => {
-      const trigger: TriggerEventV1 = {
+      const trigger: TriggerEvent = {
         type: 'queue/v1beta',
         topic: 'user-events',
         consumer: 'webhook-processors',
@@ -122,12 +122,13 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers).toEqual([trigger]);
       expect(lambda.experimentalTriggers![0].type).toBe('queue/v1beta');
       expect(lambda.experimentalTriggers![0].topic).toBe('user-events');
-      const t = lambda.experimentalTriggers![0] as TriggerEventV1;
-      expect(t.consumer).toBe('webhook-processors');
+      expect(lambda.experimentalTriggers![0].consumer).toBe(
+        'webhook-processors'
+      );
     });
 
     it('should create Lambda with complete queue trigger configuration', () => {
-      const trigger: TriggerEventV1 = {
+      const trigger: TriggerEvent = {
         type: 'queue/v1beta',
         topic: 'system-events',
         consumer: 'system-processors',
@@ -146,8 +147,9 @@ describe('Lambda', () => {
 
       expect(lambda.experimentalTriggers![0].type).toBe('queue/v1beta');
       expect(lambda.experimentalTriggers![0].topic).toBe('system-events');
-      const t = lambda.experimentalTriggers![0] as TriggerEventV1;
-      expect(t.consumer).toBe('system-processors');
+      expect(lambda.experimentalTriggers![0].consumer).toBe(
+        'system-processors'
+      );
       expect(lambda.experimentalTriggers![0].maxDeliveries).toBe(3);
       expect(lambda.experimentalTriggers![0].retryAfterSeconds).toBe(10);
       expect(lambda.experimentalTriggers![0].initialDelaySeconds).toBe(60);
@@ -184,9 +186,10 @@ describe('Lambda', () => {
 
     describe('v2beta', () => {
       it('should create Lambda with minimal v2beta queue trigger', () => {
-        const trigger: TriggerEventV2 = {
+        const trigger: TriggerEvent = {
           type: 'queue/v2beta',
           topic: 'user-events',
+          consumer: 'api-handlerjs',
         };
 
         const lambda = new Lambda({
@@ -199,12 +202,14 @@ describe('Lambda', () => {
         expect(lambda.experimentalTriggers).toEqual([trigger]);
         expect(lambda.experimentalTriggers![0].type).toBe('queue/v2beta');
         expect(lambda.experimentalTriggers![0].topic).toBe('user-events');
+        expect(lambda.experimentalTriggers![0].consumer).toBe('api-handlerjs');
       });
 
       it('should create Lambda with complete v2beta queue trigger configuration', () => {
-        const trigger: TriggerEventV2 = {
+        const trigger: TriggerEvent = {
           type: 'queue/v2beta',
           topic: 'system-events',
+          consumer: 'api-systemjs',
           maxDeliveries: 3,
           retryAfterSeconds: 10,
           initialDelaySeconds: 60,
@@ -220,30 +225,11 @@ describe('Lambda', () => {
 
         expect(lambda.experimentalTriggers![0].type).toBe('queue/v2beta');
         expect(lambda.experimentalTriggers![0].topic).toBe('system-events');
+        expect(lambda.experimentalTriggers![0].consumer).toBe('api-systemjs');
         expect(lambda.experimentalTriggers![0].maxDeliveries).toBe(3);
         expect(lambda.experimentalTriggers![0].retryAfterSeconds).toBe(10);
         expect(lambda.experimentalTriggers![0].initialDelaySeconds).toBe(60);
         expect(lambda.experimentalTriggers![0].maxConcurrency).toBe(5);
-      });
-
-      it('should throw error when v2beta has consumer field', () => {
-        expect(
-          () =>
-            new Lambda({
-              files,
-              handler: 'index.handler',
-              runtime: 'nodejs22.x',
-              experimentalTriggers: [
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic',
-                  consumer: 'test-consumer',
-                } as any,
-              ],
-            })
-        ).toThrow(
-          '"experimentalTriggers[0]".consumer is not allowed for queue/v2beta'
-        );
       });
 
       it('should throw error when v2beta has multiple triggers', () => {
@@ -257,12 +243,14 @@ describe('Lambda', () => {
                 {
                   type: 'queue/v2beta',
                   topic: 'test-topic-1',
+                  consumer: 'consumer-1',
                 },
                 {
                   type: 'queue/v2beta',
                   topic: 'test-topic-2',
+                  consumer: 'consumer-2',
                 },
-              ] as TriggerEventV2[],
+              ],
             })
         ).toThrow(
           '"experimentalTriggers" can only have one item for queue/v2beta'

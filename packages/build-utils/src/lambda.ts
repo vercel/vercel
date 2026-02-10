@@ -11,9 +11,10 @@ import type {
   Files,
   FunctionFramework,
   TriggerEvent,
+  TriggerEventInput,
 } from './types';
 
-export type { TriggerEvent };
+export type { TriggerEvent, TriggerEventInput };
 
 /**
  * Sanitizes a function path to a valid consumer name.
@@ -314,22 +315,18 @@ export class Lambda {
         );
         assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
 
-        // Version-specific validation
-        if (trigger.type === 'queue/v1beta') {
-          assert(
-            typeof trigger.consumer === 'string',
-            `${prefix}.consumer is required and must be a string`
-          );
-          assert(
-            trigger.consumer.length > 0,
-            `${prefix}.consumer cannot be empty`
-          );
-        } else if (trigger.type === 'queue/v2beta') {
-          assert(
-            (trigger as unknown as Record<string, unknown>).consumer ===
-              undefined,
-            `${prefix}.consumer is not allowed for queue/v2beta`
-          );
+        // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
+        assert(
+          typeof trigger.consumer === 'string',
+          `${prefix}.consumer is required and must be a string`
+        );
+        assert(
+          trigger.consumer.length > 0,
+          `${prefix}.consumer cannot be empty`
+        );
+
+        // v2beta allows only one trigger per function
+        if (trigger.type === 'queue/v2beta') {
           assert(
             experimentalTriggers.length === 1,
             '"experimentalTriggers" can only have one item for queue/v2beta'
@@ -514,11 +511,24 @@ export async function getLambdaOptionsFromFunction({
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        const experimentalTriggers: TriggerEvent[] | undefined =
+          fn.experimentalTriggers?.map(
+            (trigger: TriggerEventInput): TriggerEvent => {
+              if (trigger.type === 'queue/v2beta') {
+                return {
+                  ...trigger,
+                  consumer: sanitizeConsumerName(pattern),
+                };
+              }
+              return trigger;
+            }
+          );
+
         return {
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
-          experimentalTriggers: fn.experimentalTriggers,
+          experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };
       }
