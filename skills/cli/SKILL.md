@@ -1,5 +1,5 @@
 ---
-name: vercel-cli
+name: cli
 ---
 
 # Vercel CLI Skill
