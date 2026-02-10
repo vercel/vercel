@@ -134,9 +134,11 @@ for (const cmd of PRIORITY_COMMANDS) {
 
 // Copy a few static files into `dist`
 const distRoot = new URL('dist/', repoRoot);
+// builder-worker.cjs goes next to the dev entry point, since code splitting
+// places it at dist/commands/dev/ and the code uses join(__dirname, ...) to find it.
 copyFileSync(
   new URL('src/util/dev/builder-worker.cjs', repoRoot),
-  new URL('builder-worker.cjs', distRoot)
+  new URL('commands/dev/builder-worker.cjs', distRoot)
 );
 copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
