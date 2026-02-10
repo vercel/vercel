@@ -602,67 +602,7 @@ describe('routes edit', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // continue field recomputation
-  // ---------------------------------------------------------------------------
-
-  describe('continue field', () => {
-    it('should set continue:true when adding response headers to a route without them', async () => {
-      useEditRouteComprehensive();
-      // Blog Redirect has no headers/transforms, so adding headers should set continue
-      // But it has status 301 (redirect/terminating), so continue should NOT be set
-      client.setArgv(
-        'routes',
-        'edit',
-        'Blog Redirect',
-        '--set-response-header',
-        'X-Test=test'
-      );
-      const exitCode = await routes(client);
-      expect(exitCode).toEqual(0);
-
-      const body = capturedBodies.edit as any;
-      // Redirect is terminating, so continue should NOT be set even with headers
-      expect(body.route.route.continue).toBeUndefined();
-    });
-
-    it('should preserve continue:true for header-only route edits', async () => {
-      useEditRouteComprehensive();
-      // CORS Headers is header-only with continue:true
-      client.setArgv(
-        'routes',
-        'edit',
-        'CORS Headers',
-        '--set-response-header',
-        'X-Frame-Options=DENY'
-      );
-      const exitCode = await routes(client);
-      expect(exitCode).toEqual(0);
-
-      const body = capturedBodies.edit as any;
-      expect(body.route.route.continue).toBe(true);
-    });
-
-    it('should remove continue when switching from header-only to set-status', async () => {
-      useEditRouteComprehensive();
-      client.setArgv(
-        'routes',
-        'edit',
-        'CORS Headers',
-        '--action',
-        'set-status',
-        '--status',
-        '204',
-        '--clear-headers'
-      );
-      const exitCode = await routes(client);
-      expect(exitCode).toEqual(0);
-
-      const body = capturedBodies.edit as any;
-      // set-status is terminating, continue should not be set
-      expect(body.route.route.continue).toBeUndefined();
-    });
-  });
+  // Note: The `continue` field is handled by the API, not the CLI.
 
   // ---------------------------------------------------------------------------
   // Combined feature edits
