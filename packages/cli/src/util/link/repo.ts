@@ -84,6 +84,261 @@ export async function getRepoLink(
   return { rootPath, repoConfig, repoConfigPath };
 }
 
+/**
+ * Runs the project discovery flow: selects org, discovers/creates projects,
+ * and returns the selected projects as `RepoProjectConfig[]`.
+ *
+ * This is the shared core used by both `ensureRepoLink` and `addRepoLink`.
+ *
+ * @param existingProjectIds - Set of project IDs already in repo.json,
+ *   used to filter out already-linked projects from the API results.
+ * @param existingDirectories - Set of directories already linked in repo.json,
+ *   used to filter out locally-detected projects that are already covered.
+ */
+async function discoverRepoProjects(
+  client: Client,
+  rootPath: string,
+  {
+    yes,
+    existingProjectIds,
+    existingDirectories,
+  }: {
+    yes: boolean;
+    existingProjectIds?: Set<string>;
+    existingDirectories?: Set<string>;
+  }
+): Promise<
+  | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
+  | undefined
+> {
+  // Detect the projects on the filesystem out of band, so that
+  // they will be ready by the time the projects are listed
+  const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
+    output.debug(`Failed to detect local projects: ${err}`);
+    return new Map<string, Framework[]>();
+  });
+
+  // Not yet linked, so prompt user to begin linking
+  const shouldLink =
+    yes ||
+    (await client.input.confirm(
+      `Link Git repository at ${chalk.cyan(
+        `"${toHumanPath(rootPath)}"`
+      )} to your Project(s)?`,
+      true
+    ));
+
+  if (!shouldLink) {
+    output.print(`Canceled. Repository not linked.\n`);
+    return;
+  }
+
+  const org = await selectOrg(
+    client,
+    'Which scope should contain your Project(s)?',
+    yes
+  );
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  // Use getGitConfigPath to correctly resolve the config path for
+  // regular repos, worktrees, and submodules. Falls back to the
+  // traditional path if git commands fail.
+  const gitConfigPath =
+    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
+  const remoteUrls = await getRemoteUrls(gitConfigPath);
+  if (!remoteUrls) {
+    throw new Error('Could not determine Git remote URLs');
+  }
+  const remoteNames = Object.keys(remoteUrls).sort();
+  let remoteName: string;
+  if (remoteNames.length === 1) {
+    remoteName = remoteNames[0];
+  } else {
+    // Prompt user to select which remote to use
+    const defaultRemote = remoteNames.includes('origin')
+      ? 'origin'
+      : remoteNames[0];
+    if (yes) {
+      remoteName = defaultRemote;
+    } else {
+      remoteName = await client.input.select({
+        message: 'Which Git remote should be used?',
+        choices: remoteNames.map(name => {
+          return { name: name, value: name };
+        }),
+        default: defaultRemote,
+      });
+    }
+  }
+  const repoUrl = remoteUrls[remoteName];
+  const parsedRepoUrl = parseRepoUrl(repoUrl);
+  if (!parsedRepoUrl) {
+    throw new Error(`Failed to parse Git URL: ${repoUrl}`);
+  }
+  const repoUrlLink = output.link(repoUrl, repoInfoToUrl(parsedRepoUrl), {
+    fallback: () => link(repoUrl),
+  });
+  output.spinner(
+    `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
+  );
+  let projects: Project[] = [];
+  const query = new URLSearchParams({ repoUrl });
+  const projectsIterator = client.fetchPaginated<{
+    projects: Project[];
+  }>(`/v9/projects?${query}`);
+  const detectedProjects = await detectedProjectsPromise;
+  for await (const chunk of projectsIterator) {
+    projects = projects.concat(chunk.projects);
+    if (chunk.pagination.next) {
+      output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
+    }
+  }
+
+  // Filter out projects that are already linked in repo.json
+  if (existingProjectIds) {
+    projects = projects.filter(p => !existingProjectIds.has(p.id));
+  }
+
+  if (projects.length === 0) {
+    output.log(
+      `No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.`
+    );
+  } else {
+    output.log(
+      `Found ${pluralize(
+        'Project',
+        projects.length,
+        true
+      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
+    );
+  }
+
+  // For any projects that already exists on Vercel, remove them from the
+  // locally detected directories. Any remaining ones will be prompted to
+  // create new Projects for.
+  for (const project of projects) {
+    detectedProjects.delete(project.rootDirectory ?? '');
+  }
+  // Also remove detected projects whose directories are already linked
+  // in the existing repo.json (e.g. linked to a different org)
+  if (existingDirectories) {
+    for (const dir of existingDirectories) {
+      detectedProjects.delete(dir);
+    }
+  }
+
+  const detectedProjectsCount = Array.from(detectedProjects.values()).reduce(
+    (o, f) => o + f.length,
+    0
+  );
+  if (detectedProjectsCount > 0) {
+    output.log(
+      `Detected ${pluralize(
+        'new Project',
+        detectedProjectsCount,
+        true
+      )} that may be created.`
+    );
+  }
+
+  let selected: (Project | NewProject)[];
+  if (yes) {
+    selected = projects;
+  } else {
+    const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
+    selected = await client.input.checkbox<Project | NewProject>({
+      message: `Which Projects should be ${
+        projects.length ? 'linked to' : 'created'
+      }?`,
+      choices: [
+        ...(addSeparators
+          ? [new Separator('----- Existing Projects -----')]
+          : []),
+        ...projects.map(project => {
+          return {
+            name: `${org.slug}/${project.name}`,
+            value: project,
+            checked: true,
+          };
+        }),
+        ...(addSeparators
+          ? [new Separator('----- New Projects to be created -----')]
+          : []),
+        ...Array.from(detectedProjects.entries()).flatMap(
+          ([rootDirectory, frameworks]) =>
+            frameworks.map((framework, i) => {
+              const name = slugify(
+                [
+                  basename(rootDirectory) || basename(rootPath),
+                  i > 0 ? framework.slug : '',
+                ]
+                  .filter(Boolean)
+                  .join('-')
+              );
+              return {
+                name: `${org.slug}/${name} (${framework.name})`,
+                value: {
+                  newProject: true,
+                  rootDirectory,
+                  name,
+                  framework,
+                },
+                // Checked by default when there are no other existing Projects
+                checked: projects.length === 0,
+              } as const;
+            })
+        ),
+      ],
+    });
+  }
+
+  if (selected.length === 0) {
+    output.print(`No Projects were selected. Repository not linked.\n`);
+    return;
+  }
+
+  for (let i = 0; i < selected.length; i++) {
+    const selection = selected[i];
+    if (!('newProject' in selection && selection.newProject)) continue;
+    const orgAndName = `${org.slug}/${selection.name}`;
+    output.spinner(`Creating new Project: ${orgAndName}`);
+    delete selection.newProject;
+    if (!selection.rootDirectory) delete selection.rootDirectory;
+    const project = (selected[i] = await createProject(client, {
+      ...selection,
+      framework: selection.framework.slug,
+    }));
+    await connectGitProvider(
+      client,
+      project.id,
+      parsedRepoUrl.provider,
+      `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
+    );
+    output.log(
+      `Created new Project: ${output.link(
+        orgAndName,
+        `https://vercel.com/${orgAndName}`,
+        { fallback: false }
+      )}`
+    );
+  }
+
+  const repoProjects = selected.map(project => {
+    if (!('id' in project)) {
+      // Shouldn't happen at this point, but just to make TS happy
+      throw new TypeError(`Not a Project: ${JSON.stringify(project)}`);
+    }
+    return {
+      id: project.id,
+      name: project.name,
+      directory: normalize(project.rootDirectory || ''),
+      orgId: org.id,
+    };
+  });
+
+  return { remoteName, projects: repoProjects, orgSlug: org.slug };
+}
+
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
@@ -99,222 +354,14 @@ export async function ensureRepoLink(
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (overwrite || !repoConfig) {
-    // Detect the projects on the filesystem out of band, so that
-    // they will be ready by the time the projects are listed
-    const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
-      output.debug(`Failed to detect local projects: ${err}`);
-      return new Map<string, Framework[]>();
-    });
-
-    // Not yet linked, so prompt user to begin linking
-    const shouldLink =
-      yes ||
-      (await client.input.confirm(
-        `Link Git repository at ${chalk.cyan(
-          `“${toHumanPath(rootPath)}”`
-        )} to your Project(s)?`,
-        true
-      ));
-
-    if (!shouldLink) {
-      output.print(`Canceled. Repository not linked.\n`);
+    const result = await discoverRepoProjects(client, rootPath, { yes });
+    if (!result) {
       return;
-    }
-
-    const org = await selectOrg(
-      client,
-      'Which scope should contain your Project(s)?',
-      yes
-    );
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-    // Use getGitConfigPath to correctly resolve the config path for
-    // regular repos, worktrees, and submodules. Falls back to the
-    // traditional path if git commands fail.
-    const gitConfigPath =
-      getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-    const remoteUrls = await getRemoteUrls(gitConfigPath);
-    if (!remoteUrls) {
-      throw new Error('Could not determine Git remote URLs');
-    }
-    const remoteNames = Object.keys(remoteUrls).sort();
-    let remoteName: string;
-    if (remoteNames.length === 1) {
-      remoteName = remoteNames[0];
-    } else {
-      // Prompt user to select which remote to use
-      const defaultRemote = remoteNames.includes('origin')
-        ? 'origin'
-        : remoteNames[0];
-      if (yes) {
-        remoteName = defaultRemote;
-      } else {
-        remoteName = await client.input.select({
-          message: 'Which Git remote should be used?',
-          choices: remoteNames.map(name => {
-            return { name: name, value: name };
-          }),
-          default: defaultRemote,
-        });
-      }
-    }
-    const repoUrl = remoteUrls[remoteName];
-    const parsedRepoUrl = parseRepoUrl(repoUrl);
-    if (!parsedRepoUrl) {
-      throw new Error(`Failed to parse Git URL: ${repoUrl}`);
-    }
-    const repoUrlLink = output.link(repoUrl, repoInfoToUrl(parsedRepoUrl), {
-      fallback: () => link(repoUrl),
-    });
-    output.spinner(
-      `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
-    );
-    let projects: Project[] = [];
-    const query = new URLSearchParams({ repoUrl });
-    const projectsIterator = client.fetchPaginated<{
-      projects: Project[];
-    }>(`/v9/projects?${query}`);
-    const detectedProjects = await detectedProjectsPromise;
-    for await (const chunk of projectsIterator) {
-      projects = projects.concat(chunk.projects);
-      if (chunk.pagination.next) {
-        output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
-      }
-    }
-
-    if (projects.length === 0) {
-      output.log(
-        `No Projects are linked to ${repoUrlLink} under ${chalk.bold(
-          org.slug
-        )}.`
-      );
-    } else {
-      output.log(
-        `Found ${pluralize(
-          'Project',
-          projects.length,
-          true
-        )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
-      );
-    }
-
-    // For any projects that already exists on Vercel, remove them from the
-    // locally detected directories. Any remaining ones will be prompted to
-    // create new Projects for.
-    for (const project of projects) {
-      detectedProjects.delete(project.rootDirectory ?? '');
-    }
-
-    const detectedProjectsCount = Array.from(detectedProjects.values()).reduce(
-      (o, f) => o + f.length,
-      0
-    );
-    if (detectedProjectsCount > 0) {
-      output.log(
-        `Detected ${pluralize(
-          'new Project',
-          detectedProjectsCount,
-          true
-        )} that may be created.`
-      );
-    }
-
-    let selected: (Project | NewProject)[];
-    if (yes) {
-      selected = projects;
-    } else {
-      const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-      selected = await client.input.checkbox<Project | NewProject>({
-        message: `Which Projects should be ${
-          projects.length ? 'linked to' : 'created'
-        }?`,
-        choices: [
-          ...(addSeparators
-            ? [new Separator('----- Existing Projects -----')]
-            : []),
-          ...projects.map(project => {
-            return {
-              name: `${org.slug}/${project.name}`,
-              value: project,
-              checked: true,
-            };
-          }),
-          ...(addSeparators
-            ? [new Separator('----- New Projects to be created -----')]
-            : []),
-          ...Array.from(detectedProjects.entries()).flatMap(
-            ([rootDirectory, frameworks]) =>
-              frameworks.map((framework, i) => {
-                const name = slugify(
-                  [
-                    basename(rootDirectory) || basename(rootPath),
-                    i > 0 ? framework.slug : '',
-                  ]
-                    .filter(Boolean)
-                    .join('-')
-                );
-                return {
-                  name: `${org.slug}/${name} (${framework.name})`,
-                  value: {
-                    newProject: true,
-                    rootDirectory,
-                    name,
-                    framework,
-                  },
-                  // Checked by default when there are no other existing Projects
-                  checked: projects.length === 0,
-                } as const;
-              })
-          ),
-        ],
-      });
-    }
-
-    if (selected.length === 0) {
-      output.print(`No Projects were selected. Repository not linked.\n`);
-      return;
-    }
-
-    for (let i = 0; i < selected.length; i++) {
-      const selection = selected[i];
-      if (!('newProject' in selection && selection.newProject)) continue;
-      const orgAndName = `${org.slug}/${selection.name}`;
-      output.spinner(`Creating new Project: ${orgAndName}`);
-      delete selection.newProject;
-      if (!selection.rootDirectory) delete selection.rootDirectory;
-      const project = (selected[i] = await createProject(client, {
-        ...selection,
-        framework: selection.framework.slug,
-      }));
-      await connectGitProvider(
-        client,
-        project.id,
-        parsedRepoUrl.provider,
-        `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
-      );
-      output.log(
-        `Created new Project: ${output.link(
-          orgAndName,
-          `https://vercel.com/${orgAndName}`,
-          { fallback: false }
-        )}`
-      );
     }
 
     repoConfig = {
-      remoteName,
-      projects: selected.map(project => {
-        if (!('id' in project)) {
-          // Shouldn't happen at this point, but just to make TS happy
-          throw new TypeError(`Not a Project: ${JSON.stringify(project)}`);
-        }
-        return {
-          id: project.id,
-          name: project.name,
-          directory: normalize(project.rootDirectory || ''),
-          orgId: org.id,
-        };
-      }),
+      remoteName: result.remoteName,
+      projects: result.projects,
     };
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
 
@@ -327,9 +374,9 @@ export async function ensureRepoLink(
       prependEmoji(
         `Linked to ${pluralize(
           'Project',
-          selected.length,
+          result.projects.length,
           true
-        )} under ${chalk.bold(org.slug)} (created ${VERCEL_DIR}${
+        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
           isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
         })`,
         emoji('link')
@@ -339,6 +386,86 @@ export async function ensureRepoLink(
 
   return {
     repoConfig,
+    repoConfigPath,
+    rootPath,
+  };
+}
+
+/**
+ * Adds additional projects to an existing `repo.json` file.
+ * Requires that `repo.json` already exists (i.e., the repo has been linked
+ * with `vc link --repo`). Runs the same project discovery flow and merges
+ * the resulting projects into the existing config, deduplicating by project ID.
+ */
+export async function addRepoLink(
+  client: Client,
+  cwd: string,
+  { yes }: { yes: boolean }
+): Promise<RepoLink | undefined> {
+  const repoLink = await getRepoLink(client, cwd);
+  if (!repoLink) {
+    throw new Error('Could not determine Git repository root directory');
+  }
+
+  const { rootPath, repoConfig, repoConfigPath } = repoLink;
+
+  if (!repoConfig) {
+    output.error(
+      `No existing repository link found. Run \`vc link --repo\` first to link the repository.`
+    );
+    return;
+  }
+
+  output.debug(`Found Git repository root directory: ${rootPath}`);
+
+  // Collect existing project IDs and directories so we can filter them
+  const existingProjectIds = new Set(repoConfig.projects.map(p => p.id));
+  const existingDirectories = new Set(
+    repoConfig.projects.map(p => p.directory)
+  );
+
+  const result = await discoverRepoProjects(client, rootPath, {
+    yes,
+    existingProjectIds,
+    existingDirectories,
+  });
+  if (!result) {
+    return;
+  }
+
+  if (result.projects.length === 0) {
+    output.print(`No new Projects were added.\n`);
+    return { repoConfig, repoConfigPath, rootPath };
+  }
+
+  // Merge new projects into existing config, deduplicating by project ID
+  const mergedProjects = [...repoConfig.projects];
+  for (const project of result.projects) {
+    if (!existingProjectIds.has(project.id)) {
+      mergedProjects.push(project);
+    }
+  }
+
+  const updatedConfig: RepoProjectsConfig = {
+    ...repoConfig,
+    projects: mergedProjects,
+  };
+
+  await outputJSON(repoConfigPath, updatedConfig, { spaces: 2 });
+
+  output.print(
+    prependEmoji(
+      `Added ${pluralize(
+        'Project',
+        result.projects.length,
+        true
+      )} under ${chalk.bold(result.orgSlug)}`,
+      emoji('link')
+    ) + '\n'
+  );
+
+  return {
+    repoConfig: updatedConfig,
     repoConfigPath,
     rootPath,
   };

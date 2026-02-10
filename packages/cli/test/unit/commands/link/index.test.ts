@@ -43,7 +43,7 @@ describe('link', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -403,6 +403,251 @@ describe('link', () => {
         {
           key: 'flag:yes',
           value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('add', () => {
+    it('should fail if repo.json does not exist', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo (but no .vercel/repo.json)
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/test/test.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      useTeams('team_dummy');
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add', '--yes');
+      const exitCode = await link(client);
+
+      await expect(client.stderr).toOutput('No existing repository link found');
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should add projects to existing repo.json', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      // Create an existing repo.json with one project
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [
+          {
+            id: 'existing-project-id',
+            name: 'existing-project',
+            directory: 'packages/existing',
+            orgId: user.id,
+          },
+        ],
+      });
+
+      useTeams('team_dummy');
+      const { project: newProject } = useProject({
+        ...defaultProject,
+        id: 'new-project-id',
+        name: 'new-project',
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Link Git repository at ');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your Project(s)?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
+      await expect(client.stderr).toOutput(
+        `Found 1 Project linked to ${repoUrl}`
+      );
+      await expect(client.stderr).toOutput(
+        `Which Projects should be linked to?`
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Added 1 Project under');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      // Original project should still be there
+      expect(repoJson.projects).toHaveLength(2);
+      expect(repoJson.projects[0]).toMatchObject({
+        id: 'existing-project-id',
+        name: 'existing-project',
+        directory: 'packages/existing',
+        orgId: user.id,
+      });
+      // New project should be added
+      expect(repoJson.projects[1]).toMatchObject({
+        id: newProject.id,
+        name: newProject.name,
+        orgId: user.id,
+      });
+    });
+
+    it('should not duplicate already-linked projects', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      // Create repo.json with a project that already matches what the API returns
+      const existingProjectId = basename(cwd);
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [
+          {
+            id: existingProjectId,
+            name: basename(cwd),
+            directory: '.',
+            orgId: user.id,
+          },
+        ],
+      });
+
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: existingProjectId,
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add', '--yes');
+      const exitCode = await link(client);
+
+      expect(exitCode).toEqual(0);
+
+      // Should still have only the original project (the API project was filtered)
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      expect(repoJson.projects).toHaveLength(1);
+      expect(repoJson.projects[0].id).toEqual(existingProjectId);
+    });
+
+    it('should not show detected projects for directories already linked to another org', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      // Create a Next.js project at repo root that would normally be detected
+      await writeJSON(join(cwd, 'package.json'), {
+        dependencies: { next: 'latest' },
+      });
+
+      // Create repo.json where the root directory is already linked to a different org
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [
+          {
+            id: 'other-org-project',
+            name: 'other-org-project',
+            directory: '.',
+            orgId: 'team_other',
+          },
+        ],
+      });
+
+      useTeams('team_dummy');
+      // API returns no projects for this org
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add', '--yes');
+      const exitCode = await link(client);
+      expect(exitCode).toEqual(0);
+
+      // The root directory project should NOT have been re-created because
+      // it's already linked (to a different org). repo.json should be unchanged.
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      expect(repoJson.projects).toHaveLength(1);
+      expect(repoJson.projects[0].id).toEqual('other-org-project');
+      expect(repoJson.projects[0].orgId).toEqual('team_other');
+    });
+
+    it('should track `add` subcommand telemetry', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+
+      // Set up a `.git/config` file to simulate a repo
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      // Create an existing repo.json
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [],
+      });
+
+      useTeams('team_dummy');
+      // Return no projects from API, so the flow will see 0 projects
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add', '--yes');
+      const exitCode = await link(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:add',
+          value: 'add',
         },
       ]);
     });
