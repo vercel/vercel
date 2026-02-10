@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import { readFile, writeFile, pathExists, copy } from 'fs-extra';
 import {
   BuildOptions,
@@ -21,7 +21,7 @@ import { createGo } from './go-helpers';
 /**
  * Find the go.mod file starting from a directory and scanning up.
  */
-async function findGoModPath(entrypointDir: string, workPath: string) {
+export async function findGoModPath(entrypointDir: string, workPath: string) {
   let goModPath: string | undefined = undefined;
   let isGoModInRootDir = false;
   let dir = entrypointDir;
@@ -74,12 +74,16 @@ export async function buildStandaloneServer({
     CGO_ENABLED: '0',
   });
 
-  const { goModPath } = await findGoModPath(workPath, workPath);
+  // Find go.mod starting from the entrypoint's directory, walking up to workPath.
+  // This handles nested Go modules (e.g. services/go-api/go.mod) where the
+  // module root is not the project root.
+  const entrypointDir = join(workPath, dirname(entrypoint));
+  const { goModPath } = await findGoModPath(entrypointDir, workPath);
   const modulePath = goModPath ? dirname(goModPath) : workPath;
 
   const go = await createGo({
     modulePath,
-    opts: { cwd: workPath, env },
+    opts: { cwd: modulePath, env },
     workPath,
   });
 
@@ -87,11 +91,16 @@ export async function buildStandaloneServer({
   const userServerPath = join(outDir, 'user-server');
   const bootstrapPath = join(outDir, 'executable');
 
-  // Determine build target based on entrypoint location
-  // - main.go at root: build '.'
-  // - cmd/api/main.go: build './cmd/api'
+  // Determine build target relative to the module root (where go.mod lives).
+  // For nested modules the entrypoint path must be re-rooted:
+  //   workPath=/project, entrypoint=services/go-api/main.go, modulePath=/project/services/go-api
+  //   → relativeEntrypoint=main.go → buildTarget='.'
+  // For root modules:
+  //   workPath=/project, entrypoint=cmd/api/main.go, modulePath=/project
+  //   → relativeEntrypoint=cmd/api/main.go → buildTarget='./cmd/api'
+  const relativeEntrypoint = relative(modulePath, join(workPath, entrypoint));
   const buildTarget =
-    entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
+    relativeEntrypoint === 'main.go' ? '.' : './' + dirname(relativeEntrypoint);
 
   debug(
     `Building user Go server (${architecture}): go build ${buildTarget} -> ${userServerPath}`
@@ -183,7 +192,7 @@ export async function startStandaloneDevServer(
   opts: StartDevServerOptions,
   resolvedEntrypoint: string
 ): Promise<StartDevServerResult> {
-  const { workPath, meta = {} } = opts;
+  const { workPath, meta = {}, onStdout, onStderr } = opts;
 
   // Use a random port in the ephemeral range
   const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
@@ -192,21 +201,44 @@ export async function startStandaloneDevServer(
     PORT: String(port),
   });
 
-  // Determine run target based on entrypoint location
-  // - main.go at root: go run .
-  // - cmd/api/main.go: go run ./cmd/api
+  // Find go.mod starting from the entrypoint's directory, walking up to workPath.
+  // This handles nested Go modules (e.g. services/go-api/go.mod).
+  const entrypointDir = join(workPath, dirname(resolvedEntrypoint));
+  const { goModPath } = await findGoModPath(entrypointDir, workPath);
+  const modulePath = goModPath ? dirname(goModPath) : workPath;
+
+  // Determine run target relative to the module root (where go.mod lives).
+  const relativeEntrypoint = relative(
+    modulePath,
+    join(workPath, resolvedEntrypoint)
+  );
   const runTarget =
-    resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
+    relativeEntrypoint === 'main.go' ? '.' : './' + dirname(relativeEntrypoint);
 
   debug(
-    `Starting standalone Go dev server: go run ${runTarget} (port ${port})`
+    `Starting standalone Go dev server: go run ${runTarget} (port ${port}, cwd ${modulePath})`
   );
 
   const child = spawn('go', ['run', runTarget], {
-    cwd: workPath,
+    cwd: modulePath,
     env,
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+
+  if (child.stdout) {
+    if (onStdout) {
+      child.stdout.on('data', onStdout);
+    } else {
+      child.stdout.pipe(process.stdout);
+    }
+  }
+  if (child.stderr) {
+    if (onStderr) {
+      child.stderr.on('data', onStderr);
+    } else {
+      child.stderr.pipe(process.stderr);
+    }
+  }
 
   // Give the server time to start
   await new Promise(resolve => setTimeout(resolve, 2000));
