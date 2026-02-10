@@ -536,7 +536,7 @@ test('add a sensitive env var', async () => {
 
   const link = require(path.join(dir, '.vercel/project.json'));
 
-  const addEnvCommand = execCli(
+  const output = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production', '--sensitive'],
     {
@@ -544,13 +544,9 @@ test('add a sensitive env var', async () => {
         VERCEL_ORG_ID: link.orgId,
         VERCEL_PROJECT_ID: link.projectId,
       },
+      input: 'test\n',
     }
   );
-
-  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
-  addEnvCommand.stdin?.write('test\n');
-
-  const output = await addEnvCommand;
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(
@@ -590,18 +586,14 @@ test('override an existing env var', async () => {
   };
 
   // 1. Initial add
-  const addEnvCommand = execCli(
+  const output = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production'],
-    options
+    {
+      ...options,
+      input: 'test\n',
+    }
   );
-
-  await waitForPrompt(addEnvCommand, /Mark as sensitive\?/);
-  addEnvCommand.stdin?.write('n\n');
-  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
-  addEnvCommand.stdin?.write('test\n');
-
-  const output = await addEnvCommand;
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(
@@ -609,18 +601,14 @@ test('override an existing env var', async () => {
   );
 
   // 2. Override
-  const overrideEnvCommand = execCli(
+  const outputOverride = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production', '--force'],
-    options
+    {
+      ...options,
+      input: 'test\n',
+    }
   );
-
-  await waitForPrompt(overrideEnvCommand, /Mark as sensitive\?/);
-  overrideEnvCommand.stdin?.write('n\n');
-  await waitForPrompt(overrideEnvCommand, /What's the value of [^?]+\?/);
-  overrideEnvCommand.stdin?.write('test\n');
-
-  const outputOverride = await overrideEnvCommand;
 
   expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
   expect(outputOverride.stderr).toContain(
