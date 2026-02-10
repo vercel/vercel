@@ -1278,6 +1278,16 @@ export async function serverBuild({
                 route.experimentalBypassFor = [];
               }
             }
+            for (const route of Object.values(
+              manifestData.dynamicRoutes
+            ) as any) {
+              if (route.fallbackHeaders) {
+                route.fallbackHeaders = {};
+              }
+              if (route.experimentalBypassFor) {
+                route.experimentalBypassFor = [];
+              }
+            }
           } else if (
             manifest === 'server/pages-manifest.json' &&
             !shouldUse404Prerender
