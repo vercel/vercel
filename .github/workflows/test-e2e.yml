@@ -22,17 +22,21 @@ jobs:
       should-run: ${{ steps.check.outputs.should-run }}
     steps:
       - id: check
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HAS_E2E_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'run-e2e-tests') }}
         run: |
           # Run if run-e2e-tests label is present
-          if [ "${{ contains(github.event.pull_request.labels.*.name, 'run-e2e-tests') }}" = "true" ]; then
+          if [ "$HAS_E2E_LABEL" = "true" ]; then
             echo "E2E tests triggered by run-e2e-tests label"
             echo "should-run=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           # Run if Version Packages PR from vercel-release-bot
-          if [ "${{ github.event.pull_request.title }}" = "Version Packages" ]; then
-            if [ "${{ github.event.pull_request.user.login }}" = "vercel-release-bot" ]; then
+          if [ "$PR_TITLE" = "Version Packages" ]; then
+            if [ "$PR_AUTHOR" = "vercel-release-bot" ]; then
               echo "E2E tests triggered by Version Packages PR from vercel-release-bot"
               echo "should-run=true" >> $GITHUB_OUTPUT
             else
