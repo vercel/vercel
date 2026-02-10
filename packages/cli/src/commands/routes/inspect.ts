@@ -171,18 +171,6 @@ function formatRouteDetails(rule: RoutingRule): string {
     lines.push(`  ${chalk.cyan('HTTP Status:')} ${rule.route.status}`);
   }
 
-  if (rule.route.caseSensitive !== undefined) {
-    lines.push(
-      `  ${chalk.cyan('Case Sens.:')}  ${rule.route.caseSensitive ? 'Yes' : 'No'}`
-    );
-  }
-
-  if (rule.route.check !== undefined) {
-    lines.push(
-      `  ${chalk.cyan('Check:')}       ${rule.route.check ? 'Yes' : 'No'}`
-    );
-  }
-
   if (rule.route.headers && Object.keys(rule.route.headers).length > 0) {
     lines.push('');
     lines.push(chalk.bold('  Response Headers'));

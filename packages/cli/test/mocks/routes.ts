@@ -6,7 +6,7 @@ function createRoute(index: number) {
     name: `Route ${index}`,
     description: `Description for route ${index}`,
     enabled: index % 3 !== 0, // Every 3rd route is disabled
-    staged: false,
+    staged: index % 5 === 1, // Every 5th route (starting at 1) is staged
     route: {
       src: `/path-${index}/(.*)`,
       dest: `/dest-${index}/$1`,

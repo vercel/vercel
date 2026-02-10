@@ -249,7 +249,7 @@ function formatRoutesTable(
 
     return [
       colorFn(`${prefix} ${position}`).trim(),
-      colorFn(truncate(rule.name, 30)),
+      colorFn(truncate(rule.name, 30) + (rule.staged ? chalk.yellow(' (draft)') : '')),
       colorFn(truncate(rule.route.src, 40)),
       colorFn(typeLabels),
       status,
