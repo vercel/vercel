@@ -8,23 +8,59 @@ import table from '../../util/output/table';
 import output from '../../output-manager';
 import { discoverSubcommand } from './command';
 import { IntegrationDiscoverTelemetryClient } from '../../util/telemetry/commands/integration/discover';
-import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations-list';
-import { fetchIntegrationCategories } from '../../util/integration/fetch-integration-categories';
+import {
+  fetchMarketplaceIntegrationsList,
+  type IntegrationListItem,
+} from '../../util/integration/fetch-marketplace-integrations-list';
+import {
+  fetchIntegrationCategories,
+  type IntegrationCategory,
+} from '../../util/integration/fetch-integration-categories';
 
-type IntegrationListItem = {
-  slug: string;
+type ProductEntry = {
   name: string;
-  shortDescription?: string;
-  tagIds?: string[];
-  products?: { slug: string; name: string }[];
-  isMarketplace?: boolean;
-  canInstall?: boolean;
+  slug: string;
+  provider: string;
+  description: string;
+  tags: string[];
 };
 
-type IntegrationCategory = {
-  id: string;
-  title: string;
-};
+const KNOWN_PROTOCOL_TYPES = new Set([
+  'storage',
+  'ai',
+  'observability',
+  'messaging',
+  'compute',
+]);
+
+function resolveTags(
+  productTags: string[] | undefined,
+  integrationTagIds: string[] | undefined,
+  categoryTitleById: Map<string, string>
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  const allTags = [...(integrationTagIds ?? []), ...(productTags ?? [])];
+
+  for (const tag of allTags) {
+    if (tag.startsWith('tag_')) {
+      const title = categoryTitleById.get(tag);
+      if (title && !seen.has(title)) {
+        seen.add(title);
+        result.push(title);
+      }
+    } else if (!KNOWN_PROTOCOL_TYPES.has(tag)) {
+      const capitalized = tag.charAt(0).toUpperCase() + tag.slice(1);
+      if (!seen.has(capitalized)) {
+        seen.add(capitalized);
+        result.push(capitalized);
+      }
+    }
+  }
+
+  return result;
+}
 
 export async function discover(client: Client, args: string[]) {
   let parsedArguments = null;
@@ -64,7 +100,7 @@ export async function discover(client: Client, args: string[]) {
   let categories: IntegrationCategory[] = [];
   try {
     const [integrationsResult, categoriesResult] = await Promise.allSettled([
-      fetchMarketplaceIntegrations(client),
+      fetchMarketplaceIntegrationsList(client),
       fetchIntegrationCategories(client),
     ]);
 
@@ -91,24 +127,43 @@ export async function discover(client: Client, args: string[]) {
     categories.map(category => [category.id, category.title])
   );
 
-  const results = integrations
-    .filter(integration => integration.isMarketplace && integration.canInstall)
-    .map(integration => {
-      const category = (integration.tagIds ?? [])
-        .map(tagId => categoryTitleById.get(tagId))
-        .filter((title): title is string => Boolean(title));
+  const results: ProductEntry[] = [];
 
-      return {
-        slug: integration.slug,
+  for (const integration of integrations) {
+    if (!integration.isMarketplace || !integration.canInstall) {
+      continue;
+    }
+
+    const products = integration.products ?? [];
+
+    if (products.length === 0) {
+      results.push({
         name: integration.name,
+        slug: integration.slug,
+        provider: integration.name,
         description: integration.shortDescription ?? '',
-        category,
-        products: (integration.products ?? []).map(product => ({
-          slug: product.slug,
+        tags: resolveTags(undefined, integration.tagIds, categoryTitleById),
+      });
+    } else {
+      const isMultiProduct = products.length > 1;
+      for (const product of products) {
+        results.push({
           name: product.name,
-        })),
-      };
-    });
+          slug: isMultiProduct
+            ? `${integration.slug}/${product.slug}`
+            : integration.slug,
+          provider: integration.name,
+          description:
+            product.shortDescription ?? integration.shortDescription ?? '',
+          tags: resolveTags(
+            product.tags,
+            integration.tagIds,
+            categoryTitleById
+          ),
+        });
+      }
+    }
+  }
 
   output.stopSpinner();
 
@@ -116,7 +171,7 @@ export async function discover(client: Client, args: string[]) {
     client.stdout.write(
       `${JSON.stringify(
         {
-          integrations: results,
+          products: results,
         },
         null,
         2
@@ -126,7 +181,7 @@ export async function discover(client: Client, args: string[]) {
   }
 
   if (results.length === 0) {
-    output.log('No marketplace integrations found.');
+    output.log('No marketplace products found.');
     return 0;
   }
 
@@ -135,54 +190,36 @@ export async function discover(client: Client, args: string[]) {
   const formattedOutput = useCompactFormat
     ? formatCompactList(results)
     : formatTable(results);
-  output.log('Available marketplace integrations:\n' + formattedOutput);
+  output.log('Available marketplace products:\n' + formattedOutput);
   return 0;
 }
 
-function formatTable(
-  integrations: {
-    slug: string;
-    name: string;
-    description: string;
-    products: { name: string }[];
-  }[]
-) {
+function formatTable(products: ProductEntry[]) {
   return table(
     [
-      ['Name', 'Slug', 'Description', 'Products'].map(header =>
+      ['Product Name', 'Slug', 'Provider', 'Description', 'Tags'].map(header =>
         chalk.bold(chalk.cyan(header))
       ),
-      ...integrations.map(integration => [
-        integration.name,
-        integration.slug,
-        integration.description || chalk.gray('-'),
-        integration.products.length > 0
-          ? integration.products.map(product => product.name).join(', ')
-          : chalk.gray('-'),
+      ...products.map(product => [
+        product.name,
+        product.slug,
+        product.provider,
+        product.description || chalk.gray('-'),
+        product.tags.length > 0 ? product.tags.join(', ') : chalk.gray('-'),
       ]),
     ],
     { hsep: 4 }
   );
 }
 
-function formatCompactList(
-  integrations: {
-    slug: string;
-    name: string;
-    description: string;
-    products: { name: string }[];
-  }[]
-) {
-  return integrations
-    .map(integration => {
-      const products =
-        integration.products.length > 0
-          ? integration.products.map(product => product.name).join(', ')
-          : '-';
+function formatCompactList(products: ProductEntry[]) {
+  return products
+    .map(product => {
       return [
-        `${chalk.bold(integration.name)} (${integration.slug})`,
-        `  Description: ${integration.description || '-'}`,
-        `  Products: ${products}`,
+        `${chalk.bold(product.name)} (${product.slug})`,
+        `  Provider: ${product.provider}`,
+        `  Description: ${product.description || '-'}`,
+        `  Tags: ${product.tags.length > 0 ? product.tags.join(', ') : '-'}`,
       ].join('\n');
     })
     .join('\n\n');

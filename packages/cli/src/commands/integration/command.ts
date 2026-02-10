@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const addSubcommand = {
@@ -47,6 +47,10 @@ export const addSubcommand = {
     {
       name: 'Show available products for an integration',
       value: `${packageName} integration add acme --help`,
+    },
+    {
+      name: 'Discover available marketplace products and their slugs',
+      value: `${packageName} integration discover`,
     },
   ],
 } as const;
@@ -128,15 +132,7 @@ export const discoverSubcommand = {
   aliases: [],
   description: 'Discover available marketplace integrations',
   arguments: [],
-  options: [
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output as JSON',
-    },
-  ],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Discover marketplace integrations',

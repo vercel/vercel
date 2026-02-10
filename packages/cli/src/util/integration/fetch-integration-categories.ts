@@ -1,6 +1,6 @@
 import type Client from '../client';
 
-type IntegrationCategory = {
+export type IntegrationCategory = {
   id: string;
   title: string;
 };

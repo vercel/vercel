@@ -31,13 +31,27 @@ describe('integration', () => {
 
       const output = JSON.parse(client.stdout.getFullOutput());
       expect(output).toEqual({
-        integrations: [
+        products: [
           {
+            name: 'Neon Postgres',
             slug: 'neon',
-            name: 'Neon',
-            description: 'Serverless Postgres with branching',
-            category: ['Storage', 'DevTools'],
-            products: [{ slug: 'postgres', name: 'Postgres' }],
+            provider: 'Neon',
+            description: 'Serverless Postgres database',
+            tags: ['Storage', 'DevTools', 'Postgres'],
+          },
+          {
+            name: 'Acme KV',
+            slug: 'acme-multi/acme-kv',
+            provider: 'Acme Multi',
+            description: 'Key-value store',
+            tags: ['Storage', 'Redis'],
+          },
+          {
+            name: 'Acme DB',
+            slug: 'acme-multi/acme-db',
+            provider: 'Acme Multi',
+            description: 'Relational database',
+            tags: ['Storage', 'Postgres'],
           },
         ],
       });
@@ -50,12 +64,13 @@ describe('integration', () => {
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('Available marketplace integrations:');
-      expect(stderr).toContain('Neon (neon)');
-      expect(stderr).toContain(
-        'Description: Serverless Postgres with branching'
-      );
-      expect(stderr).toContain('Products: Postgres');
+      expect(stderr).toContain('Available marketplace products:');
+      expect(stderr).toContain('Neon Postgres (neon)');
+      expect(stderr).toContain('Provider: Neon');
+      expect(stderr).toContain('Description: Serverless Postgres database');
+      expect(stderr).toContain('Tags: Storage, DevTools, Postgres');
+      expect(stderr).toContain('Acme KV (acme-multi/acme-kv)');
+      expect(stderr).toContain('Acme DB (acme-multi/acme-db)');
     });
 
     it('continues when categories endpoint fails', async () => {
@@ -71,13 +86,27 @@ describe('integration', () => {
 
       const output = JSON.parse(client.stdout.getFullOutput());
       expect(output).toEqual({
-        integrations: [
+        products: [
           {
+            name: 'Neon Postgres',
             slug: 'neon',
-            name: 'Neon',
-            description: 'Serverless Postgres with branching',
-            category: [],
-            products: [{ slug: 'postgres', name: 'Postgres' }],
+            provider: 'Neon',
+            description: 'Serverless Postgres database',
+            tags: ['Postgres'],
+          },
+          {
+            name: 'Acme KV',
+            slug: 'acme-multi/acme-kv',
+            provider: 'Acme Multi',
+            description: 'Key-value store',
+            tags: ['Redis'],
+          },
+          {
+            name: 'Acme DB',
+            slug: 'acme-multi/acme-db',
+            provider: 'Acme Multi',
+            description: 'Relational database',
+            tags: ['Postgres'],
           },
         ],
       });

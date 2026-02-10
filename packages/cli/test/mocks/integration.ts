@@ -903,7 +903,36 @@ const discoverIntegrations = [
     tagIds: ['tag_databases', 'tag_dev_tools'],
     isMarketplace: true,
     canInstall: true,
-    products: [{ slug: 'postgres', name: 'Postgres' }],
+    products: [
+      {
+        slug: 'postgres',
+        name: 'Neon Postgres',
+        shortDescription: 'Serverless Postgres database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-multi',
+    name: 'Acme Multi',
+    shortDescription: 'Multi-product integration',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'acme-kv',
+        name: 'Acme KV',
+        shortDescription: 'Key-value store',
+        tags: ['storage', 'redis'],
+      },
+      {
+        slug: 'acme-db',
+        name: 'Acme DB',
+        shortDescription: 'Relational database',
+        tags: ['postgres'],
+      },
+    ],
   },
   {
     slug: 'acme-hidden',
