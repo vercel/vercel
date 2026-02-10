@@ -539,31 +539,34 @@ export const build: BuildV3 = async ({
         data: runtimeRequirementsContent,
       });
 
-      // Add the uv binary to the lambda zip
-      try {
-        const uvBinaryPath = await getUvBinaryForBundling(
-          pythonVersion.pythonPath
-        );
+      // skip the uv copy when running vercel build locally
+      if (!process.env.VERCEL_BUILD_IMAGE) {
+        // Add the uv binary to the lambda zip
+        try {
+          const uvBinaryPath = await getUvBinaryForBundling(
+            pythonVersion.pythonPath
+          );
 
-        const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
-        const uvLocalPath = join(uvBundleDir, 'uv');
-        await fs.promises.mkdir(uvBundleDir, { recursive: true });
-        await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
-        await fs.promises.chmod(uvLocalPath, 0o755);
+          const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
+          const uvLocalPath = join(uvBundleDir, 'uv');
+          await fs.promises.mkdir(uvBundleDir, { recursive: true });
+          await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+          await fs.promises.chmod(uvLocalPath, 0o755);
 
-        const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
-        files[uvBundlePath] = new FileFsRef({
-          fsPath: uvLocalPath,
-          mode: 0o100755, // Regular file + executable
-        });
-        debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
-      } catch (err) {
-        throw new NowBuildError({
-          code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-          message: `Failed to bundle uv binary for runtime installation: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        });
+          const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+          files[uvBundlePath] = new FileFsRef({
+            fsPath: uvLocalPath,
+            mode: 0o100755, // Regular file + executable
+          });
+          debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+        } catch (err) {
+          throw new NowBuildError({
+            code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+            message: `Failed to bundle uv binary for runtime installation: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          });
+        }
       }
     } else {
       throw new NowBuildError({
