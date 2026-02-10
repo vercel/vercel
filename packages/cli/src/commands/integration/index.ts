@@ -25,8 +25,10 @@ import { remove } from './remove-integration';
 import { discover } from './discover';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
+import { formatBillingPlansHelp } from '../../util/integration/format-billing-plans-help';
 import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
 import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
+import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -85,6 +87,9 @@ export default async function main(client: Client) {
         if (rawArg) {
           // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
           const integrationSlug = rawArg.split('/')[0];
+          const productSlug = rawArg.includes('/')
+            ? rawArg.split('/')[1]
+            : undefined;
           try {
             const integration = await fetchIntegration(client, integrationSlug);
             const products = integration.products ?? [];
@@ -101,14 +106,33 @@ export default async function main(client: Client) {
               if (product.metadataSchema) {
                 // For single-product integrations, don't show product slug
                 // For multi-product integrations, show product slug for slash syntax
-                const productSlug =
+                const metadataProductSlug =
                   products.length > 1 ? product.slug : undefined;
                 output.print(
                   formatMetadataSchemaHelp(
                     product.metadataSchema,
                     integrationSlug,
-                    productSlug
+                    metadataProductSlug
                   )
+                );
+              }
+            }
+            // Show billing plans for each product (or just the specified one)
+            const productsToShow = productSlug
+              ? products.filter(p => p.slug === productSlug)
+              : products;
+            for (const product of productsToShow) {
+              try {
+                const { plans } = await fetchBillingPlans(
+                  client,
+                  integration,
+                  product,
+                  {}
+                );
+                output.print(formatBillingPlansHelp(product.name, plans));
+              } catch (err: unknown) {
+                output.debug(
+                  `Failed to fetch billing plans for ${product.slug}: ${err}`
                 );
               }
             }
@@ -139,6 +163,7 @@ export default async function main(client: Client) {
       const metadataFlags = addParsedArgs.flags['--metadata'] as
         | string[]
         | undefined;
+      const billingPlanId = addParsedArgs.flags['--plan'] as string | undefined;
       const noConnect = addParsedArgs.flags['--no-connect'] as
         | boolean
         | undefined;
@@ -146,10 +171,17 @@ export default async function main(client: Client) {
         | boolean
         | undefined;
 
-      return add(client, addParsedArgs.args, resourceName, metadataFlags, {
-        noConnect,
-        noEnvPull,
-      });
+      return add(
+        client,
+        addParsedArgs.args,
+        resourceName,
+        metadataFlags,
+        billingPlanId,
+        {
+          noConnect,
+          noEnvPull,
+        }
+      );
     }
     case 'list': {
       if (needHelp) {
