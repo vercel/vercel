@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.9.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
 ## 6.8.0
 
 ### Minor Changes

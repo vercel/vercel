@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.37
+
+### Patch Changes
+
+- Pass detected agent name as `actor` in deployment request body ([#14955](https://github.com/vercel/vercel/pull/14955))
+
 ## 17.2.36
 
 ### Patch Changes

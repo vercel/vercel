@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.6.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
 ## 5.5.33
 
 ### Patch Changes
