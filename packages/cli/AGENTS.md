@@ -145,6 +145,19 @@ All output methods write to `stderr` (via the `output` singleton), except `outpu
 - Use `output.spinner` for network requests or operations that may take time. Always call `output.stopSpinner()` before other output. The spinner has an optional delay parameter (default 300ms) and degrades to plain text in non-TTY environments.
 - Confirm before dangerous or irreversible operations.
 
+### Formatting helpers
+
+Use these from `src/util/output/` to format inline references in output strings:
+
+```typescript
+import code from '../../util/output/code';
+import param from '../../util/output/param';
+import cmd from '../../util/output/cmd';
+
+output.print(`Run ${cmd('vc deploy')} to deploy`);
+output.error(`Missing ${param('--token')}`);
+```
+
 ### JSON output
 
 Commands that return data should support `--json` for script consumption. Use `validateJsonOutput(parsedArgs.flags)` to check the flag. When outputting JSON, stop the spinner first and write to `stdout` so it can be piped:
@@ -172,9 +185,55 @@ List commands use `--next` (timestamp) and `--limit` with `client.fetchPaginated
 
 Wrap top-level command logic in `try/catch` with `printError(err); return 1;`. For validation errors, use `output.error(msg)` and return `1`. Use `output.prettyError` for structured error objects with `.link` or `.action` metadata. Rewrite errors in human-friendly language with actionable guidance — don't expose raw API errors.
 
+### Error hierarchy
+
+- `NowError<C, Meta>` — Base error with typed code and metadata
+- Domain errors — One-liner subclasses: `InvalidToken`, `DomainAlreadyExists`
+- `APIError` — HTTP-aware: `status`, `serverMessage`, `link?`, `slug?`, `retryAfterMs?`
+
+**Pattern:** Throw early in validation, catch at command boundary:
+
+```typescript
+try {
+  // business logic
+} catch (err: unknown) {
+  if (err instanceof InvalidToken) {
+    output.error('Token error');
+    return 1;
+  }
+  if (isAPIError(err) && err.status >= 400 && err.status <= 499) {
+    err.message = err.serverMessage;
+    output.prettyError(err);
+    return 1;
+  }
+  throw err; // Unexpected — bubbles to root handler
+}
+```
+
+**Type guards:** `isAPIError(v)`, `isErrnoException(err)` from `src/util/errors-ts.ts`.
+
 ## Telemetry
 
-Each command has a telemetry client in `src/util/telemetry/commands/<name>/index.ts` extending `TelemetryClient`. Add `trackCliFlag*` (boolean) and `trackCliOption*` (string) methods. Track flags/options after parsing, before executing the command logic. Use `trackCliFlagHelp` when help is displayed.
+Each command has a telemetry client in `src/util/telemetry/commands/<name>/index.ts` extending `TelemetryClient`, implementing `TelemetryMethods<typeof command>`:
+
+```typescript
+export class DeployTelemetryClient extends TelemetryClient
+  implements TelemetryMethods<typeof deployCommand> {
+  trackCliArgumentProjectPath(path: string | undefined) { ... }
+  trackCliOptionArchive(format: string | undefined) { ... }
+  trackCliFlagForce(flag: boolean | undefined) { ... }
+}
+```
+
+**Naming convention:**
+
+- `trackCliArgument[Name]` — positional arguments
+- `trackCliOption[Name]` — named options with values
+- `trackCliFlag[Name]` — boolean flags
+
+Track flags/options after parsing, before executing the command logic. Use `trackCliFlagHelp` when help is displayed.
+
+**Redaction:** Use `this.redactedValue = '[REDACTED]'` for sensitive values. Use `this.redactedArgumentsLength(args)` which returns `'ONE'`, `'MANY'`, or `'NONE'`.
 
 ## Writing Tests
 
@@ -270,6 +329,21 @@ await expect(client.stderr).toOutput('Error: Missing required flags.');
 expect(await exitCodePromise).toBe(1);
 ```
 
+### Custom matchers
+
+- `toHaveTelemetryEvents([{ key, value }])` — assert telemetry events were emitted
+- `toOutput(text)` — wait (up to 3s) for text to appear in stderr stream
+
+### Test cleanup
+
+```typescript
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
+```
+
 ### Running tests
 
 From the repo root:
@@ -286,6 +360,12 @@ Build and run the CLI locally:
 pnpm build
 node packages/cli/dist/index.js <command> [args]
 ```
+
+## Import Style
+
+- **Relative paths only** — no path aliases: `import { parseArguments } from '../../util/get-args'`
+- **Type imports separated:** `import type Client from '../../util/client'`
+- **Default export** for command handlers. **Named exports** for utilities, types, error classes.
 
 ## General CLI Best Practices
 
