@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.10.0
+
+### Minor Changes
+
+- [python] prefer `fastapi dev` to start ASGI application if FastAPI CLI is available and monitor module changes ([#14861](https://github.com/vercel/vercel/pull/14861))
+
 ## 6.9.0
 
 ### Minor Changes
