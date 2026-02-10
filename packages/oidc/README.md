@@ -12,9 +12,9 @@ import { getVercelOidcToken } from '@vercel/oidc';
 // Get token using project.json configuration
 const token = await getVercelOidcToken();
 
-// Get token with explicit project and team
+// Get token with explicit project and team (supports both IDs and slugs)
 const token = await getVercelOidcToken({
-  project: 'prj_abc123',
+  project: 'my-project', // or 'prj_abc123'
   team: 'my-team', // or 'team_xyz789'
 });
 
@@ -32,7 +32,7 @@ Gets the current OIDC token from the request context or environment variable. Wi
 
 **Options:**
 
-- `project?: string` - Project ID (e.g. `prj_*`). Project slug support is not yet available.
+- `project?: string` - Project ID (prj\_\*) or slug
 - `team?: string` - Team ID (team\_\*) or slug
 - `expirationBufferMs?: number` - Buffer time in ms before expiry to trigger refresh (default: 0)
 

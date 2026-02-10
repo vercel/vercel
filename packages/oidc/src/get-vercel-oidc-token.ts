@@ -11,8 +11,7 @@ export interface GetVercelOidcTokenOptions {
    */
   team?: string;
   /**
-   * Optional project ID to use for token refresh. Must be a project ID (e.g. `prj_*`).
-   * Project slug support is not yet available.
+   * Optional project ID (prj_*) or slug to use for token refresh.
    * When provided, this project will be used instead of reading from `.vercel/project.json`.
    */
   project?: string;
@@ -54,8 +53,8 @@ export interface GetVercelOidcTokenOptions {
  * @example
  *
  * ```js
- * // Using the OIDC token with explicit team and project
- * getVercelOidcToken({ team: 'my-team', project: 'prj_xyz' }).then((token) => {
+ * // Using the OIDC token with explicit team and project (supports IDs and slugs)
+ * getVercelOidcToken({ team: 'my-team', project: 'my-project' }).then((token) => {
  *   console.log('OIDC Token:', token);
  * }).catch((error) => {
  *   console.error('Error:', error.message);

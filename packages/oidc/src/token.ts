@@ -16,8 +16,7 @@ export interface RefreshTokenOptions {
    */
   team?: string;
   /**
-   * Project ID to use for token refresh. Must be a project ID (e.g. `prj_*`).
-   * Project slug support is not yet available.
+   * Project ID (prj_*) or slug to use for token refresh.
    * When provided, this project will be used instead of reading from `.vercel/project.json`.
    */
   project?: string;
