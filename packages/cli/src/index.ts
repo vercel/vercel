@@ -739,7 +739,7 @@ const main = async () => {
           break;
         case 'flags':
           telemetry.trackCliCommandFlags(userSuppliedSubCommand);
-          func = require('./commands/flags').default;
+          func = (await import('./commands-bulk.js')).flags;
           break;
         case 'git':
           telemetry.trackCliCommandGit(userSuppliedSubCommand);
