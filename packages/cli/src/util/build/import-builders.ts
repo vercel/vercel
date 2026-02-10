@@ -88,6 +88,28 @@ function getPeerDependencies(): Record<string, string> {
   return peerDependencies;
 }
 
+function isBuilderEntryLoadable(
+  pkgPath: string,
+  builderPkg: PackageJson
+): boolean {
+  const entryPath = join(
+    dirname(pkgPath),
+    (builderPkg.main as string) || 'index.js'
+  );
+  try {
+    require_.resolve(entryPath, { paths: [dirname(pkgPath)] });
+    return true;
+  } catch (err: unknown) {
+    if (
+      isErrnoException(err) &&
+      (err as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND'
+    ) {
+      return false;
+    }
+    throw err;
+  }
+}
+
 export async function resolveBuilders(
   cwd: string,
   buildersDir: string,
@@ -147,7 +169,15 @@ export async function resolveBuilders(
           `"${name}@${builderPkgJson.version}" does not match expected "${peerVersion}"`
         );
       }
-      builderPkg = builderPkgJson;
+      if (!isBuilderEntryLoadable(pkgPath, builderPkgJson)) {
+        output.debug(
+          `"${name}" entry point missing, skipping project node_modules`
+        );
+        pkgPath = undefined;
+        builderPkg = undefined;
+      } else {
+        builderPkg = builderPkgJson;
+      }
     } catch (err: unknown) {
       if (!isErrnoException(err) || err.code !== 'ENOENT') {
         throw err;
@@ -174,7 +204,14 @@ export async function resolveBuilders(
           buildersToAdd.add(`${name}@${peerVersion}`);
           continue;
         }
-        builderPkg = cachedPkg;
+        if (!isBuilderEntryLoadable(pkgPath, cachedPkg)) {
+          output.debug(
+            `"${name}" entry point missing in .vercel/builders, skipping`
+          );
+          builderPkg = undefined;
+        } else {
+          builderPkg = cachedPkg;
+        }
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'ENOENT') {
           throw err;
@@ -199,6 +236,22 @@ export async function resolveBuilders(
           paths: [__dirname],
         });
         builderPkg = await readJSON(pkgPath);
+        if (!isBuilderEntryLoadable(pkgPath, builderPkg)) {
+          output.debug(
+            `"${name}" entry point missing in CLI's node_modules, will install or fail`
+          );
+          builderPkg = undefined;
+          pkgPath = undefined;
+          if (peerVersion) {
+            buildersToAdd.add(`${name}@${peerVersion}`);
+            continue;
+          }
+          if (resolvedSpecs) {
+            throw new Error(`Builder "${name}" not found`);
+          }
+          buildersToAdd.add(spec);
+          continue;
+        }
         output.debug(`Found "${name}" in CLI's node_modules`);
       } catch (err: unknown) {
         if (
