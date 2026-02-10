@@ -15,6 +15,8 @@ import { isWindows } from '../../../helpers/is-windows';
 // these tests can take upwards of 190s on macos-latest
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
+const repoRoot = join(__dirname, '../../../../../..');
+
 describe('importBuilders()', () => {
   let cwd: string = '';
   beforeEach(async () => {
@@ -29,9 +31,14 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
     const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
-    // Check package name matches (version may differ between local workspace and npm)
-    expect(builders.get('@vercel/node')?.pkg.name).toEqual(vercelNodePkg.name);
-    expect(builders.get('@vercel/next')?.pkg.name).toEqual(vercelNextPkg.name);
+    expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
+    expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
+    expect(builders.get('@vercel/node')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/node/package.json')
+    );
+    expect(builders.get('@vercel/next')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/next/package.json')
+    );
     expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
       'function'
     );
@@ -44,12 +51,17 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
     const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
-    // Check package name matches (version may differ between local workspace and npm)
-    expect(builders.get('@vercel/node@latest')?.pkg.name).toEqual(
-      vercelNodePkg.name
+    expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
+      vercelNodePkg
     );
-    expect(builders.get('@vercel/next@latest')?.pkg.name).toEqual(
-      vercelNextPkg.name
+    expect(builders.get('@vercel/next@latest')?.pkg).toMatchObject(
+      vercelNextPkg
+    );
+    expect(builders.get('@vercel/node@latest')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/node/package.json')
+    );
+    expect(builders.get('@vercel/next@latest')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/next/package.json')
     );
     expect(typeof builders.get('@vercel/node@latest')?.builder.build).toEqual(
       'function'
@@ -63,12 +75,17 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
     const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
-    // Check package name matches (version may differ between local workspace and npm)
-    expect(builders.get('@vercel/node@canary')?.pkg.name).toEqual(
-      vercelNodePkg.name
+    expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
+      vercelNodePkg
     );
-    expect(builders.get('@vercel/next@canary')?.pkg.name).toEqual(
-      vercelNextPkg.name
+    expect(builders.get('@vercel/next@canary')?.pkg).toMatchObject(
+      vercelNextPkg
+    );
+    expect(builders.get('@vercel/node@canary')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/node/package.json')
+    );
+    expect(builders.get('@vercel/next@canary')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/next/package.json')
     );
     expect(typeof builders.get('@vercel/node@canary')?.builder.build).toEqual(
       'function'
