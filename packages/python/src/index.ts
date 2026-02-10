@@ -363,6 +363,11 @@ export const build: BuildV3 = async ({
     );
   }
 
+  // Check if the experimental runtime install feature is enabled
+  const runtimeInstallFeatureEnabled =
+    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === '1' ||
+    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === 'true';
+
   // Track the lock file path for package classification (used when runtime install is enabled)
   let uvLockPath: string | null = null;
   let uvPyprojectPath: string | null = null;
@@ -383,6 +388,7 @@ export const build: BuildV3 = async ({
       uv,
       venvPath,
       meta,
+      generateLockFile: runtimeInstallFeatureEnabled,
     });
 
     uvLockPath = lockPath;
@@ -478,11 +484,6 @@ export const build: BuildV3 = async ({
   let runtimeInstallEnabled = false;
   let runtimeRequirementsContent: string | undefined;
 
-  // Check if the experimental runtime install feature is enabled
-  const runtimeInstallFeatureEnabled =
-    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === '1' ||
-    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === 'true';
-
   if (
     runtimeInstallFeatureEnabled &&
     totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
@@ -571,10 +572,6 @@ export const build: BuildV3 = async ({
         );
         console.log('Falling back to bundling all dependencies.');
         runtimeInstallEnabled = false;
-      }
-
-      if (runtimeInstallEnabled) {
-        console.log('Runtime dependency installation enabled.');
       }
     } else {
       console.log(

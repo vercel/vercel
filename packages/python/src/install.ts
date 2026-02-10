@@ -258,6 +258,11 @@ interface EnsureUvProjectParams {
   uv: UvRunner;
   venvPath: string;
   meta: Meta;
+  /**
+   * When true, generates a uv.lock file for Pipfile and requirements.txt projects.
+   * This enables runtime dependency installation for these project types.
+   */
+  generateLockFile?: boolean;
 }
 
 function findUvLockUpwards(
@@ -291,6 +296,7 @@ export async function ensureUvProject({
   uv,
   venvPath,
   meta,
+  generateLockFile = false,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
   const uvPath = uv.getPath();
 
@@ -366,6 +372,9 @@ export async function ensureUvProject({
       projectDir,
       requirementsPath: exportedReq,
     });
+    if (generateLockFile) {
+      await uv.lock(projectDir);
+    }
   } else if (manifestType === 'requirements.txt') {
     if (!manifestPath) {
       throw new Error(
@@ -390,6 +399,9 @@ export async function ensureUvProject({
       projectDir,
       requirementsPath: manifestPath,
     });
+    if (generateLockFile) {
+      await uv.lock(projectDir);
+    }
   } else {
     // No manifest detected – create a minimal uv project at the workPath so
     // that runtime dependencies are still managed and locked via uv.

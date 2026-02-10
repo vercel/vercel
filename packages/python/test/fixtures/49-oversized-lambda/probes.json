@@ -1,0 +1,11 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Enabling runtime dependency installation"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"all_dependencies_ok\":true"
+    }
+  ]
+}
