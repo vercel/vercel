@@ -776,7 +776,8 @@ function checkUnusedFunctions(
   if (
     frontendBuilder &&
     (isOfficialRuntime('express', frontendBuilder.use) ||
-      isOfficialRuntime('hono', frontendBuilder.use))
+      isOfficialRuntime('hono', frontendBuilder.use) ||
+      isOfficialRuntime('backends', frontendBuilder.use))
   ) {
     // Copied from builder entrypoint detection
     const validFilenames = [

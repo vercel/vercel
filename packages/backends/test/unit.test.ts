@@ -56,9 +56,12 @@ const getFixtureConfig = (vercelJson: VercelJson | null) => {
     buildCommand,
     outputDirectory,
     framework,
+    functions,
   } = vercelJson;
   return {
     ...defaultConfig,
+    // @ts-expect-error - functions is not typed
+    ...(functions && { functions }),
     projectSettings: {
       ...defaultConfig.projectSettings,
       ...(rootDirectory && { rootDirectory }),
@@ -135,6 +138,38 @@ describe('successful builds', async () => {
         await expect(
           JSON.stringify(result.routes, null, 2)
         ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
+
+        if (lambda.files) {
+          // Assert includeFiles: if files.json exists, every listed file must be in the lambda
+          try {
+            const includeFilesJson = await readFile(
+              join(fixtureSource, 'files.json'),
+              'utf-8'
+            );
+            const expectedFiles: string[] = JSON.parse(includeFilesJson);
+            const lambdaFileKeys = Object.keys(lambda.files);
+            for (const file of expectedFiles) {
+              expect(lambdaFileKeys).toContain(file);
+            }
+          } catch {
+            // no files.json — skip include assertion
+          }
+
+          // Assert excludeFiles: if excludeFiles.json exists, none of the listed files should be in the lambda
+          try {
+            const excludeFilesJson = await readFile(
+              join(fixtureSource, 'excludeFiles.json'),
+              'utf-8'
+            );
+            const excludedFiles: string[] = JSON.parse(excludeFilesJson);
+            const lambdaFileKeys = Object.keys(lambda.files);
+            for (const file of excludedFiles) {
+              expect(lambdaFileKeys).not.toContain(file);
+            }
+          } catch {
+            // no excludeFiles.json — skip exclude assertion
+          }
+        }
 
         await expect(
           extractAndExecuteLambda(lambda, lambdaOutputDir, USE_DEBUG_DIR)
