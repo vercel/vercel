@@ -34,8 +34,9 @@ describe('getServiceUrlEnvVars', () => {
     expect(result).toEqual({
       FRONTEND_URL: 'https://my-app.vercel.app',
       BACKEND_URL: 'https://my-app.vercel.app/_/backend',
-      VITE_FRONTEND_URL: 'https://my-app.vercel.app',
-      VITE_BACKEND_URL: 'https://my-app.vercel.app/_/backend',
+      // Framework-prefixed vars use relative paths to avoid CORS issues
+      VITE_FRONTEND_URL: '/',
+      VITE_BACKEND_URL: '/_/backend',
     });
   });
 
@@ -89,13 +90,13 @@ describe('getServiceUrlEnvVars', () => {
       WEB_URL: 'https://my-app.vercel.app',
       ADMIN_URL: 'https://my-app.vercel.app/admin',
       API_URL: 'https://my-app.vercel.app/_/api',
-      // Both prefixes applied to all services
-      NEXT_PUBLIC_WEB_URL: 'https://my-app.vercel.app',
-      NEXT_PUBLIC_ADMIN_URL: 'https://my-app.vercel.app/admin',
-      NEXT_PUBLIC_API_URL: 'https://my-app.vercel.app/_/api',
-      VITE_WEB_URL: 'https://my-app.vercel.app',
-      VITE_ADMIN_URL: 'https://my-app.vercel.app/admin',
-      VITE_API_URL: 'https://my-app.vercel.app/_/api',
+      // Framework-prefixed vars use relative paths to avoid CORS issues
+      NEXT_PUBLIC_WEB_URL: '/',
+      NEXT_PUBLIC_ADMIN_URL: '/admin',
+      NEXT_PUBLIC_API_URL: '/_/api',
+      VITE_WEB_URL: '/',
+      VITE_ADMIN_URL: '/admin',
+      VITE_API_URL: '/_/api',
     });
   });
 
@@ -117,8 +118,9 @@ describe('getServiceUrlEnvVars', () => {
     });
 
     // BACKEND_URL is not in result because it already exists
+    // Framework-prefixed var uses relative path
     expect(result).toEqual({
-      VITE_BACKEND_URL: 'https://my-app.vercel.app/_/backend',
+      VITE_BACKEND_URL: '/_/backend',
     });
   });
 
