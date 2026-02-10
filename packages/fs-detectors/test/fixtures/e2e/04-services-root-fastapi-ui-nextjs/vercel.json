@@ -10,7 +10,7 @@
       "routePrefix": "/"
     },
     "api": {
-      "entrypoint": "api/index.py",
+      "entrypoint": "index.py",
       "framework": "fastapi",
       "routePrefix": "/api/py"
     }
