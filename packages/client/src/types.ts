@@ -226,6 +226,7 @@ export interface DeploymentOptions {
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
+  actor?: string;
   autoAssignCustomDomains?: boolean;
   customEnvironmentSlugOrId?: string;
   customErrorPage?:

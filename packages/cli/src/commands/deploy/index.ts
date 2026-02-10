@@ -524,6 +524,7 @@ export default async (client: Client): Promise<number> => {
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
+      agentName: client.agentName,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -569,6 +570,10 @@ export default async (client: Client): Promise<number> => {
       !project,
       parsedArchive ? 'tgz' : undefined
     );
+
+    if (deployment && !(deployment instanceof Error)) {
+      telemetryClient.trackDeploymentId(deployment.id);
+    }
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment.message);

@@ -1,5 +1,14 @@
 # @vercel/backends
 
+## 0.0.30
+
+### Patch Changes
+
+- [backends] Re-add bun support ([#14916](https://github.com/vercel/vercel/pull/14916))
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.3.3
+
 ## 0.0.29
 
 ### Patch Changes

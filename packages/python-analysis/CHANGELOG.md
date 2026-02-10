@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.3.2
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
 ## 0.3.1
 
 ### Patch Changes
