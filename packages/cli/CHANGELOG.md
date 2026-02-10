@@ -1,5 +1,36 @@
 # vercel
 
+## 50.14.1
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+- Remove `customErrorPage` configuration support from `vercel.json` ([#14832](https://github.com/vercel/vercel/pull/14832))
+
+- Updated dependencies [[`45963f54f26a3e54df58a3b6a30e383de4094dd1`](https://github.com/vercel/vercel/commit/45963f54f26a3e54df58a3b6a30e383de4094dd1), [`2c09a1d3486e905d6b1a9c6280739d81e9958cec`](https://github.com/vercel/vercel/commit/2c09a1d3486e905d6b1a9c6280739d81e9958cec), [`2c09a1d3486e905d6b1a9c6280739d81e9958cec`](https://github.com/vercel/vercel/commit/2c09a1d3486e905d6b1a9c6280739d81e9958cec), [`7a78b1b4144602550a3be48cd9a976e5e2934a51`](https://github.com/vercel/vercel/commit/7a78b1b4144602550a3be48cd9a976e5e2934a51), [`87ff85b1277d84021bc83aec6fc97021d3fdab9d`](https://github.com/vercel/vercel/commit/87ff85b1277d84021bc83aec6fc97021d3fdab9d)]:
+  - @vercel/build-utils@13.3.4
+  - @vercel/backends@0.0.31
+  - @vercel/python@6.10.0
+  - @vercel/elysia@0.1.34
+  - @vercel/express@0.1.43
+  - @vercel/fastify@0.1.37
+  - @vercel/go@3.4.0
+  - @vercel/h3@0.1.43
+  - @vercel/hono@0.2.37
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.17
+  - @vercel/nestjs@0.2.38
+  - @vercel/next@4.15.28
+  - @vercel/node@5.6.1
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/ruby@2.3.0
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.35
+
 ## 50.14.0
 
 ### Minor Changes

@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 13.3.4
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+- [services] set framework prefixed env var urls to relative path ([#14958](https://github.com/vercel/vercel/pull/14958))
+
 ## 13.3.3
 
 ### Patch Changes
