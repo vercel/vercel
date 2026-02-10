@@ -300,6 +300,7 @@ describe('deploy', () => {
         key: 'option:archive',
         value: 'tgz',
       },
+      { key: 'output:deployment-id', value: 'dpl_archive_test' },
     ]);
   });
 
@@ -352,6 +353,7 @@ describe('deploy', () => {
         key: 'flag:skip-domain',
         value: 'TRUE',
       },
+      { key: 'output:deployment-id', value: 'dpl_archive_test' },
     ]);
   });
 
@@ -788,6 +790,7 @@ describe('deploy', () => {
           key: 'flag:logs',
           value: 'TRUE',
         },
+        { key: 'output:deployment-id', value: expect.any(String) },
       ]);
     });
 
@@ -874,6 +877,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:force', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--with-cache', async () => {
@@ -890,6 +894,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:with-cache', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--public', async () => {
@@ -906,6 +911,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:public', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--env', async () => {
@@ -924,6 +930,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:env', value: '[REDACTED]' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--build-env', async () => {
@@ -948,6 +955,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:build-env', value: '[REDACTED]' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--meta', async () => {
@@ -966,6 +974,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:meta', value: '[REDACTED]' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--regions', async () => {
@@ -984,6 +993,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:regions', value: '[REDACTED]' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--prebuilt', async () => {
@@ -1003,6 +1013,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:prebuilt', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--archive=tgz', async () => {
@@ -1019,6 +1030,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:archive', value: 'tgz' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--archive=split-tgz', async () => {
@@ -1035,6 +1047,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:archive', value: 'split-tgz' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--no-wait', async () => {
@@ -1053,6 +1066,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:no-wait', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--skip-domain', async () => {
@@ -1071,6 +1085,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:skip-domain', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--yes', async () => {
@@ -1089,6 +1104,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:yes', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--logs', async () => {
@@ -1107,6 +1123,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:logs', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--guidance', async () => {
@@ -1117,6 +1134,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:guidance', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--name', async () => {
@@ -1127,6 +1145,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:name', value: '[REDACTED]' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--no-clipboard', async () => {
@@ -1137,6 +1156,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:no-clipboard', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--target=preview', async () => {
@@ -1159,6 +1179,7 @@ describe('deploy', () => {
           key: 'option:target',
           value: 'preview',
         },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--target=production', async () => {
@@ -1181,6 +1202,7 @@ describe('deploy', () => {
           key: 'option:target',
           value: 'production',
         },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--target=my-custom-env-slug', async () => {
@@ -1203,6 +1225,7 @@ describe('deploy', () => {
           key: 'option:target',
           value: '[REDACTED]',
         },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
     it('--prod', async () => {
@@ -1225,7 +1248,24 @@ describe('deploy', () => {
           key: 'flag:prod',
           value: 'TRUE',
         },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
+    });
+    it('passes agentName from client', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.agentName = 'test-agent';
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            agentName: 'test-agent',
+          }),
+        })
+      );
     });
     it('--confirm', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
@@ -1238,11 +1278,25 @@ describe('deploy', () => {
           key: 'flag:confirm',
           value: 'TRUE',
         },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
         {
           key: 'flag:yes',
           value: 'TRUE',
+        },
+      ]);
+    });
+    it('tracks deployment id from response', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'output:deployment-id',
+          value: 'dpl_archive_test',
         },
       ]);
     });
