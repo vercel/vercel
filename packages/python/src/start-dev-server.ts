@@ -191,30 +191,26 @@ interface PythonRunner {
 async function getMultiServicePythonRunner(
   workPath: string,
   env: NodeJS.ProcessEnv,
-  systemPython: string
+  systemPython: string,
+  uvPath: string | null
 ): Promise<PythonRunner> {
-  // Prefer uv if available, so it handles everything for us.
-  const uvPath = await findUvBinary(systemPython);
-  if (uvPath) {
-    debug(`Using "uv run" for multi-service dev`);
-    return { command: uvPath, args: ['run', 'python'] };
-  }
-
-  // Try existing .venv/venv (allowed for 1 Python service).
+  // Use an existing .venv/venv if present and allowed (single Python service in a project).
   const { pythonCmd, venvRoot } = useVirtualEnv(workPath, env, systemPython);
   if (venvRoot) {
     debug(`Using existing virtualenv at ${venvRoot} for multi-service dev`);
     return { command: pythonCmd, args: [] };
   }
 
-  // Fallback to a manual .venv through a built-in module.
+  // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({ pythonPath: systemPython, venvPath });
+  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath });
+  debug(`Created virtualenv at ${venvPath} for multi-service dev`);
+
+  const pythonBin = getVenvPythonBin(venvPath);
   const binDir = getVenvBinDir(venvPath);
   env.VIRTUAL_ENV = venvPath;
   env.PATH = `${binDir}${delimiter}${env.PATH || ''}`;
-  const pythonBin = getVenvPythonBin(venvPath);
-  debug(`Created virtualenv at ${venvPath} for multi-service dev`);
+
   return { command: pythonBin, args: [] };
 }
 
@@ -303,12 +299,13 @@ export const startDevServer: StartDevServer = async opts => {
 
   try {
     const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
+    const uvPath = await findUvBinary(systemPython);
     const venv = isInVirtualEnv();
+    const serviceCount = (meta.serviceCount as number | undefined) ?? 0;
     const pythonServiceCount =
       (meta.pythonServiceCount as number | undefined) ?? 1;
-    const isMultiPythonService = pythonServiceCount > 1;
 
-    if (venv && isMultiPythonService) {
+    if (venv && pythonServiceCount > 1) {
       const yellow = '\x1b[33m';
       const white = '\x1b[1m';
       const reset = '\x1b[0m';
@@ -324,11 +321,12 @@ export const startDevServer: StartDevServer = async opts => {
     let spawnCommand = systemPython;
     let spawnArgsPrefix: string[] = [];
 
-    if (isMultiPythonService) {
+    if (serviceCount > 0) {
       const runner = await getMultiServicePythonRunner(
         workPath,
         env,
-        systemPython
+        systemPython,
+        uvPath
       );
       spawnCommand = runner.command;
       spawnArgsPrefix = runner.args;
