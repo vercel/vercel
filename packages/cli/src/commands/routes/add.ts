@@ -308,9 +308,18 @@ export default async function add(client: Client, argv: string[]) {
       message: `Path pattern (${syntaxHelp}):`,
       validate: val => {
         if (!val) return 'Path pattern is required';
+        if (syntax !== 'regex' && !val.startsWith('/')) {
+          return 'Path must start with / and be a valid URL path';
+        }
         return true;
       },
     });
+  }
+
+  // Validate path starts with / for non-regex syntax
+  if (syntax !== 'regex' && !src.startsWith('/')) {
+    output.error('Path must start with / and be a valid URL path');
+    return 1;
   }
 
   // --- Validate --action flag ---
