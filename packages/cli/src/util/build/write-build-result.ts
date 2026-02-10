@@ -52,6 +52,7 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number;
+  regions?: Lambda['regions'];
   experimentalTriggers?: TriggerEvent[];
   supportsCancellation?: boolean;
 }
@@ -608,6 +609,7 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const regions = functionConfiguration?.regions ?? lambda.regions;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
   const supportsCancellation =
@@ -619,6 +621,7 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
+    regions,
     experimentalTriggers,
     supportsCancellation,
     filePathMap,
