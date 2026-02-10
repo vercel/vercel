@@ -172,6 +172,10 @@ describe('target ls', () => {
     );
 
     line = await lines.next();
+    // Skip blank line before table (output.print('\n${tablePrint}\n\n'))
+    if (line.value?.trim() === '') {
+      line = await lines.next();
+    }
     const header = parseSpacedTableRow(line.value!);
     expect(header).toEqual([
       'Target Name',

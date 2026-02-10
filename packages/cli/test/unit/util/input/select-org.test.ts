@@ -102,6 +102,7 @@ describe('selectOrg', () => {
       useTeam();
       createTeam(); // second team so choices.length > 1
       client.nonInteractive = true;
+      delete client.config.currentTeam;
     });
 
     afterEach(() => {
@@ -111,10 +112,14 @@ describe('selectOrg', () => {
     it('outputs action_required JSON and exits when multiple teams and no current team', async () => {
       const exitSpy = vi
         .spyOn(process, 'exit')
-        .mockImplementation((() => {}) as (code?: number) => never);
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      await selectOrg(client, 'Which scope?', false);
+      await expect(selectOrg(client, 'Which scope?', false)).rejects.toThrow(
+        'process.exit(1)'
+      );
 
       expect(logSpy).toHaveBeenCalledTimes(1);
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
