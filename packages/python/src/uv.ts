@@ -5,6 +5,7 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import which from 'which';
+import toml from 'smol-toml';
 import { debug } from '@vercel/build-utils';
 
 /**
@@ -384,54 +385,45 @@ export async function getUvBinaryForBundling(
 }
 
 /**
+ * Represents the raw parsed structure of a uv.lock TOML file.
+ */
+interface UvLockToml {
+  version?: number;
+  package?: Array<{
+    name: string;
+    version: string;
+    source?: {
+      registry?: string;
+      url?: string;
+      git?: string;
+      path?: string;
+      editable?: string;
+      virtual?: string;
+    };
+  }>;
+}
+
+/**
  * Parse a uv.lock file (TOML format) to extract package information.
- * This is a simplified TOML parser that handles the specific structure of uv.lock.
  */
 export async function parseUvLockFile(lockPath: string): Promise<UvLockFile> {
   const content = await fs.promises.readFile(lockPath, 'utf8');
-  const packages: UvLockPackage[] = [];
 
-  // Split into package blocks - each [[package]] section
-  const packageBlocks = content.split(/\[\[package\]\]/);
-
-  for (const block of packageBlocks.slice(1)) {
-    // Skip the header section before first [[package]]
-    const pkg: UvLockPackage = { name: '', version: '' };
-
-    // Parse name
-    const nameMatch = block.match(/^name\s*=\s*"([^"]+)"/m);
-    if (nameMatch) pkg.name = nameMatch[1];
-
-    // Parse version
-    const versionMatch = block.match(/^version\s*=\s*"([^"]+)"/m);
-    if (versionMatch) pkg.version = versionMatch[1];
-
-    // Parse source section if present
-    const sourceSection = block.match(/\[package\.source\]([\s\S]*?)(?=\[|$)/);
-    if (sourceSection) {
-      pkg.source = {};
-      const sourceContent = sourceSection[1];
-
-      const registryMatch = sourceContent.match(/registry\s*=\s*"([^"]+)"/);
-      if (registryMatch) pkg.source.registry = registryMatch[1];
-
-      const urlMatch = sourceContent.match(/url\s*=\s*"([^"]+)"/);
-      if (urlMatch) pkg.source.url = urlMatch[1];
-
-      const gitMatch = sourceContent.match(/git\s*=\s*"([^"]+)"/);
-      if (gitMatch) pkg.source.git = gitMatch[1];
-
-      const pathMatch = sourceContent.match(/path\s*=\s*"([^"]+)"/);
-      if (pathMatch) pkg.source.path = pathMatch[1];
-
-      const editableMatch = sourceContent.match(/editable\s*=\s*"([^"]+)"/);
-      if (editableMatch) pkg.source.editable = editableMatch[1];
-    }
-
-    if (pkg.name && pkg.version) {
-      packages.push(pkg);
-    }
+  let parsed: UvLockToml;
+  try {
+    parsed = toml.parse(content) as UvLockToml;
+  } catch (err) {
+    debug(`Failed to parse uv.lock as TOML: ${err}`);
+    return { package: [] };
   }
 
-  return { package: packages };
+  const packages: UvLockPackage[] = (parsed.package ?? [])
+    .filter(pkg => pkg.name && pkg.version)
+    .map(pkg => ({
+      name: pkg.name,
+      version: pkg.version,
+      source: pkg.source,
+    }));
+
+  return { version: parsed.version, package: packages };
 }

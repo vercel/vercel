@@ -2302,8 +2302,8 @@ dev-dependencies = []
   });
 
   describe('LAMBDA_SIZE_THRESHOLD_BYTES', () => {
-    it('is set to 240MB', () => {
-      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(240 * 1024 * 1024);
+    it('is set to 245MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(245 * 1024 * 1024);
     });
   });
 });

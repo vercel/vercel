@@ -1,4 +1,5 @@
 import fs from 'fs';
+import toml from 'smol-toml';
 import { debug } from '@vercel/build-utils';
 import { parseUvLockFile, UvLockPackage } from './uv';
 
@@ -6,6 +7,15 @@ export interface PackageClassification {
   privatePackages: string[];
   publicPackages: string[];
   packageVersions: Record<string, string>;
+}
+
+/**
+ * Represents the relevant structure of a pyproject.toml file for extracting the project name.
+ */
+interface PyprojectToml {
+  project?: {
+    name?: string;
+  };
 }
 
 export async function getProjectNameFromPyproject(
@@ -18,21 +28,18 @@ export async function getProjectNameFromPyproject(
 
   try {
     const content = await fs.promises.readFile(pyprojectPath, 'utf8');
+    const parsed = toml.parse(content) as PyprojectToml;
 
-    // Look for name in [project] section
-    // Simple regex parser for: name = "project-name" or name = 'project-name'
-    const nameMatch = content.match(
-      /\[project\][\s\S]*?^name\s*=\s*["']([^"']+)["']/m
-    );
-    if (nameMatch) {
-      debug(`Found project name in pyproject.toml: ${nameMatch[1]}`);
-      return nameMatch[1];
+    const name = parsed.project?.name;
+    if (name) {
+      debug(`Found project name in pyproject.toml: ${name}`);
+      return name;
     }
 
     debug('Could not find project name in pyproject.toml');
     return undefined;
   } catch (err) {
-    debug(`Failed to read pyproject.toml: ${err}`);
+    debug(`Failed to parse pyproject.toml: ${err}`);
     return undefined;
   }
 }

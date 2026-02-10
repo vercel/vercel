@@ -25,6 +25,9 @@
     "vitest-unit": "glob --absolute 'test/unit.test.ts'",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "smol-toml": "1.5.2"
+  },
   "devDependencies": {
     "@renovatebot/pep440": "4.2.1",
     "@types/execa": "^0.9.0",
@@ -40,7 +43,6 @@
     "jest-junit": "16.0.0",
     "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.2",
-    "smol-toml": "1.5.2",
     "vitest": "2.1.4",
     "which": "3.0.0"
   }
