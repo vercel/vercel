@@ -6,6 +6,8 @@
 const PRIMARY_INDEX_NAME = 'primary';
 /** Prefix for extra index names when --extra-index-url is specified */
 const EXTRA_INDEX_PREFIX = 'extra-';
+/** Prefix for flat index names when --find-links is specified */
+const FIND_LINKS_PREFIX = 'find-links-';
 
 import { normalize } from 'node:path';
 
@@ -39,6 +41,10 @@ export interface PipOptions {
   indexUrl?: string;
   /** Extra index URLs (--extra-index-url) */
   extraIndexUrls: string[];
+  /** Directories/URLs for --find-links / -f (only set when present) */
+  findLinks?: string[];
+  /** Whether --no-index was specified (only set when true) */
+  noIndex?: boolean;
 }
 
 /**
@@ -138,6 +144,8 @@ function isGitUrl(url: string): boolean {
 function extractPipArguments(fileContent: string): {
   cleanedContent: string;
   options: PipOptions;
+  pathRequirements: string[];
+  editableRequirements: string[];
 } {
   const options: PipOptions = {
     requirementFiles: [],
@@ -147,6 +155,8 @@ function extractPipArguments(fileContent: string): {
 
   const lines = fileContent.split(/\r?\n/);
   const cleanedLines: string[] = [];
+  const pathRequirements: string[] = [];
+  const editableRequirements: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -167,15 +177,38 @@ function extractPipArguments(fileContent: string): {
     }
 
     const extracted = tryExtractPipArgument(fullLine, options);
-    if (extracted) {
-      // Skip the continuation lines we consumed
+    if (extracted === true) {
+      // Pip option was extracted into options
       i += linesConsumed;
-      // Don't add the line to cleanedLines
+    } else if (typeof extracted === 'object' && extracted.editable) {
+      // Editable requirement (-e / --editable)
+      editableRequirements.push(extracted.editable);
+      i += linesConsumed;
     } else {
+      // Not a pip argument. Check for unknown single-dash flags that
+      // pip-requirements-js can't handle. -r and -c are handled by
+      // pip-requirements-js so they pass through.
+      if (
+        /^-[a-zA-Z]/.test(fullLine) &&
+        !fullLine.startsWith('-r') &&
+        !fullLine.startsWith('-c')
+      ) {
+        // Unknown short flag, strip to prevent crash
+        i += linesConsumed;
+        continue;
+      }
+
       // Not a standalone pip argument, but might have inline --hash
       // Strip --hash from the line and keep the requirement part
       const strippedLine = stripInlineHashes(fullLine);
-      if (strippedLine !== fullLine) {
+      const effectiveLine = (
+        strippedLine !== fullLine ? strippedLine : fullLine
+      ).trim();
+
+      if (isPathOrUrlRequirement(effectiveLine)) {
+        // Bare file path or URL that pip-requirements-js can't parse
+        pathRequirements.push(effectiveLine);
+      } else if (strippedLine !== fullLine) {
         // Line had hashes, add the stripped version
         cleanedLines.push(strippedLine);
       } else {
@@ -193,14 +226,29 @@ function extractPipArguments(fileContent: string): {
   return {
     cleanedContent: cleanedLines.join('\n'),
     options,
+    pathRequirements,
+    editableRequirements,
   };
 }
 
 /**
- * Try to extract a pip argument from a line.
- * Returns true if the line was a pip argument that was extracted.
+ * Result from tryExtractPipArgument indicating what was found.
+ * - false: not a pip argument
+ * - true: a pip argument that was stored in options
+ * - string: an editable path that needs separate processing
  */
-function tryExtractPipArgument(line: string, options: PipOptions): boolean {
+type PipArgumentResult = boolean | { editable: string };
+
+/**
+ * Try to extract a pip argument from a line.
+ * Returns false if the line is not a pip argument,
+ * true if it was extracted into options,
+ * or an object with the editable path for -e/--editable.
+ */
+function tryExtractPipArgument(
+  line: string,
+  options: PipOptions
+): PipArgumentResult {
   // --requirement=<path> or --requirement <path>
   if (line.startsWith('--requirement')) {
     const path = extractArgValue(line, '--requirement');
@@ -247,6 +295,60 @@ function tryExtractPipArgument(line: string, options: PipOptions): boolean {
     }
   }
 
+  // --editable=<path> or --editable <path>
+  if (line.startsWith('--editable')) {
+    const path = extractArgValue(line, '--editable');
+    if (path) {
+      return { editable: path };
+    }
+  }
+
+  // -e <path> (short form for --editable)
+  if (line.startsWith('-e ') || line.startsWith('-e\t')) {
+    const path = line.slice(2).trim();
+    if (path) {
+      return { editable: path };
+    }
+  }
+
+  // --find-links=<url> or --find-links <url>
+  if (line.startsWith('--find-links')) {
+    const url = extractArgValue(line, '--find-links');
+    if (url) {
+      if (!options.findLinks) options.findLinks = [];
+      options.findLinks.push(url);
+      return true;
+    }
+  }
+
+  // -f <url> (short form for --find-links)
+  if (line.startsWith('-f ') || line.startsWith('-f\t')) {
+    const match = line.match(/^-f\s+(\S+)/);
+    if (match) {
+      if (!options.findLinks) options.findLinks = [];
+      options.findLinks.push(match[1]);
+      return true;
+    }
+  }
+
+  // --no-index (boolean flag)
+  if (line === '--no-index' || line.startsWith('--no-index ')) {
+    options.noIndex = true;
+    return true;
+  }
+
+  // --no-binary and --only-binary: strip to prevent crashes
+  if (line.startsWith('--no-binary') || line.startsWith('--only-binary')) {
+    return true;
+  }
+
+  // Catch-all: strip any unrecognized --option to prevent pip-requirements-js crashes.
+  // Known pip options we don't need: --pre, --prefer-binary, --require-hashes,
+  // --trusted-host, --use-feature, --config-settings, --global-option, etc.
+  if (line.startsWith('--')) {
+    return true;
+  }
+
   return false;
 }
 
@@ -275,21 +377,253 @@ function extractInlineHashes(line: string): HashDigest[] {
 
 /**
  * Extract the argument value from a line like "--option=value" or "--option value".
+ * Strips inline comments (e.g., "value # comment" → "value").
  */
 function extractArgValue(line: string, option: string): string | null {
+  let value: string | null = null;
+
   // Check for --option=value format
   if (line.startsWith(`${option}=`)) {
-    const value = line.slice(option.length + 1).trim();
-    return value || null;
+    value = line.slice(option.length + 1).trim();
   }
-
   // Check for --option value format
-  if (line.startsWith(`${option} `) || line.startsWith(`${option}\t`)) {
-    const value = line.slice(option.length).trim();
-    return value || null;
+  else if (line.startsWith(`${option} `) || line.startsWith(`${option}\t`)) {
+    value = line.slice(option.length).trim();
   }
 
-  return null;
+  if (!value) return null;
+
+  // Strip inline comments (space + # + anything)
+  const commentIdx = value.indexOf(' #');
+  if (commentIdx !== -1) {
+    value = value.slice(0, commentIdx).trim();
+  }
+
+  return value || null;
+}
+
+/**
+ * Check if a requirements line is a bare file path or URL requirement
+ * (as opposed to a PEP 508 `name @ url` requirement or a pip option).
+ *
+ * These are valid in requirements.txt but not handled by pip-requirements-js:
+ * - ./relative/path/to/pkg.whl
+ * - ../parent/path/to/pkg.tar.gz
+ * - /absolute/path/to/pkg.whl
+ * - ~/path/to/pkg.whl
+ * - https://example.com/pkg.tar.gz
+ * - file:///path/to/pkg.whl
+ */
+function isPathOrUrlRequirement(line: string): boolean {
+  // Relative paths
+  if (line.startsWith('./') || line.startsWith('../')) return true;
+  // Absolute paths
+  if (line.startsWith('/')) return true;
+  // Home-relative paths
+  if (line.startsWith('~/')) return true;
+  // Bare URLs (not preceded by package name + @)
+  if (/^(https?|ftp|file):\/\//i.test(line)) return true;
+  // Bare archive filenames without path prefix (e.g., "pkg-1.0.0-py3-none-any.whl")
+  if (isBareArchiveFilename(line)) return true;
+  return false;
+}
+
+/**
+ * Check if a line looks like a bare archive filename (no path prefix).
+ * Strips extras, markers, and comments before checking the extension.
+ */
+function isBareArchiveFilename(line: string): boolean {
+  // PEP 508 "name @ url" requirements are handled by pip-requirements-js
+  if (line.includes(' @ ')) return false;
+
+  let check = line;
+  // Strip inline comments
+  const commentIdx = check.indexOf(' #');
+  if (commentIdx !== -1) check = check.slice(0, commentIdx);
+  // Strip environment markers
+  const markerIdx = check.indexOf(' ;');
+  if (markerIdx !== -1) check = check.slice(0, markerIdx);
+  // Strip extras
+  const extrasIdx = check.indexOf('[');
+  if (extrasIdx !== -1) check = check.slice(0, extrasIdx);
+  check = check.trim();
+
+  return /\.(whl|tar\.gz|tar\.bz2|tar\.xz|zip)$/i.test(check);
+}
+
+/**
+ * Parse a wheel filename to extract the distribution name and version.
+ *
+ * Wheel filename format (PEP 427):
+ * {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl
+ *
+ * @returns Object with name (PEP 503 normalized) and version, or null if not a valid wheel filename
+ */
+function parseWheelFilename(
+  filename: string
+): { name: string; version: string } | null {
+  if (!filename.endsWith('.whl')) return null;
+  const stem = filename.slice(0, -4);
+  const parts = stem.split('-');
+
+  // 5 parts: name-version-python-abi-platform
+  // 6 parts: name-version-build-python-abi-platform
+  if (parts.length < 5 || parts.length > 6) return null;
+
+  const name = parts[0];
+  const version = parts[1];
+  if (!name || !version) return null;
+
+  // Normalize distribution name: underscores → hyphens (PEP 503)
+  return {
+    name: name.replace(/_/g, '-'),
+    version,
+  };
+}
+
+/**
+ * Parse an sdist filename to extract the distribution name and version.
+ *
+ * Common sdist formats: {name}-{version}.tar.gz, {name}-{version}.zip, etc.
+ *
+ * @returns Object with name and version, or null if not a valid sdist filename
+ */
+function parseSdistFilename(
+  filename: string
+): { name: string; version: string } | null {
+  // Remove known archive extensions
+  let stem = filename;
+  for (const ext of ['.tar.gz', '.tar.bz2', '.tar.xz', '.zip']) {
+    if (stem.endsWith(ext)) {
+      stem = stem.slice(0, -ext.length);
+      break;
+    }
+  }
+  if (stem === filename) return null; // no recognized extension
+
+  // Split on '-' and find the first part that starts with a digit (the version)
+  const parts = stem.split('-');
+  let versionIdx = -1;
+  for (let i = 1; i < parts.length; i++) {
+    if (/^\d/.test(parts[i])) {
+      versionIdx = i;
+      break;
+    }
+  }
+
+  if (versionIdx === -1) return null;
+
+  return {
+    name: parts.slice(0, versionIdx).join('-'),
+    version: parts.slice(versionIdx).join('-'),
+  };
+}
+
+/**
+ * Convert a bare file path or URL requirement into a NormalizedRequirement.
+ *
+ * Handles:
+ * - Wheel files (.whl) with PEP 427 filename format
+ * - Source distribution archives (.tar.gz, .zip, etc.)
+ * - Directory paths (uses last component as package name)
+ * - Inline comments (# ...) and environment markers (; ...)
+ * - Extras ([extra1,extra2])
+ */
+function normalizePathRequirement(
+  rawLine: string
+): NormalizedRequirement | null {
+  let line = rawLine;
+
+  // Strip inline comments (space + # + anything)
+  const commentIdx = line.indexOf(' #');
+  if (commentIdx !== -1) {
+    line = line.slice(0, commentIdx).trim();
+  }
+
+  // Extract environment markers (; markers)
+  let markers: string | undefined;
+  const markerIdx = line.indexOf(' ;');
+  if (markerIdx !== -1) {
+    markers = line.slice(markerIdx + 2).trim();
+    line = line.slice(0, markerIdx).trim();
+  }
+
+  // Extract extras ([extra1,extra2])
+  let extras: string[] | undefined;
+  const extrasMatch = line.match(/\[([^\]]+)\]$/);
+  if (extrasMatch) {
+    extras = extrasMatch[1].split(',').map(e => e.trim());
+    line = line.slice(0, extrasMatch.index).trim();
+  }
+
+  // Now `line` is the bare path or URL
+  const isUrl = /^(https?|ftp|file):\/\//i.test(line);
+
+  // Extract the filename from the path or URL
+  let filename: string;
+  if (isUrl) {
+    try {
+      const url = new URL(line);
+      filename = url.pathname.split('/').pop() || '';
+    } catch {
+      return null;
+    }
+  } else {
+    // Strip trailing slashes for directory paths
+    const cleanPath = line.replace(/\/+$/, '');
+    filename = cleanPath.split('/').pop() || '';
+  }
+
+  if (!filename) return null;
+
+  // Try to parse as wheel filename
+  let name: string | undefined;
+  let version: string | undefined;
+
+  const wheelParsed = parseWheelFilename(filename);
+  if (wheelParsed) {
+    name = wheelParsed.name;
+    version = wheelParsed.version;
+  }
+
+  if (!name) {
+    // Try to parse as sdist filename
+    const sdistParsed = parseSdistFilename(filename);
+    if (sdistParsed) {
+      name = sdistParsed.name;
+      version = sdistParsed.version;
+    }
+  }
+
+  if (!name) {
+    // Use last path component as name (for directory paths)
+    // Normalize: replace underscores with hyphens, lowercase (PEP 503)
+    name = filename.replace(/[-_.]+/g, '-').toLowerCase();
+  }
+
+  if (!name) return null;
+
+  const req: NormalizedRequirement = { name };
+
+  if (version) {
+    req.version = `==${version}`;
+  }
+
+  if (extras && extras.length > 0) {
+    req.extras = extras;
+  }
+
+  if (markers) {
+    req.markers = markers;
+  }
+
+  if (isUrl) {
+    req.url = line;
+  } else {
+    req.source = { path: line };
+  }
+
+  return req;
 }
 
 /**
@@ -385,6 +719,17 @@ function buildIndexEntries(pipOptions: PipOptions): UvIndexEntry[] {
     });
   }
 
+  // Add find-links as flat indexes (--find-links / -f)
+  if (pipOptions.findLinks) {
+    for (let i = 0; i < pipOptions.findLinks.length; i++) {
+      indexes.push({
+        name: `${FIND_LINKS_PREFIX}${i + 1}`,
+        url: pipOptions.findLinks[i],
+        format: 'flat',
+      });
+    }
+  }
+
   return indexes;
 }
 
@@ -414,7 +759,8 @@ function parseRequirementsFileInternal(
   readFile: ReadFileFn | undefined,
   visited: Set<string>
 ): ParsedRequirementsFile {
-  const { cleanedContent, options } = extractPipArguments(fileContent);
+  const { cleanedContent, options, pathRequirements, editableRequirements } =
+    extractPipArguments(fileContent);
 
   // Build a map from requirement name to hashes from the original content
   const hashMap = buildHashMap(fileContent);
@@ -428,6 +774,8 @@ function parseRequirementsFileInternal(
     constraintFiles: [...options.constraintFiles],
     indexUrl: options.indexUrl,
     extraIndexUrls: [...options.extraIndexUrls],
+    findLinks: options.findLinks ? [...options.findLinks] : undefined,
+    noIndex: options.noIndex,
   };
 
   for (const req of requirements) {
@@ -447,6 +795,27 @@ function parseRequirementsFileInternal(
       const hashes = hashMap.get(norm.name.toLowerCase());
       if (hashes && hashes.length > 0) {
         norm.hashes = hashes;
+      }
+      normalized.push(norm);
+    }
+  }
+
+  // Process bare file path and URL requirements that pip-requirements-js can't parse
+  for (const rawPath of pathRequirements) {
+    const norm = normalizePathRequirement(rawPath);
+    if (norm != null) {
+      normalized.push(norm);
+    }
+  }
+
+  // Process editable requirements (-e / --editable)
+  for (const rawPath of editableRequirements) {
+    const norm = normalizePathRequirement(rawPath);
+    if (norm != null) {
+      if (norm.source) {
+        norm.source.editable = true;
+      } else {
+        norm.source = { path: rawPath, editable: true };
       }
       normalized.push(norm);
     }
@@ -502,6 +871,21 @@ function parseRequirementsFileInternal(
           if (!mergedOptions.constraintFiles.includes(constraintPath)) {
             mergedOptions.constraintFiles.push(constraintPath);
           }
+        }
+
+        // Find links: collect all unique ones
+        if (refParsed.pipOptions.findLinks) {
+          if (!mergedOptions.findLinks) mergedOptions.findLinks = [];
+          for (const fl of refParsed.pipOptions.findLinks) {
+            if (!mergedOptions.findLinks.includes(fl)) {
+              mergedOptions.findLinks.push(fl);
+            }
+          }
+        }
+
+        // No index: any file setting it takes effect
+        if (refParsed.pipOptions.noIndex) {
+          mergedOptions.noIndex = true;
         }
 
         // Requirement files are already tracked via visited set
