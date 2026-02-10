@@ -255,8 +255,9 @@ async function discoverRepoProjects(
           ? [new Separator('----- Existing Projects -----')]
           : []),
         ...projects.map(project => {
+          const dir = project.rootDirectory || '.';
           return {
-            name: `${org.slug}/${project.name}`,
+            name: `${org.slug}/${project.name} ${chalk.gray(`(${dir})`)}`,
             value: project,
             checked: true,
           };
@@ -276,7 +277,7 @@ async function discoverRepoProjects(
                   .join('-')
               );
               return {
-                name: `${org.slug}/${name} (${framework.name})`,
+                name: `${org.slug}/${name} ${chalk.gray(`(${rootDirectory || '.'} · ${framework.name})`)}`,
                 value: {
                   newProject: true,
                   rootDirectory,
