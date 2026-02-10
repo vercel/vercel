@@ -74,10 +74,7 @@ describe('help command', () => {
         client.setArgv('dev', '--help');
         const exitCode = await dev(client);
         expect(exitCode).toEqual(2);
-        // Normalize leading whitespace (varies with noColor / removeEmoji)
-        expect(
-          client.stderr.getFullOutput().replace(/^\s+/, '')
-        ).toMatchSnapshot();
+        expect(client.stderr.read()).toMatchSnapshot();
       });
     });
   });
