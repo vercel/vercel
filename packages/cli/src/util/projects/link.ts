@@ -115,8 +115,15 @@ async function getProjectLinkFromRepoLink(
     // Prefer project-level orgId, fall back to top-level for backwards compat
     const orgId = project.orgId ?? repoLink.repoConfig.orgId;
     if (!orgId) {
+      const projectInfo = [
+        project.name ? `name: "${project.name}"` : '',
+        project.directory ? `directory: "${project.directory}"` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+      const details = projectInfo ? ` Project: { ${projectInfo} }.` : '';
       throw new Error(
-        'Could not determine org ID from repo.json. Please re-link the repository.'
+        `Could not determine org ID from repo.json config at "${repoLink.repoConfigPath}".${details} Please re-link the repository.`
       );
     }
     return {
@@ -202,6 +209,11 @@ async function hasProjectLink(
     if (matchingProject) {
       // Prefer project-level orgId, fall back to top-level for backwards compat
       const orgId = matchingProject.orgId ?? repoLink.repoConfig.orgId;
+      if (!orgId) {
+        throw new Error(
+          `Invalid "repo.json": missing "orgId" for project "${matchingProject.id}" and no top-level "orgId" is defined.`
+        );
+      }
       if (orgId === projectLink.orgId) {
         return true;
       }
