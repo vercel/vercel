@@ -107,8 +107,17 @@ export default async function main(client: Client) {
         return 1;
       }
       const resourceName = addParsedArgs.flags['--name'] as string | undefined;
+      const noConnect = addParsedArgs.flags['--no-connect'] as
+        | boolean
+        | undefined;
+      const noEnvPull = addParsedArgs.flags['--no-env-pull'] as
+        | boolean
+        | undefined;
 
-      return add(client, addParsedArgs.args, resourceName);
+      return add(client, addParsedArgs.args, resourceName, {
+        noConnect,
+        noEnvPull,
+      });
     }
     case 'list': {
       if (needHelp) {

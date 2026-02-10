@@ -2,12 +2,14 @@ import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import { packageName } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
 import list from '../../util/input/list';
-import cmd from '../../util/output/cmd';
 import indent from '../../util/output/indent';
-import { getLinkedProject } from '../../util/projects/link';
+import {
+  getLinkedProjectField,
+  postProvisionSetup,
+  type PostProvisionOptions,
+} from '../../util/integration/post-provision-setup';
 import type {
   BillingPlan,
   Integration,
@@ -19,7 +21,6 @@ import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import { addAutoProvision } from './add-auto-provision';
-import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
@@ -30,18 +31,19 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
+export type AddOptions = PostProvisionOptions;
+
 export async function add(
   client: Client,
   args: string[],
-  resourceNameArg?: string
+  resourceNameArg?: string,
+  options: AddOptions = {}
 ) {
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
-  telemetry.trackCliOptionName(resourceNameArg);
-
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;
@@ -74,12 +76,18 @@ export async function add(
   // Note: Resource name validation happens after product selection
   // to apply product-specific validation rules
 
-  // Auto-provision: completely separate code path
+  // Auto-provision: completely separate code path (tracks its own telemetry)
   if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
     return await addAutoProvision(client, integrationSlug, resourceNameArg, {
       productSlug,
+      noConnect: options.noConnect,
+      noEnvPull: options.noEnvPull,
     });
   }
+
+  telemetry.trackCliOptionName(resourceNameArg);
+  telemetry.trackCliFlagNoConnect(options.noConnect);
+  telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
 
   const { contextName, team } = await getScope(client);
 
@@ -182,9 +190,12 @@ export async function add(
     installation && metadataWizard.isSupported;
 
   if (!provisionResourceViaCLIIsSupported) {
-    const projectLink = await getOptionalLinkedProject(client);
-
-    if (projectLink?.status === 'error') {
+    const projectLink = await getLinkedProjectField(
+      client,
+      options.noConnect,
+      'id'
+    );
+    if (projectLink.exitCode) {
       return projectLink.exitCode;
     }
 
@@ -200,7 +211,7 @@ export async function add(
         team.id,
         integration.id,
         product.id,
-        projectLink?.project?.id,
+        projectLink.value,
         resourceName
       );
     }
@@ -211,35 +222,14 @@ export async function add(
   return await provisionResourceViaCLI(
     client,
     team.id,
+    contextName,
     integration,
     installation,
     product,
     metadataWizard,
-    resourceName
+    resourceName,
+    options
   );
-}
-
-async function getOptionalLinkedProject(client: Client) {
-  const linkedProject = await getLinkedProject(client);
-
-  if (linkedProject.status === 'not_linked') {
-    return;
-  }
-
-  const shouldLinkToProject = await client.input.confirm(
-    'Do you want to link this resource to the current project?',
-    true
-  );
-
-  if (!shouldLinkToProject) {
-    return;
-  }
-
-  if (linkedProject.status === 'error') {
-    return { status: 'error', exitCode: linkedProject.exitCode };
-  }
-
-  return { status: 'success', project: linkedProject.project };
 }
 
 function provisionResourceViaWebUI(
@@ -269,11 +259,13 @@ function provisionResourceViaWebUI(
 async function provisionResourceViaCLI(
   client: Client,
   teamId: string,
+  contextName: string,
   integration: Integration,
   installation: IntegrationInstallation,
   product: IntegrationProduct,
   metadataWizard: MetadataWizard,
-  name: string
+  name: string,
+  options: AddOptions = {}
 ) {
   const metadata = await metadataWizard.run(client);
 
@@ -307,9 +299,12 @@ async function provisionResourceViaCLI(
 
   if (billingPlan.type !== 'subscription') {
     // offer to open the web UI to continue the resource provisioning
-    const projectLink = await getOptionalLinkedProject(client);
-
-    if (projectLink?.status === 'error') {
+    const projectLink = await getLinkedProjectField(
+      client,
+      options.noConnect,
+      'id'
+    );
+    if (projectLink.exitCode) {
       return projectLink.exitCode;
     }
 
@@ -323,7 +318,7 @@ async function provisionResourceViaCLI(
         teamId,
         integration.id,
         product.id,
-        projectLink?.project?.id,
+        projectLink.value,
         name
       );
     }
@@ -360,7 +355,9 @@ async function provisionResourceViaCLI(
       name,
       metadata,
       billingPlan,
-      authorizationId
+      authorizationId,
+      contextName,
+      options
     );
   } catch (error) {
     output.error((error as Error).message);
@@ -553,7 +550,9 @@ async function provisionStorageProduct(
   name: string,
   metadata: Metadata,
   billingPlan: BillingPlan,
-  authorizationId: string
+  authorizationId: string,
+  contextName: string,
+  options: AddOptions = {}
 ) {
   output.spinner('Provisioning resource...');
   let storeId: string;
@@ -578,50 +577,5 @@ async function provisionStorageProduct(
   }
   output.log(`${product.name} successfully provisioned: ${chalk.bold(name)}`);
 
-  const projectLink = await getOptionalLinkedProject(client);
-
-  if (projectLink?.status === 'error') {
-    return projectLink.exitCode;
-  }
-
-  if (!projectLink?.project) {
-    return 0;
-  }
-
-  const project = projectLink.project;
-
-  const environments = await client.input.checkbox({
-    message: 'Select environments',
-    choices: [
-      { name: 'Production', value: 'production', checked: true },
-      { name: 'Preview', value: 'preview', checked: true },
-      { name: 'Development', value: 'development', checked: true },
-    ],
-  });
-
-  output.spinner(
-    `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
-  );
-  try {
-    await connectResourceToProject(
-      client,
-      projectLink.project.id,
-      storeId,
-      environments
-    );
-  } catch (error) {
-    output.error(
-      `Failed to connect store to project: ${(error as Error).message}`
-    );
-    return 1;
-  } finally {
-    output.stopSpinner();
-  }
-  output.log(
-    `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
-
-${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variables`, 4)}`
-  );
-
-  return 0;
+  return postProvisionSetup(client, name, storeId, contextName, options);
 }

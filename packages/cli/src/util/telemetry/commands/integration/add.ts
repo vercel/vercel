@@ -23,4 +23,16 @@ export class IntegrationAddTelemetryClient
       });
     }
   }
+
+  trackCliFlagNoConnect(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-connect');
+    }
+  }
+
+  trackCliFlagNoEnvPull(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-env-pull');
+    }
+  }
 }

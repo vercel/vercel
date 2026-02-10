@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
+import pull from '../../../../src/commands/env/pull';
 import integrationCommand from '../../../../src/commands/integration';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -17,10 +18,18 @@ vi.mock('open', () => {
   };
 });
 
+vi.mock('../../../../src/commands/env/pull', () => {
+  return {
+    default: vi.fn().mockResolvedValue(0),
+  };
+});
+
 const openMock = vi.mocked(open);
+const pullMock = vi.mocked(pull);
 
 beforeEach(() => {
   openMock.mockClear();
+  pullMock.mockClear();
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
@@ -147,10 +156,6 @@ describe('integration', () => {
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput(
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
@@ -161,7 +166,7 @@ describe('integration', () => {
           );
         });
 
-        it('should handle provisioning resource on team-level in project context', async () => {
+        it('should not include projectId in URL with --no-connect flag', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -169,15 +174,11 @@ describe('integration', () => {
           });
           const cwd = setupUnitFixture('vercel-integration-add');
           client.cwd = cwd;
-          client.setArgv('integration', 'add', 'acme');
+          client.setArgv('integration', 'add', 'acme', '--no-connect');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
-          await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
@@ -250,7 +251,7 @@ describe('integration', () => {
           );
         });
 
-        it('should include custom --name and projectId in URL when user accepts project link', async () => {
+        it('should include custom --name and projectId in URL when project is linked', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -264,10 +265,6 @@ describe('integration', () => {
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput(
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
@@ -278,7 +275,7 @@ describe('integration', () => {
           );
         });
 
-        it('should include custom --name but not projectId in URL when user declines project link', async () => {
+        it('should not include projectId in URL with --no-connect and custom --name', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -291,16 +288,13 @@ describe('integration', () => {
             'add',
             'acme',
             '--name',
-            'my-nolink-db'
+            'my-nolink-db',
+            '--no-connect'
           );
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
-          await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
@@ -352,21 +346,22 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned: acme-gray-apple'
           );
-          await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput('Select environments');
-          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Dashboard:');
           await expect(client.stderr).toOutput(
             'acme-gray-apple successfully connected to vercel-integration-add'
           );
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
+          expect(pullMock).toHaveBeenCalledWith(
+            client,
+            ['--yes'],
+            'vercel-cli:integration:add'
+          );
         });
 
-        it('should handle provisioning resource on team-level in project context', async () => {
+        it('should warn when env pull fails', async () => {
+          pullMock.mockResolvedValueOnce(1);
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -375,6 +370,48 @@ describe('integration', () => {
           const cwd = setupUnitFixture('vercel-integration-add');
           client.cwd = cwd;
           client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          await expect(client.stderr).toOutput(
+            'Failed to pull environment variables. You can run `vercel env pull` manually.'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(pullMock).toHaveBeenCalledWith(
+            client,
+            ['--yes'],
+            'vercel-cli:integration:add'
+          );
+        });
+
+        it('should skip connecting with --no-connect flag', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme', '--no-connect');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
@@ -399,13 +436,54 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned: acme-gray-apple'
           );
-          await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput('Dashboard:');
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
+          expect(pullMock).not.toHaveBeenCalled();
+        });
+
+        it('should skip env pull with --no-env-pull flag', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme', '--no-env-pull');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            `Selected product:
+- Name: acme-gray-apple
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+          );
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput('Dashboard:');
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+          expect(pullMock).not.toHaveBeenCalled();
         });
 
         it('should handle provisioning resource without project context', async () => {
@@ -456,16 +534,12 @@ describe('integration', () => {
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('n\n');
-          await expect(client.stderr).toOutput(
             'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
           client.stdin.write('Y\n');
           await expect(exitCodePromise).resolves.toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
         });
 
@@ -482,10 +556,6 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
-          await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
@@ -516,16 +586,12 @@ describe('integration', () => {
           );
           client.stdin.write('\n');
           await expect(client.stderr).toOutput(
-            'Do you want to link this resource to the current project? (Y/n)'
-          );
-          client.stdin.write('n\n');
-          await expect(client.stderr).toOutput(
             'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
           );
           client.stdin.write('Y\n');
           await expect(exitCodePromise).resolves.toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme-prepayment&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme-prepayment&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
         });
       });
