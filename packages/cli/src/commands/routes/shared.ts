@@ -201,13 +201,20 @@ export async function offerAutoPromote(
       const promoteStamp = stamp();
       output.spinner('Promoting to production');
 
-      await updateRouteVersion(client, projectId, version.id, 'promote', {
-        teamId: opts.teamId,
-      });
+      try {
+        await updateRouteVersion(client, projectId, version.id, 'promote', {
+          teamId: opts.teamId,
+        });
 
-      output.log(
-        `${chalk.cyan('Promoted')} to production ${chalk.gray(promoteStamp())}`
-      );
+        output.log(
+          `${chalk.cyan('Promoted')} to production ${chalk.gray(promoteStamp())}`
+        );
+      } catch (e: unknown) {
+        const err = e as { message?: string };
+        output.error(
+          `Failed to promote to production: ${err.message || 'Unknown error'}`
+        );
+      }
     }
   } else if (hadExistingStagingVersion) {
     output.warn(
