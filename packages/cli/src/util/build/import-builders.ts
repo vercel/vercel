@@ -88,25 +88,6 @@ function getPeerDependencies(): Record<string, string> {
   return peerDependencies;
 }
 
-function isBuilderEntryLoadable(
-  pkgPath: string,
-  builderPkg: PackageJson
-): boolean {
-  const entryPath = join(
-    dirname(pkgPath),
-    (builderPkg.main as string) || 'index.js'
-  );
-  try {
-    require_.resolve(entryPath, { paths: [dirname(pkgPath)] });
-    return true;
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'MODULE_NOT_FOUND') {
-      return false;
-    }
-    throw err;
-  }
-}
-
 export async function resolveBuilders(
   cwd: string,
   buildersDir: string,
@@ -166,15 +147,7 @@ export async function resolveBuilders(
           `"${name}@${builderPkgJson.version}" does not match expected "${peerVersion}"`
         );
       }
-      if (!isBuilderEntryLoadable(pkgPath, builderPkgJson)) {
-        output.debug(
-          `"${name}" entry point missing, skipping project node_modules`
-        );
-        pkgPath = undefined;
-        builderPkg = undefined;
-      } else {
-        builderPkg = builderPkgJson;
-      }
+      builderPkg = builderPkgJson;
     } catch (err: unknown) {
       if (!isErrnoException(err) || err.code !== 'ENOENT') {
         throw err;
@@ -201,14 +174,7 @@ export async function resolveBuilders(
           buildersToAdd.add(`${name}@${peerVersion}`);
           continue;
         }
-        if (!isBuilderEntryLoadable(pkgPath, cachedPkg)) {
-          output.debug(
-            `"${name}" entry point missing in .vercel/builders, skipping`
-          );
-          builderPkg = undefined;
-        } else {
-          builderPkg = cachedPkg;
-        }
+        builderPkg = cachedPkg;
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'ENOENT') {
           throw err;
@@ -232,24 +198,7 @@ export async function resolveBuilders(
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
-        const cliBuilderPkg = await readJSON(pkgPath);
-        if (!isBuilderEntryLoadable(pkgPath, cliBuilderPkg)) {
-          output.debug(
-            `"${name}" entry point missing in CLI's node_modules, will install or fail`
-          );
-          builderPkg = undefined;
-          pkgPath = undefined;
-          if (peerVersion) {
-            buildersToAdd.add(`${name}@${peerVersion}`);
-            continue;
-          }
-          if (resolvedSpecs) {
-            throw new Error(`Builder "${name}" not found`);
-          }
-          buildersToAdd.add(spec);
-          continue;
-        }
-        builderPkg = cliBuilderPkg;
+        builderPkg = await readJSON(pkgPath);
         output.debug(`Found "${name}" in CLI's node_modules`);
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'MODULE_NOT_FOUND') {

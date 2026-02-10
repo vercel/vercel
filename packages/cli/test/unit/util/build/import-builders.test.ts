@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'path';
-import { remove, outputJSON, mkdirp } from 'fs-extra';
+import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
 import {
@@ -16,32 +16,16 @@ import { isWindows } from '../../../helpers/is-windows';
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
 /**
- * Creates an isolated cwd with stub @vercel/node and @vercel/next that have
- * package.json (so resolution finds them in "project's node_modules") but no
- * dist/, so require(main) fails. Reproduces CI where peer deps are not built.
+ * Isolated cwd with no project node_modules so resolution uses the install
+ * path (peer deps → .vercel/builders), avoiding monorepo workspace linkage.
  */
-async function createIsolatedCwdWithUnbuiltBuilders(): Promise<string> {
-  const cwd = await getWriteableDirectory();
-  const nodeDir = join(cwd, 'node_modules', '@vercel', 'node');
-  const nextDir = join(cwd, 'node_modules', '@vercel', 'next');
-  await mkdirp(nodeDir);
-  await mkdirp(nextDir);
-  await outputJSON(join(nodeDir, 'package.json'), {
-    name: '@vercel/node',
-    version: vercelNodePkg.version,
-    main: './dist/index',
-  });
-  await outputJSON(join(nextDir, 'package.json'), {
-    name: '@vercel/next',
-    version: vercelNextPkg.version,
-    main: './dist/index',
-  });
-  return cwd;
+async function getIsolatedCwd(): Promise<string> {
+  return getWriteableDirectory();
 }
 
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
-    const cwd = await createIsolatedCwdWithUnbuiltBuilders();
+    const cwd = await getIsolatedCwd();
     try {
       const specs = new Set(['@vercel/node', '@vercel/next']);
       const builders = await importBuilders(specs, cwd);
@@ -65,7 +49,7 @@ describe('importBuilders()', () => {
   });
 
   it('should import built-in Builders using `@latest`', async () => {
-    const cwd = await createIsolatedCwdWithUnbuiltBuilders();
+    const cwd = await getIsolatedCwd();
     try {
       const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
       const builders = await importBuilders(specs, cwd);
@@ -89,7 +73,7 @@ describe('importBuilders()', () => {
   });
 
   it('should import built-in Builders using `@canary`', async () => {
-    const cwd = await createIsolatedCwdWithUnbuiltBuilders();
+    const cwd = await getIsolatedCwd();
     try {
       const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
       const builders = await importBuilders(specs, cwd);
