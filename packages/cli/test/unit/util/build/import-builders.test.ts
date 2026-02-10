@@ -242,49 +242,43 @@ describe('resolveBuilders()', () => {
   // 2. Explicit versions are preserved
   // 3. The actual peerDep resolution is tested via importBuilders which exercises the full flow
 
-  it.skipIf(isWindows)(
-    'should keep original spec for builders NOT in peerDeps',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      const buildersDir = join(cwd, '.vercel', 'builders');
-      try {
-        // 'some-random-builder' is not in the CLI's peerDependencies
-        const specs = new Set(['some-random-builder']);
-        const result = await resolveBuilders(cwd, buildersDir, specs);
+  it('should keep original spec for builders NOT in peerDeps', async () => {
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    try {
+      // 'some-random-builder' is not in the CLI's peerDependencies
+      const specs = new Set(['some-random-builder']);
+      const result = await resolveBuilders(cwd, buildersDir, specs);
 
-        if (!('buildersToAdd' in result)) {
-          throw new Error('Expected `buildersToAdd` to be defined');
-        }
-
-        // Should keep the original spec without appending a version
-        const buildersToAdd = [...result.buildersToAdd];
-        expect(buildersToAdd).toEqual(['some-random-builder']);
-      } finally {
-        await remove(cwd);
+      if (!('buildersToAdd' in result)) {
+        throw new Error('Expected `buildersToAdd` to be defined');
       }
+
+      // Should keep the original spec without appending a version
+      const buildersToAdd = [...result.buildersToAdd];
+      expect(buildersToAdd).toEqual(['some-random-builder']);
+    } finally {
+      await remove(cwd);
     }
-  );
+  });
 
-  it.skipIf(isWindows)(
-    'should preserve explicit version even for peerDep builders',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      const buildersDir = join(cwd, '.vercel', 'builders');
-      try {
-        // Even though @vercel/node is in peerDeps, explicit version should be preserved
-        const specs = new Set(['@vercel/node@2.0.0']);
-        const result = await resolveBuilders(cwd, buildersDir, specs);
+  it('should preserve explicit version even for peerDep builders', async () => {
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    try {
+      // Even though @vercel/node is in peerDeps, explicit version should be preserved
+      const specs = new Set(['@vercel/node@2.0.0']);
+      const result = await resolveBuilders(cwd, buildersDir, specs);
 
-        if (!('buildersToAdd' in result)) {
-          throw new Error('Expected `buildersToAdd` to be defined');
-        }
-
-        // Should keep the explicit version, not replace with peerDep version
-        const buildersToAdd = [...result.buildersToAdd];
-        expect(buildersToAdd).toEqual(['@vercel/node@2.0.0']);
-      } finally {
-        await remove(cwd);
+      if (!('buildersToAdd' in result)) {
+        throw new Error('Expected `buildersToAdd` to be defined');
       }
+
+      // Should keep the explicit version, not replace with peerDep version
+      const buildersToAdd = [...result.buildersToAdd];
+      expect(buildersToAdd).toEqual(['@vercel/node@2.0.0']);
+    } finally {
+      await remove(cwd);
     }
-  );
+  });
 });
