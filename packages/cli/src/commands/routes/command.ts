@@ -290,7 +290,7 @@ export const addSubcommand = {
     {
       name: 'has',
       description:
-        'Condition that must match (repeatable). Format: type:key or type:key:value. Types: header, cookie, query, host. Values are regex patterns. Examples: header:Authorization, cookie:session:^.+$, host:example.com',
+        'Condition that must match (repeatable). Format: type:key, type:key:value, or type:key:op=value. Types: header, cookie, query, host. Operators: eq, contains, re, exists. Examples: header:Authorization, header:Accept:contains=json, cookie:session:eq=abc, host:eq=example.com',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -299,7 +299,7 @@ export const addSubcommand = {
     {
       name: 'missing',
       description:
-        'Condition that must NOT match (repeatable). Format: type:key or type:key:value. Types: header, cookie, query, host. Values are regex patterns. Examples: cookie:session, header:X-Block',
+        'Condition that must NOT match (repeatable). Format: type:key, type:key:value, or type:key:op=value. Types: header, cookie, query, host. Operators: eq, contains, re, exists. Examples: cookie:session, header:X-Block:eq=true',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
