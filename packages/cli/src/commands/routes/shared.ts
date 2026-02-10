@@ -85,7 +85,7 @@ export function formatCondition(condition: {
       typeof condition.value === 'string'
         ? condition.value
         : JSON.stringify(condition.value);
-    parts.push(`= ${formatted}`);
+    parts.push(condition.key ? `= ${formatted}` : formatted);
   }
 
   return parts.join(' ');
@@ -111,16 +111,18 @@ const TRANSFORM_OP_LABELS: Record<string, string> = {
 
 /**
  * Formats a single transform for display.
- * Output: [Request Header] set X-Custom = "value"
- *         [Response Header] delete X-Powered-By
+ * When includeType is true (default): [Request Header] set X-Custom = "value"
+ * When includeType is false:          set X-Custom = "value"
  */
-export function formatTransform(transform: {
-  type: string;
-  op: string;
-  target: { key: string | Record<string, unknown> };
-  args?: string | string[];
-}): string {
-  const typeLabel = TRANSFORM_TYPE_LABELS[transform.type] ?? transform.type;
+export function formatTransform(
+  transform: {
+    type: string;
+    op: string;
+    target: { key: string | Record<string, unknown> };
+    args?: string | string[];
+  },
+  includeType = true
+): string {
   const opLabel = TRANSFORM_OP_LABELS[transform.op] ?? transform.op;
 
   const key =
@@ -128,11 +130,12 @@ export function formatTransform(transform: {
       ? transform.target.key
       : JSON.stringify(transform.target.key);
 
-  const parts = [
-    chalk.gray(`[${typeLabel}]`),
-    chalk.yellow(opLabel),
-    chalk.cyan(key),
-  ];
+  const parts: string[] = [];
+  if (includeType) {
+    const typeLabel = TRANSFORM_TYPE_LABELS[transform.type] ?? transform.type;
+    parts.push(chalk.gray(`[${typeLabel}]`));
+  }
+  parts.push(chalk.yellow(opLabel), chalk.cyan(key));
 
   if (transform.args !== undefined && transform.op !== 'delete') {
     const argsStr = Array.isArray(transform.args)
