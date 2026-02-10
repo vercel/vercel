@@ -29,6 +29,8 @@ export interface UvIndexEntry {
   default?: boolean;
   /** Mark this index as explicit (must be explicitly referenced per-package) */
   explicit?: boolean;
+  /** Index format: omit for standard (PEP 503), or "flat" for flat indexes (--find-links) */
+  format?: string;
 }
 
 /**
