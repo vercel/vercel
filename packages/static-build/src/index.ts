@@ -37,6 +37,7 @@ import {
   cloneEnv,
   getInstalledPackageVersion,
   defaultCachePathGlob,
+  type BuildResultV2,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -863,7 +864,13 @@ export const build: BuildV2 = async ({
       }
     }
 
-    return { routes, images, output };
+    const buildResult: BuildResultV2 = { routes, images, output };
+
+    if (typeof config.deploymentId === 'string' && config.deploymentId) {
+      buildResult.deploymentId = config.deploymentId;
+    }
+
+    return buildResult;
   }
 
   if (!config.zeroConfig && entrypoint.endsWith('.sh')) {

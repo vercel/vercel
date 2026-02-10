@@ -2050,5 +2050,50 @@ fs.writeFileSync(
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
     });
+
+    it('should use deploymentId from vercel.json config for static builds', async () => {
+      const cwd = fixture('static');
+      const output = join(cwd, '.vercel/output');
+
+      // Create a minimal build script that outputs a static index.html
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
+import { join } from 'path';
+
+const outputDir = join(process.cwd(), 'public');
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(join(outputDir, 'index.html'), '<h1>Hello</h1>');
+`
+      );
+
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
+        },
+      });
+
+      const userDeploymentId = 'vite-like-static-deployment';
+
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+            config: {
+              deploymentId: userDeploymentId,
+            },
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.deploymentId).toBe(userDeploymentId);
+    });
   });
 });

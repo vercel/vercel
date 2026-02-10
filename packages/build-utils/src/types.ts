@@ -45,6 +45,11 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /**
+   * User-configured deployment ID for skew protection, provided via
+   * the `config` object in `vercel.json` for a given build.
+   */
+  deploymentId?: string;
   [key: string]: unknown;
 }
 
