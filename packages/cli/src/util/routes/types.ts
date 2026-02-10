@@ -45,7 +45,6 @@ export interface RoutingRule {
  */
 export interface RouteVersion {
   id: string;
-  s3Key: string;
   lastModified: number;
   createdBy: string;
   isStaging?: boolean;

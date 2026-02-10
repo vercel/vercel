@@ -133,8 +133,9 @@ export const inspectSubcommand = {
   ],
   options: [
     {
-      name: 'staging',
-      description: 'Inspect route from the staging version',
+      name: 'diff',
+      description:
+        'Show changes between staging and production for this route',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -150,8 +151,8 @@ export const inspectSubcommand = {
       value: `${packageName} routes inspect abc123`,
     },
     {
-      name: 'Inspect a staged route',
-      value: `${packageName} routes inspect "My route" --staging`,
+      name: 'Show staged changes for a route',
+      value: `${packageName} routes inspect "My route" --diff`,
     },
   ],
 } as const;
