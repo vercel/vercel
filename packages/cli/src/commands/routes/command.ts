@@ -177,7 +177,7 @@ export const addSubcommand = {
       deprecated: false,
     },
     {
-      name: 'syntax',
+      name: 'src-syntax',
       description: 'Path syntax: regex (default), path-to-regexp, equals',
       shorthand: null,
       type: String,
@@ -185,6 +185,15 @@ export const addSubcommand = {
       deprecated: false,
     },
     // Primary Actions
+    {
+      name: 'action',
+      description:
+        'Action type: rewrite, redirect, or set-status (required with --dest/--status)',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
     {
       name: 'dest',
       description: 'Destination URL for rewrite or redirect',
@@ -281,7 +290,7 @@ export const addSubcommand = {
     {
       name: 'has',
       description:
-        'Condition that must match: type:key or type:key:value (repeatable)',
+        'Condition that must match (repeatable). Format: type:key or type:key:value. Types: header, cookie, query, host. Values are regex patterns. Examples: header:Authorization, cookie:session:^.+$, host:example.com',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -290,7 +299,7 @@ export const addSubcommand = {
     {
       name: 'missing',
       description:
-        'Condition that must NOT match: type:key or type:key:value (repeatable)',
+        'Condition that must NOT match (repeatable). Format: type:key or type:key:value. Types: header, cookie, query, host. Values are regex patterns. Examples: cookie:session, header:X-Block',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -335,31 +344,31 @@ export const addSubcommand = {
     },
     {
       name: 'Add a rewrite',
-      value: `${packageName} routes add "API Proxy" --src "/api/:path*" --syntax path-to-regexp --dest "https://api.example.com/:path*" --yes`,
+      value: `${packageName} routes add "API Proxy" --src "/api/:path*" --src-syntax path-to-regexp --action rewrite --dest "https://api.example.com/:path*" --yes`,
     },
     {
       name: 'Add a redirect',
-      value: `${packageName} routes add "Old Blog" --src "/blog" --syntax equals --dest "/articles" --status 301 --yes`,
+      value: `${packageName} routes add "Old Blog" --src "/blog" --src-syntax equals --action redirect --dest "/articles" --status 301 --yes`,
     },
     {
       name: 'Add CORS headers',
-      value: `${packageName} routes add "CORS" --src "^/api/.*$" --set-response-header "Access-Control-Allow-Origin=*" --set-response-header "Access-Control-Allow-Methods=GET,POST" --yes`,
+      value: `${packageName} routes add "CORS" --src "^/api/.*$" --set-response-header "Access-Control-Allow-Origin=*" --yes`,
     },
     {
       name: 'Block access (set status)',
-      value: `${packageName} routes add "Block Admin" --src "^/admin/.*$" --status 403 --yes`,
+      value: `${packageName} routes add "Block Admin" --src "^/admin/.*$" --action set-status --status 403 --yes`,
     },
     {
-      name: 'Conditional routing',
-      value: `${packageName} routes add "Auth Required" --src "/protected/:path*" --syntax path-to-regexp --dest "/login" --status 307 --missing "cookie:session" --yes`,
+      name: 'Conditional redirect',
+      value: `${packageName} routes add "Auth Required" --src "/protected/:path*" --src-syntax path-to-regexp --action redirect --dest "/login" --status 307 --missing "cookie:session" --yes`,
     },
     {
       name: 'Rewrite with request headers',
-      value: `${packageName} routes add "Backend Proxy" --src "/backend/:path*" --syntax path-to-regexp --dest "https://internal.example.com/:path*" --set-request-header "X-Forwarded-Host=myapp.com" --yes`,
+      value: `${packageName} routes add "Backend Proxy" --src "/backend/:path*" --src-syntax path-to-regexp --action rewrite --dest "https://internal.example.com/:path*" --set-request-header "X-Forwarded-Host=myapp.com" --yes`,
     },
     {
       name: 'Add route at start',
-      value: `${packageName} routes add "Priority Route" --src "/priority" --syntax equals --dest "/handler" --position start --yes`,
+      value: `${packageName} routes add "Priority Route" --src "/priority" --src-syntax equals --action rewrite --dest "/handler" --position start --yes`,
     },
   ],
 } as const;
