@@ -271,6 +271,8 @@ export function convertPipfileToPyprojectToml(
   }
   if (deps.length > 0) {
     pyproject.project = {
+      name: 'app',
+      version: '0.1.0',
       dependencies: deps,
     };
   }
@@ -360,6 +362,8 @@ export function convertPipfileLockToPyprojectToml(
   }
   if (deps.length > 0) {
     pyproject.project = {
+      name: 'app',
+      version: '0.1.0',
       dependencies: deps,
     };
   }

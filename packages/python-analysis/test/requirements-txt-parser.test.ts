@@ -569,6 +569,8 @@ requests==2.28.0
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask>=2.0.0', 'requests==2.28.0'],
       },
     });
@@ -581,6 +583,8 @@ uvicorn[standard]>=0.20.0
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['uvicorn[standard]>=0.20.0'],
       },
     });
@@ -593,6 +597,8 @@ mypackage @ https://example.com/package.zip
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['mypackage @ https://example.com/package.zip'],
       },
     });
@@ -613,6 +619,8 @@ requests==2.28.0
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask>=2.0.0', 'requests==2.28.0'],
       },
       tool: {
@@ -648,6 +656,8 @@ requests==2.28.0 --hash=sha256:def456 --hash=sha256:ghi789
     const result = convertRequirementsToPyprojectToml(content);
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask==2.0.0', 'requests==2.28.0'],
       },
     });
@@ -671,6 +681,8 @@ django>=4.0
 
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask>=2.0.0', 'requests==2.28.0', 'django>=4.0'],
       },
     });
@@ -698,6 +710,8 @@ numpy>=1.24.0
 
     expect(result).toEqual({
       project: {
+        name: 'app',
+        version: '0.1.0',
         dependencies: ['flask>=2.0.0', 'requests==2.28.0', 'numpy>=1.24.0'],
       },
     });
@@ -908,5 +922,732 @@ requests>=2.28.0
       'requests>=2.28.0',
     ]);
     expect(result.tool).toBeUndefined();
+  });
+});
+
+describe('parseRequirementsFile with bare paths and URLs', () => {
+  it('parses relative wheel file paths', () => {
+    const content = `
+./wheels/example_pkg_one-1.0.0-py3-none-any.whl
+./wheels/example_pkg_two-2.0.0-py3-none-any.whl
+fastapi
+uvicorn
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'fastapi' },
+      { name: 'uvicorn' },
+      {
+        name: 'example-pkg-one',
+        version: '==1.0.0',
+        source: { path: './wheels/example_pkg_one-1.0.0-py3-none-any.whl' },
+      },
+      {
+        name: 'example-pkg-two',
+        version: '==2.0.0',
+        source: { path: './wheels/example_pkg_two-2.0.0-py3-none-any.whl' },
+      },
+    ]);
+  });
+
+  it('parses absolute wheel file paths', () => {
+    const content = `
+/opt/wheels/my_package-3.2.1-cp311-cp311-linux_x86_64.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-package',
+        version: '==3.2.1',
+        source: {
+          path: '/opt/wheels/my_package-3.2.1-cp311-cp311-linux_x86_64.whl',
+        },
+      },
+    ]);
+  });
+
+  it('parses parent-relative paths', () => {
+    const content = `
+../shared/wheels/pkg-1.0.0-py3-none-any.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'pkg',
+        version: '==1.0.0',
+        source: { path: '../shared/wheels/pkg-1.0.0-py3-none-any.whl' },
+      },
+    ]);
+  });
+
+  it('parses sdist archive paths', () => {
+    const content = `
+./vendor/my-cool-package-2.1.0.tar.gz
+./vendor/another-pkg-0.5.zip
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-cool-package',
+        version: '==2.1.0',
+        source: { path: './vendor/my-cool-package-2.1.0.tar.gz' },
+      },
+      {
+        name: 'another-pkg',
+        version: '==0.5',
+        source: { path: './vendor/another-pkg-0.5.zip' },
+      },
+    ]);
+  });
+
+  it('parses bare HTTP/HTTPS URLs', () => {
+    const content = `
+https://example.com/packages/my_pkg-1.0.0-py3-none-any.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-pkg',
+        version: '==1.0.0',
+        url: 'https://example.com/packages/my_pkg-1.0.0-py3-none-any.whl',
+      },
+    ]);
+  });
+
+  it('parses file:// URLs', () => {
+    const content = `
+file:///opt/wheels/pkg-2.0.0-py3-none-any.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'pkg',
+        version: '==2.0.0',
+        url: 'file:///opt/wheels/pkg-2.0.0-py3-none-any.whl',
+      },
+    ]);
+  });
+
+  it('parses directory paths using last component as name', () => {
+    const content = `
+./test/packages/black_editable
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'black-editable',
+        source: { path: './test/packages/black_editable' },
+      },
+    ]);
+  });
+
+  it('parses directory paths with extras', () => {
+    const content = `
+./test/packages/black_editable[dev]
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'black-editable',
+        extras: ['dev'],
+        source: { path: './test/packages/black_editable' },
+      },
+    ]);
+  });
+
+  it('parses path requirements with environment markers', () => {
+    const content = `
+./test/packages/my_pkg ; python_version >= "3.9"
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-pkg',
+        markers: 'python_version >= "3.9"',
+        source: { path: './test/packages/my_pkg' },
+      },
+    ]);
+  });
+
+  it('parses path requirements with inline comments', () => {
+    const content = `
+./test/packages/my_pkg # this is a comment
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-pkg',
+        source: { path: './test/packages/my_pkg' },
+      },
+    ]);
+  });
+
+  it('handles wheel paths with build tags', () => {
+    const content = `
+./wheels/pkg-1.0.0-1-py3-none-any.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'pkg',
+        version: '==1.0.0',
+        source: { path: './wheels/pkg-1.0.0-1-py3-none-any.whl' },
+      },
+    ]);
+  });
+
+  it('converts wheel path requirements to pyproject.toml with sources', () => {
+    const content = `
+./wheels/example_pkg_one-1.0.0-py3-none-any.whl
+./wheels/example_pkg_two-2.0.0-py3-none-any.whl
+fastapi
+uvicorn
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    expect(result.project?.dependencies).toEqual([
+      'fastapi',
+      'uvicorn',
+      'example-pkg-one==1.0.0',
+      'example-pkg-two==2.0.0',
+    ]);
+    expect(result.tool?.uv?.sources).toEqual({
+      'example-pkg-one': [
+        { path: './wheels/example_pkg_one-1.0.0-py3-none-any.whl' },
+      ],
+      'example-pkg-two': [
+        { path: './wheels/example_pkg_two-2.0.0-py3-none-any.whl' },
+      ],
+    });
+  });
+
+  it('converts directory path requirements to pyproject.toml with sources', () => {
+    const content = `
+./packages/my_local_pkg
+flask>=2.0.0
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    expect(result.project?.dependencies).toEqual([
+      'flask>=2.0.0',
+      'my-local-pkg',
+    ]);
+    expect(result.tool?.uv?.sources).toEqual({
+      'my-local-pkg': [{ path: './packages/my_local_pkg' }],
+    });
+  });
+
+  it('converts bare URL requirements to pyproject.toml', () => {
+    const content = `
+https://example.com/my_pkg-1.0.0-py3-none-any.whl
+flask>=2.0.0
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    // PEP 508 URL requirements use name @ url (version is implicit in the URL)
+    expect(result.project?.dependencies).toEqual([
+      'flask>=2.0.0',
+      'my-pkg @ https://example.com/my_pkg-1.0.0-py3-none-any.whl',
+    ]);
+  });
+
+  it('handles home-relative paths', () => {
+    const content = `
+~/packages/my_pkg-1.0.0-py3-none-any.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-pkg',
+        version: '==1.0.0',
+        source: { path: '~/packages/my_pkg-1.0.0-py3-none-any.whl' },
+      },
+    ]);
+  });
+});
+
+describe('parseRequirementsFile with editable requirements', () => {
+  it('parses -e with directory path', () => {
+    const content = `
+-e ./my-package
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+      {
+        name: 'my-package',
+        source: { path: './my-package', editable: true },
+      },
+    ]);
+  });
+
+  it('parses -e with extras', () => {
+    const content = `
+-e ./editable[d,dev]
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'editable',
+        extras: ['d', 'dev'],
+        source: { path: './editable', editable: true },
+      },
+    ]);
+  });
+
+  it('parses -e with extras and whitespace (uv-compatible)', () => {
+    const content = `
+-e ./editable[d, dev]
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'editable',
+        extras: ['d', 'dev'],
+        source: { path: './editable', editable: true },
+      },
+    ]);
+  });
+
+  it('parses -e with environment markers', () => {
+    const content = `
+-e ./editable[d,dev] ; python_version >= "3.9" and os_name == "posix"
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'editable',
+        extras: ['d', 'dev'],
+        markers: 'python_version >= "3.9" and os_name == "posix"',
+        source: { path: './editable', editable: true },
+      },
+    ]);
+  });
+
+  it('parses -e with inline comment', () => {
+    const content = `
+-e ./editable # comment
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'editable',
+        source: { path: './editable', editable: true },
+      },
+    ]);
+  });
+
+  it('parses --editable long form', () => {
+    const content = `
+--editable ./my-package
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-package',
+        source: { path: './my-package', editable: true },
+      },
+    ]);
+  });
+
+  it('parses --editable=path form', () => {
+    const content = `
+--editable=./my-package
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-package',
+        source: { path: './my-package', editable: true },
+      },
+    ]);
+  });
+
+  it('parses -e with wheel file', () => {
+    const content = `
+-e ./wheels/pkg-1.0.0-py3-none-any.whl
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'pkg',
+        version: '==1.0.0',
+        source: {
+          path: './wheels/pkg-1.0.0-py3-none-any.whl',
+          editable: true,
+        },
+      },
+    ]);
+  });
+
+  it('converts editable to pyproject.toml with editable source', () => {
+    const content = `
+-e ./my-package
+flask>=2.0.0
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    expect(result.project?.dependencies).toEqual([
+      'flask>=2.0.0',
+      'my-package',
+    ]);
+    expect(result.tool?.uv?.sources).toEqual({
+      'my-package': [{ path: './my-package', editable: true }],
+    });
+  });
+});
+
+describe('parseRequirementsFile with bare archive filenames', () => {
+  it('parses bare wheel filename (no path prefix)', () => {
+    const content = `
+importlib_metadata-8.3.0-py3-none-any.whl
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+      {
+        name: 'importlib-metadata',
+        version: '==8.3.0',
+        source: { path: 'importlib_metadata-8.3.0-py3-none-any.whl' },
+      },
+    ]);
+  });
+
+  it('parses bare wheel with extras', () => {
+    const content = `
+importlib_metadata-8.2.0-py3-none-any.whl[extra]
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'importlib-metadata',
+        version: '==8.2.0',
+        extras: ['extra'],
+        source: { path: 'importlib_metadata-8.2.0-py3-none-any.whl' },
+      },
+    ]);
+  });
+
+  it('parses bare wheel with markers', () => {
+    const content = `
+importlib_metadata-8.2.0-py3-none-any.whl ; sys_platform == 'win32'
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'importlib-metadata',
+        version: '==8.2.0',
+        markers: "sys_platform == 'win32'",
+        source: { path: 'importlib_metadata-8.2.0-py3-none-any.whl' },
+      },
+    ]);
+  });
+
+  it('parses bare sdist filename', () => {
+    const content = `
+my-package-1.0.0.tar.gz
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'my-package',
+        version: '==1.0.0',
+        source: { path: 'my-package-1.0.0.tar.gz' },
+      },
+    ]);
+  });
+
+  it('does not catch PEP 508 name @ url.zip as bare archive', () => {
+    const content = `
+mypackage @ https://github.com/user/repo/archive/v1.0.0.zip
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'mypackage',
+        url: 'https://github.com/user/repo/archive/v1.0.0.zip',
+      },
+    ]);
+  });
+});
+
+describe('parseRequirementsFile with find-links and no-index', () => {
+  it('extracts --find-links', () => {
+    const content = `
+--find-links ./wheels/
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+    ]);
+    expect(result.pipOptions.findLinks).toEqual(['./wheels/']);
+  });
+
+  it('extracts --find-links=<url> form', () => {
+    const content = `
+--find-links=https://example.com/packages/
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.findLinks).toEqual([
+      'https://example.com/packages/',
+    ]);
+  });
+
+  it('extracts -f short form', () => {
+    const content = `
+-f https://example.com/packages/
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.findLinks).toEqual([
+      'https://example.com/packages/',
+    ]);
+  });
+
+  it('collects multiple --find-links', () => {
+    const content = `
+--find-links ./wheels/
+--find-links=https://example.com/packages/
+-f /opt/packages/
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.findLinks).toEqual([
+      './wheels/',
+      'https://example.com/packages/',
+      '/opt/packages/',
+    ]);
+  });
+
+  it('extracts --no-index', () => {
+    const content = `
+--no-index
+--find-links ./wheels/
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.noIndex).toBe(true);
+    expect(result.pipOptions.findLinks).toEqual(['./wheels/']);
+  });
+
+  it('converts --find-links to flat index entries in pyproject.toml', () => {
+    const content = `
+--find-links ./wheels/
+--find-links https://example.com/packages/
+flask>=2.0.0
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    expect(result.project?.dependencies).toEqual(['flask>=2.0.0']);
+    expect(result.tool?.uv?.index).toEqual([
+      {
+        name: 'find-links-1',
+        url: './wheels/',
+        format: 'flat',
+      },
+      {
+        name: 'find-links-2',
+        url: 'https://example.com/packages/',
+        format: 'flat',
+      },
+    ]);
+  });
+
+  it('converts --find-links alongside --index-url to pyproject.toml', () => {
+    const content = `
+--index-url https://private.pypi.org/simple/
+--find-links ./wheels/
+flask>=2.0.0
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    expect(result.project?.dependencies).toEqual(['flask>=2.0.0']);
+    expect(result.tool?.uv?.index).toEqual([
+      {
+        name: 'primary',
+        url: 'https://private.pypi.org/simple/',
+        default: true,
+      },
+      {
+        name: 'find-links-1',
+        url: './wheels/',
+        format: 'flat',
+      },
+    ]);
+  });
+
+  it('merges find-links from referenced files', () => {
+    const mainContent = `
+--find-links ./main-wheels/
+flask>=2.0.0
+-r deps.txt
+`;
+    const depsContent = `
+--find-links ./dep-wheels/
+requests==2.28.0
+`;
+    const readFile = (path: string) => {
+      if (path === 'deps.txt') return depsContent;
+      return null;
+    };
+
+    const result = parseRequirementsFile(mainContent, readFile);
+    expect(result.pipOptions.findLinks).toEqual([
+      './main-wheels/',
+      './dep-wheels/',
+    ]);
+  });
+});
+
+describe('parseRequirementsFile with unknown options', () => {
+  it('strips --no-binary without crashing', () => {
+    const content = `
+--no-binary :all:
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+    ]);
+  });
+
+  it('strips --only-binary without crashing', () => {
+    const content = `
+--only-binary flask
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+    ]);
+  });
+
+  it('strips --pre without crashing', () => {
+    const content = `
+--pre
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+    ]);
+  });
+
+  it('strips --trusted-host without crashing', () => {
+    const content = `
+--trusted-host pypi.example.com
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+    ]);
+  });
+
+  it('strips --prefer-binary without crashing', () => {
+    const content = `
+--prefer-binary
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+    ]);
+  });
+
+  it('strips --require-hashes without crashing', () => {
+    const content = `
+--require-hashes
+flask==2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '==2.0.0' },
+    ]);
+  });
+
+  it('handles complex file with many options', () => {
+    const content = `
+# Production requirements
+--index-url https://pypi.org/simple/
+--extra-index-url https://private.pypi.com/simple/
+--no-binary :all:
+--trusted-host private.pypi.com
+--prefer-binary
+--find-links ./wheels/
+--no-index
+
+flask>=2.0.0
+requests[socks]==2.28.0
+-e ./my-local-package[dev]
+./wheels/custom_pkg-1.0.0-py3-none-any.whl
+custom_bare-2.0.0-py3-none-any.whl
+
+# Include other files
+-r dev.txt
+-c version-locks.txt
+
+django>=4.0
+`;
+    const result = parseRequirementsFile(content);
+
+    expect(result.requirements).toEqual([
+      { name: 'flask', version: '>=2.0.0' },
+      { name: 'requests', version: '==2.28.0', extras: ['socks'] },
+      { name: 'django', version: '>=4.0' },
+      {
+        name: 'custom-pkg',
+        version: '==1.0.0',
+        source: { path: './wheels/custom_pkg-1.0.0-py3-none-any.whl' },
+      },
+      {
+        name: 'custom-bare',
+        version: '==2.0.0',
+        source: { path: 'custom_bare-2.0.0-py3-none-any.whl' },
+      },
+      {
+        name: 'my-local-package',
+        extras: ['dev'],
+        source: { path: './my-local-package', editable: true },
+      },
+    ]);
+
+    expect(result.pipOptions.indexUrl).toBe('https://pypi.org/simple/');
+    expect(result.pipOptions.extraIndexUrls).toEqual([
+      'https://private.pypi.com/simple/',
+    ]);
+    expect(result.pipOptions.findLinks).toEqual(['./wheels/']);
+    expect(result.pipOptions.noIndex).toBe(true);
+    expect(result.pipOptions.requirementFiles).toEqual(['dev.txt']);
+    expect(result.pipOptions.constraintFiles).toEqual(['version-locks.txt']);
+  });
+});
+
+describe('inline comment stripping on option values', () => {
+  it('strips comments from --index-url value', () => {
+    const content = `
+--index-url https://pypi.org/simple/ # main index
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.indexUrl).toBe('https://pypi.org/simple/');
+  });
+
+  it('strips comments from --extra-index-url value', () => {
+    const content = `
+--extra-index-url https://private.pypi.com/simple/ # private
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.extraIndexUrls).toEqual([
+      'https://private.pypi.com/simple/',
+    ]);
+  });
+
+  it('strips comments from --find-links value', () => {
+    const content = `
+--find-links ./wheels/ # local wheels
+flask>=2.0.0
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.pipOptions.findLinks).toEqual(['./wheels/']);
   });
 });
