@@ -504,6 +504,7 @@ export async function getLambdaOptionsFromFunction({
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'regions'
     | 'experimentalTriggers'
     | 'supportsCancellation'
   >
@@ -528,6 +529,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          regions: fn.regions,
           experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };
