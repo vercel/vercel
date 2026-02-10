@@ -1,6 +1,6 @@
 import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
-import { readFile, lstat } from 'node:fs/promises';
+import { readFile, lstat, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNativeError } from 'node:util/types';
 import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
@@ -68,12 +68,18 @@ export const nft = async (
 
       if (stats.isSymbolicLink() || stats.isFile()) {
         if (args.ignoreNodeModules) {
-          // Use FileBlob so introspection can include these files
-          const content = await readFile(absolutePath, 'utf-8');
-          args.files[outputPath] = new FileBlob({
-            data: content,
-            mode: stats.mode,
-          });
+          // Symlinks may point to directories — only read actual files
+          const targetStats = stats.isSymbolicLink()
+            ? await stat(absolutePath)
+            : stats;
+          if (targetStats.isFile()) {
+            // Use FileBlob so introspection can include these files
+            const content = await readFile(absolutePath, 'utf-8');
+            args.files[outputPath] = new FileBlob({
+              data: content,
+              mode: stats.mode,
+            });
+          }
         } else {
           args.files[outputPath] = new FileFsRef({
             fsPath: absolutePath,
