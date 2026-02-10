@@ -248,7 +248,7 @@ jobs:
       - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=...${{matrix.packageName}}
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
