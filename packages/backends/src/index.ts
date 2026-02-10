@@ -68,6 +68,18 @@ export const build: BuildV2 = async args => {
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
+    const functionConfig = args.config.functions?.[entrypoint];
+    if (functionConfig) {
+      args.config.includeFiles = [
+        ...normalizeArray(args.config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      args.config.excludeFiles = [
+        ...normalizeArray(args.config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
+
     // Always run rolldown, even if the user has provided a build command
     // It's very fast and we use it for introspection.
     const rolldownResult = await rolldown({
@@ -104,9 +116,23 @@ export const build: BuildV2 = async args => {
       localBuildFiles,
       files,
       ignoreNodeModules: false,
+      ignore: args.config.excludeFiles,
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    const baseDir = args.repoRootPath || args.workPath;
+    const includeResults = await Promise.all(
+      normalizeArray(args.config.includeFiles).map(pattern =>
+        glob(pattern, baseDir)
+      )
+    );
+    for (const matched of includeResults) {
+      for (const [relPath, entry] of Object.entries(matched)) {
+        files[relPath] = entry;
+      }
+    }
+
     const introspectionResult = await introspectionPromise;
     await typescriptPromise;
 
@@ -156,3 +182,6 @@ export const build: BuildV2 = async args => {
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+const normalizeArray = (value: any) =>
+  Array.isArray(value) ? value : value ? [value] : [];
