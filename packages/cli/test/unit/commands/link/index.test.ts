@@ -109,16 +109,17 @@ describe('link', () => {
 
       const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
       expect(repoJson).toMatchObject({
-        orgId: user.id,
         projects: [
           {
             directory: '.',
             id: project.id,
             name: project.name,
+            orgId: user.id,
           },
         ],
         remoteName: 'upstream',
       });
+      expect(repoJson.orgId).toBeUndefined();
     });
 
     it('should create new Project at repo root using repo folder name', async () => {
@@ -181,10 +182,11 @@ describe('link', () => {
       expect(exitCode).toEqual(0);
 
       const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
-      expect(repoJson.orgId).toEqual(user.id);
+      expect(repoJson.orgId).toBeUndefined();
       expect(repoJson.remoteName).toEqual('upstream');
       expect(repoJson.projects).toHaveLength(1);
       expect(repoJson.projects[0].directory).toEqual('.');
+      expect(repoJson.projects[0].orgId).toEqual(user.id);
       const project = await getProjectByNameOrId(
         client,
         repoJson.projects[0].id
@@ -273,9 +275,11 @@ describe('link', () => {
       expect(exitCode).toEqual(0);
 
       const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
-      expect(repoJson.orgId).toEqual(user.id);
+      expect(repoJson.orgId).toBeUndefined();
       expect(repoJson.remoteName).toEqual('origin');
       expect(repoJson.projects).toHaveLength(2);
+      expect(repoJson.projects[0].orgId).toEqual(user.id);
+      expect(repoJson.projects[1].orgId).toEqual(user.id);
 
       const frontendProject = repoJson.projects.find(
         (p: any) => p.name === 'frontend'
