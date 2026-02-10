@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import wraps
-from typing import Any, Protocol, TypedDict
+from typing import Any, Protocol, TypedDict, overload
 from uuid import uuid4
 
 import httpx
@@ -88,6 +88,16 @@ class _Subscription:
 
 _subscriptions: list[_Subscription] = []
 
+
+@overload
+def subscribe(_func: WorkerCallable) -> WorkerCallable: ...
+
+@overload
+def subscribe(
+    *,
+    topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    consumer: str | None = None,
+) -> Callable[[WorkerCallable], WorkerCallable]: ...
 
 def subscribe(
     _func: WorkerCallable | None = None,
