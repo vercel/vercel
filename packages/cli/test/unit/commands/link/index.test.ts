@@ -429,7 +429,7 @@ describe('link', () => {
       const exitCode = await link(client);
 
       await expect(client.stderr).toOutput('No existing repository link found');
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
     });
 
     it('should add projects to existing repo.json', async () => {
@@ -470,7 +470,9 @@ describe('link', () => {
       client.setArgv('link', 'add');
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Link Git repository at ');
+      await expect(client.stderr).toOutput(
+        'Add Project(s) for Git repository at '
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(

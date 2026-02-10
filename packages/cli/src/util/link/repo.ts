@@ -3,7 +3,7 @@ import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
-import { basename, join, normalize } from 'path';
+import { basename, join } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import toHumanPath from '../humanize-path';
@@ -102,10 +102,13 @@ async function discoverRepoProjects(
     yes,
     existingProjectIds,
     existingDirectories,
+    existingRemoteName,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
+    /** When set, skip the remote selection prompt and use this remote. */
+    existingRemoteName?: string;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -118,15 +121,17 @@ async function discoverRepoProjects(
     return new Map<string, Framework[]>();
   });
 
-  // Not yet linked, so prompt user to begin linking
-  const shouldLink =
-    yes ||
-    (await client.input.confirm(
-      `Link Git repository at ${chalk.cyan(
-        `"${toHumanPath(rootPath)}"`
-      )} to your Project(s)?`,
-      true
-    ));
+  const promptAction = existingRemoteName ? 'add' : 'link';
+  const confirmMessage =
+    promptAction === 'add'
+      ? `Add Project(s) for Git repository at ${chalk.cyan(
+          `"${toHumanPath(rootPath)}"`
+        )}?`
+      : `Link Git repository at ${chalk.cyan(
+          `"${toHumanPath(rootPath)}"`
+        )} to your Project(s)?`;
+
+  const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
     output.print(`Canceled. Repository not linked.\n`);
@@ -149,25 +154,36 @@ async function discoverRepoProjects(
   if (!remoteUrls) {
     throw new Error('Could not determine Git remote URLs');
   }
-  const remoteNames = Object.keys(remoteUrls).sort();
+
   let remoteName: string;
-  if (remoteNames.length === 1) {
-    remoteName = remoteNames[0];
+  if (existingRemoteName) {
+    // Re-use the remote from the existing repo.json
+    remoteName = existingRemoteName;
+    if (!remoteUrls[remoteName]) {
+      throw new Error(
+        `Git remote "${remoteName}" from repo.json no longer exists`
+      );
+    }
   } else {
-    // Prompt user to select which remote to use
-    const defaultRemote = remoteNames.includes('origin')
-      ? 'origin'
-      : remoteNames[0];
-    if (yes) {
-      remoteName = defaultRemote;
+    const remoteNames = Object.keys(remoteUrls).sort();
+    if (remoteNames.length === 1) {
+      remoteName = remoteNames[0];
     } else {
-      remoteName = await client.input.select({
-        message: 'Which Git remote should be used?',
-        choices: remoteNames.map(name => {
-          return { name: name, value: name };
-        }),
-        default: defaultRemote,
-      });
+      // Prompt user to select which remote to use
+      const defaultRemote = remoteNames.includes('origin')
+        ? 'origin'
+        : remoteNames[0];
+      if (yes) {
+        remoteName = defaultRemote;
+      } else {
+        remoteName = await client.input.select({
+          message: 'Which Git remote should be used?',
+          choices: remoteNames.map(name => {
+            return { name: name, value: name };
+          }),
+          default: defaultRemote,
+        });
+      }
     }
   }
   const repoUrl = remoteUrls[remoteName];
@@ -194,9 +210,14 @@ async function discoverRepoProjects(
     }
   }
 
-  // Filter out projects that are already linked in repo.json
-  if (existingProjectIds) {
-    projects = projects.filter(p => !existingProjectIds.has(p.id));
+  // Filter out projects that are already linked in repo.json (by ID or directory)
+  if (existingProjectIds || existingDirectories) {
+    projects = projects.filter(p => {
+      if (existingProjectIds?.has(p.id)) return false;
+      if (existingDirectories?.has(normalizePath(p.rootDirectory || '.')))
+        return false;
+      return true;
+    });
   }
 
   if (projects.length === 0) {
@@ -220,10 +241,11 @@ async function discoverRepoProjects(
     detectedProjects.delete(project.rootDirectory ?? '');
   }
   // Also remove detected projects whose directories are already linked
-  // in the existing repo.json (e.g. linked to a different org)
+  // in the existing repo.json (e.g. linked to a different org).
+  // detectProjects() uses '' for root, while repo.json uses '.', so normalize.
   if (existingDirectories) {
     for (const dir of existingDirectories) {
-      detectedProjects.delete(dir);
+      detectedProjects.delete(dir === '.' ? '' : dir);
     }
   }
 
@@ -332,7 +354,7 @@ async function discoverRepoProjects(
     return {
       id: project.id,
       name: project.name,
-      directory: normalize(project.rootDirectory || ''),
+      directory: normalizePath(project.rootDirectory || '.'),
       orgId: org.id,
     };
   });
@@ -411,10 +433,9 @@ export async function addRepoLink(
   const { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (!repoConfig) {
-    output.error(
+    throw new Error(
       `No existing repository link found. Run \`vc link --repo\` first to link the repository.`
     );
-    return;
   }
 
   output.debug(`Found Git repository root directory: ${rootPath}`);
@@ -429,6 +450,7 @@ export async function addRepoLink(
     yes,
     existingProjectIds,
     existingDirectories,
+    existingRemoteName: repoConfig.remoteName,
   });
   if (!result) {
     return;
