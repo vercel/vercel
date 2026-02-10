@@ -24,7 +24,6 @@ function createRouteVersion(
   const now = Date.now();
   return {
     id: `version-${index}`,
-    s3Key: `routes/version-${index}.json`,
     lastModified: now - index * 60000, // Each version is 1 minute older
     createdBy: `user${index}@example.com`,
     isLive: type === 'live',
@@ -71,7 +70,6 @@ export function useRoutes(count: number = 3) {
       routes,
       version: {
         id: 'current-version',
-        s3Key: 'routes/current.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isLive: true,
@@ -120,7 +118,6 @@ export function useRoutesWithDiff() {
       routes,
       version: {
         id: 'staging-version',
-        s3Key: 'routes/staging.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isStaging: true,
@@ -143,7 +140,6 @@ export function useAddRoute(options?: {
       if (options?.hasStaging) {
         versions.push({
           id: 'existing-staging',
-          s3Key: 'routes/existing-staging.json',
           lastModified: Date.now(),
           createdBy: 'user@example.com',
           isStaging: true,
@@ -154,7 +150,6 @@ export function useAddRoute(options?: {
       }
       versions.push({
         id: 'live-version',
-        s3Key: 'routes/live.json',
         lastModified: Date.now() - 86400000,
         createdBy: 'user@example.com',
         isLive: true,
@@ -255,7 +250,6 @@ export function useAddRoute(options?: {
       },
       version: {
         id: 'new-staging-version',
-        s3Key: 'routes/new-staging.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isStaging: true,
@@ -274,7 +268,6 @@ export function usePromoteRouteVersion() {
       res.json({
         version: {
           id: 'promoted-version',
-          s3Key: 'routes/promoted.json',
           lastModified: Date.now(),
           createdBy: 'user@example.com',
           isLive: true,
@@ -388,7 +381,6 @@ export function useRoutesForInspect() {
       routes,
       version: {
         id: 'current-version',
-        s3Key: 'routes/current.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isLive: true,
@@ -396,4 +388,117 @@ export function useRoutesForInspect() {
       },
     });
   });
+}
+
+export function useRoutesForInspectDiff() {
+  const stagingRoutes = [
+    {
+      id: 'route-diff-1',
+      name: 'API Proxy',
+      description: 'Updated proxy description',
+      enabled: true,
+      staged: true,
+      srcSyntax: 'path-to-regexp',
+      route: {
+        src: '/api/:path*',
+        dest: 'https://v2.api.example.com/:path*',
+        headers: {
+          'Cache-Control': 'public, max-age=3600',
+          'X-New-Header': 'added',
+        },
+        has: [
+          { type: 'header', key: 'Authorization' },
+          { type: 'query', key: 'version', value: '2' },
+        ],
+      },
+      routeTypes: ['rewrite', 'header'],
+    },
+    {
+      id: 'route-diff-new',
+      name: 'New Route',
+      enabled: true,
+      staged: true,
+      srcSyntax: 'equals',
+      route: {
+        src: '/new-page',
+        dest: '/new-handler',
+      },
+      routeTypes: ['rewrite'],
+    },
+  ];
+
+  const productionRoutes = [
+    {
+      id: 'route-diff-1',
+      name: 'API Proxy',
+      description: 'Proxies API requests',
+      enabled: true,
+      staged: false,
+      srcSyntax: 'path-to-regexp',
+      route: {
+        src: '/api/:path*',
+        dest: 'https://api.example.com/:path*',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'X-Old-Header': 'removed',
+        },
+        has: [{ type: 'header', key: 'Authorization' }],
+      },
+      routeTypes: ['rewrite', 'header'],
+    },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (req, res) => {
+    const versionId = req.query.versionId as string;
+    const search = req.query.q as string;
+
+    let routes =
+      versionId === 'prod-version-id' ? productionRoutes : stagingRoutes;
+
+    if (search) {
+      const query = search.toLowerCase();
+      routes = routes.filter(
+        r =>
+          r.name.toLowerCase().includes(query) ||
+          r.id.toLowerCase().includes(query)
+      );
+    }
+
+    res.json({
+      routes,
+      version: {
+        id:
+          versionId === 'prod-version-id'
+            ? 'prod-version-id'
+            : 'staging-version-id',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: versionId === 'prod-version-id',
+        isStaging: versionId !== 'prod-version-id',
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'staging-version-id',
+            isLive: false,
+            isStaging: true,
+            ruleCount: stagingRoutes.length,
+          },
+          {
+            id: 'prod-version-id',
+            isLive: true,
+            isStaging: false,
+            ruleCount: productionRoutes.length,
+          },
+        ],
+      });
+    }
+  );
 }

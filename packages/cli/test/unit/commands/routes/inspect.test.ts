@@ -2,7 +2,10 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import routes from '../../../../src/commands/routes';
 import { useUser } from '../../../mocks/user';
-import { useRoutesForInspect, useRouteVersions } from '../../../mocks/routes';
+import {
+  useRoutesForInspect,
+  useRoutesForInspectDiff,
+} from '../../../mocks/routes';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -147,18 +150,35 @@ describe('routes inspect', () => {
     ]);
   });
 
-  describe('--staging', () => {
-    it('should inspect route from staging version', async () => {
-      useRouteVersions(3);
-      useRoutesForInspect();
-      client.setArgv('routes', 'inspect', 'Old page redirect', '--staging');
+  describe('--diff', () => {
+    it('should show changes for a modified route', async () => {
+      useRoutesForInspectDiff();
+      client.setArgv('routes', 'inspect', 'API Proxy', '--diff');
       const exitCode = await routes(client);
-      expect(exitCode, 'exit code for inspect --staging').toEqual(0);
-      await expect(client.stderr).toOutput('Route found');
+      expect(exitCode, 'exit code for inspect --diff').toEqual(0);
+      await expect(client.stderr).toOutput('modified');
     });
 
-    it('should show error when no staging version exists', async () => {
-      // Set up versions endpoint with only live version (no staging)
+    it('should show changed destination in diff', async () => {
+      useRoutesForInspectDiff();
+      client.setArgv('routes', 'inspect', 'API Proxy', '--diff');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+      // Should show the old and new destination
+      await expect(client.stderr).toOutput('v2.api.example.com');
+    });
+
+    it('should show new route indicator', async () => {
+      useRoutesForInspectDiff();
+      client.setArgv('routes', 'inspect', 'New Route', '--diff');
+      const exitCode = await routes(client);
+      expect(exitCode, 'exit code for inspect --diff new route').toEqual(0);
+      await expect(client.stderr).toOutput('new');
+    });
+
+    it('should show normal route when no changes', async () => {
+      // Use the standard inspect mock — same routes returned for both staging and production
+      useRoutesForInspect();
       client.scenario.get(
         '/v1/projects/:projectId/routes/versions',
         (_req, res) => {
@@ -166,20 +186,19 @@ describe('routes inspect', () => {
             versions: [
               {
                 id: 'live-version',
-                s3Key: 'routes/live.json',
-                lastModified: Date.now(),
-                createdBy: 'user@example.com',
                 isLive: true,
-                ruleCount: 5,
+                isStaging: false,
+                ruleCount: 4,
               },
             ],
           });
         }
       );
-      client.setArgv('routes', 'inspect', 'some-route', '--staging');
+      client.setArgv('routes', 'inspect', 'Old page redirect', '--diff');
       const exitCode = await routes(client);
-      expect(exitCode, 'exit code for no staging').toEqual(1);
-      await expect(client.stderr).toOutput('No staging version found');
+      expect(exitCode, 'exit code for inspect --diff no changes').toEqual(0);
+      // Route is identical in both versions, so show "No staged changes"
+      await expect(client.stderr).toOutput('No staged changes');
     });
   });
 });

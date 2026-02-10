@@ -93,7 +93,7 @@ export function formatCondition(condition: {
 /**
  * Display labels for transform types.
  */
-const TRANSFORM_TYPE_LABELS: Record<string, string> = {
+export const TRANSFORM_TYPE_LABELS: Record<string, string> = {
   'request.headers': 'Request Header',
   'request.query': 'Request Query',
   'response.headers': 'Response Header',
