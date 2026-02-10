@@ -253,6 +253,7 @@ jobs:
           FORCE_COLOR: '1'
       - name: Build vercel peer dependencies
         if: matrix.packageName == 'vercel'
+        shell: bash
         run: |
           PEER_FILTERS=$(node utils/get-cli-peer-deps.js | xargs -I {} echo --filter={})
           if [ -n "$PEER_FILTERS" ]; then
