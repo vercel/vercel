@@ -79,11 +79,20 @@ export class RoutesAddTelemetryClient
     }
   }
 
-  trackCliOptionSyntax(syntax: string | undefined) {
+  trackCliOptionSrcSyntax(syntax: string | undefined) {
     if (syntax) {
       this.trackCliOption({
-        option: 'syntax',
+        option: 'src-syntax',
         value: syntax,
+      });
+    }
+  }
+
+  trackCliOptionAction(action: string | undefined) {
+    if (action) {
+      this.trackCliOption({
+        option: 'action',
+        value: action,
       });
     }
   }

@@ -128,6 +128,49 @@ function buildConditionValue(
   return `^${escapedValue}$`;
 }
 
+const VALID_ACTION_TYPES = ['rewrite', 'redirect', 'set-status'] as const;
+
+/**
+ * Validates the --action flag value and its required companion flags.
+ * Returns an error message string or null if valid.
+ */
+function validateActionFlags(
+  action: string | undefined,
+  dest: string | undefined,
+  status: number | undefined
+): string | null {
+  if (!action) {
+    if (dest || status !== undefined) {
+      return '--action is required when using --dest or --status. Use --action rewrite, --action redirect, or --action set-status.';
+    }
+    return null;
+  }
+
+  if (!VALID_ACTION_TYPES.includes(action as (typeof VALID_ACTION_TYPES)[number])) {
+    return `Invalid action type: "${action}". Valid types: ${VALID_ACTION_TYPES.join(', ')}`;
+  }
+
+  switch (action) {
+    case 'rewrite':
+      if (!dest) return '--action rewrite requires --dest.';
+      if (status !== undefined) return '--action rewrite does not accept --status.';
+      break;
+    case 'redirect':
+      if (!dest) return '--action redirect requires --dest.';
+      if (status === undefined)
+        return `--action redirect requires --status (${REDIRECT_STATUS_CODES.join(', ')}).`;
+      if (!REDIRECT_STATUS_CODES.includes(status))
+        return `Invalid redirect status: ${status}. Must be one of: ${REDIRECT_STATUS_CODES.join(', ')}`;
+      break;
+    case 'set-status':
+      if (dest) return '--action set-status does not accept --dest.';
+      if (status === undefined) return '--action set-status requires --status.';
+      break;
+  }
+
+  return null;
+}
+
 /**
  * Interactive action types. Exclusive actions (rewrite, redirect, set-status) can only
  * be selected once and are removed from the list after selection. Non-exclusive modify
@@ -173,7 +216,10 @@ export default async function add(client: Client, argv: string[]) {
   telemetry.trackCliFlagDisabled(flags['--disabled'] as boolean | undefined);
   telemetry.trackCliArgumentName(args[0]);
   telemetry.trackCliOptionSrc(flags['--src'] as string | undefined);
-  telemetry.trackCliOptionSyntax(flags['--syntax'] as string | undefined);
+  telemetry.trackCliOptionSrcSyntax(
+    flags['--src-syntax'] as string | undefined
+  );
+  telemetry.trackCliOptionAction(flags['--action'] as string | undefined);
   telemetry.trackCliOptionDest(flags['--dest'] as string | undefined);
   telemetry.trackCliOptionStatus(flags['--status'] as number | undefined);
   telemetry.trackCliOptionPosition(flags['--position'] as string | undefined);
@@ -248,8 +294,8 @@ export default async function add(client: Client, argv: string[]) {
   let src: string;
   let syntax: SrcSyntax = 'regex';
 
-  if (flags['--syntax']) {
-    const syntaxArg = flags['--syntax'] as string;
+  if (flags['--src-syntax']) {
+    const syntaxArg = flags['--src-syntax'] as string;
     if (!VALID_SYNTAXES.includes(syntaxArg as SrcSyntax)) {
       output.error(
         `Invalid syntax: "${syntaxArg}". Valid options: ${VALID_SYNTAXES.join(', ')}. Usage: ${getCommandName('routes add "Name" --src "/path" --syntax path-to-regexp')}`
@@ -297,11 +343,19 @@ export default async function add(client: Client, argv: string[]) {
     });
   }
 
-  // --- Collect action ---
+  // --- Validate --action flag ---
+  const actionFlag = flags['--action'] as string | undefined;
   const dest = flags['--dest']
     ? stripQuotes(flags['--dest'] as string)
     : undefined;
   const status = flags['--status'] as number | undefined;
+
+  // In flag-based mode, --action is required when --dest or --status is provided
+  const actionError = validateActionFlags(actionFlag, dest, status);
+  if (actionError) {
+    output.error(actionError);
+    return 1;
+  }
 
   // Collect transforms from flags using helper functions
   const transformFlags = extractTransformFlags(flags);
@@ -515,16 +569,6 @@ export default async function add(client: Client, argv: string[]) {
   ) {
     output.error(
       `Status code must be an integer between 100 and 599. Usage: ${getCommandName('routes add "Name" --src "/path" --status 404')}`
-    );
-    return 1;
-  }
-
-  // Validate action combinations
-  if (finalDest && finalStatus && REDIRECT_STATUS_CODES.includes(finalStatus)) {
-    // This is a redirect - valid
-  } else if (finalDest && finalStatus) {
-    output.error(
-      `Cannot use --dest with status ${finalStatus}. For redirects, use status ${REDIRECT_STATUS_CODES.join(', ')}. Usage: ${getCommandName('routes add "Name" --src "/old" --dest "/new" --status 301')}`
     );
     return 1;
   }
