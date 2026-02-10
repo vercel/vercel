@@ -518,19 +518,50 @@ function formatRouteDetails(rule: RoutingRule): string {
     lines.push(`  ${chalk.cyan('HTTP Status:')} ${rule.route.status}`);
   }
 
-  if (rule.route.headers && Object.keys(rule.route.headers).length > 0) {
+  // Group all header/transform operations by type
+  const responseHeaderSets = Object.entries(rule.route.headers ?? {});
+  const allTransforms = (rule.route.transforms ?? []) as Array<{
+    type: string;
+    op: string;
+    target: { key: string | Record<string, unknown> };
+    args?: string | string[];
+  }>;
+  const responseHeaderTransforms = allTransforms.filter(
+    t => t.type === 'response.headers'
+  );
+  const requestHeaderTransforms = allTransforms.filter(
+    t => t.type === 'request.headers'
+  );
+  const requestQueryTransforms = allTransforms.filter(
+    t => t.type === 'request.query'
+  );
+
+  if (responseHeaderSets.length > 0 || responseHeaderTransforms.length > 0) {
     lines.push('');
     lines.push(chalk.bold('  Response Headers'));
-    for (const [key, value] of Object.entries(rule.route.headers)) {
-      lines.push(`  ${chalk.cyan(key + ':')} ${value}`);
+    for (const [key, value] of responseHeaderSets) {
+      lines.push(
+        `  ${chalk.yellow('set')} ${chalk.cyan(key)} = ${value}`
+      );
+    }
+    for (const t of responseHeaderTransforms) {
+      lines.push(`  ${formatTransform(t, false)}`);
     }
   }
 
-  if (rule.route.transforms && rule.route.transforms.length > 0) {
+  if (requestHeaderTransforms.length > 0) {
     lines.push('');
-    lines.push(chalk.bold('  Transforms'));
-    for (const transform of rule.route.transforms) {
-      lines.push(`  ${formatTransform(transform)}`);
+    lines.push(chalk.bold('  Request Headers'));
+    for (const t of requestHeaderTransforms) {
+      lines.push(`  ${formatTransform(t, false)}`);
+    }
+  }
+
+  if (requestQueryTransforms.length > 0) {
+    lines.push('');
+    lines.push(chalk.bold('  Request Query'));
+    for (const t of requestQueryTransforms) {
+      lines.push(`  ${formatTransform(t, false)}`);
     }
   }
 
