@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.8.4
+
+### Patch Changes
+
+- Add exclude/include support for backends builder ([#14950](https://github.com/vercel/vercel/pull/14950))
+
 ## 5.8.3
 
 ### Patch Changes

@@ -103,6 +103,13 @@ export class TelemetryClient {
     });
   }
 
+  protected trackCommandOutput(eventData: { key: string; value: string }) {
+    this.track({
+      key: `output:${eventData.key}`,
+      value: eventData.value,
+    });
+  }
+
   protected trackCliFlag(flag: string) {
     this.track({
       key: `flag:${flag}`,

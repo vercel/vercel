@@ -1,7 +1,9 @@
 {
+  "regions": ["iad1"],
   "functions": {
     "api/**/*.js": {
-      "memory": 128
+      "memory": 128,
+      "regions": ["sfo1"]
     }
   }
 }

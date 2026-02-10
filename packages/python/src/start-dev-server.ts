@@ -123,13 +123,13 @@ function installGlobalCleanupHandlers() {
     }
   };
 
+  // Do not exit on signals, so other interruption handlers
+  // can perform their cleanup routine.
   process.on('SIGINT', () => {
     killAll();
-    process.exit(130);
   });
   process.on('SIGTERM', () => {
     killAll();
-    process.exit(143);
   });
   process.on('exit', () => {
     killAll();

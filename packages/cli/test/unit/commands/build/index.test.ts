@@ -992,6 +992,7 @@ describe.skipIf(flakey)('build', () => {
     expect(vcConfig).toMatchObject({
       handler: 'api/memory.js',
       memory: 128,
+      regions: ['sfo1'],
       environment: {},
       launcherType: 'Nodejs',
       shouldAddHelpers: true,
