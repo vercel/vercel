@@ -5,7 +5,8 @@ import type {
   ResolvedService,
   ServicesRoutes,
 } from './types';
-import { isStaticBuild, readVercelConfig } from './utils';
+import { ENTRYPOINT_EXTENSIONS } from './types';
+import { isRouteOwningBuilder, isStaticBuild, readVercelConfig } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 
@@ -99,8 +100,18 @@ export async function detectServices(
  * routes match before broader ones. For example, `/api/users` must be checked
  * before `/api`, which must be checked before the catch-all `/`.
  *
- * - Static/SPA services: SPA fallback routes to index.html
- * - Serverless services: Rewrite to the function entrypoint
+ * Services routing only generates *synthetic* routes for builders that do not
+ * provide their own route tables:
+ *
+ * - **Static/SPA services** (`@vercel/static-build`, `@vercel/static`):
+ *   SPA fallback routes to index.html under the service prefix.
+ *
+ * - **Runtime services** (`@vercel/python`, `@vercel/go`, `@vercel/ruby`, etc.):
+ *   Prefix rewrites to the function entrypoint with `check: true`.
+ *
+ * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
+ * Build Output API builders, etc.) are not given synthetic routes here.
+ *
  * - Cron/Worker services: TODO - internal routes under `/_svc/`
  */
 export function generateServicesRoutes(
@@ -110,6 +121,20 @@ export function generateServicesRoutes(
   const defaults: Route[] = [];
   const crons: Route[] = [];
   const workers: Route[] = [];
+
+  // Sort longest extension first so `.mts` is preferred over `.ts`, etc.
+  // (".mts".endsWith(".ts") is true, so order matters.)
+  const entrypointExtensions = Object.keys(ENTRYPOINT_EXTENSIONS).sort(
+    (a, b) => b.length - a.length
+  );
+  const stripEntrypointExtension = (entrypoint: string): string => {
+    for (const ext of entrypointExtensions) {
+      if (entrypoint.endsWith(ext)) {
+        return entrypoint.slice(0, -ext.length);
+      }
+    }
+    return entrypoint;
+  };
 
   // Filter and sort web services by prefix length (longest first)
   // so more specific routes match before broader ones.
@@ -124,6 +149,12 @@ export function generateServicesRoutes(
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
 
+    // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
+    // own route tables. Skip synthetic route generation for them.
+    if (isRouteOwningBuilder(service)) {
+      continue;
+    }
+
     if (isStaticBuild(service)) {
       // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
@@ -135,13 +166,16 @@ export function generateServicesRoutes(
           dest: `/${normalizedPrefix}/index.html`,
         });
       }
-    } else {
+    } else if (service.runtime) {
       // Function service: rewrite to the function entrypoint
       // `check: true` verifies the destination exists before applying the route
       const builderSrc = service.builder.src || routePrefix;
-      const functionPath = builderSrc.startsWith('/')
-        ? builderSrc
-        : `/${builderSrc}`;
+      // Match the v3 runtime output naming convention: extensionless function paths.
+      // For example, "api/index.ts" → "/api/index".
+      const extensionless = stripEntrypointExtension(builderSrc);
+      const functionPath = extensionless.startsWith('/')
+        ? extensionless
+        : `/${extensionless}`;
 
       if (routePrefix === '/') {
         defaults.push({ src: '^/(.*)$', dest: functionPath, check: true });
@@ -152,6 +186,10 @@ export function generateServicesRoutes(
           check: true,
         });
       }
+    } else {
+      // Non-static services without an inferred runtime are expected to provide
+      // their own routing (Next.js, @vercel/backends, Build Output API builders, etc.).
+      continue;
     }
   }
 

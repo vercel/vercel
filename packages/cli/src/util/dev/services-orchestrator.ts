@@ -314,8 +314,18 @@ export class ServicesOrchestrator {
       );
 
       // Use the resolved builder.src which includes framework defaults,
-      // or fall back to explicit entrypoint
-      const entrypoint = service.builder?.src || service.entrypoint || '';
+      // or fall back to explicit entrypoint.
+      // Strip the workspace prefix since workPath is already the service workspace.
+      // e.g., builder.src="frontend/package.json" + workspace="frontend"
+      //   → entrypoint="package.json" (relative to workspacePath)
+      let entrypoint = service.builder?.src || service.entrypoint || '';
+      const workspace = service.workspace || '.';
+      if (workspace !== '.') {
+        const wsPrefix = workspace + '/';
+        if (entrypoint.startsWith(wsPrefix)) {
+          entrypoint = entrypoint.slice(wsPrefix.length);
+        }
+      }
       const result = await builder.startDevServer({
         entrypoint,
         workPath: workspacePath,
