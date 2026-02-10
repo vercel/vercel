@@ -106,7 +106,21 @@ export const buildsSchema = {
         minLength: 3,
         maxLength: 256,
       },
-      config: { type: 'object' },
+      config: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          /**
+           * User-configured deployment ID for skew protection (e.g. prebuilt deployments).
+           * Max 32 chars; alphanumeric, hyphen, underscore only; must not start with "dpl_".
+           */
+          deploymentId: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 32,
+          },
+        },
+      },
     },
   },
 };
