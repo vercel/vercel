@@ -540,7 +540,7 @@ export const build: BuildV3 = async ({
       });
 
       // skip the uv copy when running vercel build locally
-      if (!process.env.VERCEL_BUILD_IMAGE) {
+      if (process.env.VERCEL_BUILD_IMAGE) {
         // Add the uv binary to the lambda zip
         try {
           const uvBinaryPath = await getUvBinaryForBundling(
