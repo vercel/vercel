@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
 import integrationCommand from '../../../../src/commands/integration';
+import pull from '../../../../src/commands/env/pull';
+import { connectResourceToProject } from '../../../../src/util/integration-resource/connect-resource-to-project';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { useAutoProvision } from '../../../mocks/integration';
@@ -14,10 +16,29 @@ vi.mock('open', () => {
   };
 });
 
+vi.mock('../../../../src/commands/env/pull', () => {
+  return {
+    default: vi.fn().mockResolvedValue(0),
+  };
+});
+
+vi.mock(
+  '../../../../src/util/integration-resource/connect-resource-to-project',
+  () => {
+    return {
+      connectResourceToProject: vi.fn().mockResolvedValue({}),
+    };
+  }
+);
+
 const openMock = vi.mocked(open);
+const pullMock = vi.mocked(pull);
+const connectMock = vi.mocked(connectResourceToProject);
 
 beforeEach(() => {
   openMock.mockClear();
+  pullMock.mockClear();
+  connectMock.mockClear();
   // Enable auto-provision feature flag
   process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
@@ -61,6 +82,7 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(openMock).not.toHaveBeenCalled();
+      expect(pullMock).not.toHaveBeenCalled();
     });
 
     it('should provision and connect to project', async () => {
@@ -85,24 +107,19 @@ describe('integration add (auto-provision)', () => {
         'Acme Product successfully provisioned: acme-gray-apple'
       );
 
-      await expect(client.stderr).toOutput(
-        'Do you want to link this resource to the current project?'
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Select environments');
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        'Connected to vercel-integration-add'
-      );
-
+      // After provisioning, auto-connect and env pull happen without prompts
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(openMock).not.toHaveBeenCalled();
+      expect(pullMock).toHaveBeenCalledWith(
+        client,
+        ['--yes'],
+        'vercel-cli:integration:add'
+      );
     });
 
-    it('should provision without connecting when user declines', async () => {
+    it('should warn when env pull fails', async () => {
+      pullMock.mockResolvedValueOnce(1);
       useProject({
         ...defaultProject,
         id: 'vercel-integration-add',
@@ -119,14 +136,95 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: acme-gray-apple'
       );
+      await expect(client.stderr).toOutput(
+        'acme-gray-apple successfully connected to vercel-integration-add'
+      );
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vercel env pull` manually.'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(pullMock).toHaveBeenCalledWith(
+        client,
+        ['--yes'],
+        'vercel-cli:integration:add'
+      );
+    });
+
+    it('should not env pull when connect fails', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+
+      connectMock.mockRejectedValueOnce(new Error('Connection failed'));
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Choose your region');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        'Do you want to link this resource to the current project?'
+        'Acme Product successfully provisioned: acme-gray-apple'
       );
-      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(pullMock).not.toHaveBeenCalled();
+    });
+
+    it('should skip connecting with --no-connect flag', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--no-connect');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Choose your region');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      expect(pullMock).not.toHaveBeenCalled();
+    });
+
+    it('should skip env pull with --no-env-pull flag', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--no-env-pull');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Choose your region');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      await expect(client.stderr).toOutput(
+        'acme-gray-apple successfully connected to vercel-integration-add'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(pullMock).not.toHaveBeenCalled();
     });
 
     it('should track telemetry', async () => {
@@ -272,7 +370,7 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalled();
     });
 
-    it('should include all three URL params (projectSlug, defaultResourceName, source) when user consents to link project', async () => {
+    it('should include all three URL params (projectSlug, defaultResourceName, source) when project is linked', async () => {
       useAutoProvision({ responseKey: 'metadata' });
       useProject({
         ...defaultProject,
@@ -287,11 +385,6 @@ describe('integration add (auto-provision)', () => {
 
       await expect(client.stderr).toOutput('Choose your region');
       client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        'Do you want to link this resource to the current project?'
-      );
-      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
@@ -311,7 +404,7 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should include defaultResourceName and source but not projectSlug when user declines to link project', async () => {
+    it('should not include projectSlug in URL with --no-connect', async () => {
       useAutoProvision({ responseKey: 'metadata' });
       useProject({
         ...defaultProject,
@@ -321,16 +414,11 @@ describe('integration add (auto-provision)', () => {
       const cwd = setupUnitFixture('vercel-integration-add');
       client.cwd = cwd;
 
-      client.setArgv('integration', 'add', 'acme');
+      client.setArgv('integration', 'add', 'acme', '--no-connect');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput('Choose your region');
       client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        'Do you want to link this resource to the current project?'
-      );
-      client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
@@ -373,7 +461,7 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should include custom --name and projectSlug in URL when user accepts project link', async () => {
+    it('should include custom --name and projectSlug in URL when project is linked', async () => {
       useAutoProvision({ responseKey: 'metadata' });
       useProject({
         ...defaultProject,
@@ -388,11 +476,6 @@ describe('integration add (auto-provision)', () => {
 
       await expect(client.stderr).toOutput('Choose your region');
       client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        'Do you want to link this resource to the current project?'
-      );
-      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'
@@ -411,7 +494,7 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should include custom --name but not projectSlug in URL when user declines project link', async () => {
+    it('should not include projectSlug with --no-connect and custom --name', async () => {
       useAutoProvision({ responseKey: 'metadata' });
       useProject({
         ...defaultProject,
@@ -421,16 +504,18 @@ describe('integration add (auto-provision)', () => {
       const cwd = setupUnitFixture('vercel-integration-add');
       client.cwd = cwd;
 
-      client.setArgv('integration', 'add', 'acme', '--name', 'my-nolink-db');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--name',
+        'my-nolink-db',
+        '--no-connect'
+      );
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput('Choose your region');
       client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput(
-        'Do you want to link this resource to the current project?'
-      );
-      client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
         'Additional setup required. Opening browser...'

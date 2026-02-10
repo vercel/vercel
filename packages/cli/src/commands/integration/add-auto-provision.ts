@@ -10,16 +10,16 @@ import type {
   AcceptedPolicies,
   AutoProvisionResult,
 } from '../../util/integration/types';
-import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
-import cmd from '../../util/output/cmd';
-import indent from '../../util/output/indent';
-import { packageName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import {
+  getLinkedProjectField,
+  postProvisionSetup,
+  type PostProvisionOptions,
+} from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import { createMetadataWizard } from './wizard';
 
-export interface AddAutoProvisionOptions {
+export interface AddAutoProvisionOptions extends PostProvisionOptions {
   productSlug?: string;
 }
 
@@ -43,6 +43,8 @@ export async function addAutoProvision(
   }
 
   telemetry.trackCliOptionName(resourceNameArg);
+  telemetry.trackCliFlagNoConnect(options.noConnect);
+  telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
 
   // 2. Fetch integration
   let integration;
@@ -184,9 +186,13 @@ export async function addAutoProvision(
     output.debug(`Fallback required - kind: ${result.kind}`);
     output.debug(`Fallback URL from API: ${result.url}`);
 
-    // Offer project linking before opening browser
-    const projectLink = await getOptionalLinkedProject(client);
-    if (projectLink?.status === 'error') {
+    // Auto-detect project for browser URL
+    const projectLink = await getLinkedProjectField(
+      client,
+      options.noConnect,
+      'name'
+    );
+    if (projectLink.exitCode !== undefined) {
       return projectLink.exitCode;
     }
 
@@ -194,8 +200,8 @@ export async function addAutoProvision(
     const url = new URL(result.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
-    if (projectLink?.project) {
-      url.searchParams.set('projectSlug', projectLink.project.name);
+    if (projectLink.value) {
+      url.searchParams.set('projectSlug', projectLink.value);
     }
     output.debug(`Opening URL: ${url.href}`);
     open(url.href);
@@ -212,77 +218,12 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
-  // 10. Link to project (prompt)
-  const projectLink = await getOptionalLinkedProject(client);
-  if (projectLink?.status === 'error') {
-    return projectLink.exitCode;
-  }
-
-  if (!projectLink?.project) {
-    return 0;
-  }
-
-  // 11. Select environments and connect
-  const environments = await client.input.checkbox({
-    message: 'Select environments',
-    choices: [
-      { name: 'Production', value: 'production', checked: true },
-      { name: 'Preview', value: 'preview', checked: true },
-      { name: 'Development', value: 'development', checked: true },
-    ],
-  });
-  output.debug(`Selected environments: ${JSON.stringify(environments)}`);
-
-  output.spinner(
-    `Connecting ${chalk.bold(resourceName)} to ${chalk.bold(projectLink.project.name)}...`
+  // 10. Post-provision: dashboard URL, connect, env pull
+  return postProvisionSetup(
+    client,
+    resourceName,
+    result.resource.id,
+    contextName,
+    options
   );
-  output.debug(
-    `Connecting resource ${result.resource.id} to project ${projectLink.project.id}`
-  );
-  try {
-    await connectResourceToProject(
-      client,
-      projectLink.project.id,
-      result.resource.id,
-      environments
-    );
-  } catch (error) {
-    output.stopSpinner();
-    output.error(`Failed to connect: ${(error as Error).message}`);
-    return 1;
-  }
-  output.stopSpinner();
-
-  output.success(`Connected to ${projectLink.project.name}`);
-  output.log(
-    indent(
-      `Run ${cmd(`${packageName} env pull`)} to update environment variables`,
-      4
-    )
-  );
-
-  return 0;
-}
-
-async function getOptionalLinkedProject(client: Client) {
-  const linkedProject = await getLinkedProject(client);
-
-  if (linkedProject.status === 'not_linked') {
-    return;
-  }
-
-  const shouldLinkToProject = await client.input.confirm(
-    'Do you want to link this resource to the current project?',
-    true
-  );
-
-  if (!shouldLinkToProject) {
-    return;
-  }
-
-  if (linkedProject.status === 'error') {
-    return { status: 'error' as const, exitCode: linkedProject.exitCode };
-  }
-
-  return { status: 'success' as const, project: linkedProject.project };
 }
