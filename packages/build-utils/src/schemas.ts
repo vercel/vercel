@@ -61,6 +61,12 @@ export const functionsSchema = {
           minimum: 1,
           maximum: 900,
         },
+        regions: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
         includeFiles: {
           type: 'string',
           maxLength: 256,
