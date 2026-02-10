@@ -80,7 +80,10 @@ function getPeerDependencies(): Record<string, string> {
       const cliPkg = require_(cliPkgPath) as PackageJson;
       peerDependencies =
         (cliPkg.peerDependencies as Record<string, string>) || {};
-    } catch {
+    } catch (e) {
+      output.error(
+        'Failed to parse peer dependencies from vercel/package.json'
+      );
       peerDependencies = {};
     }
   }
