@@ -65,13 +65,6 @@ export interface LambdaOptionsBase {
    * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
-
-  /**
-   * Ephemeral storage size in MB for the Lambda function.
-   * This is used when runtime dependency installation is enabled to provide
-   * sufficient space for installing dependencies in /tmp.
-   */
-  ephemeralStorageSize?: number;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -170,14 +163,6 @@ export class Lambda {
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
 
-  /**
-   * Ephemeral storage size in MB for the Lambda function.
-   * AWS Lambda supports ephemeral storage from 512 MB (default) to 10,240 MB (10 GB).
-   * This is used when runtime dependency installation is enabled to provide
-   * sufficient space for installing dependencies in /tmp.
-   */
-  ephemeralStorageSize?: number;
-
   constructor(opts: LambdaOptions) {
     const {
       handler,
@@ -198,7 +183,6 @@ export class Lambda {
       experimentalTriggers,
       supportsCancellation,
       shouldDisableAutomaticFetchInstrumentation,
-      ephemeralStorageSize,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -379,19 +363,6 @@ export class Lambda {
       );
     }
 
-    if (ephemeralStorageSize !== undefined) {
-      assert(
-        typeof ephemeralStorageSize === 'number',
-        '"ephemeralStorageSize" is not a number'
-      );
-      assert(
-        Number.isInteger(ephemeralStorageSize) &&
-          ephemeralStorageSize >= 512 &&
-          ephemeralStorageSize <= 10240,
-        '"ephemeralStorageSize" must be an integer between 512 and 10240 MB'
-      );
-    }
-
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -418,7 +389,6 @@ export class Lambda {
     this.supportsCancellation = supportsCancellation;
     this.shouldDisableAutomaticFetchInstrumentation =
       shouldDisableAutomaticFetchInstrumentation;
-    this.ephemeralStorageSize = ephemeralStorageSize;
   }
 
   async createZip(): Promise<Buffer> {
