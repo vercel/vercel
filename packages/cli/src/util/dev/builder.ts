@@ -139,6 +139,8 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(match, envConfigs, workPath);
   }
 
+  const serviceRoutePrefix = config.routePrefix;
+  const serviceWorkspace = config.workspace;
   const buildOptions: BuildOptions = {
     files,
     entrypoint,
@@ -156,6 +158,21 @@ export async function executeBuild(
       env: { ...envConfigs.runEnv },
       buildEnv: { ...envConfigs.buildEnv },
     },
+    ...(typeof serviceRoutePrefix === 'string' ||
+    typeof serviceWorkspace === 'string'
+      ? {
+          service: {
+            routePrefix:
+              typeof serviceRoutePrefix === 'string'
+                ? serviceRoutePrefix
+                : undefined,
+            workspace:
+              typeof serviceWorkspace === 'string'
+                ? serviceWorkspace
+                : undefined,
+          },
+        }
+      : undefined),
   };
 
   let buildResultOrOutputs;
