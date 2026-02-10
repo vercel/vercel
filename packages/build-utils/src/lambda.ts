@@ -30,6 +30,7 @@ export interface LambdaOptionsBase {
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
+  functionFailoverRegions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   supportsResponseStreaming?: boolean;
@@ -127,6 +128,7 @@ export class Lambda {
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
+  functionFailoverRegions?: string[];
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -174,6 +176,7 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
+      functionFailoverRegions,
       supportsMultiPayloads,
       supportsWrapper,
       supportsResponseStreaming,
@@ -253,6 +256,17 @@ export class Lambda {
       assert(
         regions.every(r => typeof r === 'string'),
         '"regions" is not a string Array'
+      );
+    }
+
+    if (functionFailoverRegions !== undefined) {
+      assert(
+        Array.isArray(functionFailoverRegions),
+        '"functionFailoverRegions" is not an Array'
+      );
+      assert(
+        functionFailoverRegions.every(r => typeof r === 'string'),
+        '"functionFailoverRegions" is not a string Array'
       );
     }
 
@@ -375,6 +389,7 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
+    this.functionFailoverRegions = functionFailoverRegions;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
@@ -479,6 +494,7 @@ export async function getLambdaOptionsFromFunction({
     | 'memory'
     | 'maxDuration'
     | 'regions'
+    | 'functionFailoverRegions'
     | 'experimentalTriggers'
     | 'supportsCancellation'
   >
@@ -491,6 +507,7 @@ export async function getLambdaOptionsFromFunction({
           memory: fn.memory,
           maxDuration: fn.maxDuration,
           regions: fn.regions,
+          functionFailoverRegions: fn.functionFailoverRegions,
           experimentalTriggers: fn.experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };

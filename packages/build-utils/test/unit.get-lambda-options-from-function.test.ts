@@ -11,6 +11,7 @@ describe('getLambdaOptionsFromFunction', () => {
           memory: 1024,
           maxDuration: 60,
           regions: ['sfo1', 'iad1'],
+          functionFailoverRegions: ['dub1'],
         },
       },
     };
@@ -25,6 +26,7 @@ describe('getLambdaOptionsFromFunction', () => {
       memory: 1024,
       maxDuration: 60,
       regions: ['sfo1', 'iad1'],
+      functionFailoverRegions: ['dub1'],
     });
   });
 

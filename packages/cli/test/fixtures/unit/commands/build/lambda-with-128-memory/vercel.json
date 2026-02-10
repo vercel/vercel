@@ -3,7 +3,8 @@
   "functions": {
     "api/**/*.js": {
       "memory": 128,
-      "regions": ["sfo1"]
+      "regions": ["sfo1"],
+      "functionFailoverRegions": ["dub1"]
     }
   }
 }

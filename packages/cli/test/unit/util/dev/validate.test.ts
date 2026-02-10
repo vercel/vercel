@@ -294,6 +294,34 @@ describe('validateConfig', () => {
     );
   });
 
+  it('should not error with valid functionFailoverRegions', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          functionFailoverRegions: ['dub1', 'fra1'],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should error with invalid functionFailoverRegions type', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          // @ts-ignore
+          functionFailoverRegions: 'dub1',
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].functionFailoverRegions` should be array."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
   it('should error with "functions" and "builds"', async () => {
     const error = validateConfig({
       builds: [
