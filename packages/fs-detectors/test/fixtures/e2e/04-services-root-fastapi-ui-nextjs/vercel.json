@@ -1,0 +1,17 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "ui": {
+      "framework": "nextjs",
+      "workspace": "ui",
+      "routePrefix": "/"
+    },
+    "api": {
+      "framework": "fastapi",
+      "routePrefix": "/api/py"
+    }
+  }
+}
