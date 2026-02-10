@@ -15,18 +15,12 @@ import { isWindows } from '../../../helpers/is-windows';
 // these tests can take upwards of 190s on macos-latest
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
-/**
- * Isolated cwd with no project node_modules so resolution uses the install
- * path (peer deps → .vercel/builders), avoiding monorepo workspace linkage.
- */
-async function getIsolatedCwd(): Promise<string> {
-  return getWriteableDirectory();
-}
-
 describe('importBuilders()', () => {
   let cwd: string = '';
   beforeEach(async () => {
-    cwd = await getIsolatedCwd();
+    // Isolated cwd with no project node_modules so resolution uses the install
+    // path (peer deps → .vercel/builders), avoiding monorepo workspace linkage.
+    cwd = await getWriteableDirectory();
   });
   afterEach(async () => {
     await remove(cwd);
