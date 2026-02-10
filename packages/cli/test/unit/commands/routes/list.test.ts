@@ -94,6 +94,14 @@ describe('routes list', () => {
     await expect(client.stderr).toOutput('0 Routes found');
   });
 
+  it('should show draft indicator for staged routes', async () => {
+    useRoutes(3); // Route 1 is staged (index % 5 === 1)
+    client.setArgv('routes', 'list');
+    const exitCode = await routes(client);
+    expect(exitCode, 'exit code for "routes list"').toEqual(0);
+    await expect(client.stderr).toOutput('(draft)');
+  });
+
   it('should search routes with --search flag', async () => {
     useRoutes(5);
     client.setArgv('routes', 'list', '--search', 'path-1');
