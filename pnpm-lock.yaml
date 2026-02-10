@@ -2004,6 +2004,10 @@ importers:
         version: 2.0.1(@types/node@20.11.0)
 
   packages/python:
+    dependencies:
+      '@vercel/python-analysis':
+        specifier: workspace:*
+        version: link:../python-analysis
     devDependencies:
       '@renovatebot/pep440':
         specifier: 4.2.1
