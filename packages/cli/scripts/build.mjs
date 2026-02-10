@@ -42,6 +42,21 @@ function envToString(key) {
 // During local development, these secrets will be empty.
 createConstants();
 
+// Validate that index.ts doesn't use require() for command loading.
+// Commands must use `await import('./commands-bulk.js')` for code splitting.
+{
+  const indexSrc = readFileSync(new URL('src/index.ts', repoRoot), 'utf8');
+  const badRequires = indexSrc.match(/require\(['"]\.\/commands\//g);
+  if (badRequires) {
+    console.error(
+      `\nError: src/index.ts uses require() to load commands (${badRequires.length} occurrence(s)).` +
+        `\nCommands must be loaded via: (await import('./commands-bulk.js')).<name>` +
+        `\nWe use this pattern for more efficient code splitting and minimizing the startup time of the CLI.\n`
+    );
+    process.exit(1);
+  }
+}
+
 // Compile the `doT.js` template files for `vercel dev`
 await compileDevTemplates();
 
