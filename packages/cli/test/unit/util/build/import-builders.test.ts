@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -18,9 +18,18 @@ vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 const repoRoot = join(__dirname, '../../../../../..');
 
 describe('importBuilders()', () => {
+  let cwd: string = '';
+  beforeEach(async () => {
+    // Isolated cwd so tests do not depend on monorepo workspace linkage.
+    cwd = await getWriteableDirectory();
+  });
+  afterEach(async () => {
+    await remove(cwd);
+  });
+
   it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
-    const builders = await importBuilders(specs, process.cwd());
+    const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
@@ -40,7 +49,7 @@ describe('importBuilders()', () => {
 
   it('should import built-in Builders using `@latest`', async () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
-    const builders = await importBuilders(specs, process.cwd());
+    const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
       vercelNodePkg
@@ -64,7 +73,7 @@ describe('importBuilders()', () => {
 
   it('should import built-in Builders using `@canary`', async () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
-    const builders = await importBuilders(specs, process.cwd());
+    const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
       vercelNodePkg
