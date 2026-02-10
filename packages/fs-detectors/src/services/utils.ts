@@ -13,6 +13,7 @@ import {
   RUNTIME_BUILDERS,
   ENTRYPOINT_EXTENSIONS,
   STATIC_BUILDERS,
+  ROUTE_OWNING_BUILDERS,
 } from './types';
 
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
@@ -25,6 +26,18 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
 
 export function isStaticBuild(service: ResolvedService): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
+}
+
+/**
+ * Determines if a service uses a "route-owning" builder.
+ *
+ * Route-owning builders (e.g., `@vercel/next`, `@vercel/backends`) produce
+ * their own full route table with handle phases (filesystem, miss, rewrite,
+ * hit, error). The services system should NOT generate synthetic catch-all
+ * rewrites for them — instead, we rely on the builder's own `routes[]`.
+ */
+export function isRouteOwningBuilder(service: ResolvedService): boolean {
+  return ROUTE_OWNING_BUILDERS.has(service.builder.use);
 }
 
 /**

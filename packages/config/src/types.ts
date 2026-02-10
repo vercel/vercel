@@ -81,6 +81,11 @@ export interface FunctionConfig {
    */
   memory?: number;
   /**
+   * An array of regions where this Serverless Function will be deployed.
+   * This setting overrides the top-level `regions` setting for matching functions.
+   */
+  regions?: string[];
+  /**
    * The npm package name of a Runtime, including its version
    */
   runtime?: string;

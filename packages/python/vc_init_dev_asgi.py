@@ -75,13 +75,23 @@ async def app(scope, receive, send):
 
 
 if __name__ == '__main__':
-    # Development runner for ASGI: prefer uvicorn, then hypercorn.
+    # Development runner for ASGI: prefer fastapi dev, then uvicorn, then hypercorn.
     # Bind to localhost on an ephemeral port and emit a recognizable log line
     # so the caller can detect the bound port.
     host = '127.0.0.1'
+
+    try:
+        from fastapi_cli.cli import dev
+    except ImportError:
+        dev = None
+
+    if dev is not None:
+        dev(entrypoint='vc_init_dev_asgi:app', host=host, port=0, reload=True)
+        sys.exit(0)
+
     try:
         import uvicorn
-        uvicorn.run('vc_init_dev_asgi:app', host=host, port=0, use_colors=True)
+        uvicorn.run('vc_init_dev_asgi:app', host=host, port=0, use_colors=True, reload=True)
     except Exception:
         try:
             import asyncio
