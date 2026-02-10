@@ -1246,6 +1246,7 @@ export async function serverBuild({
       if (isCorrectManifests) {
         for (const manifest of [
           'routes-manifest.json',
+          'prerender-manifest.json',
           'server/pages-manifest.json',
           ...(mayFilterManifests && appPathRoutesManifest
             ? ['server/app-paths-manifest.json']
@@ -1265,6 +1266,18 @@ export async function serverBuild({
             manifestData.headers = [];
             manifestData.onMatchHeaders = [];
             delete manifestData.deploymentId;
+          } else if (manifest === 'prerender-manifest.json') {
+            // These can contain deployment id query strings, and are also very large.
+            // In Next.js minimal mode, they aren't used (the builder reads them and generates the
+            // config.json for Vercel)
+            for (const route of Object.values(manifestData.routes) as any) {
+              if (route.initialHeaders) {
+                route.initialHeaders = {};
+              }
+              if (route.experimentalBypassFor) {
+                route.experimentalBypassFor = [];
+              }
+            }
           } else if (
             manifest === 'server/pages-manifest.json' &&
             !shouldUse404Prerender
