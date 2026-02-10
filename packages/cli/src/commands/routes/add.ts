@@ -32,7 +32,7 @@ const MAX_NAME_LENGTH = 256;
 const MAX_DESCRIPTION_LENGTH = 1024;
 const MAX_CONDITIONS = 16;
 const VALID_SYNTAXES: SrcSyntax[] = ['regex', 'path-to-regexp', 'equals'];
-const REDIRECT_STATUS_CODES = [301, 302, 307, 308];
+const REDIRECT_STATUS_CODES = [301, 302, 303, 307, 308];
 
 /**
  * Strips leading and trailing quotes (single or double) from a string.
@@ -566,16 +566,6 @@ export default async function add(client: Client, argv: string[]) {
     finalDest && finalStatus && REDIRECT_STATUS_CODES.includes(finalStatus);
   const hasResponseHeaders = Object.keys(headers).length > 0;
   const hasTransforms = transforms.length > 0;
-  // Check if any transforms modify response headers (append/delete operations)
-  const hasResponseHeaderTransforms = transforms.some(
-    t => t.type === 'response.headers'
-  );
-
-  // Auto-set continue when route modifies response headers and doesn't set a final status.
-  const isTerminating = isRedirect || (finalStatus && !finalDest);
-  const hasAnyResponseHeaderMutation =
-    hasResponseHeaders || hasResponseHeaderTransforms;
-  const shouldContinue = hasAnyResponseHeaderMutation && !isTerminating;
 
   // Track telemetry for conditions and action types
   telemetry.trackCliFlagHasConditions(hasConditions.length > 0);
@@ -607,7 +597,6 @@ export default async function add(client: Client, argv: string[]) {
       ...(hasTransforms && { transforms }),
       ...(hasConditions.length > 0 && { has: hasConditions }),
       ...(missingConditions.length > 0 && { missing: missingConditions }),
-      ...(shouldContinue && { continue: true }),
     },
   };
 
