@@ -470,7 +470,6 @@ export function useDeleteRoute() {
       routes,
       version: {
         id: 'live-version',
-        s3Key: 'routes/live.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isLive: true,
@@ -519,7 +518,6 @@ export function useDeleteRoute() {
       deletedCount: body.routeIds.length,
       version: {
         id: 'new-staging-version',
-        s3Key: 'routes/staging.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isStaging: true,
@@ -541,7 +539,6 @@ export function useEditRoute() {
       routes,
       version: {
         id: 'live-version',
-        s3Key: 'routes/live.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isLive: true,
@@ -585,7 +582,6 @@ export function useEditRoute() {
       },
       version: {
         id: 'new-staging-version',
-        s3Key: 'routes/staging.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isStaging: true,
@@ -609,7 +605,6 @@ export function useStageRoutes() {
       routes,
       version: {
         id: 'live-version',
-        s3Key: 'routes/live.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isLive: true,
@@ -644,7 +639,6 @@ export function useStageRoutes() {
     res.json({
       version: {
         id: 'new-staging-version',
-        s3Key: 'routes/staging.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isStaging: true,
