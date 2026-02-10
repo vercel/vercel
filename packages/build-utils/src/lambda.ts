@@ -15,6 +15,22 @@ import type {
 
 export type { TriggerEvent };
 
+/**
+ * Sanitizes a function path to a valid consumer name.
+ * For queue/v2beta triggers, the consumer name is derived from the function path.
+ *
+ * Allowed characters: A-Z, a-z, 0-9, _, -
+ * - Dots are stripped (removed)
+ * - Other disallowed characters are replaced with hyphens
+ *
+ * @example
+ * sanitizeConsumerName('api/test.js') // => 'api-testjs'
+ * sanitizeConsumerName('api/users/handler.ts') // => 'api-users-handlerts'
+ */
+export function sanitizeConsumerName(functionPath: string): string {
+  return functionPath.replace(/\./g, '').replace(/[^A-Za-z0-9_-]/g, '-');
+}
+
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
 export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
@@ -287,8 +303,8 @@ export class Lambda {
 
         // Validate required type
         assert(
-          trigger.type === 'queue/v1beta',
-          `${prefix}.type must be "queue/v1beta"`
+          trigger.type === 'queue/v1beta' || trigger.type === 'queue/v2beta',
+          `${prefix}.type must be "queue/v1beta" or "queue/v2beta"`
         );
 
         // Validate required queue fields
@@ -298,14 +314,27 @@ export class Lambda {
         );
         assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
 
-        assert(
-          typeof trigger.consumer === 'string',
-          `${prefix}.consumer is required and must be a string`
-        );
-        assert(
-          trigger.consumer.length > 0,
-          `${prefix}.consumer cannot be empty`
-        );
+        // Version-specific validation
+        if (trigger.type === 'queue/v1beta') {
+          assert(
+            typeof trigger.consumer === 'string',
+            `${prefix}.consumer is required and must be a string`
+          );
+          assert(
+            trigger.consumer.length > 0,
+            `${prefix}.consumer cannot be empty`
+          );
+        } else if (trigger.type === 'queue/v2beta') {
+          assert(
+            (trigger as unknown as Record<string, unknown>).consumer ===
+              undefined,
+            `${prefix}.consumer is not allowed for queue/v2beta`
+          );
+          assert(
+            experimentalTriggers.length === 1,
+            '"experimentalTriggers" can only have one item for queue/v2beta'
+          );
+        }
 
         // Validate optional queue configuration
         if (trigger.maxDeliveries !== undefined) {

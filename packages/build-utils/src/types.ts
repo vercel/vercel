@@ -648,19 +648,9 @@ export interface Chain {
   headers: Record<string, string>;
 }
 
-/**
- * Queue trigger event for Vercel's queue system.
- * Handles "queue/v1beta" events with queue-specific configuration.
- */
-export interface TriggerEvent {
-  /** Event type - must be "queue/v1beta" (REQUIRED) */
-  type: 'queue/v1beta';
-
+interface TriggerEventBase {
   /** Name of the queue topic to consume from (REQUIRED) */
   topic: string;
-
-  /** Name of the consumer group for this trigger (REQUIRED) */
-  consumer: string;
 
   /**
    * Maximum number of delivery attempts for message processing (OPTIONAL)
@@ -690,6 +680,34 @@ export interface TriggerEvent {
    */
   maxConcurrency?: number;
 }
+
+/**
+ * Queue trigger event for Vercel's queue system (v1beta).
+ * Requires explicit consumer name.
+ */
+export interface TriggerEventV1 extends TriggerEventBase {
+  /** Event type - must be "queue/v1beta" (REQUIRED) */
+  type: 'queue/v1beta';
+
+  /** Name of the consumer group for this trigger (REQUIRED) */
+  consumer: string;
+}
+
+/**
+ * Queue trigger event for Vercel's queue system (v2beta).
+ * Consumer name is implicitly derived from the function path.
+ * Only one trigger per function is allowed.
+ */
+export interface TriggerEventV2 extends TriggerEventBase {
+  /** Event type - must be "queue/v2beta" (REQUIRED) */
+  type: 'queue/v2beta';
+}
+
+/**
+ * Queue trigger event for Vercel's queue system.
+ * Supports both v1beta (explicit consumer) and v2beta (implicit consumer from function path).
+ */
+export type TriggerEvent = TriggerEventV1 | TriggerEventV2;
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 

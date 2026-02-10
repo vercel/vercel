@@ -93,7 +93,7 @@ export interface FunctionConfig {
    */
   experimentalTriggers?: {
     /**
-     * Event type pattern this trigger handles
+     * Event type pattern this trigger handles (queue/v1beta or queue/v2beta)
      */
     type: string;
     /**
@@ -101,9 +101,9 @@ export interface FunctionConfig {
      */
     topic: string;
     /**
-     * Name of the consumer group for this trigger
+     * Name of the consumer group for this trigger (required for v1beta, not allowed for v2beta)
      */
-    consumer: string;
+    consumer?: string;
     /**
      * Maximum number of delivery attempts
      */
