@@ -16,8 +16,6 @@ Use `vercel api ls` to discover available endpoints.
 
 ## Other Commands
 
-- `vercel integration add <name>` — install a marketplace integration
-- `vercel integration list` — list integration resources
 - `vercel webhooks` — manage webhooks (create, ls, rm)
 - `vercel mcp` — set up MCP integration for AI agents
 - `vercel telemetry` — manage telemetry settings
