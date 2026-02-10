@@ -15,7 +15,7 @@ import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
 
 // Leave some room so we don't accidentally exceed Lambda limits due to overhead from zipping, other files, etc.
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 240 * 1024 * 1024;
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 
 const isWin = process.platform === 'win32';
 
