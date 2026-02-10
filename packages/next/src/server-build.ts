@@ -1320,6 +1320,8 @@ export async function serverBuild({
             );
 
             switch (manifest) {
+              case 'prerender-manifest.json':
+                break;
               case 'routes-manifest.json': {
                 const filterItem = (item: { page: string }) =>
                   normalizedPages.has(item.page);
