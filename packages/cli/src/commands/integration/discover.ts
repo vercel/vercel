@@ -38,28 +38,20 @@ function resolveTags(
   integrationTagIds: string[] | undefined,
   categoryTitleById: Map<string, string>
 ): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
+  const result = new Set<string>();
 
   const allTags = [...(integrationTagIds ?? []), ...(productTags ?? [])];
 
   for (const tag of allTags) {
     if (tag.startsWith('tag_')) {
       const title = categoryTitleById.get(tag);
-      if (title && !seen.has(title)) {
-        seen.add(title);
-        result.push(title);
-      }
+      result.add(title ?? tag.substring(4));
     } else if (!KNOWN_PROTOCOL_TYPES.has(tag)) {
-      const capitalized = tag.charAt(0).toUpperCase() + tag.slice(1);
-      if (!seen.has(capitalized)) {
-        seen.add(capitalized);
-        result.push(capitalized);
-      }
+      result.add(tag.charAt(0).toUpperCase() + tag.slice(1));
     }
   }
 
-  return result;
+  return [...result];
 }
 
 export async function discover(client: Client, args: string[]) {
@@ -145,11 +137,12 @@ export async function discover(client: Client, args: string[]) {
         tags: resolveTags(undefined, integration.tagIds, categoryTitleById),
       });
     } else {
-      const isMultiProduct = products.length > 1;
       for (const product of products) {
+        const needsCompoundSlug =
+          products.length > 1 || product.slug !== integration.slug;
         results.push({
           name: product.name,
-          slug: isMultiProduct
+          slug: needsCompoundSlug
             ? `${integration.slug}/${product.slug}`
             : integration.slug,
           provider: integration.name,

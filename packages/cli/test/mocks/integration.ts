@@ -905,7 +905,7 @@ const discoverIntegrations = [
     canInstall: true,
     products: [
       {
-        slug: 'postgres',
+        slug: 'neon',
         name: 'Neon Postgres',
         shortDescription: 'Serverless Postgres database',
         tags: ['postgres'],
