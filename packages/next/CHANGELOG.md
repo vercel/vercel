@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.28
+
+### Patch Changes
+
+- [ppr] Support config.cacheComponents ([#14937](https://github.com/vercel/vercel/pull/14937))
+
 ## 4.15.27
 
 ### Patch Changes
