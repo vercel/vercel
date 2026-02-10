@@ -2,7 +2,7 @@
 
 exports[`base level help output > help 1`] = `
 "
-  vercel [options] <command | path>
+  ▲ vercel [options] <command | path>
 
   For deploy command help, run \`vercel deploy --help\`
 

@@ -2,7 +2,7 @@
 
 exports[`help command > alias help output snapshots > alias help column width 40 1`] = `
 "
-  vercel alias [command]
+  ▲ vercel alias [command]
 
   Interact with deployment aliases      
 
@@ -89,7 +89,7 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
 exports[`help command > alias help output snapshots > alias help column width 80 1`] = `
 "
-  vercel alias [command]
+  ▲ vercel alias [command]
 
   Interact with deployment aliases                                              
 
@@ -135,7 +135,7 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
 exports[`help command > alias help output snapshots > alias help column width 120 1`] = `
 "
-  vercel alias [command]
+  ▲ vercel alias [command]
 
   Interact with deployment aliases                                                                                      
 
@@ -179,7 +179,7 @@ exports[`help command > alias help output snapshots > alias help column width 12
 
 exports[`help command > alias help output snapshots > alias list subcommand > alias list subcommand help column width 120 1`] = `
 "
-  vercel alias list [options]
+  ▲ vercel alias list [options]
 
   Show all aliases                                                                                                      
 
@@ -209,7 +209,7 @@ exports[`help command > alias help output snapshots > alias list subcommand > al
 
 exports[`help command > alias help output snapshots > alias remove subcommand > alias remove subcommand help column width 120 1`] = `
 "
-  vercel alias remove alias [options]
+  ▲ vercel alias remove alias [options]
 
   Remove an alias using its hostname                                                                                    
 
@@ -237,7 +237,7 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
 
 exports[`help command > alias help output snapshots > alias set subcommand > alias set subcommand help column width 120 1`] = `
 "
-  vercel alias set deployment alias
+  ▲ vercel alias set deployment alias
 
   Create a new alias                                                                                                    
 
@@ -260,7 +260,7 @@ exports[`help command > alias help output snapshots > alias set subcommand > ali
 
 exports[`help command > bisect help output snapshots > bisect help column width 40 1`] = `
 "
-  vercel bisect [options]
+  ▲ vercel bisect [options]
 
   Bisect the current project            
   interactively or via an automated     
@@ -348,7 +348,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
 exports[`help command > bisect help output snapshots > bisect help column width 80 1`] = `
 "
-  vercel bisect [options]
+  ▲ vercel bisect [options]
 
   Bisect the current project interactively or via an automated test script.     
 
@@ -396,7 +396,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
 exports[`help command > bisect help output snapshots > bisect help column width 120 1`] = `
 "
-  vercel bisect [options]
+  ▲ vercel bisect [options]
 
   Bisect the current project interactively or via an automated test script.                                             
 
@@ -442,7 +442,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
 exports[`help command > certs help output snapshots > certs add help output snapshots > certs add help column width 120 1`] = `
 "
-  vercel certs add [options]
+  ▲ vercel certs add [options]
 
   Add a new certificate                                                                                                 
 
@@ -472,7 +472,7 @@ exports[`help command > certs help output snapshots > certs add help output snap
 
 exports[`help command > certs help output snapshots > certs help column width 40 1`] = `
 "
-  vercel certs command
+  ▲ vercel certs command
 
   Interact with SSL certificates. This  
   command is intended for advanced use  
@@ -559,7 +559,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
 
 exports[`help command > certs help output snapshots > certs help column width 80 1`] = `
 "
-  vercel certs command
+  ▲ vercel certs command
 
   Interact with SSL certificates. This command is intended for advanced use     
   only. By default, Vercel manages your certificates automatically.             
@@ -607,7 +607,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
 
 exports[`help command > certs help output snapshots > certs help column width 120 1`] = `
 "
-  vercel certs command
+  ▲ vercel certs command
 
   Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your       
   certificates automatically.                                                                                           
@@ -653,7 +653,7 @@ exports[`help command > certs help output snapshots > certs help column width 12
 
 exports[`help command > certs help output snapshots > certs issue help output snapshots > certs issue help column width 120 1`] = `
 "
-  vercel certs issue cn [options]
+  ▲ vercel certs issue cn [options]
 
   Issue a new certificate for a domain                                                                                  
 
@@ -690,7 +690,7 @@ exports[`help command > certs help output snapshots > certs issue help output sn
 
 exports[`help command > certs help output snapshots > certs list help output snapshots > certs list help column width 120 1`] = `
 "
-  vercel certs list [options]
+  ▲ vercel certs list [options]
 
   Show all available certificates                                                                                       
 
@@ -725,7 +725,7 @@ exports[`help command > certs help output snapshots > certs list help output sna
 
 exports[`help command > certs help output snapshots > certs remove help output snapshots > certs remove help column width 120 1`] = `
 "
-  vercel certs remove id
+  ▲ vercel certs remove id
 
   Remove a certificate by id                                                                                            
 
@@ -754,7 +754,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 
 exports[`help command > deploy help output snapshots > deploy help column width 40 1`] = `
 "
-  vercel deploy [project-path] [options]
+  ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The    
   \`deploy\` command is the default       
@@ -969,7 +969,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
 exports[`help command > deploy help output snapshots > deploy help column width 80 1`] = `
 "
-  vercel deploy [project-path] [options]
+  ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command    
   for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
@@ -1050,7 +1050,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
 exports[`help command > deploy help output snapshots > deploy help column width 120 1`] = `
 "
-  vercel deploy [project-path] [options]
+  ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
   (\`vc deploy my-app\` equals \`vc my-app\`).                                                                              
@@ -1117,7 +1117,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
-"vercel dev [dir] [options]
+"▲ vercel dev [dir] [options]
 
   Starts the \`vercel dev\` server.                                               
 
@@ -1158,7 +1158,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 
 exports[`help command > dns help output snapshots > dns add help output snapshots > dns add help column width 120 1`] = `
 "
-  vercel dns add domain details
+  ▲ vercel dns add domain details
 
   Add a new DNS entry (see below for examples)                                                                          
 
@@ -1181,7 +1181,7 @@ exports[`help command > dns help output snapshots > dns add help output snapshot
 
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
-  vercel dns [command]
+  ▲ vercel dns [command]
 
   Interact with DNS entries for a       
   project                               
@@ -1303,7 +1303,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
 exports[`help command > dns help output snapshots > dns help column width 80 1`] = `
 "
-  vercel dns [command]
+  ▲ vercel dns [command]
 
   Interact with DNS entries for a project                                       
 
@@ -1369,7 +1369,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
 exports[`help command > dns help output snapshots > dns help column width 120 1`] = `
 "
-  vercel dns [command]
+  ▲ vercel dns [command]
 
   Interact with DNS entries for a project                                                                               
 
@@ -1432,7 +1432,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
 exports[`help command > dns help output snapshots > dns import help output snapshots > dns import help column width 120 1`] = `
 "
-  vercel dns import domain zonefile
+  ▲ vercel dns import domain zonefile
 
   Import a DNS zone file (see below for examples)                                                                       
 
@@ -1455,7 +1455,7 @@ exports[`help command > dns help output snapshots > dns import help output snaps
 
 exports[`help command > dns help output snapshots > dns list help output snapshots > dns list help column width 120 1`] = `
 "
-  vercel dns list domain [options]
+  ▲ vercel dns list domain [options]
 
   List all DNS entries for a domain                                                                                     
 
@@ -1484,7 +1484,7 @@ exports[`help command > dns help output snapshots > dns list help output snapsho
 
 exports[`help command > dns help output snapshots > dns remove help output snapshots > dns remove help column width 120 1`] = `
 "
-  vercel dns remove id [options]
+  ▲ vercel dns remove id [options]
 
   Remove a DNS entry using its ID                                                                                       
 
@@ -1512,7 +1512,7 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
 
 exports[`help command > domains help output snapshots > domains add help output snapshots > domains add help column width 120 1`] = `
 "
-  vercel domains add domain project [options]
+  ▲ vercel domains add domain project [options]
 
   Add a domain name that you already own to a Vercel Team                                                               
 
@@ -1548,7 +1548,7 @@ exports[`help command > domains help output snapshots > domains add help output 
 
 exports[`help command > domains help output snapshots > domains buy help output snapshots > domains buy help column width 120 1`] = `
 "
-  vercel domains buy domain
+  ▲ vercel domains buy domain
 
   Purchase a new domain name                                                                                            
 
@@ -1571,7 +1571,7 @@ exports[`help command > domains help output snapshots > domains buy help output 
 
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
-  vercel domains [command]
+  ▲ vercel domains [command]
 
   Manage domains                        
 
@@ -1682,7 +1682,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
 exports[`help command > domains help output snapshots > domains help column width 80 1`] = `
 "
-  vercel domains [command]
+  ▲ vercel domains [command]
 
   Manage domains                                                                
 
@@ -1721,7 +1721,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
 exports[`help command > domains help output snapshots > domains help column width 120 1`] = `
 "
-  vercel domains [command]
+  ▲ vercel domains [command]
 
   Manage domains                                                                                                        
 
@@ -1755,7 +1755,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
 exports[`help command > domains help output snapshots > domains inspect help output snapshots > domains inspect help column width 120 1`] = `
 "
-  vercel domains inspect domain
+  ▲ vercel domains inspect domain
 
   Displays information related to a domain                                                                              
 
@@ -1778,7 +1778,7 @@ exports[`help command > domains help output snapshots > domains inspect help out
 
 exports[`help command > domains help output snapshots > domains list help output snapshots > domains list help column width 120 1`] = `
 "
-  vercel domains list [options]
+  ▲ vercel domains list [options]
 
   Show all domains in a list                                                                                            
 
@@ -1814,7 +1814,7 @@ exports[`help command > domains help output snapshots > domains list help output
 
 exports[`help command > domains help output snapshots > domains move help output snapshots > domains move help column width 120 1`] = `
 "
-  vercel domains move domain destination [options]
+  ▲ vercel domains move domain destination [options]
 
   Move ownership of a domain name to another Vercel Team                                                                
 
@@ -1842,7 +1842,7 @@ exports[`help command > domains help output snapshots > domains move help output
 
 exports[`help command > domains help output snapshots > domains remove help output snapshots > domains remove help column width 120 1`] = `
 "
-  vercel domains remove domain [options]
+  ▲ vercel domains remove domain [options]
 
   Remove ownership of a domain name from a Vercel Team                                                                  
 
@@ -1870,7 +1870,7 @@ exports[`help command > domains help output snapshots > domains remove help outp
 
 exports[`help command > domains help output snapshots > domains transfer-in help output snapshots > domains transfer-in help column width 120 1`] = `
 "
-  vercel domains transfer-in domain [options]
+  ▲ vercel domains transfer-in domain [options]
 
   Transfer in a domain name to Vercel                                                                                   
 
@@ -1893,7 +1893,7 @@ exports[`help command > domains help output snapshots > domains transfer-in help
 
 exports[`help command > env help output snapshots > env add help output snapshots > env add help column width 120 1`] = `
 "
-  vercel env add name [environment] [options]
+  ▲ vercel env add name [environment] [options]
 
   Add an Environment Variable (see examples below)                                                                      
 
@@ -1955,7 +1955,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
 exports[`help command > env help output snapshots > env help column width 40 1`] = `
 "
-  vercel env command
+  ▲ vercel env command
 
   Interact with Environment Variables   
   for a Project                         
@@ -2074,7 +2074,7 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
 exports[`help command > env help output snapshots > env help column width 80 1`] = `
 "
-  vercel env command
+  ▲ vercel env command
 
   Interact with Environment Variables for a Project                             
 
@@ -2118,7 +2118,7 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
 exports[`help command > env help output snapshots > env help column width 120 1`] = `
 "
-  vercel env command
+  ▲ vercel env command
 
   Interact with Environment Variables for a Project                                                                     
 
@@ -2152,7 +2152,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
 exports[`help command > env help output snapshots > env list help output snapshots > env list help column width 120 1`] = `
 "
-  vercel env list [environment] [git-branch] [options]
+  ▲ vercel env list [environment] [git-branch] [options]
 
   List all Environment Variables for a Project                                                                          
 
@@ -2181,7 +2181,7 @@ exports[`help command > env help output snapshots > env list help output snapsho
 
 exports[`help command > env help output snapshots > env pull help output snapshots > env pull help column width 120 1`] = `
 "
-  vercel env pull [filename] [options]
+  ▲ vercel env pull [filename] [options]
 
   Pull all Development Environment Variables from the cloud and write to a file [.env.local]                            
 
@@ -2218,7 +2218,7 @@ exports[`help command > env help output snapshots > env pull help output snapsho
 
 exports[`help command > env help output snapshots > env remove help output snapshots > env remove help column width 120 1`] = `
 "
-  vercel env remove name [environment] [options]
+  ▲ vercel env remove name [environment] [options]
 
   Remove an Environment Variable (see examples below)                                                                   
 
@@ -2263,7 +2263,7 @@ exports[`help command > env help output snapshots > env remove help output snaps
 
 exports[`help command > git help output snapshots > git connect help output snapshots > git connect help column width 120 1`] = `
 "
-  vercel git connect [git-url] [options]
+  ▲ vercel git connect [git-url] [options]
 
   Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository                   
 
@@ -2301,7 +2301,7 @@ exports[`help command > git help output snapshots > git connect help output snap
 
 exports[`help command > git help output snapshots > git disconnect help output snapshots > git disconnect help column width 120 1`] = `
 "
-  vercel git disconnect [options]
+  ▲ vercel git disconnect [options]
 
   Disconnect the Git repository from your Vercel Project                                                                
 
@@ -2335,7 +2335,7 @@ exports[`help command > git help output snapshots > git disconnect help output s
 
 exports[`help command > git help output snapshots > git help column width 40 1`] = `
 "
-  vercel git command
+  ▲ vercel git command
 
   Manage your Git repository connection 
   to the current Project                
@@ -2414,7 +2414,7 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
 
 exports[`help command > git help output snapshots > git help column width 80 1`] = `
 "
-  vercel git command
+  ▲ vercel git command
 
   Manage your Git repository connection to the current Project                  
 
@@ -2447,7 +2447,7 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
 
 exports[`help command > git help output snapshots > git help column width 120 1`] = `
 "
-  vercel git command
+  ▲ vercel git command
 
   Manage your Git repository connection to the current Project                                                          
 
@@ -2477,7 +2477,7 @@ exports[`help command > git help output snapshots > git help column width 120 1`
 
 exports[`help command > init help output snapshots > init help column width 40 1`] = `
 "
-  vercel init [example] [dir] [options]
+  ▲ vercel init [example] [dir] [options]
 
   Initialize example Vercel Projects    
 
@@ -2559,7 +2559,7 @@ exports[`help command > init help output snapshots > init help column width 40 1
 
 exports[`help command > init help output snapshots > init help column width 80 1`] = `
 "
-  vercel init [example] [dir] [options]
+  ▲ vercel init [example] [dir] [options]
 
   Initialize example Vercel Projects                                            
 
@@ -2607,7 +2607,7 @@ exports[`help command > init help output snapshots > init help column width 80 1
 
 exports[`help command > init help output snapshots > init help column width 120 1`] = `
 "
-  vercel init [example] [dir] [options]
+  ▲ vercel init [example] [dir] [options]
 
   Initialize example Vercel Projects                                                                                    
 
@@ -2653,7 +2653,7 @@ exports[`help command > init help output snapshots > init help column width 120 
 
 exports[`help command > inspect help output snapshots > inspect help column width 40 1`] = `
 "
-  vercel inspect url|deploymentId [options]
+  ▲ vercel inspect url|deploymentId [options]
 
   Show information about a deployment.  
 
@@ -2755,7 +2755,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > inspect help output snapshots > inspect help column width 80 1`] = `
 "
-  vercel inspect url|deploymentId [options]
+  ▲ vercel inspect url|deploymentId [options]
 
   Show information about a deployment.                                          
 
@@ -2815,7 +2815,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > inspect help output snapshots > inspect help column width 120 1`] = `
 "
-  vercel inspect url|deploymentId [options]
+  ▲ vercel inspect url|deploymentId [options]
 
   Show information about a deployment.                                                                                  
 
@@ -2872,7 +2872,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
 "
-  vercel integration balance integration
+  ▲ vercel integration balance integration
 
   Shows the balances and thresholds of a specified marketplace integration                                              
 
@@ -2902,7 +2902,7 @@ exports[`help command > integration help output snapshots > integration balance 
 
 exports[`help command > integration help output snapshots > integration help column width 40 1`] = `
 "
-  vercel integration command
+  ▲ vercel integration command
 
   Manage marketplace integrations       
 
@@ -2996,7 +2996,7 @@ exports[`help command > integration help output snapshots > integration help col
 
 exports[`help command > integration help output snapshots > integration help column width 80 1`] = `
 "
-  vercel integration command
+  ▲ vercel integration command
 
   Manage marketplace integrations                                               
 
@@ -3038,7 +3038,7 @@ exports[`help command > integration help output snapshots > integration help col
 
 exports[`help command > integration help output snapshots > integration help column width 120 1`] = `
 "
-  vercel integration command
+  ▲ vercel integration command
 
   Manage marketplace integrations                                                                                       
 
@@ -3076,7 +3076,7 @@ exports[`help command > integration help output snapshots > integration help col
 
 exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 120 1`] = `
 "
-  vercel integration list [project] [options]
+  ▲ vercel integration list [project] [options]
 
   Lists all resources from marketplace integrations                                                                     
 
@@ -3122,7 +3122,7 @@ exports[`help command > integration help output snapshots > integration list sub
 
 exports[`help command > integration-resource help output snapshots > integration-resource create-threshold subcommand > integration-resource create-threshold subcommand help column width 120 1`] = `
 "
-  vercel integration-resource create-threshold resource minimum spend limit [options]
+  ▲ vercel integration-resource create-threshold resource minimum spend limit [options]
 
   Creates a threshold for a resource (or installation, if the integration uses installation-level thresholds)           
 
@@ -3158,7 +3158,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > integration-resource help output snapshots > integration-resource disconnect subcommand > integration-resource disconnect subcommand help column width 120 1`] = `
 "
-  vercel integration-resource disconnect resource [project] [options]
+  ▲ vercel integration-resource disconnect resource [project] [options]
 
   Disconnect a resource from a project, or the current project                                                          
 
@@ -3205,7 +3205,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > integration-resource help output snapshots > integration-resource help column width 40 1`] = `
 "
-  vercel integration-resource command
+  ▲ vercel integration-resource command
 
   Manage marketplace integration        
   resources                             
@@ -3295,7 +3295,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > integration-resource help output snapshots > integration-resource help column width 80 1`] = `
 "
-  vercel integration-resource command
+  ▲ vercel integration-resource command
 
   Manage marketplace integration resources                                      
 
@@ -3335,7 +3335,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > integration-resource help output snapshots > integration-resource help column width 120 1`] = `
 "
-  vercel integration-resource command
+  ▲ vercel integration-resource command
 
   Manage marketplace integration resources                                                                              
 
@@ -3366,7 +3366,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > integration-resource help output snapshots > integration-resource remove subcommand > integration-resource remove subcommand help column width 120 1`] = `
 "
-  vercel integration-resource remove resource [options]
+  ▲ vercel integration-resource remove resource [options]
 
   Delete an integration resource                                                                                        
 
@@ -3408,40 +3408,26 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > link help output snapshots > link help column width 40 1`] = `
 "
-  vercel link [options]
+  ▲ vercel link [options]
 
   Link a local directory to a Vercel    
   Project.                              
 
   Options:
 
-  -p,  --project <NAME>           Specify a  
-                                  project    
-                                  name       
-       --project-id <PROJECT_ID>  Link to an 
-                                  existing   
-                                  project by 
-                                  ID         
-  -r,  --repo                     Link       
-                                  multiple   
-                                  projects   
-                                  based on   
-                                  Git        
-                                  repository 
-                                  (alpha)    
-       --team <TEAM_ID_OR_SLUG>   Scope (team
-                                  ID or slug)
-                                  to link the
-                                  project to 
-  -y,  --yes                      Skip       
-                                  questions  
-                                  when       
-                                  setting up 
-                                  new project
-                                  using      
-                                  default    
-                                  scope and  
-                                  settings   
+  -p,  --project <NAME>  Specify a      
+                         project name   
+  -r,  --repo            Link multiple  
+                         projects based 
+                         on Git         
+                         repository     
+                         (alpha)        
+  -y,  --yes             Skip questions 
+                         when setting up
+                         new project    
+                         using default  
+                         scope and      
+                         settings       
 
 
   Global Options:
@@ -3515,19 +3501,16 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
 exports[`help command > link help output snapshots > link help column width 80 1`] = `
 "
-  vercel link [options]
+  ▲ vercel link [options]
 
   Link a local directory to a Vercel Project.                                   
 
   Options:
 
-  -p,  --project <NAME>           Specify a project name                             
-       --project-id <PROJECT_ID>  Link to an existing project by ID                  
-  -r,  --repo                     Link multiple projects based on Git repository     
-                                  (alpha)                                            
-       --team <TEAM_ID_OR_SLUG>   Scope (team ID or slug) to link the project to     
-  -y,  --yes                      Skip questions when setting up new project using   
-                                  default scope and settings                         
+  -p,  --project <NAME>  Specify a project name                                 
+  -r,  --repo            Link multiple projects based on Git repository (alpha) 
+  -y,  --yes             Skip questions when setting up new project using       
+                         default scope and settings                             
 
 
   Global Options:
@@ -3569,17 +3552,15 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
 exports[`help command > link help output snapshots > link help column width 120 1`] = `
 "
-  vercel link [options]
+  ▲ vercel link [options]
 
   Link a local directory to a Vercel Project.                                                                           
 
   Options:
 
-  -p,  --project <NAME>           Specify a project name                                                                     
-       --project-id <PROJECT_ID>  Link to an existing project by ID                                                          
-  -r,  --repo                     Link multiple projects based on Git repository (alpha)                                     
-       --team <TEAM_ID_OR_SLUG>   Scope (team ID or slug) to link the project to                                             
-  -y,  --yes                      Skip questions when setting up new project using default scope and settings                
+  -p,  --project <NAME>  Specify a project name                                                                         
+  -r,  --repo            Link multiple projects based on Git repository (alpha)                                         
+  -y,  --yes             Skip questions when setting up new project using default scope and settings                    
 
 
   Global Options:
@@ -3619,7 +3600,7 @@ exports[`help command > link help output snapshots > link help column width 120 
 
 exports[`help command > list help output snapshots > list help column width 40 1`] = `
 "
-  vercel list [app] [options]
+  ▲ vercel list [app] [options]
 
   List app deployments for an app.      
 
@@ -3748,7 +3729,7 @@ exports[`help command > list help output snapshots > list help column width 40 1
 
 exports[`help command > list help output snapshots > list help column width 80 1`] = `
 "
-  vercel list [app] [options]
+  ▲ vercel list [app] [options]
 
   List app deployments for an app.                                              
 
@@ -3815,7 +3796,7 @@ exports[`help command > list help output snapshots > list help column width 80 1
 
 exports[`help command > list help output snapshots > list help column width 120 1`] = `
 "
-  vercel list [app] [options]
+  ▲ vercel list [app] [options]
 
   List app deployments for an app.                                                                                      
 
@@ -3877,7 +3858,7 @@ exports[`help command > list help output snapshots > list help column width 120 
 
 exports[`help command > login help output snapshots > login help column width 40 1`] = `
 "
-  vercel login [email or team id] [options]
+  ▲ vercel login [email or team id] [options]
 
   Sign in to your Vercel account.       
 
@@ -3940,7 +3921,7 @@ exports[`help command > login help output snapshots > login help column width 40
 
 exports[`help command > login help output snapshots > login help column width 80 1`] = `
 "
-  vercel login [email or team id] [options]
+  ▲ vercel login [email or team id] [options]
 
   Sign in to your Vercel account.                                               
 
@@ -3971,7 +3952,7 @@ exports[`help command > login help output snapshots > login help column width 80
 
 exports[`help command > login help output snapshots > login help column width 120 1`] = `
 "
-  vercel login [email or team id] [options]
+  ▲ vercel login [email or team id] [options]
 
   Sign in to your Vercel account.                                                                                       
 
@@ -4000,7 +3981,7 @@ exports[`help command > login help output snapshots > login help column width 12
 
 exports[`help command > project help output snapshots > project add help output snapshots > project add help column width 120 1`] = `
 "
-  vercel project add name
+  ▲ vercel project add name
 
   Add a new project                                                                                                     
 
@@ -4029,7 +4010,7 @@ exports[`help command > project help output snapshots > project add help output 
 
 exports[`help command > project help output snapshots > project help column width 40 1`] = `
 "
-  vercel project [command]
+  ▲ vercel project [command]
 
   Manage your Vercel projects           
 
@@ -4102,7 +4083,7 @@ exports[`help command > project help output snapshots > project help column widt
 
 exports[`help command > project help output snapshots > project help column width 80 1`] = `
 "
-  vercel project [command]
+  ▲ vercel project [command]
 
   Manage your Vercel projects                                                   
 
@@ -4135,7 +4116,7 @@ exports[`help command > project help output snapshots > project help column widt
 
 exports[`help command > project help output snapshots > project help column width 120 1`] = `
 "
-  vercel project [command]
+  ▲ vercel project [command]
 
   Manage your Vercel projects                                                                                           
 
@@ -4166,7 +4147,7 @@ exports[`help command > project help output snapshots > project help column widt
 
 exports[`help command > project help output snapshots > project inspect help output snapshots > project inspect help column width 120 1`] = `
 "
-  vercel project inspect [name] [options]
+  ▲ vercel project inspect [name] [options]
 
   Displays information related to a project                                                                             
 
@@ -4204,7 +4185,7 @@ exports[`help command > project help output snapshots > project inspect help out
 
 exports[`help command > project help output snapshots > project list help output snapshots > project list help column width 120 1`] = `
 "
-  vercel project list [options]
+  ▲ vercel project list [options]
 
   Show all projects in the selected scope                                                                               
 
@@ -4244,7 +4225,7 @@ exports[`help command > project help output snapshots > project list help output
 
 exports[`help command > project help output snapshots > project remove help output snapshots > project remove help column width 120 1`] = `
 "
-  vercel project remove name
+  ▲ vercel project remove name
 
   Delete a project                                                                                                      
 
@@ -4267,7 +4248,7 @@ exports[`help command > project help output snapshots > project remove help outp
 
 exports[`help command > promote help output snapshots > promote help column width 40 1`] = `
 "
-  vercel promote url|deploymentId [options]
+  ▲ vercel promote url|deploymentId [options]
 
   Promote an existing Deployment to     
   current                               
@@ -4351,7 +4332,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 
 exports[`help command > promote help output snapshots > promote help column width 80 1`] = `
 "
-  vercel promote url|deploymentId [options]
+  ▲ vercel promote url|deploymentId [options]
 
   Promote an existing Deployment to current                                     
 
@@ -4393,7 +4374,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 
 exports[`help command > promote help output snapshots > promote help column width 120 1`] = `
 "
-  vercel promote url|deploymentId [options]
+  ▲ vercel promote url|deploymentId [options]
 
   Promote an existing Deployment to current                                                                             
 
@@ -4433,7 +4414,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 
 exports[`help command > promote help output snapshots > promote status help output snapshots > promote status help column width 120 1`] = `
 "
-  vercel promote status [project] [options]
+  ▲ vercel promote status [project] [options]
 
   Show the status of any current pending promotions                                                                     
 
@@ -4469,7 +4450,7 @@ exports[`help command > promote help output snapshots > promote status help outp
 
 exports[`help command > pull help output snapshots > pull help column width 40 1`] = `
 "
-  vercel pull [project-path] [options]
+  ▲ vercel pull [project-path] [options]
 
   Pull latest environment variables and 
   project settings from Vercel.         
@@ -4567,7 +4548,7 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
 
 exports[`help command > pull help output snapshots > pull help column width 80 1`] = `
 "
-  vercel pull [project-path] [options]
+  ▲ vercel pull [project-path] [options]
 
   Pull latest environment variables and project settings from Vercel.           
 
@@ -4623,7 +4604,7 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
 
 exports[`help command > pull help output snapshots > pull help column width 120 1`] = `
 "
-  vercel pull [project-path] [options]
+  ▲ vercel pull [project-path] [options]
 
   Pull latest environment variables and project settings from Vercel.                                                   
 
@@ -4675,7 +4656,7 @@ exports[`help command > pull help output snapshots > pull help column width 120 
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 40 1`] = `
 "
-  vercel redeploy [url|deploymentId] [options]
+  ▲ vercel redeploy [url|deploymentId] [options]
 
   Rebuild and deploy a previous         
   deployment.                           
@@ -4756,7 +4737,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 80 1`] = `
 "
-  vercel redeploy [url|deploymentId] [options]
+  ▲ vercel redeploy [url|deploymentId] [options]
 
   Rebuild and deploy a previous deployment.                                     
 
@@ -4801,7 +4782,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 120 1`] = `
 "
-  vercel redeploy [url|deploymentId] [options]
+  ▲ vercel redeploy [url|deploymentId] [options]
 
   Rebuild and deploy a previous deployment.                                                                             
 
@@ -4844,7 +4825,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > remove help output snapshots > remove help column width 40 1`] = `
 "
-  vercel remove name|deploymentId ... [options]
+  ▲ vercel remove name|deploymentId ... [options]
 
   Remove deployment(s) by project name  
   or deployment ID.                     
@@ -4923,7 +4904,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
 exports[`help command > remove help output snapshots > remove help column width 80 1`] = `
 "
-  vercel remove name|deploymentId ... [options]
+  ▲ vercel remove name|deploymentId ... [options]
 
   Remove deployment(s) by project name or deployment ID.                        
 
@@ -4968,7 +4949,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
 exports[`help command > remove help output snapshots > remove help column width 120 1`] = `
 "
-  vercel remove name|deploymentId ... [options]
+  ▲ vercel remove name|deploymentId ... [options]
 
   Remove deployment(s) by project name or deployment ID.                                                                
 
@@ -5011,7 +4992,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
 exports[`help command > rollback help output snapshots > rollback help column width 40 1`] = `
 "
-  vercel rollback url|deploymentId [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous     
   deployment                            
@@ -5093,7 +5074,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback help column width 80 1`] = `
 "
-  vercel rollback url|deploymentId [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous deployment                                  
 
@@ -5135,7 +5116,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback help column width 120 1`] = `
 "
-  vercel rollback url|deploymentId [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous deployment                                                                          
 
@@ -5175,7 +5156,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
 "
-  vercel rollback url|deploymentId [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous deployment                                                                          
 
@@ -5215,7 +5196,7 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
 exports[`help command > target help output snapshots > target help column width 40 1`] = `
 "
-  vercel target command
+  ▲ vercel target command
 
   Manage your Vercel Project's          
   "targets" (custom environments).      
@@ -5280,7 +5261,7 @@ exports[`help command > target help output snapshots > target help column width 
 
 exports[`help command > target help output snapshots > target help column width 80 1`] = `
 "
-  vercel target command
+  ▲ vercel target command
 
   Manage your Vercel Project's "targets" (custom environments).                 
 
@@ -5310,7 +5291,7 @@ exports[`help command > target help output snapshots > target help column width 
 
 exports[`help command > target help output snapshots > target help column width 120 1`] = `
 "
-  vercel target command
+  ▲ vercel target command
 
   Manage your Vercel Project's "targets" (custom environments).                                                         
 
@@ -5338,7 +5319,7 @@ exports[`help command > target help output snapshots > target help column width 
 
 exports[`help command > target help output snapshots > target list help output snapshots > target list help column width 120 1`] = `
 "
-  vercel target list [options]
+  ▲ vercel target list [options]
 
   List targets defined for the current Project                                                                          
 
@@ -5372,7 +5353,7 @@ exports[`help command > target help output snapshots > target list help output s
 
 exports[`help command > teams help output snapshots > teams add help output snapshots > teams add help column width 120 1`] = `
 "
-  vercel teams add
+  ▲ vercel teams add
 
   Create a new team                                                                                                     
 
@@ -5395,7 +5376,7 @@ exports[`help command > teams help output snapshots > teams add help output snap
 
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
-  vercel teams command
+  ▲ vercel teams command
 
   Manage Teams under your Vercel        
   account                               
@@ -5467,7 +5448,7 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
 exports[`help command > teams help output snapshots > teams help column width 80 1`] = `
 "
-  vercel teams command
+  ▲ vercel teams command
 
   Manage Teams under your Vercel account                                        
 
@@ -5500,7 +5481,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
 exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
 "
-  vercel teams command
+  ▲ vercel teams command
 
   Manage Teams under your Vercel account                                                                                
 
@@ -5531,7 +5512,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
 exports[`help command > teams help output snapshots > teams invite help output snapshots > teams invite help column width 120 1`] = `
 "
-  vercel teams invite email ...
+  ▲ vercel teams invite email ...
 
   Invite a new member to a team                                                                                         
 
@@ -5564,7 +5545,7 @@ exports[`help command > teams help output snapshots > teams invite help output s
 
 exports[`help command > teams help output snapshots > teams list help output snapshots > teams list help column width 120 1`] = `
 "
-  vercel teams list [options]
+  ▲ vercel teams list [options]
 
   Show all teams that you're a member of                                                                                
 
@@ -5599,7 +5580,7 @@ exports[`help command > teams help output snapshots > teams list help output sna
 
 exports[`help command > teams help output snapshots > teams switch help output snapshots > teams switch help column width 120 1`] = `
 "
-  vercel teams switch [name]
+  ▲ vercel teams switch [name]
 
   Switch to a different team                                                                                            
 
@@ -5628,7 +5609,7 @@ exports[`help command > teams help output snapshots > teams switch help output s
 
 exports[`help command > telemetry help output snapshots > telemetry disable help output snapshots > telemetry disable help column width 120 1`] = `
 "
-  vercel telemetry disable
+  ▲ vercel telemetry disable
 
   Disables telemetry collection                                                                                         
 
@@ -5651,7 +5632,7 @@ exports[`help command > telemetry help output snapshots > telemetry disable help
 
 exports[`help command > telemetry help output snapshots > telemetry enable help output snapshots > telemetry enable help column width 120 1`] = `
 "
-  vercel telemetry enable
+  ▲ vercel telemetry enable
 
   Enables telemetry collection                                                                                          
 
@@ -5674,7 +5655,7 @@ exports[`help command > telemetry help output snapshots > telemetry enable help 
 
 exports[`help command > telemetry help output snapshots > telemetry help column width 40 1`] = `
 "
-  vercel telemetry command
+  ▲ vercel telemetry command
 
   Allows you to enable or disable       
   telemetry collection                  
@@ -5744,7 +5725,7 @@ exports[`help command > telemetry help output snapshots > telemetry help column 
 
 exports[`help command > telemetry help output snapshots > telemetry help column width 80 1`] = `
 "
-  vercel telemetry command
+  ▲ vercel telemetry command
 
   Allows you to enable or disable telemetry collection                          
 
@@ -5776,7 +5757,7 @@ exports[`help command > telemetry help output snapshots > telemetry help column 
 
 exports[`help command > telemetry help output snapshots > telemetry help column width 120 1`] = `
 "
-  vercel telemetry command
+  ▲ vercel telemetry command
 
   Allows you to enable or disable telemetry collection                                                                  
 
@@ -5806,7 +5787,7 @@ exports[`help command > telemetry help output snapshots > telemetry help column 
 
 exports[`help command > telemetry help output snapshots > telemetry status help output snapshots > telemetry status help column width 120 1`] = `
 "
-  vercel telemetry status
+  ▲ vercel telemetry status
 
   Shows whether telemetry collection is enabled or disabled                                                             
 
@@ -5829,7 +5810,7 @@ exports[`help command > telemetry help output snapshots > telemetry status help 
 
 exports[`help command > whoami help output snapshots > whoami help column width 40 1`] = `
 "
-  vercel whoami [options]
+  ▲ vercel whoami [options]
 
   Shows the username of the currently   
   logged in user.                       
@@ -5900,7 +5881,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
 exports[`help command > whoami help output snapshots > whoami help column width 80 1`] = `
 "
-  vercel whoami [options]
+  ▲ vercel whoami [options]
 
   Shows the username of the currently logged in user.                           
 
@@ -5936,7 +5917,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
 exports[`help command > whoami help output snapshots > whoami help column width 120 1`] = `
 "
-  vercel whoami [options]
+  ▲ vercel whoami [options]
 
   Shows the username of the currently logged in user.                                                                   
 

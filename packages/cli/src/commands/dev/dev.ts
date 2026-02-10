@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
@@ -12,7 +11,6 @@ import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
-import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
@@ -24,7 +22,6 @@ import {
   isExperimentalServicesEnabled,
 } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
-import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 
 type Options = {
   '--listen': string;
@@ -101,33 +98,6 @@ export default async function dev(
     }
   }
 
-  let lockAcquired = false;
-  if (isExperimentalServicesEnabled()) {
-    const port = typeof listen[0] === 'number' ? listen[0] : 0;
-    const lockResult = await acquireDevLock(cwd, port);
-
-    if (!lockResult.acquired) {
-      output.error(
-        `Another ${getCommandName('dev')} process is already running for this project.`
-      );
-      if (lockResult.existingLock) {
-        const { existingLock } = lockResult;
-        const startTime = ms(Date.now() - existingLock.startedAt);
-        output.print(`  Port: ${chalk.cyan(existingLock.port)}\n`);
-        output.print(`  PID: ${chalk.cyan(existingLock.pid)}\n`);
-        output.print(`  Started: ${chalk.cyan(startTime)} ago\n`);
-        output.log(
-          `To stop the existing process, press Ctrl+C in its terminal or run: ` +
-            cmd(`kill ${existingLock.pid}`)
-        );
-      } else {
-        output.log(lockResult.reason);
-      }
-      return 1;
-    }
-    lockAcquired = true;
-  }
-
   const devServer = new DevServer(cwd, {
     projectSettings,
     envValues,
@@ -162,37 +132,12 @@ export default async function dev(
     }
   });
 
-  let cleanupInProgress = false;
-  const cleanup = async (signal: string) => {
-    if (cleanupInProgress) return;
-    cleanupInProgress = true;
-
-    output.debug(`Received ${signal}, shutting down...`);
-
+  // listen to SIGTERM for graceful shutdown
+  process.on('SIGTERM', () => {
     clearTimeout(timeout);
     controller.abort();
-
-    if (lockAcquired) {
-      releaseDevLock(cwd);
-    }
-
-    await devServer.stop();
-
-    let exitCode = 0;
-    switch (signal) {
-      case 'SIGINT':
-        exitCode = 130;
-        break;
-      case 'SIGTERM':
-        exitCode = 143;
-        break;
-    }
-
-    process.exit(exitCode);
-  };
-
-  process.on('SIGTERM', async () => await cleanup('SIGTERM'));
-  process.on('SIGINT', async () => await cleanup('SIGINT'));
+    devServer.stop();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
@@ -207,11 +152,6 @@ export default async function dev(
 
   try {
     await devServer.start(...listen);
-  } catch (err) {
-    if (lockAcquired) {
-      releaseDevLock(cwd);
-    }
-    throw err;
   } finally {
     clearTimeout(timeout);
     controller.abort();
