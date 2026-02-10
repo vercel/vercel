@@ -7,7 +7,6 @@ import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 import {
   exec,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,

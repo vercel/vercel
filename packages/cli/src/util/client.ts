@@ -13,12 +13,6 @@ import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
-import fetch, {
-  type BodyInit,
-  Headers,
-  type RequestInit,
-  type Response,
-} from 'node-fetch';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
@@ -48,7 +42,7 @@ const isSAMLError = (v: any): v is SAMLError => {
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
-  body?: BodyInit | JSONObject;
+  body?: RequestInit['body'] | NodeJS.ReadableStream | JSONObject;
   json?: boolean;
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
@@ -326,21 +320,22 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   private async _fetch(_url: string, opts: FetchOptions = {}) {
+    const { accountId, useCurrentTeam, body: requestBody, ...init } = opts;
     const url = new URL(_url, this.apiUrl);
 
-    if (opts.accountId || opts.useCurrentTeam !== false) {
-      if (opts.accountId) {
-        if (opts.accountId.startsWith('team_')) {
-          url.searchParams.set('teamId', opts.accountId);
+    if (accountId || useCurrentTeam !== false) {
+      if (accountId) {
+        if (accountId.startsWith('team_')) {
+          url.searchParams.set('teamId', accountId);
         } else {
           url.searchParams.delete('teamId');
         }
-      } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
+      } else if (useCurrentTeam !== false && this.config.currentTeam) {
         url.searchParams.set('teamId', this.config.currentTeam);
       }
     }
 
-    const headers = new Headers(opts.headers);
+    const headers = new Headers(init.headers);
     headers.set('user-agent', ua);
 
     await this.ensureAuthorized();
@@ -349,12 +344,12 @@ export default class Client extends EventEmitter implements Stdio {
       headers.set('authorization', `Bearer ${this.authConfig.token}`);
     }
 
-    let body;
-    if (isJSONObject(opts.body)) {
-      body = JSON.stringify(opts.body);
+    let body: RequestInit['body'];
+    if (isJSONObject(requestBody)) {
+      body = JSON.stringify(requestBody);
       headers.set('content-type', 'application/json; charset=utf-8');
     } else {
-      body = opts.body;
+      body = requestBody as RequestInit['body'];
     }
 
     const requestId = this.requestIdCounter++;
@@ -365,10 +360,10 @@ export default class Client extends EventEmitter implements Stdio {
             res.statusText
           }: ${res.headers.get('x-vercel-id')}`;
         } else {
-          return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
+          return `#${requestId} → ${init.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url, { ...init, headers, body })
     );
   }
 

@@ -1,4 +1,3 @@
-import type { Response } from 'node-fetch';
 import errorOutput from './output/error';
 import bytes from 'bytes';
 import type { APIError } from './errors-ts';

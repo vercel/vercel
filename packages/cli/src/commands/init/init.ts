@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
@@ -143,12 +144,20 @@ async function extractExample(
         throw new Error(`Could not get ${name}.tar.gz`);
       }
 
+      if (!res.body) {
+        throw new Error(
+          `Could not download ${name}.tar.gz: response has no body`
+        );
+      }
+
+      const responseBody = res.body;
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        res.body.on('error', reject);
+        const body = Readable.fromWeb(responseBody);
+        body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        res.body.pipe(extractor);
+        body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(

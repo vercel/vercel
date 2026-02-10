@@ -7,8 +7,6 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import type { RequestInfo } from 'node-fetch';
-import fetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -38,7 +36,7 @@ const pickUrl = (stdout: string) => {
   return lines[lines.length - 1];
 };
 
-const waitForDeployment = async (href: RequestInfo) => {
+const waitForDeployment = async (href: string | URL) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');

@@ -601,9 +601,6 @@ importers:
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
-      '@types/node-fetch':
-        specifier: 2.5.10
-        version: 2.5.10
       '@types/npm-package-arg':
         specifier: 6.1.0
         version: 6.1.0
@@ -805,9 +802,6 @@ importers:
       ms:
         specifier: 2.1.2
         version: 2.1.2
-      node-fetch:
-        specifier: 2.6.7
-        version: 2.6.7
       npm-package-arg:
         specifier: 6.1.0
         version: 6.1.0
@@ -877,6 +871,9 @@ importers:
       typescript:
         specifier: 4.9.5
         version: 4.9.5
+      undici:
+        specifier: 6.21.0
+        version: 6.21.0
       utility-types:
         specifier: 2.1.0
         version: 2.1.0
@@ -6762,7 +6759,7 @@ packages:
       source-map-support: 0.5.21
       stream-slice: 0.1.2
       typescript: 5.7.3
-      undici: 6.21.2
+      undici: 6.21.0
     dev: true
 
   /@renovatebot/pep440@4.2.1:
@@ -9027,13 +9024,6 @@ packages:
       '@types/node': 20.11.0
       '@types/react': 19.2.7
       '@types/react-loadable': 5.5.11
-    dev: true
-
-  /@types/node-fetch@2.5.10:
-    resolution: {integrity: sha512-IpkX0AasN44hgEad0gEF/V6EgR5n69VEqPEgnmoM8GsIGro3PowbWs4tR6IhxUTyPLpOn+fiGG6nrQhcmoCuIQ==}
-    dependencies:
-      '@types/node': 20.11.0
-      form-data: 3.0.3
     dev: true
 
   /@types/node-fetch@2.5.4:
@@ -20081,8 +20071,8 @@ packages:
       '@fastify/busboy': 2.1.1
     dev: false
 
-  /undici@6.21.2:
-    resolution: {integrity: sha512-uROZWze0R0itiAKVPsYhFov9LxrPMHLMEQFszeI2gCN6bnIIZ8twzBCJcN2LJrBBLfrP0t1FW0g+JmKVl8Vk1g==}
+  /undici@6.21.0:
+    resolution: {integrity: sha512-BUgJXc752Kou3oOIuU1i+yZZypyZRqNPW0vqoMPl8VaoalSfeR0D8/t4iAS3yirs79SSMTxTag+ZC86uswv+Cw==}
     engines: {node: '>=18.17'}
     dev: true
 

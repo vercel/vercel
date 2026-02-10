@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import type { Response } from 'node-fetch';
 import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
 import type Client from '../client';
 import output from '../../output-manager';

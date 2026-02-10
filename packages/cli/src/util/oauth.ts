@@ -1,4 +1,3 @@
-import fetch, { type Response } from 'node-fetch';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -215,9 +214,6 @@ export async function deviceAccessTokenRequest(options: {
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           ...options,
         }),
-        // TODO: Drop `node-fetch` and just use `signal`
-        timeout: 10 * 1000,
-        // @ts-expect-error: Signal is part of `fetch` spec, should drop `node-fetch`
         signal: AbortSignal.timeout(10 * 1000),
       }),
     ];

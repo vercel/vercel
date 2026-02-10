@@ -1,4 +1,5 @@
 // Native
+import { Readable } from 'stream';
 import { URLSearchParams } from 'url';
 
 // Packages
@@ -60,12 +61,14 @@ async function printEvents(
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
-          // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
           signal: abortController?.signal,
         });
 
         if (eventsRes.ok) {
-          const readable = eventsRes.body;
+          if (!eventsRes.body) {
+            throw new Error('Deployment events response has no body');
+          }
+          const readable = Readable.fromWeb(eventsRes.body);
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry

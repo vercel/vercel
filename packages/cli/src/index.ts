@@ -68,6 +68,7 @@ import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
+import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -147,6 +148,10 @@ let { isTTY } = process.stdout;
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
+  // Set the global fetch dispatcher to automatically use HTTP_PROXY /
+  // HTTPS_PROXY / NO_PROXY environment variables for all fetch() calls.
+  setGlobalDispatcher(new EnvHttpProxyAgent());
+
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;

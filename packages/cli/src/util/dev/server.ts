@@ -3,7 +3,6 @@ import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
-import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
@@ -1560,7 +1559,7 @@ export default class DevServer {
             }
           );
 
-          const middlewareBody = await middlewareRes.buffer();
+          const middlewareBody = Buffer.from(await middlewareRes.arrayBuffer());
 
           if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(

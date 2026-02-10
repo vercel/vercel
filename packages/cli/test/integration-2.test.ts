@@ -1,6 +1,5 @@
 import path from 'path';
 import { URL } from 'url';
-import fetch from 'node-fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
