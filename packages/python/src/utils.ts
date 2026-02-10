@@ -59,9 +59,11 @@ export function createVenvEnv(
 export async function ensureVenv({
   pythonPath,
   venvPath,
+  uvPath,
 }: {
   pythonPath: string;
   venvPath: string;
+  uvPath?: string | null;
 }) {
   const marker = join(venvPath, 'pyvenv.cfg');
   try {
@@ -72,7 +74,11 @@ export async function ensureVenv({
   }
   await fs.promises.mkdir(venvPath, { recursive: true });
   console.log(`Creating virtual environment at "${venvPath}"...`);
-  await execa(pythonPath, ['-m', 'venv', venvPath]);
+  if (uvPath) {
+    await execa(uvPath, ['venv', venvPath]);
+  } else {
+    await execa(pythonPath, ['-m', 'venv', venvPath]);
+  }
 }
 
 export function getVenvPythonBin(venvPath: string) {
