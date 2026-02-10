@@ -100,10 +100,7 @@ function isBuilderEntryLoadable(
     require_.resolve(entryPath, { paths: [dirname(pkgPath)] });
     return true;
   } catch (err: unknown) {
-    if (
-      isErrnoException(err) &&
-      (err as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND'
-    ) {
+    if (isErrnoException(err) && err.code === 'MODULE_NOT_FOUND') {
       return false;
     }
     throw err;
@@ -254,10 +251,7 @@ export async function resolveBuilders(
         }
         output.debug(`Found "${name}" in CLI's node_modules`);
       } catch (err: unknown) {
-        if (
-          !isErrnoException(err) ||
-          (err as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND'
-        ) {
+        if (!isErrnoException(err) || err.code !== 'MODULE_NOT_FOUND') {
           throw err;
         }
         // Not found anywhere and no peerDep - this is an error on second run
