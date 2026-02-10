@@ -1,5 +1,12 @@
 # @vercel/koa
 
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies [[`2edb2843d99bdfa4bf4697826a5f6eeedccdef78`](https://github.com/vercel/vercel/commit/2edb2843d99bdfa4bf4697826a5f6eeedccdef78)]:
+  - @vercel/node@5.6.0
+
 ## 0.1.15
 
 ### Patch Changes
