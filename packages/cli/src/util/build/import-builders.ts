@@ -232,8 +232,8 @@ export async function resolveBuilders(
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
-        builderPkg = await readJSON(pkgPath);
-        if (!isBuilderEntryLoadable(pkgPath, builderPkg)) {
+        const cliBuilderPkg = await readJSON(pkgPath);
+        if (!isBuilderEntryLoadable(pkgPath, cliBuilderPkg)) {
           output.debug(
             `"${name}" entry point missing in CLI's node_modules, will install or fail`
           );
@@ -249,6 +249,7 @@ export async function resolveBuilders(
           buildersToAdd.add(spec);
           continue;
         }
+        builderPkg = cliBuilderPkg;
         output.debug(`Found "${name}" in CLI's node_modules`);
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'MODULE_NOT_FOUND') {
