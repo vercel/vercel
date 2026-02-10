@@ -895,6 +895,70 @@ const autoProvisionResponses: Record<
   },
 };
 
+const discoverIntegrations = [
+  {
+    slug: 'neon',
+    name: 'Neon',
+    shortDescription: 'Serverless Postgres with branching',
+    tagIds: ['tag_databases', 'tag_dev_tools'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'neon',
+        name: 'Neon Postgres',
+        shortDescription: 'Serverless Postgres database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-multi',
+    name: 'Acme Multi',
+    shortDescription: 'Multi-product integration',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'acme-kv',
+        name: 'Acme KV',
+        shortDescription: 'Key-value store',
+        tags: ['storage', 'redis'],
+      },
+      {
+        slug: 'acme-db',
+        name: 'Acme DB',
+        shortDescription: 'Relational database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-hidden',
+    name: 'Acme Hidden',
+    shortDescription: 'Should be filtered out because canInstall is false',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: false,
+    products: [{ slug: 'storage', name: 'Storage' }],
+  },
+  {
+    slug: 'acme-external',
+    name: 'Acme External',
+    shortDescription: 'Should be filtered out because isMarketplace is false',
+    tagIds: ['tag_dev_tools'],
+    isMarketplace: false,
+    canInstall: true,
+    products: [{ slug: 'connect', name: 'Connect' }],
+  },
+];
+
+const discoverCategories = [
+  { id: 'tag_databases', title: 'Storage' },
+  { id: 'tag_dev_tools', title: 'DevTools' },
+];
+
 export function useResources(returnError?: number) {
   client.scenario.get('/:version/storage/stores', (req, res) => {
     if (returnError) {
@@ -912,6 +976,29 @@ export function useResources(returnError?: number) {
     }
 
     res.json(resources);
+  });
+}
+
+export function useIntegrationDiscover(opts?: {
+  integrationsStatus?: number;
+  categoriesStatus?: number;
+}) {
+  client.scenario.get('/v2/integrations/integrations', (_req, res) => {
+    if (opts?.integrationsStatus) {
+      res.status(opts.integrationsStatus);
+      res.end();
+      return;
+    }
+    res.json(discoverIntegrations);
+  });
+
+  client.scenario.get('/v2/integrations/categories', (_req, res) => {
+    if (opts?.categoriesStatus) {
+      res.status(opts.categoriesStatus);
+      res.end();
+      return;
+    }
+    res.json(discoverCategories);
   });
 }
 
