@@ -703,6 +703,13 @@ async function doBuild(
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
       if (service.builder.src) {
+        const existing = servicesByBuilderSrc.get(service.builder.src);
+        if (existing) {
+          throw new NowBuildError({
+            code: 'DUPLICATE_SERVICE_BUILDER_SRC',
+            message: `Services "${existing.name}" and "${service.name}" both have the same builder source "${service.builder.src}". Each service must have a unique builder source.`,
+          });
+        }
         servicesByBuilderSrc.set(service.builder.src, service);
       }
     }
