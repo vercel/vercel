@@ -59,6 +59,7 @@ export async function getPyprojectEntrypoint(
 
 /**
  * Detect a Python entrypoint for any Python framework using AST-based detection.
+ * Searches within `workPath` only — callers handle workspace scoping.
  */
 export async function detectGenericPythonEntrypoint(
   workPath: string,
@@ -81,11 +82,8 @@ export async function detectGenericPythonEntrypoint(
     }
 
     // Search candidate locations using AST-based detection
-    const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
-
-    for (const candidate of candidates) {
+    for (const candidate of PYTHON_CANDIDATE_ENTRYPOINTS) {
+      if (!fsFiles[candidate]) continue;
       const isValid = await isPythonEntrypoint(fsFiles[candidate] as FileFsRef);
       if (isValid) {
         debug(`Detected Python entrypoint: ${candidate}`);
@@ -102,17 +100,44 @@ export async function detectGenericPythonEntrypoint(
 }
 
 /**
- * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
+ * Run the full detection pipeline (AST candidates + pyproject.toml) in a single directory.
+ * Returns a path relative to `dir`.
+ */
+async function detectInDir(
+  dir: string,
+  entrypoint: string
+): Promise<string | null> {
+  const detected = await detectGenericPythonEntrypoint(dir, entrypoint);
+  if (detected) return detected;
+  return getPyprojectEntrypoint(dir);
+}
+
+/**
+ * Detect a Python entrypoint path for a given framework relative to workPath,
+ * or return null if not found.
+ *
+ * When a `serviceWorkspace` is provided (e.g. `"backend"` from the service
+ * resolver), detection is scoped to that directory
  */
 export async function detectPythonEntrypoint(
   _framework: PythonFramework,
   workPath: string,
-  configuredEntrypoint: string
+  configuredEntrypoint: string,
+  serviceWorkspace?: string
 ): Promise<string | null> {
-  const entrypoint = await detectGenericPythonEntrypoint(
-    workPath,
-    configuredEntrypoint
-  );
-  if (entrypoint) return entrypoint;
-  return await getPyprojectEntrypoint(workPath);
+  if (serviceWorkspace) {
+    const workspacePath = join(workPath, serviceWorkspace);
+    // Strip the workspace prefix to get the local entrypoint
+    // e.g. "backend/index.py" → "index.py"
+    const localEntrypoint = configuredEntrypoint.startsWith(
+      serviceWorkspace + '/'
+    )
+      ? configuredEntrypoint.slice(serviceWorkspace.length + 1)
+      : configuredEntrypoint;
+
+    const result = await detectInDir(workspacePath, localEntrypoint);
+    return result ? pathPosix.join(serviceWorkspace, result) : null;
+  }
+
+  return detectInDir(workPath, configuredEntrypoint);
 }

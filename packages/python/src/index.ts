@@ -168,7 +168,8 @@ export const build: BuildV3 = async ({
     const detected = await detectPythonEntrypoint(
       config.framework as PythonFramework,
       workPath,
-      entrypoint
+      entrypoint,
+      config.serviceWorkspace as string | undefined
     );
     if (detected) {
       debug(
