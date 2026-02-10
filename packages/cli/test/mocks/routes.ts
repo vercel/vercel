@@ -311,7 +311,6 @@ export function useUpdateRouteVersion(options?: {
 
   const versions = (options?.versions ?? defaultVersions).map((v, i) => ({
     id: v.id,
-    s3Key: `routes/${v.id}.json`,
     lastModified: Date.now() - i * 60000,
     createdBy: 'user@example.com',
     isStaging: v.isStaging ?? false,
@@ -382,7 +381,6 @@ export function useUpdateRouteVersion(options?: {
       res.json({
         version: {
           id: version.id,
-          s3Key: version.s3Key,
           lastModified: Date.now(),
           createdBy: version.createdBy,
           isLive: body.action === 'promote' || body.action === 'restore',
@@ -433,7 +431,6 @@ export function useRoutesWithDiffForPublish() {
       routes,
       version: {
         id: 'staging-version',
-        s3Key: 'routes/staging.json',
         lastModified: Date.now(),
         createdBy: 'user@example.com',
         isStaging: true,
