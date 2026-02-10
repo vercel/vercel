@@ -51,10 +51,13 @@ function getFrameworkEnvPrefix(
  * Generate environment variables for service URLs.
  *
  * For each web service, generates:
- * 1. A base env var (e.g., BACKEND_URL)
- * 2. Framework-prefixed versions for each frontend framework in the deployment
- *    (e.g., VITE_BACKEND_URL, NEXT_PUBLIC_BACKEND_URL) so they can be accessed
- *    in client-side code.
+ * 1. A base env var with the full absolute URL (e.g., BACKEND_URL=https://deploy.vercel.app/api)
+ *    for server-side use.
+ * 2. Framework-prefixed versions with only the route prefix path
+ *    (e.g., NEXT_PUBLIC_BACKEND_URL=/api, VITE_BACKEND_URL=/api) for client-side use.
+ *    Using relative paths avoids CORS issues since the browser resolves them against
+ *    the current origin, which works correctly across production domains, preview
+ *    deployments, and custom domains.
  *
  * Environment variables that are already set in `currentEnv` will NOT be overwritten,
  * allowing user-defined values to take precedence.
@@ -87,19 +90,23 @@ export function getServiceUrlEnvVars(
     }
 
     const baseEnvVarName = serviceNameToEnvVar(service.name);
-    const url = computeServiceUrl(deploymentUrl, service.routePrefix);
+    const absoluteUrl = computeServiceUrl(deploymentUrl, service.routePrefix);
 
-    // Add the base env var (e.g., BACKEND_URL) if not already set
+    // Add the base env var with full absolute URL (e.g., BACKEND_URL)
+    // for server-side use where relative paths won't resolve
     if (!(baseEnvVarName in currentEnv)) {
-      envVars[baseEnvVarName] = url;
+      envVars[baseEnvVarName] = absoluteUrl;
     }
 
-    // Add framework-prefixed versions for each frontend framework in the deployment
-    // e.g., VITE_BACKEND_URL, NEXT_PUBLIC_BACKEND_URL
+    // Add framework-prefixed versions with only the route prefix path
+    // (e.g., NEXT_PUBLIC_BACKEND_URL, VITE_BACKEND_URL) for client-side use.
+    // Using relative paths ensures the browser resolves requests against the
+    // current origin, avoiding CORS errors when the deployment URL differs
+    // from the production/custom domain.
     for (const prefix of frameworkPrefixes) {
       const prefixedEnvVarName = `${prefix}${baseEnvVarName}`;
       if (!(prefixedEnvVarName in currentEnv)) {
-        envVars[prefixedEnvVarName] = url;
+        envVars[prefixedEnvVarName] = service.routePrefix;
       }
     }
   }
