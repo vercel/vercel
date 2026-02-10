@@ -43,6 +43,7 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  isRouteOwningBuilder,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -59,6 +60,7 @@ import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { scrubArgv } from '../../util/build/scrub-argv';
+import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
@@ -501,26 +503,6 @@ async function doBuild(
     }
   }
 
-  if (localConfig.customErrorPage) {
-    const errorPages =
-      typeof localConfig.customErrorPage === 'string'
-        ? [localConfig.customErrorPage]
-        : Object.values(localConfig.customErrorPage);
-
-    for (const page of errorPages) {
-      if (page) {
-        const src = join(workPath, page);
-        if (!existsSync(src)) {
-          throw new NowBuildError({
-            code: 'CUSTOM_ERROR_PAGE_NOT_FOUND',
-            message: `The custom error page "${page}" was not found in "${workPath}".`,
-            link: 'https://vercel.com/docs/projects/project-configuration#custom-error-page',
-          });
-        }
-      }
-    }
-  }
-
   const projectSettings = {
     ...project.settings,
     ...pickOverrides(localConfig),
@@ -695,6 +677,24 @@ async function doBuild(
   }
   const diagnostics: Files = {};
 
+  const hasDetectedServices =
+    detectedServices !== undefined && detectedServices.length > 0;
+  const servicesByBuilderSrc = new Map<string, Service>();
+  if (hasDetectedServices) {
+    for (const service of detectedServices!) {
+      if (service.builder.src) {
+        const existing = servicesByBuilderSrc.get(service.builder.src);
+        if (existing) {
+          throw new NowBuildError({
+            code: 'DUPLICATE_SERVICE_BUILDER_SRC',
+            message: `Services "${existing.name}" and "${service.name}" both have the same builder source "${service.builder.src}". Each service must have a unique builder source.`,
+          });
+        }
+        servicesByBuilderSrc.set(service.builder.src, service);
+      }
+    }
+  }
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -706,25 +706,108 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
+      // When a service lives in a subdirectory, e.g. /frontend
+      // (workspace !== '.'), we need to:
+      // 1. Set workPath to the service's workspace directory
+      // 2. Strip the workspace prefix from the entrypoint
+      // 3. Scope the files map to only include files within the workspace
+      // This ensures builders like Next.js receive the correct workPath and
+      // entrypoint, so their routes are emitted relative to the workspace root
+      // (not polluted with the workspace directory prefix).
+      const service = hasDetectedServices
+        ? servicesByBuilderSrc.get(build.src)
+        : undefined;
+
+      let buildWorkPath = workPath;
+      let buildEntrypoint = build.src;
+      let buildFiles: Files = filesMap;
+
+      if (service && service.workspace !== '.') {
+        const wsPrefix = service.workspace + '/';
+        buildWorkPath = join(workPath, service.workspace);
+
+        // Strip workspace prefix from entrypoint:
+        // e.g., "frontend/package.json" → "package.json"
+        buildEntrypoint = build.src.startsWith(wsPrefix)
+          ? build.src.slice(wsPrefix.length)
+          : build.src;
+
+        // Scope files to the service workspace — re-key paths relative to
+        // the workspace root so builders see "package.json" not "frontend/package.json"
+        buildFiles = {};
+        for (const [filePath, file] of Object.entries(filesMap)) {
+          if (filePath.startsWith(wsPrefix)) {
+            buildFiles[filePath.slice(wsPrefix.length)] = file;
+          }
+        }
+
+        output.debug(
+          `Service "${service.name}": workspace-rooted build at "${buildWorkPath}", ` +
+            `entrypoint "${buildEntrypoint}" (original: "${build.src}")`
+        );
+      }
+
+      // Set VERCEL_PROJECT_SETTINGS_* env vars.
+      // For services: use service-specific values instead of project-level settings
+      // (the project-level framework is "services", which is meaningless to individual builders).
+      const settingsForEnv = service
+        ? {
+            buildCommand: service.buildCommand ?? undefined,
+            installCommand: service.installCommand ?? undefined,
+            outputDirectory: projectSettings.outputDirectory ?? undefined,
+            nodeVersion: projectSettings.nodeVersion ?? undefined,
+          }
+        : projectSettings;
+
       for (const key of [
         'buildCommand',
         'installCommand',
         'outputDirectory',
         'nodeVersion',
       ] as const) {
-        const value = projectSettings[key];
+        const value = settingsForEnv[key];
+        const envKey =
+          `VERCEL_PROJECT_SETTINGS_` +
+          key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
         if (typeof value === 'string') {
-          const envKey =
-            `VERCEL_PROJECT_SETTINGS_` +
-            key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
           process.env[envKey] = value;
           output.debug(`Setting env ${envKey} to "${value}"`);
+        } else {
+          delete process.env[envKey];
         }
       }
 
       const isFrontendBuilder = build.config && 'framework' in build.config;
-      const buildConfig: Config = isZeroConfig
-        ? {
+      // For services builds, the builder framework is set by the service resolver,
+      // the project-level framework is 'services'.
+      const builderFramework =
+        build.config?.framework ?? projectSettings.framework;
+
+      let buildConfig: Config;
+
+      if (isZeroConfig) {
+        if (service) {
+          // Services build: use service-specific config from resolution.
+          // build.config already contains framework, routePrefix, memory, etc.
+          buildConfig = {
+            ...build.config,
+            // Override project-level settings with service-specific ones.
+            // The project-level framework is "services" which must NOT be
+            // propagated to individual builders.
+            projectSettings: {
+              ...projectSettings,
+              framework: service.framework ?? null,
+              buildCommand: service.buildCommand ?? null,
+              installCommand: service.installCommand ?? null,
+            },
+            installCommand: service.installCommand ?? undefined,
+            buildCommand: service.buildCommand ?? undefined,
+            framework: builderFramework,
+            nodeVersion: projectSettings.nodeVersion,
+            bunVersion: localConfig.bunVersion ?? undefined,
+          };
+        } else {
+          buildConfig = {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
             ...build.config,
             projectSettings,
@@ -734,20 +817,23 @@ async function doBuild(
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
-          }
-        : {
-            ...(build.config || {}),
-            bunVersion: localConfig.bunVersion ?? undefined,
           };
+        }
+      } else {
+        buildConfig = {
+          ...(build.config || {}),
+          bunVersion: localConfig.bunVersion ?? undefined,
+        };
+      }
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,
       });
 
       const buildOptions: BuildOptions = {
-        files: filesMap,
-        entrypoint: build.src,
-        workPath,
+        files: buildFiles,
+        entrypoint: buildEntrypoint,
+        workPath: buildWorkPath,
         repoRootPath,
         config: buildConfig,
         meta,
@@ -765,6 +851,7 @@ async function doBuild(
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
         if (
+          !hasDetectedServices &&
           buildConfig.zeroConfig &&
           isFrontendBuilder &&
           'output' in buildResult &&
@@ -774,7 +861,10 @@ async function doBuild(
             f => f.slug === buildConfig.framework
           );
           if (framework) {
-            const defaultRoutes = await getFrameworkRoutes(framework, workPath);
+            const defaultRoutes = await getFrameworkRoutes(
+              framework,
+              buildWorkPath
+            );
             buildResult.routes = defaultRoutes;
           }
         }
@@ -817,7 +907,9 @@ async function doBuild(
         buildResult.output &&
         (isBackendBuilder(build) || build.use === '@vercel/python')
       ) {
-        const routesJsonPath = join(workPath, '.vercel', 'routes.json');
+        // Use service workspace path for routes.json lookup, since the builder
+        // writes routes.json relative to its workPath
+        const routesJsonPath = join(buildWorkPath, '.vercel', 'routes.json');
         if (existsSync(routesJsonPath)) {
           try {
             const routesJson = await readJSONFile(routesJsonPath);
@@ -874,6 +966,21 @@ async function doBuild(
         }
       }
 
+      if (
+        hasDetectedServices &&
+        service &&
+        isRouteOwningBuilder(service) &&
+        'routes' in buildResult &&
+        Array.isArray(buildResult.routes) &&
+        detectedServices
+      ) {
+        buildResult.routes = scopeRoutesToServiceOwnership({
+          routes: buildResult.routes as Route[],
+          owner: service,
+          allServices: detectedServices,
+        });
+      }
+
       // Store the build result to generate the final `config.json` after
       // all builds have completed
       buildResults.set(build, buildResult);
@@ -901,7 +1008,7 @@ async function doBuild(
               builderPkg,
               vercelConfig: localConfig,
               standalone,
-              workPath,
+              workPath: buildWorkPath,
             })
           )
           .then(
@@ -1012,10 +1119,25 @@ async function doBuild(
   )
     .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
     .map(b => {
+      const build = b[0];
+      const buildResult = b[1] as BuildResultV2Typical;
+      let entrypoint = build.src!;
+
+      if (hasDetectedServices && typeof build.src === 'string') {
+        const service = servicesByBuilderSrc.get(build.src);
+        if (
+          service &&
+          service.type === 'web' &&
+          typeof service.routePrefix === 'string'
+        ) {
+          entrypoint = getServicesMergeEntrypoint(service, build.src);
+        }
+      }
+
       return {
-        use: b[0].use,
-        entrypoint: b[0].src!,
-        routes: (b[1] as BuildResultV2Typical).routes,
+        use: build.use,
+        entrypoint,
+        routes: buildResult.routes,
       };
     });
   if (zeroConfigRoutes.length) {
@@ -1310,4 +1432,42 @@ async function getFrameworkRoutes(
     routes = framework.defaultRoutes;
   }
   return routes;
+}
+
+function normalizeServiceRoutePrefix(routePrefix: string): string {
+  let prefix = routePrefix.startsWith('/') ? routePrefix : `/${routePrefix}`;
+  if (prefix !== '/' && prefix.endsWith('/')) {
+    prefix = prefix.slice(0, -1);
+  }
+  return prefix;
+}
+
+/**
+ * Build a synthetic `entrypoint` key used only when merging builder route tables
+ * in services mode.
+ *
+ * `mergeRoutes()` sorts builder routes by `entrypoint` lexicographically. If we
+ * used the real build src (file paths), ordering would be unrelated to URL
+ * specificity. In services mode we instead want more specific prefixes (longer
+ * routePrefix) to win before broader ones.
+ *
+ * So we create the following key for merge ordering:
+ *   `svc:${sortKey}:${normalizedPrefix}:${serviceName}:${buildSrc}`
+ *
+ * Example:
+ *   "/api/fastapi" (len 12) -> "svc:09988:/api/fastapi:fastapi-api:services/fastapi-api/main.py"
+ *   "/api"         (len 4)  -> "svc:09996:/api:api:services/api/index.ts"
+ *
+ * This key is only for merge ordering. It does not change build entrypoints,
+ * output paths, or routing destinations.
+ */
+function getServicesMergeEntrypoint(
+  service: Service,
+  buildSrc: string
+): string {
+  const routePrefix =
+    typeof service.routePrefix === 'string' ? service.routePrefix : '/';
+  const normalized = normalizeServiceRoutePrefix(routePrefix);
+  const sortKey = String(10000 - normalized.length).padStart(5, '0');
+  return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
 }

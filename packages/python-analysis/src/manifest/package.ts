@@ -45,6 +45,28 @@ export enum PythonManifestKind {
 }
 
 /**
+ * Kinds of Python lock files.
+ *
+ * Lock files pin exact dependency versions for reproducible installs.
+ */
+export enum PythonLockFileKind {
+  /** uv's lock file format. */
+  UvLock = 'uv.lock',
+  /** PEP 751 standard lock file format. */
+  PylockToml = 'pylock.toml',
+}
+
+/**
+ * Information about a detected lock file.
+ */
+export interface PythonLockFile {
+  /** Relative path to the lock file. */
+  path: RelPath;
+  /** The lock file format. */
+  kind: PythonLockFileKind;
+}
+
+/**
  * Kinds of Python package manifests that are converted to pyproject.toml format.
  *
  * These legacy or alternative formats are parsed and converted to a normalized
@@ -89,6 +111,8 @@ export interface PythonManifest {
   origin?: PythonManifestOrigin;
   /** Whether this manifest represents a workspace root. */
   isRoot?: boolean;
+  /** Lock file associated with this manifest, if one exists. */
+  lockFile?: PythonLockFile;
 }
 
 /**
@@ -166,6 +190,8 @@ export interface PythonPackage {
   requiresPython?: PythonConstraint[];
   /** The workspace root manifest, if this package is part of a workspace. */
   workspaceManifest?: PythonManifest;
+  /** Lock file at the workspace root, if one exists. */
+  workspaceLockFile?: PythonLockFile;
 }
 
 /**
@@ -236,6 +262,7 @@ export async function discoverPythonPackage({
 
   let entrypointManifest: PythonManifest | undefined;
   let workspaceManifest: PythonManifest | undefined;
+  let workspaceLockFile: PythonLockFile | undefined;
 
   if (manifests.length === 0) {
     // No Python manifests detected in the repo
@@ -249,6 +276,8 @@ export async function discoverPythonPackage({
       manifests
     );
     workspaceManifest = entrypointWorkspaceManifest;
+    // Propagate workspace lock file from workspace root manifest
+    workspaceLockFile = entrypointWorkspaceManifest.lockFile;
     configs = configs.filter(config =>
       Object.values(config).some(
         cfg =>
@@ -270,6 +299,7 @@ export async function discoverPythonPackage({
   return {
     manifest: entrypointManifest,
     workspaceManifest,
+    workspaceLockFile,
     configs,
     requiresPython,
   };
@@ -420,6 +450,33 @@ async function loadPythonManifest(
   return manifest;
 }
 
+/**
+ * Check for lock files in the given directory.
+ * Priority: uv.lock > pylock.toml (uv.lock is more common currently)
+ */
+async function maybeLoadLockFile(
+  root: AbsPath,
+  subdir: RelPath
+): Promise<PythonLockFile | undefined> {
+  // Check for uv.lock first (higher priority)
+  const uvLockRelPath = path.join(subdir, 'uv.lock');
+  const uvLockPath = path.join(root, uvLockRelPath);
+  const uvLockContent = await readFileTextIfExists(uvLockPath);
+  if (uvLockContent != null) {
+    return { path: uvLockRelPath, kind: PythonLockFileKind.UvLock };
+  }
+
+  // Check for pylock.toml (PEP 751 standard lock file)
+  const pylockRelPath = path.join(subdir, 'pylock.toml');
+  const pylockPath = path.join(root, pylockRelPath);
+  const pylockContent = await readFileTextIfExists(pylockPath);
+  if (pylockContent != null) {
+    return { path: pylockRelPath, kind: PythonLockFileKind.PylockToml };
+  }
+
+  return undefined;
+}
+
 async function maybeLoadPyProjectToml(
   root: AbsPath,
   subdir: RelPath
@@ -475,9 +532,13 @@ async function maybeLoadPyProjectToml(
     }
   }
 
+  // Check for lock files in the same directory
+  const lockFile = await maybeLoadLockFile(root, subdir);
+
   return {
     path: pyprojectTomlRelPath,
     data: pyproject,
+    lockFile,
   };
 }
 

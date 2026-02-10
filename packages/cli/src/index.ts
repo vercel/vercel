@@ -704,6 +704,10 @@ const main = async () => {
           telemetry.trackCliCommandEnv(userSuppliedSubCommand);
           func = require('./commands/env').default;
           break;
+        case 'flags':
+          telemetry.trackCliCommandFlags(userSuppliedSubCommand);
+          func = require('./commands/flags').default;
+          break;
         case 'git':
           telemetry.trackCliCommandGit(userSuppliedSubCommand);
           func = require('./commands/git').default;

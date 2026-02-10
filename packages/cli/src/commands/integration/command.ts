@@ -21,6 +21,21 @@ export const addSubcommand = {
       deprecated: false,
       argument: 'NAME',
     },
+    {
+      name: 'no-connect',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Skip connecting the resource to the current project (also skips env pull)',
+    },
+    {
+      name: 'no-env-pull',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Skip running env pull after provisioning',
+    },
   ],
   examples: [
     {
