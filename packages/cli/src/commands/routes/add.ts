@@ -98,36 +98,6 @@ function collectHeadersAndTransforms(transformFlags: TransformFlags): {
   return { headers, transforms };
 }
 
-/**
- * Escapes special regex characters in a string.
- * Used for building condition value patterns (equals, contains).
- */
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Condition operators that match the frontend's behavior.
- * Each operator compiles user input to a regex pattern for the API.
- */
-type ConditionOperator = 'eq' | 'contains' | 're' | 'exists';
-
-/**
- * Compiles a condition operator and value to a regex pattern for the API.
- * Matches the frontend's buildConditionValue() in form-state.ts.
- */
-function buildConditionValue(
-  operator: ConditionOperator,
-  value: string,
-): string | undefined {
-  if (operator === 'exists') return undefined;
-  if (operator === 're') return value;
-  const escapedValue = escapeRegExp(value);
-  if (operator === 'contains') return `.*${escapedValue}.*`;
-  // 'eq'
-  return `^${escapedValue}$`;
-}
-
 const VALID_ACTION_TYPES = ['rewrite', 'redirect', 'set-status'] as const;
 
 /**
@@ -818,7 +788,6 @@ async function collectInteractiveConditions(
     let conditionValue: string;
 
     if (targetType === 'host') {
-      // Host conditions use an operator to build the value pattern
       const operator = await client.input.select({
         message: 'How to match the host:',
         choices: [
@@ -845,11 +814,8 @@ async function collectInteractiveConditions(
         },
       });
 
-      const compiledValue = buildConditionValue(
-        operator as ConditionOperator,
-        hostInput,
-      );
-      conditionValue = `host:${compiledValue}`;
+      // Store as host:op=value — parseConditions will compile the operator
+      conditionValue = `host:${operator}=${hostInput}`;
     } else {
       const key = await client.input.text({
         message: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} name:`,
@@ -867,7 +833,8 @@ async function collectInteractiveConditions(
       });
 
       if (operator === 'exists') {
-        conditionValue = `${targetType}:${key}`;
+        // Store as type:key:exists — parseConditions will handle it
+        conditionValue = `${targetType}:${key}:exists`;
       } else {
         const valueInput = await client.input.text({
           message:
@@ -886,13 +853,8 @@ async function collectInteractiveConditions(
           },
         });
 
-        const compiledValue = buildConditionValue(
-          operator as ConditionOperator,
-          valueInput,
-        );
-        conditionValue = compiledValue
-          ? `${targetType}:${key}:${compiledValue}`
-          : `${targetType}:${key}`;
+        // Store as type:key:op=value — parseConditions will compile the operator
+        conditionValue = `${targetType}:${key}:${operator}=${valueInput}`;
       }
     }
 
