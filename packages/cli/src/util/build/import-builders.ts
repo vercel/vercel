@@ -32,6 +32,25 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
+function isBuilderEntryLoadable(
+  pkgPath: string,
+  builderPkg: PackageJson
+): boolean {
+  const entryPath = join(
+    dirname(pkgPath),
+    (builderPkg.main as string) || 'index.js'
+  );
+  try {
+    require_.resolve(entryPath, { paths: [dirname(pkgPath)] });
+    return true;
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'MODULE_NOT_FOUND') {
+      return false;
+    }
+    throw err;
+  }
+}
+
 /**
  * Imports the specified Vercel Builders, installing any missing ones
  * into `.vercel/builders` if necessary.
@@ -104,6 +123,13 @@ export async function resolveBuilders(
         // at the top-level of `node_modules` since CLI is installing those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
+        if (builderPkg && !isBuilderEntryLoadable(pkgPath, builderPkg)) {
+          output.debug(
+            `"${name}" entry point missing in .vercel/builders, skipping`
+          );
+          pkgPath = undefined;
+          builderPkg = undefined;
+        }
       } catch (error: unknown) {
         if (!isErrnoException(error)) {
           throw error;
@@ -111,18 +137,35 @@ export async function resolveBuilders(
         if (error.code !== 'ENOENT') {
           throw error;
         }
+      }
 
-        // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
-        // dependency. `require.resolve()` will throw if the Builder is not a CLI
-        // dep, in which case we'll install it into `.vercel/builders`.
-        pkgPath = require_.resolve(`${name}/package.json`, {
-          paths: [__dirname],
-        });
-        builderPkg = await readJSON(pkgPath);
+      if (!builderPkg) {
+        try {
+          // If not in `.vercel/builders` then try as a CLI local dependency.
+          pkgPath = require_.resolve(`${name}/package.json`, {
+            paths: [__dirname],
+          });
+          builderPkg = await readJSON(pkgPath);
+          if (builderPkg && !isBuilderEntryLoadable(pkgPath, builderPkg)) {
+            output.debug(
+              `"${name}" entry point missing in CLI's node_modules, will install`
+            );
+            pkgPath = undefined;
+            builderPkg = undefined;
+          }
+        } catch (error: unknown) {
+          if (!isErrnoException(error) || error.code !== 'MODULE_NOT_FOUND') {
+            throw error;
+          }
+        }
       }
 
       if (!builderPkg || !pkgPath) {
-        throw new Error(`Failed to load \`package.json\` for "${name}"`);
+        output.debug(
+          `"${name}" not found or entry point missing, will install`
+        );
+        buildersToAdd.add(spec);
+        continue;
       }
 
       if (typeof builderPkg.version !== 'string') {
