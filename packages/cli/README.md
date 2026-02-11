@@ -62,6 +62,34 @@ pnpm vercel switch --debug
 
 When you are satisfied with your changes, make a commit and create a pull request!
 
+## Publishing
+
+### Production Releases
+
+Production releases are automated via the [`release.yml`](../../.github/workflows/release.yml) workflow, which runs on every push to `main`. It uses [changesets](https://github.com/changesets/changesets) to determine which packages need new versions. If there are pending changesets, the workflow either creates a "Version Packages" PR or publishes to npm with the `latest` dist-tag.
+
+To include your changes in a release, add a changeset before merging your PR:
+
+```bash
+pnpm changeset
+```
+
+### Canary Releases
+
+Canary releases let you publish pre-release versions from any branch. You can use this sparingly
+to test changes before they land on `main`.
+
+1. Go to the [Release Canary](../../.github/workflows/release-canary.yml) workflow in the Actions tab.
+2. Click **Run workflow** and enter the branch name.
+3. A member of the `vercel-cli-approvers` team must approve the release.
+4. Once approved, all public packages are published to npm with a canary version (e.g. `1.2.3-canary.20260211120000.abc1234`) under the `canary` dist-tag.
+
+To install a canary release:
+
+```bash
+npm i -g vercel@canary
+```
+
 ### Full Testing
 
 `pnpm vercel` executes a locally built dist. Because this dist lives locally in this monorepo,
