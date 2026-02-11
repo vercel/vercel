@@ -727,6 +727,10 @@ const main = async () => {
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).cache;
           break;
+        case 'contract':
+          telemetry.trackCliCommandContract(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).contract;
+          break;
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
@@ -859,6 +863,10 @@ const main = async () => {
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).webhooks;
+          break;
+        case 'usage':
+          telemetry.trackCliCommandUsage(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).usage;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
