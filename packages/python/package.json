@@ -26,9 +26,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vercel/python-analysis": "workspace:*"
+    "@vercel/python-analysis": "workspace:*",
+    "mustache": "4.2.0"
   },
   "devDependencies": {
+    "@types/mustache": "4.2.5",
     "@renovatebot/pep440": "4.2.1",
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "11.0.2",

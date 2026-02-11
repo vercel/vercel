@@ -8,14 +8,14 @@ _here = os.path.dirname(__file__)
 
 os.environ.update(
     {
-        "__VC_HANDLER_MODULE_NAME": "{{moduleName}}",
-        "__VC_HANDLER_ENTRYPOINT": "{{entrypointWithSuffix}}",
-        "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "{{entrypointWithSuffix}}"),
-        "__VC_HANDLER_VENDOR_DIR": "{{vendorDir}}",
+        "__VC_HANDLER_MODULE_NAME": "{{{moduleName}}}",
+        "__VC_HANDLER_ENTRYPOINT": "{{{entrypointWithSuffix}}}",
+        "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "{{{entrypointWithSuffix}}}"),
+        "__VC_HANDLER_VENDOR_DIR": "{{{vendorDir}}}",
     }
 )
 
-# {{#runtimeInstallEnabled}}
+{{#runtimeInstallEnabled}}
 import subprocess
 import time
 
@@ -24,8 +24,8 @@ _marker = os.path.join(_deps_dir, ".installed")
 
 if not os.path.exists(_marker):
     # Cold start: install dependencies using bundled uv
-    _uv_path = os.path.join(_here, "{{uvBundleDir}}", "uv")
-    _requirements = os.path.join(_here, "{{uvBundleDir}}", "_runtime_requirements.txt")
+    _uv_path = os.path.join(_here, "{{{uvBundleDir}}}", "uv")
+    _requirements = os.path.join(_here, "{{{uvBundleDir}}}", "_runtime_requirements.txt")
 
     print("Installing runtime dependencies...")
     _install_start = time.time()
@@ -79,9 +79,9 @@ if os.path.isdir(_deps_dir):
     except ValueError:
         pass
     sys.path.insert(0, _deps_dir)
-# {{/runtimeInstallEnabled}}
+{{/runtimeInstallEnabled}}
 
-_vendor_rel = "{{vendorDir}}"
+_vendor_rel = "{{{vendorDir}}}"
 _vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
 
 if os.path.isdir(_vendor):

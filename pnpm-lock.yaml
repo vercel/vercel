@@ -2008,6 +2008,9 @@ importers:
       '@vercel/python-analysis':
         specifier: workspace:*
         version: link:../python-analysis
+      mustache:
+        specifier: 4.2.0
+        version: 4.2.0
     devDependencies:
       '@renovatebot/pep440':
         specifier: 4.2.1
@@ -2021,6 +2024,9 @@ importers:
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
+      '@types/mustache':
+        specifier: 4.2.5
+        version: 4.2.5
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
@@ -9010,6 +9016,10 @@ packages:
     resolution: {integrity: sha512-PqavtNFnMyXRZS5vuW16wMOKeJUCD5PIGHdNBHzF5Urjncsij90hRQ82Wcy9+uSdnmrR2Gfao6xoJVq1wAWzbA==}
     dependencies:
       '@types/node': 20.11.0
+    dev: true
+
+  /@types/mustache@4.2.5:
+    resolution: {integrity: sha512-PLwiVvTBg59tGFL/8VpcGvqOu3L4OuveNvPi0EYbWchRdEVP++yRUXJPFl+CApKEq13017/4Nf7aQ5lTtHUNsA==}
     dev: true
 
   /@types/mute-stream@0.0.4:
@@ -16475,6 +16485,11 @@ packages:
       inherits: 2.0.4
       readable-stream: 2.3.8
     dev: true
+
+  /mustache@4.2.0:
+    resolution: {integrity: sha512-71ippSywq5Yb7/tVYyGbkBggbU8H3u5Rz56fH60jGFgr8uHwxs+aSKeqmluIVzM0m0kB7xQjKS6qPfd0b2ZoqQ==}
+    hasBin: true
+    dev: false
 
   /mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
