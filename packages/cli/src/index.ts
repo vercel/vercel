@@ -676,41 +676,9 @@ const main = async () => {
       let func: any;
       switch (targetCommand) {
         // Priority commands - separate bundles for fast loading
-        case 'alias':
-          telemetry.trackCliCommandAlias(userSuppliedSubCommand);
-          func = require('./commands/alias').default;
-          break;
-        case 'api':
-          telemetry.trackCliCommandApi(userSuppliedSubCommand);
-          func = require('./commands/api').default;
-          break;
-        case 'bisect':
-          telemetry.trackCliCommandBisect(userSuppliedSubCommand);
-          func = require('./commands/bisect').default;
-          break;
-        case 'blob':
-          telemetry.trackCliCommandBlob(userSuppliedSubCommand);
-          func = require('./commands/blob').default;
-          break;
-        case 'build':
-          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
-          func = require('./commands/build').default;
-          break;
-        case 'cache':
-          telemetry.trackCliCommandCache(userSuppliedSubCommand);
-          func = require('./commands/cache').default;
-          break;
-        case 'certs':
-          telemetry.trackCliCommandCerts(userSuppliedSubCommand);
-          func = require('./commands/certs').default;
-          break;
         case 'contract':
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
-          func = require('./commands/contract').default;
-          break;
-        case 'curl':
-          telemetry.trackCliCommandCurl(userSuppliedSubCommand);
-          func = require('./commands/curl').default;
+          func = (await import('./commands/contract/index.js')).default;
           break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
