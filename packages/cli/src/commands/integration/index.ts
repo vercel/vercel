@@ -13,6 +13,7 @@ import { balance } from './balance';
 import {
   addSubcommand,
   balanceSubcommand,
+  discoverSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -21,13 +22,17 @@ import {
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
+import { discover } from './discover';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
+import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
+import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
+  discover: getCommandAliases(discoverSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
 };
@@ -74,9 +79,8 @@ export default async function main(client: Client) {
     case 'add': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
-        printHelp(addSubcommand);
 
-        // Dynamic help: if an integration slug is provided, fetch and show available products
+        // Dynamic help: if an integration slug is provided, fetch and show integration-specific help
         const rawArg = subArgs[0];
         if (rawArg) {
           // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
@@ -84,15 +88,40 @@ export default async function main(client: Client) {
           try {
             const integration = await fetchIntegration(client, integrationSlug);
             const products = integration.products ?? [];
+
+            // Print help without static examples — we'll show dynamic ones instead
+            printHelp({ ...addSubcommand, examples: [] });
+            output.print(formatDynamicExamples(integrationSlug, products));
+
             if (products.length > 1) {
               output.print(formatProductHelp(integrationSlug, products));
             }
+            // Show metadata schema for ALL products
+            for (const product of products) {
+              if (product.metadataSchema) {
+                // For single-product integrations, don't show product slug
+                // For multi-product integrations, show product slug for slash syntax
+                const productSlug =
+                  products.length > 1 ? product.slug : undefined;
+                output.print(
+                  formatMetadataSchemaHelp(
+                    product.metadataSchema,
+                    integrationSlug,
+                    productSlug
+                  )
+                );
+              }
+            }
+            return 0;
           } catch (err: unknown) {
             output.debug(
               `Failed to fetch integration for dynamic help: ${err}`
             );
           }
         }
+
+        // Fallback: no integration slug provided, or fetch failed — show static help
+        printHelp(addSubcommand);
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
@@ -107,8 +136,20 @@ export default async function main(client: Client) {
         return 1;
       }
       const resourceName = addParsedArgs.flags['--name'] as string | undefined;
+      const metadataFlags = addParsedArgs.flags['--metadata'] as
+        | string[]
+        | undefined;
+      const noConnect = addParsedArgs.flags['--no-connect'] as
+        | boolean
+        | undefined;
+      const noEnvPull = addParsedArgs.flags['--no-env-pull'] as
+        | boolean
+        | undefined;
 
-      return add(client, addParsedArgs.args, resourceName);
+      return add(client, addParsedArgs.args, resourceName, metadataFlags, {
+        noConnect,
+        noEnvPull,
+      });
     }
     case 'list': {
       if (needHelp) {
@@ -118,6 +159,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
+    }
+    case 'discover': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(discoverSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandDiscover(subcommandOriginal);
+      return discover(client, subArgs);
     }
     case 'balance': {
       if (needHelp) {
