@@ -379,7 +379,7 @@ export default async function add(client: Client, argv: string[]) {
     const availableActions = [...ALL_ACTION_CHOICES];
     let actionCount = 0;
 
-    while (true) {
+    for (;;) {
       const choices = [...availableActions];
 
       // Only show "Done" after at least one action has been added
