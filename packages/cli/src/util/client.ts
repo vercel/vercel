@@ -362,6 +362,11 @@ export default class Client extends EventEmitter implements Stdio {
       ? ((await import('undici')).fetch as typeof fetch)
       : fetch;
 
+    // Native fetch requires `duplex: 'half'` when the body is a stream
+    // (e.g. IncomingMessage piped through from proxy.ts).
+    const duplex =
+      body && typeof body === 'object' && 'pipe' in body ? 'half' : undefined;
+
     const requestId = this.requestIdCounter++;
     return output.time(
       res => {
@@ -373,7 +378,13 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${init.method || 'GET'} ${url.href}`;
         }
       },
-      fetchFn(url, { ...init, headers, body, dispatcher: this.dispatcher })
+      fetchFn(url, {
+        ...init,
+        headers,
+        body,
+        duplex,
+        dispatcher: this.dispatcher,
+      } as RequestInit)
     );
   }
 
