@@ -116,14 +116,17 @@ function validateActionFlags(
     return null;
   }
 
-  if (!VALID_ACTION_TYPES.includes(action as (typeof VALID_ACTION_TYPES)[number])) {
+  if (
+    !VALID_ACTION_TYPES.includes(action as (typeof VALID_ACTION_TYPES)[number])
+  ) {
     return `Invalid action type: "${action}". Valid types: ${VALID_ACTION_TYPES.join(', ')}`;
   }
 
   switch (action) {
     case 'rewrite':
       if (!dest) return '--action rewrite requires --dest.';
-      if (status !== undefined) return '--action rewrite does not accept --status.';
+      if (status !== undefined)
+        return '--action rewrite does not accept --status.';
       break;
     case 'redirect':
       if (!dest) return '--action redirect requires --dest.';
@@ -807,8 +810,7 @@ async function collectInteractiveConditions(
       });
 
       const hostInput = await client.input.text({
-        message:
-          operator === 're' ? 'Host pattern (regex):' : 'Host value:',
+        message: operator === 're' ? 'Host pattern (regex):' : 'Host value:',
         validate: val => {
           if (!val) return 'Host value is required';
           if (operator === 're') {
@@ -846,8 +848,7 @@ async function collectInteractiveConditions(
         conditionValue = `${targetType}:${key}:exists`;
       } else {
         const valueInput = await client.input.text({
-          message:
-            operator === 're' ? 'Value pattern (regex):' : 'Value:',
+          message: operator === 're' ? 'Value pattern (regex):' : 'Value:',
           validate: val => {
             if (!val) return 'Value is required';
             if (operator === 're') {

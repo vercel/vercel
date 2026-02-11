@@ -187,145 +187,147 @@ describe('parse-conditions', () => {
     });
   });
 
-    describe('operator syntax (op=value)', () => {
-      it('should parse eq operator for header', () => {
-        const result = parseCondition('header:X-Custom:eq=exact-value');
-        expect(result).toEqual({
-          type: 'header',
-          key: 'X-Custom',
-          value: '^exact-value$',
-        });
-      });
-
-      it('should parse contains operator for header', () => {
-        const result = parseCondition('header:Accept:contains=json');
-        expect(result).toEqual({
-          type: 'header',
-          key: 'Accept',
-          value: '.*json.*',
-        });
-      });
-
-      it('should parse re operator for header', () => {
-        const result = parseCondition('header:Accept:re=^text/html.*');
-        expect(result).toEqual({
-          type: 'header',
-          key: 'Accept',
-          value: '^text/html.*',
-        });
-      });
-
-      it('should parse exists operator for header', () => {
-        const result = parseCondition('header:Authorization:exists');
-        expect(result).toEqual({
-          type: 'header',
-          key: 'Authorization',
-        });
-      });
-
-      it('should parse eq operator for cookie', () => {
-        const result = parseCondition('cookie:session:eq=abc123');
-        expect(result).toEqual({
-          type: 'cookie',
-          key: 'session',
-          value: '^abc123$',
-        });
-      });
-
-      it('should parse contains operator for query', () => {
-        const result = parseCondition('query:search:contains=test');
-        expect(result).toEqual({
-          type: 'query',
-          key: 'search',
-          value: '.*test.*',
-        });
-      });
-
-      it('should parse eq operator for host', () => {
-        const result = parseCondition('host:eq=example.com');
-        expect(result).toEqual({
-          type: 'host',
-          value: '^example\\.com$',
-        });
-      });
-
-      it('should parse contains operator for host', () => {
-        const result = parseCondition('host:contains=staging');
-        expect(result).toEqual({
-          type: 'host',
-          value: '.*staging.*',
-        });
-      });
-
-      it('should parse re operator for host', () => {
-        const result = parseCondition('host:re=.*\\.example\\.com');
-        expect(result).toEqual({
-          type: 'host',
-          value: '.*\\.example\\.com',
-        });
-      });
-
-      it('should handle eq value containing equals sign', () => {
-        const result = parseCondition('query:redirect:eq=url=https://example.com');
-        expect(result).toEqual({
-          type: 'query',
-          key: 'redirect',
-          // escapeRegExp escapes: . * + ? ^ $ { } ( ) | [ ] \
-          // = and : and / are NOT escaped by escapeRegExp
-          value: '^url=https://example\\.com$',
-        });
-      });
-
-      it('should handle eq value containing colons', () => {
-        const result = parseCondition('header:Location:eq=https://example.com');
-        // colons are rejoined: "eq=https://example.com"
-        // operator is "eq", value is "https://example.com"
-        expect(result.type).toBe('header');
-        expect(result).toHaveProperty('key', 'Location');
-        expect(result).toHaveProperty('value');
-        // The value should be anchored and escaped
-        expect((result as any).value).toMatch(/^\^/);
-        expect((result as any).value).toMatch(/\$$/);
-      });
-
-      it('should treat unknown operator prefix as raw regex', () => {
-        // "foo=bar" is not a known operator, so treat as raw regex
-        const result = parseCondition('header:X-Custom:foo=bar');
-        expect(result).toEqual({
-          type: 'header',
-          key: 'X-Custom',
-          value: 'foo=bar',
-        });
-      });
-
-      it('should error when host uses exists operator', () => {
-        expect(() => parseCondition('host:exists')).toThrow(
-          'does not support "exists"'
-        );
-      });
-
-      it('should error when eq operator has no value after =', () => {
-        expect(() => parseCondition('header:X-Custom:eq=')).toThrow(
-          'requires a value'
-        );
-      });
-
-      it('should error when contains operator has no value after =', () => {
-        expect(() => parseCondition('header:X-Custom:contains=')).toThrow(
-          'requires a value'
-        );
-      });
-
-      it('should backward-compatible with bare regex values', () => {
-        // Bare value without operator prefix should still work as raw regex
-        const result = parseCondition('header:Accept:text/html');
-        expect(result).toEqual({
-          type: 'header',
-          key: 'Accept',
-          value: 'text/html',
-        });
+  describe('operator syntax (op=value)', () => {
+    it('should parse eq operator for header', () => {
+      const result = parseCondition('header:X-Custom:eq=exact-value');
+      expect(result).toEqual({
+        type: 'header',
+        key: 'X-Custom',
+        value: '^exact-value$',
       });
     });
+
+    it('should parse contains operator for header', () => {
+      const result = parseCondition('header:Accept:contains=json');
+      expect(result).toEqual({
+        type: 'header',
+        key: 'Accept',
+        value: '.*json.*',
+      });
+    });
+
+    it('should parse re operator for header', () => {
+      const result = parseCondition('header:Accept:re=^text/html.*');
+      expect(result).toEqual({
+        type: 'header',
+        key: 'Accept',
+        value: '^text/html.*',
+      });
+    });
+
+    it('should parse exists operator for header', () => {
+      const result = parseCondition('header:Authorization:exists');
+      expect(result).toEqual({
+        type: 'header',
+        key: 'Authorization',
+      });
+    });
+
+    it('should parse eq operator for cookie', () => {
+      const result = parseCondition('cookie:session:eq=abc123');
+      expect(result).toEqual({
+        type: 'cookie',
+        key: 'session',
+        value: '^abc123$',
+      });
+    });
+
+    it('should parse contains operator for query', () => {
+      const result = parseCondition('query:search:contains=test');
+      expect(result).toEqual({
+        type: 'query',
+        key: 'search',
+        value: '.*test.*',
+      });
+    });
+
+    it('should parse eq operator for host', () => {
+      const result = parseCondition('host:eq=example.com');
+      expect(result).toEqual({
+        type: 'host',
+        value: '^example\\.com$',
+      });
+    });
+
+    it('should parse contains operator for host', () => {
+      const result = parseCondition('host:contains=staging');
+      expect(result).toEqual({
+        type: 'host',
+        value: '.*staging.*',
+      });
+    });
+
+    it('should parse re operator for host', () => {
+      const result = parseCondition('host:re=.*\\.example\\.com');
+      expect(result).toEqual({
+        type: 'host',
+        value: '.*\\.example\\.com',
+      });
+    });
+
+    it('should handle eq value containing equals sign', () => {
+      const result = parseCondition(
+        'query:redirect:eq=url=https://example.com'
+      );
+      expect(result).toEqual({
+        type: 'query',
+        key: 'redirect',
+        // escapeRegExp escapes: . * + ? ^ $ { } ( ) | [ ] \
+        // = and : and / are NOT escaped by escapeRegExp
+        value: '^url=https://example\\.com$',
+      });
+    });
+
+    it('should handle eq value containing colons', () => {
+      const result = parseCondition('header:Location:eq=https://example.com');
+      // colons are rejoined: "eq=https://example.com"
+      // operator is "eq", value is "https://example.com"
+      expect(result.type).toBe('header');
+      expect(result).toHaveProperty('key', 'Location');
+      expect(result).toHaveProperty('value');
+      // The value should be anchored and escaped
+      expect((result as any).value).toMatch(/^\^/);
+      expect((result as any).value).toMatch(/\$$/);
+    });
+
+    it('should treat unknown operator prefix as raw regex', () => {
+      // "foo=bar" is not a known operator, so treat as raw regex
+      const result = parseCondition('header:X-Custom:foo=bar');
+      expect(result).toEqual({
+        type: 'header',
+        key: 'X-Custom',
+        value: 'foo=bar',
+      });
+    });
+
+    it('should error when host uses exists operator', () => {
+      expect(() => parseCondition('host:exists')).toThrow(
+        'does not support "exists"'
+      );
+    });
+
+    it('should error when eq operator has no value after =', () => {
+      expect(() => parseCondition('header:X-Custom:eq=')).toThrow(
+        'requires a value'
+      );
+    });
+
+    it('should error when contains operator has no value after =', () => {
+      expect(() => parseCondition('header:X-Custom:contains=')).toThrow(
+        'requires a value'
+      );
+    });
+
+    it('should backward-compatible with bare regex values', () => {
+      // Bare value without operator prefix should still work as raw regex
+      const result = parseCondition('header:Accept:text/html');
+      expect(result).toEqual({
+        type: 'header',
+        key: 'Accept',
+        value: 'text/html',
+      });
+    });
+  });
 
   describe('parseConditions', () => {
     it('should parse multiple conditions', () => {
