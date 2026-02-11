@@ -1,0 +1,58 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Vite"
+    },
+    {
+      "path": "/some-spa-route",
+      "status": 200,
+      "mustContain": "Hello from Vite"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "mustContain": "Hello from Next.js"
+    },
+    {
+      "path": "/dashboard/api/ping",
+      "status": 200,
+      "mustContain": "pong"
+    },
+    {
+      "path": "/backend",
+      "status": 200,
+      "mustContain": "Hello from FastAPI"
+    },
+    {
+      "path": "/backend/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/dashboard/backend-from-env",
+      "status": 200,
+      "mustContain": "backend-status:ok"
+    },
+    {
+      "path": "/dashboard/backend-from-env",
+      "status": 200,
+      "mustContain": "service-url:https://"
+    },
+    {
+      "path": "/dashboard/backend-from-env",
+      "status": 200,
+      "mustContain": "/backend"
+    },
+    {
+      "path": "/dashboard/does-not-exist",
+      "status": 404
+    },
+    {
+      "path": "/backend/does-not-exist",
+      "status": 404,
+      "mustContain": "Not Found"
+    }
+  ]
+}
