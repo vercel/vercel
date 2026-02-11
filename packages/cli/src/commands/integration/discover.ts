@@ -190,7 +190,7 @@ export async function discover(client: Client, args: string[]) {
 function formatTable(products: ProductEntry[]) {
   return table(
     [
-      ['Product Name', 'Slug', 'Provider', 'Description', 'Tags'].map(header =>
+      ['Product Name', 'Slug', 'Provider', 'Description'].map(header =>
         chalk.bold(chalk.cyan(header))
       ),
       ...products.map(product => [
@@ -198,7 +198,6 @@ function formatTable(products: ProductEntry[]) {
         product.slug,
         product.provider,
         product.description || chalk.gray('-'),
-        product.tags.length > 0 ? product.tags.join(', ') : chalk.gray('-'),
       ]),
     ],
     { hsep: 4 }
@@ -212,7 +211,6 @@ function formatCompactList(products: ProductEntry[]) {
         `${chalk.bold(product.name)} (${product.slug})`,
         `  Provider: ${product.provider}`,
         `  Description: ${product.description || '-'}`,
-        `  Tags: ${product.tags.length > 0 ? product.tags.join(', ') : '-'}`,
       ].join('\n');
     })
     .join('\n\n');
