@@ -17,7 +17,7 @@ export function getUser(retries = 3): Promise<User> {
         );
       }
 
-      const data = await res.json();
+      const data: any = await res.json();
 
       return data.user;
     },
@@ -40,7 +40,7 @@ export function getTeam(retries = 3): Promise<Team> {
         );
       }
 
-      const data = await res.json();
+      const data: any = await res.json();
 
       return data;
     },

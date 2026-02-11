@@ -26,7 +26,7 @@ export async function responseError(
     let body;
 
     try {
-      body = await res.json();
+      body = (await res.json()) as any;
     } catch (err) {
       body = parsedBody;
     }
@@ -75,7 +75,7 @@ export async function responseErrorMessage(
     let body;
 
     try {
-      body = await res.json();
+      body = (await res.json()) as any;
     } catch (err) {
       body = {};
     }

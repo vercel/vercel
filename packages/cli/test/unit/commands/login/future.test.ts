@@ -23,7 +23,7 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
     );
   }
   fetch.mockResolvedValueOnce(finalResponse);
-  return finalResponse.json();
+  return finalResponse.json() as any;
 }
 
 beforeEach(() => {

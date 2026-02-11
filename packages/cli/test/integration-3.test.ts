@@ -122,7 +122,7 @@ test('deploy with metadata containing "=" in the value', async () => {
 
   const { host } = new URL(stdout);
   const res = await apiFetch(`/v12/now/deployments/get?url=${host}`);
-  const deployment = await res.json();
+  const deployment: any = await res.json();
   expect(deployment.meta.someKey).toBe('=');
 });
 
@@ -493,7 +493,7 @@ test('create a staging deployment', async () => {
   const { host } = new URL(targetCall.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json() as any);
   expect(deployment.target).toBe('staging');
 });
 
@@ -516,7 +516,7 @@ test('create a production deployment', async () => {
   const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${targetHost}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json() as any);
   expect(targetDeployment.target).toBe('production');
 
   const call = await execCli(binaryPath, [directory, '--prod', ...args]);
@@ -528,7 +528,7 @@ test('create a production deployment', async () => {
   const { host } = new URL(call.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json() as any);
   expect(deployment.target).toBe('production');
 });
 
@@ -807,7 +807,7 @@ test('deploy a Lambda with 128MB of memory', async () => {
 
   // It won't be exactly 128MB,
   // so we just compare if it is lower than 450MB
-  const { memory } = await response.json();
+  const { memory } = (await response.json()) as any;
   expect(memory).toBe(128);
 });
 

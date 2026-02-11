@@ -4,6 +4,7 @@ import { createProxy } from 'proxy';
 import { createServer } from 'http';
 import { EnvHttpProxyAgent } from 'undici';
 import { client } from '../../mocks/client';
+import type { FetchOptions } from '../../../src/util/client';
 
 describe('Client', () => {
   describe('fetch()', () => {
@@ -32,7 +33,10 @@ describe('Client', () => {
 
       try {
         process.env.HTTP_PROXY = proxyUrl.href;
-        client.dispatcher = new EnvHttpProxyAgent();
+        // Cast needed: undici@6 Dispatcher is structurally compatible with
+        // undici-types@5 Dispatcher (from @types/node) but TS can't verify.
+        client.dispatcher =
+          new EnvHttpProxyAgent() as unknown as FetchOptions['dispatcher'];
 
         expect(requestCount).toEqual(0);
         const res = await client.fetch(mockServerUrl.href, { json: false });
