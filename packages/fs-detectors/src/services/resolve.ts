@@ -15,6 +15,18 @@ import frameworkList from '@vercel/frameworks';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
+const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+
+function normalizeRoutePrefix(routePrefix: string): string {
+  let normalized = routePrefix.startsWith('/')
+    ? routePrefix
+    : `/${routePrefix}`;
+  if (normalized !== '/' && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized || '/';
+}
+
 /**
  * Validate a service configuration from vercel.json experimentalServices.
  */
@@ -22,6 +34,13 @@ export function validateServiceConfig(
   name: string,
   config: ExperimentalServiceConfig
 ): ServiceDetectionError | null {
+  if (!SERVICE_NAME_REGEX.test(name)) {
+    return {
+      code: 'INVALID_SERVICE_NAME',
+      message: `Service name "${name}" is invalid. Names must start with a letter, end with an alphanumeric character, and contain only alphanumeric characters, hyphens, and underscores.`,
+      serviceName: name,
+    };
+  }
   if (!config || typeof config !== 'object') {
     return {
       code: 'INVALID_SERVICE_CONFIG',
@@ -143,13 +162,18 @@ export function resolveConfiguredService(
         : `/${config.routePrefix}`
       : undefined;
 
-  // Ensure builder.src is fully qualified for non-root workspaces
+  // Ensure builder.src is fully qualified for non-root workspaces.
+  // Always prepend — the entrypoint in the config is relative to the workspace,
+  // never repo-root-relative.
   const isRoot = workspace === '.';
-  if (!isRoot && !builderSrc.startsWith(workspace + '/')) {
+  if (!isRoot) {
     builderSrc = posixPath.join(workspace, builderSrc);
   }
 
-  const builderConfig: Record<string, unknown> = {};
+  // Services are built via the zero-config pipeline (multiple builders, merged routes).
+  // Ensure `zeroConfig` is set on the Builder spec so downstream steps (like
+  // CLI `writeBuildResultV3()`) can compute correct extensionless function paths.
+  const builderConfig: Record<string, unknown> = { zeroConfig: true };
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;
@@ -166,6 +190,10 @@ export function resolveConfiguredService(
       ? routePrefix.slice(1)
       : routePrefix;
     builderConfig.routePrefix = stripped || '.';
+  }
+  // Pass workspace to builder config for builders that need to know the service's workspace
+  if (workspace && workspace !== '.') {
+    builderConfig.workspace = workspace;
   }
   if (config.framework) {
     builderConfig.framework = config.framework;
@@ -203,6 +231,7 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
 } {
   const resolved: ResolvedService[] = [];
   const errors: ServiceDetectionError[] = [];
+  const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
     const serviceConfig = services[name];
@@ -214,6 +243,23 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
     }
 
     const service = resolveConfiguredService(name, serviceConfig);
+
+    if (service.type === 'web' && typeof service.routePrefix === 'string') {
+      const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
+      const existingServiceName = webServicesByRoutePrefix.get(
+        normalizedRoutePrefix
+      );
+      if (existingServiceName) {
+        errors.push({
+          code: 'DUPLICATE_ROUTE_PREFIX',
+          message: `Web services "${existingServiceName}" and "${name}" cannot share routePrefix "${normalizedRoutePrefix}".`,
+          serviceName: name,
+        });
+        continue;
+      }
+      webServicesByRoutePrefix.set(normalizedRoutePrefix, name);
+    }
+
     resolved.push(service);
   }
 

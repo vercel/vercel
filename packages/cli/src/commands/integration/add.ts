@@ -2,12 +2,14 @@ import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import { packageName } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
 import list from '../../util/input/list';
-import cmd from '../../util/output/cmd';
 import indent from '../../util/output/indent';
-import { getLinkedProject } from '../../util/projects/link';
+import {
+  getLinkedProjectField,
+  postProvisionSetup,
+  type PostProvisionOptions,
+} from '../../util/integration/post-provision-setup';
 import type {
   BillingPlan,
   Integration,
@@ -17,40 +19,86 @@ import type {
 } from '../../util/integration/types';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
+import { resolveResourceName } from '../../util/integration/generate-resource-name';
+import {
+  parseMetadataFlags,
+  validateAndPrintRequiredMetadata,
+  validateRequiredMetadata,
+} from '../../util/integration/parse-metadata';
 import { addAutoProvision } from './add-auto-provision';
-import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
+import { selectProduct } from '../../util/integration/select-product';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
-export async function add(client: Client, args: string[]) {
-  const telemetry = new IntegrationAddTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
+export type AddOptions = PostProvisionOptions;
 
+export async function add(
+  client: Client,
+  args: string[],
+  resourceNameArg?: string,
+  metadataFlags?: string[],
+  billingPlanId?: string,
+  options: AddOptions = {}
+) {
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const rawArg = args[0];
 
-  if (!integrationSlug) {
+  if (!rawArg) {
     output.error('You must pass an integration slug');
     return 1;
   }
 
-  // Auto-provision: completely separate code path
-  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
-    return await addAutoProvision(client, integrationSlug);
+  // Parse optional product slug from "integration/product" syntax
+  let integrationSlug: string;
+  let productSlug: string | undefined;
+  const slashIndex = rawArg.indexOf('/');
+  if (slashIndex !== -1) {
+    integrationSlug = rawArg.substring(0, slashIndex);
+    productSlug = rawArg.substring(slashIndex + 1);
+    if (!integrationSlug || !productSlug) {
+      output.error(
+        'Invalid format. Expected: <integration-name>/<product-slug>'
+      );
+      return 1;
+    }
+  } else {
+    integrationSlug = rawArg;
   }
+
+  // Note: Resource name validation happens after product selection
+  // to apply product-specific validation rules
+
+  // Auto-provision: completely separate code path (self-contained telemetry)
+  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+    return await addAutoProvision(client, integrationSlug, resourceNameArg, {
+      productSlug,
+      metadata: metadataFlags,
+      billingPlanId,
+      noConnect: options.noConnect,
+      noEnvPull: options.noEnvPull,
+    });
+  }
+
+  const telemetry = new IntegrationAddTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetry.trackCliOptionName(resourceNameArg);
+  telemetry.trackCliOptionMetadata(metadataFlags);
+  telemetry.trackCliOptionPlan(billingPlanId);
+  telemetry.trackCliFlagNoConnect(options.noConnect);
+  telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
 
   const { contextName, team } = await getScope(client);
 
@@ -59,21 +107,16 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  let integration: Integration | undefined;
-  let knownIntegrationSlug = false;
-  try {
-    integration = await fetchIntegration(client, integrationSlug);
-    knownIntegrationSlug = true;
-  } catch (error) {
-    output.error(
-      `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
-    );
+  const integration = await fetchIntegrationWithTelemetry(
+    client,
+    integrationSlug,
+    telemetry
+  );
+  if (!integration) {
     return 1;
-  } finally {
-    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
   }
 
-  if (!integration.products) {
+  if (!integration.products?.length) {
     output.error(
       `Integration "${integrationSlug}" is not a Marketplace integration`
     );
@@ -81,12 +124,23 @@ export async function add(client: Client, args: string[]) {
   }
 
   const [productResult, installationsResult] = await Promise.allSettled([
-    selectProduct(client, integration),
+    selectProduct(client, integration.products, productSlug),
     fetchInstallations(client, integration),
   ]);
 
-  if (productResult.status === 'rejected' || !productResult.value) {
-    output.error('Product not found');
+  if (productResult.status === 'rejected') {
+    output.error(
+      `Failed to select product: ${(productResult.reason as Error).message}`
+    );
+    return 1;
+  }
+
+  if (!productResult.value) {
+    if (!productSlug) {
+      // Only print generic error when no slug was specified.
+      // When a slug was provided, selectProduct already printed a specific error.
+      output.error('Product not found');
+    }
     return 1;
   }
 
@@ -123,17 +177,44 @@ export async function add(client: Client, args: string[]) {
   const metadataSchema = product.metadataSchema;
   const metadataWizard = createMetadataWizard(metadataSchema);
 
+  // Resolve and validate resource name
+  const nameResult = resolveResourceName(product.slug, resourceNameArg);
+  if ('error' in nameResult) {
+    output.error(nameResult.error);
+    return 1;
+  }
+  const { resourceName } = nameResult;
+
+  // Validate --metadata flags early (fail fast, even if CLI provisioning not supported)
+  let parsedMetadata: Metadata | undefined;
+  if (metadataFlags?.length) {
+    const { metadata: parsed, errors } = parseMetadataFlags(
+      metadataFlags,
+      metadataSchema
+    );
+    if (errors.length) {
+      for (const error of errors) {
+        output.error(error);
+      }
+      return 1;
+    }
+    parsedMetadata = parsed;
+  }
+
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
-  // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
+  // 2. EITHER metadata is provided via flags OR wizard is supported
   // 3. The selected billing plan is supported (handled at time of billing plan selection)
   const provisionResourceViaCLIIsSupported =
-    installation && metadataWizard.isSupported;
+    installation && (parsedMetadata || metadataWizard.isSupported);
 
   if (!provisionResourceViaCLIIsSupported) {
-    const projectLink = await getOptionalLinkedProject(client);
-
-    if (projectLink?.status === 'error') {
+    const projectLink = await getLinkedProjectField(
+      client,
+      options.noConnect,
+      'id'
+    );
+    if (projectLink.exitCode) {
       return projectLink.exitCode;
     }
 
@@ -149,7 +230,10 @@ export async function add(client: Client, args: string[]) {
         team.id,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink.value,
+        resourceName,
+        parsedMetadata,
+        billingPlanId
       );
     }
 
@@ -159,67 +243,95 @@ export async function add(client: Client, args: string[]) {
   return await provisionResourceViaCLI(
     client,
     team.id,
+    contextName,
     integration,
     installation,
     product,
-    metadataWizard
+    metadataWizard,
+    resourceName,
+    parsedMetadata,
+    billingPlanId,
+    options
   );
-}
-
-async function getOptionalLinkedProject(client: Client) {
-  const linkedProject = await getLinkedProject(client);
-
-  if (linkedProject.status === 'not_linked') {
-    return;
-  }
-
-  const shouldLinkToProject = await client.input.confirm(
-    'Do you want to link this resource to the current project?',
-    true
-  );
-
-  if (!shouldLinkToProject) {
-    return;
-  }
-
-  if (linkedProject.status === 'error') {
-    return { status: 'error', exitCode: linkedProject.exitCode };
-  }
-
-  return { status: 'success', project: linkedProject.project };
 }
 
 function provisionResourceViaWebUI(
   teamId: string,
   integrationId: string,
   productId: string,
-  projectId?: string
+  projectId?: string,
+  resourceName?: string,
+  metadata?: Metadata,
+  billingPlanId?: string
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('integrationId', integrationId);
   url.searchParams.set('productId', productId);
+  url.searchParams.set('source', 'cli');
   if (projectId) {
     url.searchParams.set('projectId', projectId);
   }
+  if (resourceName) {
+    url.searchParams.set('defaultResourceName', resourceName);
+  }
+  if (metadata && Object.keys(metadata).length > 0) {
+    url.searchParams.set('metadata', JSON.stringify(metadata));
+  }
+  if (billingPlanId) {
+    url.searchParams.set('planId', billingPlanId);
+  }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.debug(`Opening URL: ${url.href}`);
   open(url.href);
 }
 
 async function provisionResourceViaCLI(
   client: Client,
   teamId: string,
+  contextName: string,
   integration: Integration,
   installation: IntegrationInstallation,
   product: IntegrationProduct,
-  metadataWizard: MetadataWizard
+  metadataWizard: MetadataWizard,
+  name: string,
+  parsedMetadata?: Metadata,
+  billingPlanId?: string,
+  options: AddOptions = {}
 ) {
-  const name = await client.input.text({
-    message: 'What is the name of the resource?',
-  });
-
-  const metadata = await metadataWizard.run(client);
+  // Get metadata from flags, wizard, or hybrid
+  let metadata: Metadata;
+  if (parsedMetadata) {
+    if (client.stdin.isTTY && metadataWizard.isSupported) {
+      // TTY with supported wizard: run wizard, pre-filling with flag values
+      metadata = await metadataWizard.run(client, parsedMetadata);
+    } else {
+      // Non-TTY or unsupported wizard: all required fields must come from flags
+      if (
+        !validateAndPrintRequiredMetadata(
+          parsedMetadata,
+          product.metadataSchema
+        )
+      ) {
+        return 1;
+      }
+      metadata = parsedMetadata;
+    }
+  } else if (!client.stdin.isTTY) {
+    // Non-TTY without metadata: check if required fields need user input
+    if (validateRequiredMetadata({}, product.metadataSchema).length > 0) {
+      output.error(
+        "Metadata is required in non-interactive mode. Use --metadata KEY=VALUE flags. Run 'vercel integration add <name> --help' to see available keys."
+      );
+      return 1;
+    }
+    // No required fields need user input — proceed with empty metadata
+    metadata = {};
+  } else {
+    // TTY without metadata: run full wizard
+    metadata = await metadataWizard.run(client);
+  }
 
   let billingPlans: BillingPlan[] | undefined;
   try {
@@ -242,7 +354,19 @@ async function provisionResourceViaCLI(
     return 1;
   }
 
-  const billingPlan = await selectBillingPlan(client, enabledBillingPlans);
+  let billingPlan: BillingPlan | undefined;
+
+  if (billingPlanId) {
+    billingPlan = enabledBillingPlans.find(plan => plan.id === billingPlanId);
+    if (!billingPlan) {
+      output.error(
+        `Billing plan "${billingPlanId}" not found. Available plans: ${enabledBillingPlans.map(p => p.id).join(', ')}`
+      );
+      return 1;
+    }
+  } else {
+    billingPlan = await selectBillingPlan(client, enabledBillingPlans);
+  }
 
   if (!billingPlan) {
     output.error('No billing plan selected');
@@ -251,9 +375,12 @@ async function provisionResourceViaCLI(
 
   if (billingPlan.type !== 'subscription') {
     // offer to open the web UI to continue the resource provisioning
-    const projectLink = await getOptionalLinkedProject(client);
-
-    if (projectLink?.status === 'error') {
+    const projectLink = await getLinkedProjectField(
+      client,
+      options.noConnect,
+      'id'
+    );
+    if (projectLink.exitCode) {
       return projectLink.exitCode;
     }
 
@@ -267,7 +394,10 @@ async function provisionResourceViaCLI(
         teamId,
         integration.id,
         product.id,
-        projectLink?.project?.id
+        projectLink.value,
+        name,
+        metadata,
+        billingPlanId
       );
     }
 
@@ -303,35 +433,14 @@ async function provisionResourceViaCLI(
       name,
       metadata,
       billingPlan,
-      authorizationId
+      authorizationId,
+      contextName,
+      options
     );
   } catch (error) {
     output.error((error as Error).message);
     return 1;
   }
-}
-
-async function selectProduct(client: Client, integration: Integration) {
-  const products = integration.products;
-
-  if (!products?.length) {
-    return;
-  }
-
-  if (products.length === 1) {
-    return products[0];
-  }
-
-  const selected = await client.input.select({
-    message: 'Select a product',
-    choices: products.map(product => ({
-      description: product.shortDescription,
-      name: product.name,
-      value: product,
-    })),
-  });
-
-  return selected;
 }
 
 async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
@@ -505,8 +614,10 @@ function handleManualVerificationAction(
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('authorizationId', authorizationId);
+  url.searchParams.set('source', 'cli');
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
+  output.debug(`Opening URL: ${url.href}`);
   open(url.href);
 }
 
@@ -517,7 +628,9 @@ async function provisionStorageProduct(
   name: string,
   metadata: Metadata,
   billingPlan: BillingPlan,
-  authorizationId: string
+  authorizationId: string,
+  contextName: string,
+  options: AddOptions = {}
 ) {
   output.spinner('Provisioning resource...');
   let storeId: string;
@@ -540,52 +653,7 @@ async function provisionStorageProduct(
   } finally {
     output.stopSpinner();
   }
-  output.log(`${product.name} successfully provisioned`);
+  output.log(`${product.name} successfully provisioned: ${chalk.bold(name)}`);
 
-  const projectLink = await getOptionalLinkedProject(client);
-
-  if (projectLink?.status === 'error') {
-    return projectLink.exitCode;
-  }
-
-  if (!projectLink?.project) {
-    return 0;
-  }
-
-  const project = projectLink.project;
-
-  const environments = await client.input.checkbox({
-    message: 'Select environments',
-    choices: [
-      { name: 'Production', value: 'production', checked: true },
-      { name: 'Preview', value: 'preview', checked: true },
-      { name: 'Development', value: 'development', checked: true },
-    ],
-  });
-
-  output.spinner(
-    `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
-  );
-  try {
-    await connectResourceToProject(
-      client,
-      projectLink.project.id,
-      storeId,
-      environments
-    );
-  } catch (error) {
-    output.error(
-      `Failed to connect store to project: ${(error as Error).message}`
-    );
-    return 1;
-  } finally {
-    output.stopSpinner();
-  }
-  output.log(
-    `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
-
-${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variables`, 4)}`
-  );
-
-  return 0;
+  return postProvisionSetup(client, name, storeId, contextName, options);
 }

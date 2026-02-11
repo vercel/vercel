@@ -114,11 +114,20 @@ export class UvRunner {
         env: getProtectedUvEnv(process.env),
       });
     } catch (err) {
-      throw new Error(
+      const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${
           err instanceof Error ? err.message : String(err)
         }`
       );
+      // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+      throw error;
     }
   }
 
@@ -145,6 +154,19 @@ export class UvRunner {
     const args = ['add', '--active', '-r', requirementsPath];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
     await this.runUvCmd(args, projectDir, venvPath);
+  }
+
+  /**
+   * Run a `uv pip` command (e.g., `uv pip install`).
+   */
+  async pip(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+  }): Promise<void> {
+    const { venvPath, projectDir, args } = options;
+    const fullArgs = ['pip', ...args];
+    await this.runUvCmd(fullArgs, projectDir, venvPath);
   }
 
   private async runUvCmd(

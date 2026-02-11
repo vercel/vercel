@@ -1,5 +1,6 @@
 import { BuildOptions, Span } from '@vercel/build-utils';
 import type { Plugin, ResolvedId } from 'rolldown';
+import { Colors as c } from '../cervel/utils.js';
 import { resolveEntrypointAndFormat } from './resolve-format.js';
 import { build as rolldownBuild } from 'rolldown';
 import { builtinModules } from 'node:module';
@@ -13,7 +14,10 @@ const PLUGIN_NAME = 'vercel:backends';
 const CJS_SHIM_PREFIX = '\0cjs-shim:';
 
 export const rolldown = async (
-  args: Pick<BuildOptions, 'entrypoint' | 'workPath' | 'repoRootPath'> & {
+  args: Pick<
+    BuildOptions,
+    'entrypoint' | 'workPath' | 'repoRootPath' | 'config'
+  > & {
     span?: Span;
   }
 ) => {
@@ -124,6 +128,10 @@ export const rolldown = async (
     return builtinModules.includes(normalizedId);
   };
 
+  const isBunBuiltin = (id: string) => {
+    return id === 'bun' || id.startsWith('bun:');
+  };
+
   const isLocalImport = (id: string) => {
     return !id.startsWith('node:') && !id.includes('node_modules');
   };
@@ -147,6 +155,11 @@ export const rolldown = async (
               id: id.startsWith('node:') ? id : `node:${id}`,
               external: true,
             };
+          }
+
+          // Handle bun builtins (e.g. `bun`, `bun:sqlite`, `bun:ffi`)
+          if (isBunBuiltin(id)) {
+            return { id, external: true };
           }
 
           // Track local files for NFT
@@ -303,6 +316,7 @@ module.exports = requireFromContext('${pkgName}');
     files,
     span: rolldownSpan ?? new Span({ name: 'vc.builder.backends.nft' }),
     ignoreNodeModules: true,
+    ignore: args.config.excludeFiles,
   });
 
   if (!handler) {
@@ -310,5 +324,6 @@ module.exports = requireFromContext('${pkgName}');
       `Unable to resolve build handler for entrypoint: ${args.entrypoint}`
     );
   }
+  console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
   return { files, handler, framework, localBuildFiles };
 };

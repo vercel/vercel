@@ -1,5 +1,42 @@
 # @vercel/fs-detectors
 
+## 5.8.5
+
+### Patch Changes
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- - Fix services routing for runtime entrypoints by using extensionless function destinations, disabling framework `defaultRoutes` injection during services builds, and ensuring deterministic route merging precedence for services. ([#14946](https://github.com/vercel/vercel/pull/14946))
+  - Scope route-owning builder routes to their owning service prefixes in services mode, preventing cross-service route leakage
+
+## 5.8.4
+
+### Patch Changes
+
+- Add exclude/include support for backends builder ([#14950](https://github.com/vercel/vercel/pull/14950))
+
+## 5.8.3
+
+### Patch Changes
+
+- [services] add service name validation ([#14907](https://github.com/vercel/vercel/pull/14907))
+
+- Updated dependencies [[`712badd017d01fd1f8cb51980752ecda18540b78`](https://github.com/vercel/vercel/commit/712badd017d01fd1f8cb51980752ecda18540b78)]:
+  - @vercel/frameworks@3.17.1
+
+## 5.8.2
+
+### Patch Changes
+
+- Updated dependencies [[`84f121190813b2840a6a16279dcaa75dcb2872cd`](https://github.com/vercel/vercel/commit/84f121190813b2840a6a16279dcaa75dcb2872cd)]:
+  - @vercel/frameworks@3.17.0
+
+## 5.8.1
+
+### Patch Changes
+
+- [services] `vercel dev` will add the known framework prefix to env vars for services ([#14866](https://github.com/vercel/vercel/pull/14866))
+
 ## 5.8.0
 
 ### Minor Changes

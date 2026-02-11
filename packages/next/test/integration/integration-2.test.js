@@ -818,7 +818,6 @@ describe('determinism', () => {
         )
       );
       expect(originalManifest.deploymentId).toBeDefined();
-      expect(originalManifest.headers.length).not.toBe(0);
 
       for (const entry of Object.values(buildResult.output)) {
         if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
@@ -828,6 +827,7 @@ describe('determinism', () => {
             let parsed = JSON.parse(manifest.data);
             expect(parsed.deploymentId).toBeUndefined();
             expect(parsed.headers.length).toBe(0);
+            expect(parsed.onMatchHeaders.length).toBe(0);
           }
         }
       }

@@ -1,3 +1,4 @@
+import { loadEnvConfig } from '@next/env';
 import execa from 'execa';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -105,14 +106,22 @@ export default async function run(client: Client): Promise<number> {
     `Running command with ${Object.keys(records.env).length} environment variables`
   );
 
+  let localEnv: Record<string, string | undefined> = {};
+  try {
+    localEnv = loadEnvConfig(client.cwd, true).combinedEnv;
+  } catch (err) {
+    output.debug(`Failed to load local env files: ${err}`);
+  }
+
   try {
     const result = await execa(userCommand[0], userCommand.slice(1), {
       cwd: client.cwd,
       stdio: 'inherit',
       reject: false,
       env: {
-        ...process.env,
         ...records.env,
+        ...localEnv,
+        ...process.env,
       },
     });
 

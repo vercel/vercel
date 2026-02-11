@@ -1,5 +1,52 @@
 # @vercel/python
 
+## 6.11.1
+
+### Patch Changes
+
+- [python] preserve error code on uv error ([#14990](https://github.com/vercel/vercel/pull/14990))
+
+## 6.11.0
+
+### Minor Changes
+
+- Use python-analysis for manifest detection and conversion ([#14956](https://github.com/vercel/vercel/pull/14956))
+
+- [services] detect and manage virtual environments for Python services ([#14952](https://github.com/vercel/vercel/pull/14952))
+
+### Patch Changes
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 6.10.0
+
+### Minor Changes
+
+- [python] prefer `fastapi dev` to start ASGI application if FastAPI CLI is available and monitor module changes ([#14861](https://github.com/vercel/vercel/pull/14861))
+
+## 6.9.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
+## 6.8.0
+
+### Minor Changes
+
+- fix a build regression on projects with changed rootDirectory ([#14931](https://github.com/vercel/vercel/pull/14931))
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
 ## 6.6.0
 
 ### Minor Changes

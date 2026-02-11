@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const addSubcommand = {
@@ -7,18 +7,98 @@ export const addSubcommand = {
   description: 'Installs a marketplace integration',
   arguments: [
     {
-      name: 'name',
+      name: 'integration',
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'name',
+      description:
+        'Custom name for the resource (auto-generated if not provided)',
+      shorthand: 'n',
+      type: String,
+      deprecated: false,
+      argument: 'NAME',
+    },
+    {
+      name: 'metadata',
+      description:
+        'Metadata for the resource as KEY=VALUE (can be repeated). Run `vercel integration add <name> --help` to see available keys.',
+      shorthand: 'm',
+      type: [String],
+      deprecated: false,
+      argument: 'KEY=VALUE',
+    },
+    {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      argument: 'PLAN_ID',
+      description: 'Billing plan ID to use for the resource',
+    },
+    {
+      name: 'no-connect',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Skip connecting the resource to the current project (also skips env pull)',
+    },
+    {
+      name: 'no-env-pull',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Skip running env pull after provisioning',
+    },
+  ],
   examples: [
     {
-      name: 'Install a marketplace integration',
+      name: 'Install a marketplace integration (auto-generates resource name)',
       value: [
         `${packageName} integration add <integration-name>`,
         `${packageName} integration add acme`,
       ],
+    },
+    {
+      name: 'Install a specific product from an integration',
+      value: [
+        `${packageName} integration add <integration>/<product>`,
+        `${packageName} integration add acme/acme-redis`,
+      ],
+    },
+    {
+      name: 'Install with a custom resource name',
+      value: [
+        `${packageName} integration add acme --name my-database`,
+        `${packageName} integration add acme -n my-database`,
+      ],
+    },
+    {
+      name: 'Install with metadata options',
+      value: [
+        `${packageName} integration add acme --metadata region=us-east-1`,
+        `${packageName} integration add acme -m region=us-east-1 -m version=16`,
+        `${packageName} integration add acme -m auth=true`,
+        `${packageName} integration add acme -m "readRegions=sfo1,iad1"`,
+      ],
+    },
+    {
+      name: 'Install with a specific billing plan',
+      value: [
+        `${packageName} integration add acme --plan pro`,
+        `${packageName} integration add acme -p pro`,
+      ],
+    },
+    {
+      name: 'Show available products for an integration',
+      value: `${packageName} integration add acme --help`,
+    },
+    {
+      name: 'Discover available marketplace products and their slugs',
+      value: `${packageName} integration discover`,
     },
   ],
 } as const;
@@ -95,11 +175,29 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const discoverSubcommand = {
+  name: 'discover',
+  aliases: [],
+  description: 'Discover available marketplace integrations',
+  arguments: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Discover marketplace integrations',
+      value: [`${packageName} integration discover`],
+    },
+    {
+      name: 'Discover marketplace integrations as JSON',
+      value: [`${packageName} integration discover --json`],
+    },
+  ],
+} as const;
+
 export const balanceSubcommand = {
   name: 'balance',
   aliases: [],
   description:
-    'Shows the balances and thresholds of specified marketplace integration',
+    'Shows the balances and thresholds of a specified marketplace integration',
   arguments: [
     {
       name: 'integration',
@@ -154,9 +252,16 @@ export const integrationCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    balanceSubcommand,
     listSubcommand,
+    discoverSubcommand,
     openSubcommand,
     removeSubcommand,
   ],
-  examples: [],
+  examples: [
+    {
+      name: 'Install a specific product from an integration',
+      value: `${packageName} integration add acme/acme-redis`,
+    },
+  ],
 } as const;

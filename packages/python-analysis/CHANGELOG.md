@@ -1,5 +1,23 @@
 # @vercel/python-analysis
 
+## 0.4.0
+
+### Minor Changes
+
+- Use python-analysis for manifest detection and conversion ([#14956](https://github.com/vercel/vercel/pull/14956))
+
+## 0.3.2
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 0.3.1
+
+### Patch Changes
+
+- fix ESM/CJS cross-compatibility ([#14869](https://github.com/vercel/vercel/pull/14869))
+
 ## 0.3.0
 
 ### Minor Changes

@@ -4,10 +4,13 @@ import { promises as fsp } from 'fs';
 import { join, dirname, extname } from 'path';
 import _treeKill from 'tree-kill';
 import { promisify } from 'util';
+import { Writable } from 'stream';
 import {
   BunVersion,
+  runNpmInstall,
   walkParentDirs,
   getSupportedBunVersion,
+  NowBuildError,
   type StartDevServer,
 } from '@vercel/build-utils';
 import { isErrnoException } from '@vercel/error-utils';
@@ -25,9 +28,81 @@ const treeKill = promisify(_treeKill);
 
 type TypescriptModule = typeof import('typescript');
 
+async function syncDependencies(
+  workPath: string,
+  onStdout?: (buf: Buffer) => void,
+  onStderr?: (buf: Buffer) => void
+): Promise<void> {
+  const writeOut = (msg: string) => {
+    if (onStdout) {
+      onStdout(Buffer.from(msg));
+    } else {
+      process.stdout.write(msg);
+    }
+  };
+
+  const writeErr = (msg: string) => {
+    if (onStderr) {
+      onStderr(Buffer.from(msg));
+    } else {
+      process.stderr.write(msg);
+    }
+  };
+
+  // Silence the output, but capture it in order for failures
+  const captured: Array<['stdout' | 'stderr', Buffer]> = [];
+  const bufStdout = new Writable({
+    write(chunk, _enc, cb) {
+      captured.push([
+        'stdout',
+        Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk),
+      ]);
+      cb();
+    },
+  });
+  const bufStderr = new Writable({
+    write(chunk, _enc, cb) {
+      captured.push([
+        'stderr',
+        Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk),
+      ]);
+      cb();
+    },
+  });
+
+  try {
+    await runNpmInstall(workPath, [], undefined, undefined, undefined, {
+      stdout: bufStdout,
+      stderr: bufStderr,
+    });
+  } catch (err) {
+    for (const [channel, chunk] of captured) {
+      (channel === 'stdout' ? writeOut : writeErr)(chunk.toString());
+    }
+
+    throw new NowBuildError({
+      code: 'NODE_DEPENDENCY_SYNC_FAILED',
+      message: `Failed to install Node.JS dependencies: ${err instanceof Error ? err.message : String(err)}`,
+    });
+  }
+}
+
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {}, publicDir } = opts;
   const entrypointPath = join(workPath, entrypoint);
+
+  if (meta.syncDependencies) {
+    const gray = '\x1b[90m';
+    const reset = '\x1b[0m';
+    const syncMessage = `${gray}Synchronizing dependencies...${reset}\n`;
+    if (opts.onStdout) {
+      opts.onStdout(Buffer.from(syncMessage));
+    } else {
+      console.log(syncMessage);
+    }
+
+    await syncDependencies(workPath, opts.onStdout, opts.onStderr);
+  }
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);

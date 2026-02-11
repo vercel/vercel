@@ -1,7 +1,12 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import {
+  Lambda,
+  createLambda,
+  getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
+} from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, {
@@ -38,6 +43,7 @@ import {
   findPackageJson,
   traverseUpDirectories,
   PipInstallResult,
+  NpmInstallOutput,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -51,6 +57,7 @@ import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
+import { getServiceUrlEnvVars } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
@@ -84,6 +91,7 @@ export {
   getSupportedBunVersion,
   detectPackageManager,
   runNpmInstall,
+  NpmInstallOutput,
   runBundleInstall,
   runPipInstall,
   PipInstallResult,
@@ -98,12 +106,14 @@ export {
   getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
+  getServiceUrlEnvVars,
   streamToBuffer,
   streamToBufferChunks,
   debug,
   isSymbolicLink,
   isDirectory,
   getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
   scanParentDirs,
   findPackageJson,
   getIgnoreFilter,

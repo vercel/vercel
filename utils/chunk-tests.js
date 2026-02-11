@@ -104,7 +104,9 @@ const E2E_TEST_SCRIPTS = [
 ];
 
 const packageOptionsOverrides = {
-  // 'some-package': { min: 1, max: 1 },
+  // The vercel CLI package has enough test files that passing them all as
+  // command-line arguments exceeds the Windows cmd.exe ~8191 character limit.
+  vercel: { max: 2 },
 };
 
 function getRunnerOptions(scriptName, packageName) {

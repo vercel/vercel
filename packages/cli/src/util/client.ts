@@ -68,6 +68,8 @@ export interface ClientOptions extends Stdio {
   isAgent?: boolean;
   /** Name of the agent running the CLI (e.g., 'claude', 'cursor') */
   agentName?: string;
+  /** Run without interactive prompts; true when --non-interactive or when agent is detected */
+  nonInteractive?: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
   /** Never prompt; output structured JSON and exit on action required (--non-interactive or agent) */
@@ -113,6 +115,8 @@ export default class Client extends EventEmitter implements Stdio {
   isAgent: boolean;
   /** Name of the agent running the CLI */
   agentName?: string;
+  /** Run without interactive prompts; true when --non-interactive or when agent is detected */
+  nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
   /** Never prompt; output structured JSON and exit on action required */
@@ -134,6 +138,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.telemetryEventStore = opts.telemetryEventStore;
     this.isAgent = opts.isAgent ?? false;
     this.agentName = opts.agentName;
+    this.nonInteractive = opts.nonInteractive ?? this.isAgent;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
     this.nonInteractive = opts.nonInteractive ?? this.isAgent;
 

@@ -9,6 +9,7 @@ import {
   type PrepareCache,
   type BuildV2,
   type Lambda,
+  isBunVersion,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
 // Re-export cervel functions for use by other packages
@@ -39,7 +40,13 @@ export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
-  const nodeVersion = await getNodeVersion(args.workPath);
+  const nodeVersion = await getNodeVersion(
+    args.workPath,
+    undefined,
+    args.config,
+    args.meta
+  );
+  const isBun = isBunVersion(nodeVersion);
   const builderName = '@vercel/backends';
 
   const span =
@@ -60,6 +67,18 @@ export const build: BuildV2 = async args => {
     args.entrypoint = entrypoint;
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
+
+    const functionConfig = args.config.functions?.[entrypoint];
+    if (functionConfig) {
+      args.config.includeFiles = [
+        ...normalizeArray(args.config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      args.config.excludeFiles = [
+        ...normalizeArray(args.config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
 
     // Always run rolldown, even if the user has provided a build command
     // It's very fast and we use it for introspection.
@@ -97,8 +116,23 @@ export const build: BuildV2 = async args => {
       localBuildFiles,
       files,
       ignoreNodeModules: false,
+      ignore: args.config.excludeFiles,
+      conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    const baseDir = args.repoRootPath || args.workPath;
+    const includeResults = await Promise.all(
+      normalizeArray(args.config.includeFiles).map(pattern =>
+        glob(pattern, baseDir)
+      )
+    );
+    for (const matched of includeResults) {
+      for (const [relPath, entry] of Object.entries(matched)) {
+        files[relPath] = entry;
+      }
+    }
+
     const introspectionResult = await introspectionPromise;
     await typescriptPromise;
 
@@ -148,3 +182,6 @@ export const build: BuildV2 = async args => {
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+const normalizeArray = (value: any) =>
+  Array.isArray(value) ? value : value ? [value] : [];

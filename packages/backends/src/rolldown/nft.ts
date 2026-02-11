@@ -1,6 +1,6 @@
 import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
-import { readFile, lstat } from 'node:fs/promises';
+import { readFile, lstat, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNativeError } from 'node:util/types';
 import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
@@ -9,22 +9,31 @@ import { transform } from 'oxc-transform';
 export const nft = async (
   args: Pick<BuildOptions, 'workPath' | 'repoRootPath'> & {
     ignoreNodeModules: boolean;
+    ignore?: string | string[] | undefined;
     localBuildFiles: Set<string>;
     files: Files;
     span: Span;
+    conditions?: string[];
   }
 ) => {
   const nftSpan = args.span.child('vc.builder.backends.nft');
 
   const runNft = async () => {
+    const ignorePatterns = [
+      ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
+      ...(args.ignore
+        ? Array.isArray(args.ignore)
+          ? args.ignore
+          : [args.ignore]
+        : []),
+    ];
     const nftResult = await nodeFileTrace(Array.from(args.localBuildFiles), {
       base: args.repoRootPath,
       processCwd: args.workPath,
       ts: true,
       mixedModules: true,
-      ignore: args.ignoreNodeModules
-        ? path => path.includes('node_modules')
-        : undefined,
+      conditions: args.conditions,
+      ignore: ignorePatterns.length > 0 ? ignorePatterns : undefined,
       async readFile(fsPath) {
         try {
           let source: string | Buffer = await readFile(fsPath);
@@ -59,12 +68,18 @@ export const nft = async (
 
       if (stats.isSymbolicLink() || stats.isFile()) {
         if (args.ignoreNodeModules) {
-          // Use FileBlob so introspection can include these files
-          const content = await readFile(absolutePath, 'utf-8');
-          args.files[outputPath] = new FileBlob({
-            data: content,
-            mode: stats.mode,
-          });
+          // Symlinks may point to directories — only read actual files
+          const targetStats = stats.isSymbolicLink()
+            ? await stat(absolutePath)
+            : stats;
+          if (targetStats.isFile()) {
+            // Use FileBlob so introspection can include these files
+            const content = await readFile(absolutePath, 'utf-8');
+            args.files[outputPath] = new FileBlob({
+              data: content,
+              mode: stats.mode,
+            });
+          }
         } else {
           args.files[outputPath] = new FileFsRef({
             fsPath: absolutePath,

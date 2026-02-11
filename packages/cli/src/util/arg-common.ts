@@ -55,6 +55,14 @@ export const globalCommandOptions = [
     deprecated: false,
   },
   {
+    name: 'non-interactive',
+    shorthand: null,
+    type: Boolean,
+    description:
+      'Run without interactive prompts; when an agent is detected this is the default',
+    deprecated: false,
+  },
+  {
     name: 'scope',
     shorthand: 'S',
     type: String,
@@ -140,4 +148,13 @@ export const jsonOption = {
   type: Boolean,
   deprecated: true,
   description: 'DEPRECATED: Use --format=json instead',
+} as const;
+
+export const nonInteractiveOption = {
+  name: 'non-interactive',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Run without interactive prompts; when an agent is detected this is the default',
 } as const;

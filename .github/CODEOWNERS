@@ -17,15 +17,25 @@
 /packages/mcp-adapter                    @vercel/ci-cd @cramforce @quuu
 /examples/create-react-app               @vercel/ci-cd @Timer
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
-/packages/node                           @vercel/ci-cd @Kikobeats
-/packages/related-projects               @vercel/ci-cd @Kikobeats @mknichel
-/packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management @vercel/ai-sdk
+/packages/node                           @vercel/ci-cd
+/packages/related-projects               @vercel/ci-cd @mknichel
+/packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
-/packages/config                         @vercel/ci-cd @vercel/edge-ingress @pranavkarthik10 @MatthewStanciu
-/packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/marketplace
-/packages/cli/src/util/integration/      @vercel/ci-cd @vercel/marketplace
-/packages/cli/test/mocks/integration.ts  @vercel/ci-cd @vercel/marketplace
-/packages/cli/test/unit/commands/integration/ @vercel/ci-cd @vercel/marketplace
+/packages/config                         @vercel/ci-cd @MatthewStanciu
+/packages/cli/                           @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/util/integration/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/util/telemetry/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/mocks/integration.ts  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/util/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli-auth/                      @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/client/                        @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/frameworks/                    @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/error-utils/                   @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/detect-agent/                  @vercel/ci-cd @vercel/vercel-cli-approvers
 /packages/python*                        @vercel/ci-cd @vercel/team-python
 /python                                  @vercel/ci-cd @vercel/team-python
 /.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python
@@ -36,3 +46,4 @@
 .changeset/
 /packages/*/CHANGELOG.md
 /packages/*/package.json
+/pnpm-lock.yaml
