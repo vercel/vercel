@@ -1,7 +1,12 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import {
+  Lambda,
+  createLambda,
+  getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
+} from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, {
@@ -108,6 +113,7 @@ export {
   isSymbolicLink,
   isDirectory,
   getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
   scanParentDirs,
   findPackageJson,
   getIgnoreFilter,
