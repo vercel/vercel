@@ -796,6 +796,109 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('--plan flag', () => {
+    it('should include billingPlanId in auto-provision request body', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'provisioned',
+      });
+
+      client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        billingPlanId: 'pro',
+      });
+    });
+
+    it('should include planId in fallback URL when --plan is provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringMatching(/planId=pro/)
+      );
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringMatching(/source=cli/)
+      );
+    });
+
+    it('should not include planId in fallback URL when --plan is not provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.not.stringMatching(/planId=/)
+      );
+    });
+
+    it('should provision successfully with --plan flag and -p shorthand', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'provisioned',
+      });
+
+      client.setArgv('integration', 'add', 'acme', '-p', 'team');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        billingPlanId: 'team',
+      });
+    });
+
+    it('should include billingPlanId in retry request after policy acceptance', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'install',
+        secondResponseKey: 'provisioned',
+      });
+
+      client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Accept privacy policy?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Accept terms of service?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      // Both initial and retry requests should include billingPlanId
+      expect(requestBodies[0]).toMatchObject({ billingPlanId: 'pro' });
+      expect(requestBodies[1]).toMatchObject({ billingPlanId: 'pro' });
+    });
+  });
+
   describe('errors', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });
