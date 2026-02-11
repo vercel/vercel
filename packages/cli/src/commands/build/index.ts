@@ -2,9 +2,9 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
+import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
-import { statSync } from 'fs';
+import { readdirSync, statSync } from 'fs';
 
 import {
   download,
@@ -1376,8 +1376,13 @@ async function analyzeSingleFunction(
   try {
     const content = await fs.readFile(file, 'utf8');
     const parsed = JSON.parse(content);
+    const funcDir = dirname(file);
 
-    // Extract file paths from .vc-config.json
+    // Size the files that were written into .func (FileBlob, zipBuffer, etc.)
+    const funcDirStats = getDirectorySizeInMB(funcDir);
+
+    // Also size FileFsRef entries from filePathMap — these live on disk
+    // outside .func so there's no overlap with the directory walk above.
     const filePathMap =
       parsed.filePathMap && typeof parsed.filePathMap === 'object'
         ? Object.entries(parsed.filePathMap)
@@ -1390,13 +1395,17 @@ async function analyzeSingleFunction(
             }))
         : [];
 
-    const stats = getTotalFileSizeInMB(filePathMap);
+    const fsRefStats = getTotalFileSizeInMB(filePathMap);
+
+    const totalSize = funcDirStats.size + fsRefStats.size;
+    const allFiles = new Map([...funcDirStats.files, ...fsRefStats.files]);
+
     const functionUrlPath = getFunctionUrlPath(file, outputDir);
 
     return {
       path: functionUrlPath,
-      size: stats.size,
-      files: stats.files,
+      size: totalSize,
+      files: allFiles,
     };
   } catch (error) {
     output.warn(`Failed to analyze ${file}: ${error}`);
@@ -1427,6 +1436,35 @@ function getTotalFileSizeInMB(
     }
   }
 
+  return { size, files: filesSizeMap };
+}
+
+function getDirectorySizeInMB(dir: string): {
+  size: number;
+  files: Map<string, number>;
+} {
+  let size = 0;
+  const filesSizeMap = new Map<string, number>();
+  try {
+    const entries = readdirSync(dir, { recursive: true });
+    for (const entry of entries) {
+      const entryPath =
+        typeof entry === 'string' ? entry : (entry as Buffer).toString();
+      const fullPath = join(dir, entryPath);
+      try {
+        const stats = statSync(fullPath);
+        if (stats.isFile()) {
+          const fileSizeMB = stats.size / (1024 * 1024);
+          size += fileSizeMB;
+          filesSizeMap.set(normalizePath(entryPath), fileSizeMB);
+        }
+      } catch {
+        // File doesn't exist or can't be accessed
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
   return { size, files: filesSizeMap };
 }
 
