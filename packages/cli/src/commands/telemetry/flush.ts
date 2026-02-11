@@ -6,7 +6,7 @@ export default async function flush(_client: Client, args: string[]) {
     'https://telemetry.vercel.com/api/vercel-cli/v1/events';
   const { headers, body } = JSON.parse(args[0]);
   try {
-    // Use node-fetch directly instead of client.fetch because the client's
+    // Use fetch directly instead of client.fetch because the client's
     // HTTP agent may be HTTPS-only, but the bridge URL can be http:// in tests.
     const res = await fetch(url, {
       method: 'POST',
