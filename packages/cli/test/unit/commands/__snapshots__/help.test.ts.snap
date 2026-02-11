@@ -3415,10 +3415,20 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > link help output snapshots > link help column width 40 1`] = `
 "
-  ▲ vercel link [options]
+  ▲ vercel link command [options]
 
   Link a local directory to a Vercel    
   Project.                              
+
+  Commands:
+
+  add    Add additional Vercel  
+         Projects to an existing
+         repository link.       
+         Requires an existing   
+         repo.json (created by  
+         \`link --repo\`).        
+
 
   Options:
 
@@ -3503,14 +3513,24 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link --repo
 
+  - Add additional projects to an existing repository link
+
+    $ vercel link add
+
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 80 1`] = `
 "
-  ▲ vercel link [options]
+  ▲ vercel link command [options]
 
   Link a local directory to a Vercel Project.                                   
+
+  Commands:
+
+  add    Add additional Vercel Projects to an existing repository link. 
+         Requires an existing repo.json (created by \`link --repo\`).     
+
 
   Options:
 
@@ -3554,14 +3574,24 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
     $ vercel link --repo
 
+  - Add additional projects to an existing repository link
+
+    $ vercel link add
+
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 120 1`] = `
 "
-  ▲ vercel link [options]
+  ▲ vercel link command [options]
 
   Link a local directory to a Vercel Project.                                                                           
+
+  Commands:
+
+  add    Add additional Vercel Projects to an existing repository link. Requires an existing repo.json (created 
+         by \`link --repo\`).                                                                                     
+
 
   Options:
 
@@ -3601,6 +3631,10 @@ exports[`help command > link help output snapshots > link help column width 120 
   - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
 
     $ vercel link --repo
+
+  - Add additional projects to an existing repository link
+
+    $ vercel link add
 
 "
 `;
