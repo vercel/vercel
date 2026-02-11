@@ -3129,7 +3129,7 @@ exports[`help command > integration help output snapshots > integration list sub
 
   - List resources as JSON
 
-    $ vercel integration list --json
+    $ vercel integration list --format=json
 
 "
 `;

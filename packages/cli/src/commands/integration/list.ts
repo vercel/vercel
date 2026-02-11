@@ -36,7 +36,7 @@ export async function list(client: Client) {
 
   telemetry.trackCliArgumentProject(parsedArguments.args[1]);
   telemetry.trackCliFlagAll(parsedArguments.flags['--all']);
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
   // Note: the `--integration` flag is tracked later, after validating
   // whether the value is a known integration name or not.
 

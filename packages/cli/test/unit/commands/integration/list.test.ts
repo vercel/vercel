@@ -397,9 +397,9 @@ describe('integration', () => {
         });
       });
 
-      describe('--json', () => {
+      describe('--format=json', () => {
         it('returns JSON output for the linked project', async () => {
-          client.setArgv('integration', 'list', '--json');
+          client.setArgv('integration', 'list', '--format=json');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);
 
@@ -421,7 +421,7 @@ describe('integration', () => {
         });
 
         it('returns JSON output with --all flag', async () => {
-          client.setArgv('integration', 'list', '--all', '--json');
+          client.setArgv('integration', 'list', '--all', '--format=json');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);
 
@@ -430,8 +430,8 @@ describe('integration', () => {
           expect(jsonOutput.resources).toHaveLength(7);
         });
 
-        it('should track --json flag in telemetry', async () => {
-          client.setArgv('integration', 'list', '--json');
+        it('should track --format option in telemetry', async () => {
+          client.setArgv('integration', 'list', '--format=json');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);
 
@@ -441,8 +441,8 @@ describe('integration', () => {
               value: 'list',
             },
             {
-              key: 'flag:json',
-              value: 'TRUE',
+              key: 'option:format',
+              value: 'json',
             },
           ]);
         });

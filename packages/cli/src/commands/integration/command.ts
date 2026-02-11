@@ -153,7 +153,6 @@ export const listSubcommand = {
       deprecated: false,
     },
     formatOption,
-    jsonOption,
   ],
   examples: [
     {
@@ -177,7 +176,7 @@ export const listSubcommand = {
     },
     {
       name: 'List resources as JSON',
-      value: [`${packageName} integration list --json`],
+      value: [`${packageName} integration list --format=json`],
     },
   ],
 } as const;
