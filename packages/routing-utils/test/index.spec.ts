@@ -152,6 +152,89 @@ describe('normalizeRoutes', () => {
     }
   });
 
+  test('accepts routes with source alias', () => {
+    const input = [
+      { source: '/about', destination: '/about.html' },
+      { source: '/blog/:slug', destination: '/posts/:slug', statusCode: 200 },
+    ];
+    assertValid(input);
+  });
+
+  test('converts source to src in normalizeRoutes', () => {
+    const input = [
+      { source: '/about', destination: '/about.html' },
+    ] as unknown as Route[];
+    const { error, routes } = normalizeRoutes(input);
+
+    assert.strictEqual(error, null);
+    assert.notStrictEqual(routes, null);
+
+    if (routes) {
+      const route = routes[0] as any;
+      assert.strictEqual(route.src, '^/about$');
+      assert.strictEqual(route.dest, '/about.html');
+      assert.strictEqual(route.source, undefined);
+      assert.strictEqual(route.destination, undefined);
+    }
+  });
+
+  test('converts statusCode to status in normalizeRoutes', () => {
+    const input = [
+      { source: '/old', destination: '/new', statusCode: 301 },
+    ] as unknown as Route[];
+    const { error, routes } = normalizeRoutes(input);
+
+    assert.strictEqual(error, null);
+    assert.notStrictEqual(routes, null);
+
+    if (routes) {
+      const route = routes[0] as any;
+      assert.strictEqual(route.src, '^/old$');
+      assert.strictEqual(route.dest, '/new');
+      assert.strictEqual(route.status, 301);
+      assert.strictEqual(route.source, undefined);
+      assert.strictEqual(route.destination, undefined);
+      assert.strictEqual(route.statusCode, undefined);
+    }
+  });
+
+  test('fails if both src and source are defined', () => {
+    const input = [{ src: '/about', source: '/about' }] as unknown as Route[];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error?.code, 'invalid_route');
+    assert.deepEqual(
+      error?.message,
+      'Route at index 0 cannot define both `src` and `source`. Please use only one.'
+    );
+  });
+
+  test('fails if both dest and destination are defined', () => {
+    const input = [
+      { src: '/about', dest: '/about.html', destination: '/about.html' },
+    ] as unknown as Route[];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error?.code, 'invalid_route');
+    assert.deepEqual(
+      error?.message,
+      'Route at index 0 cannot define both `dest` and `destination`. Please use only one.'
+    );
+  });
+
+  test('fails if both status and statusCode are defined', () => {
+    const input = [
+      { src: '/old', dest: '/new', status: 301, statusCode: 301 },
+    ] as unknown as Route[];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error?.code, 'invalid_route');
+    assert.deepEqual(
+      error?.message,
+      'Route at index 0 cannot define both `status` and `statusCode`. Please use only one.'
+    );
+  });
+
   test('returns if null', () => {
     const input = null;
     const { error, routes } = normalizeRoutes(input);
@@ -269,11 +352,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].dest',
+          schemaPath: '#/items/anyOf/0/properties/dest/type',
+          params: { type: 'string' },
+          message: 'should be string',
         },
         {
           keyword: 'additionalProperties',
@@ -303,11 +386,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].methods',
+          schemaPath: '#/items/anyOf/0/properties/methods/type',
+          params: { type: 'array' },
+          message: 'should be array',
         },
         {
           keyword: 'additionalProperties',
@@ -337,11 +420,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].methods[0]',
+          schemaPath: '#/items/anyOf/0/properties/methods/items/type',
+          params: { type: 'string' },
+          message: 'should be string',
         },
         {
           keyword: 'additionalProperties',
@@ -371,11 +454,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].headers',
+          schemaPath: '#/items/anyOf/0/properties/headers/type',
+          params: { type: 'object' },
+          message: 'should be object',
         },
         {
           keyword: 'additionalProperties',
@@ -407,11 +490,12 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: "[0].headers['test']",
+          schemaPath:
+            '#/items/anyOf/0/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type',
+          params: { type: 'string' },
+          message: 'should be string',
         },
         {
           keyword: 'additionalProperties',
@@ -475,11 +559,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].continue',
+          schemaPath: '#/items/anyOf/0/properties/continue/type',
+          params: { type: 'boolean' },
+          message: 'should be boolean',
         },
         {
           keyword: 'additionalProperties',
@@ -509,11 +593,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].check',
+          schemaPath: '#/items/anyOf/0/properties/check/type',
+          params: { type: 'boolean' },
+          message: 'should be boolean',
         },
         {
           keyword: 'additionalProperties',
@@ -543,11 +627,11 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
+          keyword: 'type',
+          dataPath: '[0].status',
+          schemaPath: '#/items/anyOf/0/properties/status/type',
+          params: { type: 'integer' },
+          message: 'should be integer',
         },
         {
           keyword: 'additionalProperties',

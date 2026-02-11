@@ -16,6 +16,7 @@ import {
   Route,
   RouteApiError,
   RouteWithHandle,
+  RouteWithSrc,
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
@@ -42,6 +43,38 @@ export function isValidHandleValue(handle: string): handle is HandleValue {
   return validHandleValues.has(handle);
 }
 
+function convertRouteAliases(route: RouteWithSrc, index: number): void {
+  if (route.source !== undefined) {
+    if (route.src !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`src\` and \`source\`. Please use only one.`
+      );
+    }
+    route.src = route.source;
+    delete route.source;
+  }
+
+  if (route.destination !== undefined) {
+    if (route.dest !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
+      );
+    }
+    route.dest = route.destination;
+    delete route.destination;
+  }
+
+  if (route.statusCode !== undefined) {
+    if (route.status !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`status\` and \`statusCode\`. Please use only one.`
+      );
+    }
+    route.status = route.statusCode;
+    delete route.statusCode;
+  }
+}
+
 export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
     return { routes: inputRoutes, error: null };
@@ -54,6 +87,16 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   inputRoutes.forEach((r, i) => {
     const route = { ...r };
     routes.push(route);
+
+    // Convert aliases (source -> src, destination -> dest, statusCode -> status)
+    if (!isHandler(route)) {
+      try {
+        convertRouteAliases(route as RouteWithSrc, i);
+      } catch (err: any) {
+        errors.push(err.message);
+      }
+    }
+
     const keys = Object.keys(route);
     if (isHandler(route)) {
       const { handle } = route;
