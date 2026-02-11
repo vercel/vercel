@@ -35,7 +35,7 @@ import {
   classifyPackages,
   generateRuntimeRequirements,
   parseUvLock,
-} from './packages';
+} from '@vercel/python-analysis';
 import { detectInstallSource } from './install';
 import {
   UvRunner,
@@ -606,6 +606,23 @@ export const build: BuildV3 = async ({
   if (config.framework === 'fasthtml') {
     const { SESSKEY = '' } = process.env;
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
+  }
+
+  // When runtime installation is enabled, verify the bundle without public deps fits within Lambda limits.
+  if (runtimeInstallEnabled) {
+    const finalBundleSize = await calculateBundleSize(files);
+    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+      const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
+          `deferring public packages to runtime installation. This usually means your ` +
+          `private packages or source code are too large. Consider reducing the size of ` +
+          `private dependencies or splitting your application.`,
+      });
+    }
   }
 
   const output = new Lambda({

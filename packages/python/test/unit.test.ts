@@ -1978,15 +1978,12 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 // installation to runtime.
 // --------------------------------------------------------------------------
 
-import {
-  calculateBundleSize,
-  LAMBDA_SIZE_THRESHOLD_BYTES,
-} from '../src/install';
+import { calculateBundleSize } from '../src/install';
 import {
   classifyPackages,
   generateRuntimeRequirements,
   parseUvLock,
-} from '../src/packages';
+} from '@vercel/python-analysis';
 import { renderTrampoline } from '../src/trampoline';
 import { FileFsRef } from '@vercel/build-utils';
 
@@ -2163,12 +2160,6 @@ version = "2.31.0"
       const content = generateRuntimeRequirements(classification);
       expect(content).toContain('# Auto-generated');
       expect(content).not.toContain('==');
-    });
-  });
-
-  describe('LAMBDA_SIZE_THRESHOLD_BYTES', () => {
-    it('is set to 245MB', () => {
-      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(245 * 1024 * 1024);
     });
   });
 });

@@ -1,30 +1,15 @@
-/**
- * Parser for uv.lock files.
- *
- * uv.lock is a TOML-based lock file format used by uv (https://github.com/astral-sh/uv).
- * This module provides utilities for parsing the lock file and classifying packages
- * as public (from PyPI) or private (from git, local paths, or private registries).
- *
- * @module uv-lock-parser
- */
-
+// Parser for uv.lock files.
 import toml from 'smol-toml';
 
 /**
- * Source information for a package in uv.lock.
+ * A source of a package in a uv.lock file
  */
 export interface UvLockPackageSource {
-  /** Registry URL (e.g., "https://pypi.org/simple") */
   registry?: string;
-  /** Direct URL for the package */
   url?: string;
-  /** Git repository URL */
   git?: string;
-  /** Local file path */
   path?: string;
-  /** Editable install path */
   editable?: string;
-  /** Virtual package marker (for the project itself) */
   virtual?: string;
 }
 
@@ -32,11 +17,8 @@ export interface UvLockPackageSource {
  * A package entry from a parsed uv.lock file.
  */
 export interface UvLockPackage {
-  /** Package name (e.g., "requests") */
   name: string;
-  /** Pinned version (e.g., "2.31.0") */
   version: string;
-  /** Source information indicating where the package comes from */
   source?: UvLockPackageSource;
 }
 
@@ -44,9 +26,7 @@ export interface UvLockPackage {
  * Parsed uv.lock file structure.
  */
 export interface UvLockFile {
-  /** Lock file format version */
   version?: number;
-  /** List of locked packages */
   packages: UvLockPackage[];
 }
 
@@ -64,10 +44,6 @@ interface UvLockToml {
 
 /**
  * Parse the contents of a uv.lock file.
- *
- * @param content - Raw TOML content of the uv.lock file
- * @returns Parsed lock file structure
- * @throws Error if the content is not valid TOML
  */
 export function parseUvLock(content: string): UvLockFile {
   const parsed = toml.parse(content) as UvLockToml;
@@ -94,9 +70,6 @@ const PUBLIC_PYPI_PATTERNS = [
 
 /**
  * Check if a registry URL is a public PyPI registry.
- *
- * @param registryUrl - The registry URL to check
- * @returns true if the registry is public PyPI, false otherwise
  */
 function isPublicPyPIRegistry(registryUrl: string | undefined): boolean {
   if (!registryUrl) return true; // Default registry is PyPI
@@ -113,9 +86,6 @@ function isPublicPyPIRegistry(registryUrl: string | undefined): boolean {
  * - Editable installs
  * - Direct URLs
  * - Non-PyPI registry URLs (private PyPI mirrors, custom indexes)
- *
- * @param source - The package source to check
- * @returns true if the package is private, false otherwise
  */
 export function isPrivatePackageSource(
   source: UvLockPackageSource | undefined
@@ -136,22 +106,13 @@ export function isPrivatePackageSource(
  * Result of classifying packages from a uv.lock file.
  */
 export interface PackageClassification {
-  /** Package names that are from private sources (git, path, private registry, etc.) */
   privatePackages: string[];
-  /** Package names that are from public PyPI */
   publicPackages: string[];
-  /** Map of package names to their pinned versions */
   packageVersions: Record<string, string>;
 }
 
 /**
  * Normalize a Python package name according to PEP 503.
- *
- * Package names are case-insensitive and treat hyphens, underscores,
- * and periods as equivalent.
- *
- * @param name - The package name to normalize
- * @returns Normalized package name
  */
 export function normalizePackageName(name: string): string {
   return name.toLowerCase().replace(/[-_.]+/g, '-');
@@ -161,20 +122,15 @@ export function normalizePackageName(name: string): string {
  * Options for classifying packages.
  */
 export interface ClassifyPackagesOptions {
-  /** Parsed uv.lock file */
   lockFile: UvLockFile;
-  /** Package names to exclude from classification (e.g., the project itself) */
   excludePackages?: string[];
 }
 
 /**
  * Classify packages from a uv.lock file into private and public categories.
  *
- * This is useful for determining which packages can be installed from PyPI
+ * This is used for determining which packages can be installed from PyPI
  * at runtime vs. which must be bundled with the deployment.
- *
- * @param options - Classification options
- * @returns Classification result with private packages, public packages, and versions
  */
 export function classifyPackages(
   options: ClassifyPackagesOptions
@@ -209,9 +165,6 @@ export function classifyPackages(
  *
  * Only includes public packages that will be installed at runtime from PyPI.
  * Private packages should be bundled separately.
- *
- * @param classification - Package classification result
- * @returns Requirements.txt formatted content
  */
 export function generateRuntimeRequirements(
   classification: PackageClassification

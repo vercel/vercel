@@ -22,8 +22,8 @@ import { getVenvPythonBin } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
 
-// Leave some room so we don't accidentally exceed Lambda limits due to overhead from zipping, other files, etc.
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
+// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -225,7 +225,6 @@ interface EnsureUvProjectParams {
   repoRootPath?: string;
   pythonVersion: string;
   uv: UvRunner;
-  /** If true, always generate a uv.lock file (used for runtime install feature). */
   generateLockFile?: boolean;
 }
 
@@ -542,7 +541,6 @@ export async function mirrorSitePackagesIntoVendor({
 
 /**
  * Calculate the total uncompressed size of files in a Files object.
- * This is used to determine if the Lambda bundle exceeds the size threshold.
  */
 export async function calculateBundleSize(files: Files): Promise<number> {
   let totalSize = 0;
@@ -569,7 +567,6 @@ export async function calculateBundleSize(files: Files): Promise<number> {
 
 /**
  * Mirror only private packages from site-packages into the _vendor directory.
- * Used when runtime installation is enabled to bundle only private dependencies.
  */
 export async function mirrorPrivatePackagesIntoVendor({
   venvPath,
