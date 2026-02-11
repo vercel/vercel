@@ -38,6 +38,7 @@ import {
   findPackageJson,
   traverseUpDirectories,
   PipInstallResult,
+  NpmInstallOutput,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -85,6 +86,7 @@ export {
   getSupportedBunVersion,
   detectPackageManager,
   runNpmInstall,
+  NpmInstallOutput,
   runBundleInstall,
   runPipInstall,
   PipInstallResult,

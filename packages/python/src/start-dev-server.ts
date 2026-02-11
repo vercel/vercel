@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join, delimiter } from 'path';
+import { join, delimiter, dirname } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
@@ -16,7 +16,9 @@ import {
   getVenvPythonBin,
   getVenvBinDir,
 } from './utils';
-import { findUvBinary } from './uv';
+import { findUvBinary, getProtectedUvEnv } from './uv';
+import { detectInstallSource, type ManifestType } from './install';
+import { stringifyManifest } from '@vercel/python-analysis';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -77,6 +79,188 @@ function createLogListener(
       }
     }
   };
+}
+
+interface SyncDependenciesOptions {
+  workPath: string;
+  uvPath: string | null;
+  pythonBin: string;
+  env: NodeJS.ProcessEnv;
+  onStdout?: (buf: Buffer) => void;
+  onStderr?: (buf: Buffer) => void;
+}
+
+async function syncDependencies({
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: SyncDependenciesOptions): Promise<void> {
+  const installInfo = await detectInstallSource({
+    workPath,
+    entryDirectory: '.',
+  });
+
+  let { manifestType, manifestPath } = installInfo;
+  const manifest = installInfo.pythonPackage?.manifest;
+
+  if (!manifestType || !manifestPath) {
+    debug('No Python project manifest found, skipping dependency sync');
+    return;
+  }
+
+  // Store converted into manifest requirements, so we can run the sync
+  if (manifest?.origin && manifestType === 'pyproject.toml') {
+    const syncDir = join(workPath, '.vercel', 'python', 'sync');
+    mkdirSync(syncDir, { recursive: true });
+    const tempPyproject = join(syncDir, 'pyproject.toml');
+    const content = stringifyManifest(manifest.data);
+    writeFileSync(tempPyproject, content, 'utf8');
+    manifestPath = tempPyproject;
+    debug(
+      `Wrote converted ${manifest.origin.kind} manifest to ${tempPyproject}`
+    );
+  }
+
+  const writeOut = (msg: string) => {
+    if (onStdout) {
+      onStdout(Buffer.from(msg));
+    } else {
+      process.stdout.write(msg);
+    }
+  };
+
+  const writeErr = (msg: string) => {
+    if (onStderr) {
+      onStderr(Buffer.from(msg));
+    } else {
+      process.stderr.write(msg);
+    }
+  };
+
+  // Silence the output, but capture it for failures
+  const captured: Array<['stdout' | 'stderr', Buffer]> = [];
+
+  try {
+    await runSync({
+      manifestType,
+      manifestPath,
+      uvPath,
+      pythonBin,
+      env,
+      onStdout: data => captured.push(['stdout', data]),
+      onStderr: data => captured.push(['stderr', data]),
+    });
+  } catch (err) {
+    for (const [channel, chunk] of captured) {
+      (channel === 'stdout' ? writeOut : writeErr)(chunk.toString());
+    }
+
+    throw new NowBuildError({
+      code: 'PYTHON_DEPENDENCY_SYNC_FAILED',
+      message: `Failed to install Python dependencies from ${manifestType}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  }
+}
+
+interface RunSyncOptions {
+  manifestType: ManifestType;
+  manifestPath: string;
+  uvPath: string | null;
+  pythonBin: string;
+  env: NodeJS.ProcessEnv;
+  onStdout?: (buf: Buffer) => void;
+  onStderr?: (buf: Buffer) => void;
+}
+
+async function runSync({
+  manifestType,
+  manifestPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: RunSyncOptions): Promise<void> {
+  const projectDir = dirname(manifestPath);
+
+  const pip = uvPath
+    ? { cmd: uvPath, prefix: ['pip', 'install'] }
+    : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
+
+  let spawnCmd: string;
+  let spawnArgs: string[];
+
+  switch (manifestType) {
+    case 'uv.lock': {
+      if (!uvPath) {
+        throw new NowBuildError({
+          code: 'PYTHON_DEPENDENCY_SYNC_FAILED',
+          message: 'uv is required to install dependencies from uv.lock.',
+          link: 'https://docs.astral.sh/uv/getting-started/installation/',
+          action: 'Install uv',
+        });
+      }
+      spawnCmd = uvPath;
+      spawnArgs = ['sync'];
+      break;
+    }
+    case 'pylock.toml': {
+      spawnCmd = pip.cmd;
+      spawnArgs = [...pip.prefix, '-r', manifestPath];
+      break;
+    }
+    case 'pyproject.toml': {
+      spawnCmd = pip.cmd;
+      spawnArgs = [...pip.prefix, projectDir];
+      break;
+    }
+    default:
+      debug(`Unknown manifest type: ${manifestType}`);
+      return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    debug(`Running "${spawnCmd} ${spawnArgs.join(' ')}" in ${projectDir}...`);
+    const child = spawn(spawnCmd, spawnArgs, {
+      cwd: projectDir,
+      env: getProtectedUvEnv(env),
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    child.stdout?.on('data', (data: Buffer) => {
+      if (onStdout) {
+        onStdout(data);
+      } else {
+        process.stdout.write(data.toString());
+      }
+    });
+
+    child.stderr?.on('data', (data: Buffer) => {
+      if (onStderr) {
+        onStderr(data);
+      } else {
+        process.stderr.write(data.toString());
+      }
+    });
+
+    child.on('error', reject);
+    child.on('exit', (code, signal) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(
+          new Error(
+            `Command "${spawnCmd} ${spawnArgs.join(' ')}" failed with code ${code}, signal ${signal}`
+          )
+        );
+      }
+    });
+  });
 }
 
 // Persistent dev servers keyed by workPath + modulePath so background tasks
@@ -203,7 +387,7 @@ async function getMultiServicePythonRunner(
 
   // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath });
+  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath, quiet: true });
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
@@ -361,6 +545,26 @@ export const startDevServer: StartDevServer = async opts => {
           // ignore write errors
         }
       }
+    }
+
+    if (meta.syncDependencies) {
+      const gray = '\x1b[90m';
+      const reset = '\x1b[0m';
+      const syncMessage = `${gray}Synchronizing dependencies...${reset}\n`;
+      if (onStdout) {
+        onStdout(Buffer.from(syncMessage));
+      } else {
+        console.log(syncMessage);
+      }
+
+      await syncDependencies({
+        workPath,
+        uvPath,
+        pythonBin: spawnCommand,
+        env,
+        onStdout,
+        onStderr,
+      });
     }
 
     // Now spawn the actual server process
