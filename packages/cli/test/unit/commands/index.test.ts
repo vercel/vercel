@@ -13,6 +13,7 @@ describe('index', () => {
         ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
+        ['contract', 'contract'],
         ['curl', 'curl'],
         ['deploy', 'deploy'],
         ['dev', 'dev'],
@@ -65,6 +66,7 @@ describe('index', () => {
         ['upgrade', 'upgrade'],
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
+        ['usage', 'usage'],
         ['whoami', 'whoami'],
       ])
     );
