@@ -104,16 +104,17 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           CANARY_SUFFIX="canary.${TIMESTAMP}.${SHORT_SHA}"
 
-          # For each public package, append canary suffix to current version
+          # For each public package, bump to the next minor prerelease version.
+          # e.g. 1.2.3 -> 1.3.0-canary.20260211120000.abc1234
           node -e "
             const fs = require('fs');
-            const path = require('path');
             const glob = require('glob');
             const pkgPaths = glob.sync('packages/*/package.json');
             for (const pkgPath of pkgPaths) {
               const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
               if (pkg.private) continue;
-              pkg.version = pkg.version + '-${CANARY_SUFFIX}';
+              const [major, minor] = pkg.version.split('.').map(Number);
+              pkg.version = major + '.' + (minor + 1) + '.0-${CANARY_SUFFIX}';
               fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
               console.log(pkg.name + '@' + pkg.version);
             }
