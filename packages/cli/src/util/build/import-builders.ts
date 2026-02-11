@@ -59,7 +59,7 @@ export async function importBuilders(
       installResult.resolvedSpecs
     );
 
-    // We shouldn't buildersToAdd a second time from resolveBuilders.
+    // We shouldn't get buildersToAdd a second time from resolveBuilders.
     if ('buildersToAdd' in importResult) {
       throw new Error('Something went wrong!');
     }
@@ -125,52 +125,15 @@ export async function resolveBuilders(
     }
 
     // Resolution priority:
-    // 1. Project's node_modules (cwd)
-    // 2. .vercel/builders (where we install builders)
-    // 3. peerDeps version (install if specified and not found)
-    // 4. CLI's node_modules (wherever CLI is installed - globally or as a project dep)
+    // 1. .vercel/builders (where we install builders)
+    // 2. peerDeps version (install if specified and not found)
+    // 3. CLI's node_modules (wherever CLI is installed - globally or as a project dep)
 
     let pkgPath: string | undefined;
     let builderPkg: PackageJson | undefined;
     const peerVersion = peerDeps[name];
 
-    // 1. Try project's node_modules
-    try {
-      // TODO: in addition to look in node modules, we should look at project package.json
-      // because a nested/transitive dep could include the builder, and that is not the project's
-      // intentional opt-in to a custom builder.
-      const projPkgJSON = join(cwd, 'package.json');
-      const { dependencies } = await readJSON(projPkgJSON);
-      if (dependencies[name]) {
-        pkgPath = join(cwd, 'node_modules', name, 'package.json');
-        const builderPkgJson: PackageJson = await readJSON(pkgPath);
-        output.debug(
-          `Found "${name}@${builderPkgJson.version}" in project's node_modules`
-        );
-
-        // Warn if version doesn't match peerDeps, but still use it
-        // Note: we could use satisfies() to see if project version
-        // satisfies peerVersion requirement, and do something different when it does and doesn't.
-        if (peerVersion) {
-          if (builderPkgJson.version !== peerVersion) {
-            output.warn(
-              `"${name}@${builderPkgJson.version}" does not match expected "${peerVersion}"`
-            );
-          } else {
-            builderPkg = builderPkgJson;
-          }
-        }
-      }
-    } catch (err: unknown) {
-      if (!isErrnoException(err) || err.code !== 'ENOENT') {
-        throw err;
-      }
-      output.debug(
-        `"${name}@${peerVersion}" not found in project's node_modules`
-      );
-    }
-
-    // 2. Try .vercel/builders (where we install builders)
+    // 1. Try .vercel/builders (where we install builders)
     if (!builderPkg) {
       try {
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
@@ -196,7 +159,7 @@ export async function resolveBuilders(
       }
     }
 
-    // 3. If in peerDeps and not found yet, install it
+    // 2. If in peerDeps and not found yet, install it
     if (!builderPkg && peerVersion) {
       output.debug(
         `"${name}@${peerVersion}" not found in project or .vercel/builders, will install`
@@ -205,7 +168,7 @@ export async function resolveBuilders(
       continue;
     }
 
-    // 4. Try CLI's node_modules (wherever CLI is installed - globally or as a project dep)
+    // 3. Try CLI's node_modules (wherever CLI is installed - globally or as a project dep)
     if (!builderPkg) {
       try {
         pkgPath = require_.resolve(`${name}/package.json`, {
