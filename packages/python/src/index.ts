@@ -30,8 +30,6 @@ import {
   installRequirement,
   calculateBundleSize,
   LAMBDA_SIZE_THRESHOLD_BYTES,
-  findRepoRoot,
-  copyDirectoryToFiles,
 } from './install';
 import {
   classifyPackages,
