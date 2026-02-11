@@ -54,12 +54,15 @@ export default async function selectOrg(
     0
   );
 
-  // Non-interactive: when multiple choices and no default, return action_required so caller can output JSON and exit
-  if (client.nonInteractive && choices.length > 1 && !currentTeam) {
+  // Non-interactive: never default; output choices and exit so the user can explicitly pass --scope/--team
+  if (client.nonInteractive) {
     const actionRequired: ActionRequiredPayload = {
       status: 'action_required',
       reason: 'missing_scope',
-      message: 'Multiple teams available. Provide --team or --scope.',
+      message:
+        choices.length > 0
+          ? 'Provide --scope or --team explicitly. No default is applied in non-interactive mode.'
+          : 'No scopes available.',
       choices: choices.map(c => ({
         id: c.value.id,
         name: c.value.slug,

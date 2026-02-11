@@ -125,7 +125,7 @@ export default async function setupAndLink(
     org = await selectOrg(
       client,
       'Which scope should contain your project?',
-      autoConfirm || nonInteractive
+      autoConfirm
     );
   } catch (err: unknown) {
     if (isAPIError(err)) {
