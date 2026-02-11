@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createDeployment, FILE_LIMIT } from '../src/index';
 import { generateFakeFiles } from './util/generate-fake-files';
-import { generateNewToken } from './common';
 
 // We mock the upload module to prevent actual API calls.
 // We only need to verify that the archive mode is set correctly
@@ -12,23 +11,18 @@ vi.mock('../src/upload', () => ({
   },
 }));
 
+// A fake token is sufficient since upload is mocked and createDeployment
+// only checks that `token` is a string.
+const token = 'test-fake-token';
+
 describe('createDeployment auto-archive', () => {
-  let token: string;
-
-  beforeEach(async () => {
-    token = await generateNewToken();
-  });
-
   it('should auto-upgrade to archive mode when file count exceeds FILE_LIMIT', async () => {
-    // Each file is 1 byte, so we need FILE_LIMIT + 1 files.
-    // generateFakeFiles takes totalMB and fileSizeInBytes, so:
-    //   totalFiles = ceil((totalMB * 1024) / fileSizeInBytes)
-    // We want FILE_LIMIT + 1 = 15001 files at 1 byte each:
-    //   totalMB = ceil(15001 / 1024) ~= 15
-    const fileCount = FILE_LIMIT + 1;
-    const fileSizeInBytes = 1;
-    const totalKB = Math.ceil(fileCount / 1024);
-    const uploadFolder = await generateFakeFiles(totalKB, fileSizeInBytes);
+    // generateFakeFiles(totalMB, fileSizeInBytes) creates
+    //   ceil((totalMB * 1024) / fileSizeInBytes) files.
+    // We need > FILE_LIMIT files at 1 byte each:
+    //   ceil(15 * 1024 / 1) = 15360 > 15000
+    const totalMB = Math.ceil((FILE_LIMIT + 1) / 1024);
+    const uploadFolder = await generateFakeFiles(totalMB, 1);
 
     const events: Array<{ type: string; payload: any }> = [];
 
@@ -97,17 +91,15 @@ describe('createDeployment auto-archive', () => {
     const fileNames = Object.values(hashEvent!.payload).flatMap(
       (item: any) => item.names || []
     );
-    expect(
-      fileNames.every((n: string) => !n.includes('source.tgz.part'))
-    ).toBe(true);
+    expect(fileNames.every((n: string) => !n.includes('source.tgz.part'))).toBe(
+      true
+    );
   });
 
   it('should NOT override when archive is already explicitly set', async () => {
     // Even with many files, if archive is already set, don't emit warning
-    const fileCount = FILE_LIMIT + 1;
-    const fileSizeInBytes = 1;
-    const totalKB = Math.ceil(fileCount / 1024);
-    const uploadFolder = await generateFakeFiles(totalKB, fileSizeInBytes);
+    const totalMB = Math.ceil((FILE_LIMIT + 1) / 1024);
+    const uploadFolder = await generateFakeFiles(totalMB, 1);
 
     const events: Array<{ type: string; payload: any }> = [];
 
