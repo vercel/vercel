@@ -136,21 +136,31 @@ export async function resolveBuilders(
 
     // 1. Try project's node_modules
     try {
-      pkgPath = join(cwd, 'node_modules', name, 'package.json');
-      const builderPkgJson: PackageJson = await readJSON(pkgPath);
-      output.debug(
-        `Found "${name}@${builderPkgJson.version}" in project's node_modules`
-      );
-
-      // Warn if version doesn't match peerDeps, but still use it
-      // Note: we could use satisfies() to see if project version
-      // satisfies peerVersion requirement, and do something different when it does and doesn't.
-      if (peerVersion && builderPkgJson.version !== peerVersion) {
-        output.warn(
-          `"${name}@${builderPkgJson.version}" does not match expected "${peerVersion}"`
+      // TODO: in addition to look in node modules, we should look at project package.json
+      // because a nested/transitive dep could include the builder, and that is not the project's
+      // intentional opt-in to a custom builder.
+      const projPkgJSON = join(cwd, 'package.json');
+      const { dependencies } = await readJSON(projPkgJSON);
+      if (dependencies[name]) {
+        pkgPath = join(cwd, 'node_modules', name, 'package.json');
+        const builderPkgJson: PackageJson = await readJSON(pkgPath);
+        output.debug(
+          `Found "${name}@${builderPkgJson.version}" in project's node_modules`
         );
+
+        // Warn if version doesn't match peerDeps, but still use it
+        // Note: we could use satisfies() to see if project version
+        // satisfies peerVersion requirement, and do something different when it does and doesn't.
+        if (peerVersion) {
+          if (builderPkgJson.version !== peerVersion) {
+            output.warn(
+              `"${name}@${builderPkgJson.version}" does not match expected "${peerVersion}"`
+            );
+          } else {
+            builderPkg = builderPkgJson;
+          }
+        }
       }
-      builderPkg = builderPkgJson;
     } catch (err: unknown) {
       if (!isErrnoException(err) || err.code !== 'ENOENT') {
         throw err;
