@@ -29,10 +29,15 @@ export interface RepoProjectConfig {
   id: string;
   name: string;
   directory: string;
+  orgId?: string;
 }
 
 export interface RepoProjectsConfig {
-  orgId: string;
+  /**
+   * @deprecated Use `orgId` on each project entry instead.
+   * Kept for backwards compatibility with older `repo.json` files.
+   */
+  orgId?: string;
   remoteName: string;
   projects: RepoProjectConfig[];
 }
@@ -297,7 +302,6 @@ export async function ensureRepoLink(
     }
 
     repoConfig = {
-      orgId: org.id,
       remoteName,
       projects: selected.map(project => {
         if (!('id' in project)) {
@@ -308,6 +312,7 @@ export async function ensureRepoLink(
           id: project.id,
           name: project.name,
           directory: normalize(project.rootDirectory || ''),
+          orgId: org.id,
         };
       }),
     };

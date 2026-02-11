@@ -202,6 +202,28 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toEqual(cwd);
   });
 
+  it('should return link with legacy `repo.json` (top-level orgId)', async () => {
+    const cwd = fixture('monorepo-link-legacy');
+
+    useUser();
+    useTeams('team_dummy');
+
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'monorepo-dashboard',
+    });
+    const link = await getLinkedProject(client, join(cwd, 'dashboard'));
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    // Should fall back to top-level orgId when project-level orgId is not set
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmbKpqpiUqbcke');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
   it('should show project selector prompt link with `repo.json`', async () => {
     const cwd = fixture('monorepo-link');
 

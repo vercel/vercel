@@ -1,11 +1,11 @@
 {
+    "orgId": "team_dummy",
     "remoteName": "origin",
     "projects": [
       {
         "id": "QmbKpqpiUqbcke",
-        "name": "app",
-        "directory": "app",
-        "orgId": "team_dummy"
+        "name": "monorepo-dashboard",
+        "directory": "dashboard"
       }
     ]
 }
