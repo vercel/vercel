@@ -2,11 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
 import { createServer } from 'http';
-import {
-  EnvHttpProxyAgent,
-  setGlobalDispatcher,
-  getGlobalDispatcher,
-} from 'undici';
+import { EnvHttpProxyAgent } from 'undici';
 import { client } from '../../mocks/client';
 
 describe('Client', () => {
@@ -14,6 +10,7 @@ describe('Client', () => {
     beforeEach(() => {
       delete process.env.HTTPS_PROXY;
       delete process.env.HTTP_PROXY;
+      client.dispatcher = undefined;
     });
 
     it('should respect the `HTTP_PROXY` env var', async () => {
@@ -21,8 +18,8 @@ describe('Client', () => {
       const proxy = createProxy();
       const proxyUrl = await listen(proxy);
 
-      // For HTTP proxying, listen to 'request' events instead of 'connect'
-      proxy.on('request', () => {
+      // undici uses CONNECT tunneling for all proxied requests (including HTTP)
+      proxy.on('connect', () => {
         requestCount++;
       });
 
@@ -33,17 +30,16 @@ describe('Client', () => {
       });
       const mockServerUrl = await listen(mockServer);
 
-      const originalDispatcher = getGlobalDispatcher();
       try {
         process.env.HTTP_PROXY = proxyUrl.href;
-        setGlobalDispatcher(new EnvHttpProxyAgent());
+        client.dispatcher = new EnvHttpProxyAgent();
 
         expect(requestCount).toEqual(0);
         const res = await client.fetch(mockServerUrl.href, { json: false });
         expect(requestCount).toEqual(1);
         expect(res.status).toEqual(200);
       } finally {
-        setGlobalDispatcher(originalDispatcher);
+        client.dispatcher = undefined;
         await new Promise<void>(resolve => {
           proxy.close(() => resolve());
         });

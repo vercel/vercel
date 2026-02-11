@@ -57,6 +57,7 @@ export interface ClientOptions extends Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   agent?: Agent;
+  dispatcher?: FetchOptions['dispatcher'];
   telemetryEventStore: TelemetryEventStore;
   /** Whether the CLI is being run by an AI agent */
   isAgent?: boolean;
@@ -98,6 +99,7 @@ export default class Client extends EventEmitter implements Stdio {
   stderr: tty.WriteStream;
   config: GlobalConfig;
   agent?: Agent;
+  dispatcher?: FetchOptions['dispatcher'];
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
@@ -115,6 +117,7 @@ export default class Client extends EventEmitter implements Stdio {
   constructor(opts: ClientOptions) {
     super();
     this.agent = opts.agent;
+    this.dispatcher = opts.dispatcher;
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -352,6 +355,13 @@ export default class Client extends EventEmitter implements Stdio {
       body = requestBody as RequestInit['body'];
     }
 
+    // Node.js v22's built-in fetch does not support the `dispatcher` option
+    // from npm undici. Use undici's own fetch when a dispatcher is set so
+    // the fetch implementation and dispatcher come from the same package.
+    const fetchFn: typeof fetch = this.dispatcher
+      ? ((await import('undici')).fetch as typeof fetch)
+      : fetch;
+
     const requestId = this.requestIdCounter++;
     return output.time(
       res => {
@@ -363,7 +373,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${init.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { ...init, headers, body })
+      fetchFn(url, { ...init, headers, body, dispatcher: this.dispatcher })
     );
   }
 
