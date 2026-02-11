@@ -540,9 +540,7 @@ function formatRouteDetails(rule: RoutingRule): string {
     lines.push('');
     lines.push(chalk.bold('  Response Headers'));
     for (const [key, value] of responseHeaderSets) {
-      lines.push(
-        `  ${chalk.yellow('set')} ${chalk.cyan(key)} = ${value}`
-      );
+      lines.push(`  ${chalk.yellow('set')} ${chalk.cyan(key)} = ${value}`);
     }
     for (const t of responseHeaderTransforms) {
       lines.push(`  ${formatTransform(t, false)}`);
