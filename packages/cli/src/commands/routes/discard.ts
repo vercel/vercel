@@ -74,15 +74,21 @@ export default async function discard(client: Client, argv: string[]) {
   const updateStamp = stamp();
   output.spinner('Discarding staged changes');
 
-  await updateRouteVersion(client, project.id, stagingVersion.id, 'discard', {
-    teamId,
-  });
+  try {
+    await updateRouteVersion(client, project.id, stagingVersion.id, 'discard', {
+      teamId,
+    });
 
-  output.log(
-    `${chalk.cyan('Success!')} Staged changes discarded ${chalk.gray(
-      updateStamp()
-    )}`
-  );
+    output.log(
+      `${chalk.cyan('Success!')} Staged changes discarded ${chalk.gray(
+        updateStamp()
+      )}`
+    );
 
-  return 0;
+    return 0;
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    output.error(err.message || 'Failed to discard staged changes');
+    return 1;
+  }
 }

@@ -102,23 +102,31 @@ export default async function restore(client: Client, argv: string[]) {
   const updateStamp = stamp();
   output.spinner(`Restoring version ${chalk.bold(version.id.slice(0, 12))}`);
 
-  const { version: newVersion } = await updateRouteVersion(
-    client,
-    project.id,
-    version.id,
-    'restore',
-    { teamId }
-  );
+  try {
+    const { version: newVersion } = await updateRouteVersion(
+      client,
+      project.id,
+      version.id,
+      'restore',
+      { teamId }
+    );
 
-  output.log(
-    `${chalk.cyan('Success!')} Version ${chalk.bold(
-      newVersion.id.slice(0, 12)
-    )} restored to production ${chalk.gray(updateStamp())}`
-  );
+    output.log(
+      `${chalk.cyan('Success!')} Version ${chalk.bold(
+        newVersion.id.slice(0, 12)
+      )} restored to production ${chalk.gray(updateStamp())}`
+    );
 
-  if (newVersion.ruleCount !== undefined) {
-    output.print(`  ${chalk.bold('Active routes:')} ${newVersion.ruleCount}\n`);
+    if (newVersion.ruleCount !== undefined) {
+      output.print(
+        `  ${chalk.bold('Active routes:')} ${newVersion.ruleCount}\n`
+      );
+    }
+
+    return 0;
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    output.error(err.message || 'Failed to restore version');
+    return 1;
   }
-
-  return 0;
 }

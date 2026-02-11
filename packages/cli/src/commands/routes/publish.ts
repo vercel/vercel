@@ -106,23 +106,31 @@ export default async function publish(client: Client, argv: string[]) {
   const updateStamp = stamp();
   output.spinner('Publishing to production');
 
-  const { version: newVersion } = await updateRouteVersion(
-    client,
-    project.id,
-    version.id,
-    'promote',
-    { teamId }
-  );
+  try {
+    const { version: newVersion } = await updateRouteVersion(
+      client,
+      project.id,
+      version.id,
+      'promote',
+      { teamId }
+    );
 
-  output.log(
-    `${chalk.cyan('Success!')} Routes published to production ${chalk.gray(
-      updateStamp()
-    )}`
-  );
+    output.log(
+      `${chalk.cyan('Success!')} Routes published to production ${chalk.gray(
+        updateStamp()
+      )}`
+    );
 
-  if (newVersion.ruleCount !== undefined) {
-    output.print(`  ${chalk.bold('Active routes:')} ${newVersion.ruleCount}\n`);
+    if (newVersion.ruleCount !== undefined) {
+      output.print(
+        `  ${chalk.bold('Active routes:')} ${newVersion.ruleCount}\n`
+      );
+    }
+
+    return 0;
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    output.error(err.message || 'Failed to publish routes');
+    return 1;
   }
-
-  return 0;
 }

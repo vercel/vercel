@@ -18,8 +18,7 @@ export const listSubcommand = {
     },
     {
       name: 'filter',
-      description:
-        'Filter by type: header, rewrite, redirect, set_status, transform',
+      description: 'Filter by type: rewrite, redirect, set_status, transform',
       shorthand: 'f',
       type: String,
       argument: 'TYPE',
