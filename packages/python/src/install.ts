@@ -217,6 +217,7 @@ export interface UvProjectInfo {
   projectDir: string;
   pyprojectPath: string;
   lockPath: string;
+  lockFileProvidedByUser: boolean;
 }
 
 interface EnsureUvProjectParams {
@@ -249,8 +250,11 @@ export async function ensureUvProject({
   let projectDir: string;
   let pyprojectPath: string;
   let lockPath: string | null = null;
+  let lockFileProvidedByUser = false;
 
   if (manifestType === 'uv.lock' || manifestType === 'pylock.toml') {
+    // User provided a lock file
+    lockFileProvidedByUser = true;
     // Lock file exists - use it directly
     const lockFile =
       pythonPackage?.manifest?.lockFile ?? pythonPackage?.workspaceLockFile;
@@ -346,7 +350,12 @@ export async function ensureUvProject({
       ? lockPath
       : join(projectDir, 'uv.lock');
 
-  return { projectDir, pyprojectPath, lockPath: resolvedLockPath };
+  return {
+    projectDir,
+    pyprojectPath,
+    lockPath: resolvedLockPath,
+    lockFileProvidedByUser,
+  };
 }
 
 async function pipInstall(

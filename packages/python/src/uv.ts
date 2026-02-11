@@ -104,8 +104,17 @@ export class UvRunner {
     await this.runUvCmd(args, projectDir, venvPath);
   }
 
-  async lock(projectDir: string): Promise<void> {
+  async lock(
+    projectDir: string,
+    options?: { noBuild?: boolean; upgrade?: boolean }
+  ): Promise<void> {
     const args = ['lock'];
+    if (options?.noBuild) {
+      args.push('--no-build');
+    }
+    if (options?.upgrade) {
+      args.push('--upgrade');
+    }
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}" in ${projectDir}...`);
     try {

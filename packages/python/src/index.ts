@@ -371,6 +371,7 @@ export const build: BuildV3 = async ({
 
   // Track the lock file path and project info for package classification (used when runtime install is enabled)
   let uvLockPath: string | null = null;
+  let uvProjectDir: string | null = null;
   let projectName: string | undefined;
 
   if (!assumeDepsInstalled) {
@@ -388,6 +389,7 @@ export const build: BuildV3 = async ({
     });
 
     uvLockPath = lockPath;
+    uvProjectDir = projectDir;
 
     // Get the project name from python-analysis for package classification
     const installInfo = await detectInstallSource({
@@ -489,11 +491,18 @@ export const build: BuildV3 = async ({
     totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
     uvLockPath !== null;
 
-  if (runtimeInstallEnabled && uvLockPath) {
+  if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
     console.log(
       `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
         `Enabling runtime dependency installation.`
     );
+
+    // Regenerate lock file with --no-build --upgrade to ensure all packages have binary wheels.
+    // --no-build: Only select package versions that have pre-built wheels
+    // --upgrade: Re-resolve all packages, ignoring pins in the existing lock file
+    // If a package doesn't have wheels available, uv will fail with a clear error.
+    console.log('Verifying all packages have binary wheels available...');
+    await uv.lock(uvProjectDir, { noBuild: true, upgrade: true });
 
     // Read and parse the uv.lock file
     const lockContent = await fs.promises.readFile(uvLockPath, 'utf8');
@@ -543,7 +552,7 @@ export const build: BuildV3 = async ({
         data: runtimeRequirementsContent,
       });
 
-      // skip the uv copy when running vercel build locally
+      // Skip uv bundling when running vercel build locally
       if (process.env.VERCEL_BUILD_IMAGE) {
         // Add the uv binary to the lambda zip
         try {
