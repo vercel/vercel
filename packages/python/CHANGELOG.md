@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.11.1
+
+### Patch Changes
+
+- [python] preserve error code on uv error ([#14990](https://github.com/vercel/vercel/pull/14990))
+
 ## 6.11.0
 
 ### Minor Changes
