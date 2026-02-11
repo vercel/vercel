@@ -53,7 +53,7 @@ export default async function alias(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('alias');
     output.print(help(aliasCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -67,7 +67,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
@@ -75,7 +75,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
@@ -83,7 +83,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(setSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
@@ -91,7 +91,7 @@ export default async function alias(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(setSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);

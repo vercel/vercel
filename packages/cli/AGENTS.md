@@ -70,7 +70,7 @@ export const mySubcommand = {
 
 The entry point resolves subcommands with `getSubcommand`, displays help for `--help`/`-h`, parses flags with `parseArguments(args, getFlagsSpecification(subcommand.options))`, tracks telemetry, and delegates to subcommand functions. Use `getCommandAliases` to build the `COMMAND_CONFIG` map. Wrap the body in `try/catch` with `printError(err)`. See `src/commands/rolling-release/index.ts` or `src/commands/alias/index.ts` for complete examples.
 
-**Exit codes**: `0` = success, `1` = error, `2` = help displayed.
+**Exit codes**: `0` = success (including when help is displayed via `--help`), `1` = error, `2` = usage error (invalid subcommand, missing required args).
 **Permissive parsing**: Parent commands with subcommands should use `permissive: true` so unknown flags pass through to subcommand handlers, which do strict parsing (default).
 
 ## Interactive Prompts vs Flags

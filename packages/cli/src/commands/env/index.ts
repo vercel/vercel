@@ -62,7 +62,7 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('env', subcommand);
     output.print(help(envCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -76,7 +76,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
@@ -84,7 +84,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
@@ -92,7 +92,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
@@ -100,7 +100,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(pullSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
@@ -115,7 +115,7 @@ export default async function main(client: Client) {
       if (needsHelpForRun(client)) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(runSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRun(subcommandOriginal);
       return run(client);
@@ -123,7 +123,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(updateSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       return update(client, args);

@@ -23,7 +23,7 @@ describe('certs ls', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

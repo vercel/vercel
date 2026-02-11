@@ -61,14 +61,14 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('domains');
     output.print(help(domainsCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, { parent: domainsCommand, columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {

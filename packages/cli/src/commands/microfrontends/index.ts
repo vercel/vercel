@@ -48,7 +48,7 @@ export default async function main(client: Client) {
     output.print(
       help(microfrontendsCommand, { columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -58,7 +58,7 @@ export default async function main(client: Client) {
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {

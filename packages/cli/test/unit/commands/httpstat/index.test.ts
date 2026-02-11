@@ -58,7 +58,7 @@ describe('httpstat', () => {
     it('prints help message', async () => {
       client.setArgv('httpstat', '--help');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Execute httpstat with automatic deployment URL and protection bypass'
       );

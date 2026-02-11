@@ -11,7 +11,7 @@ describe('certs issue', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCode = await certs(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

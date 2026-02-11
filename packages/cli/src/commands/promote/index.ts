@@ -38,7 +38,7 @@ export default async (client: Client): Promise<number> => {
   if (!parsedArgs.args[1] && needHelp) {
     telemetry.trackCliFlagHelp('promote');
     output.print(help(promoteCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   const yes = parsedArgs.flags['--yes'] ?? false;
@@ -65,7 +65,7 @@ export default async (client: Client): Promise<number> => {
             parent: promoteCommand,
           })
         );
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({

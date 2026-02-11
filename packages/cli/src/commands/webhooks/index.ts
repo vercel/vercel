@@ -53,14 +53,14 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('webhooks');
     output.print(help(webhooksCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, { parent: webhooksCommand, columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {

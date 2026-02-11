@@ -67,21 +67,21 @@ export default async function main(client: Client) {
     case 'purge':
       if (needHelp) {
         printHelp(purgeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPurge(subcommandOriginal);
       return purge(client, args);
     case 'invalidate':
       if (needHelp) {
         printHelp(invalidateSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandInvalidate(subcommandOriginal);
       return invalidate(client, args);
     case 'dangerously-delete':
       if (needHelp) {
         printHelp(dangerouslyDeleteSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandDangerouslyDelete(subcommandOriginal);
       return dangerouslyDelete(client, args);

@@ -48,7 +48,7 @@ export default async function inspect(client: Client) {
   if (parsedArguments.flags['--help']) {
     telemetry.trackCliFlagHelp('inspect');
     print(help(inspectCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   if (parsedArguments.args[0] === inspectCommand.name) {

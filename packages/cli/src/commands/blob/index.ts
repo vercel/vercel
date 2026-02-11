@@ -60,7 +60,7 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('blob', subcommand);
     output.print(help(blobCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -77,7 +77,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandList(subcommandOriginal);
@@ -92,7 +92,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(putSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandPut(subcommandOriginal);
@@ -107,7 +107,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(delSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandDel(subcommandOriginal);
@@ -122,7 +122,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(copySubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandCopy(subcommandOriginal);

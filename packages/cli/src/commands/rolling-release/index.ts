@@ -56,7 +56,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
     output.print(
       help(rollingReleaseCommand, { columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -89,7 +89,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         if (needHelp) {
           telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
           printHelp(configureSubcommand);
-          return 2;
+          return 0;
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
@@ -132,7 +132,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         if (needHelp) {
           telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
           printHelp(startSubcommand);
-          return 2;
+          return 0;
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
@@ -156,7 +156,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         if (needHelp) {
           telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
           printHelp(approveSubcommand);
-          return 2;
+          return 0;
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
@@ -190,7 +190,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         if (needHelp) {
           telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
           printHelp(abortSubcommand);
-          return 2;
+          return 0;
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
@@ -213,7 +213,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         if (needHelp) {
           telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
           printHelp(completeSubcommand);
-          return 2;
+          return 0;
         }
         subcommandFlags = parseArguments(
           subcommandArgs,
@@ -236,7 +236,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
         if (needHelp) {
           telemetry.trackCliFlagHelp('rolling-release', subcommandOriginal);
           printHelp(fetchSubcommand);
-          return 2;
+          return 0;
         }
         const result = await requestRollingRelease({
           client,

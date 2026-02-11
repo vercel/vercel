@@ -45,7 +45,7 @@ export default async function bisect(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('bisect');
     output.print(help(bisectCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   telemetry.trackCliOptionGood(parsedArgs.flags['--good']);

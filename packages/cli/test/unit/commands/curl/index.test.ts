@@ -62,7 +62,7 @@ describe('curl', () => {
     it('prints help message', async () => {
       client.setArgv('curl', '--help');
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Execute curl with automatic deployment URL and protection bypass'
       );

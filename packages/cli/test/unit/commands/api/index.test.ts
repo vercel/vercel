@@ -11,7 +11,7 @@ describe('api', () => {
     it('prints help message', async () => {
       client.setArgv('api', '--help');
       const exitCode = await api(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Make authenticated HTTP requests to the Vercel API'
       );

@@ -36,7 +36,7 @@ export default async function main(client: Client) {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('init');
     output.print(help(initCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   const args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;

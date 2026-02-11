@@ -79,7 +79,7 @@ export default async function main(client: Client) {
   if (parsedArgs.flags['--help']) {
     telemetryClient.trackCliFlagHelp('pull');
     output.print(help(pullCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   const cwd = parsedArgs.args[1] || client.cwd;

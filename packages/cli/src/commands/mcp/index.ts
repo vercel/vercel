@@ -20,7 +20,7 @@ export default async function main(client: Client) {
 
   if (parsedArgs.flags['--help']) {
     output.print(help(mcpCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   // Add the parsed flags to client.argv so the mcp function can access them
