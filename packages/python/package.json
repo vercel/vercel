@@ -26,7 +26,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "smol-toml": "1.5.2"
+    "@vercel/python-analysis": "workspace:*"
   },
   "devDependencies": {
     "@renovatebot/pep440": "4.2.1",

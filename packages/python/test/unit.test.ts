@@ -1460,7 +1460,7 @@ describe('.python-version file priority', () => {
     );
   });
 
-  it('warns and falls back to default when .python-version has invalid content', async () => {
+  it('throws error when .python-version has invalid content', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       '.python-version': new FileBlob({ data: 'invalid-version\n' }),
@@ -1469,24 +1469,17 @@ describe('.python-version file priority', () => {
       }),
     } as Record<string, FileBlob>;
 
-    await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'handler.py',
-      meta: { isDev: false },
-      config: {},
-      repoRootPath: mockWorkPath,
-    });
-
-    // Should warn about invalid .python-version and fall back to default
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Warning: Python version "invalid-version" detected in .python-version is invalid'
-      )
-    );
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using python version: 3.12')
-    );
+    // Should throw an error about invalid .python-version content
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow('could not parse .python-version file');
   });
 });
 
@@ -1992,7 +1985,7 @@ import {
 import {
   classifyPackages,
   generateRuntimeRequirements,
-  getProjectNameFromPyproject,
+  parseUvLock,
 } from '../src/packages';
 import { renderTrampoline } from '../src/trampoline';
 import { FileFsRef } from '@vercel/build-utils';
@@ -2038,12 +2031,7 @@ describe('runtime dependency installation support', () => {
     });
   });
   describe('classifyPackages', () => {
-    it('classifies PyPI packages as public', async () => {
-      const tempDir = path.join(tmpdir(), `classify-test-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-      const lockPath = path.join(tempDir, 'uv.lock');
-
-      // Create a simple uv.lock with a PyPI package
+    it('classifies PyPI packages as public', () => {
       const lockContent = `
 version = 1
 requires-python = ">=3.12"
@@ -2052,23 +2040,14 @@ requires-python = ">=3.12"
 name = "requests"
 version = "2.31.0"
 `;
-      fs.writeFileSync(lockPath, lockContent);
-
-      try {
-        const result = await classifyPackages({ lockPath });
-        expect(result.publicPackages).toContain('requests');
-        expect(result.privatePackages).not.toContain('requests');
-        expect(result.packageVersions['requests']).toBe('2.31.0');
-      } finally {
-        fs.removeSync(tempDir);
-      }
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.publicPackages).toContain('requests');
+      expect(result.privatePackages).not.toContain('requests');
+      expect(result.packageVersions['requests']).toBe('2.31.0');
     });
 
-    it('classifies git source packages as private', async () => {
-      const tempDir = path.join(tmpdir(), `classify-git-test-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-      const lockPath = path.join(tempDir, 'uv.lock');
-
+    it('classifies git source packages as private', () => {
       const lockContent = `
 version = 1
 requires-python = ">=3.12"
@@ -2080,22 +2059,13 @@ version = "1.0.0"
 [package.source]
 git = "https://github.com/myorg/private-pkg.git"
 `;
-      fs.writeFileSync(lockPath, lockContent);
-
-      try {
-        const result = await classifyPackages({ lockPath });
-        expect(result.privatePackages).toContain('my-private-pkg');
-        expect(result.publicPackages).not.toContain('my-private-pkg');
-      } finally {
-        fs.removeSync(tempDir);
-      }
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('my-private-pkg');
+      expect(result.publicPackages).not.toContain('my-private-pkg');
     });
 
-    it('classifies path source packages as private', async () => {
-      const tempDir = path.join(tmpdir(), `classify-path-test-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-      const lockPath = path.join(tempDir, 'uv.lock');
-
+    it('classifies path source packages as private', () => {
       const lockContent = `
 version = 1
 requires-python = ">=3.12"
@@ -2107,25 +2077,13 @@ version = "0.1.0"
 [package.source]
 path = "./packages/local-pkg"
 `;
-      fs.writeFileSync(lockPath, lockContent);
-
-      try {
-        const result = await classifyPackages({ lockPath });
-        expect(result.privatePackages).toContain('local-pkg');
-        expect(result.publicPackages).not.toContain('local-pkg');
-      } finally {
-        fs.removeSync(tempDir);
-      }
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('local-pkg');
+      expect(result.publicPackages).not.toContain('local-pkg');
     });
 
-    it('classifies non-PyPI registry packages as private', async () => {
-      const tempDir = path.join(
-        tmpdir(),
-        `classify-registry-test-${Date.now()}`
-      );
-      fs.mkdirSync(tempDir, { recursive: true });
-      const lockPath = path.join(tempDir, 'uv.lock');
-
+    it('classifies non-PyPI registry packages as private', () => {
       const lockContent = `
 version = 1
 requires-python = ">=3.12"
@@ -2137,34 +2095,20 @@ version = "1.0.0"
 [package.source]
 registry = "https://private.pypi.mycompany.com/simple"
 `;
-      fs.writeFileSync(lockPath, lockContent);
-
-      try {
-        const result = await classifyPackages({ lockPath });
-        expect(result.privatePackages).toContain('internal-pkg');
-        expect(result.publicPackages).not.toContain('internal-pkg');
-      } finally {
-        fs.removeSync(tempDir);
-      }
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('internal-pkg');
+      expect(result.publicPackages).not.toContain('internal-pkg');
     });
 
-    it('returns empty classification for missing lock file', async () => {
-      const result = await classifyPackages({
-        lockPath: '/nonexistent/uv.lock',
-      });
+    it('returns empty classification for empty lock file', () => {
+      const lockFile = { packages: [] };
+      const result = classifyPackages({ lockFile });
       expect(result.privatePackages).toHaveLength(0);
       expect(result.publicPackages).toHaveLength(0);
     });
 
-    it('excludes specified packages from classification', async () => {
-      const tempDir = path.join(
-        tmpdir(),
-        `classify-exclude-test-${Date.now()}`
-      );
-      fs.mkdirSync(tempDir, { recursive: true });
-      const lockPath = path.join(tempDir, 'uv.lock');
-
-      // Create a uv.lock with a project package and a dependency
+    it('excludes specified packages from classification', () => {
       const lockContent = `
 version = 1
 requires-python = ">=3.12"
@@ -2177,96 +2121,17 @@ version = "0.1.0"
 name = "requests"
 version = "2.31.0"
 `;
-      fs.writeFileSync(lockPath, lockContent);
-
-      try {
-        const result = await classifyPackages({
-          lockPath,
-          excludePackages: ['my-app'],
-        });
-        // my-app should be excluded entirely
-        expect(result.publicPackages).not.toContain('my-app');
-        expect(result.privatePackages).not.toContain('my-app');
-        expect(result.packageVersions['my-app']).toBeUndefined();
-        // requests should still be classified
-        expect(result.publicPackages).toContain('requests');
-      } finally {
-        fs.removeSync(tempDir);
-      }
-    });
-  });
-
-  describe('getProjectNameFromPyproject', () => {
-    it('reads project name from pyproject.toml', async () => {
-      const tempDir = path.join(tmpdir(), `pyproject-name-test-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-      const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-
-      const content = `
-[project]
-name = "my-awesome-project"
-version = "1.0.0"
-`;
-      fs.writeFileSync(pyprojectPath, content);
-
-      try {
-        const name = await getProjectNameFromPyproject(pyprojectPath);
-        expect(name).toBe('my-awesome-project');
-      } finally {
-        fs.removeSync(tempDir);
-      }
-    });
-
-    it('handles single quotes in project name', async () => {
-      const tempDir = path.join(
-        tmpdir(),
-        `pyproject-single-quote-test-${Date.now()}`
-      );
-      fs.mkdirSync(tempDir, { recursive: true });
-      const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-
-      const content = `
-[project]
-name = 'single-quoted-name'
-version = "1.0.0"
-`;
-      fs.writeFileSync(pyprojectPath, content);
-
-      try {
-        const name = await getProjectNameFromPyproject(pyprojectPath);
-        expect(name).toBe('single-quoted-name');
-      } finally {
-        fs.removeSync(tempDir);
-      }
-    });
-
-    it('returns undefined for missing file', async () => {
-      const name = await getProjectNameFromPyproject(
-        '/nonexistent/pyproject.toml'
-      );
-      expect(name).toBeUndefined();
-    });
-
-    it('returns undefined when project name is missing', async () => {
-      const tempDir = path.join(
-        tmpdir(),
-        `pyproject-no-name-test-${Date.now()}`
-      );
-      fs.mkdirSync(tempDir, { recursive: true });
-      const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-
-      const content = `
-[tool.uv]
-dev-dependencies = []
-`;
-      fs.writeFileSync(pyprojectPath, content);
-
-      try {
-        const name = await getProjectNameFromPyproject(pyprojectPath);
-        expect(name).toBeUndefined();
-      } finally {
-        fs.removeSync(tempDir);
-      }
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({
+        lockFile,
+        excludePackages: ['my-app'],
+      });
+      // my-app should be excluded entirely
+      expect(result.publicPackages).not.toContain('my-app');
+      expect(result.privatePackages).not.toContain('my-app');
+      expect(result.packageVersions['my-app']).toBeUndefined();
+      // requests should still be classified
+      expect(result.publicPackages).toContain('requests');
     });
   });
 

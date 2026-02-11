@@ -5,31 +5,7 @@ import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import which from 'which';
-import toml from 'smol-toml';
 import { debug } from '@vercel/build-utils';
-
-/**
- * Represents a package entry from uv.lock with source information.
- */
-export interface UvLockPackage {
-  name: string;
-  version: string;
-  source?: {
-    registry?: string;
-    url?: string;
-    git?: string;
-    path?: string;
-    editable?: string;
-  };
-}
-
-/**
- * Parsed uv.lock file structure.
- */
-export interface UvLockFile {
-  version?: number;
-  package?: UvLockPackage[];
-}
 
 export const UV_VERSION = '0.9.22';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
@@ -382,48 +358,4 @@ export async function getUvBinaryForBundling(
   // the Lambda will contain a symlink rather than the actual binary.
   const resolvedPath = await fs.promises.realpath(uvPath);
   return resolvedPath;
-}
-
-/**
- * Represents the raw parsed structure of a uv.lock TOML file.
- */
-interface UvLockToml {
-  version?: number;
-  package?: Array<{
-    name: string;
-    version: string;
-    source?: {
-      registry?: string;
-      url?: string;
-      git?: string;
-      path?: string;
-      editable?: string;
-      virtual?: string;
-    };
-  }>;
-}
-
-/**
- * Parse a uv.lock file (TOML format) to extract package information.
- */
-export async function parseUvLockFile(lockPath: string): Promise<UvLockFile> {
-  const content = await fs.promises.readFile(lockPath, 'utf8');
-
-  let parsed: UvLockToml;
-  try {
-    parsed = toml.parse(content) as UvLockToml;
-  } catch (err) {
-    debug(`Failed to parse uv.lock as TOML: ${err}`);
-    return { package: [] };
-  }
-
-  const packages: UvLockPackage[] = (parsed.package ?? [])
-    .filter(pkg => pkg.name && pkg.version)
-    .map(pkg => ({
-      name: pkg.name,
-      version: pkg.version,
-      source: pkg.source,
-    }));
-
-  return { version: parsed.version, package: packages };
 }

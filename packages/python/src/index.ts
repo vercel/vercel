@@ -34,8 +34,9 @@ import {
 import {
   classifyPackages,
   generateRuntimeRequirements,
-  getProjectNameFromPyproject,
+  parseUvLock,
 } from './packages';
+import { detectInstallSource } from './install';
 import {
   UvRunner,
   getUvBinaryOrInstall,
@@ -368,31 +369,33 @@ export const build: BuildV3 = async ({
     process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === '1' ||
     process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === 'true';
 
-  // Track the lock file path for package classification (used when runtime install is enabled)
+  // Track the lock file path and project info for package classification (used when runtime install is enabled)
   let uvLockPath: string | null = null;
-  let uvPyprojectPath: string | null = null;
+  let projectName: string | undefined;
 
   if (!assumeDepsInstalled) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.
-    const { projectDir, pyprojectPath, lockPath } = await ensureUvProject({
+    const { projectDir, lockPath } = await ensureUvProject({
       workPath,
       entryDirectory,
-      fsFiles,
       repoRootPath,
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
       pythonVersion: pythonVersion.version,
       uv,
-      venvPath,
-      meta,
       generateLockFile: runtimeInstallFeatureEnabled,
     });
 
     uvLockPath = lockPath;
-    uvPyprojectPath = pyprojectPath;
+
+    // Get the project name from python-analysis for package classification
+    const installInfo = await detectInstallSource({
+      workPath,
+      entryDirectory,
+      repoRootPath,
+    });
+    projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
     // so we can use `uv sync` to install dependencies into the active
@@ -481,11 +484,10 @@ export const build: BuildV3 = async ({
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
   // Determine if runtime dependency installation is needed
-  let runtimeInstallEnabled =
+  const runtimeInstallEnabled =
     runtimeInstallFeatureEnabled &&
     totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
     uvLockPath !== null;
-  let runtimeRequirementsContent: string | undefined;
 
   if (runtimeInstallEnabled && uvLockPath) {
     console.log(
@@ -493,20 +495,21 @@ export const build: BuildV3 = async ({
         `Enabling runtime dependency installation.`
     );
 
+    // Read and parse the uv.lock file
+    const lockContent = await fs.promises.readFile(uvLockPath, 'utf8');
+    const lockFile = parseUvLock(lockContent);
+
     // Exclude the project name from runtime installation requirements.
     const excludePackages: string[] = [];
-    if (uvPyprojectPath) {
-      const projectName = await getProjectNameFromPyproject(uvPyprojectPath);
-      if (projectName) {
-        excludePackages.push(projectName);
-        debug(
-          `Excluding project package "${projectName}" from runtime installation`
-        );
-      }
+    if (projectName) {
+      excludePackages.push(projectName);
+      debug(
+        `Excluding project package "${projectName}" from runtime installation`
+      );
     }
 
-    const classification = await classifyPackages({
-      lockPath: uvLockPath,
+    const classification = classifyPackages({
+      lockFile,
       excludePackages,
     });
     debug(
@@ -533,7 +536,8 @@ export const build: BuildV3 = async ({
       }
 
       // Everything else gets put into _runtime_requirements.txt for installation at runtime
-      runtimeRequirementsContent = generateRuntimeRequirements(classification);
+      const runtimeRequirementsContent =
+        generateRuntimeRequirements(classification);
       const runtimeRequirementsPath = `${UV_BUNDLE_DIR}/_runtime_requirements.txt`;
       files[runtimeRequirementsPath] = new FileBlob({
         data: runtimeRequirementsContent,
