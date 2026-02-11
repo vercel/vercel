@@ -741,18 +741,31 @@ export function useEditRouteComprehensive() {
           'X-Custom': 'value',
         },
         transforms: [
-          { type: 'request.headers', op: 'set', target: { key: 'X-Forwarded-Host' }, args: 'myapp.com' },
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'X-Forwarded-Host' },
+            args: 'myapp.com',
+          },
           { type: 'request.headers', op: 'delete', target: { key: 'X-Debug' } },
-          { type: 'request.query', op: 'set', target: { key: 'source' }, args: 'cli' },
-          { type: 'response.headers', op: 'append', target: { key: 'Vary' }, args: 'Accept' },
+          {
+            type: 'request.query',
+            op: 'set',
+            target: { key: 'source' },
+            args: 'cli',
+          },
+          {
+            type: 'response.headers',
+            op: 'append',
+            target: { key: 'Vary' },
+            args: 'Accept',
+          },
         ],
         has: [
           { type: 'header', key: 'Authorization' },
           { type: 'cookie', key: 'session', value: '^.+$' },
         ],
-        missing: [
-          { type: 'header', key: 'X-Block' },
-        ],
+        missing: [{ type: 'header', key: 'X-Block' }],
         continue: true,
       },
       routeTypes: ['rewrite', 'transform'],
@@ -838,31 +851,36 @@ export function useEditRouteComprehensive() {
     }
   );
 
-  client.scenario.patch('/v1/projects/:projectId/routes/:routeId', (req, res) => {
-    const body = req.body as Record<string, unknown>;
-    capturedBodies.edit = body;
+  client.scenario.patch(
+    '/v1/projects/:projectId/routes/:routeId',
+    (req, res) => {
+      const body = req.body as Record<string, unknown>;
+      capturedBodies.edit = body;
 
-    res.json({
-      route: {
-        id: req.params.routeId,
-        ...(body.route as Record<string, unknown>),
-        staged: true,
-      },
-      version: {
-        id: 'new-staging-version',
-        s3Key: 'routes/staging.json',
-        lastModified: Date.now(),
-        createdBy: 'user@example.com',
-        isStaging: true,
-        isLive: false,
-        ruleCount: routes.length,
-      },
-    });
-  });
+      res.json({
+        route: {
+          id: req.params.routeId,
+          ...(body.route as Record<string, unknown>),
+          staged: true,
+        },
+        version: {
+          id: 'new-staging-version',
+          s3Key: 'routes/staging.json',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isStaging: true,
+          isLive: false,
+          ruleCount: routes.length,
+        },
+      });
+    }
+  );
 }
 
 export function useStageRoutesWithSingleRoute() {
-  const routes = [{ ...createRoute(0), name: 'Only Route', id: 'only-route-id' }];
+  const routes = [
+    { ...createRoute(0), name: 'Only Route', id: 'only-route-id' },
+  ];
 
   client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
     res.json({
@@ -897,7 +915,12 @@ export function useStageRoutesWithSingleRoute() {
 
 export function useEditRouteWithApiError() {
   const routes = [
-    { ...createRoute(0), name: 'Test Route', id: 'test-route-id', enabled: false },
+    {
+      ...createRoute(0),
+      name: 'Test Route',
+      id: 'test-route-id',
+      enabled: false,
+    },
   ];
 
   client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
@@ -930,14 +953,17 @@ export function useEditRouteWithApiError() {
     }
   );
 
-  client.scenario.patch('/v1/projects/:projectId/routes/:routeId', (_req, res) => {
-    res.status(403).json({
-      error: {
-        code: 'feature_not_enabled',
-        message: 'Project-level routes are not enabled for this project.',
-      },
-    });
-  });
+  client.scenario.patch(
+    '/v1/projects/:projectId/routes/:routeId',
+    (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'feature_not_enabled',
+          message: 'Project-level routes are not enabled for this project.',
+        },
+      });
+    }
+  );
 }
 
 export function useRoutesForInspect() {
