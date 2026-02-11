@@ -8,3 +8,7 @@ export function formatQuantity(quantity: number, unit: string): string {
   }
   return quantity.toFixed(4);
 }
+
+export function extractDatePortion(isoString: string): string {
+  return isoString.slice(0, 10);
+}
