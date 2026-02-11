@@ -14,6 +14,12 @@ import { streamToBufferChunks } from '@vercel/build-utils';
 import tar from 'tar-fs';
 import { createGzip } from 'zlib';
 
+/**
+ * Maximum number of individual files that can be sent to the deployment API.
+ * When this limit is exceeded, we automatically switch to archive mode (tgz).
+ */
+export const FILE_LIMIT = 15_000;
+
 export default function buildCreateDeployment() {
   return async function* createDeployment(
     clientOptions: VercelClientOptions,
@@ -75,6 +81,20 @@ export default function buildCreateDeployment() {
     }
 
     const { fileList } = await buildFileTree(path, clientOptions, debug);
+
+    // Auto-upgrade to archive mode if file count exceeds the API limit.
+    // The server rejects deployments with more than 15,000 individual files,
+    // so we proactively switch to tgz archive to avoid a failed request.
+    if (!clientOptions.archive && fileList.length > FILE_LIMIT) {
+      debug(
+        `File count ${fileList.length} exceeds limit of ${FILE_LIMIT}. Automatically using archive mode (tgz).`
+      );
+      yield {
+        type: 'warning',
+        payload: `The deployment contains ${fileList.length} files, which exceeds the limit of ${FILE_LIMIT}. Automatically using archive mode (tgz).`,
+      };
+      clientOptions.archive = 'tgz';
+    }
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
