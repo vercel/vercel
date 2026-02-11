@@ -1,5 +1,24 @@
 # @vercel/build-utils
 
+## 13.3.5
+
+### Patch Changes
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 13.3.4
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+- [services] set framework prefixed env var urls to relative path ([#14958](https://github.com/vercel/vercel/pull/14958))
+
 ## 13.3.3
 
 ### Patch Changes

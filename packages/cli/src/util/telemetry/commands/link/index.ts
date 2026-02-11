@@ -39,4 +39,11 @@ export class LinkTelemetryClient
       });
     }
   }
+
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
 }

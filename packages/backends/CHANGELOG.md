@@ -1,5 +1,23 @@
 # @vercel/backends
 
+## 0.0.32
+
+### Patch Changes
+
+- Updated dependencies [[`012a8e410d09d9a5dcf060b30b4b24b08500823d`](https://github.com/vercel/vercel/commit/012a8e410d09d9a5dcf060b30b4b24b08500823d)]:
+  - @vercel/build-utils@13.3.5
+
+## 0.0.31
+
+### Patch Changes
+
+- Add exclude/include support for backends builder ([#14950](https://github.com/vercel/vercel/pull/14950))
+
+- Ignore bun builtins ([#14950](https://github.com/vercel/vercel/pull/14950))
+
+- Updated dependencies [[`45963f54f26a3e54df58a3b6a30e383de4094dd1`](https://github.com/vercel/vercel/commit/45963f54f26a3e54df58a3b6a30e383de4094dd1), [`87ff85b1277d84021bc83aec6fc97021d3fdab9d`](https://github.com/vercel/vercel/commit/87ff85b1277d84021bc83aec6fc97021d3fdab9d)]:
+  - @vercel/build-utils@13.3.4
+
 ## 0.0.30
 
 ### Patch Changes
