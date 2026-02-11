@@ -69,9 +69,7 @@ describe('routes enable', () => {
   });
 
   it('should handle API error gracefully', async () => {
-    const { useEditRouteWithApiError } = await import(
-      '../../../mocks/routes'
-    );
+    const { useEditRouteWithApiError } = await import('../../../mocks/routes');
     useEditRouteWithApiError();
     client.setArgv('routes', 'enable', 'Test Route');
     const exitCode = await routes(client);

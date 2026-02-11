@@ -243,14 +243,7 @@ describe('routes reorder', () => {
 
   it('should error on position 0', async () => {
     useStageRoutes();
-    client.setArgv(
-      'routes',
-      'reorder',
-      'Route 1',
-      '--position',
-      '0',
-      '--yes'
-    );
+    client.setArgv('routes', 'reorder', 'Route 1', '--position', '0', '--yes');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('must be 1 or greater');
