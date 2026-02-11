@@ -1,15 +1,27 @@
+import chalk from 'chalk';
+import { errorToString } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import {
   creditsSubcommand,
-  SUPPORTED_CREDIT_CURRENCIES,
-  type CreditCurrency,
+  SUPPORTED_CREDIT_TYPES,
+  CREDIT_TYPE_LABELS,
+  type CreditType,
 } from './command';
 import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import { getCommandName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
+import stamp from '../../util/output/stamp';
+
+type BuyResponse = {
+  purchaseIntent: {
+    id: string;
+    status: string;
+  };
+};
 
 export default async function credits(client: Client, argv: string[]) {
   let parsedArgs;
@@ -22,20 +34,20 @@ export default async function credits(client: Client, argv: string[]) {
   }
 
   const { args } = parsedArgs;
-  const [currency, amountStr] = args;
+  const [creditType, amountStr] = args;
 
-  // Validate currency argument
-  if (!currency) {
+  // Validate credit type argument
+  if (!creditType) {
     output.error(
-      `Missing currency. Supported currencies: ${SUPPORTED_CREDIT_CURRENCIES.join(', ')}`
+      `Missing credit type. Supported types: ${SUPPORTED_CREDIT_TYPES.join(', ')}`
     );
     output.log(`Run ${getCommandName('buy credits --help')} for usage.`);
     return 1;
   }
 
-  if (!SUPPORTED_CREDIT_CURRENCIES.includes(currency as CreditCurrency)) {
+  if (!SUPPORTED_CREDIT_TYPES.includes(creditType as CreditType)) {
     output.error(
-      `Invalid currency "${currency}". Supported currencies: ${SUPPORTED_CREDIT_CURRENCIES.join(', ')}`
+      `Invalid credit type "${creditType}". Supported types: ${SUPPORTED_CREDIT_TYPES.join(', ')}`
     );
     return 1;
   }
@@ -65,14 +77,74 @@ export default async function credits(client: Client, argv: string[]) {
     return 1;
   }
 
-  output.log(
-    `Purchasing $${amount} of ${currency} credits for team ${contextName}...`
-  );
+  const typedCreditType = creditType as CreditType;
+  const label = CREDIT_TYPE_LABELS[typedCreditType];
 
-  // TODO: Implement credits purchase API call
-  output.warn(
-    'Credits purchase is not yet available. API integration pending.'
-  );
+  // Confirm purchase
+  if (
+    !(await client.input.confirm(
+      `Purchase ${chalk.bold(`$${amount}`)} of ${label} credits for team ${chalk.bold(contextName)}?`,
+      false
+    ))
+  ) {
+    return 0;
+  }
 
-  return 0;
+  const purchaseStamp = stamp();
+  output.spinner('Processing purchase');
+
+  try {
+    const result = await client.fetch<BuyResponse>('/v1/billing/buy', {
+      method: 'POST',
+      body: {
+        item: {
+          type: 'credits',
+          creditType: typedCreditType,
+          amount,
+        },
+      },
+    });
+
+    output.stopSpinner();
+    output.success(
+      `Purchased ${chalk.bold(`$${amount}`)} of ${label} credits for ${chalk.bold(contextName)} ${purchaseStamp()}`
+    );
+    output.debug(`Purchase intent: ${result.purchaseIntent.id}`);
+
+    return 0;
+  } catch (err: unknown) {
+    output.stopSpinner();
+
+    if (isAPIError(err)) {
+      if (err.code === 'missing_stripe_customer') {
+        output.error(
+          'Your team does not have a payment method on file. Please add one in the Vercel dashboard.'
+        );
+        return 1;
+      }
+      if (err.status === 402 || err.code === 'payment_failed') {
+        output.error(
+          'Payment failed. Please check the payment method on file for your team.'
+        );
+        return 1;
+      }
+      if (
+        err.code === 'purchase_create_failed' ||
+        err.code === 'purchase_confirm_failed' ||
+        err.code === 'purchase_complete_failed'
+      ) {
+        output.error(
+          'An error occurred while processing your purchase. Please try again later.'
+        );
+        output.debug(`Error code: ${err.code}`);
+        return 1;
+      }
+    }
+
+    output.error(
+      'An unexpected error occurred while purchasing credits. Please try again later.'
+    );
+    output.debug(`Server response: ${errorToString(err)}`);
+    return 1;
+  }
 }
