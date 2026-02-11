@@ -44,14 +44,7 @@ describe('routes reorder', () => {
 
   it('should reorder with numeric --position', async () => {
     useStageRoutes();
-    client.setArgv(
-      'routes',
-      'reorder',
-      'Route 4',
-      '--position',
-      '2',
-      '--yes'
-    );
+    client.setArgv('routes', 'reorder', 'Route 4', '--position', '2', '--yes');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Moved');
@@ -89,14 +82,7 @@ describe('routes reorder', () => {
 
   it('should say already at position if no change', async () => {
     useStageRoutes();
-    client.setArgv(
-      'routes',
-      'reorder',
-      'Route 1',
-      '--position',
-      '1',
-      '--yes'
-    );
+    client.setArgv('routes', 'reorder', 'Route 1', '--position', '1', '--yes');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('already at position');
@@ -186,13 +172,7 @@ describe('routes reorder', () => {
 
   it('should error when route not found', async () => {
     useStageRoutes();
-    client.setArgv(
-      'routes',
-      'reorder',
-      'nonexistent',
-      '--first',
-      '--yes'
-    );
+    client.setArgv('routes', 'reorder', 'nonexistent', '--first', '--yes');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('No route found');
