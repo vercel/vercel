@@ -862,7 +862,7 @@ const main = async () => {
           break;
         case 'usage':
           telemetry.trackCliCommandUsage(userSuppliedSubCommand);
-          func = require('./commands/usage').default;
+          func = (await import('./commands-bulk.js')).usage;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
