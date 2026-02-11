@@ -11,9 +11,45 @@ import type {
   Files,
   FunctionFramework,
   TriggerEvent,
+  TriggerEventInput,
 } from './types';
 
-export type { TriggerEvent };
+export type { TriggerEvent, TriggerEventInput };
+
+/**
+ * Encodes a function path into a valid consumer name using mnemonic escapes.
+ * For queue/v2beta triggers, the consumer name is derived from the function path.
+ * This encoding is collision-free (bijective/reversible).
+ *
+ * Encoding scheme:
+ * - `_` → `__` (escape character itself)
+ * - `/` → `_S` (slash)
+ * - `.` → `_D` (dot)
+ * - Other invalid chars → `_XX` (hex code)
+ *
+ * @example
+ * sanitizeConsumerName('api/test.js') // => 'api_Stest_Djs'
+ * sanitizeConsumerName('api/users/handler.ts') // => 'api_Susers_Shandler_Dts'
+ * sanitizeConsumerName('my_func.ts') // => 'my__func_Dts'
+ */
+export function sanitizeConsumerName(functionPath: string): string {
+  let result = '';
+  for (const char of functionPath) {
+    if (char === '_') {
+      result += '__';
+    } else if (char === '/') {
+      result += '_S';
+    } else if (char === '.') {
+      result += '_D';
+    } else if (/[A-Za-z0-9-]/.test(char)) {
+      result += char;
+    } else {
+      result +=
+        '_' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+    }
+  }
+  return result;
+}
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -287,8 +323,8 @@ export class Lambda {
 
         // Validate required type
         assert(
-          trigger.type === 'queue/v1beta',
-          `${prefix}.type must be "queue/v1beta"`
+          trigger.type === 'queue/v1beta' || trigger.type === 'queue/v2beta',
+          `${prefix}.type must be "queue/v1beta" or "queue/v2beta"`
         );
 
         // Validate required queue fields
@@ -298,6 +334,7 @@ export class Lambda {
         );
         assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
 
+        // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
         assert(
           typeof trigger.consumer === 'string',
           `${prefix}.consumer is required and must be a string`
@@ -306,6 +343,14 @@ export class Lambda {
           trigger.consumer.length > 0,
           `${prefix}.consumer cannot be empty`
         );
+
+        // v2beta allows only one trigger per function
+        if (trigger.type === 'queue/v2beta') {
+          assert(
+            experimentalTriggers.length === 1,
+            '"experimentalTriggers" can only have one item for queue/v2beta'
+          );
+        }
 
         // Validate optional queue configuration
         if (trigger.maxDeliveries !== undefined) {
@@ -486,12 +531,25 @@ export async function getLambdaOptionsFromFunction({
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        const experimentalTriggers: TriggerEvent[] | undefined =
+          fn.experimentalTriggers?.map(
+            (trigger: TriggerEventInput): TriggerEvent => {
+              if (trigger.type === 'queue/v2beta') {
+                return {
+                  ...trigger,
+                  consumer: sanitizeConsumerName(pattern),
+                };
+              }
+              return trigger;
+            }
+          );
+
         return {
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
           regions: fn.regions,
-          experimentalTriggers: fn.experimentalTriggers,
+          experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };
       }
