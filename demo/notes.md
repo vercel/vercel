@@ -20,9 +20,11 @@ Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 
 ## 1. Old Prisma — the interactive gauntlet
 
+> **RUN (left pane):** `vc integration add prisma`
+
 | Say | Show on screen |
 |-----|----------------|
-| "Let me show you what installing an integration looks like today." | Left pane: `vc integration add prisma` |
+| "Let me show you what installing an integration looks like today." | Left pane: run the command above |
 | "Type a name." | Prompt: type resource name manually |
 | "Pick a region." | Prompt: select region |
 | "Now pick a billing plan." | Prompt: wall of text — 4 plans, each with multiple detail sections, you have to scroll through all of them |
@@ -35,21 +37,23 @@ Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 
 ## 2. New Prisma — the gauntlet, gone
 
+> **RUN (right pane):** `vc integration add prisma`
+
 | Say | Show on screen |
 |-----|----------------|
-| "Now watch this. Same Prisma." | Right pane: cursor blinking |
-| *(type the command)* | `vc integration add prisma` |
+| "Now watch this. Same Prisma." | Right pane: run the command above |
 | *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... env pull |
 | **"Same Prisma. One command. Zero prompts. Name auto-generated. Free plan auto-selected. Auto-connected. Env vars pulled."** | Full output visible |
 
 ---
 
-## 3. Discovery — `vc integration add prisma --help`
+## 3. Discovery — dynamic help
+
+> **RUN (right pane):** `vc integration add prisma --help`
 
 | Say | Show on screen |
 |-----|----------------|
-| "What if the agent needs to customize? It asks the CLI." | Right pane: cursor blinking |
-| *(type the command)* | `vc integration add prisma --help` |
+| "What if the agent needs to customize? It asks the CLI." | Right pane: run the command above |
 | *(let output render)* | Help output showing `--name`, `--plan`, `--no-connect`, metadata fields |
 | "Every parameter the old CLI prompted for — name, region, billing plan — is now a flag." | Point at flags |
 | **"Generated from the actual product schema. The agent reads this, constructs the command, and runs it. No guessing."** | |
@@ -70,10 +74,11 @@ Expected output (section 2):
 
 ## 4. Discover — structured output for agents
 
+> **RUN (right pane):** `vc integration discover --format=json`
+
 | Say | Show on screen |
 |-----|----------------|
-| "One more thing. How does an agent even find integrations in the first place?" | Right pane: cursor blinking |
-| *(type the command)* | `vc integration discover --format=json` |
+| "One more thing. How does an agent even find integrations in the first place?" | Right pane: run the command above |
 | *(let output render)* | JSON array of integrations with slugs, names, categories |
 | **"Structured JSON. An agent can search, filter, and pick the right integration programmatically. No scraping, no guessing."** | Full JSON output visible |
 

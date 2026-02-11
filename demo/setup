@@ -194,13 +194,14 @@ ok(f"demo-new → {TEAM_SLUG}")
 
 
 # ── 7. Link to cli-test project ──────────────────────────────────────
-PROJECT_JSON = '{"projectId":"prj_ZZysOqOQrAlGD0TLHwcS9WEqEqrZ","orgId":"team_ZrswwWlkgu3cRre7Tk7Rr0HV","projectName":"cli-test"}'
-step("Linking to cli-test project")
-for d in [DEMO_OLD, DEMO_NEW]:
+PROJECT_OLD = '{"projectId":"prj_ZZysOqOQrAlGD0TLHwcS9WEqEqrZ","orgId":"team_ZrswwWlkgu3cRre7Tk7Rr0HV","projectName":"cli-test"}'
+PROJECT_NEW = '{"projectId":"prj_nBx1eP21mQAqW34aJmdUkVJlTubO","orgId":"team_ZrswwWlkgu3cRre7Tk7Rr0HV","projectName":"cli-test-2"}'
+step("Linking projects")
+for d, proj, name in [(DEMO_OLD, PROJECT_OLD, "cli-test"), (DEMO_NEW, PROJECT_NEW, "cli-test-2")]:
     vercel_dir = d / ".vercel"
     vercel_dir.mkdir(exist_ok=True)
-    (vercel_dir / "project.json").write_text(PROJECT_JSON + "\n")
-    ok(f"{d.name} → cli-test")
+    (vercel_dir / "project.json").write_text(proj + "\n")
+    ok(f"{d.name} → {name}")
 
 
 # ── 8. Sanity checks ────────────────────────────────────────────────
