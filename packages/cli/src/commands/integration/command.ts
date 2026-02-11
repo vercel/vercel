@@ -31,6 +31,14 @@ export const addSubcommand = {
       argument: 'KEY=VALUE',
     },
     {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      argument: 'PLAN_ID',
+      description: 'Billing plan ID to use for the resource',
+    },
+    {
       name: 'no-connect',
       shorthand: null,
       type: Boolean,
@@ -75,6 +83,13 @@ export const addSubcommand = {
         `${packageName} integration add acme -m region=us-east-1 -m version=16`,
         `${packageName} integration add acme -m auth=true`,
         `${packageName} integration add acme -m "readRegions=sfo1,iad1"`,
+      ],
+    },
+    {
+      name: 'Install with a specific billing plan',
+      value: [
+        `${packageName} integration add acme --plan pro`,
+        `${packageName} integration add acme -p pro`,
       ],
     },
     {

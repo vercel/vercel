@@ -26,6 +26,7 @@ import type { Metadata } from '../../util/integration/types';
 export interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
   productSlug?: string;
+  billingPlanId?: string;
 }
 
 export async function addAutoProvision(
@@ -43,6 +44,7 @@ export async function addAutoProvision(
   telemetry.trackCliOptionMetadata(options.metadata);
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
+  telemetry.trackCliOptionPlan(options.billingPlanId);
 
   // 1. Get team context
   const { contextName, team } = await getScope(client);
@@ -134,7 +136,8 @@ export async function addAutoProvision(
       product.slug,
       resourceName,
       metadata,
-      {} // Start with empty policies
+      {}, // Start with empty policies
+      options.billingPlanId
     );
   } catch (error) {
     output.stopSpinner();
@@ -185,7 +188,8 @@ export async function addAutoProvision(
         product.slug,
         resourceName,
         metadata,
-        acceptedPolicies
+        acceptedPolicies,
+        options.billingPlanId
       );
     } catch (error) {
       output.stopSpinner();
@@ -222,6 +226,9 @@ export async function addAutoProvision(
     }
     if (projectLink.value) {
       url.searchParams.set('projectSlug', projectLink.value);
+    }
+    if (options.billingPlanId) {
+      url.searchParams.set('planId', options.billingPlanId);
     }
     output.debug(`Opening URL: ${url.href}`);
     open(url.href);

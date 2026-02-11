@@ -33,6 +33,15 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionPlan(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'plan',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagNoConnect(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('no-connect');

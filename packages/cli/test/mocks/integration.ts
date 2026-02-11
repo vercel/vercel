@@ -1259,6 +1259,7 @@ export function useAutoProvision(opts?: {
 }) {
   let callCount = 0;
   const storeId = 'resource_123';
+  const requestBodies: unknown[] = [];
 
   // Integration fetch endpoint (needed for auto-provision flow)
   client.scenario.get(
@@ -1280,8 +1281,9 @@ export function useAutoProvision(opts?: {
   // Auto-provision endpoint
   client.scenario.post(
     '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
-    (_req, res) => {
+    (req, res) => {
       callCount++;
+      requestBodies.push(req.body);
 
       // First call returns the first response, subsequent calls return second response
       const responseKey =
@@ -1321,4 +1323,6 @@ export function useAutoProvision(opts?: {
       res.end();
     }
   );
+
+  return { requestBodies };
 }

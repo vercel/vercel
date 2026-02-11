@@ -30,7 +30,8 @@ export async function autoProvisionResource(
   productSlug: string,
   name: string,
   metadata: Metadata,
-  acceptedPolicies: AcceptedPolicies
+  acceptedPolicies: AcceptedPolicies,
+  billingPlanId?: string
 ): Promise<AutoProvisionResult> {
   const endpoint = `/v1/integrations/integration/${encodeURIComponent(integrationSlug)}/marketplace/auto-provision/${encodeURIComponent(productSlug)}`;
   const body = {
@@ -38,6 +39,7 @@ export async function autoProvisionResource(
     metadata,
     acceptedPolicies,
     source: 'cli',
+    ...(billingPlanId ? { billingPlanId } : {}),
   };
   output.debug(`Auto-provision request: POST ${endpoint}`);
   output.debug(`Auto-provision body: ${JSON.stringify(body, null, 2)}`);
