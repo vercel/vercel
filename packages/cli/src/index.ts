@@ -49,7 +49,7 @@ import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
-import Client from './util/client';
+import Client, { type FetchOptions } from './util/client';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
@@ -68,7 +68,6 @@ import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
-import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -148,10 +147,6 @@ let { isTTY } = process.stdout;
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
-  // Set the global fetch dispatcher to automatically use HTTP_PROXY /
-  // HTTPS_PROXY / NO_PROXY environment variables for all fetch() calls.
-  setGlobalDispatcher(new EnvHttpProxyAgent());
-
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -361,13 +356,22 @@ const main = async () => {
   // When an agent is detected, --non-interactive is effectively the default
   const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
+  // Only load proxy modules if proxy env vars are configured (saves ~60ms startup)
   const agent = hasProxyConfig()
     ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
     : new HttpsAgent({ keepAlive: true });
+  // EnvHttpProxyAgent from undici@6 is structurally compatible with the
+  // Dispatcher type from undici-types@5 (used by @types/node@20), but
+  // TypeScript can't verify this across package versions.
+  const dispatcher = hasProxyConfig()
+    ? (new (
+        await import('undici')
+      ).EnvHttpProxyAgent() as unknown as FetchOptions['dispatcher'])
+    : undefined;
 
   client = new Client({
     agent,
+    dispatcher,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
