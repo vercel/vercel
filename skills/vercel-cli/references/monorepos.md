@@ -98,13 +98,15 @@ root/
 ```
 
 **pnpm-workspace.yaml:**
+
 ```yaml
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 ```
 
 **vercel.json:**
+
 ```json
 {
   "rootDirectory": "apps/api"
@@ -112,14 +114,15 @@ packages:
 ```
 
 **apps/api/server.ts:**
+
 ```typescript
-import { Hono } from 'hono'
-import { greet } from '@repo/shared'
+import { Hono } from 'hono';
+import { greet } from '@repo/shared';
 
-const app = new Hono()
-app.get('/', (c) => c.text(greet('world')))
+const app = new Hono();
+app.get('/', c => c.text(greet('world')));
 
-export default app
+export default app;
 ```
 
 ## Anti-Patterns

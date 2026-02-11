@@ -17,6 +17,7 @@ This works with any framework — backend apps (Express, Hono, Elysia), frontend
 Elysia is a Bun-native framework. To use it on Vercel:
 
 **vercel.json:**
+
 ```json
 {
   "bunVersion": "1.x"
@@ -24,6 +25,7 @@ Elysia is a Bun-native framework. To use it on Vercel:
 ```
 
 **package.json:**
+
 ```json
 {
   "type": "module",
@@ -34,18 +36,19 @@ Elysia is a Bun-native framework. To use it on Vercel:
 ```
 
 **server.ts:**
+
 ```typescript
-import { Elysia } from 'elysia'
+import { Elysia } from 'elysia';
 
-const app = new Elysia()
-  .get('/', () => 'Hello Elysia!')
+const app = new Elysia().get('/', () => 'Hello Elysia!');
 
-export default app
+export default app;
 ```
 
 ## Example: Next.js with Bun
 
 **vercel.json:**
+
 ```json
 {
   "bunVersion": "1.x"
@@ -53,6 +56,7 @@ export default app
 ```
 
 **package.json:**
+
 ```json
 {
   "scripts": {

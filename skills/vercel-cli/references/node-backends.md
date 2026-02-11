@@ -38,6 +38,7 @@ my-app/
 ```
 
 **package.json:**
+
 ```json
 {
   "type": "module",
@@ -48,21 +49,23 @@ my-app/
 ```
 
 **server.ts:**
-```typescript
-import express from 'express'
 
-const app = express()
+```typescript
+import express from 'express';
+
+const app = express();
 
 app.get('/', (_req, res) => {
-  res.send('Hello Express!')
-})
+  res.send('Hello Express!');
+});
 
-export default app
+export default app;
 ```
 
 ## Minimal Hono App
 
 **package.json:**
+
 ```json
 {
   "type": "module",
@@ -73,16 +76,17 @@ export default app
 ```
 
 **server.ts:**
+
 ```typescript
-import { Hono } from 'hono'
+import { Hono } from 'hono';
 
-const app = new Hono()
+const app = new Hono();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.get('/', c => {
+  return c.text('Hello Hono!');
+});
 
-export default app
+export default app;
 ```
 
 ## Local Development
