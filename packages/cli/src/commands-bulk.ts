@@ -14,6 +14,7 @@ export { default as certs } from './commands/certs';
 export { default as curl } from './commands/curl';
 export { default as dns } from './commands/dns';
 export { default as domains } from './commands/domains';
+export { default as events } from './commands/events';
 export { default as flags } from './commands/flags';
 export { default as git } from './commands/git';
 export { default as guidance } from './commands/guidance';
