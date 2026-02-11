@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
+import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
 import { statSync } from 'fs';
 
@@ -1376,8 +1376,13 @@ async function analyzeSingleFunction(
   try {
     const content = await fs.readFile(file, 'utf8');
     const parsed = JSON.parse(content);
+    const funcDir = dirname(file);
 
-    // Extract file paths from .vc-config.json
+    // Size the files that were written into .func (FileBlob, zipBuffer, etc.)
+    const funcDirStats = await getDirectorySizeInMB(funcDir);
+
+    // Also size FileFsRef entries from filePathMap — these live on disk
+    // outside .func so there's no overlap with the directory walk above.
     const filePathMap =
       parsed.filePathMap && typeof parsed.filePathMap === 'object'
         ? Object.entries(parsed.filePathMap)
@@ -1390,13 +1395,17 @@ async function analyzeSingleFunction(
             }))
         : [];
 
-    const stats = getTotalFileSizeInMB(filePathMap);
+    const fsRefStats = getTotalFileSizeInMB(filePathMap);
+
+    const totalSize = funcDirStats.size + fsRefStats.size;
+    const allFiles = new Map([...funcDirStats.files, ...fsRefStats.files]);
+
     const functionUrlPath = getFunctionUrlPath(file, outputDir);
 
     return {
       path: functionUrlPath,
-      size: stats.size,
-      files: stats.files,
+      size: totalSize,
+      files: allFiles,
     };
   } catch (error) {
     output.warn(`Failed to analyze ${file}: ${error}`);
@@ -1427,6 +1436,48 @@ function getTotalFileSizeInMB(
     }
   }
 
+  return { size, files: filesSizeMap };
+}
+
+/**
+ * Recursively walk `dir` and sum up file sizes. Follows symlinks so
+ * symlinked files are measured by their real size.
+ */
+async function getDirectorySizeInMB(dir: string): Promise<{
+  size: number;
+  files: Map<string, number>;
+}> {
+  let size = 0;
+  const filesSizeMap = new Map<string, number>();
+
+  async function walk(currentDir: string): Promise<void> {
+    let entries: string[];
+    try {
+      entries = await fs.readdir(currentDir);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = join(currentDir, entry);
+      try {
+        // stat (not lstat) so we follow symlinks
+        const stats = statSync(fullPath);
+        if (stats.isDirectory()) {
+          await walk(fullPath);
+        } else if (stats.isFile()) {
+          const fileSizeMB = stats.size / (1024 * 1024);
+          size += fileSizeMB;
+          const relativePath = normalizePath(relative(dir, fullPath));
+          filesSizeMap.set(relativePath, fileSizeMB);
+        }
+      } catch {
+        // File can't be accessed, skip
+      }
+    }
+  }
+
+  await walk(dir);
   return { size, files: filesSizeMap };
 }
 
