@@ -140,6 +140,46 @@ jobs:
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN_ELEVATED }}" >> ~/.npmrc
 
       - name: Publish Canary to npm
-        run: pnpm publish -r --tag canary --no-git-checks
         env:
           NPM_CONFIG_PROVENANCE: 'true'
+        run: |
+          FAILED=""
+          PUBLISHED=""
+
+          PACKAGES=$(npx turbo ls --output json | node -e "
+            const chunks = [];
+            process.stdin.on('data', c => chunks.push(c));
+            process.stdin.on('end', () => {
+              const data = JSON.parse(chunks.join(''));
+              const paths = data.packages.items.map(p => p.path);
+              console.log(JSON.stringify(paths));
+            });
+          ")
+
+          for dir in $(node -e "JSON.parse(process.argv[1]).forEach(d => console.log(d))" "$PACKAGES"); do
+            PKG_JSON="$dir/package.json"
+            PRIVATE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$PKG_JSON','utf8')).private || false)")
+            if [ "$PRIVATE" = "true" ]; then
+              continue
+            fi
+            NAME=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$PKG_JSON','utf8')).name)")
+            VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$PKG_JSON','utf8')).version)")
+
+            echo "Publishing $NAME@$VERSION..."
+            if pnpm publish --tag canary --no-git-checks -C "$dir" 2>&1; then
+              PUBLISHED="$PUBLISHED\n  $NAME@$VERSION"
+            else
+              echo "::warning::Failed to publish $NAME@$VERSION"
+              FAILED="$FAILED\n  $NAME@$VERSION"
+            fi
+          done
+
+          echo ""
+          echo "=== Publish Summary ==="
+          if [ -n "$PUBLISHED" ]; then
+            echo -e "Published:$PUBLISHED"
+          fi
+          if [ -n "$FAILED" ]; then
+            echo -e "Failed:$FAILED"
+            exit 1
+          fi
