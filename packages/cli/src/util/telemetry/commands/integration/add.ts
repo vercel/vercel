@@ -24,6 +24,15 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionMetadata(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'metadata',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagNoConnect(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('no-connect');

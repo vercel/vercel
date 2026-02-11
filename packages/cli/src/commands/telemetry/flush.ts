@@ -1,16 +1,18 @@
+import fetch from 'node-fetch';
 import type Client from '../../util/client';
 
-export default async function flush(client: Client, args: string[]) {
+export default async function flush(_client: Client, args: string[]) {
   const url =
     process.env.VERCEL_TELEMETRY_BRIDGE_URL ||
     'https://telemetry.vercel.com/api/vercel-cli/v1/events';
   const { headers, body } = JSON.parse(args[0]);
   try {
-    const res = await client.fetch(url, {
+    // Use node-fetch directly instead of client.fetch because the client's
+    // HTTP agent may be HTTPS-only, but the bridge URL can be http:// in tests.
+    const res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      json: false,
     });
     const status = res.status;
     const cliTracked = res.headers.get('x-vercel-cli-tracked') || '';
