@@ -136,8 +136,10 @@ jobs:
       # Post-publish steps from release.yml (trigger update workflow, python
       # runtime release, update latest GitHub release) are intentionally omitted
       # since those are only relevant for production releases.
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN_ELEVATED }}" >> ~/.npmrc
+
       - name: Publish Canary to npm
         run: pnpm publish -r --tag canary --no-git-checks
         env:
           NPM_CONFIG_PROVENANCE: 'true'
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
