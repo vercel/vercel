@@ -26,10 +26,15 @@ jobs:
     name: Release Canary
     needs: approve
     runs-on: ubuntu-latest
+    # Only contents: read is needed (release.yml uses contents: write because
+    # changesets pushes commits/tags back to the repo).
     permissions:
       contents: read
       id-token: write
     steps:
+      # Unlike release.yml, we use the default GITHUB_TOKEN and skip fetching
+      # git tags. The custom token and tags are only needed for changesets to
+      # push commits/tags back to the repo, which canary releases don't do.
       - name: Checkout Repo
         uses: actions/checkout@v4
 
@@ -79,6 +84,9 @@ jobs:
             }
           "
 
+      # Post-publish steps from release.yml (trigger update workflow, python
+      # runtime release, update latest GitHub release) are intentionally omitted
+      # since those are only relevant for production releases.
       - name: Publish Canary to npm
         run: pnpm publish -r --tag canary --no-git-checks
         env:
