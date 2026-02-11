@@ -113,6 +113,17 @@ export interface BuildOptions {
    * The current trace state from the internal vc tracing
    */
   span?: Span;
+
+  /**
+   * Service-specific options. Only present when the build is part of a
+   * multi-service project.
+   */
+  service?: {
+    /** URL path prefix where the service is mounted (e.g., "/api"). */
+    routePrefix?: string;
+    /** Workspace directory for this service, relative to the project root. */
+    workspace?: string;
+  };
 }
 
 export interface PrepareCacheOptions {
@@ -404,6 +415,7 @@ export interface BuilderFunctions {
     architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: number;
+    regions?: string[];
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
