@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Auto-reloading glow pager. Reopens glow -p when the file changes."""
+import subprocess
+import sys
+import os
+import time
+from pathlib import Path
+
+NOTES = Path(__file__).resolve().parent / "notes.md"
+
+
+def main():
+    target = sys.argv[1] if len(sys.argv) > 1 else str(NOTES)
+
+    while True:
+        # Start glow in pager mode
+        glow = subprocess.Popen(
+            f'glow -w 160 "{target}" | less -R',
+            shell=True,
+        )
+
+        # Start watching for file changes
+        watcher = subprocess.Popen(
+            ["fswatch", "-1", target],
+            stdout=subprocess.DEVNULL,
+        )
+
+        # Wait for either to exit
+        while True:
+            glow_done = glow.poll()
+            watch_done = watcher.poll()
+
+            if glow_done is not None:
+                # User pressed q — exit
+                watcher.kill()
+                watcher.wait()
+                sys.exit(0)
+
+            if watch_done is not None:
+                # File changed — kill glow, relaunch
+                glow.terminate()
+                glow.wait()
+                break
+
+            time.sleep(0.1)
+
+
+if __name__ == "__main__":
+    main()

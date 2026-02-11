@@ -3,7 +3,7 @@
 ## Narrative Arc
 Old CLI = interactive, human-only → New CLI = one-shot, agent-friendly
 
-All sections use **Upstash Redis** — the hardest case (multi-product, required metadata, billing plan selection).
+All sections use **Upstash** — multi-product integration, the hardest case.
 
 ---
 
@@ -12,54 +12,75 @@ All sections use **Upstash Redis** — the hardest case (multi-product, required
 | | Version |
 |---|---|
 | Before my changes (Jan 2025) | **39.3.0** |
-| Current (latest on main) | **50.15.0** |
+| Current (latest on main) | **50.15.1** |
 
-Demo the "old" experience on `39.3.0`, demo the "new" experience on `50.15.0`.
+Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 
 ---
 
-## 1. The Old Experience (show the pain)
+## 1. Old Upstash KV — dead end
 
 | Say | Show on screen |
 |-----|----------------|
-| "Let me show you what installing an integration looks like today." | Terminal: `vc integration add upstash` |
-| *(wait for prompts to appear)* | Prompt: "Select a product" → 4 options (Redis, Vector, QStash, Search) |
-| "First, pick a product. Arrow keys, enter." | Arrow through options, select Redis |
-| "Now pick a region." | Prompt: "Choose your region" → arrow keys, enter |
+| "Let me show you what installing an integration looks like today." | Left pane: `vc integration add upstash` |
+| *(wait for prompt)* | Prompt: "Select a product" → 4 options |
+| "Pick a product. Arrow keys, enter." | Select Redis |
+| **"And now it gives up. 'This resource must be provisioned through the Web UI.' The CLI literally can't do it."** | Error message: opens browser fallback |
+
+---
+
+## 2. Old Prisma — the interactive gauntlet
+
+| Say | Show on screen |
+|-----|----------------|
+| "OK, let's try one the old CLI can actually do." | Left pane: `vc integration add prisma` |
 | "Type a name." | Prompt: type resource name manually |
-| "Pick a billing plan." | Prompt: "Choose a billing plan" → scroll through wall of text, enter |
-| "Connect to a project?" | Prompt: "Do you want to link this resource to the current project?" → y |
-| **"That's 6 interactive steps just to install one Redis cache. Every install needs a human at a terminal. Can't script it. Can't use it in CI. And if you're building an AI agent that provisions infrastructure — forget about it."** | Final output visible showing all the steps that were taken |
+| "Pick a region." | Prompt: select region |
+| "Now pick a billing plan." | Prompt: wall of text — 4 plans, each with multiple detail sections, you have to scroll through all of them |
+| *(slowly scroll through the plans)* | Audience sees the massive billing plan wall scroll by |
+| "Confirm selection." | Prompt: "Confirm selection?" → yes |
+| **"All that work — name, region, billing plan, confirmation — and it errors out anyway."** | Error: "Authorization ID must be specified for marketplace installations (400)" |
+| **"That's the old CLI. Interactive prompts that can't be scripted, can't be used in CI, and if you're building an AI agent that provisions infrastructure — forget about it."** | |
 
 ---
 
-## 2. The One-Shot (money moment)
+## 3. New Upstash KV — the one that was impossible
 
 | Say | Show on screen |
 |-----|----------------|
-| "Now watch this." | Terminal: cursor blinking |
-| *(type the command)* | `vc integration add upstash/upstash-kv` |
-| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... Downloaded .env.local... Dashboard URL |
-| **"Same integration, completely different experience. One command, zero flags, zero prompts."** | Full output visible on screen |
-| "Slash syntax picks the product. Region auto-detected from the team's existing projects. Name auto-generated. Default billing plan. Auto-connected to the project. Env vars pulled into `.env.local`." | Point at output lines one by one |
+| "Now watch this." | Right pane: cursor blinking |
+| *(type the command)* | `vc integration add upstash/upstash-kv --plan paid` |
+| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Dashboard URL |
+| **"Slash syntax picks the product. Region auto-detected. Name auto-generated. The old CLI couldn't even attempt this."** | Point at output lines one by one |
+
+---
+
+## 4. New Prisma — the gauntlet, gone
+
+| Say | Show on screen |
+|-----|----------------|
+| "And Prisma — the one that took 5 prompts and then errored." | Right pane: cursor blinking |
+| *(type the command)* | `vc integration add prisma` |
+| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Dashboard URL |
+| **"Same Prisma. One command. Zero prompts. Actually works."** | Full output visible |
 | **"Start to finish, zero human input. That's what agents need."** | |
-| *(optional, if audience asks)* | "You can override anything — `--name`, `-m primaryRegion=fra1`, `--plan`, `--no-connect` — but the defaults just work." |
+| *(optional, if audience asks)* | "You can override anything — `--name`, `--plan`, `--no-connect` — but the defaults just work." |
 
-> **Note:** Feature flag is baked into the `vc` function when run from `~/demo-new` — no manual export needed. Ensure test team has at least one project with a function region (so the API can infer the region).
+> **Note:** Feature flag is baked into the `vc` function when run from `~/demo-new` — no manual export needed.
 
-Expected output:
+Expected output (sections 3 and 4 follow this pattern):
 ```
-> Installing Upstash for Redis by Upstash under <team>
-Provisioning resource...
-> Success! Upstash for Redis successfully provisioned: upstash-kv-teal-fox
-> Connected upstash-kv-teal-fox to <project> (production, preview, development)
-> Downloaded .env.local file
-Dashboard: https://vercel.com/<team>/~/stores/integration/<id>
+> Installing <Integration> by <Partner> under <team>
+> Success! <Integration> successfully provisioned: <resource-name>
+>     Dashboard: https://vercel.com/<team>/~/stores/integration/<id>
+> <resource-name> successfully connected to cli-test
+> Downloading `development` Environment Variables for <team>/cli-test
+✅  Updated .env.local file
 ```
 
 ---
 
-## 3. Discovery: "How did the agent know what to type?"
+## 5. Discovery: "How did the agent know what to type?"
 
 | Say | Show on screen |
 |-----|----------------|
@@ -73,7 +94,7 @@ Dashboard: https://vercel.com/<team>/~/stores/integration/<id>
 
 ---
 
-## 4. Eval Results (the closer)
+## 6. Eval Results (the closer)
 
 | Say | Show on screen |
 |-----|----------------|
@@ -104,13 +125,14 @@ Eval scenarios on screen:
 ## Demo Checklist
 
 **Live demo prep:**
-- [ ] Run `./demo/setup.sh` (installs old CLI, builds new CLI, configures `vc` function)
-- [ ] `cd ~/demo-old && vc link` — link to test team/project
-- [ ] `cd ~/demo-new && vc link` — link to test team/project
-- [ ] Upstash already installed on test team (skip terms acceptance)
-- [ ] Dry-run: `cd ~/demo-old && vc integration add upstash` (old experience)
-- [ ] Dry-run: `cd ~/demo-new && vc integration add upstash/upstash-kv` (one-shot)
-- [ ] Dry-run: `cd ~/demo-new && vc integration add upstash --help` (dynamic help)
+- [ ] Run `demo-setup` (installs old CLI, builds new CLI, configures `vc` function, switches team)
+- [ ] Upstash + Prisma already installed on test team (skip terms acceptance)
+- [ ] Disconnect all Prisma/Upstash resources from `cli-test` project (avoid env var conflicts)
+- [ ] Dry-run old: `demo-old && vc integration add upstash` → select Redis (dead end)
+- [ ] Dry-run old: `demo-old && vc integration add prisma` (gauntlet → error)
+- [ ] Dry-run new: `demo-new && vc integration add upstash/upstash-kv --plan paid` (one-shot)
+- [ ] Dry-run new: `demo-new && vc integration add prisma` (one-shot)
+- [ ] Dry-run new: `demo-new && vc integration add upstash --help` (dynamic help)
 
 **Eval prep (section 6):**
 - [ ] Run full suite against "Baseline" config (no FF) — screenshot/save results

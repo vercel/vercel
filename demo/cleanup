@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+import os
+import re
+import shutil
+
+HOME = os.path.expanduser("~")
+DEMO_OLD = os.path.join(HOME, "demo-old")
+DEMO_NEW = os.path.join(HOME, "demo-new")
+ZSHRC = os.path.join(HOME, ".zshrc")
+STARSHIP = os.path.join(HOME, ".config", "starship.toml")
+
+GREEN = "\033[0;32m"
+YELLOW = "\033[0;33m"
+NC = "\033[0m"
+
+
+def ok(msg):
+    print(f"{GREEN}✓ {msg}{NC}")
+
+
+def skip(msg):
+    print(f"{YELLOW}· {msg}{NC}")
+
+
+def remove_block(filepath, start_marker, end_marker):
+    """Remove everything between start_marker and end_marker (inclusive) from a file."""
+    if not os.path.exists(filepath):
+        skip(f"{filepath} not found")
+        return
+
+    with open(filepath) as f:
+        content = f.read()
+
+    if start_marker not in content:
+        skip(f"No '{start_marker}' block in {filepath}")
+        return
+
+    # Remove the block (including the marker lines and any trailing newline)
+    pattern = re.escape(start_marker) + r".*?" + re.escape(end_marker) + r"\n?"
+    new_content = re.sub(pattern, "", content, flags=re.DOTALL)
+
+    with open(filepath, "w") as f:
+        f.write(new_content)
+
+    ok(f"Removed block from {filepath}")
+
+
+print()
+
+# 1. Remove demo directories
+for d in [DEMO_OLD, DEMO_NEW]:
+    if os.path.isdir(d):
+        shutil.rmtree(d)
+        ok(f"Removed {d}")
+    else:
+        skip(f"{d} (not found)")
+
+# 2. Remove vc function from .zshrc
+remove_block(ZSHRC, "# BEGIN-cli-demo-vc", "# END-cli-demo-vc")
+
+# 3. Remove vc_version block from starship.toml
+remove_block(STARSHIP, "# BEGIN-cli-demo-starship", "# END-cli-demo-starship")
+
+# 4. Remove vc_version from starship format string
+if os.path.exists(STARSHIP):
+    with open(STARSHIP) as f:
+        content = f.read()
+    if "custom.vc_version" in content:
+        lines = [l for l in content.splitlines(True) if "custom.vc_version" not in l]
+        with open(STARSHIP, "w") as f:
+            f.writelines(lines)
+        ok("Removed vc_version from starship format")
+    else:
+        skip("No vc_version in starship format")
+
+print(f"\n{GREEN}Cleanup complete. Open a new terminal tab to pick up changes.{NC}\n")
