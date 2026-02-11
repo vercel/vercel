@@ -10,6 +10,7 @@ export { default as api } from './commands/api';
 export { default as bisect } from './commands/bisect';
 export { default as blob } from './commands/blob';
 export { default as cache } from './commands/cache';
+export { default as contract } from './commands/contract';
 export { default as certs } from './commands/certs';
 export { default as curl } from './commands/curl';
 export { default as dns } from './commands/dns';

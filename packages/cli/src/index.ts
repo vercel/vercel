@@ -676,10 +676,6 @@ const main = async () => {
       let func: any;
       switch (targetCommand) {
         // Priority commands - separate bundles for fast loading
-        case 'contract':
-          telemetry.trackCliCommandContract(userSuppliedSubCommand);
-          func = (await import('./commands/contract/index.js')).default;
-          break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           telemetry.trackCliDefaultDeploy(defaultDeploy);
@@ -730,6 +726,10 @@ const main = async () => {
         case 'cache':
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).cache;
+          break;
+        case 'contract':
+          telemetry.trackCliCommandContract(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).contract;
           break;
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
