@@ -400,18 +400,22 @@ export const routesSchema = {
             type: 'boolean',
           },
           important: {
+            deprecated: true,
             type: 'boolean',
           },
           user: {
             type: 'boolean',
           },
           continue: {
+            deprecated: true,
             type: 'boolean',
           },
           override: {
+            deprecated: true,
             type: 'boolean',
           },
           check: {
+            deprecated: true,
             type: 'boolean',
           },
           isInternal: {
@@ -494,6 +498,7 @@ export const routesSchema = {
       },
       {
         type: 'object',
+        deprecated: true,
         required: ['handle'],
         additionalProperties: false,
         properties: {

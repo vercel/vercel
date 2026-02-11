@@ -68,10 +68,14 @@ export type RouteWithSrc = {
   dest?: string;
   headers?: { [name: string]: string };
   methods?: string[];
+  /** @deprecated */
   continue?: boolean;
+  /** @deprecated */
   override?: boolean;
   caseSensitive?: boolean;
+  /** @deprecated */
   check?: boolean;
+  /** @deprecated */
   important?: boolean;
   status?: number;
   has?: HasField;
@@ -108,6 +112,7 @@ export type RouteWithSrc = {
 };
 
 export type RouteWithHandle = {
+  /** @deprecated Internal use only. Do not use in vercel.json. */
   handle: HandleValue;
   src?: string;
   dest?: string;
