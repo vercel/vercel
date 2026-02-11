@@ -8,6 +8,7 @@ import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import table from '../../util/output/table';
 import title from 'title';
@@ -35,8 +36,16 @@ export async function list(client: Client) {
 
   telemetry.trackCliArgumentProject(parsedArguments.args[1]);
   telemetry.trackCliFlagAll(parsedArguments.flags['--all']);
+  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
   // Note: the `--integration` flag is tracked later, after validating
   // whether the value is a known integration name or not.
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   const validationResult = validateLsArgs({
     commandName: 'integration list [project]',
@@ -132,9 +141,7 @@ export async function list(client: Client) {
         product: resource.product?.name,
         integration: resource.product?.slug,
         configurationId: resource.product?.integrationConfigurationId,
-        projects: resource.projectsMetadata
-          ?.map(metadata => metadata.name)
-          .join(', '),
+        projects: resource.projectsMetadata?.map(metadata => metadata.name),
       };
     });
 
@@ -143,13 +150,23 @@ export async function list(client: Client) {
     knownIntegration
   );
 
+  if (asJson) {
+    output.stopSpinner();
+    client.stdout.write(`${JSON.stringify({ resources: results }, null, 2)}\n`);
+    return 0;
+  }
+
   if (results.length === 0) {
     output.log('No resources found.');
     return 0;
   }
 
+  const headerMessage = project
+    ? `Integration resources for project ${chalk.bold(project.name)} in ${chalk.bold(contextName)}:`
+    : `Integrations in ${chalk.bold(contextName)}:`;
+
   output.log(
-    `Integrations in ${chalk.bold(contextName)}:\n${table(
+    `${headerMessage}\n${table(
       [
         ['Name', 'Status', 'Product', 'Integration', 'Projects'].map(header =>
           chalk.bold(chalk.cyan(header))
@@ -159,7 +176,9 @@ export async function list(client: Client) {
           resourceStatus(result.status ?? '–'),
           result.product ?? chalk.gray('–'),
           integrationLink(result, team) ?? chalk.gray('–'),
-          chalk.grey(result.projects ? result.projects : '–'),
+          chalk.grey(
+            result.projects?.length ? result.projects.join(', ') : '–'
+          ),
         ]),
       ],
       { hsep: 8 }

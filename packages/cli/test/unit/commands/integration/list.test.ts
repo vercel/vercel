@@ -62,7 +62,9 @@ describe('integration', () => {
         expect(line.value).toEqual('Retrieving resources…');
 
         line = await lines.next();
-        expect(line.value).toEqual(`> Integrations in ${team.slug}:`);
+        expect(line.value).toEqual(
+          `> Integration resources for project connected-project in ${team.slug}:`
+        );
 
         line = await lines.next();
         const header = parseSpacedTableRow(line.value ?? '');
@@ -125,7 +127,9 @@ describe('integration', () => {
           expect(line.value).toEqual('Retrieving resources…');
 
           line = await lines.next();
-          expect(line.value).toEqual(`> Integrations in ${team.slug}:`);
+          expect(line.value).toEqual(
+            `> Integration resources for project connected-project in ${team.slug}:`
+          );
 
           line = await lines.next();
           const header = parseSpacedTableRow(line.value ?? '');
@@ -274,7 +278,9 @@ describe('integration', () => {
           expect(line.value).toEqual('Retrieving resources…');
 
           line = await lines.next();
-          expect(line.value).toEqual(`> Integrations in ${team.slug}:`);
+          expect(line.value).toEqual(
+            `> Integration resources for project connected-project in ${team.slug}:`
+          );
 
           line = await lines.next();
           const header = parseSpacedTableRow(line.value ?? '');
@@ -386,6 +392,57 @@ describe('integration', () => {
             {
               key: 'option:integration',
               value: '[REDACTED]',
+            },
+          ]);
+        });
+      });
+
+      describe('--json', () => {
+        it('returns JSON output for the linked project', async () => {
+          client.setArgv('integration', 'list', '--json');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          expect(jsonOutput).toHaveProperty('resources');
+          expect(jsonOutput.resources).toHaveLength(2);
+          expect(jsonOutput.resources[0]).toMatchObject({
+            name: 'store-acme-connected-project',
+            product: 'Acme',
+            integration: 'acme',
+            projects: ['connected-project'],
+          });
+          expect(jsonOutput.resources[1]).toMatchObject({
+            name: 'store-foo-bar-both-projects',
+            product: 'Foo Bar',
+            integration: 'foo-bar',
+            projects: ['connected-project', 'other-project'],
+          });
+        });
+
+        it('returns JSON output with --all flag', async () => {
+          client.setArgv('integration', 'list', '--all', '--json');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          expect(jsonOutput).toHaveProperty('resources');
+          expect(jsonOutput.resources).toHaveLength(7);
+        });
+
+        it('should track --json flag in telemetry', async () => {
+          client.setArgv('integration', 'list', '--json');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: 'subcommand:list',
+              value: 'list',
+            },
+            {
+              key: 'flag:json',
+              value: 'TRUE',
             },
           ]);
         });

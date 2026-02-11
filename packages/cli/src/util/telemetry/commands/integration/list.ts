@@ -29,4 +29,10 @@ export class IntegrationListTelemetryClient
       this.trackCliFlag('all');
     }
   }
+
+  trackCliFlagJson(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('json');
+    }
+  }
 }
