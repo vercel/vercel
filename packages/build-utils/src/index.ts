@@ -26,6 +26,7 @@ import {
   runPipInstall,
   runShellScript,
   runCustomInstallCommand,
+  resetCustomInstallCommandSet,
   getEnvForPackageManager,
   getNodeVersion,
   getPathForPackageManager,
@@ -34,7 +35,9 @@ import {
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
+  findPackageJson,
   traverseUpDirectories,
+  PipInstallResult,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -48,6 +51,7 @@ import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
+import { getServiceUrlEnvVars } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
@@ -83,8 +87,10 @@ export {
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
+  PipInstallResult,
   runShellScript,
   runCustomInstallCommand,
+  resetCustomInstallCommandSet,
   getEnvForPackageManager,
   getNodeVersion,
   getPathForPackageManager,
@@ -93,6 +99,7 @@ export {
   getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
+  getServiceUrlEnvVars,
   streamToBuffer,
   streamToBufferChunks,
   debug,
@@ -100,6 +107,7 @@ export {
   isDirectory,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  findPackageJson,
   getIgnoreFilter,
   cloneEnv,
   hardLinkDir,
@@ -108,7 +116,7 @@ export {
 };
 
 export { EdgeFunction } from './edge-function';
-export { readConfigFile } from './fs/read-config-file';
+export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 export { getOsRelease, getProvidedRuntime } from './os';
 
@@ -129,10 +137,17 @@ export { generateNodeBuilderFunctions } from './generate-node-builder-functions'
 
 export {
   BACKEND_FRAMEWORKS,
+  BACKEND_BUILDERS,
+  UNIFIED_BACKEND_BUILDER,
   BackendFramework,
   isBackendFramework,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
+  PYTHON_FRAMEWORKS,
+  PythonFramework,
+  isPythonFramework,
 } from './framework-helpers';
+
+export * from './python';

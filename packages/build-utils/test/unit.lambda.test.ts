@@ -130,6 +130,7 @@ describe('Lambda', () => {
         maxDeliveries: 3,
         retryAfterSeconds: 10,
         initialDelaySeconds: 60,
+        maxConcurrency: 5,
       };
 
       const lambda = new Lambda({
@@ -147,6 +148,7 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers![0].maxDeliveries).toBe(3);
       expect(lambda.experimentalTriggers![0].retryAfterSeconds).toBe(10);
       expect(lambda.experimentalTriggers![0].initialDelaySeconds).toBe(60);
+      expect(lambda.experimentalTriggers![0].maxConcurrency).toBe(5);
     });
 
     it('should create Lambda with multiple queue triggers', () => {
@@ -316,6 +318,27 @@ describe('Lambda', () => {
           '"experimentalTriggers[0]".initialDelaySeconds must be a non-negative number'
         );
       });
+
+      it('should throw error for invalid maxConcurrency', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs22.x',
+              experimentalTriggers: [
+                {
+                  type: 'queue/v1beta',
+                  topic: 'test-topic',
+                  consumer: 'test-consumer',
+                  maxConcurrency: 0,
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".maxConcurrency must be at least 1'
+        );
+      });
     });
 
     describe('Edge Cases', () => {
@@ -357,6 +380,82 @@ describe('Lambda', () => {
 
         expect(lambda.experimentalTriggers![0].initialDelaySeconds).toBe(0);
       });
+    });
+  });
+
+  describe('runtimeLanguage validation', () => {
+    it('should create Lambda with valid runtimeLanguage (rust)', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'provided.al2',
+        runtimeLanguage: 'rust',
+      });
+
+      expect(lambda.runtimeLanguage).toBe('rust');
+    });
+
+    it('should create Lambda with valid runtimeLanguage (go)', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'provided.al2',
+        runtimeLanguage: 'go',
+      });
+
+      expect(lambda.runtimeLanguage).toBe('go');
+    });
+
+    it('should create Lambda without runtimeLanguage', () => {
+      const files: Files = {};
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+      });
+
+      expect(lambda.runtimeLanguage).toBeUndefined();
+    });
+
+    it('should throw error for invalid runtimeLanguage (python)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: 'python' as any,
+          })
+      ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
+    });
+
+    it('should throw error for invalid runtimeLanguage (number)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: 123 as any,
+          })
+      ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
+    });
+
+    it('should throw error for invalid runtimeLanguage (empty string)', () => {
+      const files: Files = {};
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'provided.al2',
+            runtimeLanguage: '' as any,
+          })
+      ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
     });
   });
 });

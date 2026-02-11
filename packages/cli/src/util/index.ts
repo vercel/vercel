@@ -17,6 +17,7 @@ import type Client from './client';
 import { type FetchOptions, isJSONObject } from './client';
 import type { ArchiveFormat, Dictionary } from '@vercel/client';
 import output from '../output-manager';
+import sleep from './sleep';
 
 export interface NowOptions {
   client: Client;
@@ -52,6 +53,7 @@ export interface CreateOptions {
   noWait?: boolean;
   withFullLogs?: boolean;
   autoAssignCustomDomains?: boolean;
+  agentName?: string;
 }
 
 export interface RemoveOptions {
@@ -127,6 +129,7 @@ export default class Now {
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
+      agentName,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -148,6 +151,7 @@ export default class Now {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      actor: agentName,
       autoAssignCustomDomains,
     };
 
@@ -175,6 +179,7 @@ export default class Now {
       rootDirectory,
       noWait,
       withFullLogs,
+      bulkRedirectsPath: nowConfig.bulkRedirectsPath,
     });
 
     if (deployment && deployment.warnings) {
@@ -210,10 +215,10 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err = Object.create(APIError.prototype);
+        const err: APIError = Object.create(APIError.prototype);
         err.message = error.message;
         err.status = error.status;
-        err.retryAfter = 'never';
+        err.retryAfterMs = 'never';
         err.code = error.code;
         return err;
       }
@@ -229,10 +234,10 @@ export default class Now {
         msg += 'Please slow down.';
       }
 
-      const err = Object.create(APIError.prototype);
+      const err: APIError = Object.create(APIError.prototype);
       err.message = msg;
       err.status = error.status;
-      err.retryAfter = 'never';
+      err.retryAfterMs = 'never';
 
       return err;
     }
@@ -302,12 +307,25 @@ export default class Now {
 
       if (res.status === 200) {
         // What we want
-      } else if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to remove deployment'));
       } else {
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to remove deployment');
+        const error = await responseError(res, 'Failed to remove deployment');
+        // Always respect Retry-After headers and retry
+        if (typeof error.retryAfterMs === 'number') {
+          // The `Retry-After` header from the api tells us when the next rate
+          // limit token is available. There may only be a single rate limit
+          // token available at that time. Add a random skew to prevent creating
+          // a thundering herd.
+          const randomSkewMs = 30_000 * Math.random();
+          await sleep(error.retryAfterMs + randomSkewMs);
+          throw error;
+        }
+        if (res.status > 200 && res.status < 500) {
+          // If something is wrong with our request, we don't retry
+          return bail(error);
+        } else {
+          // If something is wrong with the server, we retry
+          throw error;
+        }
       }
     });
 
@@ -363,7 +381,7 @@ export default class Now {
   }
 
   // public fetch with built-in retrying that can be
-  // used from external utilities. it optioanlly
+  // used from external utilities. it optionally
   // receives a `retry` object in the opts that is
   // passed to the retry utility
   // it accepts a `json` option, which defaults to `true`
@@ -395,6 +413,16 @@ export default class Now {
           : res;
       }
       const err = await responseError(res);
+      // Always respect Retry-After headers and retry
+      if (typeof err.retryAfterMs === 'number') {
+        // The `Retry-After` header from the api tells us when the next rate
+        // limit token is available. There may only be a single rate limit
+        // token available at that time. Add a random skew to prevent creating
+        // a thundering herd.
+        const randomSkewMs = 30_000 * Math.random();
+        await sleep(err.retryAfterMs + randomSkewMs);
+        throw err;
+      }
       if (res.status >= 400 && res.status < 500) {
         return bail(err);
       }

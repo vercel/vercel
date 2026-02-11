@@ -6,6 +6,7 @@ describe('index', () => {
       new Map([
         ['alias', 'alias'],
         ['aliases', 'alias'],
+        ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
         ['build', 'build'],
@@ -20,6 +21,7 @@ describe('index', () => {
         ['domain', 'domains'],
         ['domains', 'domains'],
         ['env', 'env'],
+        ['flags', 'flags'],
         ['git', 'git'],
         ['help', 'help'],
         ['httpstat', 'httpstat'],
@@ -47,6 +49,8 @@ describe('index', () => {
         ['promote', 'promote'],
         ['pull', 'pull'],
         ['redeploy', 'redeploy'],
+        ['redirect', 'redirects'],
+        ['redirects', 'redirects'],
         ['remove', 'remove'],
         ['rm', 'remove'],
         ['rollback', 'rollback'],
@@ -58,6 +62,9 @@ describe('index', () => {
         ['team', 'teams'],
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
+        ['upgrade', 'upgrade'],
+        ['webhook', 'webhooks'],
+        ['webhooks', 'webhooks'],
         ['whoami', 'whoami'],
       ])
     );

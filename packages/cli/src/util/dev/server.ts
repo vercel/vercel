@@ -17,8 +17,8 @@ import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
-import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
+import { checkForPort } from './port-utils';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
 import JSONparse from 'json-parse-better-errors';
@@ -39,19 +39,19 @@ import {
   FileFsRef,
   type PackageJson,
   spawnCommand,
-  isExperimentalBackendsEnabled,
+  shouldUseExperimentalBackends,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
   isOfficialRuntime,
+  type Service,
 } from '@vercel/fs-detectors';
 import { frameworkList } from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
 import link from '../output/link';
-import sleep from '../sleep';
 import { relative } from '../path-helpers';
 import getVercelConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
@@ -88,6 +88,7 @@ import type {
 } from './types';
 import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
+import { ServicesOrchestrator } from './services-orchestrator';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
@@ -167,6 +168,8 @@ export default class DevServer {
   >;
   private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
+  private services?: Service[];
+  private orchestrator?: ServicesOrchestrator;
 
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
@@ -183,6 +186,7 @@ export default class DevServer {
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
+    this.services = options.services;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -547,7 +551,7 @@ export default class DevServer {
 
       // Once we're happy with this approach, the backend framework definitions
       // can be updated to contain a dev command. And we can remove this
-      if (isExperimentalBackendsEnabled()) {
+      if (shouldUseExperimentalBackends(frameworkSlug)) {
         return 'npx @vercel/cervel dev';
       }
     }
@@ -555,6 +559,8 @@ export default class DevServer {
   }
 
   async _getVercelConfig(): Promise<VercelConfig> {
+    const { compileVercelConfig } = await import('../compile-vercel-config');
+    await compileVercelConfig(this.cwd);
     const configPath = getVercelConfigPath(this.cwd);
 
     const [
@@ -583,7 +589,10 @@ export default class DevServer {
     vercelConfig.routes = maybeRoutes || [];
 
     // no builds -> zero config
-    if (!vercelConfig.builds || vercelConfig.builds.length === 0) {
+    if (
+      !vercelConfig.experimentalServices &&
+      (!vercelConfig.builds || vercelConfig.builds.length === 0)
+    ) {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = vercelConfig;
 
@@ -612,6 +621,7 @@ export default class DevServer {
         featHandleMiss,
         cleanUrls,
         trailingSlash,
+        workPath: this.cwd,
       });
 
       if (errors) {
@@ -626,7 +636,7 @@ export default class DevServer {
       }
 
       if (builders) {
-        if (this.devCommand) {
+        if (this.devCommand || (this.services && this.services.length > 0)) {
           builders = builders.filter(filterFrontendBuilds);
         }
 
@@ -655,7 +665,7 @@ export default class DevServer {
     }
 
     if (Array.isArray(vercelConfig.builds)) {
-      if (this.devCommand) {
+      if (this.devCommand || (this.services && this.services.length > 0)) {
         vercelConfig.builds = vercelConfig.builds.filter(filterFrontendBuilds);
       }
 
@@ -909,7 +919,33 @@ export default class DevServer {
     this._address = new URL(replaceLocalhost(address));
 
     const vercelConfig = await this.getVercelConfig();
-    const devCommandPromise = this.runDevCommand();
+
+    let devCommandPromise: Promise<void> | undefined;
+    if (this.services && this.services.length > 1) {
+      this.orchestrator = new ServicesOrchestrator({
+        services: this.services,
+        cwd: this.cwd,
+        repoRoot: this.repoRoot,
+        env: this.envConfigs.allEnv,
+        proxyOrigin: this.address.origin,
+      });
+      devCommandPromise = this.orchestrator.startAll();
+      this.devProcessOrigin = undefined;
+
+      let addressFormatted = this.address.toString();
+      if (this.address.pathname === '/' && this.address.protocol === 'http:') {
+        // log address without trailing slash to maintain backwards compatibility
+        addressFormatted = addressFormatted.replace(/\/$/, '');
+      }
+
+      output.print(`${chalk.cyan('>')} Available at:\n`);
+      for (const service of this.services) {
+        const serviceUrl = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
+        output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
+      }
+    } else {
+      devCommandPromise = this.runDevCommand();
+    }
 
     const files = await getFiles(this.cwd, {});
     this.files = {};
@@ -971,6 +1007,25 @@ export default class DevServer {
     // Configure the server to forward WebSocket "upgrade" events to the proxy.
     this.server.on('upgrade', async (req, socket, head) => {
       await this.startPromise;
+
+      if (this.orchestrator) {
+        const pathname = url.parse(req.url || '/').pathname || '/';
+        const service = this.orchestrator.getServiceForRoute(pathname);
+        if (service) {
+          const target = `http://${service.host}:${service.port}`;
+          output.debug(
+            `Detected "upgrade" event, proxying to service "${service.name}" at ${target}`
+          );
+          this.proxy.ws(req, socket, head, { target });
+          return;
+        }
+        output.debug(
+          `Detected "upgrade" event, but no matching service found for ${pathname}`
+        );
+        socket.destroy();
+        return;
+      }
+
       if (!this.devProcessOrigin) {
         output.debug(
           `Detected "upgrade" event, but closing socket because no frontend dev server is running`
@@ -985,12 +1040,15 @@ export default class DevServer {
 
     await devCommandPromise;
 
-    let addressFormatted = this.address.toString();
-    if (this.address.pathname === '/' && this.address.protocol === 'http:') {
-      // log address without trailing slash to maintain backwards compatibility
-      addressFormatted = addressFormatted.replace(/\/$/, '');
+    // For multi-service mode, URLs were already printed.
+    if (!this.orchestrator?.hasServices()) {
+      let addressFormatted = this.address.toString();
+      if (this.address.pathname === '/' && this.address.protocol === 'http:') {
+        // log address without trailing slash to maintain backwards compatibility
+        addressFormatted = addressFormatted.replace(/\/$/, '');
+      }
+      output.ready(`Available at ${link(addressFormatted)}`);
     }
-    output.ready(`Available at ${link(addressFormatted)}`);
   }
 
   /**
@@ -1010,6 +1068,10 @@ export default class DevServer {
 
     if (devProcess) {
       ops.push(treeKill(devProcess.pid!));
+    }
+
+    if (this.orchestrator) {
+      ops.push(this.orchestrator.stopAll());
     }
 
     ops.push(close(this.server));
@@ -1387,6 +1449,26 @@ export default class DevServer {
 
       debug(`Rewriting URL from "${req.url}" to "${location}"`);
       req.url = location;
+    }
+
+    // With multi-service setup, try to route to the appropriate service first
+    if (callLevel === 0 && this.orchestrator) {
+      const pathname = parsed.pathname || '/';
+      const service = this.orchestrator.getServiceForRoute(pathname);
+      if (service) {
+        debug(`Found service: ${service.name}`);
+        const upstream = `http://${service.host}:${service.port}`;
+        debug(`Proxying to service "${service.name}": ${upstream}`);
+
+        // Add the Vercel platform proxy request headers
+        const headers = this.getProxyHeaders(req, requestId, false);
+        for (const [name, value] of Object.entries(headers)) {
+          req.headers[name] = value;
+        }
+
+        this.setResponseHeaders(res, requestId);
+        return proxyPass(req, res, upstream, this, requestId, false);
+      }
     }
 
     if (callLevel === 0) {
@@ -2229,6 +2311,11 @@ export default class DevServer {
   }
 
   async runDevCommand(forceRestart: boolean = false) {
+    // In multi-service setup, all services are managed by orchestrator
+    if (this.services && this.services.length > 1) {
+      return;
+    }
+
     const { devCommand, cwd } = this;
 
     if (devCommand === this.currentDevCommand && !forceRestart) {
@@ -2610,31 +2697,6 @@ function fileRemoved(
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
-}
-
-async function checkForPort(port: number, timeout: number): Promise<string> {
-  let host;
-  const start = Date.now();
-  while (!(host = await getReachableHostOnPort(port))) {
-    if (Date.now() - start > timeout) {
-      break;
-    }
-    await sleep(100);
-  }
-  if (!host) {
-    throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
-  }
-  return host;
-}
-
-async function getReachableHostOnPort(port: number): Promise<string | false> {
-  const optsIpv4 = { host: '127.0.0.1' };
-  const optsIpv6 = { host: '::1' };
-  const results = await Promise.all([
-    isPortReachable(port, optsIpv6).then(r => r && `[${optsIpv6.host}]`),
-    isPortReachable(port, optsIpv4).then(r => r && optsIpv4.host),
-  ]);
-  return results.find(Boolean) || false;
 }
 
 function filterFrontendBuilds(build: Builder) {

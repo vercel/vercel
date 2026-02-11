@@ -223,4 +223,15 @@ export interface Framework {
    * Array of slugs for other framework presets which this framework supersedes.
    */
   supersedes?: string[];
+  /**
+   * Whether the framework is experimental.
+   * Experimental frameworks are feature flagged.
+   * @example true
+   */
+  experimental?: boolean;
+  /**
+   * Whether the framework is a "runtime" framework preset, e.g. Python, Go, etc.
+   * @example true
+   */
+  runtimeFramework?: boolean;
 }

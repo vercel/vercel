@@ -4,10 +4,16 @@ export function generateStaticParams() {
   return [{ slug: 'first' }, { slug: 'second' }, { slug: 'third' }];
 }
 
-export default function Page({ params: { slug } }) {
+export default async function Page(props) {
+  const params = await props.params;
+
+  const {
+    slug
+  } = params;
+
   if (slug === 'third') {
     // bail to ssr
-    cookies();
+    await cookies();
   }
 
   return (

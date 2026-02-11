@@ -1,5 +1,69 @@
 # @vercel/frameworks
 
+## 3.17.1
+
+### Patch Changes
+
+- [services] remove empty detectors ([#14914](https://github.com/vercel/vercel/pull/14914))
+
+## 3.17.0
+
+### Minor Changes
+
+- Add experimental Go runtime framework preset. ([#14865](https://github.com/vercel/vercel/pull/14865))
+
+  This adds support for deploying standalone Go HTTP servers (using `package main` with `func main()`) in addition to the existing serverless function pattern. The preset supports:
+
+  - `main.go` at project root (simple projects)
+  - `cmd/api/main.go` (API servers)
+  - `cmd/server/main.go` (HTTP servers)
+
+  The Go application must listen on the port specified by the `PORT` environment variable.
+
+## 3.16.1
+
+### Patch Changes
+
+- Generic node framework preset ([#14779](https://github.com/vercel/vercel/pull/14779))
+
+- experimental rust runtime framework preset ([#14765](https://github.com/vercel/vercel/pull/14765))
+
+## 3.16.0
+
+### Minor Changes
+
+- [ruby] Add experimental Ruby runtime framework preset ([#14762](https://github.com/vercel/vercel/pull/14762))
+
+  Also fixed a bug in the Ruby version parsing where `ruby "~> 3.3.x"` in Gemfile would fail due to a trailing space not being trimmed after removing the `~>` prefix.
+
+## 3.15.7
+
+### Patch Changes
+
+- [experimental-services] Add "services" as experimental framework preset ([#14648](https://github.com/vercel/vercel/pull/14648))
+
+- [frameworks] experimental framework flagging ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+## 3.15.6
+
+### Patch Changes
+
+- [frameworks] experimental framework flagging ([#14637](https://github.com/vercel/vercel/pull/14637))
+
+## 3.15.5
+
+### Patch Changes
+
+- Add zero-config support for Koa.js ([#14567](https://github.com/vercel/vercel/pull/14567))
+
+## 3.15.4
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 3.15.3
 
 ### Patch Changes

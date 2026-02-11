@@ -1,6 +1,7 @@
 node_modules
 dist
 .vscode
+.zed
 npm-debug.log
 yarn-error.log
 .nyc_output
@@ -25,6 +26,7 @@ test/lib/deployment/failed-page.txt
 .DS_Store
 .next
 /.env
+/.venv*/
 /public
 __pycache__
 .vercel

@@ -1,9 +1,10 @@
 export interface MetadataSchemaProperty {
-  type: 'string' | 'number' | string;
+  type: 'string' | 'number' | 'boolean' | 'array' | string;
   description?: string;
-  default?: string;
+  default?: string | boolean | number;
   minimum?: number;
   maximum?: number;
+  items?: { type: 'string' | 'number' | string };
   'ui:control': 'input' | 'select' | 'vercel-region' | string;
   'ui:disabled'?: 'create' | Expression | boolean | string;
   'ui:hidden'?: 'create' | Expression | boolean | string;
@@ -23,7 +24,10 @@ export interface Expression {
   expr: string;
 }
 
-export type Metadata = Record<string, string | number | undefined>;
+export type Metadata = Record<
+  string,
+  string | number | boolean | string[] | number[] | undefined
+>;
 export type MetadataEntry = Readonly<[string, Metadata[string]]>;
 
 export interface MetadataSchema {
@@ -149,3 +153,58 @@ export interface MarketplaceBillingAuthorizationState {
   createdAt: number;
   updatedAt: number;
 }
+
+// Auto-provision types
+
+// AcceptedPolicies: key = policy name ('privacy' | 'eula'), value = ISO timestamp
+export type AcceptedPolicies = Record<string, string>;
+
+export interface AutoProvisionIntegration {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  policies: {
+    eula?: string; // URL to EULA doc
+    privacy?: string; // URL to privacy doc
+  };
+}
+
+export interface AutoProvisionProduct {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  iconBackgroundColor?: string;
+  metadataSchema: MetadataSchema;
+}
+
+export interface AutoProvisionResource {
+  id: string;
+  externalResourceId: string;
+  name: string;
+  status: string;
+  ownership?: unknown;
+  secretKeys?: string[];
+}
+
+export interface AutoProvisionedResponse {
+  kind: 'provisioned';
+  integration: AutoProvisionIntegration;
+  product: AutoProvisionProduct;
+  installation: { id: string };
+  resource: AutoProvisionResource;
+  billingPlan: BillingPlan | null;
+}
+
+export interface AutoProvisionFallback {
+  kind: 'install' | 'metadata' | 'unknown';
+  url: string;
+  integration: AutoProvisionIntegration;
+  product: AutoProvisionProduct;
+  installation?: { id: string };
+}
+
+export type AutoProvisionResult =
+  | AutoProvisionedResponse
+  | AutoProvisionFallback;

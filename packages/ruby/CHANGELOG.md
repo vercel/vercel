@@ -1,5 +1,31 @@
 # @vercel/ruby
 
+## 2.3.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
+## 2.2.5
+
+### Patch Changes
+
+- [ruby] Add experimental Ruby runtime framework preset ([#14762](https://github.com/vercel/vercel/pull/14762))
+
+  Also fixed a bug in the Ruby version parsing where `ruby "~> 3.3.x"` in Gemfile would fail due to a trailing space not being trimmed after removing the `~>` prefix.
+
+## 2.2.4
+
+### Patch Changes
+
+- Replace bundle install flags with environment variables. ([#14499](https://github.com/vercel/vercel/pull/14499))
+
+## 2.2.3
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
 ## 2.2.2
 
 ### Patch Changes

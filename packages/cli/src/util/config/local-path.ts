@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
 import getArgs from '../../util/get-args';
+import { VERCEL_DIR } from '../projects/link';
 
 export default function getLocalPathConfig(prefix: string) {
   const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
@@ -26,6 +27,14 @@ export default function getLocalPathConfig(prefix: string) {
 
   if (nowConfigExists && vercelConfigExists) {
     throw new ConflictingConfigFiles([vercelConfigPath, nowConfigPath]);
+  }
+
+  // Check for compiled vercel.ts first
+  const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
+  const compiledConfigExists = existsSync(compiledConfigPath);
+
+  if (compiledConfigExists) {
+    return compiledConfigPath;
   }
 
   if (nowConfigExists) {

@@ -1,4 +1,5 @@
 import { aliasCommand } from './alias/command';
+import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
@@ -9,6 +10,7 @@ import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
+import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
 import { httpstatCommand } from './httpstat/command';
@@ -29,19 +31,23 @@ import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
 import { redeployCommand } from './redeploy/command';
+import { redirectsCommand } from './redirects/command';
 import { removeCommand } from './remove/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
+import { upgradeCommand } from './upgrade/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
+import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
 const commandsStructs = [
   aliasCommand,
+  apiCommand,
   blobCommand,
   bisectCommand,
   buildCommand,
@@ -53,6 +59,7 @@ const commandsStructs = [
   dnsCommand,
   domainsCommand,
   envCommand,
+  flagsCommand,
   gitCommand,
   httpstatCommand,
   initCommand,
@@ -72,12 +79,15 @@ const commandsStructs = [
   promoteCommand,
   pullCommand,
   redeployCommand,
+  redirectsCommand,
   removeCommand,
   rollbackCommand,
   rollingReleaseCommand,
   targetCommand,
   teamsCommand,
   telemetryCommand,
+  upgradeCommand,
+  webhooksCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
@@ -106,3 +116,5 @@ for (const command of commandsStructs) {
 output.debug(
   `All registered commands: ${JSON.stringify(Array.from(commands.entries()))}`
 );
+
+export const commandNames = Array.from(commands.keys());

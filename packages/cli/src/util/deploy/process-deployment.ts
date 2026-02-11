@@ -71,6 +71,7 @@ export default async function processDeployment({
   noWait?: boolean;
   withFullLogs?: boolean;
   agent?: Agent;
+  bulkRedirectsPath?: string | null;
 }) {
   const {
     now,
@@ -83,6 +84,7 @@ export default async function processDeployment({
     prebuilt,
     vercelOutputDir,
     rootDirectory,
+    bulkRedirectsPath,
   } = args;
 
   const client = now._client;
@@ -109,6 +111,7 @@ export default async function processDeployment({
     archive,
     agent,
     projectName,
+    bulkRedirectsPath,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -341,6 +344,22 @@ export default async function processDeployment({
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
         stopSpinner();
+
+        if (
+          event.payload.target === 'production' &&
+          event.payload.alias &&
+          event.payload.alias.length > 0
+        ) {
+          const primaryDomain = event.payload.alias[0];
+          const prodUrl = `https://${primaryDomain}`;
+          output.print(
+            prependEmoji(
+              `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
+              emoji('link')
+            ) + '\n'
+          );
+        }
+
         event.payload.indications = indications;
         return event.payload;
       }

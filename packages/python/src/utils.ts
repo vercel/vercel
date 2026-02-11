@@ -1,10 +1,18 @@
 import fs from 'fs';
-import { join, delimiter as pathDelimiter } from 'path';
+import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand } from '@vercel/build-utils';
+import execa from 'execa';
+import { getProtectedUvEnv } from './uv';
+
+const isWin = process.platform === 'win32';
 
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };
+
+export function getVenvBinDir(venvPath: string) {
+  return join(venvPath, isWin ? 'Scripts' : 'bin');
+}
 
 export function useVirtualEnv(
   workPath: string,
@@ -34,10 +42,54 @@ export function useVirtualEnv(
   return { pythonCmd };
 }
 
+export function createVenvEnv(
+  venvPath: string,
+  baseEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...getProtectedUvEnv(baseEnv),
+    VIRTUAL_ENV: venvPath,
+  };
+  const binDir = getVenvBinDir(venvPath);
+  const existingPath = env.PATH || process.env.PATH || '';
+  env.PATH = existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir;
+  return env;
+}
+
+export async function ensureVenv({
+  pythonPath,
+  venvPath,
+  uvPath,
+}: {
+  pythonPath: string;
+  venvPath: string;
+  uvPath?: string | null;
+}) {
+  const marker = join(venvPath, 'pyvenv.cfg');
+  try {
+    await fs.promises.access(marker);
+    return;
+  } catch {
+    // fall through to creation
+  }
+  await fs.promises.mkdir(venvPath, { recursive: true });
+  console.log(`Creating virtual environment at "${venvPath}"...`);
+  if (uvPath) {
+    await execa(uvPath, ['venv', venvPath]);
+  } else {
+    await execa(pythonPath, ['-m', 'venv', venvPath]);
+  }
+}
+
+export function getVenvPythonBin(venvPath: string) {
+  return join(getVenvBinDir(venvPath), isWin ? 'python.exe' : 'python');
+}
+
 export async function runPyprojectScript(
   workPath: string,
   scriptNames: string | Iterable<string>,
-  env?: NodeJS.ProcessEnv
+  env?: NodeJS.ProcessEnv,
+  useUserVirtualEnv = true
 ) {
   const pyprojectPath = join(workPath, 'pyproject.toml');
   if (!fs.existsSync(pyprojectPath)) return false;
@@ -67,7 +119,9 @@ export async function runPyprojectScript(
   // Use the Python from the virtualenv if present to resolve tooling, else system python
   const systemPython = process.platform === 'win32' ? 'python' : 'python3';
   const finalEnv = { ...process.env, ...env };
-  useVirtualEnv(workPath, finalEnv, systemPython);
+  if (useUserVirtualEnv) {
+    useVirtualEnv(workPath, finalEnv, systemPython);
+  }
 
   const scriptCommand = scripts[scriptToRun];
   if (typeof scriptCommand === 'string' && scriptCommand.trim()) {
@@ -81,4 +135,24 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
+}
+
+export function findDir({
+  file,
+  entryDirectory,
+  workPath,
+  fsFiles,
+}: {
+  file: string;
+  entryDirectory: string;
+  workPath: string;
+  fsFiles: Record<string, any>;
+}): string | null {
+  if (fsFiles[join(entryDirectory, file)]) {
+    return join(workPath, entryDirectory);
+  }
+  if (fsFiles[file]) {
+    return workPath;
+  }
+  return null;
 }

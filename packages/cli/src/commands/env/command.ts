@@ -1,6 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, yesOption } from '../../util/arg-common';
+import { forceOption, formatOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -19,6 +19,7 @@ export const listSubcommand = {
     },
   ],
   options: [
+    formatOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -56,6 +57,11 @@ export const addSubcommand = {
       ...forceOption,
       description: 'Force overwrites when a command would normally fail',
       shorthand: null,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when adding an Environment Variable',
     },
     {
       name: 'guidance',
@@ -198,6 +204,50 @@ export const pullSubcommand = {
   ],
 } as const;
 
+export const runSubcommand = {
+  name: 'run',
+  aliases: [],
+  description:
+    'Run a command with environment variables from the linked Vercel project',
+  arguments: [
+    {
+      name: 'command',
+      required: true,
+      multiple: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      description:
+        'Specify the environment to pull variables from (default: development)',
+      shorthand: 'e',
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+    },
+    {
+      name: 'git-branch',
+      description:
+        'Specify the Git branch to pull specific Environment Variables for',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Run Next.js dev server with development environment variables',
+      value: `${packageName} env run -- next dev`,
+    },
+    {
+      name: 'Run tests with preview environment variables for a specific branch',
+      value: `${packageName} env run -e preview --git-branch feature-x -- npm test`,
+    },
+  ],
+} as const;
+
 export const updateSubcommand = {
   name: 'update',
   aliases: [],
@@ -270,6 +320,7 @@ export const envCommand = {
     listSubcommand,
     pullSubcommand,
     removeSubcommand,
+    runSubcommand,
     updateSubcommand,
   ],
   options: [],

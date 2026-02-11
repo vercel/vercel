@@ -33,6 +33,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
       - name: install npm@9
         run: npm i -g npm@9
 
@@ -67,6 +73,26 @@ jobs:
           script: |
             const script = require('./utils/trigger-update-workflow.js')
             await script({ github, context })
+
+      - name: Trigger Python Runtime Release (if @vercel/python-runtime changed)
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const publishedPackages = JSON.parse('${{ steps.changesets.outputs.publishedPackages }}' || '[]');
+            const pythonRuntimePublished = publishedPackages.some(pkg => pkg.name === '@vercel/python-runtime');
+            if (pythonRuntimePublished) {
+              console.log('@vercel/python-runtime was published, triggering Python runtime release workflow');
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'release-python-runtime.yml',
+                ref: 'main',
+              });
+            } else {
+              console.log('@vercel/python-runtime was not in the published packages, skipping Python release');
+            }
 
       - name: Set latest Release to `vercel` (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'

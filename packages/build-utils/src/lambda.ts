@@ -17,11 +17,13 @@ export type { TriggerEvent };
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
+  runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
@@ -57,6 +59,12 @@ export interface LambdaOptionsBase {
    * When true, the Lambda runtime can be terminated mid-execution if the request is cancelled.
    */
   supportsCancellation?: boolean;
+
+  /**
+   * Whether to disable automatic fetch instrumentation.
+   * When true, the Function runtime will not automatically instrument fetch calls.
+   */
+  shouldDisableAutomaticFetchInstrumentation?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -108,6 +116,11 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
+  /**
+   * When using a generic runtime such as "executable" or "provided" (custom runtimes),
+   * this field can be used to specify the language the executable was compiled with.
+   */
+  runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
@@ -144,10 +157,17 @@ export class Lambda {
    */
   supportsCancellation?: boolean;
 
+  /**
+   * Whether to disable automatic fetch instrumentation.
+   * When true, the Function runtime will not automatically instrument fetch calls.
+   */
+  shouldDisableAutomaticFetchInstrumentation?: boolean;
+
   constructor(opts: LambdaOptions) {
     const {
       handler,
       runtime,
+      runtimeLanguage,
       maxDuration,
       architecture,
       memory,
@@ -162,6 +182,7 @@ export class Lambda {
       framework,
       experimentalTriggers,
       supportsCancellation,
+      shouldDisableAutomaticFetchInstrumentation,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -177,6 +198,13 @@ export class Lambda {
       assert(
         architecture === 'x86_64' || architecture === 'arm64',
         '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
+
+    if (runtimeLanguage !== undefined) {
+      assert(
+        runtimeLanguage === 'rust' || runtimeLanguage === 'go',
+        '"runtimeLanguage" is invalid. Valid options: "rust", "go"'
       );
     }
 
@@ -313,6 +341,18 @@ export class Lambda {
             `${prefix}.initialDelaySeconds must be a non-negative number`
           );
         }
+
+        if (trigger.maxConcurrency !== undefined) {
+          assert(
+            typeof trigger.maxConcurrency === 'number',
+            `${prefix}.maxConcurrency must be a number`
+          );
+          assert(
+            Number.isInteger(trigger.maxConcurrency) &&
+              trigger.maxConcurrency >= 1,
+            `${prefix}.maxConcurrency must be at least 1`
+          );
+        }
       }
     }
 
@@ -328,6 +368,7 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
+    this.runtimeLanguage = runtimeLanguage;
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
@@ -346,6 +387,8 @@ export class Lambda {
         : undefined;
     this.experimentalTriggers = experimentalTriggers;
     this.supportsCancellation = supportsCancellation;
+    this.shouldDisableAutomaticFetchInstrumentation =
+      shouldDisableAutomaticFetchInstrumentation;
   }
 
   async createZip(): Promise<Buffer> {
@@ -435,6 +478,7 @@ export async function getLambdaOptionsFromFunction({
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'regions'
     | 'experimentalTriggers'
     | 'supportsCancellation'
   >
@@ -446,6 +490,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          regions: fn.regions,
           experimentalTriggers: fn.experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };

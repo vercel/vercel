@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "builds": [
-    { "src": "www/**/*", "use": "@now/static" },
-    { "src": "api/**/*.js", "use": "@now/node" }
-  ],
-  "routes": [{ "src": "/", "dest": "www/index.html" }]
-}

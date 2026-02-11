@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["node"],
+    "lib": ["DOM", "ES2022"], // DOM needed for WebAssembly
+    "module": "ES2022",
+    "paths": {
+      "#wasm/*": ["./dist/wasm/*"]
+    }
+  },
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"]
+}

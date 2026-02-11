@@ -1,5 +1,46 @@
 # @vercel/functions
 
+## 3.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`3760ea1e97fdc45dae36c64138023e1b1a075467`](https://github.com/vercel/vercel/commit/3760ea1e97fdc45dae36c64138023e1b1a075467)]:
+  - @vercel/oidc@3.2.0
+
+## 3.4.1
+
+### Patch Changes
+
+- Fix InMemoryCache to use JSON serialization for consistency with RuntimeCache ([#14751](https://github.com/vercel/vercel/pull/14751))
+
+  InMemoryCache now serializes values with `JSON.stringify()` on set and deserializes with `JSON.parse()` on get, matching the behavior of RuntimeCache. This ensures consistent behavior when switching between cache implementations (e.g., in-memory for development, remote for production), particularly for types that don't survive JSON round-trips like `Date`, `Map`, `Set`, and `undefined`.
+
+## 3.4.0
+
+### Minor Changes
+
+- Fix cache tags to be URL encoded before being sent to the cache API. Tags containing special characters (spaces, commas, ampersands, etc.) are now properly encoded using `encodeURIComponent`. This ([#14749](https://github.com/vercel/vercel/pull/14749))
+  ensures tags like `"my tag"` or `"category,item"` are correctly handled when setting cache entries or expiring tags.
+
+## 3.3.6
+
+### Patch Changes
+
+- Fix `TimeoutNegativeWarning` in Node.js v24 when process runs longer than 15 minutes by ensuring minimum wait time of 100ms ([#14491](https://github.com/vercel/vercel/pull/14491))
+
+## 3.3.5
+
+### Patch Changes
+
+- Updated dependencies [[`abdec3599b6897da76b90f2348a33e3c6c188353`](https://github.com/vercel/vercel/commit/abdec3599b6897da76b90f2348a33e3c6c188353), [`b9eae1d7c9f618355c6179eb58afb3c54318a046`](https://github.com/vercel/vercel/commit/b9eae1d7c9f618355c6179eb58afb3c54318a046)]:
+  - @vercel/oidc@3.1.0
+
+## 3.3.4
+
+### Patch Changes
+
+- [functions] update link to docs ([#14350](https://github.com/vercel/vercel/pull/14350))
+
 ## 3.3.3
 
 ### Patch Changes

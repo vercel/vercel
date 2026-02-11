@@ -1,5 +1,19 @@
 # @vercel/routing-utils
 
+## 5.3.2
+
+### Patch Changes
+
+- Add respectOriginCacheControl to rewritesSchema ([#14506](https://github.com/vercel/vercel/pull/14506))
+
+- Add respectOriginCacheControl to routes schema ([#14565](https://github.com/vercel/vercel/pull/14565))
+
+## 5.3.1
+
+### Patch Changes
+
+- add env field to redirects, rewrites, routes ([#14405](https://github.com/vercel/vercel/pull/14405))
+
 ## 5.3.0
 
 ### Minor Changes

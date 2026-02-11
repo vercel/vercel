@@ -73,7 +73,7 @@ export const disconnectSubcommand = {
   ],
   examples: [
     {
-      name: 'Disconnect a resource from the current projecct',
+      name: 'Disconnect a resource from the current project',
       value: [
         `${packageName} integration-resource disconnect <resource>`,
         `${packageName} integration-resource disconnect my-acme-resource`,
@@ -82,7 +82,7 @@ export const disconnectSubcommand = {
     {
       name: 'Disconnect all projects from a resource',
       value: [
-        `${packageName} integration-resource disconnect <resource> --unlink-all`,
+        `${packageName} integration-resource disconnect <resource> --all`,
         `${packageName} integration-resource disconnect my-acme-resource --all`,
         `${packageName} integration-resource disconnect my-acme-resource -a`,
       ],
@@ -144,6 +144,10 @@ export const integrationResourceCommand = {
   description: 'Manage marketplace integration resources',
   options: [],
   arguments: [],
-  subcommands: [disconnectSubcommand, removeSubcommand],
+  subcommands: [
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    removeSubcommand,
+  ],
   examples: [],
 } as const;

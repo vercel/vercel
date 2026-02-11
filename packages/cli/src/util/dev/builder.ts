@@ -15,6 +15,7 @@ import {
   FileFsRef,
   normalizePath,
   isBackendFramework,
+  isPythonFramework,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -60,7 +61,7 @@ async function createBuildProcess(
 ): Promise<ChildProcess> {
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
-  const builderWorkerPath = join(__dirname, 'builder-worker.js');
+  const builderWorkerPath = join(__dirname, 'builder-worker.cjs');
 
   // Ensure that `node` is in the builder's `PATH`
   const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
@@ -138,6 +139,8 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(match, envConfigs, workPath);
   }
 
+  const serviceRoutePrefix = config.routePrefix;
+  const serviceWorkspace = config.workspace;
   const buildOptions: BuildOptions = {
     files,
     entrypoint,
@@ -155,6 +158,21 @@ export async function executeBuild(
       env: { ...envConfigs.runEnv },
       buildEnv: { ...envConfigs.buildEnv },
     },
+    ...(typeof serviceRoutePrefix === 'string' ||
+    typeof serviceWorkspace === 'string'
+      ? {
+          service: {
+            routePrefix:
+              typeof serviceRoutePrefix === 'string'
+                ? serviceRoutePrefix
+                : undefined,
+            workspace:
+              typeof serviceWorkspace === 'string'
+                ? serviceWorkspace
+                : undefined,
+          },
+        }
+      : undefined),
   };
 
   let buildResultOrOutputs;
@@ -429,27 +447,20 @@ export async function getBuildMatches(
       src = 'package.json';
     }
 
+    // The Python builder will handle the actual entrypoint discovery, we just need to
+    // point it to a manifest file that exists.
     if (
-      buildConfig.config?.framework === 'fastapi' ||
-      buildConfig.config?.framework === 'flask'
+      buildConfig.config?.framework &&
+      isPythonFramework(buildConfig.config?.framework)
     ) {
-      // Mirror @vercel/python's entrypoint candidates
-      const candidateDirs = ['', 'src', 'app', 'api'];
-      const candidateNames = ['app', 'index', 'server', 'main'];
-      const candidates: string[] = [];
-      for (const name of candidateNames) {
-        for (const dir of candidateDirs) {
-          candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
-        }
-      }
-      if (!fileList.includes(src)) {
-        const existing = candidates.filter(p => fileList.includes(p));
-        if (existing.length > 0) {
-          src = existing[0];
-        } else if (fileList.includes('pyproject.toml')) {
-          // Builder will resolve entrypoint from pyproject.toml;
-          src = 'pyproject.toml';
-        }
+      const pythonManifestFiles = [
+        'pyproject.toml',
+        'requirements.txt',
+        'Pipfile',
+      ];
+      const existing = pythonManifestFiles.filter(p => fileList.includes(p));
+      if (existing.length > 0) {
+        src = existing[0];
       }
     }
 

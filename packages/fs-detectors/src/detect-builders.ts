@@ -1,6 +1,6 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
-import { parse as parsePath, extname } from 'path';
+import { parse as parsePath, extname, join } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
@@ -9,8 +9,16 @@ import type {
   Config,
   BuilderFunctions,
   ProjectSettings,
+  Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
+import {
+  isPythonEntrypoint,
+  BACKEND_BUILDERS,
+  UNIFIED_BACKEND_BUILDER,
+  isExperimentalBackendsEnabled,
+} from '@vercel/build-utils';
+import { getServicesBuilders } from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -47,6 +55,7 @@ export interface Options {
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
   bunVersion?: string;
+  workPath?: string;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -111,7 +120,17 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  services?: Service[];
 }> {
+  const { projectSettings = {} } = options;
+  const { framework } = projectSettings;
+
+  if (framework === 'services') {
+    return getServicesBuilders({
+      workPath: options.workPath,
+    });
+  }
+
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
@@ -145,8 +164,7 @@ export async function detectBuilders(
 
   const absolutePathCache = new Map<string, string>();
 
-  const { projectSettings = {} } = options;
-  const { buildCommand, outputDirectory, framework } = projectSettings;
+  const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
   const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
@@ -180,7 +198,7 @@ export async function detectBuilders(
 
   // API
   for (const fileName of sortedFiles) {
-    const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
+    const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(
@@ -349,11 +367,12 @@ export async function detectBuilders(
   if (frontendBuilder) {
     // Add @vercel/static build for public files for server-based frameworks
     // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
-    // This applies to Express, Hono, and any Python-based server frameworks.
+    // This applies to Express, Hono, Go, and Python-based server frameworks.
     if (
       frontendBuilder?.use === '@vercel/express' ||
       frontendBuilder?.use === '@vercel/hono' ||
-      frontendBuilder?.use === '@vercel/python'
+      frontendBuilder?.use === '@vercel/python' ||
+      frontendBuilder?.use === '@vercel/go'
     ) {
       builders.push({
         src: 'public/**/*',
@@ -400,11 +419,11 @@ export async function detectBuilders(
   };
 }
 
-function maybeGetApiBuilder(
+async function maybeGetApiBuilder(
   fileName: string,
   apiMatches: Builder[],
   options: Options
-) {
+): Promise<Builder | null> {
   const middleware =
     fileName === 'middleware.js' || fileName === 'middleware.ts';
 
@@ -432,6 +451,15 @@ function maybeGetApiBuilder(
 
   if (fileName.endsWith('.d.ts')) {
     return null;
+  }
+
+  // For Python files, verify they are valid entrypoints before creating a builder
+  if (fileName.endsWith('.py') && options.workPath) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
   }
 
   const match = apiMatches.find(({ src = '**' }) => {
@@ -504,6 +532,7 @@ function getApiMatches(): Builder[] {
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
+    { src: 'api/**/*.rs', use: `@vercel/rust`, config },
   ];
 }
 
@@ -580,7 +609,13 @@ function detectFrontBuilder(
   const f = slugToFramework.get(framework || '');
   if (f && f.useRuntime) {
     const { src, use } = f.useRuntime;
-    return { src, use: `${use}${withTag}`, config };
+    // Replace framework-specific backend builders with the unified backend builder
+    // when experimental backends is enabled
+    const shouldUseUnifiedBackend =
+      isExperimentalBackendsEnabled() &&
+      BACKEND_BUILDERS.includes(use as (typeof BACKEND_BUILDERS)[number]);
+    const finalUse = shouldUseUnifiedBackend ? UNIFIED_BACKEND_BUILDER : use;
+    return { src, use: `${finalUse}${withTag}`, config };
   }
 
   // Entrypoints for other frameworks
@@ -741,7 +776,8 @@ function checkUnusedFunctions(
   if (
     frontendBuilder &&
     (isOfficialRuntime('express', frontendBuilder.use) ||
-      isOfficialRuntime('hono', frontendBuilder.use))
+      isOfficialRuntime('hono', frontendBuilder.use) ||
+      isOfficialRuntime('backends', frontendBuilder.use))
   ) {
     // Copied from builder entrypoint detection
     const validFilenames = [

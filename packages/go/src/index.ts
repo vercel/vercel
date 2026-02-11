@@ -45,6 +45,13 @@ import {
   OUT_EXTENSION,
 } from './go-helpers';
 
+import { GO_CANDIDATE_ENTRYPOINTS, detectGoEntrypoint } from './entrypoint';
+
+import {
+  buildStandaloneServer,
+  startStandaloneDevServer,
+} from './standalone-server';
+
 export { shouldServe };
 
 // in order to allow the user to have `main.go`,
@@ -109,13 +116,10 @@ type UndoActions = {
 
 export const version = 3;
 
-export async function build({
-  files,
-  entrypoint,
-  config,
-  workPath,
-  meta = {},
-}: BuildOptions) {
+export async function build(options: BuildOptions) {
+  const { files, config, workPath, meta = {} } = options;
+  let { entrypoint } = options;
+
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.skipDownload ? workPath : srcPath;
@@ -151,6 +155,21 @@ export async function build({
   We highly recommend you leverage Go Modules in your project.
   Learn more: https://github.com/golang/go/wiki/Modules
   `);
+    }
+
+    // Standalone server mode when framework is 'go' or 'services'
+    if (config?.framework === 'go' || config?.framework === 'services') {
+      const resolvedEntrypoint = await detectGoEntrypoint(workPath, entrypoint);
+      if (!resolvedEntrypoint) {
+        throw new Error(
+          `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
+        );
+      }
+      debug(`Using standalone Go server mode for ${resolvedEntrypoint}`);
+      return buildStandaloneServer({
+        ...options,
+        entrypoint: resolvedEntrypoint,
+      });
     }
 
     const originalEntrypointAbsolute = join(workPath, entrypoint);
@@ -255,6 +274,7 @@ export async function build({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
       runtime,
+      runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
     });
@@ -816,9 +836,8 @@ async function writeGoWork(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, config, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
-  const entrypointDir = dirname(entrypoint);
 
   // For some reason, if `entrypoint` is a path segment (filename contains `[]`
   // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
@@ -827,6 +846,21 @@ export async function startDevServer(
     entrypointWithExt += '.go';
   }
 
+  // Standalone server mode when framework is 'go' or 'services'
+  if (config?.framework === 'go' || config?.framework === 'services') {
+    const resolvedEntrypoint = await detectGoEntrypoint(
+      workPath,
+      entrypointWithExt
+    );
+    if (!resolvedEntrypoint) {
+      throw new Error(
+        `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    return startStandaloneDevServer(opts, resolvedEntrypoint);
+  }
+
+  const entrypointDir = dirname(entrypointWithExt);
   const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
@@ -918,7 +952,7 @@ export async function startDevServer(
   if (isPortInfo(result)) {
     return {
       port: result.port,
-      pid: child.pid,
+      pid: child.pid!,
     };
   } else if (Array.isArray(result)) {
     // Got "exit" event from child process

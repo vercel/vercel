@@ -113,6 +113,17 @@ export interface BuildOptions {
    * The current trace state from the internal vc tracing
    */
   span?: Span;
+
+  /**
+   * Service-specific options. Only present when the build is part of a
+   * multi-service project.
+   */
+  service?: {
+    /** URL path prefix where the service is mounted (e.g., "/api"). */
+    routePrefix?: string;
+    /** Workspace directory for this service, relative to the project root. */
+    workspace?: string;
+  };
 }
 
 export interface PrepareCacheOptions {
@@ -196,6 +207,18 @@ export type StartDevServerOptions = BuildOptions & {
    * Directory to serve static files from in dev mode
    */
   publicDir?: string;
+  /**
+   * Optional callback for stdout output from the dev server process.
+   * If provided, the builder should forward stdout to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStdout?: (data: Buffer) => void;
+  /**
+   * Optional callback for stderr output from the dev server process.
+   * If provided, the builder should forward stderr to this callback
+   * instead of (or in addition to) the default behavior.
+   */
+  onStderr?: (data: Buffer) => void;
 };
 
 export interface StartDevServerSuccess {
@@ -392,6 +415,7 @@ export interface BuilderFunctions {
     architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: number;
+    regions?: string[];
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
@@ -408,6 +432,7 @@ export interface ProjectSettings {
   outputDirectory?: string | null;
   rootDirectory?: string | null;
   nodeVersion?: string;
+  monorepoManager?: string | null;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
@@ -521,6 +546,26 @@ export interface Cron {
   schedule: string;
 }
 
+export interface Service {
+  name: string;
+  type: ServiceType;
+  group?: string;
+  workspace: string;
+  entrypoint?: string;
+  framework?: string;
+  builder: Builder;
+  runtime?: string;
+  buildCommand?: string;
+  installCommand?: string;
+  /* web service config */
+  routePrefix?: string;
+  /* cron service config */
+  schedule?: string;
+  /* worker service config */
+  topic?: string;
+  consumer?: string;
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
@@ -546,6 +591,14 @@ export interface BuildResultV2Typical {
     version: string;
   };
   flags?: { definitions: FlagDefinitions };
+  /**
+   * User-configured deployment ID for skew protection.
+   * This allows users to specify a custom deployment identifier
+   * in their next.config.js that will be used for version skew protection
+   * with pre-built deployments.
+   * @example "abc123"
+   */
+  deploymentId?: string;
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -641,4 +694,79 @@ export interface TriggerEvent {
    * Behavior when not specified depends on the server's default configuration.
    */
   initialDelaySeconds?: number;
+
+  /**
+   * Maximum number of concurrent executions for this consumer (OPTIONAL)
+   * Must be at least 1 if specified.
+   * Behavior when not specified depends on the server's default configuration.
+   */
+  maxConcurrency?: number;
 }
+
+export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
+
+export type ServiceType = 'web' | 'cron' | 'worker';
+
+/**
+ * Configuration for a service in vercel.json.
+ * @experimental This feature is experimental and may change.
+ */
+export interface ExperimentalServiceConfig {
+  type?: ServiceType;
+  /**
+   * Entry file for the service, relative to the workspace directory.
+   * @example "src/index.ts", "main.py", "api/server.go"
+   */
+  entrypoint?: string;
+  /**
+   * Path to the directory containing the service's manifest file
+   * (package.json, pyproject.toml, etc.).
+   * Defaults to "." (project root) if not specified.
+   */
+  workspace?: string;
+
+  /** Framework to use */
+  framework?: string;
+  /** Builder to use, e.g. @vercel/node, @vercel/python */
+  builder?: string;
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  runtime?: string;
+
+  buildCommand?: string;
+  installCommand?: string;
+
+  /** Lambda config */
+  memory?: number;
+  maxDuration?: number;
+  includeFiles?: string | string[];
+  excludeFiles?: string | string[];
+
+  /* Web service config */
+  /** URL prefix for routing */
+  routePrefix?: string;
+
+  /* Cron service config */
+  /** Cron schedule expression (e.g., "0 0 * * *") */
+  schedule?: string;
+
+  /* Worker service config */
+  topic?: string;
+  consumer?: string;
+}
+
+/**
+ * Map of service name to service configuration.
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
+
+/**
+ * Map of service group name to array of service names belonging to that group.
+ * @experimental This feature is experimental and may change.
+ * @example
+ * {
+ *   "app": ["site", "backend"],
+ *   "admin": ["admin", "backend"]
+ * }
+ */
+export type ExperimentalServiceGroups = Record<string, string[]>;

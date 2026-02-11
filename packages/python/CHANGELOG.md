@@ -1,5 +1,180 @@
 # @vercel/python
 
+## 6.11.1
+
+### Patch Changes
+
+- [python] preserve error code on uv error ([#14990](https://github.com/vercel/vercel/pull/14990))
+
+## 6.11.0
+
+### Minor Changes
+
+- Use python-analysis for manifest detection and conversion ([#14956](https://github.com/vercel/vercel/pull/14956))
+
+- [services] detect and manage virtual environments for Python services ([#14952](https://github.com/vercel/vercel/pull/14952))
+
+### Patch Changes
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 6.10.0
+
+### Minor Changes
+
+- [python] prefer `fastapi dev` to start ASGI application if FastAPI CLI is available and monitor module changes ([#14861](https://github.com/vercel/vercel/pull/14861))
+
+## 6.9.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
+## 6.8.0
+
+### Minor Changes
+
+- fix a build regression on projects with changed rootDirectory ([#14931](https://github.com/vercel/vercel/pull/14931))
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
+## 6.6.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- Skip filtering system pythons on local vercel builds. ([#14858](https://github.com/vercel/vercel/pull/14858))
+
+## 6.5.1
+
+### Patch Changes
+
+- switch tests to vitest ([#14853](https://github.com/vercel/vercel/pull/14853))
+
+## 6.5.0
+
+### Minor Changes
+
+- vendor Python runtime dependencies ([#14827](https://github.com/vercel/vercel/pull/14827))
+
+- Bump vercel-runtime version automatically on its releases ([#14842](https://github.com/vercel/vercel/pull/14842))
+
+## 6.4.2
+
+### Patch Changes
+
+- Fix issue when .python-version file is provided without a pyproject.toml ([#14811](https://github.com/vercel/vercel/pull/14811))
+
+## 6.4.1
+
+### Patch Changes
+
+- Preserve error code when re-throwing errors in UvRunner methods ([#14796](https://github.com/vercel/vercel/pull/14796))
+
+## 6.4.0
+
+### Minor Changes
+
+- Enable support for python 3.13 and 3.14 runtimes ([#14740](https://github.com/vercel/vercel/pull/14740))
+
+  Preserves the current behaviour of "falling back" to python3.12 when an unsupported version of python is selected
+
+## 6.3.2
+
+### Patch Changes
+
+- Revert removing pip from the isInstalled check ([#14728](https://github.com/vercel/vercel/pull/14728))
+
+## 6.3.1
+
+### Patch Changes
+
+- isInstalled check only needs to check for python on the path. ([#14712](https://github.com/vercel/vercel/pull/14712))
+
+## 6.3.0
+
+### Minor Changes
+
+- enable standalone python-runtime behind a feature flag ([#14673](https://github.com/vercel/vercel/pull/14673))
+
+### Patch Changes
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
+## 6.2.1
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- Re-enable automatic python installs at build time. ([#14670](https://github.com/vercel/vercel/pull/14670))
+
+## 6.2.0
+
+### Minor Changes
+
+- Support for python 3.13 and 3.14 ([#14601](https://github.com/vercel/vercel/pull/14601))
+
+## 6.1.6
+
+### Patch Changes
+
+- [python] fix handling of ASGI headers in local runtime ([#14513](https://github.com/vercel/vercel/pull/14513))
+
+## 6.1.5
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 6.1.4
+
+### Patch Changes
+
+- [python] add install script to pyproject.toml ([#14420](https://github.com/vercel/vercel/pull/14420))
+
+- [python] uv workspaces fix don't throw on missing `uv.lock` ([#14467](https://github.com/vercel/vercel/pull/14467))
+
+## 6.1.3
+
+### Patch Changes
+
+- [python] fix custom install command ([#14418](https://github.com/vercel/vercel/pull/14418))
+
+- Ensure python install errors retain the error code ([#14452](https://github.com/vercel/vercel/pull/14452))
+
+## 6.1.2
+
+### Patch Changes
+
+- [python] update dependency installation to use a .venv + uv sync ([#14415](https://github.com/vercel/vercel/pull/14415))
+
+## 6.1.1
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 6.1.0
+
+### Minor Changes
+
+- Improved error message for missing entrypoint ([#14369](https://github.com/vercel/vercel/pull/14369))
+
 ## 6.0.8
 
 ### Patch Changes

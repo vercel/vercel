@@ -7,7 +7,7 @@
   "devDependencies": {
     "@changesets/cli": "2.27.8",
     "@svitejs/changesets-changelog-github-compact": "1.1.0",
-    "@types/node": "14.18.33",
+    "@types/node": "20.11.0",
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
     "@vercel/build-utils": "*",
@@ -32,6 +32,7 @@
     "npm-package-arg": "6.1.0",
     "prettier": "3.3.3",
     "source-map-support": "0.5.12",
+    "syncpack": "13.0.4",
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.5",
@@ -53,7 +54,7 @@
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
-    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci:version": "changeset version && node utils/sync-python-version.js && pnpm install --no-frozen-lockfile",
     "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
@@ -119,6 +120,24 @@
       "jest/no-focused-tests": 2
     },
     "overrides": [
+      {
+        "files": [
+          "packages/cli/src/commands/**/*"
+        ],
+        "excludedFiles": [
+          "**/index.ts",
+          "**/blob/store.ts"
+        ],
+        "rules": {
+          "no-restricted-syntax": [
+            "error",
+            {
+              "selector": "Property[key.name='permissive'][value.value=true]",
+              "message": "Do not use 'permissive: true' in leaf commands. Unknown flags will be treated as arguments, causing misleading errors. Only index.ts routing files should use permissive mode."
+            }
+          ]
+        }
+      },
       {
         "files": [
           "packages/cli/**/*"

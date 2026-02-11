@@ -219,6 +219,40 @@ describe('db-connections', () => {
       Date.now = originalDateNow;
     });
 
+    test('ensures minimum wait time of 100ms when process exceeds maximum duration', () => {
+      // This test verifies the fix for TimeoutNegativeWarning in Node.js v24
+      // When the process runs longer than 15 minutes, the remaining duration calculation
+      // would become negative, causing setTimeout to receive a negative delay
+      const waitUntilMock = vi.fn();
+      globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
+        get: () => ({ waitUntil: waitUntilMock }),
+      };
+
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+
+      const pgPool = {
+        options: { idleTimeoutMillis: 5000 },
+        on: vi.fn(),
+      };
+
+      attachDatabasePool(pgPool);
+
+      // Simulate that 20 minutes have passed (well beyond the 15 minute maximum)
+      // This would make maximumDuration - (Date.now() - bootTime) negative
+      vi.setSystemTime(Date.now() + 20 * 60 * 1000);
+
+      const releaseCallback = pgPool.on.mock.calls[0][1];
+      releaseCallback();
+
+      // Verify setTimeout was called with a delay of at least 100ms (the minimum)
+      const lastSetTimeoutCall =
+        setTimeoutSpy.mock.calls[setTimeoutSpy.mock.calls.length - 1];
+      const timeoutDelay = lastSetTimeoutCall[1];
+      expect(timeoutDelay).toBeGreaterThanOrEqual(100);
+
+      setTimeoutSpy.mockRestore();
+    });
+
     test('timeout expires and logs message', async () => {
       const waitUntilMock = vi.fn();
       let resolvePromise: (value: void) => void;

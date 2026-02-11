@@ -19,17 +19,29 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 export default async function ls(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
+
+  const validationResult = validateLsArgs({
+    commandName: 'dns ls [domain]',
+    args: args,
+    maxArgs: 1,
+    exitCode: 1,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
+
   const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
   const telemetry = new DnsLsTelemetryClient({
@@ -44,15 +56,6 @@ export default async function ls(client: Client, argv: string[]) {
   telemetry.trackCliArgumentDomain(domainName);
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
-
-  if (args.length > 1) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('dns ls [domain]')}`
-      )}`
-    );
-    return 1;
-  }
 
   let paginationOptions;
 

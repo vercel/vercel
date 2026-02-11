@@ -1,4 +1,5 @@
-import tar from 'tar';
+import { createHash } from 'crypto';
+import { extract } from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import {
@@ -278,15 +279,57 @@ export async function createGo({
   }
 
   const setGoEnv = async (goDir: string | null) => {
-    if (platform !== 'win32' && goDir === goGlobalCacheDir) {
+    if (!goDir) {
+      env.GOROOT = undefined;
+      env.PATH = PATH;
+      return;
+    }
+
+    const isUnix = platform !== 'win32';
+
+    const setEnvPaths = (modCache: string, buildCache: string) => {
+      env.GOMODCACHE = modCache;
+      env.GOCACHE = buildCache;
+      debug(`Set GOMODCACHE to ${env.GOMODCACHE}`);
+      debug(`Set GOCACHE to ${env.GOCACHE}`);
+    };
+
+    if (isUnix && goDir === goGlobalCacheDir) {
+      // Using global cache → link it to goCacheDir
       debug(`Symlinking ${goDir} -> ${goCacheDir}`);
       await remove(goCacheDir);
       await mkdirp(dirname(goCacheDir));
       await symlink(goDir, goCacheDir);
+
+      const modCache = join(goDir, 'pkg', 'mod');
+      const buildCache = join(goDir, 'go-build');
+      setEnvPaths(modCache, buildCache);
+
       goDir = goCacheDir;
+    } else if (isUnix && goDir === goCacheDir) {
+      // Using local cache → link temp writable directories
+      // Use deterministic path based on workPath so all function builds
+      // within the same deployment share the same cache paths
+      const hash = createHash('md5').update(workPath).digest('hex').slice(0, 8);
+      const tmpBase = join(tmpdir(), `vercel-go-cache-${hash}`);
+      const tmpModCache = join(tmpBase, 'mod');
+      const tmpBuildCache = join(tmpBase, 'go-build');
+
+      await mkdirp(join(goDir, 'pkg', 'mod'));
+      await mkdirp(join(goDir, 'go-build'));
+
+      // Create symlinks (remove first to handle broken symlinks)
+      await mkdirp(tmpBase);
+      await remove(tmpModCache);
+      await symlink(join(goCacheDir, 'pkg', 'mod'), tmpModCache);
+      await remove(tmpBuildCache);
+      await symlink(join(goCacheDir, 'go-build'), tmpBuildCache);
+
+      setEnvPaths(tmpModCache, tmpBuildCache);
     }
-    env.GOROOT = goDir || undefined;
-    env.PATH = goDir ? `${join(goDir, 'bin')}${delimiter}${PATH}` : PATH;
+
+    env.GOROOT = goDir;
+    env.PATH = `${join(goDir, 'bin')}${delimiter}${PATH}`;
   };
 
   // try each of these Go directories looking for the version we need
@@ -395,7 +438,7 @@ async function download({ dest, version }: { dest: string; version: string }) {
   await new Promise((resolve, reject) => {
     res.body
       .on('error', reject)
-      .pipe(tar.extract({ cwd: dest, strip: 1 }))
+      .pipe(extract({ cwd: dest, strip: 1 }))
       .on('error', reject)
       .on('finish', resolve);
   });

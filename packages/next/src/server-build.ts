@@ -75,6 +75,8 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+// Needs https://github.com/vercel/next.js/pull/89263
+const DYNAMICALLY_RENDER_404_VERSION = 'v16.2.0-canary.17';
 
 // Ideally this should be in a Next.js manifest so we can change it in
 // the future but this also allows us to improve existing versions
@@ -128,6 +130,7 @@ export async function serverBuild({
   afterFilesRewrites,
   fallbackRewrites,
   headers,
+  onMatchHeaders,
   dataRoutes,
   hasIsr404Page,
   hasIsr500Page,
@@ -178,6 +181,7 @@ export async function serverBuild({
   entryDirectory: string;
   outputDirectory: string;
   headers: Route[];
+  onMatchHeaders: Route[];
   workPath: string;
   beforeFilesRewrites: Route[];
   afterFilesRewrites: Route[];
@@ -428,9 +432,17 @@ export async function serverBuild({
   );
   // experimental bundling prevents filtering manifests
   // as we don't know what to filter by at this stage
-  const isCorrectManifests =
-    !experimentalAllowBundling &&
-    semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
+  const mayFilterManifests = !experimentalAllowBundling;
+  const isCorrectManifests = semver.gte(
+    nextVersion,
+    CORRECTED_MANIFESTS_VERSION
+  );
+
+  // When possible, don't embed the static 404 page in lambdas for determinism
+  const shouldUse404Prerender = semver.lt(
+    nextVersion,
+    DYNAMICALLY_RENDER_404_VERSION
+  );
 
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
@@ -711,7 +723,7 @@ export async function serverBuild({
       fsPath: nextServerFile,
     });
 
-    if (static404Pages.size > 0) {
+    if (shouldUse404Prerender && static404Pages.size > 0) {
       // If we've generated a static 404 page, it's possible that we also
       // have a static 404 page for each locale.
       if (i18n) {
@@ -1232,71 +1244,110 @@ export async function serverBuild({
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
 
       if (isCorrectManifests) {
-        // filter dynamic routes to only the included dynamic routes
-        // in this specific serverless function so that we don't
-        // accidentally match a dynamic route while resolving that
-        // is not actually in this specific serverless function
         for (const manifest of [
           'routes-manifest.json',
           'server/pages-manifest.json',
-          ...(appPathRoutesManifest ? ['server/app-paths-manifest.json'] : []),
-        ] as const) {
+          ...(mayFilterManifests && appPathRoutesManifest
+            ? ['server/app-paths-manifest.json']
+            : []),
+        ]) {
           const fsPath = path.join(entryPath, outputDirectory, manifest);
 
           const relativePath = path.relative(baseDir, fsPath);
           delete group.pseudoLayer[relativePath];
 
           const manifestData = await fs.readJSON(fsPath);
-          const normalizedPages = new Set(
-            group.pages.map(page => {
-              page = `/${page.replace(/\.js$/, '')}`;
-              if (page === '/index') page = '/';
-              return page;
-            })
-          );
 
-          switch (manifest) {
-            case 'routes-manifest.json': {
-              const filterItem = (item: { page: string }) =>
-                normalizedPages.has(item.page);
-
-              manifestData.dynamicRoutes =
-                manifestData.dynamicRoutes?.filter(filterItem);
-              manifestData.staticRoutes =
-                manifestData.staticRoutes?.filter(filterItem);
-              break;
+          if (manifest === 'routes-manifest.json') {
+            // Filter `headers` and `deploymentId` out of the routes-manifest.json for deterministic
+            // functions. In Next.js minimal mode, they aren't used (the builder reads them and
+            // generates the config.json for Vercel)
+            manifestData.headers = [];
+            manifestData.onMatchHeaders = [];
+            delete manifestData.deploymentId;
+          } else if (
+            manifest === 'server/pages-manifest.json' &&
+            !shouldUse404Prerender
+          ) {
+            // Replace `(/locale)?/404.html`  with `/(404|_error).js` in pages-manifest to avoid
+            // including static (and non-deterministic) 404 page in lambdas.
+            if (manifestData['/404'] === 'pages/404.html') {
+              manifestData['/404'] =
+                lambdaPages['404.js'] && !lambdaAppPaths['404.js']
+                  ? 'pages/404.js'
+                  : 'pages/_error.js';
             }
-            case 'server/pages-manifest.json': {
-              for (const key of Object.keys(manifestData)) {
-                if (
-                  isDynamicRoute(key, nextVersion) &&
-                  !normalizedPages.has(key)
-                ) {
-                  delete manifestData[key];
+            if (i18n) {
+              for (const locale of i18n.locales) {
+                const locale404Key = `/${locale}/404`;
+                if (manifestData[locale404Key]?.endsWith('/404.html')) {
+                  // This might be a pages/404.html or pages/en/404.html, but all of them were
+                  // prerendered from the same page
+                  manifestData[locale404Key] =
+                    lambdaPages['404.js'] && !lambdaAppPaths['404.js']
+                      ? 'pages/404.js'
+                      : 'pages/_error.js';
                 }
               }
-              break;
             }
-            case 'server/app-paths-manifest.json': {
-              for (const key of Object.keys(manifestData)) {
-                const normalizedKey =
-                  appPathRoutesManifest?.[key] ||
-                  key.replace(/(^|\/)(page|route)$/, '');
+          }
 
-                if (
-                  isDynamicRoute(normalizedKey, nextVersion) &&
-                  !normalizedPages.has(normalizedKey)
-                ) {
-                  delete manifestData[key];
-                }
+          if (mayFilterManifests) {
+            // filter dynamic routes to only the included dynamic routes
+            // in this specific serverless function so that we don't
+            // accidentally match a dynamic route while resolving that
+            // is not actually in this specific serverless function
+
+            const normalizedPages = new Set(
+              group.pages.map(page => {
+                page = `/${page.replace(/\.js$/, '')}`;
+                if (page === '/index') page = '/';
+                return page;
+              })
+            );
+
+            switch (manifest) {
+              case 'routes-manifest.json': {
+                const filterItem = (item: { page: string }) =>
+                  normalizedPages.has(item.page);
+                manifestData.dynamicRoutes =
+                  manifestData.dynamicRoutes?.filter(filterItem);
+                manifestData.staticRoutes =
+                  manifestData.staticRoutes?.filter(filterItem);
+                break;
               }
-              break;
-            }
-            default: {
-              throw new NowBuildError({
-                message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
-                code: 'NEXT_MANIFEST_INVARIANT',
-              });
+              case 'server/pages-manifest.json': {
+                for (const key of Object.keys(manifestData)) {
+                  if (
+                    isDynamicRoute(key, nextVersion) &&
+                    !normalizedPages.has(key)
+                  ) {
+                    delete manifestData[key];
+                  }
+                }
+                break;
+              }
+              case 'server/app-paths-manifest.json': {
+                for (const key of Object.keys(manifestData)) {
+                  const normalizedKey =
+                    appPathRoutesManifest?.[key] ||
+                    key.replace(/(^|\/)(page|route)$/, '');
+
+                  if (
+                    isDynamicRoute(normalizedKey, nextVersion) &&
+                    !normalizedPages.has(normalizedKey)
+                  ) {
+                    delete manifestData[key];
+                  }
+                }
+                break;
+              }
+              default: {
+                throw new NowBuildError({
+                  message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
+                  code: 'NEXT_MANIFEST_INVARIANT',
+                });
+              }
             }
           }
 
@@ -2279,7 +2330,11 @@ export async function serverBuild({
             prefetchSegmentSuffix
               ? [
                   {
-                    src: path.posix.join('/', entryDirectory, '/(?<path>.+)$'),
+                    src: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/(?<path>.+?)(?:/)?$'
+                    ),
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
@@ -2306,7 +2361,7 @@ export async function serverBuild({
                     override: true,
                   },
                   {
-                    src: path.posix.join('^/', entryDirectory, '$'),
+                    src: path.posix.join('^/', entryDirectory, '/?$'),
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
@@ -2760,6 +2815,7 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
+      ...onMatchHeaders,
       {
         src: path.posix.join('/', entryDirectory, '/index(?:/)?'),
         headers: {
@@ -2795,6 +2851,9 @@ export async function serverBuild({
               dest: path.posix.join('/', entryDirectory, '/$nextLocale/404'),
               status: 404,
               caseSensitive: true,
+              headers: {
+                'x-next-error-status': '404',
+              },
             },
             {
               src: path.posix.join('/', entryDirectory, '.*'),
@@ -2804,6 +2863,9 @@ export async function serverBuild({
                 `/${i18n.defaultLocale}/404`
               ),
               status: 404,
+              headers: {
+                'x-next-error-status': '404',
+              },
             },
           ]
         : [
@@ -2830,6 +2892,9 @@ export async function serverBuild({
                     : '/_error'
               ),
               status: 404,
+              headers: {
+                'x-next-error-status': '404',
+              },
             },
           ]),
 
@@ -2847,6 +2912,9 @@ export async function serverBuild({
               dest: path.posix.join('/', entryDirectory, '/$nextLocale/500'),
               status: 500,
               caseSensitive: true,
+              headers: {
+                'x-next-error-status': '500',
+              },
             },
             {
               src: path.posix.join('/', entryDirectory, '.*'),
@@ -2856,6 +2924,9 @@ export async function serverBuild({
                 `/${i18n.defaultLocale}/500`
               ),
               status: 500,
+              headers: {
+                'x-next-error-status': '500',
+              },
             },
           ]
         : [
@@ -2878,6 +2949,9 @@ export async function serverBuild({
                   : '/_error'
               ),
               status: 500,
+              headers: {
+                'x-next-error-status': '500',
+              },
             },
           ]),
     ],

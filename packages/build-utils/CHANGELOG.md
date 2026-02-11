@@ -1,5 +1,176 @@
 # @vercel/build-utils
 
+## 13.3.5
+
+### Patch Changes
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 13.3.4
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+- [services] set framework prefixed env var urls to relative path ([#14958](https://github.com/vercel/vercel/pull/14958))
+
+## 13.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`2d61173cd73860fedc23edc0552c86d0e21fccd3`](https://github.com/vercel/vercel/commit/2d61173cd73860fedc23edc0552c86d0e21fccd3)]:
+  - @vercel/python-analysis@0.3.2
+
+## 13.3.2
+
+### Patch Changes
+
+- Improve memory efficiency in `FileBlob.fromStream()` by avoiding unnecessary buffer copies when chunks are already Buffers ([#14701](https://github.com/vercel/vercel/pull/14701))
+
+- [services] build time service url env vars ([#14893](https://github.com/vercel/vercel/pull/14893))
+
+- Updated dependencies [[`7a747344dfb778a650da2ee5f7fba8c974098b42`](https://github.com/vercel/vercel/commit/7a747344dfb778a650da2ee5f7fba8c974098b42)]:
+  - @vercel/python-analysis@0.3.1
+
+## 13.3.1
+
+### Patch Changes
+
+- Replace Python-based AST parser with WASM-based `@vercel/python-analysis` for detecting Python entrypoints. This eliminates the need for a Python runtime when analyzing Python files for WSGI/ASGI application patterns. ([#14843](https://github.com/vercel/vercel/pull/14843))
+
+## 13.3.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- [services] add `services` to `config.json` ([#14847](https://github.com/vercel/vercel/pull/14847))
+
+## 13.2.17
+
+### Patch Changes
+
+- Add `exposeErrBody` optional boolean property to Prerender object ([#14845](https://github.com/vercel/vercel/pull/14845))
+
+- Move backends builder detection to detectBuilders phase ([#14830](https://github.com/vercel/vercel/pull/14830))
+
+## 13.2.16
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+- Add maxConcurrency trigger field ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+## 13.2.15
+
+### Patch Changes
+
+- Optimize `getAvailableNodeVersions` to skip discontinued versions and use non-throwing `statSync` ([#14686](https://github.com/vercel/vercel/pull/14686))
+
+## 13.2.14
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
+## 13.2.13
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+## 13.2.12
+
+### Patch Changes
+
+- Add `findPackageJson` function for optimized package.json lookup without lockfile scanning. This improves `getNodeVersion` performance by avoiding unnecessary lockfile parsing. ([#14658](https://github.com/vercel/vercel/pull/14658))
+
+## 13.2.10
+
+### Patch Changes
+
+- Add 'go' as a valid runtimeLanguage option for Lambda functions ([#14624](https://github.com/vercel/vercel/pull/14624))
+
+## 13.2.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+## 13.2.8
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+## 13.2.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+- Add zero-config support for Koa.js ([#14567](https://github.com/vercel/vercel/pull/14567))
+
+## 13.2.6
+
+### Patch Changes
+
+- Update http links in Node.js version incompatibility message to https ([#14583](https://github.com/vercel/vercel/pull/14583))
+
+- Ensure internal build step runs if a build script is missing ([#14564](https://github.com/vercel/vercel/pull/14564))
+
+## 13.2.5
+
+### Patch Changes
+
+- Adding in user configured deploymentId to build output type ([#14497](https://github.com/vercel/vercel/pull/14497))
+
+- skip secondary installation for vercel.ts ([#14471](https://github.com/vercel/vercel/pull/14471))
+
+## 13.2.4
+
+### Patch Changes
+
+- [python] only create api builders for `.py` files that export an app or handler ([#14493](https://github.com/vercel/vercel/pull/14493))
+
+## 13.2.3
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 13.2.2
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+## 13.2.1
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 13.2.0
+
+### Minor Changes
+
+- Remove env var check for node24 ([#14355](https://github.com/vercel/vercel/pull/14355))
+
+## 13.1.2
+
+### Patch Changes
+
+- Support `runtimeLanguage` in build-utils ([#14344](https://github.com/vercel/vercel/pull/14344))
+
 ## 13.1.1
 
 ### Patch Changes

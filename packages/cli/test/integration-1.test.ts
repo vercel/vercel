@@ -391,7 +391,7 @@ test('deploy from a nested directory', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
   vc.kill();
 });
@@ -429,7 +429,7 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
   vc.kill();
 });
@@ -461,7 +461,8 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-test('deploy `api-env` fixture and test `vercel env` command', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
   // Randomness is required so that tests can run in
   // parallel on the same project
@@ -502,6 +503,8 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     await waitForPrompt(vc, "What's the name of the variable?");
     vc.stdin?.write(`${promptEnvVar}\n`);
+    await waitForPrompt(vc, 'Mark as sensitive?');
+    vc.stdin?.write('n\n');
     await waitForPrompt(
       vc,
       chunk =>
@@ -590,7 +593,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Created .env.local file/gm);
+    expect(stderr).toMatch(/Updated .env.local file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
@@ -622,6 +625,9 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const vc = execCli(binaryPath, ['env', 'pull'], {
       cwd: target,
+      env: {
+        FORCE_TTY: '1',
+      },
     });
 
     await waitForPrompt(

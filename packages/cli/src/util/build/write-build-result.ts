@@ -28,14 +28,18 @@ import {
   getLambdaOptionsFromFunction,
   normalizePath,
   type TriggerEvent,
-  isExperimentalBackendsEnabled,
   isBackendBuilder,
+  isExperimentalBackendsEnabled,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
-import { fileNameSymbol, type VercelConfig } from '@vercel/client';
+import {
+  fileNameSymbol,
+  type VercelConfig,
+  getVercelIgnore,
+} from '@vercel/client';
 import outputManager from '../../output-manager';
 
 const { normalize } = posix;
@@ -48,6 +52,7 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number;
+  regions?: Lambda['regions'];
   experimentalTriggers?: TriggerEvent[];
   supportsCancellation?: boolean;
 }
@@ -74,10 +79,7 @@ export async function writeBuildResult(args: {
     standalone,
     workPath,
   } = args;
-  let version = builder.version;
-  if (isExperimentalBackendsEnabled() && 'output' in buildResult) {
-    version = 2;
-  }
+  const version = builder.version;
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2({
       repoRootPath,
@@ -153,9 +155,10 @@ async function writeBuildResultV2(args: {
     build,
     vercelConfig,
     standalone,
+    workPath,
   } = args;
   if ('buildOutputPath' in buildResult) {
-    await mergeBuilderOutput(outputDir, buildResult);
+    await mergeBuilderOutput(outputDir, buildResult, workPath);
     return;
   }
 
@@ -299,42 +302,58 @@ async function writeBuildResultV3(args: {
   const { output } = buildResult;
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
 
-  if (
-    (isBackendBuilder(build) || build.use === '@vercel/python') &&
-    existsSync(routesJsonPath)
-  ) {
-    try {
-      const newOutput: Record<string, Lambda | EdgeFunction> = {
-        index: output,
-      };
-      const routesJson = await fs.readJSON(routesJsonPath);
-      if (
-        routesJson &&
-        typeof routesJson === 'object' &&
-        'routes' in routesJson &&
-        Array.isArray(routesJson.routes)
-      ) {
-        for (const route of routesJson.routes) {
-          if (route.source === '/') {
-            continue;
-          }
-          if (route.source) {
-            newOutput[route.source] = output;
+  if (isBackendBuilder(build) || build.use === '@vercel/python') {
+    if (existsSync(routesJsonPath)) {
+      try {
+        const newOutput: Record<string, Lambda | EdgeFunction> = {
+          index: output,
+        };
+        const routesJson = await fs.readJSON(routesJsonPath);
+        if (
+          routesJson &&
+          typeof routesJson === 'object' &&
+          'routes' in routesJson &&
+          Array.isArray(routesJson.routes)
+        ) {
+          for (const route of routesJson.routes) {
+            if (route.source === '/') {
+              continue;
+            }
+            if (route.source) {
+              newOutput[route.source] = output;
+            }
           }
         }
-      }
 
+        return writeBuildResultV2({
+          repoRootPath,
+          outputDir,
+          buildResult: { output: newOutput, routes: buildResult.routes },
+          build,
+          vercelConfig,
+          standalone,
+          workPath,
+        });
+      } catch (error) {
+        outputManager.error(`Failed to read routes.json: ${error}`);
+      }
+    }
+    // This flag is being used to write a v2 build result,
+    // earlier in the process, the `routes` check is just to double-check
+    if (
+      isBackendBuilder(build) &&
+      isExperimentalBackendsEnabled() &&
+      'routes' in buildResult
+    ) {
       return writeBuildResultV2({
         repoRootPath,
         outputDir,
-        buildResult: { output: newOutput, routes: buildResult.routes },
+        buildResult: buildResult as unknown as BuildResultV2,
         build,
         vercelConfig,
         standalone,
         workPath,
       });
-    } catch (error) {
-      outputManager.error(`Failed to read routes.json: ${error}`);
     }
   }
   const src = build.src;
@@ -590,6 +609,7 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const regions = functionConfiguration?.regions ?? lambda.regions;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
   const supportsCancellation =
@@ -601,6 +621,7 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
+    regions,
     experimentalTriggers,
     supportsCancellation,
     filePathMap,
@@ -645,15 +666,59 @@ async function writeLambda(
  */
 async function mergeBuilderOutput(
   outputDir: string,
-  buildResult: BuildResultBuildOutput
+  buildResult: BuildResultBuildOutput,
+  workPath: string
 ) {
   const absOutputDir = resolve(outputDir);
+  const { ig } = await getVercelIgnore(workPath);
+  const filter = ig.createFilter();
+
   if (absOutputDir === buildResult.buildOutputPath) {
-    // `.vercel/output` dir is already in the correct location,
-    // so no need to do anything
+    const staticDir = join(outputDir, 'static');
+    try {
+      await cleanIgnoredFiles(staticDir, staticDir, filter);
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') throw err;
+    }
     return;
   }
-  await merge(buildResult.buildOutputPath, outputDir);
+
+  const ignoreFilter = (path: string) => {
+    const normalizedPath = path.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('static/')) {
+      return filter(normalizedPath.substring('static/'.length));
+    }
+    return true;
+  };
+
+  await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+}
+
+async function cleanIgnoredFiles(
+  dir: string,
+  staticRoot: string,
+  filter: (path: string) => boolean
+): Promise<void> {
+  const entries = await fs.readdir(dir);
+
+  await Promise.all(
+    entries.map(async entry => {
+      const entryPath = join(dir, entry);
+      const stat = await fs.stat(entryPath);
+      const relativePath = relative(staticRoot, entryPath);
+
+      if (stat.isDirectory()) {
+        await cleanIgnoredFiles(entryPath, staticRoot, filter);
+        const remaining = await fs.readdir(entryPath);
+        if (remaining.length === 0) {
+          await fs.rmdir(entryPath);
+        }
+      } else if (!filter(relativePath)) {
+        outputManager.debug(`Removing ignored file: ${relativePath}`);
+        await fs.remove(entryPath);
+      }
+    })
+  );
 }
 
 /**

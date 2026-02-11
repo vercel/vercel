@@ -56,4 +56,10 @@ export class EnvAddTelemetryClient
       this.trackCliFlag('guidance');
     }
   }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
 }

@@ -328,6 +328,8 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   );
   now.stdin?.write('\n');
 
+  await waitForPrompt(now, /Linked to/);
+
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -534,7 +536,7 @@ test('add a sensitive env var', async () => {
 
   const link = require(path.join(dir, '.vercel/project.json'));
 
-  const addEnvCommand = execCli(
+  const output = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production', '--sensitive'],
     {
@@ -542,13 +544,9 @@ test('add a sensitive env var', async () => {
         VERCEL_ORG_ID: link.orgId,
         VERCEL_PROJECT_ID: link.projectId,
       },
+      input: 'test\n',
     }
   );
-
-  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
-  addEnvCommand.stdin?.write('test\n');
-
-  const output = await addEnvCommand;
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(
@@ -588,16 +586,14 @@ test('override an existing env var', async () => {
   };
 
   // 1. Initial add
-  const addEnvCommand = execCli(
+  const output = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production'],
-    options
+    {
+      ...options,
+      input: 'test\n',
+    }
   );
-
-  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
-  addEnvCommand.stdin?.write('test\n');
-
-  const output = await addEnvCommand;
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(
@@ -605,16 +601,14 @@ test('override an existing env var', async () => {
   );
 
   // 2. Override
-  const overrideEnvCommand = execCli(
+  const outputOverride = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production', '--force'],
-    options
+    {
+      ...options,
+      input: 'test\n',
+    }
   );
-
-  await waitForPrompt(overrideEnvCommand, /What's the value of [^?]+\?/);
-  overrideEnvCommand.stdin?.write('test\n');
-
-  const outputOverride = await overrideEnvCommand;
 
   expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
   expect(outputOverride.stderr).toContain(
@@ -1006,7 +1000,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   vc.stdin?.write(`${projectRootDir}\n`);
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
   vc.kill();
 });
@@ -1034,9 +1028,9 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   // Ensure the message is correct pattern
   expect(stderr).toMatch(/Linked to /m);
 
-  // Ensure .gitignore is created
+  // Ensure .gitignore contains .vercel and .env*.local (from env pull)
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+  expect(gitignore).toBe('.vercel\n.env*.local\n');
 });
 
 test('[vc dev] should show prompts to set up project', async () => {

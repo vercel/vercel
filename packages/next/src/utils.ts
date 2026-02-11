@@ -263,6 +263,7 @@ type RoutesManifestOld = {
         fallback: (Rewrite & RoutesManifestRegex)[];
       };
   headers?: (Header & RoutesManifestRegex)[];
+  onMatchHeaders?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: RoutesManifestRoute[];
   staticRoutes: RoutesManifestRoute[];
   version: 1 | 2 | 3;
@@ -342,6 +343,13 @@ type RoutesManifestOld = {
    * as though pages router were being used.
    */
   appType?: 'app' | 'pages' | 'hybrid';
+  /**
+   * User-configured deployment ID for skew protection.
+   * This allows users to specify a custom deployment identifier
+   * in their next.config.js that will be used for version skew protection
+   * with pre-built deployments.
+   */
+  deploymentId?: string;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -375,7 +383,14 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new NowBuildError({
-      message: `The file "${pathRoutesManifest}" couldn't be found. This is often caused by a misconfiguration in your project.`,
+      message:
+        `The file "${pathRoutesManifest}" couldn't be found. ` +
+        `This is usually caused by one of the following:\n\n` +
+        `1. The "Output Directory" setting in your project is misconfigured. ` +
+        `Ensure it matches your Next.js "distDir" configuration (defaults to ".next").\n\n` +
+        `2. If using Turborepo, ensure your task outputs include the Next.js build directory. ` +
+        `Add ".next/**" (or your custom distDir) to the "outputs" array in turbo.json for the build task.\n\n` +
+        `3. The build command did not complete successfully. Check the build logs above for errors.`,
       link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
@@ -597,6 +612,7 @@ export async function getDynamicRoutes({
                 !prefetchDataRoute);
 
             routes.push({
+              ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 // Now than the upstream issues has been resolved, we can safely
@@ -1093,15 +1109,34 @@ export async function createLambdaFromPseudoLayers({
       version: nextVersion,
     },
     experimentalAllowBundling,
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
+
+// This should be a subset of Next.js's full NextConfigRuntime
+// https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
+export type NextConfigRuntime = {
+  pageExtensions: string[];
+  // experimental.cacheComponents has been moved out of experimental
+  // at https://github.com/vercel/next.js/pull/85035
+  cacheComponents?: boolean;
+  experimental?: {
+    cacheComponents?: boolean;
+    clientParamParsingOrigins?: string[];
+    clientSegmentCache?: boolean;
+    ppr?: boolean | 'incremental';
+    serverActions?: Record<string, never>;
+  };
+};
 
 export type NextRequiredServerFilesManifest = {
   appDir?: string;
   relativeAppDir?: string;
   files: string[];
   ignore: string[];
-  config: Record<string, any>;
+  config: NextConfigRuntime;
 };
 
 /**
@@ -1287,21 +1322,15 @@ export async function getRequiredServerFilesManifest(
     await fs.readFile(pathRequiredServerFilesManifest, 'utf8')
   );
 
-  const requiredServerFiles = {
-    files: [],
-    ignore: [],
-    config: {},
-    appDir: manifestData.appDir,
-    relativeAppDir: manifestData.relativeAppDir,
-  };
-
   switch (manifestData.version) {
     case 1: {
-      requiredServerFiles.files = manifestData.files;
-      requiredServerFiles.ignore = manifestData.ignore;
-      requiredServerFiles.config = manifestData.config;
-      requiredServerFiles.appDir = manifestData.appDir;
-      break;
+      return {
+        files: manifestData.files,
+        ignore: manifestData.ignore,
+        config: manifestData.config,
+        appDir: manifestData.appDir,
+        relativeAppDir: manifestData.relativeAppDir,
+      };
     }
     default: {
       throw new Error(
@@ -1309,7 +1338,6 @@ export async function getRequiredServerFilesManifest(
       );
     }
   }
-  return requiredServerFiles;
 }
 
 export async function getPrerenderManifest(
@@ -1966,10 +1994,17 @@ export async function getPageLambdaGroups({
         ),
         pageExtensions,
       });
+      // For App Router, source file is like `step/route.js` so config is at `../config.json`
+      // For Pages Router, source file is like `step.js` so config is at `./config.json`
+      const isAppRouterRoute =
+        sourceFile.endsWith('/route.js') || sourceFile.endsWith('/route.ts');
+      const configRelativePath = isAppRouterRoute
+        ? '../config.json'
+        : './config.json';
       const config = JSON.parse(
         await fs
           .readFile(
-            path.join(entryPath, path.dirname(sourceFile), '../config.json'),
+            path.join(entryPath, path.dirname(sourceFile), configRelativePath),
             'utf8'
           )
           .catch(() => '{}')
@@ -2694,7 +2729,9 @@ export const onPrerenderRoute =
       !isBlocking &&
       (!isNotFound || static404Page) &&
       dataRoute &&
-      (!isAppClientParamParsingEnabled || prefetchDataRoute)
+      // When this is an App route, either isAppClientParamParsingEnabled is disabled
+      // or there's a prefetchDataRoute
+      (!isAppPathRoute || !isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
@@ -3139,66 +3176,74 @@ export const onPrerenderRoute =
           routesManifest?.rsc?.dynamicRSCPrerender &&
           routesManifest?.ppr?.chain?.headers
         ) {
-          let contentType = rscContentTypeHeader;
-          if (postponedState) {
-            contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
-              rscContentTypeHeader
-            )}`;
-          }
+          const shouldSkipDynamicRsc =
+            Boolean(prefetchDataRoute) && !postponedState;
+          if (shouldSkipDynamicRsc) {
+            // Ensure the data route is still registered using the static
+            // prerender (with fallback) so the .rsc build output is uploaded.
+            prerenders[normalizePathData(outputPathData)] = prerender;
+          } else {
+            let contentType = rscContentTypeHeader;
+            if (postponedState) {
+              contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+                rscContentTypeHeader
+              )}`;
+            }
 
-          // If client param parsing is enabled, we follow the same logic as the
-          // HTML allowQuery as it's already going to vary based on if there's a
-          // static shell generated or if there's fallback root params. If there
-          // are fallback root params, and we can serve a fallback, then we
-          // should follow the same logic for the dynamic RSC routes.
-          //
-          // If client param parsing is not enabled, we have to use the
-          // allowQuery because the RSC payloads will contain dynamic segment
-          // values.
-          const rdcRSCAllowQuery = isAppClientParamParsingEnabled
-            ? htmlAllowQuery
-            : allowQuery;
+            // If client param parsing is enabled, we follow the same logic as the
+            // HTML allowQuery as it's already going to vary based on if there's a
+            // static shell generated or if there's fallback root params. If there
+            // are fallback root params, and we can serve a fallback, then we
+            // should follow the same logic for the dynamic RSC routes.
+            //
+            // If client param parsing is not enabled, we have to use the
+            // allowQuery because the RSC payloads will contain dynamic segment
+            // values.
+            const rdcRSCAllowQuery = isAppClientParamParsingEnabled
+              ? htmlAllowQuery
+              : allowQuery;
 
-          // Use the fallback value for the RSC route if the route doesn't
-          // vary based on the route parameters and there's an actual postponed
-          // state to fallback to.
-          let fallback: FileBlob | null = null;
-          if (
-            rdcRSCAllowQuery &&
-            rdcRSCAllowQuery.length === 0 &&
-            postponedState
-          ) {
-            fallback = new FileBlob({
-              data: postponedState,
-              contentType,
+            // Use the fallback value for the RSC route if the route doesn't
+            // vary based on the route parameters and there's an actual postponed
+            // state to fallback to.
+            let fallback: FileBlob | null = null;
+            if (
+              rdcRSCAllowQuery &&
+              rdcRSCAllowQuery.length === 0 &&
+              postponedState
+            ) {
+              fallback = new FileBlob({
+                data: postponedState,
+                contentType,
+              });
+            }
+
+            prerenders[normalizePathData(outputPathData)] = new Prerender({
+              expiration: initialRevalidate,
+              staleExpiration: initialExpire,
+              lambda,
+              allowQuery: rdcRSCAllowQuery,
+              fallback,
+              group: prerenderGroup,
+              bypassToken: prerenderManifest.bypassToken,
+              experimentalBypassFor,
+              allowHeader,
+              chain: {
+                outputPath: normalizePathData(outputPathData),
+                headers: routesManifest.ppr.chain.headers,
+              },
+              ...(isNotFound ? { initialStatus: 404 } : {}),
+              initialHeaders: {
+                ...initialHeaders,
+                'content-type': contentType,
+                // Dynamic RSC requests cannot be cached, so we explicity set it
+                // here to ensure that the response is not cached by the browser.
+                'cache-control':
+                  'private, no-store, no-cache, max-age=0, must-revalidate',
+                vary: rscVaryHeader,
+              },
             });
           }
-
-          prerenders[normalizePathData(outputPathData)] = new Prerender({
-            expiration: initialRevalidate,
-            staleExpiration: initialExpire,
-            lambda,
-            allowQuery: rdcRSCAllowQuery,
-            fallback,
-            group: prerenderGroup,
-            bypassToken: prerenderManifest.bypassToken,
-            experimentalBypassFor,
-            allowHeader,
-            chain: {
-              outputPath: normalizePathData(outputPathData),
-              headers: routesManifest.ppr.chain.headers,
-            },
-            ...(isNotFound ? { initialStatus: 404 } : {}),
-            initialHeaders: {
-              ...initialHeaders,
-              'content-type': contentType,
-              // Dynamic RSC requests cannot be cached, so we explicity set it
-              // here to ensure that the response is not cached by the browser.
-              'cache-control':
-                'private, no-store, no-cache, max-age=0, must-revalidate',
-              vary: rscVaryHeader,
-            },
-          });
         }
       }
 
@@ -3246,6 +3291,35 @@ export const onPrerenderRoute =
               ? htmlAllowQuery
               : allowQuery;
 
+            // No initial headers here means that the fallback is being served
+            // and it should infer the initial headers from the base metadata
+            // file which will be the ones which include the cache tags for
+            // the fallback render. Failing to do this will result in
+            // producing build output entries without any cache tags which are
+            // then therefore unexpirable.
+            let segmentInitialHeaders = initialHeaders;
+            if (
+              (isBlocking || isFallback) &&
+              'headers' in meta &&
+              typeof meta.headers === 'object' &&
+              meta.headers !== null
+            ) {
+              const metaHeaders = meta.headers as Record<string, string>;
+              const hasMissingMetaHeader =
+                !segmentInitialHeaders ||
+                Object.keys(metaHeaders).some(
+                  key => segmentInitialHeaders?.[key] == null
+                );
+              if (hasMissingMetaHeader) {
+                // Merge to fill any missing meta headers without overriding
+                // segment-specific values.
+                segmentInitialHeaders = {
+                  ...metaHeaders,
+                  ...segmentInitialHeaders,
+                };
+              }
+            }
+
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
                 path.join(
@@ -3254,13 +3328,15 @@ export const onPrerenderRoute =
                 ) + prefetchSegmentSuffix;
 
               // Only use the fallback value when the allowQuery is defined and
-              // is empty, which means that the segments do not vary based on
-              // the route parameters. This is safer than ensuring that we only
-              // use the fallback when this is not a fallback because we know in
-              // this new logic that it doesn't vary based on the route
-              // parameters and therefore can be used for all requests instead.
+              // either: (1) it is empty, meaning segments do not vary by params,
+              // or (2) client param parsing is enabled, meaning the segment
+              // payloads are safe to reuse across params.
               let fallback: FileFsRef | null = null;
-              if (segmentAllowQuery && segmentAllowQuery.length === 0) {
+              const shouldAttachSegmentFallback =
+                segmentAllowQuery &&
+                (segmentAllowQuery.length === 0 ||
+                  isAppClientParamParsingEnabled);
+              if (shouldAttachSegmentFallback) {
                 const fsPath = path.join(
                   segmentsDir,
                   segmentPath + prefetchSegmentSuffix
@@ -3286,7 +3362,7 @@ export const onPrerenderRoute =
                 experimentalBypassFor: undefined,
 
                 initialHeaders: {
-                  ...initialHeaders,
+                  ...segmentInitialHeaders,
                   vary: rscVaryHeader,
                   'content-type': rscContentTypeHeader,
                   [rscDidPostponeHeader]: '2',
@@ -3741,8 +3817,12 @@ export async function getNodeMiddleware({
     return null;
   }
   const routes: RouteWithSrc[] = [];
+  // Pass page: '/' to skip basePath addition in getRouteMatchers(), since
+  // functions-config-manifest matchers already have basePath baked in by
+  // Next.js build. This matches the behavior for edge middleware where
+  // page is '/' (root middleware) and basePath is not added.
   const routeMatchers = getRouteMatchers(
-    { matchers: middlewareFunctionConfig.matchers },
+    { matchers: middlewareFunctionConfig.matchers, page: '/' },
     routesManifest
   );
 
@@ -3867,6 +3947,9 @@ export async function getNodeMiddleware({
       [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
         new FileBlob({ data: launcherData }),
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return {

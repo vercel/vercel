@@ -25,6 +25,8 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import { validateLsArgs } from '../../util/validate-ls-args';
+import { validateJsonOutput } from '../../util/output-format';
 import type {
   Deployment,
   PaginationOptions,
@@ -70,16 +72,29 @@ export default async function list(client: Client) {
     return 0;
   }
 
-  if (parsedArgs.args.length > 2) {
-    error(`${getCommandName('ls [app]')} accepts at most one argument`);
+  const validationResult = validateLsArgs({
+    commandName: 'ls [app]',
+    args: parsedArgs.args,
+    maxArgs: 2,
+    exitCode: 2,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
+
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    error(formatResult.error);
     return 1;
   }
+  const asJson = formatResult.jsonOutput;
 
   telemetry.trackCliFlagProd(parsedArgs.flags['--prod']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
   telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
   telemetry.trackCliOptionStatus(parsedArgs.flags['--status']);
 
@@ -212,7 +227,9 @@ export default async function list(client: Client) {
   const projectSlugLink = formatProject(contextName, project.name);
 
   if (!singleDeployment) {
-    spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
+    if (!asJson) {
+      spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
+    }
     const start = Date.now();
 
     debug('Fetching deployments');
@@ -248,15 +265,53 @@ export default async function list(client: Client) {
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
-      log('No deployments found.');
+      if (asJson) {
+        const jsonOutput = { deployments: [], pagination };
+        client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      } else {
+        log('No deployments found.');
+      }
       return 0;
     }
 
-    log(
-      `${
-        target === 'production' ? 'Production deployments' : 'Deployments'
-      } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
-    );
+    if (!asJson) {
+      log(
+        `${
+          target === 'production' ? 'Production deployments' : 'Deployments'
+        } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
+      );
+    }
+  }
+
+  if (asJson) {
+    const jsonOutput = {
+      deployments: deployments.sort(sortByCreatedAt).map(dep => ({
+        id: dep.id,
+        url: dep.url,
+        name: dep.name,
+        state: dep.readyState,
+        target: dep.target,
+        customEnvironment: dep.customEnvironment
+          ? {
+              id: dep.customEnvironment.id,
+              slug: dep.customEnvironment.slug,
+            }
+          : undefined,
+        createdAt: dep.createdAt,
+        buildingAt: dep.buildingAt,
+        ready: dep.ready,
+        creator: dep.creator
+          ? {
+              uid: dep.creator.uid,
+              username: dep.creator.username,
+            }
+          : undefined,
+        meta: dep.meta,
+      })),
+      pagination,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    return 0;
   }
 
   const headers = ['Age', 'Deployment', 'Status', 'Environment'];

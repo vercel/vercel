@@ -16,6 +16,7 @@ import readStandardInput from '../../util/input/read-standard-input';
 import buildsList from '../../util/output/builds';
 import elapsed from '../../util/output/elapsed';
 import indent from '../../util/output/indent';
+import { validateJsonOutput } from '../../util/output-format';
 import routesList from '../../util/output/routes';
 import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
@@ -76,6 +77,8 @@ export default async function inspect(client: Client) {
   telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
   telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
   telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
 
   // validate the timeout
   const timeout = ms(parsedArguments.flags['--timeout'] ?? '3m');
@@ -103,6 +106,12 @@ export default async function inspect(client: Client) {
   const until = Date.now() + timeout;
   const wait = parsedArguments.flags['--wait'] ?? false;
   const withLogs = parsedArguments.flags['--logs'];
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
   const startTimestamp = Date.now();
 
   try {
@@ -116,7 +125,7 @@ export default async function inspect(client: Client) {
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
   let abortController: AbortController | undefined;
-  if (withLogs) {
+  if (withLogs && !asJson) {
     let promise: Promise<void>;
     ({ abortController, promise } = displayBuildLogs(client, deployment, wait));
     if (wait) {
@@ -140,7 +149,11 @@ export default async function inspect(client: Client) {
       break;
     }
   }
-  if (withLogs) {
+
+  if (asJson) {
+    output.stopSpinner();
+    await printJson({ deployment, contextName, client });
+  } else if (withLogs) {
     print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
   } else {
     await printDetails({ deployment, contextName, client, startTimestamp });
@@ -262,6 +275,48 @@ async function printDetails({
     print(indent(routesList(routes), 4));
     print(`\n\n`);
   }
+}
+
+async function printJson({
+  deployment,
+  contextName,
+  client,
+}: {
+  deployment: Deployment;
+  contextName: string | null;
+  client: Client;
+}): Promise<void> {
+  const {
+    id,
+    name,
+    url,
+    createdAt,
+    routes,
+    readyState,
+    alias: aliases,
+    target,
+    customEnvironment,
+  } = deployment;
+
+  const { builds } =
+    deployment.version === 2
+      ? await client.fetch<{ builds: Build[] }>(`/v11/deployments/${id}/builds`)
+      : { builds: [] };
+
+  const jsonOutput = {
+    id,
+    name,
+    url,
+    target: customEnvironment?.slug ?? target ?? 'preview',
+    readyState,
+    createdAt,
+    ...(aliases && aliases.length > 0 && { aliases }),
+    ...(builds.length > 0 && { builds }),
+    ...(Array.isArray(routes) && routes.length > 0 && { routes }),
+    ...(contextName && { contextName }),
+  };
+
+  client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }
 
 function exitCode(state: Deployment['readyState']) {

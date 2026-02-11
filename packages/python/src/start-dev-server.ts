@@ -1,16 +1,22 @@
 import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, delimiter } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import {
-  FASTAPI_CANDIDATE_ENTRYPOINTS,
-  FLASK_CANDIDATE_ENTRYPOINTS,
+  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
-import { getLatestPythonVersion } from './version';
-import { isInVirtualEnv, useVirtualEnv } from './utils';
+import { getDefaultPythonVersion } from './version';
+import {
+  isInVirtualEnv,
+  useVirtualEnv,
+  ensureVenv,
+  getVenvPythonBin,
+  getVenvBinDir,
+} from './utils';
+import { findUvBinary } from './uv';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -54,6 +60,24 @@ const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
 
 const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
 const WSGI_SHIM_MODULE = 'vc_init_dev_wsgi';
+
+function createLogListener(
+  callback: ((buf: Buffer) => void) | undefined,
+  stream: NodeJS.WriteStream
+): (buf: Buffer) => void {
+  return (buf: Buffer) => {
+    if (callback) {
+      callback(buf);
+    } else {
+      const s = buf.toString();
+      for (const line of s.split(/\r?\n/)) {
+        if (line) {
+          stream.write(line.endsWith('\n') ? line : line + '\n');
+        }
+      }
+    }
+  };
+}
 
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
@@ -106,13 +130,13 @@ function installGlobalCleanupHandlers() {
     }
   };
 
+  // Do not exit on signals, so other interruption handlers
+  // can perform their cleanup routine.
   process.on('SIGINT', () => {
     killAll();
-    process.exit(130);
   });
   process.on('SIGTERM', () => {
     killAll();
-    process.exit(143);
   });
   process.on('exit', () => {
     killAll();
@@ -159,8 +183,46 @@ function createDevWsgiShim(
   }
 }
 
+interface PythonRunner {
+  command: string;
+  args: string[];
+}
+
+async function getMultiServicePythonRunner(
+  workPath: string,
+  env: NodeJS.ProcessEnv,
+  systemPython: string,
+  uvPath: string | null
+): Promise<PythonRunner> {
+  // Use an existing .venv/venv if present and allowed (single Python service in a project).
+  const { pythonCmd, venvRoot } = useVirtualEnv(workPath, env, systemPython);
+  if (venvRoot) {
+    debug(`Using existing virtualenv at ${venvRoot} for multi-service dev`);
+    return { command: pythonCmd, args: [] };
+  }
+
+  // Create a per-service .venv, so deps are managed separately.
+  const venvPath = join(workPath, '.venv');
+  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath });
+  debug(`Created virtualenv at ${venvPath} for multi-service dev`);
+
+  const pythonBin = getVenvPythonBin(venvPath);
+  const binDir = getVenvBinDir(venvPath);
+  env.VIRTUAL_ENV = venvPath;
+  env.PATH = `${binDir}${delimiter}${env.PATH || ''}`;
+
+  return { command: pythonBin, args: [] };
+}
+
 export const startDevServer: StartDevServer = async opts => {
-  const { entrypoint: rawEntrypoint, workPath, meta = {}, config } = opts;
+  const {
+    entrypoint: rawEntrypoint,
+    workPath,
+    meta = {},
+    config,
+    onStdout,
+    onStderr,
+  } = opts;
 
   // Only start a dev server for FastAPI or Flask for now
   const framework = config?.framework;
@@ -177,13 +239,10 @@ export const startDevServer: StartDevServer = async opts => {
     rawEntrypoint
   );
   if (!entry) {
-    const searched =
-      framework === 'fastapi'
-        ? FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')
-        : FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+    const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message: `No ${framework} entrypoint found. Define a valid application entrypoint in one of the following locations: ${searched} or add an 'app' script in pyproject.toml.`,
+      message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
       link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
       action: 'Learn More',
     });
@@ -239,44 +298,77 @@ export const startDevServer: StartDevServer = async opts => {
   PENDING_STARTS.set(serverKey, childReady);
 
   try {
+    const { pythonPath: systemPython } = getDefaultPythonVersion(meta);
+    const uvPath = await findUvBinary(systemPython);
+    const venv = isInVirtualEnv();
+    const serviceCount = (meta.serviceCount as number | undefined) ?? 0;
+    const pythonServiceCount =
+      (meta.pythonServiceCount as number | undefined) ?? 1;
+
+    if (venv && pythonServiceCount > 1) {
+      const yellow = '\x1b[33m';
+      const white = '\x1b[1m';
+      const reset = '\x1b[0m';
+      throw new NowBuildError({
+        code: 'PYTHON_EXTERNAL_VENV_DETECTED',
+        message:
+          `Detected activated venv at ${yellow}${venv}${reset}, ` +
+          `${white}vercel dev${reset} manages virtual environments automatically.\n` +
+          `Run ${white}deactivate${reset} and try again.`,
+      });
+    }
+
+    let spawnCommand = systemPython;
+    let spawnArgsPrefix: string[] = [];
+
+    if (serviceCount > 0) {
+      const runner = await getMultiServicePythonRunner(
+        workPath,
+        env,
+        systemPython,
+        uvPath
+      );
+      spawnCommand = runner.command;
+      spawnArgsPrefix = runner.args;
+      debug(
+        `Multi-service Python runner: ${spawnCommand} ${spawnArgsPrefix.join(' ')}`
+      );
+    } else if (venv) {
+      debug(`Running in virtualenv at ${venv}`);
+    } else {
+      const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
+        workPath,
+        env,
+        systemPython
+      );
+      spawnCommand = venvPythonCmd;
+      if (venvRoot) {
+        debug(`Using virtualenv at ${venvRoot}`);
+      } else {
+        debug('No virtualenv found');
+        try {
+          const yellow = '\x1b[33m';
+          const reset = '\x1b[0m';
+          const venvCmd =
+            process.platform === 'win32'
+              ? 'python -m venv .venv && .venv\\Scripts\\activate'
+              : 'python -m venv .venv && source .venv/bin/activate';
+          process.stderr.write(
+            `${yellow}Warning: no virtual environment detected in ${workPath}. Using system Python: ${systemPython}.${reset}\n` +
+              `If you are using a virtual environment, activate it before running "vercel dev", or create one: ${venvCmd}\n`
+          );
+        } catch (_) {
+          // ignore write errors
+        }
+      }
+    }
+
     // Now spawn the actual server process
     await new Promise<void>((resolve, reject) => {
       let resolved = false;
-      const { pythonPath: systemPython } = getLatestPythonVersion(meta);
-      let pythonCmd = systemPython;
-      const venv = isInVirtualEnv();
 
-      if (venv) {
-        debug(`Running in virtualenv at ${venv}`);
-      } else {
-        const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
-          workPath,
-          env,
-          systemPython
-        );
-        pythonCmd = venvPythonCmd;
-        if (venvRoot) {
-          debug(`Using virtualenv at ${venvRoot}`);
-        } else {
-          debug('No virtualenv found');
-          try {
-            const yellow = '\x1b[33m';
-            const reset = '\x1b[0m';
-            const venvCmd =
-              process.platform === 'win32'
-                ? 'python -m venv .venv && .venv\\Scripts\\activate'
-                : 'python -m venv .venv && source .venv/bin/activate';
-            process.stderr.write(
-              `${yellow}Warning: no virtual environment detected in ${workPath}. Using system Python: ${pythonCmd}.${reset}\n` +
-                `If you are using a virtual environment, activate it before running "vercel dev", or create one: ${venvCmd}\n`
-            );
-          } catch (_) {
-            // ignore write errors
-          }
-        }
-      }
-
-      if (framework === 'fastapi') {
+      if (framework !== 'flask') {
+        // ASGI dev server (FastAPI, Starlette, Sanic, generic Python, etc.)
         // Create a tiny ASGI shim that serves static files first (when present)
         // and falls back to the user's app. Always applied for consistent behavior.
         const devShimModule = createDevAsgiShim(workPath, modulePath);
@@ -292,31 +384,20 @@ export const startDevServer: StartDevServer = async opts => {
 
         // Run the ASGI shim module directly
         const moduleToRun = devShimModule || modulePath;
-        const argv = ['-u', '-m', moduleToRun];
-        debug(`Starting ASGI dev server: ${pythonCmd} ${argv.join(' ')}`);
-        const child = spawn(pythonCmd, argv, {
+        const pythonArgs = ['-u', '-m', moduleToRun];
+        const argv = [...spawnArgsPrefix, ...pythonArgs];
+        debug(
+          `Starting ASGI dev server (${framework}): ${spawnCommand} ${argv.join(' ')}`
+        );
+        const child = spawn(spawnCommand, argv, {
           cwd: workPath,
           env,
           stdio: ['inherit', 'pipe', 'pipe'],
         });
         childProcess = child;
 
-        stdoutLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
-        stderrLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
+        stdoutLogListener = createLogListener(onStdout, process.stdout);
+        stderrLogListener = createLogListener(onStderr, process.stderr);
         child.stdout?.on('data', stdoutLogListener);
         child.stderr?.on('data', stderrLogListener);
 
@@ -383,31 +464,18 @@ export const startDevServer: StartDevServer = async opts => {
 
         const moduleToRun = devShimModule || modulePath;
         // Execute the shim as a module so its __main__ runner handles Werkzeug/wsgiref
-        const argv = ['-u', '-m', moduleToRun];
-        debug(`Starting Flask dev server: ${pythonCmd} ${argv.join(' ')}`);
-        const child = spawn(pythonCmd, argv, {
+        const pythonArgs = ['-u', '-m', moduleToRun];
+        const argv = [...spawnArgsPrefix, ...pythonArgs];
+        debug(`Starting Flask dev server: ${spawnCommand} ${argv.join(' ')}`);
+        const child = spawn(spawnCommand, argv, {
           cwd: workPath,
           env,
           stdio: ['inherit', 'pipe', 'pipe'],
         });
         childProcess = child;
 
-        stdoutLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
-        stderrLogListener = (buf: Buffer) => {
-          const s = buf.toString();
-          for (const line of s.split(/\r?\n/)) {
-            if (line) {
-              process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-            }
-          }
-        };
+        stdoutLogListener = createLogListener(onStdout, process.stdout);
+        stderrLogListener = createLogListener(onStderr, process.stderr);
         child.stdout?.on('data', stdoutLogListener);
         child.stderr?.on('data', stderrLogListener);
 

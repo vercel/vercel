@@ -1,4 +1,6 @@
 import type {
+  AutoProvisionedResponse,
+  AutoProvisionFallback,
   Configuration,
   InstallationBalancesAndThresholds,
   Integration,
@@ -146,6 +148,33 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataFullTypes: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Region',
+      type: 'string',
+      'ui:options': ['iad1', 'sfo1'],
+    },
+    auth: {
+      'ui:control': 'toggle',
+      'ui:label': 'Auth',
+      description: 'Enable built-in authentication',
+      type: 'boolean',
+      default: false,
+    },
+    readRegions: {
+      type: 'array',
+      'ui:control': 'multi-vercel-region',
+      'ui:label': 'Read Regions',
+      items: { type: 'string' },
+      'ui:options': ['iad1', 'sfo1', 'fra1'],
+    },
+  },
+  required: ['region'],
+};
+
 const metadataUnsupported: MetadataSchema = {
   type: 'object',
   properties: {
@@ -178,6 +207,19 @@ const metadataUnsupported: MetadataSchema = {
     },
   },
   required: ['region'],
+};
+
+const metadataNoDefaults: MetadataSchema = {
+  type: 'object',
+  properties: {
+    tier: {
+      'ui:control': 'select',
+      'ui:label': 'Tier',
+      type: 'string',
+      'ui:options': ['starter', 'pro', 'enterprise'],
+    },
+  },
+  required: ['tier'],
 };
 
 const integrations: Record<string, Integration> = {
@@ -219,6 +261,21 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  'aws-apg': {
+    id: 'aws-apg',
+    name: 'Aurora Postgres',
+    slug: 'aws-apg',
+    products: [
+      {
+        id: 'aws-apg-product',
+        name: 'Aurora Postgres',
+        slug: 'aws-apg',
+        type: 'storage',
+        shortDescription: 'Amazon Aurora PostgreSQL',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-external': {
     id: 'acme-external',
     name: 'Acme Integration External',
@@ -229,6 +286,21 @@ const integrations: Record<string, Integration> = {
     name: 'Acme Integration No Products',
     slug: 'acme-no-products',
     products: [],
+  },
+  'acme-full-schema': {
+    id: 'acme-full-schema',
+    name: 'Acme Full Schema',
+    slug: 'acme-full-schema',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with all field types',
+        metadataSchema: metadataFullTypes,
+      },
+    ],
   },
   'acme-prepayment': {
     id: 'acme-prepayment',
@@ -242,6 +314,36 @@ const integrations: Record<string, Integration> = {
         type: 'ai',
         shortDescription: 'The Acme product',
         metadataSchema: metadataSchema1,
+      },
+    ],
+  },
+  'acme-required': {
+    id: 'acme-required',
+    name: 'Acme Required',
+    slug: 'acme-required',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with required metadata',
+        metadataSchema: metadataNoDefaults,
+      },
+    ],
+  },
+  'acme-multi': {
+    id: 'acme-multi',
+    name: 'Acme Multi',
+    slug: 'acme-multi',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with multiple fields',
+        metadataSchema: metadataSchema2,
       },
     ],
   },
@@ -415,6 +517,34 @@ const integrationPlans: Record<string, unknown> = {
           },
         ],
         disabled: true,
+      },
+    ],
+  },
+  'acme-multi': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
+      },
+    ],
+  },
+  'aws-apg': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Aurora PostgreSQL Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
       },
     ],
   },
@@ -798,6 +928,136 @@ const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
   },
 };
 
+// Auto-provision mock responses
+const autoProvisionIntegration = {
+  id: 'acme',
+  slug: 'acme',
+  name: 'Acme Integration',
+  icon: 'https://example.com/icon.png',
+  policies: {
+    privacy: 'https://example.com/privacy',
+    eula: 'https://example.com/eula',
+  },
+};
+
+const autoProvisionProduct = {
+  id: 'acme-product',
+  slug: 'acme',
+  name: 'Acme Product',
+  icon: 'https://example.com/product-icon.png',
+  metadataSchema: metadataSchema1,
+};
+
+const autoProvisionResponses: Record<
+  string,
+  AutoProvisionedResponse | AutoProvisionFallback
+> = {
+  provisioned: {
+    kind: 'provisioned',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'install_123' },
+    resource: {
+      id: 'resource_123',
+      externalResourceId: 'ext_resource_123',
+      name: 'test-resource',
+      status: 'available',
+    },
+    billingPlan: null,
+  },
+  install: {
+    kind: 'install',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  'install-no-policies': {
+    kind: 'install',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: {
+      ...autoProvisionIntegration,
+      policies: {},
+    },
+    product: autoProvisionProduct,
+  },
+  metadata: {
+    kind: 'metadata',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  unknown: {
+    kind: 'unknown',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+};
+
+const discoverIntegrations = [
+  {
+    slug: 'neon',
+    name: 'Neon',
+    shortDescription: 'Serverless Postgres with branching',
+    tagIds: ['tag_databases', 'tag_dev_tools'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'neon',
+        name: 'Neon Postgres',
+        shortDescription: 'Serverless Postgres database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-multi',
+    name: 'Acme Multi',
+    shortDescription: 'Multi-product integration',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'acme-kv',
+        name: 'Acme KV',
+        shortDescription: 'Key-value store',
+        tags: ['storage', 'redis'],
+      },
+      {
+        slug: 'acme-db',
+        name: 'Acme DB',
+        shortDescription: 'Relational database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-hidden',
+    name: 'Acme Hidden',
+    shortDescription: 'Should be filtered out because canInstall is false',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: false,
+    products: [{ slug: 'storage', name: 'Storage' }],
+  },
+  {
+    slug: 'acme-external',
+    name: 'Acme External',
+    shortDescription: 'Should be filtered out because isMarketplace is false',
+    tagIds: ['tag_dev_tools'],
+    isMarketplace: false,
+    canInstall: true,
+    products: [{ slug: 'connect', name: 'Connect' }],
+  },
+];
+
+const discoverCategories = [
+  { id: 'tag_databases', title: 'Storage' },
+  { id: 'tag_dev_tools', title: 'DevTools' },
+];
+
 export function useResources(returnError?: number) {
   client.scenario.get('/:version/storage/stores', (req, res) => {
     if (returnError) {
@@ -815,6 +1075,29 @@ export function useResources(returnError?: number) {
     }
 
     res.json(resources);
+  });
+}
+
+export function useIntegrationDiscover(opts?: {
+  integrationsStatus?: number;
+  categoriesStatus?: number;
+}) {
+  client.scenario.get('/v2/integrations/integrations', (_req, res) => {
+    if (opts?.integrationsStatus) {
+      res.status(opts.integrationsStatus);
+      res.end();
+      return;
+    }
+    res.json(discoverIntegrations);
+  });
+
+  client.scenario.get('/v2/integrations/categories', (_req, res) => {
+    if (opts?.categoriesStatus) {
+      res.status(opts.categoriesStatus);
+      res.end();
+      return;
+    }
+    res.json(discoverCategories);
   });
 }
 
@@ -955,6 +1238,76 @@ export function useIntegration({
     });
   });
 
+  client.scenario.post(
+    '/v1/storage/stores/:storeId/connections',
+    (req, res) => {
+      if (req.params.storeId !== storeId) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.status(200);
+      res.end();
+    }
+  );
+}
+
+export function useAutoProvision(opts?: {
+  responseKey?: keyof typeof autoProvisionResponses;
+  secondResponseKey?: keyof typeof autoProvisionResponses;
+}) {
+  let callCount = 0;
+  const storeId = 'resource_123';
+
+  // Integration fetch endpoint (needed for auto-provision flow)
+  client.scenario.get(
+    '/:version/integrations/integration/:slug',
+    (req, res) => {
+      const { slug } = req.params;
+      const integration = integrations[slug];
+
+      if (!integration) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(integration);
+    }
+  );
+
+  // Auto-provision endpoint
+  client.scenario.post(
+    '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
+    (_req, res) => {
+      callCount++;
+
+      // First call returns the first response, subsequent calls return second response
+      const responseKey =
+        callCount === 1
+          ? (opts?.responseKey ?? 'provisioned')
+          : (opts?.secondResponseKey ?? opts?.responseKey ?? 'provisioned');
+
+      const response = autoProvisionResponses[responseKey];
+
+      if (
+        response.kind === 'install' ||
+        response.kind === 'metadata' ||
+        response.kind === 'unknown'
+      ) {
+        // 422 responses for fallback cases
+        res.status(422);
+        res.json(response);
+      } else {
+        // 201 for successful provisioning
+        res.status(201);
+        res.json(response);
+      }
+    }
+  );
+
+  // Connection endpoint for linking to projects
   client.scenario.post(
     '/v1/storage/stores/:storeId/connections',
     (req, res) => {

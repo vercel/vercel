@@ -12,6 +12,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  findPackageJson,
   Prerender,
 } from '../src';
 import type { Files } from '../src';
@@ -57,7 +58,7 @@ it('should only match supported node versions, otherwise throw an error', async 
   );
 
   const autoMessage =
-    'Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.';
+    'Please set Node.js Version to 24.x in your Project Settings to use Node.js 24.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
     autoMessage
@@ -77,7 +78,7 @@ it('should only match supported node versions, otherwise throw an error', async 
   );
 
   const foundMessage =
-    'Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.';
+    'Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
     foundMessage
@@ -125,17 +126,22 @@ it('should allow nodejs20.x', async () => {
 });
 
 it('should allow nodejs22.x', async () => {
-  expect(getLatestNodeVersion()).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22.x')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22.1.0')).toHaveProperty('major', 22);
-  expect(await getSupportedNodeVersion('>=18')).toHaveProperty('major', 22);
+});
+
+it('should only nodejs24.x', async () => {
+  expect(await getSupportedNodeVersion('24.x')).toHaveProperty('major', 24);
+  expect(await getSupportedNodeVersion('24')).toHaveProperty('major', 24);
+  expect(await getSupportedNodeVersion('24.3.0')).toHaveProperty('major', 24);
+  expect(await getSupportedNodeVersion('>=24')).toHaveProperty('major', 24);
 });
 
 it('should not allow nodejs18.x when not available', async () => {
   // Simulates AL2023 build-container
   await expect(getSupportedNodeVersion('18.x', true, [20])).rejects.toThrow(
-    'Found invalid Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
+    'Found invalid or discontinued Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
   );
 });
 
@@ -202,7 +208,7 @@ it('should prefer package.json engines over project setting from config and warn
     )
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": "22.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply, Node.js Version "22.x" will be used instead. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "22.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply, Node.js Version "22.x" will be used instead. Learn More: https://vercel.link/node-version',
   ]);
 });
 
@@ -216,7 +222,7 @@ it('should warn when package.json engines is exact version', async () => {
     )
   ).toHaveProperty('range', '22.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Detected "engines": { "node": "22.11.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
+    'Warning: Detected "engines": { "node": "22.11.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: https://vercel.link/node-version',
   ]);
 });
 
@@ -228,9 +234,9 @@ it('should warn when package.json engines is greater than', async () => {
       {},
       {}
     )
-  ).toHaveProperty('range', '22.x');
+  ).toHaveProperty('range', '24.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
+    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version',
   ]);
 });
 
@@ -242,10 +248,10 @@ it('should warn when project settings gets overrided', async () => {
       { nodeVersion: '16.x' },
       {}
     )
-  ).toHaveProperty('range', '22.x');
+  ).toHaveProperty('range', '24.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": ">=16" } in your `package.json` file, the Node.js Version defined in your Project Settings ("16.x") will not apply, Node.js Version "22.x" will be used instead. Learn More: http://vercel.link/node-version',
-    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": ">=16" } in your `package.json` file, the Node.js Version defined in your Project Settings ("16.x") will not apply, Node.js Version "24.x" will be used instead. Learn More: https://vercel.link/node-version',
+    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version',
   ]);
 });
 
@@ -282,7 +288,7 @@ it('should not warn when package.json engines matches project setting from confi
 });
 
 it('should get latest node version', async () => {
-  expect(getLatestNodeVersion()).toHaveProperty('major', 22);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 24);
 });
 
 it('should get latest node version with Node 22.x in build-container', async () => {
@@ -322,31 +328,6 @@ it('should throw for discontinued versions', async () => {
   }
 });
 
-it('should allow nodejs22.x', async () => {
-  expect(getLatestNodeVersion()).toHaveProperty('major', 22);
-  expect(await getSupportedNodeVersion('22.x')).toHaveProperty('major', 22);
-  expect(await getSupportedNodeVersion('22')).toHaveProperty('major', 22);
-  expect(await getSupportedNodeVersion('22.1.0')).toHaveProperty('major', 22);
-  expect(await getSupportedNodeVersion('>=20')).toHaveProperty('major', 22);
-});
-
-it('should only allow nodejs24.x when env var is set', async () => {
-  try {
-    expect(getLatestNodeVersion()).toHaveProperty('major', 22);
-    await expect(getSupportedNodeVersion('24.x')).rejects.toThrow();
-
-    process.env.VERCEL_ALLOW_NODEJS_24 = '1';
-
-    expect(getLatestNodeVersion()).toHaveProperty('major', 24);
-    expect(await getSupportedNodeVersion('24.x')).toHaveProperty('major', 24);
-    expect(await getSupportedNodeVersion('24')).toHaveProperty('major', 24);
-    expect(await getSupportedNodeVersion('24.3.0')).toHaveProperty('major', 24);
-    expect(await getSupportedNodeVersion('>=24')).toHaveProperty('major', 24);
-  } finally {
-    delete process.env.VERCEL_ALLOW_NODEJS_24;
-  }
-});
-
 it('should warn for deprecated versions, soon to be discontinued', async () => {
   const realDateNow = Date.now;
   try {
@@ -361,8 +342,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       18
     );
     expect(warningMessages).toStrictEqual([
-      'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
-      'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
+      'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.',
+      'Error: Node.js version 18.x is deprecated. Deployments created on or after 2025-09-01 will fail to build. Please set Node.js Version to 24.x in your Project Settings to use Node.js 24.',
     ]);
   } finally {
     global.Date.now = realDateNow;
@@ -611,6 +592,69 @@ it('should support passQuery correctly', async () => {
     });
   }).toThrowError(
     `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support exposeErrBody correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: true,
+  });
+  expect(prerenderWithTrue.exposeErrBody).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: false,
+  });
+  expect(prerenderWithFalse.exposeErrBody).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: undefined,
+  });
+  expect(prerenderWithUndefined.exposeErrBody).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.exposeErrBody).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 'true',
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 1,
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
   );
 });
 
@@ -1017,6 +1061,46 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
+});
+
+describe('findPackageJson', () => {
+  it('should find package.json and return path without reading contents', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, false);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeUndefined();
+  });
+
+  it('should find package.json and read contents when readPackageJson is true', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+    expect(result.packageJson?.name).toBeDefined();
+  });
+
+  it('should traverse up directories to find package.json', async () => {
+    const base = path.join(__dirname, 'fixtures', '21-npm-workspaces');
+    const fixture = path.join(base, 'a');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should respect the base parameter boundary', async () => {
+    const base = path.join(__dirname, 'fixtures', '23-pnpm-workspaces');
+    const fixture = path.join(base, 'c');
+    const result = await findPackageJson(fixture, true, base);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should return undefined when no package.json is found', async () => {
+    // Use a directory that definitely has no package.json
+    const result = await findPackageJson('/tmp', false, '/tmp');
+    expect(result.packageJsonPath).toBeUndefined();
+    expect(result.packageJson).toBeUndefined();
+  });
 });
 
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {

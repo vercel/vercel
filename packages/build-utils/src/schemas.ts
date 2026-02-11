@@ -25,6 +25,10 @@ const triggerEventSchema = {
       type: 'number',
       minimum: 0,
     },
+    maxConcurrency: {
+      type: 'number',
+      minimum: 1,
+    },
   },
   required: ['type', 'topic', 'consumer'],
   additionalProperties: false,
@@ -56,6 +60,12 @@ export const functionsSchema = {
           type: 'number',
           minimum: 1,
           maximum: 900,
+        },
+        regions: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
         },
         includeFiles: {
           type: 'string',

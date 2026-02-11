@@ -22,7 +22,7 @@ describe('integration', () => {
 
         client.setArgv(command, subcommand, '--help');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(2);
+        await expect(exitCodePromise).resolves.toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -435,7 +435,7 @@ describe('integration', () => {
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: Cannot specify more than one project at a time. Use `--all` to show all resources.'
+          'Error: Invalid number of arguments. Usage: `vercel integration list [project]'
         );
       });
 

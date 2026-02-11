@@ -9,7 +9,6 @@ import {
   FileFsRef,
   getEnvForPackageManager,
   getNodeVersion,
-  getSpawnOptions,
   glob,
   EdgeFunction,
   NodejsLambda,
@@ -117,16 +116,11 @@ export const build: BuildV2 = async ({
   ]);
   const pkg = JSON.parse(pkgRaw);
 
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  if (!spawnOpts.env) {
-    spawnOpts.env = {};
-  }
-
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env,
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -135,7 +129,7 @@ export const build: BuildV2 = async ({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        ...spawnOpts,
+        env: spawnEnv,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -145,7 +139,7 @@ export const build: BuildV2 = async ({
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      spawnOpts,
+      { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
     );
@@ -312,7 +306,7 @@ export const build: BuildV2 = async ({
 
     // Bypass `--frozen-lockfile` enforcement by removing
     // env vars that are considered to be CI
-    const nonCiEnv = { ...spawnOpts.env };
+    const nonCiEnv = { ...process.env };
     delete nonCiEnv.CI;
     delete nonCiEnv.VERCEL;
     delete nonCiEnv.NOW_BUILDER;
@@ -324,7 +318,6 @@ export const build: BuildV2 = async ({
       entrypointFsDirname,
       [],
       {
-        ...spawnOpts,
         env: nonCiEnv,
       },
       undefined,
@@ -411,13 +404,13 @@ module.exports = config;`;
     }
 
     // Make `remix build` output production mode
-    spawnOpts.env.NODE_ENV = 'production';
+    spawnEnv.NODE_ENV = 'production';
 
     // Run "Build Command"
     if (buildCommand) {
       debug(`Executing build command "${buildCommand}"`);
       await execCommand(buildCommand, {
-        ...spawnOpts,
+        env: spawnEnv,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -426,7 +419,7 @@ module.exports = config;`;
         await runPackageJsonScript(
           entrypointFsDirname,
           'vercel-build',
-          spawnOpts,
+          { env: spawnEnv },
           config.projectSettings?.createdAt
         );
       } else if (hasScript('build', pkg)) {
@@ -434,12 +427,12 @@ module.exports = config;`;
         await runPackageJsonScript(
           entrypointFsDirname,
           'build',
-          spawnOpts,
+          { env: spawnEnv },
           config.projectSettings?.createdAt
         );
       } else {
         await execCommand('remix build', {
-          ...spawnOpts,
+          env: spawnEnv,
           cwd: entrypointFsDirname,
         });
       }
@@ -553,12 +546,8 @@ module.exports = config;`;
     ...staticFiles,
     ...transformedBuildAssets,
   };
+  const assetsPath = remixConfig.publicPath.replace(/^\/|\/$/g, '');
   const routes: any[] = [
-    {
-      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
     {
       handle: 'filesystem',
     },
@@ -613,6 +602,18 @@ module.exports = config;`;
   routes.push({
     src: '/(.*)',
     dest: '/404',
+  });
+
+  // Routes to call after a file has been matched.
+  // Cache headers are set here so they only apply to files that exist,
+  // preventing 404 responses from being cached with immutable headers.
+  routes.push({
+    handle: 'hit',
+  });
+  routes.push({
+    src: `^/${assetsPath}/(.*)$`,
+    headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+    continue: true,
   });
 
   return { routes, output, framework: { version: remixVersion } };
@@ -682,6 +683,9 @@ async function createRenderNodeFunction(
       slug: 'remix',
       version: remixVersion,
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 
   return fn;
