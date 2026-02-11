@@ -860,6 +860,10 @@ const main = async () => {
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).webhooks;
           break;
+        case 'usage':
+          telemetry.trackCliCommandUsage(userSuppliedSubCommand);
+          func = require('./commands/usage').default;
+          break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).whoami;
