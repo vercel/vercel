@@ -504,9 +504,7 @@ export function useDeleteRoute() {
     const body = req.body as { routeIds: string[] };
 
     // Validate all IDs exist
-    const missing = body.routeIds.filter(
-      id => !routes.find(r => r.id === id)
-    );
+    const missing = body.routeIds.filter(id => !routes.find(r => r.id === id));
     if (missing.length > 0) {
       res.status(400).json({
         error: { message: `Routes not found: ${missing.join(', ')}` },
@@ -530,8 +528,18 @@ export function useDeleteRoute() {
 
 export function useEditRoute() {
   const routes = [
-    { ...createRoute(0), name: 'Enabled Route', id: 'enabled-route-id', enabled: true },
-    { ...createRoute(1), name: 'Disabled Route', id: 'disabled-route-id', enabled: false },
+    {
+      ...createRoute(0),
+      name: 'Enabled Route',
+      id: 'enabled-route-id',
+      enabled: true,
+    },
+    {
+      ...createRoute(1),
+      name: 'Disabled Route',
+      id: 'disabled-route-id',
+      enabled: false,
+    },
   ];
 
   client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
@@ -569,27 +577,30 @@ export function useEditRoute() {
     }
   );
 
-  client.scenario.patch('/v1/projects/:projectId/routes/:routeId', (req, res) => {
-    const body = req.body as { route?: { enabled?: boolean; name?: string } };
+  client.scenario.patch(
+    '/v1/projects/:projectId/routes/:routeId',
+    (req, res) => {
+      const body = req.body as { route?: { enabled?: boolean; name?: string } };
 
-    res.json({
-      route: {
-        id: req.params.routeId,
-        name: body.route?.name ?? 'Updated Route',
-        enabled: body.route?.enabled ?? true,
-        staged: true,
-        route: { src: '^/test$' },
-      },
-      version: {
-        id: 'new-staging-version',
-        lastModified: Date.now(),
-        createdBy: 'user@example.com',
-        isStaging: true,
-        isLive: false,
-        ruleCount: routes.length,
-      },
-    });
-  });
+      res.json({
+        route: {
+          id: req.params.routeId,
+          name: body.route?.name ?? 'Updated Route',
+          enabled: body.route?.enabled ?? true,
+          staged: true,
+          route: { src: '^/test$' },
+        },
+        version: {
+          id: 'new-staging-version',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isStaging: true,
+          isLive: false,
+          ruleCount: routes.length,
+        },
+      });
+    }
+  );
 }
 
 export function useStageRoutes() {
