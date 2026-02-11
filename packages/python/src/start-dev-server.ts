@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, delimiter, dirname } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
-import { debug, glob, NowBuildError } from '@vercel/build-utils';
+import { debug, NowBuildError } from '@vercel/build-utils';
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
@@ -17,11 +17,8 @@ import {
   getVenvBinDir,
 } from './utils';
 import { findUvBinary, getProtectedUvEnv } from './uv';
-import {
-  detectInstallSource,
-  exportRequirementsFromPipfile,
-  type ManifestType,
-} from './install';
+import { detectInstallSource, type ManifestType } from './install';
+import { stringifyManifest } from '@vercel/python-analysis';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -101,18 +98,30 @@ async function syncDependencies({
   onStdout,
   onStderr,
 }: SyncDependenciesOptions): Promise<void> {
-  let fsFiles = await glob('**', workPath);
   const installInfo = await detectInstallSource({
     workPath,
     entryDirectory: '.',
-    fsFiles,
   });
 
-  const { manifestType, manifestPath } = installInfo;
+  let { manifestType, manifestPath } = installInfo;
+  const manifest = installInfo.pythonPackage?.manifest;
 
   if (!manifestType || !manifestPath) {
     debug('No Python project manifest found, skipping dependency sync');
     return;
+  }
+
+  // Store converted into manifest requirements, so we can run the sync
+  if (manifest?.origin && manifestType === 'pyproject.toml') {
+    const syncDir = join(workPath, '.vercel', 'python', 'sync');
+    mkdirSync(syncDir, { recursive: true });
+    const tempPyproject = join(syncDir, 'pyproject.toml');
+    const content = stringifyManifest(manifest.data);
+    writeFileSync(tempPyproject, content, 'utf8');
+    manifestPath = tempPyproject;
+    debug(
+      `Wrote converted ${manifest.origin.kind} manifest to ${tempPyproject}`
+    );
   }
 
   const writeOut = (msg: string) => {
@@ -200,28 +209,14 @@ async function runSync({
       spawnArgs = ['sync'];
       break;
     }
-    case 'pyproject.toml': {
-      spawnCmd = pip.cmd;
-      spawnArgs = [...pip.prefix, '-e', '.'];
-      break;
-    }
-    case 'Pipfile.lock':
-    case 'Pipfile': {
-      const devPython = getDefaultPythonVersion({ isDev: true });
-      const requirementsPath = await exportRequirementsFromPipfile({
-        pythonPath: devPython.pythonPath,
-        pipPath: devPython.pipPath,
-        uvPath,
-        projectDir,
-        meta: { isDev: true },
-      });
-      spawnCmd = pip.cmd;
-      spawnArgs = [...pip.prefix, '-r', requirementsPath];
-      break;
-    }
-    case 'requirements.txt': {
+    case 'pylock.toml': {
       spawnCmd = pip.cmd;
       spawnArgs = [...pip.prefix, '-r', manifestPath];
+      break;
+    }
+    case 'pyproject.toml': {
+      spawnCmd = pip.cmd;
+      spawnArgs = [...pip.prefix, projectDir];
       break;
     }
     default:
