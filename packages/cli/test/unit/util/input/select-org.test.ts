@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
+import { isActionRequiredPayload } from '../../../../src/util/agent-output';
 import selectOrg from '../../../../src/util/input/select-org';
 import { createTeam, useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -95,6 +96,75 @@ describe('selectOrg', () => {
     });
   });
 
+  describe('non-interactive mode', () => {
+    beforeEach(() => {
+      user = useUser({ version: 'northstar' });
+      useTeam();
+      createTeam(); // second team so choices.length > 1
+      client.nonInteractive = true;
+      delete client.config.currentTeam;
+    });
+
+    afterEach(() => {
+      client.nonInteractive = false;
+    });
+
+    it('outputs action_required JSON and exits (never defaults; user must pass --scope)', async () => {
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(selectOrg(client, 'Which scope?', false)).rejects.toThrow(
+        'process.exit(1)'
+      );
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(isActionRequiredPayload(payload)).toBe(true);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
+      expect(Array.isArray(payload.choices)).toBe(true);
+      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(Array.isArray(payload.next)).toBe(true);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('outputs action_required and exits even with single scope (no defaulting)', async () => {
+      // Single team only (northstar user + one team)
+      user = useUser({ version: 'northstar' });
+      useTeam(); // only one team
+      client.nonInteractive = true;
+      delete client.config.currentTeam;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(selectOrg(client, 'Which scope?', false)).rejects.toThrow(
+        'process.exit(1)'
+      );
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(isActionRequiredPayload(payload)).toBe(true);
+      expect(payload.choices.length).toBe(1);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+  });
+
   describe('without current team', () => {
     let team2: ReturnType<typeof createTeam>;
 
@@ -113,6 +183,9 @@ describe('selectOrg', () => {
       client.stdin.write('\r'); // Return key
 
       const result = await selectOrgPromise;
+      if (isActionRequiredPayload(result)) {
+        throw new Error('Unexpected action_required in interactive test');
+      }
       expect(result.id).toBe(team2.id);
       expect(user.defaultTeamId).toBe(team2.id);
     });
