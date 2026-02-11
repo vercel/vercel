@@ -541,40 +541,42 @@ describe('Lambda', () => {
   });
 
   describe('sanitizeConsumerName', () => {
-    it('should strip dots and replace slashes with hyphens', () => {
-      expect(sanitizeConsumerName('api/test.js')).toBe('api-testjs');
+    it('should encode dots with _D and slashes with _S', () => {
+      expect(sanitizeConsumerName('api/test.js')).toBe('api_Stest_Djs');
     });
 
     it('should handle nested paths', () => {
       expect(sanitizeConsumerName('api/users/handler.ts')).toBe(
-        'api-users-handlerts'
+        'api_Susers_Shandler_Dts'
       );
     });
 
-    it('should preserve underscores', () => {
-      expect(sanitizeConsumerName('src/my_func.js')).toBe('src-my_funcjs');
+    it('should escape underscores with __', () => {
+      expect(sanitizeConsumerName('src/my_func.js')).toBe('src_Smy__func_Djs');
     });
 
-    it('should replace multiple dots', () => {
-      expect(sanitizeConsumerName('api/test.spec.ts')).toBe('api-testspects');
+    it('should encode multiple dots', () => {
+      expect(sanitizeConsumerName('api/test.spec.ts')).toBe(
+        'api_Stest_Dspec_Dts'
+      );
     });
 
-    it('should replace spaces with hyphens', () => {
-      expect(sanitizeConsumerName('api/my func.js')).toBe('api-my-funcjs');
+    it('should encode spaces with hex code', () => {
+      expect(sanitizeConsumerName('api/my func.js')).toBe('api_Smy_20func_Djs');
     });
 
-    it('should replace special characters with hyphens', () => {
+    it('should encode special characters with hex codes', () => {
       expect(sanitizeConsumerName('api/test@file!.js')).toBe(
-        'api-test-file-js'
+        'api_Stest_40file_21_Djs'
       );
     });
 
-    it('should preserve alphanumeric characters', () => {
-      expect(sanitizeConsumerName('api123/test456')).toBe('api123-test456');
+    it('should preserve alphanumeric characters and hyphens', () => {
+      expect(sanitizeConsumerName('api123/test-456')).toBe('api123_Stest-456');
     });
 
     it('should handle simple filename', () => {
-      expect(sanitizeConsumerName('handler.ts')).toBe('handlerts');
+      expect(sanitizeConsumerName('handler.ts')).toBe('handler_Dts');
     });
   });
 });

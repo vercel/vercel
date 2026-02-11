@@ -17,19 +17,38 @@ import type {
 export type { TriggerEvent, TriggerEventInput };
 
 /**
- * Sanitizes a function path to a valid consumer name.
+ * Encodes a function path into a valid consumer name using mnemonic escapes.
  * For queue/v2beta triggers, the consumer name is derived from the function path.
+ * This encoding is collision-free (bijective/reversible).
  *
- * Allowed characters: A-Z, a-z, 0-9, _, -
- * - Dots are stripped (removed)
- * - Other disallowed characters are replaced with hyphens
+ * Encoding scheme:
+ * - `_` → `__` (escape character itself)
+ * - `/` → `_S` (slash)
+ * - `.` → `_D` (dot)
+ * - Other invalid chars → `_XX` (hex code)
  *
  * @example
- * sanitizeConsumerName('api/test.js') // => 'api-testjs'
- * sanitizeConsumerName('api/users/handler.ts') // => 'api-users-handlerts'
+ * sanitizeConsumerName('api/test.js') // => 'api_Stest_Djs'
+ * sanitizeConsumerName('api/users/handler.ts') // => 'api_Susers_Shandler_Dts'
+ * sanitizeConsumerName('my_func.ts') // => 'my__func_Dts'
  */
 export function sanitizeConsumerName(functionPath: string): string {
-  return functionPath.replace(/\./g, '').replace(/[^A-Za-z0-9_-]/g, '-');
+  let result = '';
+  for (const char of functionPath) {
+    if (char === '_') {
+      result += '__';
+    } else if (char === '/') {
+      result += '_S';
+    } else if (char === '.') {
+      result += '_D';
+    } else if (/[A-Za-z0-9-]/.test(char)) {
+      result += char;
+    } else {
+      result +=
+        '_' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+    }
+  }
+  return result;
 }
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;

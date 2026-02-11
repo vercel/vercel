@@ -4,4 +4,4 @@
 'vercel': patch
 ---
 
-Add new expirementalTrigger format for queeus v2beta
+Add new expirementalTrigger format for queues v2beta
