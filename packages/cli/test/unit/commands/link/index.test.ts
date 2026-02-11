@@ -1007,16 +1007,23 @@ describe('link', () => {
       client.setArgv();
 
       const originalSelect = client.input.select.bind(client.input);
+      const toCancelablePromise = <T>(value: T) => {
+        // Inquirer prompts return a `CancelablePromise`. For this test we sometimes
+        // need to short-circuit a prompt while still matching the return type.
+        const p = Promise.resolve(value) as any;
+        p.cancel = () => {};
+        return p as ReturnType<typeof originalSelect>;
+      };
       let sawRepoProjectSelector = false;
-      const selectSpy = vi
-        .spyOn(client.input, 'select')
-        .mockImplementation(async (opts: any) => {
-          if (opts?.message === 'Please select a Project:') {
-            sawRepoProjectSelector = true;
-            return opts.choices[0].value;
-          }
-          return originalSelect(opts);
-        });
+      const selectSpy = vi.spyOn(client.input, 'select').mockImplementation(((
+        opts: any
+      ) => {
+        if (opts?.message === 'Please select a Project:') {
+          sawRepoProjectSelector = true;
+          return toCancelablePromise(opts.choices[0].value);
+        }
+        return originalSelect(opts);
+      }) as typeof client.input.select);
 
       const exitCodePromise = link(client);
 
