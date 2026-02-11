@@ -252,4 +252,75 @@ describe('getLinkedProject', () => {
     expect(link.project.id).toEqual('QmbKpqpiUqbcke');
     expect(link.repoRoot).toEqual(cwd);
   });
+
+  it('should auto-select project when --project flag matches', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmScb7GPQt6gsS',
+      name: 'monorepo-blog',
+    });
+
+    // When projectName is provided, it should auto-select without prompting
+    const link = await getLinkedProject(client, cwd, {
+      projectName: 'monorepo-blog',
+    });
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmScb7GPQt6gsS');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
+  it('should error when --project flag does not match any project', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+
+    // When projectName is provided but doesn't match, it should error
+    let error: Error | undefined;
+    try {
+      await getLinkedProject(client, cwd, {
+        projectName: 'non-existent-project',
+      });
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error).toBeDefined();
+    expect(error?.message).toContain(
+      'Project "non-existent-project" not found'
+    );
+    expect(error?.message).toContain('monorepo-dashboard');
+    expect(error?.message).toContain('monorepo-marketing');
+    expect(error?.message).toContain('monorepo-blog');
+  });
+
+  it('should error when --yes flag is provided but multiple projects match', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+
+    // When autoConfirm is true but no projectName, it should error
+    let error: Error | undefined;
+    try {
+      await getLinkedProject(client, cwd, {
+        autoConfirm: true,
+      });
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error).toBeDefined();
+    expect(error?.message).toContain('Multiple projects found');
+    expect(error?.message).toContain('Use --project to specify');
+  });
 });
