@@ -62,7 +62,7 @@ export default async function getTeams(
     return body;
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
-      throw new InvalidToken();
+      throw new InvalidToken(client.authConfig.tokenSource);
     }
     throw error;
   }

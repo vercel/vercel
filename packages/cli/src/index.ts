@@ -477,11 +477,13 @@ const main = async () => {
   }
 
   // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  if (
-    typeof parsedArgs.flags['--token'] !== 'string' &&
-    process.env.VERCEL_TOKEN
-  ) {
+  // Track where the token came from for better error messages
+  let tokenSource: 'flag' | 'env' | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
     parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
   }
 
   if (
@@ -525,7 +527,7 @@ const main = async () => {
       return 1;
     }
 
-    client.authConfig = { token, skipWrite: true };
+    client.authConfig = { token, skipWrite: true, tokenSource };
 
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {
