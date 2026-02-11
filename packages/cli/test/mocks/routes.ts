@@ -56,7 +56,6 @@ export function useRoutes(count: number = 3) {
     // Filter by type if provided
     if (filter) {
       routes = routes.filter(r => {
-        if (filter === 'header') return r.route.headers;
         if (filter === 'redirect')
           return (
             r.route.status && [301, 302, 307, 308].includes(r.route.status)
@@ -402,19 +401,19 @@ export function useRoutesWithDiffForPublish() {
         ...createRoute(0),
         name: 'Added route',
         action: diff ? ('+' as const) : undefined,
-        routeTypes: ['rewrite' as const],
+        routeType: 'rewrite' as const,
       },
       {
         ...createRoute(1),
         name: 'Deleted route',
         action: diff ? ('-' as const) : undefined,
-        routeTypes: ['redirect' as const],
+        routeType: 'redirect' as const,
       },
       {
         ...createRoute(2),
         name: 'Modified route',
         action: diff ? ('~' as const) : undefined,
-        routeTypes: ['header' as const],
+        routeType: 'transform' as const,
       },
       {
         ...createRoute(3),
@@ -422,9 +421,25 @@ export function useRoutesWithDiffForPublish() {
         action: diff ? ('~' as const) : undefined,
         previousIndex: diff ? 5 : undefined,
         newIndex: diff ? 3 : undefined,
-        routeTypes: ['transform' as const],
+        routeType: 'transform' as const,
       },
-      { ...createRoute(4), name: 'Unchanged route', action: undefined },
+      {
+        ...createRoute(4),
+        name: 'Enabled route',
+        enabled: true,
+        action: diff ? ('~' as const) : undefined,
+        previousEnabled: diff ? false : undefined,
+        routeType: 'rewrite' as const,
+      },
+      {
+        ...createRoute(5),
+        name: 'Disabled route',
+        enabled: false,
+        action: diff ? ('~' as const) : undefined,
+        previousEnabled: diff ? true : undefined,
+        routeType: 'redirect' as const,
+      },
+      { ...createRoute(6), name: 'Unchanged route', action: undefined },
     ];
 
     res.json({
@@ -455,7 +470,7 @@ export function useRoutesForInspect() {
         dest: '/new-page',
         status: 308,
       },
-      routeTypes: ['redirect'],
+      routeType: 'redirect',
     },
     {
       id: 'route-header-456',
@@ -472,7 +487,7 @@ export function useRoutesForInspect() {
         },
         continue: true,
       },
-      routeTypes: ['header'],
+      routeType: 'transform',
     },
     {
       id: 'route-condition-789',
@@ -487,7 +502,7 @@ export function useRoutesForInspect() {
         missing: [{ type: 'cookie', key: 'auth' }],
         has: [{ type: 'header', key: 'Accept', value: 'text/html' }],
       },
-      routeTypes: ['rewrite'],
+      routeType: 'rewrite',
     },
     {
       id: 'route-transform-101',
@@ -519,7 +534,7 @@ export function useRoutesForInspect() {
           },
         ],
       },
-      routeTypes: ['rewrite', 'transform'],
+      routeType: 'rewrite',
     },
   ];
 
@@ -573,7 +588,7 @@ export function useRoutesForInspectDiff() {
           { type: 'query', key: 'version', value: '2' },
         ],
       },
-      routeTypes: ['rewrite', 'header'],
+      routeType: 'rewrite',
     },
     {
       id: 'route-diff-new',
@@ -585,7 +600,7 @@ export function useRoutesForInspectDiff() {
         src: '/new-page',
         dest: '/new-handler',
       },
-      routeTypes: ['rewrite'],
+      routeType: 'rewrite',
     },
   ];
 
@@ -606,7 +621,7 @@ export function useRoutesForInspectDiff() {
         },
         has: [{ type: 'header', key: 'Authorization' }],
       },
-      routeTypes: ['rewrite', 'header'],
+      routeType: 'rewrite',
     },
   ];
 

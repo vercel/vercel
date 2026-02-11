@@ -14,7 +14,7 @@ import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import {
-  getRouteTypeLabels,
+  getRouteTypeLabel,
   getSrcSyntaxLabel,
   type RoutingRule,
 } from '../../util/routes/types';
@@ -207,7 +207,7 @@ function formatRouteDiff(
     return lines.join('\n') + '\n' + formatRouteDetails(staging);
   }
 
-  const typeLabels = getRouteTypeLabels(staging);
+  const typeLabels = getRouteTypeLabel(staging);
   const syntaxLabel = getSrcSyntaxLabel(staging);
 
   lines.push(`  ${chalk.bold(staging.name)} ${chalk.yellow('(modified)')}`);
@@ -484,7 +484,7 @@ function diffConditions(
 
 function formatRouteDetails(rule: RoutingRule): string {
   const lines: string[] = [''];
-  const typeLabels = getRouteTypeLabels(rule);
+  const typeLabels = getRouteTypeLabel(rule);
   const syntaxLabel = getSrcSyntaxLabel(rule);
   const statusText =
     rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');

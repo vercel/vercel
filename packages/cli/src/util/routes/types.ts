@@ -36,8 +36,10 @@ export interface RoutingRule {
   previousIndex?: number;
   /** Present if route was reordered (new position) */
   newIndex?: number;
-  /** Route types computed by the API */
-  routeTypes?: RouteType[];
+  /** Present in diff when route's enabled state changed */
+  previousEnabled?: boolean;
+  /** Computed route type from the API */
+  routeType?: RouteType;
 }
 
 /**
@@ -71,18 +73,12 @@ export interface GetVersionsResponse {
 /**
  * Route type categories for filtering and display
  */
-export type RouteType =
-  | 'header'
-  | 'rewrite'
-  | 'redirect'
-  | 'set_status'
-  | 'transform';
+export type RouteType = 'rewrite' | 'redirect' | 'set_status' | 'transform';
 
 /**
  * Display labels for route types
  */
 const ROUTE_TYPE_LABELS: Record<RouteType, string> = {
-  header: 'Header',
   rewrite: 'Rewrite',
   redirect: 'Redirect',
   set_status: 'Set Status',
@@ -90,12 +86,12 @@ const ROUTE_TYPE_LABELS: Record<RouteType, string> = {
 };
 
 /**
- * Returns a comma-separated string of display labels for a rule's route types.
- * Returns '-' if the rule has no route types.
+ * Returns the display label for a rule's route type.
+ * Returns '-' if the rule has no route type.
  */
-export function getRouteTypeLabels(rule: RoutingRule): string {
-  const types = rule.routeTypes ?? [];
-  return types.map(t => ROUTE_TYPE_LABELS[t]).join(', ') || '-';
+export function getRouteTypeLabel(rule: RoutingRule): string {
+  if (!rule.routeType) return '-';
+  return ROUTE_TYPE_LABELS[rule.routeType] ?? '-';
 }
 
 /**

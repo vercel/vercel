@@ -61,6 +61,8 @@ describe('routes publish', () => {
     await expect(client.stderr).toOutput('Deleted route');
     await expect(client.stderr).toOutput('Modified route');
     await expect(client.stderr).toOutput('Reordered route');
+    await expect(client.stderr).toOutput('Enabled');
+    await expect(client.stderr).toOutput('Disabled');
   });
 
   it('should show reorder info in diff', async () => {

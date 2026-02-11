@@ -252,7 +252,7 @@ export function printDiffSummary(routes: RoutingRule[], maxDisplay = 10): void {
   for (const route of displayRoutes) {
     const symbol = getDiffSymbol(route);
     const label = getDiffLabel(route);
-    const routeType = getPrimaryRouteType(route);
+    const routeType = getRouteTypeDisplayLabel(route);
 
     output.print(
       `  ${symbol} ${route.name}${routeType ? ` ${chalk.gray(`(${routeType})`)}` : ''} ${chalk.gray(`- ${label}`)}\n`
@@ -283,22 +283,24 @@ export function getDiffLabel(route: RoutingRule): string {
     return `Reordered (${route.previousIndex! + 1} → ${route.newIndex! + 1})`;
   }
 
+  if (route.previousEnabled !== undefined) {
+    return route.enabled === false ? 'Disabled' : 'Enabled';
+  }
+
   return 'Modified';
 }
 
-export function getPrimaryRouteType(route: RoutingRule): string | null {
-  const types = route.routeTypes ?? [];
-  if (types.length === 0) return null;
+export function getRouteTypeDisplayLabel(route: RoutingRule): string | null {
+  if (!route.routeType) return null;
 
   const typeLabels: Record<RouteType, string> = {
-    header: 'Header',
     rewrite: 'Rewrite',
     redirect: 'Redirect',
     set_status: 'Set Status',
     transform: 'Transform',
   };
 
-  return typeLabels[types[0]] ?? null;
+  return typeLabels[route.routeType] ?? null;
 }
 
 /**

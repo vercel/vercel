@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { getCommandName } from '../../util/pkg-name';
 import {
-  getRouteTypeLabels,
+  getRouteTypeLabel,
   getSrcSyntaxLabel,
   type RoutingRule,
   type RouteType,
@@ -44,7 +44,6 @@ export default async function list(client: Client, argv: string[]) {
   // Validate filter value
   if (filter) {
     const validFilters: RouteType[] = [
-      'header',
       'rewrite',
       'redirect',
       'set_status',
@@ -233,7 +232,7 @@ function formatRoutesTable(
   actionSymbol?: DiffAction
 ): string {
   const rows: string[][] = routes.map((rule, index) => {
-    const typeLabels = getRouteTypeLabels(rule);
+    const typeLabels = getRouteTypeLabel(rule);
     const status =
       rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
     const prefix = actionSymbol || '';
@@ -275,7 +274,7 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
   const lines: string[] = [''];
 
   routes.forEach((rule, index) => {
-    const typeLabels = getRouteTypeLabels(rule);
+    const typeLabels = getRouteTypeLabel(rule);
     const syntaxLabel = getSrcSyntaxLabel(rule);
     const statusText =
       rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
