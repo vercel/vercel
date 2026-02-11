@@ -1,8 +1,3 @@
----
-name: node-backends
-description: Build and deploy Node.js backend apps (Express, Hono, Fastify) on Vercel as first-class projects
----
-
 # Node Backends on Vercel
 
 Vercel supports Node.js backend frameworks as first-class apps. Express and Hono are the most common, but Fastify, Elysia, NestJS, H3, and Koa are also supported. Your app is the entrypoint — not the `api/` folder. No rewrites, no build scripts. Just export your app and deploy.

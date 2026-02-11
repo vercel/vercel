@@ -1,8 +1,3 @@
----
-name: monorepos
-description: Configure and deploy monorepo projects on Vercel with Turborepo, pnpm workspaces, or Nx
----
-
 # Monorepos on Vercel
 
 Vercel auto-detects monorepo tools (Turborepo, Nx) and workspace managers (pnpm, Yarn, npm). Each project in the monorepo gets its own Vercel project, linked via `vercel link --repo`.

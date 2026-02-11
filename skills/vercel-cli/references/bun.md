@@ -1,8 +1,3 @@
----
-name: bun
-description: Use Bun as the runtime for Vercel projects
----
-
 # Bun on Vercel
 
 Vercel supports Bun as a runtime. To enable it, add `"bunVersion": "1.x"` to your `vercel.json`:
