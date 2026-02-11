@@ -508,9 +508,51 @@ describe('detectServices', () => {
       // Prefixed static service gets SPA fallback in rewrites
       expect(result.routes.rewrites).toHaveLength(1);
       expect(result.routes.rewrites[0]).toEqual({
-        src: '^/admin(?:/.*)?$',
+        src: '^(?=/admin(?:/|$))(?:/admin(?:/.*)?$)',
         dest: '/admin/index.html',
       });
+    });
+
+    it('should scope parent static fallback so descendant service prefixes are excluded', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            dashboard: {
+              framework: 'vite',
+              routePrefix: '/dashboard',
+            },
+            'dashboard-api': {
+              entrypoint: 'services/dashboard-api/index.go',
+              routePrefix: '/dashboard/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+      expect(result.errors).toEqual([]);
+
+      const staticRoute = result.routes.rewrites.find(
+        (route): route is Route & { src: string; dest: string } =>
+          'src' in route &&
+          typeof route.src === 'string' &&
+          'dest' in route &&
+          route.dest === '/dashboard/index.html'
+      );
+      expect(staticRoute).toBeDefined();
+
+      const staticRegex = new RegExp(staticRoute!.src);
+      expect(staticRegex.test('/dashboard')).toBe(true);
+      expect(staticRegex.test('/dashboard/settings')).toBe(true);
+      expect(staticRegex.test('/dashboard/api')).toBe(false);
+      expect(staticRegex.test('/dashboard/api/ping')).toBe(false);
+
+      const apiRoute = findMatchingRoute(
+        result.routes.rewrites,
+        '/dashboard/api/ping'
+      );
+      expect(apiRoute).toBeDefined();
+      expect(apiRoute!.dest).toBe('/services/dashboard-api/index');
+      expect(apiRoute).toHaveProperty('check', true);
     });
 
     it('should pass routePrefix in builder config for static services', async () => {
@@ -593,20 +635,22 @@ describe('detectServices', () => {
       // Function service and prefixed static service get rewrites
       expect(result.routes.rewrites).toHaveLength(2);
       expect(result.routes.rewrites).toContainEqual({
-        src: '^/api(?:/.*)?$',
+        src: '^(?=/api(?:/|$))(?:/api(?:/.*)?$)',
         dest: '/api/index',
         check: true,
       });
       expect(result.routes.rewrites).toContainEqual({
-        src: '^/admin(?:/.*)?$',
+        src: '^(?=/admin(?:/|$))(?:/admin(?:/.*)?$)',
         dest: '/admin/index.html',
       });
 
-      // Root static service gets filesystem + SPA fallback in defaults
+      // Root static service gets filesystem + SPA fallback in defaults.
+      // The SPA catch-all excludes prefixes owned by other services
+      // so they fall through to their own route tables (e.g. error phases).
       expect(result.routes.defaults).toHaveLength(2);
       expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
       expect(result.routes.defaults).toContainEqual({
-        src: '/(.*)',
+        src: '^(?!/admin(?:/|$))(?!/api(?:/|$))(?:/(.*))',
         dest: '/index.html',
       });
     });

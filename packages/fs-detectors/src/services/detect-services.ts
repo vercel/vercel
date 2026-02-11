@@ -1,4 +1,9 @@
 import type { Route } from '@vercel/routing-utils';
+import {
+  getOwnershipGuard,
+  normalizeRoutePrefix,
+  scopeRouteSourceToOwnership,
+} from '@vercel/routing-utils';
 import type {
   DetectServicesOptions,
   DetectServicesResult,
@@ -145,9 +150,12 @@ export function generateServicesRoutes(
     )
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
+  const allWebPrefixes = getWebRoutePrefixes(sortedWebServices);
+
   for (const service of sortedWebServices) {
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
+    const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
 
     // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
     // own route tables. Skip synthetic route generation for them.
@@ -159,10 +167,16 @@ export function generateServicesRoutes(
       // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
         defaults.push({ handle: 'filesystem' });
-        defaults.push({ src: '/(.*)', dest: '/index.html' });
+        defaults.push({
+          src: scopeRouteSourceToOwnership('/(.*)', ownershipGuard),
+          dest: '/index.html',
+        });
       } else {
         rewrites.push({
-          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          src: scopeRouteSourceToOwnership(
+            `^/${normalizedPrefix}(?:/.*)?$`,
+            ownershipGuard
+          ),
           dest: `/${normalizedPrefix}/index.html`,
         });
       }
@@ -178,10 +192,17 @@ export function generateServicesRoutes(
         : `/${extensionless}`;
 
       if (routePrefix === '/') {
-        defaults.push({ src: '^/(.*)$', dest: functionPath, check: true });
+        defaults.push({
+          src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
+          dest: functionPath,
+          check: true,
+        });
       } else {
         rewrites.push({
-          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          src: scopeRouteSourceToOwnership(
+            `^/${normalizedPrefix}(?:/.*)?$`,
+            ownershipGuard
+          ),
           dest: functionPath,
           check: true,
         });
@@ -194,4 +215,15 @@ export function generateServicesRoutes(
   }
 
   return { rewrites, defaults, crons, workers };
+}
+
+function getWebRoutePrefixes(services: ResolvedService[]): string[] {
+  const unique = new Set<string>();
+  for (const service of services) {
+    if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
+      continue;
+    }
+    unique.add(normalizeRoutePrefix(service.routePrefix));
+  }
+  return Array.from(unique);
 }

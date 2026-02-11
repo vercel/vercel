@@ -21,6 +21,10 @@
       "mustContain": "pong"
     },
     {
+      "path": "/dashboard/api/bad-route",
+      "status": 404
+    },
+    {
       "path": "/backend",
       "status": 200,
       "mustContain": "Hello from FastAPI"
