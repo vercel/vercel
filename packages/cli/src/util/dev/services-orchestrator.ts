@@ -367,11 +367,18 @@ export class ServicesOrchestrator {
           entrypoint = entrypoint.slice(wsPrefix.length);
         }
       }
+      // Mirror services build behavior in dev: when a service doesn't declare
+      // an explicit framework (runtime-only services), builders should still
+      // receive the project framework context of "services".
+      const frameworkForDev = service.framework || 'services';
       const result = await builder.startDevServer({
         entrypoint,
         workPath: workspacePath,
         repoRootPath: this.repoRoot,
-        config: { framework: service.framework },
+        config: {
+          ...(service.builder?.config || {}),
+          framework: frameworkForDev,
+        },
         meta: {
           isDev: true,
           env,
