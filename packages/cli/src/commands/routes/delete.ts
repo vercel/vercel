@@ -38,7 +38,6 @@ export default async function del(client: Client, argv: string[]) {
   const existingStagingVersion = versions.find(v => v.isStaging);
 
   // Fetch all routes to resolve identifiers
-  const fetchStamp = stamp();
   output.spinner('Fetching routes');
   const { routes } = await getRoutes(client, project.id, { teamId });
   output.stopSpinner();
