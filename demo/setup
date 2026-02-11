@@ -8,6 +8,7 @@ from pathlib import Path
 # ── Config ───────────────────────────────────────────────────────────
 HOME = Path.home()
 REPO_ROOT = Path(__file__).resolve().parent.parent
+MAIN_WORKTREE = HOME / "vercel" / "vercel"  # main branch — used for CLI build
 DEMO_OLD = HOME / "demo-old"
 DEMO_NEW = HOME / "demo-new"
 OLD_VERSION = "50.4.9"
@@ -115,10 +116,10 @@ if need_install:
 
 
 # ── 3. Build new CLI from source ────────────────────────────────────
-step(f"Building new CLI from {REPO_ROOT}")
-run_visible(["pnpm", "--filter", "vercel...", "build"], cwd=REPO_ROOT)
+step(f"Building new CLI from {MAIN_WORKTREE}")
+run_visible(["pnpm", "--filter", "vercel...", "build"], cwd=MAIN_WORKTREE)
 
-dist = REPO_ROOT / "packages" / "cli" / "dist" / "index.js"
+dist = MAIN_WORKTREE / "packages" / "cli" / "dist" / "index.js"
 if dist.exists():
     ok("Built: packages/cli/dist/index.js")
 else:

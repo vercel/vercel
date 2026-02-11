@@ -5,7 +5,7 @@ when = """case "$PWD" in "$HOME"/demo-old*|"$HOME"/demo-new*) true ;; *) false ;
 command = """
 case "$PWD" in
   "$HOME"/demo-old*) ver=$("$HOME/demo-old/node_modules/.bin/vercel" --version 2>/dev/null) ;;
-  "$HOME"/demo-new*) ver=$(node "$HOME/vercel/vercel-demo/packages/cli/dist/index.js" --version 2>/dev/null) ;;
+  "$HOME"/demo-new*) ver=$(node "$HOME/vercel/vercel/packages/cli/dist/index.js" --version 2>/dev/null) ;;
 esac
 team=$(python3 -c "
 import json,os
