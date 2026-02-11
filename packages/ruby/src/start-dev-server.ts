@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import type { ChildProcess } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import which from 'which';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
@@ -197,17 +197,6 @@ export const startDevServer: StartDevServer = async opts => {
     await new Promise<void>((resolve, reject) => {
       let resolved = false;
 
-      const shimPath = createDevRubyShim(workPath, entrypoint);
-      if (!shimPath) {
-        rejectChildReady(
-          new NowBuildError({
-            code: 'RUBY_DEV_SHIM_ERROR',
-            message: 'Failed to create Ruby dev shim.',
-          })
-        );
-        return reject(new Error('Failed to create Ruby dev shim'));
-      }
-
       // Prefer running via Bundler when Gemfile exists
       const gemfile = detectGemfile(workPath, entrypoint);
       const bundlePath = which.sync('bundle', { nothrow: true }) as
@@ -217,6 +206,22 @@ export const startDevServer: StartDevServer = async opts => {
         bundlePath ||
         (which.sync('bundler', { nothrow: true }) as string | null);
       const projectDir = gemfile ? dirname(gemfile) : workPath;
+
+      // For nested services (e.g. services/ruby-api/config.ru), the shim
+      // entrypoint must be relative to the project dir (where Gemfile lives)
+      // so that relative requires in config.ru (e.g. require './app') resolve
+      // correctly when cwd is the service directory.
+      const shimEntrypoint = relative(projectDir, join(workPath, entrypoint));
+      const shimPath = createDevRubyShim(workPath, shimEntrypoint);
+      if (!shimPath) {
+        rejectChildReady(
+          new NowBuildError({
+            code: 'RUBY_DEV_SHIM_ERROR',
+            message: 'Failed to create Ruby dev shim.',
+          })
+        );
+        return reject(new Error('Failed to create Ruby dev shim'));
+      }
       if (gemfile) {
         env.BUNDLE_GEMFILE = gemfile;
       }
@@ -255,9 +260,11 @@ export const startDevServer: StartDevServer = async opts => {
             args = ['exec', 'ruby', shimPath];
           }
 
-          debug(`Starting Ruby dev server: ${cmd} ${args.join(' ')}`);
+          debug(
+            `Starting Ruby dev server: ${cmd} ${args.join(' ')} (cwd: ${projectDir})`
+          );
           const child = spawn(cmd, args, {
-            cwd: workPath,
+            cwd: projectDir,
             env,
             stdio: ['inherit', 'pipe', 'pipe'],
           });

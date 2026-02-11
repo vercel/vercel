@@ -55,7 +55,10 @@ export async function detectServices(
     }
 
     if (autoResult.services) {
-      const result = resolveAllConfiguredServices(autoResult.services);
+      const result = await resolveAllConfiguredServices(
+        autoResult.services,
+        scopedFs
+      );
       const routes = generateServicesRoutes(result.services);
       return {
         services: result.services,
@@ -80,7 +83,10 @@ export async function detectServices(
   }
 
   // Resolve configured services from vercel.json
-  const result = resolveAllConfiguredServices(configuredServices);
+  const result = await resolveAllConfiguredServices(
+    configuredServices,
+    scopedFs
+  );
 
   // Generate routes
   const routes = generateServicesRoutes(result.services);

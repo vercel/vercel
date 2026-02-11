@@ -54,7 +54,7 @@ export interface ServicesRoutes {
 }
 
 export interface DetectServicesResult {
-  services: ResolvedService[];
+  services: Service[];
   /** Routing rules derived from services */
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
@@ -79,6 +79,14 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+};
+
+export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
+  node: ['package.json'],
+  python: ['pyproject.toml', 'requirements.txt', 'Pipfile'],
+  go: ['go.mod'],
+  ruby: ['Gemfile'],
+  rust: ['Cargo.toml'],
 };
 
 export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {

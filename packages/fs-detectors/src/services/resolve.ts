@@ -1,21 +1,91 @@
 import { posix as posixPath } from 'path';
 import type {
-  ResolvedService,
+  Service,
   ExperimentalServiceConfig,
   ExperimentalServices,
   ServiceDetectionError,
+  ServiceRuntime,
 } from './types';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
+  RUNTIME_MANIFESTS,
 } from './types';
-import { getBuilderForRuntime, inferServiceRuntime } from './utils';
+import { getBuilderForRuntime, hasFile, inferServiceRuntime } from './utils';
 import frameworkList from '@vercel/frameworks';
+import type { DetectorFilesystem } from '../detectors/filesystem';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+function toWorkspaceRelativeEntrypoint(
+  entrypoint: string,
+  workspace: string
+): string {
+  const normalizedEntrypoint = posixPath.normalize(entrypoint);
+  if (workspace === '.') {
+    return normalizedEntrypoint;
+  }
+  const workspacePrefix = `${workspace}/`;
+  if (normalizedEntrypoint.startsWith(workspacePrefix)) {
+    return normalizedEntrypoint.slice(workspacePrefix.length);
+  }
+  const relativeEntrypoint = posixPath.relative(
+    workspace,
+    normalizedEntrypoint
+  );
+  if (relativeEntrypoint === '' || relativeEntrypoint.startsWith('..')) {
+    return normalizedEntrypoint;
+  }
+  return relativeEntrypoint;
+}
+
+async function inferWorkspaceFromNearestManifest({
+  fs,
+  entrypoint,
+  runtime,
+}: {
+  fs: DetectorFilesystem;
+  entrypoint?: string;
+  runtime?: ServiceRuntime;
+}): Promise<string | undefined> {
+  if (!entrypoint || !runtime) {
+    return undefined;
+  }
+  const manifests = RUNTIME_MANIFESTS[runtime];
+  if (!manifests || manifests.length === 0) {
+    return undefined;
+  }
+
+  let dir = posixPath.dirname(posixPath.normalize(entrypoint)) || '.';
+  if (dir === '') {
+    dir = '.';
+  }
+
+  let reachedRoot = false;
+  while (!reachedRoot) {
+    for (const manifest of manifests) {
+      const manifestPath =
+        dir === '.' ? manifest : posixPath.join(dir, manifest);
+      if (await hasFile(fs, manifestPath)) {
+        return dir;
+      }
+    }
+    if (dir === '.' || dir === '/') {
+      reachedRoot = true;
+    } else {
+      const parent = posixPath.dirname(dir);
+      if (!parent || parent === dir) {
+        reachedRoot = true;
+      } else {
+        dir = parent;
+      }
+    }
+  }
+
+  return undefined;
+}
 
 function normalizeRoutePrefix(routePrefix: string): string {
   let normalized = routePrefix.startsWith('/')
@@ -124,18 +194,39 @@ export function validateServiceConfig(
 /**
  * Resolve a single service from user configuration.
  */
-export function resolveConfiguredService(
+export async function resolveConfiguredService(
   name: string,
   config: ExperimentalServiceConfig,
+  fs: DetectorFilesystem,
   group?: string
-): ResolvedService {
+): Promise<Service> {
   const type = config.type || 'web';
-  const workspace = config.workspace || '.';
+  const inferredRuntime = inferServiceRuntime(config);
+  let workspace = config.workspace || '.';
+  let resolvedEntrypoint = config.entrypoint;
+
+  // If no explicit workspace is provided, infer from the nearest runtime
+  // manifest relative to the configured entrypoint.
+  if (!config.workspace) {
+    const inferredWorkspace = await inferWorkspaceFromNearestManifest({
+      fs,
+      entrypoint: resolvedEntrypoint,
+      runtime: inferredRuntime,
+    });
+    if (inferredWorkspace) {
+      workspace = inferredWorkspace;
+      if (resolvedEntrypoint) {
+        resolvedEntrypoint = toWorkspaceRelativeEntrypoint(
+          resolvedEntrypoint,
+          inferredWorkspace
+        );
+      }
+    }
+  }
+
   const topic = type === 'worker' ? config.topic || 'default' : config.topic;
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
-
-  const inferredRuntime = inferServiceRuntime(config);
 
   let builderUse: string;
   let builderSrc: string;
@@ -145,13 +236,13 @@ export function resolveConfiguredService(
     builderUse = framework?.useRuntime?.use || '@vercel/static-build';
     // Prefer user-provided entrypoint over framework default
     builderSrc =
-      config.entrypoint || framework?.useRuntime?.src || 'package.json';
+      resolvedEntrypoint || framework?.useRuntime?.src || 'package.json';
   } else if (config.builder) {
     builderUse = config.builder;
-    builderSrc = config.entrypoint!;
+    builderSrc = resolvedEntrypoint!;
   } else {
     builderUse = getBuilderForRuntime(inferredRuntime!);
-    builderSrc = config.entrypoint!;
+    builderSrc = resolvedEntrypoint!;
   }
 
   // routePrefix is required for web services; normalize to always start with /
@@ -204,7 +295,7 @@ export function resolveConfiguredService(
     type,
     group,
     workspace,
-    entrypoint: config.entrypoint,
+    entrypoint: resolvedEntrypoint,
     routePrefix,
     framework: config.framework,
     builder: {
@@ -225,11 +316,14 @@ export function resolveConfiguredService(
  * Resolve all services from vercel.json experimentalServices.
  * Validates each service configuration.
  */
-export function resolveAllConfiguredServices(services: ExperimentalServices): {
-  services: ResolvedService[];
+export async function resolveAllConfiguredServices(
+  services: ExperimentalServices,
+  fs: DetectorFilesystem
+): Promise<{
+  services: Service[];
   errors: ServiceDetectionError[];
-} {
-  const resolved: ResolvedService[] = [];
+}> {
+  const resolved: Service[] = [];
   const errors: ServiceDetectionError[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
@@ -242,7 +336,7 @@ export function resolveAllConfiguredServices(services: ExperimentalServices): {
       continue;
     }
 
-    const service = resolveConfiguredService(name, serviceConfig);
+    const service = await resolveConfiguredService(name, serviceConfig, fs);
 
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);

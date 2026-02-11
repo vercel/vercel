@@ -16,6 +16,17 @@ import {
   ROUTE_OWNING_BUILDERS,
 } from './types';
 
+export async function hasFile(
+  fs: DetectorFilesystem,
+  filePath: string
+): Promise<boolean> {
+  try {
+    return await fs.isFile(filePath);
+  } catch {
+    return false;
+  }
+}
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {
