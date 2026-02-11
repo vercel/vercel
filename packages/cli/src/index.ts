@@ -755,6 +755,10 @@ const main = async () => {
           telemetry.trackCliCommandLogout(userSuppliedSubCommand);
           func = require('./commands/logout').default;
           break;
+        case 'metrics':
+          telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+          func = require('./commands/metrics').default;
+          break;
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = require('./commands/microfrontends').default;

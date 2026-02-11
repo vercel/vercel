@@ -25,6 +25,7 @@ import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
 import { logsv2Command } from './logsv2/command';
 import { mcpCommand } from './mcp/command';
+import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
@@ -72,6 +73,7 @@ const commandsStructs = [
   logsCommand,
   logsv2Command,
   mcpCommand,
+  metricsCommand,
   microfrontendsCommand,
   openCommand,
   projectCommand,
