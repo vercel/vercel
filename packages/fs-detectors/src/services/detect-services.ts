@@ -173,16 +173,9 @@ export function generateServicesRoutes(
       // Match the v3 runtime output naming convention: extensionless function paths.
       // For example, "api/index.ts" → "/api/index".
       const extensionless = stripEntrypointExtension(builderSrc);
-      let functionPath = extensionless.startsWith('/')
+      const functionPath = extensionless.startsWith('/')
         ? extensionless
         : `/${extensionless}`;
-
-      // Avoid collisions with route-owning root services (for example Next.js at "/")
-      // when a non-root runtime defaults to "index.*" at the repo root.
-      // In that case, rewriting to "/index" can be claimed by the root service.
-      if (routePrefix !== '/' && functionPath === '/index') {
-        functionPath = routePrefix;
-      }
 
       if (routePrefix === '/') {
         defaults.push({ src: '^/(.*)$', dest: functionPath, check: true });
