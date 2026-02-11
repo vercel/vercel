@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
+import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -63,6 +64,7 @@ describe.skipIf(flakey)('build', () => {
         },
       ],
     });
+    expect(builds.cliVersion).toEqual(cliPkg.version);
 
     // "static" directory contains static files
     const files = await fs.readdir(join(output, 'static'));
