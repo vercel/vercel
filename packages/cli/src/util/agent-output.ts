@@ -66,8 +66,18 @@ export function buildCommandWithScope(
   const args = argv.slice(2);
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--scope' || args[i] === '--team') {
-      i++;
+    // Handle space-separated: --scope VALUE, --team VALUE, -S VALUE, -T VALUE
+    if (
+      args[i] === '--scope' ||
+      args[i] === '--team' ||
+      args[i] === '-S' ||
+      args[i] === '-T'
+    ) {
+      i++; // skip the next arg (the value)
+      continue;
+    }
+    // Handle equals-separated: --scope=VALUE, --team=VALUE
+    if (args[i].startsWith('--scope=') || args[i].startsWith('--team=')) {
       continue;
     }
     out.push(args[i]);

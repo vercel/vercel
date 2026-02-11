@@ -164,6 +164,34 @@ describe('buildCommandWithScope', () => {
       'vercel pull --scope new-team'
     );
   });
+
+  it('replaces --scope=value (equals-separated) with --scope', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--scope=old-team'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --scope new-team'
+    );
+  });
+
+  it('replaces --team=value (equals-separated) with --scope', () => {
+    const argv = ['/node', '/vc.js', 'pull', '--team=old-team'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel pull --scope new-team'
+    );
+  });
+
+  it('replaces -S shorthand with --scope', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-S', 'old-team'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --scope new-team'
+    );
+  });
+
+  it('replaces -T shorthand with --scope', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-T', 'old-team'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --scope new-team'
+    );
+  });
 });
 
 describe('enrichActionRequiredWithInvokingCommand', () => {
