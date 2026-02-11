@@ -340,9 +340,16 @@ const main = async () => {
     return 1;
   }
 
-  // Shared API `Client` instance for all sub-commands to utilize
-  // When an agent is detected, --non-interactive is effectively the default
-  const nonInteractive = parsedArgs.flags['--non-interactive'] ?? isAgent;
+  // Shared API `Client` instance for all sub-commands to utilize.
+  // Non-interactive when: --non-interactive flag, or agent running without a TTY (so Cursor terminal stays interactive).
+  const stdinIsTTY = process.stdin?.isTTY === true;
+  const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
+  const nonInteractive = nonInteractiveFlag || (isAgent && !stdinIsTTY);
+
+  output.debug(
+    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
+  );
+
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,

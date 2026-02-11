@@ -6,6 +6,7 @@ import { getLinkedProject } from '../projects/link';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { outputActionRequired, buildCommandWithYes } from '../agent-output';
 
 /**
  * Checks if a project is already linked and if not, links the project and
@@ -52,11 +53,29 @@ export async function ensureLink(
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      output.error(
-        `Command ${getCommandName(
-          commandName
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
+      if (nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'confirmation_required',
+            message: `Command ${getCommandName(commandName)} requires confirmation. Use option --yes to confirm.`,
+            next: [
+              {
+                command: buildCommandWithYes(client.argv),
+                when: 'Confirm and run',
+              },
+            ],
+          },
+          link.exitCode
+        );
+      } else {
+        output.error(
+          `Command ${getCommandName(
+            commandName
+          )} requires confirmation. Use option ${param('--yes')} to confirm.`
+        );
+      }
     }
     if (nonInteractive) {
       process.exit(link.exitCode);

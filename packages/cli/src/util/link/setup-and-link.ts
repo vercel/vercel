@@ -162,12 +162,23 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   }
 
-  const projectOrNewProjectName = await inputProject(
-    client,
-    org,
-    projectName,
-    autoConfirm
-  );
+  let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
+  try {
+    projectOrNewProjectName = await inputProject(
+      client,
+      org,
+      projectName,
+      autoConfirm
+    );
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    }
+    throw err;
+  }
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
@@ -302,6 +313,12 @@ export default async function setupAndLink(
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
+    }
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
     }
     printError(err);
 

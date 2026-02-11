@@ -127,24 +127,47 @@ describe('ensureLink', () => {
       };
     });
 
-    it('calls process.exit with code when link is error and client.nonInteractive', async () => {
+    it('outputs action_required JSON and exits when link is error HEADLESS and client.nonInteractive', async () => {
       vi.mocked(getLinkedProject).mockResolvedValue({
-        status: 'error',
-        exitCode: 1,
-        reason: 'HEADLESS',
+        status: 'not_linked',
+        org: null,
+        project: null,
       });
       const setupAndLinkModule = await import(
         '../../../../src/util/link/setup-and-link'
       );
-      const setupAndLink = setupAndLinkModule.default as ReturnType<
+      const setupAndLinkFn = setupAndLinkModule.default as ReturnType<
         typeof vi.fn
       >;
-      vi.mocked(setupAndLink).mockClear();
+      vi.mocked(setupAndLinkFn).mockResolvedValue({
+        status: 'error',
+        exitCode: 1,
+        reason: 'HEADLESS',
+      });
+      const agentOutput = await import('../../../../src/util/agent-output');
+      const outputActionRequired = vi.mocked(agentOutput.outputActionRequired);
 
       (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.argv = ['/node', '/vc.js', 'deploy', '--cwd=/path'];
       await ensureLink('deploy', client, client.cwd, {});
       (client as { nonInteractive: boolean }).nonInteractive = false;
 
+      expect(outputActionRequired).toHaveBeenCalledTimes(1);
+      expect(outputActionRequired).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({
+          status: 'action_required',
+          reason: 'confirmation_required',
+          message: expect.stringContaining('requires confirmation'),
+          next: [
+            {
+              command: expect.stringMatching(/deploy.*--yes/),
+              when: 'Confirm and run',
+            },
+          ],
+        }),
+        1
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 

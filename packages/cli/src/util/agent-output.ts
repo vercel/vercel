@@ -41,6 +41,20 @@ export interface AgentErrorPayload {
 }
 
 /**
+ * Builds the invoking CLI command with --yes added (or retained).
+ * Used for non-interactive "confirmation required" payloads.
+ */
+export function buildCommandWithYes(
+  argv: string[],
+  pkgName: string = packageName
+): string {
+  const args = argv.slice(2);
+  const hasYes = args.some(a => a === '--yes' || a === '-y');
+  const out = hasYes ? [...args] : [...args, '--yes'];
+  return `${pkgName} ${out.join(' ')}`;
+}
+
+/**
  * Builds the invoking CLI command with --scope set to the given slug
  * (strips existing --scope/--team from argv so the result is canonical).
  */
@@ -109,7 +123,7 @@ export function outputActionRequired(
     client.argv
   );
   // eslint-disable-next-line no-console
-  console.log(JSON.stringify(enriched));
+  console.log(JSON.stringify(enriched, null, 2));
   process.exit(exitCode);
 }
 
@@ -127,6 +141,6 @@ export function outputAgentError(
     return;
   }
   // eslint-disable-next-line no-console
-  console.log(JSON.stringify(payload));
+  console.log(JSON.stringify(payload, null, 2));
   process.exit(exitCode);
 }

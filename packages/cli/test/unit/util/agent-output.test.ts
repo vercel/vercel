@@ -3,6 +3,7 @@ import {
   isActionRequiredPayload,
   outputActionRequired,
   buildCommandWithScope,
+  buildCommandWithYes,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
@@ -114,7 +115,7 @@ describe('outputActionRequired', () => {
     const client = { nonInteractive: true } as Client;
     outputActionRequired(client, payload);
     expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(payload));
+    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(payload, null, 2));
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
@@ -122,6 +123,23 @@ describe('outputActionRequired', () => {
     const client = { nonInteractive: true } as Client;
     outputActionRequired(client, payload, 2);
     expect(exitSpy).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('buildCommandWithYes', () => {
+  it('appends --yes when argv has no --yes', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--cwd=/path'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --cwd=/path --yes');
+  });
+
+  it('keeps existing --yes when present', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--yes'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('keeps existing -y when present', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-y'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy -y');
   });
 });
 

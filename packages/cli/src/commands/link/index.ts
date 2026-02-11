@@ -88,11 +88,12 @@ export default async function link(client: Client) {
       }
     }
 
-    // Only use non-interactive behavior when the flag is explicitly enabled (link stays interactive otherwise)
-    const linkNonInteractive = client.argv.includes('--non-interactive');
+    // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
+    const linkNonInteractive =
+      client.nonInteractive || client.argv.includes('--non-interactive');
 
     const link = await ensureLink('link', client, cwd, {
-      autoConfirm: yes || linkNonInteractive,
+      autoConfirm: yes,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
       projectId: parsedArgs.flags['--project-id'],

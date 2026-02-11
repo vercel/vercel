@@ -49,7 +49,7 @@ describe('open', () => {
   });
 
   describe('--non-interactive', () => {
-    it('returns 1 when not linked (open checks link before ensureLink)', async () => {
+    it('outputs action_required JSON and exits when not linked (open uses ensureLink)', async () => {
       const cwd = setupTmpDir();
       useUser({ version: 'northstar' });
       useTeams('team_dummy');
@@ -58,10 +58,21 @@ describe('open', () => {
       client.setArgv('open', '--non-interactive');
       (client as { nonInteractive: boolean }).nonInteractive = true;
 
-      const exitCode = await openCommand(client);
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      expect(exitCode).toBe(1);
-      expect(client.getFullOutput()).toContain('requires a linked project');
+      await expect(openCommand(client)).rejects.toThrow('process.exit(1)');
+      expect(logSpy).toHaveBeenCalled();
+      const output = logSpy.mock.calls.map(c => c[0]).join('\n');
+      expect(output).toContain('action_required');
+      expect(output).toContain('missing_scope');
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
@@ -103,23 +114,44 @@ describe('open', () => {
 
   describe('without linked project', () => {
     it('should error when project is not linked', async () => {
+      const linkModule = await import('../../../../src/util/projects/link');
+      const setupAndLinkModule = await import(
+        '../../../../src/util/link/setup-and-link'
+      );
+      const getLinkedProjectSpy = vi
+        .spyOn(linkModule, 'getLinkedProject')
+        .mockResolvedValue({
+          status: 'not_linked',
+          org: null,
+          project: null,
+        });
+      const setupAndLinkSpy = vi
+        .spyOn(setupAndLinkModule, 'default')
+        .mockResolvedValue({
+          status: 'error',
+          reason: 'HEADLESS',
+          exitCode: 1,
+        });
+
       const { setupTmpDir } = await import(
         '../../../helpers/setup-unit-fixture'
       );
       const cwd = setupTmpDir();
       client.cwd = cwd;
-
       useUser();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
 
       client.setArgv('open');
       const exitCode = await openCommand(client);
 
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        'This command requires a linked project. Please run:'
-      );
-      await expect(client.stderr).toOutput('  vercel link');
+      expect(client.stderr.getFullOutput()).toContain('requires confirmation');
+      expect(client.stderr.getFullOutput()).toMatch(/--yes|yes/);
       expect(openMock).not.toHaveBeenCalled();
+
+      getLinkedProjectSpy.mockRestore();
+      setupAndLinkSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 });
