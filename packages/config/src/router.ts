@@ -327,9 +327,13 @@ export interface Transform {
  */
 export interface Route {
   /** Pattern to match request paths using path-to-regexp syntax */
-  src: string;
+  src?: string;
+  /** Alias for `src`. A pattern that matches each incoming pathname (excluding querystring). */
+  source?: string;
   /** Optional destination for rewrite/redirect */
   dest?: string;
+  /** Alias for `dest`. An absolute pathname to an existing resource or an external URL. */
+  destination?: string;
   /** Array of HTTP methods to match. If not provided, matches all methods */
   methods?: string[];
   /** Array of transforms to apply */
@@ -340,6 +344,8 @@ export interface Route {
   missing?: Condition[];
   /** Status code for the response */
   status?: number;
+  /** Alias for `status`. An optional integer to override the status code of the response. */
+  statusCode?: number;
   /** Headers to set (alternative to using transforms) */
   headers?: Record<string, string>;
   /** Environment variables referenced in dest or transforms */
@@ -1094,11 +1100,15 @@ export class Router {
    *    });
    */
   public route(config: Route): this {
-    this.validateSourcePattern(config.src);
+    const src = config.src ?? config.source;
+    if (!src) {
+      throw new Error('Route must define either `src` or `source`.');
+    }
+    this.validateSourcePattern(src);
 
     // Auto-extract env vars from each transform if not already specified
     if (config.transforms) {
-      const pathParams = this.extractPathParams(config.src);
+      const pathParams = this.extractPathParams(src);
       for (const transform of config.transforms) {
         if (!transform.env && transform.args) {
           const envVars = extractEnvVars(transform.args, pathParams);
