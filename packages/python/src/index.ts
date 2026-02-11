@@ -30,6 +30,8 @@ import {
   installRequirement,
   calculateBundleSize,
   LAMBDA_SIZE_THRESHOLD_BYTES,
+  findRepoRoot,
+  copyDirectoryToFiles,
 } from './install';
 import {
   classifyPackages,
@@ -57,7 +59,6 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
-import { renderTrampoline } from './trampoline';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -419,16 +420,6 @@ export const build: BuildV3 = async ({
   // manifest, which means that it is NOT SAFE to re-run `uv sync` at any
   // point after as that would effectively remove vercel-runtime from the
   // bundle rendering the function inoperable.
-  const runtimeDep =
-    baseEnv.VERCEL_RUNTIME_PYTHON ||
-    `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
-  debug(`Installing ${runtimeDep}`);
-  await uv.pip({
-    venvPath,
-    projectDir: join(workPath, entryDirectory),
-    args: ['install', runtimeDep],
-  });
-
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -437,6 +428,45 @@ export const build: BuildV3 = async ({
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
+
+  const runtimeTrampoline = `
+import importlib
+import os
+import os.path
+import site
+import sys
+
+_here = os.path.dirname(__file__)
+
+os.environ.update({
+  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
+  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
+  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+})
+
+_vendor_rel = '${vendorDir}'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
+
+from vercel_runtime.vc_init import vc_handler
+`;
 
   const predefinedExcludes = [
     '.git/**',
@@ -594,14 +624,6 @@ export const build: BuildV3 = async ({
       files[p] = f;
     }
   }
-
-  const runtimeTrampoline = renderTrampoline({
-    moduleName,
-    entrypointWithSuffix,
-    vendorDir,
-    runtimeInstallEnabled,
-    uvBundleDir: UV_BUNDLE_DIR,
-  });
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else

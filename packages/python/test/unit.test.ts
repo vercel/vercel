@@ -1984,7 +1984,6 @@ import {
   generateRuntimeRequirements,
   parseUvLock,
 } from '@vercel/python-analysis';
-import { renderTrampoline } from '../src/trampoline';
 import { FileFsRef } from '@vercel/build-utils';
 
 describe('runtime dependency installation support', () => {
@@ -2161,75 +2160,5 @@ version = "2.31.0"
       expect(content).toContain('# Auto-generated');
       expect(content).not.toContain('==');
     });
-  });
-});
-
-describe('renderTrampoline', () => {
-  it('renders template with basic variables', () => {
-    const result = renderTrampoline({
-      moduleName: 'api.handler',
-      entrypointWithSuffix: 'api/handler.py',
-      vendorDir: '_vendor',
-      runtimeInstallEnabled: false,
-      uvBundleDir: '_uv',
-    });
-
-    expect(result).toContain('__VC_HANDLER_MODULE_NAME": "api.handler"');
-    expect(result).toContain('__VC_HANDLER_ENTRYPOINT": "api/handler.py"');
-    expect(result).toContain('_vendor_rel = "_vendor"');
-    expect(result).toContain('from vercel_runtime.vc_init import vc_handler');
-  });
-
-  it('includes runtime install code when enabled', () => {
-    const result = renderTrampoline({
-      moduleName: 'handler',
-      entrypointWithSuffix: 'handler.py',
-      vendorDir: '_vendor',
-      runtimeInstallEnabled: true,
-      uvBundleDir: '_uv',
-    });
-
-    expect(result).toContain('import subprocess');
-    expect(result).toContain('import time');
-    expect(result).toContain('_deps_dir = "/tmp/_vc_deps_overflow"');
-    expect(result).toContain('_uv_path = os.path.join(_here, "_uv", "uv")');
-    expect(result).toContain('Runtime dependency installation failed');
-    // Check for production logging
-    expect(result).toContain('Installing runtime dependencies...');
-    expect(result).toContain('Runtime dependencies installed in');
-    expect(result).toContain('Using cached runtime dependencies');
-  });
-
-  it('excludes runtime install code when disabled', () => {
-    const result = renderTrampoline({
-      moduleName: 'handler',
-      entrypointWithSuffix: 'handler.py',
-      vendorDir: '_vendor',
-      runtimeInstallEnabled: false,
-      uvBundleDir: '_uv',
-    });
-
-    expect(result).not.toContain('import subprocess');
-    expect(result).not.toContain('import time');
-    expect(result).not.toContain('_deps_dir = "/tmp/_vc_deps_overflow"');
-    expect(result).not.toContain('Runtime dependency installation failed');
-    expect(result).not.toContain('Installing runtime dependencies...');
-  });
-
-  it('uses custom uvBundleDir in runtime install code', () => {
-    const result = renderTrampoline({
-      moduleName: 'handler',
-      entrypointWithSuffix: 'handler.py',
-      vendorDir: '_vendor',
-      runtimeInstallEnabled: true,
-      uvBundleDir: 'custom_uv_dir',
-    });
-
-    expect(result).toContain(
-      '_uv_path = os.path.join(_here, "custom_uv_dir", "uv")'
-    );
-    expect(result).toContain(
-      '_requirements = os.path.join(_here, "custom_uv_dir", "_runtime_requirements.txt")'
-    );
   });
 });

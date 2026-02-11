@@ -8,8 +8,7 @@
     "dist",
     "vc_init.py",
     "vc_init_dev_asgi.py",
-    "vc_init_dev_wsgi.py",
-    "trampoline.py.tmpl"
+    "vc_init_dev_wsgi.py"
   ],
   "repository": {
     "type": "git",
@@ -26,11 +25,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vercel/python-analysis": "workspace:*",
-    "mustache": "4.2.0"
+    "@vercel/python-analysis": "workspace:*"
   },
   "devDependencies": {
-    "@types/mustache": "4.2.5",
     "@renovatebot/pep440": "4.2.1",
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "11.0.2",
@@ -45,6 +42,7 @@
     "jest-junit": "16.0.0",
     "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.2",
+    "smol-toml": "1.5.2",
     "vitest": "2.1.4",
     "which": "3.0.0"
   }
