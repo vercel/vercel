@@ -1,11 +1,18 @@
 import { packageName } from '../../util/pkg-name';
 
-export const SUPPORTED_CREDIT_CURRENCIES = [
-  'v0',
-  'ai_gateway',
-  'agent',
-] as const;
-export type CreditCurrency = (typeof SUPPORTED_CREDIT_CURRENCIES)[number];
+/**
+ * Supported credit types for purchase, matching the API's creditTypeSchema:
+ *   z.enum(['v0', 'gateway', 'agent'])
+ */
+export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
+export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
+
+/** Human-readable labels for each credit type */
+export const CREDIT_TYPE_LABELS: Record<CreditType, string> = {
+  v0: 'v0',
+  gateway: 'AI Gateway',
+  agent: 'Vercel Agent',
+};
 
 export const creditsSubcommand = {
   name: 'credits',
@@ -13,7 +20,7 @@ export const creditsSubcommand = {
   description: 'Purchase Vercel credits for your team',
   arguments: [
     {
-      name: 'currency',
+      name: 'credit-type',
       required: true,
     },
     {
@@ -29,10 +36,10 @@ export const creditsSubcommand = {
     },
     {
       name: 'Purchase $250 of AI Gateway credits',
-      value: `${packageName} buy credits ai_gateway 250`,
+      value: `${packageName} buy credits gateway 250`,
     },
     {
-      name: 'Purchase $50 of Agent credits',
+      name: 'Purchase $50 of Vercel Agent credits',
       value: `${packageName} buy credits agent 50`,
     },
   ],
