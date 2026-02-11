@@ -1,5 +1,67 @@
 # vercel
 
+## 50.15.0
+
+### Minor Changes
+
+- Add `vercel flags` command to manage feature flags from the CLI. This includes subcommands for listing, inspecting, creating, deleting, archiving, enabling, and disabling feature flags, as well as managing SDK keys for flag evaluation. ([#14710](https://github.com/vercel/vercel/pull/14710))
+
+  New commands:
+
+  - `vercel flags ls` - List all feature flags
+  - `vercel flags inspect <flag>` - Display detailed information about a feature flag, including its variants
+  - `vercel flags add <slug>` - Create a new feature flag
+  - `vercel flags rm <flag>` - Delete a feature flag (must be archived first)
+  - `vercel flags archive <flag>` - Archive a feature flag
+  - `vercel flags disable <flag>` - Disable a flag in an environment
+  - `vercel flags enable <flag>` - Enable a flag in an environment
+  - `vercel flags sdk-keys ls` - List SDK keys
+  - `vercel flags sdk-keys add` - Create a new SDK key
+  - `vercel flags sdk-keys rm <key>` - Delete an SDK key
+
+- Add `--metadata` / `-m` flag to `vercel integration add` for non-interactive provisioning ([#14871](https://github.com/vercel/vercel/pull/14871))
+
+- Add `vc link add` subcommand to append projects to existing repo.json ([#14968](https://github.com/vercel/vercel/pull/14968))
+
+- [services] detect and manage virtual environments for Python services ([#14952](https://github.com/vercel/vercel/pull/14952))
+
+- Improved startup time 1.2-1.5x for CLI commands by implementing a different bundling & lazy loading strategy ([#14930](https://github.com/vercel/vercel/pull/14930))
+
+  Specifically, speedup the following subcommands: deploy, env, list, link, build, dev (informed by telemetry end-user usage data). The rest of the commands also became faster due to reduced amount of code they need to load.
+
+### Patch Changes
+
+- Add `vercel integration discover` with human-readable and JSON output for installable marketplace integrations and products. ([#14948](https://github.com/vercel/vercel/pull/14948))
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- [cli] `integration add`: auto-connect resources to all environments and auto-run `env pull` after provisioning. Add `--no-connect` and `--no-env-pull` opt-out flags. Print resource dashboard URL on success. ([#14964](https://github.com/vercel/vercel/pull/14964))
+
+- Write `repo.json` "orgId" field on a per-project basis ([#14967](https://github.com/vercel/vercel/pull/14967))
+
+- - Fix services routing for runtime entrypoints by using extensionless function destinations, disabling framework `defaultRoutes` injection during services builds, and ensuring deterministic route merging precedence for services. ([#14946](https://github.com/vercel/vercel/pull/14946))
+  - Scope route-owning builder routes to their owning service prefixes in services mode, preventing cross-service route leakage
+- Updated dependencies [[`012a8e410d09d9a5dcf060b30b4b24b08500823d`](https://github.com/vercel/vercel/commit/012a8e410d09d9a5dcf060b30b4b24b08500823d), [`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c), [`96310842f34741ccced49eb9bd392631c2de4d14`](https://github.com/vercel/vercel/commit/96310842f34741ccced49eb9bd392631c2de4d14)]:
+  - @vercel/build-utils@13.3.5
+  - @vercel/python@6.11.0
+  - @vercel/backends@0.0.32
+  - @vercel/elysia@0.1.35
+  - @vercel/express@0.1.44
+  - @vercel/fastify@0.1.38
+  - @vercel/go@3.4.0
+  - @vercel/h3@0.1.44
+  - @vercel/hono@0.2.38
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.18
+  - @vercel/nestjs@0.2.39
+  - @vercel/next@4.15.28
+  - @vercel/node@5.6.2
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/ruby@2.3.0
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.36
+
 ## 50.14.1
 
 ### Patch Changes
