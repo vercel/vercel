@@ -1,28 +1,41 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
-import { ensureRepoLink } from '../../util/link/repo';
+import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
 import getTeams from '../../util/teams/get-teams';
-import { help } from '../help';
-import { linkCommand } from './command';
+import { type Command, help } from '../help';
+import { addSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
+import { getCommandAliases } from '..';
+
+const COMMAND_CONFIG = {
+  add: getCommandAliases(addSubcommand),
+};
 
 export default async function link(client: Client) {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(linkCommand.options);
 
-  // Parse CLI args
+  // Parse CLI args (permissive to allow subcommand flags to pass through)
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (error) {
     printError(error);
     return 1;
   }
+
+  const { subcommand, subcommandOriginal } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
 
   const telemetry = new LinkTelemetryClient({
     opts: {
@@ -30,10 +43,48 @@ export default async function link(client: Client) {
     },
   });
 
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: linkCommand, columns: client.stderr.columns })
+    );
+  }
+
+  if (subcommand === 'add') {
+    // `vc link add` subcommand
+    // `--yes` is shared with the parent and already parsed by the permissive parse
+    if (parsedArgs.flags['--help']) {
+      telemetry.trackCliFlagHelp('link', subcommandOriginal);
+      printHelp(addSubcommand);
+      return 2;
+    }
+
+    telemetry.trackCliSubcommandAdd(subcommandOriginal);
+
+    const yes = !!parsedArgs.flags['--yes'];
+
+    try {
+      await addRepoLink(client, client.cwd, { yes });
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
+
+    return 0;
+  }
+
+  // Default behavior (no subcommand) - original `vc link` flow
+  // Re-parse strictly now that we know there's no subcommand
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('link');
     output.print(help(linkCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);

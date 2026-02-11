@@ -2909,33 +2909,37 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add      integration  Installs
-                        a       
-                        marketp…
-                        integra…
-  balance  integration  Shows   
-                        the     
-                        balances
-                        and     
-                        thresho…
-                        of a    
-                        specifi…
-                        marketp…
-                        integra…
-  list     [project]    Lists   
-                        all     
-                        resourc…
-                        from    
-                        marketp…
-                        integra…
-  open     name         Opens a 
-                        marketp…
-                        integra…
-                        dashboa…
-  remove   integration  Uninsta…
-                        a       
-                        marketp…
-                        integra…
+  add       integration  Installs
+                         a       
+                         marketp…
+                         integra…
+  balance   integration  Shows   
+                         the     
+                         balances
+                         and     
+                         thresho…
+                         of a    
+                         specifi…
+                         marketp…
+                         integra…
+  list      [project]    Lists   
+                         all     
+                         resourc…
+                         from    
+                         marketp…
+                         integra…
+  discover               Discover
+                         availab…
+                         marketp…
+                         integra…
+  open      name         Opens a 
+                         marketp…
+                         integra…
+                         dashboa…
+  remove    integration  Uninsta…
+                         a       
+                         marketp…
+                         integra…
 
 
   Global Options:
@@ -3003,13 +3007,14 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add      integration  Installs a marketplace integration              
-  balance  integration  Shows the balances and thresholds of a specified
-                        marketplace integration                         
-  list     [project]    Lists all resources from marketplace            
-                        integrations                                    
-  open     name         Opens a marketplace integration's dashboard     
-  remove   integration  Uninstalls a marketplace integration            
+  add       integration  Installs a marketplace integration              
+  balance   integration  Shows the balances and thresholds of a specified
+                         marketplace integration                         
+  list      [project]    Lists all resources from marketplace            
+                         integrations                                    
+  discover               Discover available marketplace integrations     
+  open      name         Opens a marketplace integration's dashboard     
+  remove    integration  Uninstalls a marketplace integration            
 
 
   Global Options:
@@ -3045,11 +3050,12 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add      integration  Installs a marketplace integration                                                      
-  balance  integration  Shows the balances and thresholds of a specified marketplace integration                
-  list     [project]    Lists all resources from marketplace integrations                                       
-  open     name         Opens a marketplace integration's dashboard                                             
-  remove   integration  Uninstalls a marketplace integration                                                    
+  add       integration  Installs a marketplace integration                                                      
+  balance   integration  Shows the balances and thresholds of a specified marketplace integration                
+  list      [project]    Lists all resources from marketplace integrations                                       
+  discover               Discover available marketplace integrations                                             
+  open      name         Opens a marketplace integration's dashboard                                             
+  remove    integration  Uninstalls a marketplace integration                                                    
 
 
   Global Options:
@@ -3409,10 +3415,20 @@ exports[`help command > integration-resource help output snapshots > integration
 
 exports[`help command > link help output snapshots > link help column width 40 1`] = `
 "
-  ▲ vercel link [options]
+  ▲ vercel link command [options]
 
   Link a local directory to a Vercel    
   Project.                              
+
+  Commands:
+
+  add    Add additional Vercel  
+         Projects to an existing
+         repository link.       
+         Requires an existing   
+         repo.json (created by  
+         \`link --repo\`).        
+
 
   Options:
 
@@ -3511,14 +3527,24 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link --repo
 
+  - Add additional projects to an existing repository link
+
+    $ vercel link add
+
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 80 1`] = `
 "
-  ▲ vercel link [options]
+  ▲ vercel link command [options]
 
   Link a local directory to a Vercel Project.                                   
+
+  Commands:
+
+  add    Add additional Vercel Projects to an existing repository link. 
+         Requires an existing repo.json (created by \`link --repo\`).     
+
 
   Options:
 
@@ -3565,14 +3591,24 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
     $ vercel link --repo
 
+  - Add additional projects to an existing repository link
+
+    $ vercel link add
+
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 120 1`] = `
 "
-  ▲ vercel link [options]
+  ▲ vercel link command [options]
 
   Link a local directory to a Vercel Project.                                                                           
+
+  Commands:
+
+  add    Add additional Vercel Projects to an existing repository link. Requires an existing repo.json (created 
+         by \`link --repo\`).                                                                                     
+
 
   Options:
 
@@ -3614,6 +3650,10 @@ exports[`help command > link help output snapshots > link help column width 120 
   - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
 
     $ vercel link --repo
+
+  - Add additional projects to an existing repository link
+
+    $ vercel link add
 
 "
 `;

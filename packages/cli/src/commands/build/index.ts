@@ -830,6 +830,8 @@ async function doBuild(
         name: builderPkg.name,
       });
 
+      const serviceRoutePrefix = build.config?.routePrefix;
+      const serviceWorkspace = build.config?.workspace;
       const buildOptions: BuildOptions = {
         files: buildFiles,
         entrypoint: buildEntrypoint,
@@ -838,6 +840,21 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
+        ...(typeof serviceRoutePrefix === 'string' ||
+        typeof serviceWorkspace === 'string'
+          ? {
+              service: {
+                routePrefix:
+                  typeof serviceRoutePrefix === 'string'
+                    ? serviceRoutePrefix
+                    : undefined,
+                workspace:
+                  typeof serviceWorkspace === 'string'
+                    ? serviceWorkspace
+                    : undefined,
+              },
+            }
+          : undefined),
       };
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`

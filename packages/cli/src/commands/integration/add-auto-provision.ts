@@ -4,22 +4,27 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
   AcceptedPolicies,
   AutoProvisionResult,
 } from '../../util/integration/types';
-import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
-import cmd from '../../util/output/cmd';
-import indent from '../../util/output/indent';
-import { packageName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import {
+  getLinkedProjectField,
+  postProvisionSetup,
+  type PostProvisionOptions,
+} from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
-import { createMetadataWizard } from './wizard';
+import {
+  parseMetadataFlags,
+  validateAndPrintRequiredMetadata,
+} from '../../util/integration/parse-metadata';
+import type { Metadata } from '../../util/integration/types';
 
-export interface AddAutoProvisionOptions {
+export interface AddAutoProvisionOptions extends PostProvisionOptions {
+  metadata?: string[];
   productSlug?: string;
 }
 
@@ -34,6 +39,10 @@ export async function addAutoProvision(
       store: client.telemetryEventStore,
     },
   });
+  telemetry.trackCliOptionName(resourceNameArg);
+  telemetry.trackCliOptionMetadata(options.metadata);
+  telemetry.trackCliFlagNoConnect(options.noConnect);
+  telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
 
   // 1. Get team context
   const { contextName, team } = await getScope(client);
@@ -42,24 +51,14 @@ export async function addAutoProvision(
     return 1;
   }
 
-  telemetry.trackCliOptionName(resourceNameArg);
-
   // 2. Fetch integration
-  let integration;
-  let knownIntegrationSlug = false;
-  try {
-    integration = await fetchIntegration(client, integrationSlug);
-    knownIntegrationSlug = true;
-  } catch (error) {
-    output.error(
-      `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
-    );
+  const integration = await fetchIntegrationWithTelemetry(
+    client,
+    integrationSlug,
+    telemetry
+  );
+  if (!integration) {
     return 1;
-  } finally {
-    telemetry.trackCliArgumentIntegration(
-      integrationSlug,
-      knownIntegrationSlug
-    );
   }
 
   if (!integration.products?.length) {
@@ -87,10 +86,34 @@ export async function addAutoProvision(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
   );
 
-  const metadataWizard = createMetadataWizard(product.metadataSchema);
-  output.debug(`Metadata wizard supported: ${metadataWizard.isSupported}`);
+  // 4. Validate metadata flags (if provided) BEFORE prompting for resource name
+  let metadata: Metadata;
+  if (options.metadata?.length) {
+    // Parse metadata from CLI flags
+    output.debug(
+      `Parsing metadata from flags: ${JSON.stringify(options.metadata)}`
+    );
+    const { metadata: parsed, errors } = parseMetadataFlags(
+      options.metadata,
+      product.metadataSchema
+    );
+    if (errors.length) {
+      for (const error of errors) {
+        output.error(error);
+      }
+      return 1;
+    }
+    // Validate all required fields are present
+    if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
+      return 1;
+    }
+    metadata = parsed;
+  } else {
+    // No --metadata flags: pass {} and let server fill defaults (API PR #58905)
+    metadata = {};
+  }
 
-  // 4. Resolve and validate resource name
+  // 5. Resolve and validate resource name
   const nameResult = resolveResourceName(product.slug, resourceNameArg);
   if ('error' in nameResult) {
     output.error(nameResult.error);
@@ -98,10 +121,6 @@ export async function addAutoProvision(
   }
   const { resourceName } = nameResult;
 
-  // 5. Collect metadata (if supported, otherwise let server use defaults)
-  const metadata = metadataWizard.isSupported
-    ? await metadataWizard.run(client)
-    : {};
   output.debug(`Collected metadata: ${JSON.stringify(metadata)}`);
   output.debug(`Resource name: ${resourceName}`);
 
@@ -184,9 +203,13 @@ export async function addAutoProvision(
     output.debug(`Fallback required - kind: ${result.kind}`);
     output.debug(`Fallback URL from API: ${result.url}`);
 
-    // Offer project linking before opening browser
-    const projectLink = await getOptionalLinkedProject(client);
-    if (projectLink?.status === 'error') {
+    // Auto-detect project for browser URL
+    const projectLink = await getLinkedProjectField(
+      client,
+      options.noConnect,
+      'name'
+    );
+    if (projectLink.exitCode !== undefined) {
       return projectLink.exitCode;
     }
 
@@ -194,8 +217,11 @@ export async function addAutoProvision(
     const url = new URL(result.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
-    if (projectLink?.project) {
-      url.searchParams.set('projectSlug', projectLink.project.name);
+    if (Object.keys(metadata).length > 0) {
+      url.searchParams.set('metadata', JSON.stringify(metadata));
+    }
+    if (projectLink.value) {
+      url.searchParams.set('projectSlug', projectLink.value);
     }
     output.debug(`Opening URL: ${url.href}`);
     open(url.href);
@@ -212,77 +238,12 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
-  // 10. Link to project (prompt)
-  const projectLink = await getOptionalLinkedProject(client);
-  if (projectLink?.status === 'error') {
-    return projectLink.exitCode;
-  }
-
-  if (!projectLink?.project) {
-    return 0;
-  }
-
-  // 11. Select environments and connect
-  const environments = await client.input.checkbox({
-    message: 'Select environments',
-    choices: [
-      { name: 'Production', value: 'production', checked: true },
-      { name: 'Preview', value: 'preview', checked: true },
-      { name: 'Development', value: 'development', checked: true },
-    ],
-  });
-  output.debug(`Selected environments: ${JSON.stringify(environments)}`);
-
-  output.spinner(
-    `Connecting ${chalk.bold(resourceName)} to ${chalk.bold(projectLink.project.name)}...`
+  // 10. Post-provision: dashboard URL, connect, env pull
+  return postProvisionSetup(
+    client,
+    resourceName,
+    result.resource.id,
+    contextName,
+    options
   );
-  output.debug(
-    `Connecting resource ${result.resource.id} to project ${projectLink.project.id}`
-  );
-  try {
-    await connectResourceToProject(
-      client,
-      projectLink.project.id,
-      result.resource.id,
-      environments
-    );
-  } catch (error) {
-    output.stopSpinner();
-    output.error(`Failed to connect: ${(error as Error).message}`);
-    return 1;
-  }
-  output.stopSpinner();
-
-  output.success(`Connected to ${projectLink.project.name}`);
-  output.log(
-    indent(
-      `Run ${cmd(`${packageName} env pull`)} to update environment variables`,
-      4
-    )
-  );
-
-  return 0;
-}
-
-async function getOptionalLinkedProject(client: Client) {
-  const linkedProject = await getLinkedProject(client);
-
-  if (linkedProject.status === 'not_linked') {
-    return;
-  }
-
-  const shouldLinkToProject = await client.input.confirm(
-    'Do you want to link this resource to the current project?',
-    true
-  );
-
-  if (!shouldLinkToProject) {
-    return;
-  }
-
-  if (linkedProject.status === 'error') {
-    return { status: 'error' as const, exitCode: linkedProject.exitCode };
-  }
-
-  return { status: 'success' as const, project: linkedProject.project };
 }
