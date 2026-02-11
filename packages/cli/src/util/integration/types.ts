@@ -1,9 +1,10 @@
 export interface MetadataSchemaProperty {
-  type: 'string' | 'number' | string;
+  type: 'string' | 'number' | 'boolean' | 'array' | string;
   description?: string;
-  default?: string;
+  default?: string | boolean | number;
   minimum?: number;
   maximum?: number;
+  items?: { type: 'string' | 'number' | string };
   'ui:control': 'input' | 'select' | 'vercel-region' | string;
   'ui:disabled'?: 'create' | Expression | boolean | string;
   'ui:hidden'?: 'create' | Expression | boolean | string;
@@ -23,7 +24,10 @@ export interface Expression {
   expr: string;
 }
 
-export type Metadata = Record<string, string | number | undefined>;
+export type Metadata = Record<
+  string,
+  string | number | boolean | string[] | number[] | undefined
+>;
 export type MetadataEntry = Readonly<[string, Metadata[string]]>;
 
 export interface MetadataSchema {
