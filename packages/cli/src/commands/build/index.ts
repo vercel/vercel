@@ -4,7 +4,7 @@ import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
 import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
-import { statSync } from 'fs';
+import { readdirSync, statSync } from 'fs';
 
 import {
   download,
@@ -1379,7 +1379,7 @@ async function analyzeSingleFunction(
     const funcDir = dirname(file);
 
     // Size the files that were written into .func (FileBlob, zipBuffer, etc.)
-    const funcDirStats = await getDirectorySizeInMB(funcDir);
+    const funcDirStats = getDirectorySizeInMB(funcDir);
 
     // Also size FileFsRef entries from filePathMap — these live on disk
     // outside .func so there's no overlap with the directory walk above.
@@ -1439,45 +1439,32 @@ function getTotalFileSizeInMB(
   return { size, files: filesSizeMap };
 }
 
-/**
- * Recursively walk `dir` and sum up file sizes. Follows symlinks so
- * symlinked files are measured by their real size.
- */
-async function getDirectorySizeInMB(dir: string): Promise<{
+function getDirectorySizeInMB(dir: string): {
   size: number;
   files: Map<string, number>;
-}> {
+} {
   let size = 0;
   const filesSizeMap = new Map<string, number>();
-
-  async function walk(currentDir: string): Promise<void> {
-    let entries: string[];
-    try {
-      entries = await fs.readdir(currentDir);
-    } catch {
-      return;
-    }
-
+  try {
+    const entries = readdirSync(dir, { recursive: true });
     for (const entry of entries) {
-      const fullPath = join(currentDir, entry);
+      const entryPath =
+        typeof entry === 'string' ? entry : (entry as Buffer).toString();
+      const fullPath = join(dir, entryPath);
       try {
-        // stat (not lstat) so we follow symlinks
         const stats = statSync(fullPath);
-        if (stats.isDirectory()) {
-          await walk(fullPath);
-        } else if (stats.isFile()) {
+        if (stats.isFile()) {
           const fileSizeMB = stats.size / (1024 * 1024);
           size += fileSizeMB;
-          const relativePath = normalizePath(relative(dir, fullPath));
-          filesSizeMap.set(relativePath, fileSizeMB);
+          filesSizeMap.set(normalizePath(entryPath), fileSizeMB);
         }
       } catch {
-        // File can't be accessed, skip
+        // File doesn't exist or can't be accessed
       }
     }
+  } catch {
+    // Directory doesn't exist or can't be read
   }
-
-  await walk(dir);
   return { size, files: filesSizeMap };
 }
 
