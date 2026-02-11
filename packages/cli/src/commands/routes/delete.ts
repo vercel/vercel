@@ -12,6 +12,7 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
 import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function del(client: Client, argv: string[]) {
@@ -28,7 +29,7 @@ export default async function del(client: Client, argv: string[]) {
 
   if (args.length === 0) {
     output.error(
-      'At least one route name or ID is required. Usage: vercel routes delete <name-or-id> [...]'
+      `At least one route name or ID is required. Usage: ${getCommandName('routes delete <name-or-id> [...]')}`
     );
     return 1;
   }
