@@ -12,7 +12,7 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
 import stamp from '../../util/output/stamp';
-import { getRouteTypeLabels } from '../../util/routes/types';
+import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function del(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, deleteSubcommand);
@@ -58,7 +58,7 @@ export default async function del(client: Client, argv: string[]) {
     `The following ${resolved.length === 1 ? 'route' : `${resolved.length} routes`} will be deleted:`
   );
   for (const route of resolved) {
-    const typeLabels = getRouteTypeLabels(route);
+    const typeLabels = getRouteTypeLabel(route);
     output.print(
       `  ${chalk.red('×')} ${route.name} ${chalk.gray(`(${route.route.src})`)} ${chalk.gray(`[${typeLabels}]`)}\n`
     );
