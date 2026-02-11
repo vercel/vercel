@@ -1,7 +1,7 @@
 import type Client from '../client';
 import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
-import { getCommandName } from '../pkg-name';
+import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
@@ -59,7 +59,7 @@ export async function ensureLink(
           {
             status: 'action_required',
             reason: 'confirmation_required',
-            message: `Command ${getCommandName(commandName)} requires confirmation. Use option --yes to confirm.`,
+            message: `Command ${getCommandNamePlain(commandName)} requires confirmation. Use option --yes to confirm.`,
             next: [
               {
                 command: buildCommandWithYes(client.argv),

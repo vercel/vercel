@@ -10,7 +10,7 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
@@ -71,7 +71,7 @@ export default async function dev(
           {
             status: 'action_required',
             reason: 'confirmation_required',
-            message: `Command ${getCommandName('dev')} requires confirmation. Use option --yes to confirm.`,
+            message: `Command ${getCommandNamePlain('dev')} requires confirmation. Use option --yes to confirm.`,
             next: [
               {
                 command: buildCommandWithYes(client.argv),
