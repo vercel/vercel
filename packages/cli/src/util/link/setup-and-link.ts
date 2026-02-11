@@ -14,6 +14,7 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
+import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type Client from '../client';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
@@ -33,7 +34,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -57,6 +58,10 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
+  /** When set, link directly to this project ID (requires org to be resolved) */
+  projectId?: string;
+  /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
+  nonInteractive?: boolean;
   pullEnv?: boolean;
 }
 
@@ -70,6 +75,8 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
+    projectId,
+    nonInteractive = false,
     pullEnv = true,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -97,12 +104,13 @@ export default async function setupAndLink(
     remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
-  if (!isTTY && !autoConfirm) {
+  if (!isTTY && !autoConfirm && !nonInteractive) {
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
   const shouldStartSetup =
     autoConfirm ||
+    nonInteractive ||
     (await client.input.confirm(
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
@@ -117,7 +125,7 @@ export default async function setupAndLink(
     org = await selectOrg(
       client,
       'Which scope should contain your project?',
-      autoConfirm
+      autoConfirm || nonInteractive
     );
   } catch (err: unknown) {
     if (isAPIError(err)) {
@@ -135,12 +143,42 @@ export default async function setupAndLink(
     throw err;
   }
 
-  const projectOrNewProjectName = await inputProject(
-    client,
-    org,
-    projectName,
-    autoConfirm
-  );
+  // When --project-id is provided, link directly to that project (no project selection)
+  if (projectId) {
+    const project = await getProjectByNameOrId(client, projectId, org.id);
+    if (project instanceof ProjectNotFound) {
+      output.prettyError(project);
+      return { status: 'error', exitCode: 1 };
+    }
+    await linkFolderToProject(
+      client,
+      path,
+      { projectId: project.id, orgId: org.id },
+      project.name,
+      org.slug,
+      successEmoji,
+      autoConfirm || nonInteractive
+    );
+    return { status: 'linked', org, project };
+  }
+
+  let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
+  try {
+    projectOrNewProjectName = await inputProject(
+      client,
+      org,
+      projectName,
+      autoConfirm
+    );
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    }
+    throw err;
+  }
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
@@ -275,6 +313,12 @@ export default async function setupAndLink(
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
+    }
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
     }
     printError(err);
 
