@@ -10,7 +10,7 @@ HOME = Path.home()
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEMO_OLD = HOME / "demo-old"
 DEMO_NEW = HOME / "demo-new"
-OLD_VERSION = "39.3.0"
+OLD_VERSION = "50.4.9"
 TEAM_SLUG = "acme-marketplace-team-vtest314"
 ZSHRC = HOME / ".zshrc"
 STARSHIP = HOME / ".config" / "starship.toml"
@@ -139,8 +139,7 @@ vc() {{
       FF_AUTO_PROVISION_INSTALL=1 node {dist} "$@"
       ;;
     *)
-      echo "vc: not in a demo directory (~/demo-old or ~/demo-new)"
-      return 1
+      command vc "$@"
       ;;
   esac
 }}

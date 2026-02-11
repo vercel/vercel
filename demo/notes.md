@@ -3,7 +3,7 @@
 ## Narrative Arc
 Old CLI = interactive, human-only → New CLI = one-shot, agent-friendly
 
-All sections use **Upstash** — multi-product integration, the hardest case.
+Demo uses **Prisma Postgres** — single-product, clean before/after comparison.
 
 ---
 
@@ -11,64 +11,52 @@ All sections use **Upstash** — multi-product integration, the hardest case.
 
 | | Version |
 |---|---|
-| Before my changes (Jan 2025) | **39.3.0** |
+| Before my changes (Jan 2025) | **50.4.9** |
 | Current (latest on main) | **50.15.1** |
 
 Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 
 ---
 
-## 1. Old Upstash KV — dead end
+## 1. Old Prisma — the interactive gauntlet
 
 | Say | Show on screen |
 |-----|----------------|
-| "Let me show you what installing an integration looks like today." | Left pane: `vc integration add upstash` |
-| *(wait for prompt)* | Prompt: "Select a product" → 4 options |
-| "Pick a product. Arrow keys, enter." | Select Redis |
-| **"And now it gives up. 'This resource must be provisioned through the Web UI.' The CLI literally can't do it."** | Error message: opens browser fallback |
-
----
-
-## 2. Old Prisma — the interactive gauntlet
-
-| Say | Show on screen |
-|-----|----------------|
-| "OK, let's try one the old CLI can actually do." | Left pane: `vc integration add prisma` |
+| "Let me show you what installing an integration looks like today." | Left pane: `vc integration add prisma` |
 | "Type a name." | Prompt: type resource name manually |
 | "Pick a region." | Prompt: select region |
 | "Now pick a billing plan." | Prompt: wall of text — 4 plans, each with multiple detail sections, you have to scroll through all of them |
 | *(slowly scroll through the plans)* | Audience sees the massive billing plan wall scroll by |
 | "Confirm selection." | Prompt: "Confirm selection?" → yes |
-| **"All that work — name, region, billing plan, confirmation — and it errors out anyway."** | Error: "Authorization ID must be specified for marketplace installations (400)" |
-| **"That's the old CLI. Interactive prompts that can't be scripted, can't be used in CI, and if you're building an AI agent that provisions infrastructure — forget about it."** | |
+| "Link to project?" | Prompt: "Do you want to link this resource to the current project?" |
+| **"That's 5 interactive steps to provision one database. Every install needs a human at a terminal. Can't script it. Can't use it in CI. And if you're building an AI agent that provisions infrastructure — forget about it."** | |
 
 ---
 
-## 3. New Upstash KV — the one that was impossible
+## 2. New Prisma — the gauntlet, gone
 
 | Say | Show on screen |
 |-----|----------------|
-| "Now watch this." | Right pane: cursor blinking |
-| *(type the command)* | `vc integration add upstash/upstash-kv --plan paid` |
-| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Dashboard URL |
-| **"Slash syntax picks the product. Region auto-detected. Name auto-generated. The old CLI couldn't even attempt this."** | Point at output lines one by one |
-
----
-
-## 4. New Prisma — the gauntlet, gone
-
-| Say | Show on screen |
-|-----|----------------|
-| "And Prisma — the one that took 5 prompts and then errored." | Right pane: cursor blinking |
+| "Now watch this. Same Prisma." | Right pane: cursor blinking |
 | *(type the command)* | `vc integration add prisma` |
-| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Dashboard URL |
-| **"Same Prisma. One command. Zero prompts. Actually works."** | Full output visible |
-| **"Start to finish, zero human input. That's what agents need."** | |
-| *(optional, if audience asks)* | "You can override anything — `--name`, `--plan`, `--no-connect` — but the defaults just work." |
+| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... env pull |
+| **"Same Prisma. One command. Zero prompts. Name auto-generated. Free plan auto-selected. Auto-connected. Env vars pulled."** | Full output visible |
+
+---
+
+## 3. Discovery — `vc integration add prisma --help`
+
+| Say | Show on screen |
+|-----|----------------|
+| "What if the agent needs to customize? It asks the CLI." | Right pane: cursor blinking |
+| *(type the command)* | `vc integration add prisma --help` |
+| *(let output render)* | Help output showing `--name`, `--plan`, `--no-connect`, metadata fields |
+| "Every parameter the old CLI prompted for — name, region, billing plan — is now a flag." | Point at flags |
+| **"Generated from the actual product schema. The agent reads this, constructs the command, and runs it. No guessing."** | |
 
 > **Note:** Feature flag is baked into the `vc` function when run from `~/demo-new` — no manual export needed.
 
-Expected output (sections 3 and 4 follow this pattern):
+Expected output (section 2):
 ```
 > Installing <Integration> by <Partner> under <team>
 > Success! <Integration> successfully provisioned: <resource-name>
@@ -80,21 +68,18 @@ Expected output (sections 3 and 4 follow this pattern):
 
 ---
 
-## 5. Discovery: "How did the agent know what to type?"
+## 4. Discover — structured output for agents
 
 | Say | Show on screen |
 |-----|----------------|
-| "That command had zero flags — but what if the agent needs to customize? It asks the CLI." | Terminal: cursor blinking |
-| *(run the command)* | `vc integration add upstash --help` |
-| *(let output render)* | Help output with products list + per-product metadata sections |
-| "Look — it lists all 4 Upstash products with their slugs." | Point at product list (upstash-kv, upstash-vector, etc.) |
-| "Each product shows its metadata fields, valid options, and defaults." | Point at per-product metadata sections |
-| "Copy-pasteable examples right there." | Point at example commands |
-| **"Generated from the actual product schema. If a partner adds a field, it shows up here automatically. The agent reads this, constructs the command, and runs it. No documentation crawling, no guessing."** | Full help output visible |
+| "One more thing. How does an agent even find integrations in the first place?" | Right pane: cursor blinking |
+| *(type the command)* | `vc integration discover --format=json` |
+| *(let output render)* | JSON array of integrations with slugs, names, categories |
+| **"Structured JSON. An agent can search, filter, and pick the right integration programmatically. No scraping, no guessing."** | Full JSON output visible |
 
 ---
 
-## 6. Eval Results (the closer)
+## 5. Eval Results (the closer)
 
 | Say | Show on screen |
 |-----|----------------|
@@ -119,25 +104,6 @@ Eval scenarios on screen:
 | non-interactive-provision | Zero-prompt provision + connect + env pull | Fail | Pass |
 | scripted-multi-resource | Provision Neon + Upstash in one session | Fail | Pass |
 | **upstash-redis-e2e** | **Supermax: Upstash Redis, zero hints** | **Fail** | **Pass** |
-
----
-
-## Demo Checklist
-
-**Live demo prep:**
-- [ ] Run `demo-setup` (installs old CLI, builds new CLI, configures `vc` function, switches team)
-- [ ] Upstash + Prisma already installed on test team (skip terms acceptance)
-- [ ] Disconnect all Prisma/Upstash resources from `cli-test` project (avoid env var conflicts)
-- [ ] Dry-run old: `demo-old && vc integration add upstash` → select Redis (dead end)
-- [ ] Dry-run old: `demo-old && vc integration add prisma` (gauntlet → error)
-- [ ] Dry-run new: `demo-new && vc integration add upstash/upstash-kv --plan paid` (one-shot)
-- [ ] Dry-run new: `demo-new && vc integration add prisma` (one-shot)
-- [ ] Dry-run new: `demo-new && vc integration add upstash --help` (dynamic help)
-
-**Eval prep (section 6):**
-- [ ] Run full suite against "Baseline" config (no FF) — screenshot/save results
-- [ ] Run full suite against "New CLI" config (FF_AUTO_PROVISION_INSTALL=1) — screenshot/save results
-- [ ] Have eval dashboard open and ready to show side-by-side comparison
 
 ---
 

@@ -1,48 +1,140 @@
 #!/usr/bin/env python3
-"""Auto-reloading glow pager. Reopens glow -p when the file changes."""
+"""Slideshow viewer for demo notes. Splits on --- and navigates with arrow keys."""
+import os
+import re
 import subprocess
 import sys
-import os
-import time
+import termios
+import threading
+import tty
 from pathlib import Path
 
 NOTES = Path(__file__).resolve().parent / "notes.md"
+WIDTH = 160
+
+GREEN = "\033[0;32m"
+DIM = "\033[2m"
+NC = "\033[0m"
+
+
+def parse_slides(filepath):
+    """Split markdown on --- separators into slides."""
+    content = Path(filepath).read_text()
+    # Split on lines that are just ---
+    slides = re.split(r"\n---\n", content)
+    # Strip leading/trailing whitespace from each slide
+    return [s.strip() for s in slides if s.strip()]
+
+
+def render_slide(text):
+    """Render a markdown slide using glow."""
+    result = subprocess.run(
+        ["glow", "-w", str(WIDTH), "-"],
+        input=text,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout
+
+
+def get_key():
+    """Read a single keypress (handles arrow keys)."""
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+        if ch == "\x1b":
+            ch2 = sys.stdin.read(1)
+            if ch2 == "[":
+                ch3 = sys.stdin.read(1)
+                if ch3 == "C":  # right arrow
+                    return "right"
+                elif ch3 == "D":  # left arrow
+                    return "left"
+                elif ch3 == "B":  # down arrow
+                    return "right"
+                elif ch3 == "A":  # up arrow
+                    return "left"
+            return "esc"
+        return ch
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def watch_file(filepath, callback):
+    """Watch a file for changes in a background thread."""
+    def _watch():
+        while True:
+            subprocess.run(
+                ["fswatch", "-1", str(filepath)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            callback()
+
+    t = threading.Thread(target=_watch, daemon=True)
+    t.start()
+
+
+def clear():
+    sys.stdout.write("\033[2J\033[H")
+    sys.stdout.flush()
 
 
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else str(NOTES)
+    slides = parse_slides(target)
+    idx = 0
+    needs_redraw = True
+
+    def on_file_change():
+        nonlocal slides, idx, needs_redraw
+        slides = parse_slides(target)
+        if idx >= len(slides):
+            idx = len(slides) - 1
+        needs_redraw = True
+
+    watch_file(target, on_file_change)
+
+    # Pre-render all slides
+    rendered = [render_slide(s) for s in slides]
 
     while True:
-        # Start glow in pager mode
-        glow = subprocess.Popen(
-            f'glow -w 160 "{target}" | less -R',
-            shell=True,
+        if needs_redraw:
+            # Re-render if slides changed
+            rendered = [render_slide(s) for s in slides]
+            needs_redraw = False
+
+        clear()
+        if rendered:
+            sys.stdout.write(rendered[idx])
+        # Status bar
+        sys.stdout.write(
+            f"\n{DIM}{'─' * 60}{NC}\n"
+            f"{GREEN}  Slide {idx + 1}/{len(slides)}{NC}  "
+            f"{DIM}← → navigate  q quit{NC}\n"
         )
+        sys.stdout.flush()
 
-        # Start watching for file changes
-        watcher = subprocess.Popen(
-            ["fswatch", "-1", target],
-            stdout=subprocess.DEVNULL,
-        )
+        key = get_key()
 
-        # Wait for either to exit
-        while True:
-            glow_done = glow.poll()
-            watch_done = watcher.poll()
-
-            if glow_done is not None:
-                # User pressed q — exit
-                watcher.kill()
-                watcher.wait()
-                sys.exit(0)
-
-            if watch_done is not None:
-                # File changed — kill glow, relaunch
-                glow.terminate()
-                glow.wait()
-                break
-
-            time.sleep(0.1)
+        if key in ("q", "\x03"):  # q or ctrl-c
+            clear()
+            break
+        elif key in ("right", "j", "l", " ", "n"):
+            if idx < len(slides) - 1:
+                idx += 1
+        elif key in ("left", "h", "k", "p"):
+            if idx > 0:
+                idx -= 1
+        elif key == "g":
+            idx = 0
+        elif key == "G":
+            idx = len(slides) - 1
+        elif needs_redraw:
+            # File changed, will redraw on next loop
+            pass
 
 
 if __name__ == "__main__":
