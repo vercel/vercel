@@ -7,12 +7,11 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { Command } from '../help';
-import type {
-  RoutingRule,
-  RouteType,
-  RoutePosition,
-  RouteVersion,
-  RoutePosition,
+import {
+  getRouteTypeLabel,
+  type RoutingRule,
+  type RoutePosition,
+  type RouteVersion,
 } from '../../util/routes/types';
 
 export interface ParsedSubcommand {
@@ -253,10 +252,10 @@ export function printDiffSummary(routes: RoutingRule[], maxDisplay = 10): void {
   for (const route of displayRoutes) {
     const symbol = getDiffSymbol(route);
     const label = getDiffLabel(route);
-    const routeType = getRouteTypeDisplayLabel(route);
+    const routeType = getRouteTypeLabel(route);
 
     output.print(
-      `  ${symbol} ${route.name}${routeType ? ` ${chalk.gray(`(${routeType})`)}` : ''} ${chalk.gray(`- ${label}`)}\n`
+      `  ${symbol} ${route.name}${routeType !== '-' ? ` ${chalk.gray(`(${routeType})`)}` : ''} ${chalk.gray(`- ${label}`)}\n`
     );
   }
 
@@ -289,19 +288,6 @@ export function getDiffLabel(route: RoutingRule): string {
   }
 
   return 'Modified';
-}
-
-export function getRouteTypeDisplayLabel(route: RoutingRule): string | null {
-  if (!route.routeType) return null;
-
-  const typeLabels: Record<RouteType, string> = {
-    rewrite: 'Rewrite',
-    redirect: 'Redirect',
-    set_status: 'Set Status',
-    transform: 'Transform',
-  };
-
-  return typeLabels[route.routeType] ?? null;
 }
 
 /**

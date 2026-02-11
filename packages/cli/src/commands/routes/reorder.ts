@@ -178,8 +178,6 @@ export default async function reorder(client: Client, argv: string[]) {
   // Clamp targetIndex
   targetIndex = Math.max(0, Math.min(targetIndex, routes.length - 1));
 
-  const targetPosition = targetIndex + 1; // 1-based
-
   if (currentIndex === targetIndex) {
     output.log(
       `Route "${route.name}" is already at position ${currentPosition}.`
@@ -187,10 +185,15 @@ export default async function reorder(client: Client, argv: string[]) {
     return 0;
   }
 
+  // Compute the actual final position after splice adjustment
+  const adjustedTarget =
+    currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
+  const finalPosition = adjustedTarget + 1; // 1-based
+
   // Confirm
   if (!skipConfirmation) {
     const confirmed = await client.input.confirm(
-      `Move "${route.name}" from position ${currentPosition} to position ${targetPosition}?`,
+      `Move "${route.name}" from position ${currentPosition} to position ${finalPosition}?`,
       true
     );
     if (!confirmed) {
@@ -202,9 +205,6 @@ export default async function reorder(client: Client, argv: string[]) {
   // Perform the reorder: remove from current position, insert at target
   const reordered = [...routes];
   reordered.splice(currentIndex, 1);
-  // Adjust target index if the route was before the target
-  const adjustedTarget =
-    currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
   reordered.splice(adjustedTarget, 0, route);
 
   const reorderStamp = stamp();
@@ -220,7 +220,7 @@ export default async function reorder(client: Client, argv: string[]) {
     );
 
     output.log(
-      `${chalk.cyan('Moved')} "${route.name}" from position ${currentPosition} to ${targetPosition} ${chalk.gray(reorderStamp())}`
+      `${chalk.cyan('Moved')} "${route.name}" from position ${currentPosition} to ${finalPosition} ${chalk.gray(reorderStamp())}`
     );
 
     // Auto-promote offer

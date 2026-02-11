@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { RoutingRule, RouteVersion } from './types';
+import type { RoutingRule, RouteVersion, SrcSyntax } from './types';
 
 /**
  * Input for editing a route. Requires the full route object (not partial).
@@ -10,7 +10,7 @@ interface EditRouteInput {
     name: string;
     description?: string;
     enabled?: boolean;
-    srcSyntax?: string;
+    srcSyntax?: SrcSyntax;
     route: {
       src: string;
       dest?: string;
