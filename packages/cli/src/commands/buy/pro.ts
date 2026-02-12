@@ -30,9 +30,7 @@ export default async function pro(client: Client, argv: string[]) {
   output.log(`Upgrading team ${contextName} to Vercel Pro...`);
 
   // TODO: Implement Pro subscription purchase flow when API is available
-  output.warn(
-    'Pro subscription purchase is not yet available. API integration pending.'
-  );
+  output.warn('Pro subscription purchase is not yet available.');
 
   return 0;
 }
