@@ -36,7 +36,8 @@ describe('git disconnect', () => {
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
-      expect(payload.message).toContain('Multiple teams');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
       expect(Array.isArray(payload.choices)).toBe(true);
       expect(payload.choices.length).toBeGreaterThanOrEqual(2);
       expect(exitSpy).toHaveBeenCalledWith(1);
