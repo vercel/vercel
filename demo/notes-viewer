@@ -10,7 +10,14 @@ import tty
 from pathlib import Path
 
 NOTES = Path(__file__).resolve().parent / "notes.md"
-WIDTH = 160
+
+
+def get_width():
+    """Get terminal width, fallback to 120."""
+    try:
+        return os.get_terminal_size().columns
+    except OSError:
+        return 120
 
 GREEN = "\033[0;32m"
 DIM = "\033[2m"
@@ -26,25 +33,36 @@ def parse_slides(filepath):
     return [s.strip() for s in slides if s.strip()]
 
 
+WHITE = "\033[1;37m"           # bold white — spoken text
 CMD_HIGHLIGHT = "\033[1;97;41m"  # bold bright white on red background
+ITALIC = "\033[3m"             # ANSI italic code
+ITALIC_RE = re.compile(r"\033\[;?3m")  # glow's italic marker
 
 def render_slide(text):
-    """Render a markdown slide using glow, then highlight RUN commands."""
+    """Render a markdown slide using glow, then post-process for readability.
+
+    - RUN commands: red background highlight
+    - Italic lines (stage directions): left as-is (dim/italic from glow)
+    - Everything else (spoken text): boosted to bold white
+    """
     result = subprocess.run(
-        ["glow", "-w", str(WIDTH), "-"],
+        ["glow", "-s", "dark", "-w", str(get_width()), "-"],
         input=text,
         capture_output=True,
         text=True,
     )
-    # Highlight lines containing RUN commands
     lines = result.stdout.split("\n")
     highlighted = []
     for line in lines:
-        # Strip ANSI to check content, but keep original for display
         stripped = re.sub(r"\033\[[0-9;]*m", "", line)
         if "RUN" in stripped and ("vc " in stripped or "vercel " in stripped):
-            # Replace the whole line with highlighted version
             highlighted.append(f"{CMD_HIGHLIGHT}{stripped}{NC}")
+        elif ITALIC_RE.search(line):
+            # Stage direction — leave glow's italic styling as-is
+            highlighted.append(line)
+        elif stripped.strip():
+            # Non-empty, non-italic line — boost to white
+            highlighted.append(f"{WHITE}{line}{NC}")
         else:
             highlighted.append(line)
     return "\n".join(highlighted)
@@ -124,7 +142,7 @@ def main():
             sys.stdout.write(rendered[idx])
         # Status bar
         sys.stdout.write(
-            f"\n{DIM}{'─' * 60}{NC}\n"
+            f"\n{DIM}{'─' * get_width()}{NC}\n"
             f"{GREEN}  Slide {idx + 1}/{len(slides)}{NC}  "
             f"{DIM}← → navigate  r refresh  q quit{NC}\n"
         )
@@ -154,7 +172,7 @@ def main():
             clear()
             sys.stdout.write(rendered[idx])
             sys.stdout.write(
-                f"\n{DIM}{'─' * 60}{NC}\n"
+                f"\n{DIM}{'─' * get_width()}{NC}\n"
                 f"{GREEN}  Slide {idx + 1}/{len(slides)}  ✓ Refreshed{NC}\n"
             )
             sys.stdout.flush()

@@ -1,0 +1,53 @@
+{
+  "document": {
+    "margin": 2
+  },
+  "paragraph": {
+    "color": "15"
+  },
+  "heading": {
+    "bold": true,
+    "color": "39"
+  },
+  "h1": {
+    "bold": true,
+    "color": "39",
+    "prefix": ""
+  },
+  "h2": {
+    "bold": true,
+    "color": "39",
+    "prefix": ""
+  },
+  "h3": {
+    "bold": true,
+    "color": "39",
+    "prefix": ""
+  },
+  "strong": {
+    "bold": true,
+    "color": "15"
+  },
+  "emph": {
+    "italic": true,
+    "color": "245"
+  },
+  "block_quote": {
+    "color": "11",
+    "indent": 2
+  },
+  "code": {
+    "color": "10"
+  },
+  "code_block": {
+    "color": "10",
+    "margin": 2
+  },
+  "link_text": {
+    "color": "33",
+    "underline": true
+  },
+  "table": {
+    "color": "15"
+  }
+}
