@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -18,9 +18,18 @@ vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 const repoRoot = join(__dirname, '../../../../../..');
 
 describe('importBuilders()', () => {
+  let cwd: string = '';
+  beforeEach(async () => {
+    // Isolated cwd so tests do not depend on monorepo workspace linkage.
+    cwd = await getWriteableDirectory();
+  });
+  afterEach(async () => {
+    await remove(cwd);
+  });
+
   it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
-    const builders = await importBuilders(specs, process.cwd());
+    const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
@@ -40,7 +49,7 @@ describe('importBuilders()', () => {
 
   it('should import built-in Builders using `@latest`', async () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
-    const builders = await importBuilders(specs, process.cwd());
+    const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
       vercelNodePkg
@@ -64,7 +73,7 @@ describe('importBuilders()', () => {
 
   it('should import built-in Builders using `@canary`', async () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
-    const builders = await importBuilders(specs, process.cwd());
+    const builders = await importBuilders(specs, cwd);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
       vercelNodePkg
@@ -196,8 +205,10 @@ describe('importBuilders()', () => {
 
 describe('resolveBuilders()', () => {
   it('should return builders to install when missing', async () => {
+    const cwd = process.cwd();
+    const buildersDir = join(cwd, '.vercel', 'builders');
     const specs = new Set(['@vercel/does-not-exist']);
-    const result = await resolveBuilders(process.cwd(), specs);
+    const result = await resolveBuilders(cwd, buildersDir, specs);
     if (!('buildersToAdd' in result)) {
       throw new Error('Expected `buildersToAdd` to be defined');
     }
@@ -206,11 +217,13 @@ describe('resolveBuilders()', () => {
 
   it('should throw error when `MODULE_NOT_FOUND` on 2nd pass', async () => {
     let err: Error | undefined;
+    const cwd = process.cwd();
+    const buildersDir = join(cwd, '.vercel', 'builders');
     const specs = new Set(['@vercel/does-not-exist']);
 
     // The empty Map represents `resolveBuilders()` being invoked after the install step
     try {
-      await resolveBuilders(process.cwd(), specs, new Map());
+      await resolveBuilders(cwd, buildersDir, specs, new Map());
     } catch (_err: unknown) {
       err = _err as Error;
     }
@@ -219,8 +232,50 @@ describe('resolveBuilders()', () => {
       throw new Error('Expected `err` to be defined');
     }
 
-    expect(
-      err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
-    ).toEqual(true);
+    expect(err.message).toEqual('Builder "@vercel/does-not-exist" not found');
+  });
+
+  // Tests for peerDependencies version resolution
+  // 1. Non-peerDep builders keep original spec (no version appended)
+  // 2. Explicit versions are preserved
+  // 3. The actual peerDep resolution is tested via importBuilders which exercises the full flow
+  it('should keep original spec for builders NOT in peerDeps', async () => {
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    try {
+      // 'some-random-builder' is not in the CLI's peerDependencies
+      const specs = new Set(['some-random-builder']);
+      const result = await resolveBuilders(cwd, buildersDir, specs);
+
+      if (!('buildersToAdd' in result)) {
+        throw new Error('Expected `buildersToAdd` to be defined');
+      }
+
+      // Should keep the original spec without appending a version
+      const buildersToAdd = [...result.buildersToAdd];
+      expect(buildersToAdd).toEqual(['some-random-builder']);
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should preserve explicit version even for peerDep builders', async () => {
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    try {
+      // Even though @vercel/node is in peerDeps, explicit version should be preserved
+      const specs = new Set(['@vercel/node@2.0.0']);
+      const result = await resolveBuilders(cwd, buildersDir, specs);
+
+      if (!('buildersToAdd' in result)) {
+        throw new Error('Expected `buildersToAdd` to be defined');
+      }
+
+      // Should keep the explicit version, not replace with peerDep version
+      const buildersToAdd = [...result.buildersToAdd];
+      expect(buildersToAdd).toEqual(['@vercel/node@2.0.0']);
+    } finally {
+      await remove(cwd);
+    }
   });
 });
