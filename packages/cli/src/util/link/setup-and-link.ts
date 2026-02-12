@@ -71,7 +71,7 @@ export default async function setupAndLink(
     link,
     successEmoji = 'link',
     setupMsg = 'Set up',
-    projectName,
+    projectName = basename(path),
     nonInteractive = false,
     pullEnv = true,
   }: SetupAndLinkOptions
