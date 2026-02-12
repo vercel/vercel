@@ -22,7 +22,8 @@
     },
     {
       "path": "/dashboard/api/bad-route",
-      "status": 404
+      "status": 404,
+      "mustContain": "404 from Next.js"
     },
     {
       "path": "/backend",
@@ -51,12 +52,13 @@
     },
     {
       "path": "/dashboard/does-not-exist",
-      "status": 404
+      "status": 404,
+      "mustContain": "404 from Next.js"
     },
     {
       "path": "/backend/does-not-exist",
       "status": 404,
-      "mustContain": "Not Found"
+      "mustContain": "404 from FastAPI"
     }
   ]
 }

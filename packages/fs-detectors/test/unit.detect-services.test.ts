@@ -286,6 +286,30 @@ describe('detectServices', () => {
       expect(result.errors[0].serviceName).toBe('api');
     });
 
+    it.each(['/_svc', '/_svc/api'])(
+      'should error when web service uses reserved internal routePrefix "%s"',
+      async routePrefix => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                entrypoint: 'api/index.ts',
+                routePrefix,
+              },
+            },
+          }),
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'RESERVED_ROUTE_PREFIX',
+          serviceName: 'api',
+        });
+      }
+    );
+
     it('should error when two web services share normalized routePrefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -551,7 +575,7 @@ describe('detectServices', () => {
         '/dashboard/api/ping'
       );
       expect(apiRoute).toBeDefined();
-      expect(apiRoute!.dest).toBe('/services/dashboard-api/index');
+      expect(apiRoute!.dest).toBe('/_svc/dashboard-api/index');
       expect(apiRoute).toHaveProperty('check', true);
     });
 
@@ -636,7 +660,7 @@ describe('detectServices', () => {
       expect(result.routes.rewrites).toHaveLength(2);
       expect(result.routes.rewrites).toContainEqual({
         src: '^(?=/api(?:/|$))(?:/api(?:/.*)?$)',
-        dest: '/api/index',
+        dest: '/_svc/gin-api/index',
         check: true,
       });
       expect(result.routes.rewrites).toContainEqual({
@@ -801,7 +825,7 @@ describe('detectServices', () => {
       ])('should match "%s" to gin-api function rewrite', pathname => {
         const match = findMatchingRoute(rewrites, pathname);
         expect(match).toBeDefined();
-        expect(match!.dest).toBe('/services/gin-api/index');
+        expect(match!.dest).toBe('/_svc/gin-api/index');
         expect(match!).toHaveProperty('check', true);
       });
 
@@ -813,7 +837,7 @@ describe('detectServices', () => {
       ])('should match "%s" to fastapi-api function rewrite', pathname => {
         const match = findMatchingRoute(rewrites, pathname);
         expect(match).toBeDefined();
-        expect(match!.dest).toBe('/services/fastapi-api/main');
+        expect(match!.dest).toBe('/_svc/fastapi-api/index');
         expect(match!).toHaveProperty('check', true);
       });
     });

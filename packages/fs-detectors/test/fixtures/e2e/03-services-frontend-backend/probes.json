@@ -37,16 +37,28 @@
     },
     {
       "path": "/does-not-exist",
-      "status": 404
+      "status": 404,
+      "mustContain": "404 from Next.js"
     },
     {
       "path": "/api/does-not-exist",
-      "status": 404
+      "status": 404,
+      "mustContain": "404 from Next.js"
     },
     {
       "path": "/api/py/does-not-exist",
       "status": 404,
-      "mustContain": "Not Found"
+      "mustContain": "404 from FastAPI"
+    },
+    {
+      "path": "/backend",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/backend/index",
+      "status": 404,
+      "mustContain": "404 from Next.js"
     }
   ]
 }
