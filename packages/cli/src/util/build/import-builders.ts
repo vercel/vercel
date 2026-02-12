@@ -19,7 +19,13 @@ import type { Writable } from 'stream';
 import output from '../../output-manager';
 
 export interface BuilderWithPkg {
+  /**
+   * the absolute path to the entrypoint for this builder (e.g. dist/index.js)
+   */
   path: string;
+  /**
+   * absolute path to the package.json of the builder
+   */
   pkgPath: string;
   builder: BuilderV2 | BuilderV3;
   pkg: PackageJson & { name: string };
@@ -65,6 +71,13 @@ export async function importBuilders(
     }
   }
 
+  // Figure out what
+  const resolvedBuildersDebug = [];
+  for (const [spec, builderSpec] of importResult.builders) {
+    resolvedBuildersDebug.push(`${spec} => ${builderSpec.pkg.version}`);
+  }
+
+  output.debug(`Resolved builders: "${resolvedBuildersDebug.join(', ')}"`);
   return importResult.builders;
 }
 
