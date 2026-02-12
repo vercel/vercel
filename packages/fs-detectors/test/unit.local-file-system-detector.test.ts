@@ -77,22 +77,31 @@ describe('LocalFileSystemDetector', () => {
       return;
     }
 
-    const socketdir = path.join(os.tmpdir(), 'socket-dir');
+    const socketdir = await fs.mkdtemp(path.join(os.tmpdir(), 'socket-dir-'));
     const socketFileSystem = new LocalFileSystemDetector(socketdir);
     const server = net.createServer();
+    const socketPath = path.join(socketdir, 'socket');
 
     try {
-      fs.mkdir(socketdir, { recursive: true });
-      await new Promise<void>(resolve => {
-        server.listen(path.join(socketdir, 'socket'), () => resolve());
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(socketPath, () => resolve());
       });
-      const readdirResults = await socketFileSystem.readdir(socketdir);
+      const readdirResults = await socketFileSystem.readdir('');
       expect(readdirResults).toEqual([]);
     } finally {
+      if (server.listening) {
+        await new Promise<void>((resolve, reject) => {
+          server.close(err => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
       await fs.rm(socketdir, { recursive: true, force: true });
-      await new Promise<void>(resolve => {
-        server.close(() => resolve());
-      });
     }
   });
 
