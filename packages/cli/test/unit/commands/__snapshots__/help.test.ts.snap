@@ -3432,33 +3432,27 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
   Options:
 
-  -p,  --project <NAME>           Specify a  
-                                  project    
-                                  name       
-       --project-id <PROJECT_ID>  Link to an 
-                                  existing   
-                                  project by 
-                                  ID         
-  -r,  --repo                     Link       
-                                  multiple   
-                                  projects   
-                                  based on   
-                                  Git        
-                                  repository 
-                                  (alpha)    
-       --team <TEAM_ID_OR_SLUG>   Scope (team
-                                  ID or slug)
-                                  to link the
-                                  project to 
-  -y,  --yes                      Skip       
-                                  questions  
-                                  when       
-                                  setting up 
-                                  new project
-                                  using      
-                                  default    
-                                  scope and  
-                                  settings   
+  -p,  --project <NAME>          Specify a   
+                                 project name
+  -r,  --repo                    Link        
+                                 multiple    
+                                 projects    
+                                 based on Git
+                                 repository  
+                                 (alpha)     
+       --team <TEAM_ID_OR_SLUG>  Scope (team 
+                                 ID or slug) 
+                                 to link the 
+                                 project to  
+  -y,  --yes                     Skip        
+                                 questions   
+                                 when setting
+                                 up new      
+                                 project     
+                                 using       
+                                 default     
+                                 scope and   
+                                 settings    
 
 
   Global Options:
@@ -3548,13 +3542,12 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
   Options:
 
-  -p,  --project <NAME>           Specify a project name                             
-       --project-id <PROJECT_ID>  Link to an existing project by ID                  
-  -r,  --repo                     Link multiple projects based on Git repository     
-                                  (alpha)                                            
-       --team <TEAM_ID_OR_SLUG>   Scope (team ID or slug) to link the project to     
-  -y,  --yes                      Skip questions when setting up new project using   
-                                  default scope and settings                         
+  -p,  --project <NAME>          Specify a project name                              
+  -r,  --repo                    Link multiple projects based on Git repository      
+                                 (alpha)                                             
+       --team <TEAM_ID_OR_SLUG>  Scope (team ID or slug) to link the project to      
+  -y,  --yes                     Skip questions when setting up new project using    
+                                 default scope and settings                          
 
 
   Global Options:
@@ -3612,11 +3605,10 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   Options:
 
-  -p,  --project <NAME>           Specify a project name                                                                     
-       --project-id <PROJECT_ID>  Link to an existing project by ID                                                          
-  -r,  --repo                     Link multiple projects based on Git repository (alpha)                                     
-       --team <TEAM_ID_OR_SLUG>   Scope (team ID or slug) to link the project to                                             
-  -y,  --yes                      Skip questions when setting up new project using default scope and settings                
+  -p,  --project <NAME>          Specify a project name                                                                      
+  -r,  --repo                    Link multiple projects based on Git repository (alpha)                                      
+       --team <TEAM_ID_OR_SLUG>  Scope (team ID or slug) to link the project to                                              
+  -y,  --yes                     Skip questions when setting up new project using default scope and settings                 
 
 
   Global Options:
@@ -5386,6 +5378,7 @@ exports[`help command > target help output snapshots > target list help output s
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip confirmation when linking is required (e.g. in non-interactive mode)                     
 
 
   Global Options:
