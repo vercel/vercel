@@ -984,10 +984,6 @@ async function doBuild(
         }
       }
 
-      // Scope every service route table (not only route-owning builders).
-      // Static-build/framework routes can also include broad catch-alls
-      // (for example "/(.*)"), which must be ownership-guarded so they
-      // don't capture sibling service prefixes.
       if (
         hasDetectedServices &&
         service &&
