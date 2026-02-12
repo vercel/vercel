@@ -1483,9 +1483,6 @@ test.each([
     const response = await fetch(href);
     expect(response.status).toBe(expectedStatus);
 
-    const projectResponse = await apiFetch(`/projects/${projectName}`, {
-      method: 'DELETE',
-    });
-    expect(projectResponse.status).toBe(204);
+    await deleteProject(projectName);
   }
 );
