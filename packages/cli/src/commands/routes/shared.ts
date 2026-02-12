@@ -210,6 +210,11 @@ export async function offerAutoPromote(
   );
   const { default: stamp } = await import('../../util/output/stamp');
 
+  // Always inform the user that changes are staged
+  output.print(
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('routes publish'))} to make it live, or ${chalk.cyan(getCommandName('routes discard-staging'))} to undo.`)}\n`
+  );
+
   if (!hadExistingStagingVersion && !opts.skipPrompts) {
     output.print('\n');
     const shouldPromote = await client.input.confirm(

@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
-export default async function del(client: Client, argv: string[]) {
+export default async function deleteRoute(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, deleteSubcommand);
   if (typeof parsed === 'number') return parsed;
 
