@@ -66,7 +66,7 @@ export function validateServiceConfig(
   ) {
     return {
       code: 'RESERVED_ROUTE_PREFIX',
-      message: `Web service "${name}" cannot use routePrefix "${config.routePrefix}". The "/_svc" namespace is reserved for internal services routing.`,
+      message: `Web service "${name}" cannot use routePrefix "${config.routePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
       serviceName: name,
     };
   }
