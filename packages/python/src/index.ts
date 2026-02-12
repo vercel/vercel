@@ -380,20 +380,22 @@ export const build: BuildV3 = async ({
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
   let projectName: string | undefined;
+  let noBuildCheckFailed = false;
 
   if (!assumeDepsInstalled) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.
-    const { projectDir, lockPath } = await ensureUvProject({
-      workPath,
-      entryDirectory,
-      repoRootPath,
-      pythonVersion: pythonVersion.version,
-      uv,
-      generateLockFile: runtimeInstallFeatureEnabled,
-    });
+    const { projectDir, lockPath, lockFileProvidedByUser } =
+      await ensureUvProject({
+        workPath,
+        entryDirectory,
+        repoRootPath,
+        pythonVersion: pythonVersion.version,
+        uv,
+        generateLockFile: runtimeInstallFeatureEnabled,
+      });
 
     uvLockPath = lockPath;
     uvProjectDir = projectDir;
@@ -406,13 +408,38 @@ export const build: BuildV3 = async ({
     });
     projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
 
+    // For user-provided lock files, check if all packages have binary wheels
+    // available BEFORE running the actual sync. We track this result so we can
+    // error later if runtime dependency installation is needed (which requires
+    // all public packages to have pre-built wheels).
+    if (lockFileProvidedByUser && runtimeInstallFeatureEnabled) {
+      try {
+        await uv.sync({
+          venvPath,
+          projectDir,
+          frozen: true,
+          noBuild: true,
+        });
+      } catch (err) {
+        // Note the failure but don't error yet - we only need wheels
+        // if runtime dependency install is required (bundle > 250MB)
+        noBuildCheckFailed = true;
+        debug(
+          `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
     // so we can use `uv sync` to install dependencies into the active
     // virtual environment.
+    // Use --frozen for user-provided lock files (respects exact versions),
+    // --locked for generated lock files (validates consistency).
     await uv.sync({
       venvPath,
       projectDir,
-      locked: true,
+      frozen: lockFileProvidedByUser,
+      locked: !lockFileProvidedByUser,
     });
   }
 
@@ -426,6 +453,16 @@ export const build: BuildV3 = async ({
   // manifest, which means that it is NOT SAFE to re-run `uv sync` at any
   // point after as that would effectively remove vercel-runtime from the
   // bundle rendering the function inoperable.
+  const runtimeDep =
+    baseEnv.VERCEL_RUNTIME_PYTHON ||
+    `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
+  debug(`Installing ${runtimeDep}`);
+  await uv.pip({
+    venvPath,
+    projectDir: join(workPath, entryDirectory),
+    args: ['install', runtimeDep],
+  });
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -533,12 +570,21 @@ from vercel_runtime.vc_init import vc_handler
         `Enabling runtime dependency installation.`
     );
 
-    // Regenerate lock file with --no-build --upgrade to ensure all packages have binary wheels.
-    // --no-build: Only select package versions that have pre-built wheels
-    // --upgrade: Re-resolve all packages, ignoring pins in the existing lock file
-    // If a package doesn't have wheels available, uv will fail with a clear error.
-    console.log('Verifying all packages have binary wheels available...');
-    await uv.lock(uvProjectDir, { noBuild: true, upgrade: true });
+    // If the earlier --no-build check failed, we know some packages don't have
+    // pre-built wheels. Runtime dependency installation requires all public
+    // packages to have wheels, so we error here with a helpful message.
+    if (noBuildCheckFailed) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
+          `but some packages in your uv.lock file do not have pre-built binary wheels available. ` +
+          `Runtime dependency installation requires all public packages to have binary wheels.\n\n` +
+          `To fix this, either:\n` +
+          `1. Remove the problematic packages, or\n` +
+          `2. Regenerate your lock file with: uv lock --upgrade --no-build`,
+      });
+    }
 
     // Read and parse the uv.lock file
     const lockContent = await fs.promises.readFile(uvLockPath, 'utf8');
