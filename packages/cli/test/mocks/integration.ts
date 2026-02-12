@@ -227,6 +227,8 @@ const integrations: Record<string, Integration> = {
     id: 'acme',
     name: 'Acme Integration',
     slug: 'acme',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
     products: [
       {
         id: 'acme-product',
@@ -242,6 +244,8 @@ const integrations: Record<string, Integration> = {
     id: 'acme-two-products',
     name: 'Acme Integration Two Products',
     slug: 'acme-two-products',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
     products: [
       {
         id: 'acme-product-a',
@@ -348,9 +352,11 @@ const integrations: Record<string, Integration> = {
     ],
   },
   'acme-unsupported': {
-    id: 'acme',
+    id: 'acme-unsupported',
     name: 'Acme Integration',
-    slug: 'acme',
+    slug: 'acme-unsupported',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
     products: [
       {
         id: 'acme-product',
@@ -520,7 +526,35 @@ const integrationPlans: Record<string, unknown> = {
       },
     ],
   },
+  'acme-unsupported': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
+      },
+    ],
+  },
   'acme-multi': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
+      },
+    ],
+  },
+  'acme-two-products': {
     plans: [
       {
         id: 'pro',
@@ -965,21 +999,6 @@ const autoProvisionResponses: Record<
     },
     billingPlan: null,
   },
-  install: {
-    kind: 'install',
-    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
-    integration: autoProvisionIntegration,
-    product: autoProvisionProduct,
-  },
-  'install-no-policies': {
-    kind: 'install',
-    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
-    integration: {
-      ...autoProvisionIntegration,
-      policies: {},
-    },
-    product: autoProvisionProduct,
-  },
   metadata: {
     kind: 'metadata',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
@@ -1170,9 +1189,11 @@ export function usePreauthorization(opts?: {
 export function useIntegration({
   withInstallation,
   ownerId,
+  installShouldFail,
 }: {
   withInstallation: boolean;
   ownerId?: string;
+  installShouldFail?: boolean;
 }) {
   const storeId = 'store_123';
 
@@ -1206,6 +1227,7 @@ export function useIntegration({
         ? [
             {
               id: `${integrationIdOrSlug}-install`,
+              integrationId: integrationIdOrSlug,
               installationType: 'marketplace',
               ownerId,
             },
@@ -1251,13 +1273,33 @@ export function useIntegration({
       res.end();
     }
   );
+
+  const installRequestBodies: unknown[] = [];
+
+  client.scenario.post(
+    '/v2/integrations/integration/:integrationId/marketplace/install',
+    (req, res) => {
+      installRequestBodies.push(req.body);
+      if (installShouldFail) {
+        res.status(500);
+        res.json({ error: { message: 'Internal Server Error' } });
+        return;
+      }
+      res.json({
+        id: `${req.params.integrationId}-new-install`,
+      });
+    }
+  );
+
+  return { installRequestBodies };
 }
 
 export function useAutoProvision(opts?: {
   responseKey?: keyof typeof autoProvisionResponses;
-  secondResponseKey?: keyof typeof autoProvisionResponses;
+  withInstallation?: boolean;
+  ownerId?: string;
 }) {
-  let callCount = 0;
+  const withInstallation = opts?.withInstallation ?? true;
   const storeId = 'resource_123';
   const requestBodies: unknown[] = [];
 
@@ -1278,26 +1320,38 @@ export function useAutoProvision(opts?: {
     }
   );
 
+  // Installations endpoint (needed for upfront install check)
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { installationType, integrationIdOrSlug } = req.query;
+    if (installationType !== 'marketplace') {
+      res.status(500);
+      res.end();
+      return;
+    }
+    res.json(
+      withInstallation
+        ? [
+            {
+              id: 'acme-install',
+              integrationId: integrationIdOrSlug,
+              installationType: 'marketplace',
+              ownerId: opts?.ownerId ?? 'team_dummy',
+            },
+          ]
+        : []
+    );
+  });
+
   // Auto-provision endpoint
   client.scenario.post(
     '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
     (req, res) => {
-      callCount++;
       requestBodies.push(req.body);
 
-      // First call returns the first response, subsequent calls return second response
-      const responseKey =
-        callCount === 1
-          ? (opts?.responseKey ?? 'provisioned')
-          : (opts?.secondResponseKey ?? opts?.responseKey ?? 'provisioned');
+      const response =
+        autoProvisionResponses[opts?.responseKey ?? 'provisioned'];
 
-      const response = autoProvisionResponses[responseKey];
-
-      if (
-        response.kind === 'install' ||
-        response.kind === 'metadata' ||
-        response.kind === 'unknown'
-      ) {
+      if (response.kind === 'metadata' || response.kind === 'unknown') {
         // 422 responses for fallback cases
         res.status(422);
         res.json(response);
