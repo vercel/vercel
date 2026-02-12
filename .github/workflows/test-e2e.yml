@@ -2,7 +2,6 @@ name: E2E Tests
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
 
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
@@ -15,41 +14,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  check-trigger:
-    name: Check E2E Trigger
-    runs-on: ubuntu-latest
-    outputs:
-      should-run: ${{ steps.check.outputs.should-run }}
-    steps:
-      - id: check
-        run: |
-          # Run if run-e2e-tests label is present
-          if [ "${{ contains(github.event.pull_request.labels.*.name, 'run-e2e-tests') }}" = "true" ]; then
-            echo "E2E tests triggered by run-e2e-tests label"
-            echo "should-run=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Run if Version Packages PR from vercel-release-bot
-          if [ "${{ github.event.pull_request.title }}" = "Version Packages" ]; then
-            if [ "${{ github.event.pull_request.user.login }}" = "vercel-release-bot" ]; then
-              echo "E2E tests triggered by Version Packages PR from vercel-release-bot"
-              echo "should-run=true" >> $GITHUB_OUTPUT
-            else
-              echo "::warning::Version Packages PR not authored by vercel-release-bot, skipping e2e tests"
-              echo "should-run=false" >> $GITHUB_OUTPUT
-            fi
-            exit 0
-          fi
-
-          echo "E2E tests not triggered (no matching conditions)"
-          echo "should-run=false" >> $GITHUB_OUTPUT
-
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
-    needs: check-trigger
-    if: needs.check-trigger.outputs.should-run == 'true'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.waitForTarball.outputs.url }}
@@ -126,7 +93,7 @@ jobs:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
     name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
-    if: ${{ needs.setup.result != 'skipped' && needs.setup.outputs['tests'] != '[]' }}
+    if: ${{ needs.setup.outputs['tests'] != '[]' }}
     needs:
       - setup
     strategy:
@@ -194,7 +161,6 @@ jobs:
     timeout-minutes: 5
     if: always()
     needs:
-      - check-trigger
       - test
     steps:
       - name: Check All
