@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  TURBO_REMOTE_ONLY: "true"
-  TURBO_TEAM: "vercel"
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
