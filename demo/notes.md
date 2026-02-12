@@ -16,6 +16,8 @@ Demo uses **Prisma Postgres** — single-product, clean before/after comparison.
 
 Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 
+**Pre-demo cleanup:** [Delete all Prisma resources](https://vercel.com/acme-marketplace-team-vtest314/~/integrations/prisma/icfg_CSeZTv0jmrvMfqq6wDyoq3nS) before starting.
+
 ---
 
 ## 1. Old Prisma — the interactive gauntlet
@@ -35,28 +37,38 @@ Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 
 ---
 
-## 2. New Prisma — the gauntlet, gone
-
-> **RUN (right pane):** `vc integration add prisma`
-
-| Say | Show on screen |
-|-----|----------------|
-| "Now watch this. Same Prisma." | Right pane: run the command above |
-| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... env pull |
-| **"Same Prisma. One command. Zero prompts. Name auto-generated. Free plan auto-selected. Auto-connected. Env vars pulled."** | Full output visible |
-
----
-
-## 3. Discovery — dynamic help
+## 2. Discovery + New Prisma — the full equivalent
 
 > **RUN (right pane):** `vc integration add prisma --help`
 
 | Say | Show on screen |
 |-----|----------------|
-| "What if the agent needs to customize? It asks the CLI." | Right pane: run the command above |
+| "The new CLI. How would an agent know what flags to use? It asks." | Right pane: run the command above |
 | *(let output render)* | Help output showing `--name`, `--plan`, `--no-connect`, metadata fields |
 | "Every parameter the old CLI prompted for — name, region, billing plan — is now a flag." | Point at flags |
-| **"Generated from the actual product schema. The agent reads this, constructs the command, and runs it. No guessing."** | |
+| **"Generated from the actual product schema. The agent reads this, constructs the command, and runs it."** | |
+
+> **RUN (right pane):** `vc integration add prisma --name xyztest --plan pro -m region=iad1`
+
+| Say | Show on screen |
+|-----|----------------|
+| "So let's use those flags." | Right pane: run the command above |
+| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... env pull |
+| **"Same result. One command. Name, plan, region — all flags. Scriptable. CI-friendly. Agent-friendly."** | Full output visible |
+
+> **Cleanup (right pane):** `vc integration-resource remove xyztest -a -y`
+
+---
+
+## 3. New Prisma — smart defaults
+
+> **RUN (right pane):** `vc integration add prisma`
+
+| Say | Show on screen |
+|-----|----------------|
+| "But we made it even easier. Drop every flag." | Right pane: run the command above |
+| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... env pull |
+| **"Zero flags. Name auto-generated. Free plan auto-selected. Region inferred. Auto-connected. Env vars pulled. That's what agents need."** | Full output visible |
 
 > **Note:** Feature flag is baked into the `vc` function when run from `~/demo-new` — no manual export needed.
 

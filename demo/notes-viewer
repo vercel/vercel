@@ -26,15 +26,28 @@ def parse_slides(filepath):
     return [s.strip() for s in slides if s.strip()]
 
 
+CMD_HIGHLIGHT = "\033[1;97;41m"  # bold bright white on red background
+
 def render_slide(text):
-    """Render a markdown slide using glow."""
+    """Render a markdown slide using glow, then highlight RUN commands."""
     result = subprocess.run(
         ["glow", "-w", str(WIDTH), "-"],
         input=text,
         capture_output=True,
         text=True,
     )
-    return result.stdout
+    # Highlight lines containing RUN commands
+    lines = result.stdout.split("\n")
+    highlighted = []
+    for line in lines:
+        # Strip ANSI to check content, but keep original for display
+        stripped = re.sub(r"\033\[[0-9;]*m", "", line)
+        if "RUN" in stripped and ("vc " in stripped or "vercel " in stripped):
+            # Replace the whole line with highlighted version
+            highlighted.append(f"{CMD_HIGHLIGHT}{stripped}{NC}")
+        else:
+            highlighted.append(line)
+    return "\n".join(highlighted)
 
 
 def get_key():
@@ -43,21 +56,21 @@ def get_key():
     old = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
-        ch = sys.stdin.read(1)
-        if ch == "\x1b":
-            ch2 = sys.stdin.read(1)
-            if ch2 == "[":
-                ch3 = sys.stdin.read(1)
-                if ch3 == "C":  # right arrow
+        b = os.read(fd, 1)
+        if b == b"\x1b":
+            b2 = os.read(fd, 1)
+            if b2 == b"[":
+                b3 = os.read(fd, 1)
+                if b3 == b"C":
                     return "right"
-                elif ch3 == "D":  # left arrow
+                elif b3 == b"D":
                     return "left"
-                elif ch3 == "B":  # down arrow
+                elif b3 == b"B":
                     return "right"
-                elif ch3 == "A":  # up arrow
+                elif b3 == b"A":
                     return "left"
             return "esc"
-        return ch
+        return b.decode("utf-8", errors="replace")
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
@@ -113,7 +126,7 @@ def main():
         sys.stdout.write(
             f"\n{DIM}{'─' * 60}{NC}\n"
             f"{GREEN}  Slide {idx + 1}/{len(slides)}{NC}  "
-            f"{DIM}← → navigate  q quit{NC}\n"
+            f"{DIM}← → navigate  r refresh  q quit{NC}\n"
         )
         sys.stdout.flush()
 
@@ -132,6 +145,20 @@ def main():
             idx = 0
         elif key == "G":
             idx = len(slides) - 1
+        elif key == "r":
+            slides = parse_slides(target)
+            rendered = [render_slide(s) for s in slides]
+            if idx >= len(slides):
+                idx = len(slides) - 1
+            # Flash confirmation
+            clear()
+            sys.stdout.write(rendered[idx])
+            sys.stdout.write(
+                f"\n{DIM}{'─' * 60}{NC}\n"
+                f"{GREEN}  Slide {idx + 1}/{len(slides)}  ✓ Refreshed{NC}\n"
+            )
+            sys.stdout.flush()
+            import time; time.sleep(0.3)
         elif needs_redraw:
             # File changed, will redraw on next loop
             pass

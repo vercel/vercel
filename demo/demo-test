@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""
+Runs the full demo sequence end-to-end and verifies each step succeeds.
+Cleans up all resources when done (or on failure).
+"""
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+DEMO_OLD = HOME / "demo-old"
+DEMO_NEW = HOME / "demo-new"
+MAIN_WORKTREE = HOME / "vercel" / "vercel"
+CLI_DIST = MAIN_WORKTREE / "packages" / "cli" / "dist" / "index.js"
+OLD_BIN = DEMO_OLD / "node_modules" / ".bin" / "vercel"
+
+GREEN = "\033[0;32m"
+RED = "\033[0;31m"
+YELLOW = "\033[0;33m"
+BOLD = "\033[1m"
+NC = "\033[0m"
+
+resources_to_cleanup: list[str] = []
+
+
+def ok(msg: str):
+    print(f"{GREEN}  PASS{NC} {msg}")
+
+
+def fail(msg: str):
+    print(f"{RED}  FAIL{NC} {msg}")
+
+
+def section(num: int, title: str):
+    print(f"\n{BOLD}Step {num}: {title}{NC}")
+
+
+def run_new(args: list[str], cwd: Path = DEMO_NEW) -> subprocess.CompletedProcess:
+    env = {**os.environ, "FF_AUTO_PROVISION_INSTALL": "1"}
+    return subprocess.run(
+        ["node", str(CLI_DIST)] + args,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def run_old(args: list[str], cwd: Path = DEMO_OLD) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [str(OLD_BIN)] + args,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
+
+
+def cleanup():
+    """Remove all resources created during the test."""
+    if not resources_to_cleanup:
+        return
+    print(f"\n{BOLD}Cleanup{NC}")
+    for name in list(resources_to_cleanup):
+        result = run_new(["integration-resource", "remove", name, "-a", "-y"])
+        if result.returncode == 0:
+            ok(f"Removed {name}")
+        else:
+            fail(f"Could not remove {name}: {result.stderr.strip() or result.stdout.strip()}")
+
+
+def main() -> int:
+    failures = 0
+
+    # ── Preflight ─────────────────────────────────────────────────────
+    print(f"{BOLD}Preflight checks{NC}")
+    if not CLI_DIST.exists():
+        fail(f"New CLI not built: {CLI_DIST}")
+        return 1
+    ok("New CLI dist exists")
+
+    if not OLD_BIN.exists():
+        fail(f"Old CLI not installed: {OLD_BIN}")
+        return 1
+    ok("Old CLI installed")
+
+    # ── Step 1: Old CLI help (sanity) ─────────────────────────────────
+    section(1, "Old CLI — vc integration add --help")
+    result = run_old(["integration", "add", "--help"])
+    output = result.stdout + result.stderr
+    if "integration" in output.lower() and "add" in output.lower():
+        ok("Old CLI help works")
+    else:
+        fail(f"Old CLI help failed\n{output}")
+        failures += 1
+
+    # ── Step 2a: New CLI help ─────────────────────────────────────────
+    section(2, "New CLI — discovery + flagged provision")
+    result = run_new(["integration", "add", "prisma", "--help"])
+    output = result.stdout + result.stderr
+    if "--name" in output and "--plan" in output:
+        ok("Help shows --name and --plan flags")
+    else:
+        fail(f"Help missing expected flags\n{output}")
+        failures += 1
+
+    # ── Step 2b: Provision with all flags ─────────────────────────────
+    result = run_new([
+        "integration", "add", "prisma",
+        "--name", "demo-test-flagged",
+        "--plan", "pro",
+        "-m", "region=iad1",
+    ])
+    output = result.stdout + result.stderr
+    if result.returncode == 0 and "successfully provisioned" in output.lower():
+        ok("Provisioned demo-test-flagged with flags")
+        resources_to_cleanup.append("demo-test-flagged")
+    else:
+        fail(f"Flagged provision failed (exit {result.returncode})\n{output}")
+        failures += 1
+        cleanup()
+        return failures
+
+    if "successfully connected" in output.lower():
+        ok("Auto-connected to project")
+    else:
+        fail("Did not auto-connect")
+        failures += 1
+
+    if ".env.local" in output:
+        ok("Env vars pulled")
+    else:
+        fail("Did not pull env vars")
+        failures += 1
+
+    # ── Step 2c: Cleanup resource before step 3 ──────────────────────
+    print(f"\n{BOLD}Cleanup between steps{NC}")
+    result = run_new(["integration-resource", "remove", "demo-test-flagged", "-a", "-y"])
+    if result.returncode == 0 and "successfully deleted" in (result.stdout + result.stderr).lower():
+        ok("Removed demo-test-flagged")
+        resources_to_cleanup.remove("demo-test-flagged")
+    else:
+        fail(f"Could not remove demo-test-flagged\n{result.stdout}\n{result.stderr}")
+        failures += 1
+        cleanup()
+        return failures
+
+    # ── Step 3: Zero-flag provision ───────────────────────────────────
+    section(3, "New CLI — smart defaults (zero flags)")
+    result = run_new(["integration", "add", "prisma"])
+    output = result.stdout + result.stderr
+    if result.returncode == 0 and "successfully provisioned" in output.lower():
+        # Extract auto-generated resource name
+        for line in output.splitlines():
+            if "successfully provisioned" in line.lower():
+                name = line.split(":")[-1].strip()
+                if name:
+                    resources_to_cleanup.append(name)
+                break
+        ok("Provisioned with zero flags")
+    else:
+        fail(f"Zero-flag provision failed (exit {result.returncode})\n{output}")
+        failures += 1
+        cleanup()
+        return failures
+
+    if "successfully connected" in output.lower():
+        ok("Auto-connected to project")
+    else:
+        fail("Did not auto-connect")
+        failures += 1
+
+    if ".env.local" in output:
+        ok("Env vars pulled")
+    else:
+        fail("Did not pull env vars")
+        failures += 1
+
+    # ── Step 4: Discover ──────────────────────────────────────────────
+    section(4, "New CLI — discover --format=json")
+    result = run_new(["integration", "discover", "--format=json"])
+    output = result.stdout + result.stderr
+    if result.returncode == 0 and '"slug"' in output:
+        ok("Discover returns JSON with slugs")
+    else:
+        fail(f"Discover failed (exit {result.returncode})\n{output[:500]}")
+        failures += 1
+
+    # ── Done ──────────────────────────────────────────────────────────
+    cleanup()
+
+    print()
+    if failures == 0:
+        print(f"{GREEN}{BOLD}All steps passed.{NC}")
+    else:
+        print(f"{RED}{BOLD}{failures} failure(s).{NC}")
+    return failures
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print(f"\n{YELLOW}Interrupted — cleaning up...{NC}")
+        cleanup()
+        sys.exit(1)
