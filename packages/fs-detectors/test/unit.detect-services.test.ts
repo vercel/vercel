@@ -224,37 +224,45 @@ describe('detectServices', () => {
       });
     });
 
-    it('should infer Python workspace from nearest manifest when workspace is omitted', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            'fastapi-api': {
-              framework: 'fastapi',
-              entrypoint: 'services/fastapi-api/main.py',
-              routePrefix: '/fastapi-api',
+    it.each([
+      ['pyproject.toml', '[project]\nname = "fastapi-api"\n'],
+      ['requirements.txt', 'fastapi\n'],
+      ['Pipfile', '[packages]\nfastapi = "*"\n'],
+      ['pylock.yml', 'lock-version: "1.0"\n'],
+      ['uv.lock', 'version = 1\n'],
+    ])(
+      'should infer Python workspace from nearest %s when workspace is omitted',
+      async (manifestFilename, manifestContents) => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              'fastapi-api': {
+                framework: 'fastapi',
+                entrypoint: 'services/fastapi-api/main.py',
+                routePrefix: '/fastapi-api',
+              },
             },
-          },
-        }),
-        'services/fastapi-api/pyproject.toml':
-          '[project]\nname = "fastapi-api"\n',
-        'services/fastapi-api/main.py': 'from fastapi import FastAPI',
-      });
-      const result = await detectServices({ fs });
+          }),
+          [`services/fastapi-api/${manifestFilename}`]: manifestContents,
+          'services/fastapi-api/main.py': 'from fastapi import FastAPI',
+        });
+        const result = await detectServices({ fs });
 
-      expect(result.errors).toEqual([]);
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'fastapi-api',
-        workspace: 'services/fastapi-api',
-        entrypoint: 'main.py',
-      });
-      expect(result.services[0].builder.src).toBe(
-        'services/fastapi-api/main.py'
-      );
-      expect(result.services[0].builder.config).toMatchObject({
-        workspace: 'services/fastapi-api',
-      });
-    });
+        expect(result.errors).toEqual([]);
+        expect(result.services).toHaveLength(1);
+        expect(result.services[0]).toMatchObject({
+          name: 'fastapi-api',
+          workspace: 'services/fastapi-api',
+          entrypoint: 'main.py',
+        });
+        expect(result.services[0].builder.src).toBe(
+          'services/fastapi-api/main.py'
+        );
+        expect(result.services[0].builder.config).toMatchObject({
+          workspace: 'services/fastapi-api',
+        });
+      }
+    );
 
     it('should infer Ruby workspace from nearest Gemfile when workspace is omitted', async () => {
       const fs = new VirtualFilesystem({
