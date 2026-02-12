@@ -1,6 +1,8 @@
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
-import { buildFileTree } from '../src/utils';
+import { buildFileTree, shouldUseInlineFiles, prepareFiles } from '../src/utils';
+import type { FilesMap } from '../src/utils/hashes';
+import type { VercelClientOptions } from '../src/types';
 import { describe, expect, it } from 'vitest';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
@@ -267,5 +269,157 @@ describe('buildFileTree()', () => {
     expect(normalizeWindowsPaths(fileList)).toContain(
       normalizeWindowsPaths(bulkRedirectsFile)[0]
     );
+  });
+});
+
+describe('shouldUseInlineFiles()', () => {
+  const createFilesMap = (
+    files: Array<{ name: string; content: string }>
+  ): FilesMap => {
+    const map: FilesMap = new Map();
+    files.forEach((file, index) => {
+      const data = Buffer.from(file.content, 'utf-8');
+      map.set(`sha${index}`, {
+        names: [file.name],
+        data,
+        mode: 0o644,
+      });
+    });
+    return map;
+  };
+
+  it('should return true for less than 10 HTML files', () => {
+    const files = createFilesMap([
+      { name: '/project/index.html', content: '<html></html>' },
+      { name: '/project/about.html', content: '<html></html>' },
+      { name: '/project/contact.html', content: '<html></html>' },
+    ]);
+    expect(shouldUseInlineFiles(files)).toBe(true);
+  });
+
+  it('should return true for .htm files', () => {
+    const files = createFilesMap([
+      { name: '/project/index.htm', content: '<html></html>' },
+      { name: '/project/about.HTM', content: '<html></html>' },
+    ]);
+    expect(shouldUseInlineFiles(files)).toBe(true);
+  });
+
+  it('should return false when non-HTML files are present', () => {
+    const files = createFilesMap([
+      { name: '/project/index.html', content: '<html></html>' },
+      { name: '/project/style.css', content: 'body {}' },
+    ]);
+    expect(shouldUseInlineFiles(files)).toBe(false);
+  });
+
+  it('should return false when there are 10 or more files', () => {
+    const htmlFiles = Array.from({ length: 10 }, (_, i) => ({
+      name: `/project/page${i}.html`,
+      content: '<html></html>',
+    }));
+    const files = createFilesMap(htmlFiles);
+    expect(shouldUseInlineFiles(files)).toBe(false);
+  });
+
+  it('should return true when there are exactly 9 files', () => {
+    const htmlFiles = Array.from({ length: 9 }, (_, i) => ({
+      name: `/project/page${i}.html`,
+      content: '<html></html>',
+    }));
+    const files = createFilesMap(htmlFiles);
+    expect(shouldUseInlineFiles(files)).toBe(true);
+  });
+
+  it('should return false for JavaScript files', () => {
+    const files = createFilesMap([
+      { name: '/project/index.js', content: 'console.log("hi")' },
+    ]);
+    expect(shouldUseInlineFiles(files)).toBe(false);
+  });
+
+  it('should handle case-insensitive HTML extensions', () => {
+    const files = createFilesMap([
+      { name: '/project/index.HTML', content: '<html></html>' },
+      { name: '/project/about.Html', content: '<html></html>' },
+    ]);
+    expect(shouldUseInlineFiles(files)).toBe(true);
+  });
+});
+
+describe('prepareFiles() with inline files', () => {
+  const createFilesMap = (
+    files: Array<{ name: string; content: string }>
+  ): FilesMap => {
+    const map: FilesMap = new Map();
+    files.forEach((file, index) => {
+      const data = Buffer.from(file.content, 'utf-8');
+      map.set(`sha${index}`, {
+        names: [file.name],
+        data,
+        mode: 0o644,
+      });
+    });
+    return map;
+  };
+
+  it('should include data and encoding for inlined HTML files', () => {
+    const files = createFilesMap([
+      { name: '/project/index.html', content: '<html><body>Hello</body></html>' },
+    ]);
+    const clientOptions: VercelClientOptions = {
+      token: 'test-token',
+      path: '/project',
+      isDirectory: true,
+    };
+
+    const prepared = prepareFiles(files, clientOptions);
+
+    expect(prepared).toHaveLength(1);
+    expect(prepared[0].file).toBe('index.html');
+    expect(prepared[0].data).toBe('<html><body>Hello</body></html>');
+    expect(prepared[0].encoding).toBe('utf-8');
+    expect(prepared[0].sha).toBeUndefined();
+  });
+
+  it('should use SHA reference for non-HTML files', () => {
+    const files = createFilesMap([
+      { name: '/project/script.js', content: 'console.log("hi")' },
+    ]);
+    const clientOptions: VercelClientOptions = {
+      token: 'test-token',
+      path: '/project',
+      isDirectory: true,
+    };
+
+    const prepared = prepareFiles(files, clientOptions);
+
+    expect(prepared).toHaveLength(1);
+    expect(prepared[0].file).toBe('script.js');
+    expect(prepared[0].sha).toBe('sha0');
+    expect(prepared[0].data).toBeUndefined();
+    expect(prepared[0].encoding).toBeUndefined();
+  });
+
+  it('should use SHA reference when file count exceeds limit', () => {
+    const htmlFiles = Array.from({ length: 10 }, (_, i) => ({
+      name: `/project/page${i}.html`,
+      content: `<html>Page ${i}</html>`,
+    }));
+    const files = createFilesMap(htmlFiles);
+    const clientOptions: VercelClientOptions = {
+      token: 'test-token',
+      path: '/project',
+      isDirectory: true,
+    };
+
+    const prepared = prepareFiles(files, clientOptions);
+
+    expect(prepared).toHaveLength(10);
+    prepared.forEach(file => {
+      expect(file.sha).toBeDefined();
+      expect(file.data).toBeUndefined();
+      expect(file.encoding).toBeUndefined();
+    });
   });
 });
