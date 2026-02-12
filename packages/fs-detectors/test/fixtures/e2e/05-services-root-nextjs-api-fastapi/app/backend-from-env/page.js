@@ -1,8 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 export default async function BackendFromEnvPage() {
-  const serviceUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+  const serviceUrl = process.env.API_URL;
 
   let response = 'backend-status:missing';
 
