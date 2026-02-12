@@ -675,42 +675,7 @@ const main = async () => {
     if (subcommand) {
       let func: any;
       switch (targetCommand) {
-        case 'alias':
-          telemetry.trackCliCommandAlias(userSuppliedSubCommand);
-          func = require('./commands/alias').default;
-          break;
-        case 'api':
-          telemetry.trackCliCommandApi(userSuppliedSubCommand);
-          func = require('./commands/api').default;
-          break;
-        case 'bisect':
-          telemetry.trackCliCommandBisect(userSuppliedSubCommand);
-          func = require('./commands/bisect').default;
-          break;
-        case 'blob':
-          telemetry.trackCliCommandBlob(userSuppliedSubCommand);
-          func = require('./commands/blob').default;
-          break;
-        case 'build':
-          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
-          func = require('./commands/build').default;
-          break;
-        case 'buy':
-          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
-          func = require('./commands/buy').default;
-          break;
-        case 'cache':
-          telemetry.trackCliCommandCache(userSuppliedSubCommand);
-          func = require('./commands/cache').default;
-          break;
-        case 'certs':
-          telemetry.trackCliCommandCerts(userSuppliedSubCommand);
-          func = require('./commands/certs').default;
-          break;
-        case 'curl':
-          telemetry.trackCliCommandCurl(userSuppliedSubCommand);
-          func = require('./commands/curl').default;
-          break;
+        // Priority commands - separate bundles for fast loading
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           telemetry.trackCliDefaultDeploy(defaultDeploy);
@@ -753,6 +718,10 @@ const main = async () => {
         case 'blob':
           telemetry.trackCliCommandBlob(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).blob;
+          break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).buy;
           break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
