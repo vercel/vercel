@@ -976,10 +976,30 @@ export default async function edit(client: Client, argv: string[]) {
       ).length;
       const requestQuery = getTransformsByType(route, 'request.query').length;
 
+      const syntaxLabel =
+        route.srcSyntax === 'path-to-regexp'
+          ? 'Pattern'
+          : route.srcSyntax === 'equals'
+            ? 'Exact'
+            : 'Regex';
+      const descriptionPreview = route.description
+        ? route.description.length > 40
+          ? route.description.slice(0, 40) + '...'
+          : route.description
+        : '';
+
       const editChoices = [
-        { name: 'Name', value: 'name' },
-        { name: 'Description', value: 'description' },
-        { name: 'Source pattern & syntax', value: 'source' },
+        { name: `Name (${route.name})`, value: 'name' },
+        {
+          name: descriptionPreview
+            ? `Description (${descriptionPreview})`
+            : 'Description',
+          value: 'description',
+        },
+        {
+          name: `Source (${syntaxLabel}: ${route.route.src})`,
+          value: 'source',
+        },
         {
           name: `Primary action (${getPrimaryActionLabel(route)})`,
           value: 'action',
