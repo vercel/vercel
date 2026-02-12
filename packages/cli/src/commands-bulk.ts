@@ -9,6 +9,7 @@ export { default as alias } from './commands/alias';
 export { default as api } from './commands/api';
 export { default as bisect } from './commands/bisect';
 export { default as blob } from './commands/blob';
+export { default as buy } from './commands/buy';
 export { default as cache } from './commands/cache';
 export { default as contract } from './commands/contract';
 export { default as certs } from './commands/certs';
