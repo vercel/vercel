@@ -373,7 +373,8 @@ export interface PreparedFile {
   file: string;
   sha?: string;
   size?: number;
-  mode: number;
+  /** File mode/permissions (not used for inlined files) */
+  mode?: number;
   /** Inlined file content (utf-8 or base64 encoded) */
   data?: string;
   /** Encoding of the inlined data */
@@ -440,19 +441,24 @@ export const prepareFiles = (
 
       const normalizedFileName = isWin ? fileName.replace(/\\/g, '/') : fileName;
 
-      const preparedFile: PreparedFile = {
-        file: normalizedFileName,
-        size: file.data?.byteLength || file.data?.length,
-        mode: file.mode,
-      };
+      let preparedFile: PreparedFile;
 
       if (useInline && file.data) {
         // Inline the file content - HTML files use utf-8 encoding
-        preparedFile.data = file.data.toString('utf-8');
-        preparedFile.encoding = 'utf-8';
+        // Inlined files only accept: file, data, encoding (no size, mode, or sha)
+        preparedFile = {
+          file: normalizedFileName,
+          data: file.data.toString('utf-8'),
+          encoding: 'utf-8',
+        };
       } else {
         // Use SHA reference for separate upload
-        preparedFile.sha = sha || undefined;
+        preparedFile = {
+          file: normalizedFileName,
+          size: file.data?.byteLength || file.data?.length,
+          mode: file.mode,
+          sha: sha || undefined,
+        };
       }
 
       preparedFiles.push(preparedFile);

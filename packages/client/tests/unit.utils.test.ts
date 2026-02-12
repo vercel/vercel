@@ -379,7 +379,10 @@ describe('prepareFiles() with inline files', () => {
     expect(prepared[0].file).toBe('index.html');
     expect(prepared[0].data).toBe('<html><body>Hello</body></html>');
     expect(prepared[0].encoding).toBe('utf-8');
+    // Inlined files should NOT have sha, size, or mode (API rejects additional properties)
     expect(prepared[0].sha).toBeUndefined();
+    expect(prepared[0].size).toBeUndefined();
+    expect(prepared[0].mode).toBeUndefined();
   });
 
   it('should use SHA reference for non-HTML files', () => {
