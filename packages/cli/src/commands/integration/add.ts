@@ -43,6 +43,7 @@ export async function add(
   args: string[],
   resourceNameArg?: string,
   metadataFlags?: string[],
+  billingPlanId?: string,
   options: AddOptions = {}
 ) {
   if (args.length > 1) {
@@ -82,6 +83,7 @@ export async function add(
     return await addAutoProvision(client, integrationSlug, resourceNameArg, {
       productSlug,
       metadata: metadataFlags,
+      billingPlanId,
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
     });
@@ -94,6 +96,7 @@ export async function add(
   });
   telemetry.trackCliOptionName(resourceNameArg);
   telemetry.trackCliOptionMetadata(metadataFlags);
+  telemetry.trackCliOptionPlan(billingPlanId);
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
 
@@ -229,7 +232,8 @@ export async function add(
         product.id,
         projectLink.value,
         resourceName,
-        parsedMetadata
+        parsedMetadata,
+        billingPlanId
       );
     }
 
@@ -246,6 +250,7 @@ export async function add(
     metadataWizard,
     resourceName,
     parsedMetadata,
+    billingPlanId,
     options
   );
 }
@@ -256,7 +261,8 @@ function provisionResourceViaWebUI(
   productId: string,
   projectId?: string,
   resourceName?: string,
-  metadata?: Metadata
+  metadata?: Metadata,
+  billingPlanId?: string
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
@@ -271,6 +277,9 @@ function provisionResourceViaWebUI(
   }
   if (metadata && Object.keys(metadata).length > 0) {
     url.searchParams.set('metadata', JSON.stringify(metadata));
+  }
+  if (billingPlanId) {
+    url.searchParams.set('planId', billingPlanId);
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
@@ -288,6 +297,7 @@ async function provisionResourceViaCLI(
   metadataWizard: MetadataWizard,
   name: string,
   parsedMetadata?: Metadata,
+  billingPlanId?: string,
   options: AddOptions = {}
 ) {
   // Get metadata from flags, wizard, or hybrid
@@ -344,7 +354,19 @@ async function provisionResourceViaCLI(
     return 1;
   }
 
-  const billingPlan = await selectBillingPlan(client, enabledBillingPlans);
+  let billingPlan: BillingPlan | undefined;
+
+  if (billingPlanId) {
+    billingPlan = enabledBillingPlans.find(plan => plan.id === billingPlanId);
+    if (!billingPlan) {
+      output.error(
+        `Billing plan "${billingPlanId}" not found. Available plans: ${enabledBillingPlans.map(p => p.id).join(', ')}`
+      );
+      return 1;
+    }
+  } else {
+    billingPlan = await selectBillingPlan(client, enabledBillingPlans);
+  }
 
   if (!billingPlan) {
     output.error('No billing plan selected');
@@ -374,7 +396,8 @@ async function provisionResourceViaCLI(
         product.id,
         projectLink.value,
         name,
-        metadata
+        metadata,
+        billingPlanId
       );
     }
 
