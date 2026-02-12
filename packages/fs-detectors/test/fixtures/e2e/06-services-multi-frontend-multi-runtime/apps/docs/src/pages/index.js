@@ -6,8 +6,6 @@ export default function Home() {
     <Layout title='Docs Home'>
       <main>
         <p>Hello from Docusaurus 2</p>
-        <p>pong from Docusaurus 2</p>
-        <p>404 from Docusaurus 2</p>
       </main>
     </Layout>
   );

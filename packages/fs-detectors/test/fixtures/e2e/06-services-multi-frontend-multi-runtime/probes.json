@@ -27,8 +27,8 @@
     },
     {
       "path": "/docs/not-found",
-      "status": 200,
-      "mustContain": "404 from Docusaurus 2"
+      "status": 404,
+      "mustContain": "Page Not Found"
     },
     {
       "path": "/dashboard",
