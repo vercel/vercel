@@ -1,12 +1,21 @@
 import type { Route } from '@vercel/routing-utils';
-import type {
-  DetectServicesOptions,
-  DetectServicesResult,
-  ResolvedService,
-  ServicesRoutes,
+import {
+  getOwnershipGuard,
+  normalizeRoutePrefix,
+  scopeRouteSourceToOwnership,
+} from '@vercel/routing-utils';
+import {
+  type DetectServicesOptions,
+  type DetectServicesResult,
+  type ResolvedService,
+  type ServicesRoutes,
 } from './types';
-import { ENTRYPOINT_EXTENSIONS } from './types';
-import { isRouteOwningBuilder, isStaticBuild, readVercelConfig } from './utils';
+import {
+  getInternalServiceFunctionPath,
+  isRouteOwningBuilder,
+  isStaticBuild,
+  readVercelConfig,
+} from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 
@@ -107,7 +116,8 @@ export async function detectServices(
  *   SPA fallback routes to index.html under the service prefix.
  *
  * - **Runtime services** (`@vercel/python`, `@vercel/go`, `@vercel/ruby`, etc.):
- *   Prefix rewrites to the function entrypoint with `check: true`.
+ *   Prefix rewrites to an internal runtime destination (`/_svc/{name}/index`)
+ *   with `check: true`.
  *
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
@@ -122,20 +132,6 @@ export function generateServicesRoutes(
   const crons: Route[] = [];
   const workers: Route[] = [];
 
-  // Sort longest extension first so `.mts` is preferred over `.ts`, etc.
-  // (".mts".endsWith(".ts") is true, so order matters.)
-  const entrypointExtensions = Object.keys(ENTRYPOINT_EXTENSIONS).sort(
-    (a, b) => b.length - a.length
-  );
-  const stripEntrypointExtension = (entrypoint: string): string => {
-    for (const ext of entrypointExtensions) {
-      if (entrypoint.endsWith(ext)) {
-        return entrypoint.slice(0, -ext.length);
-      }
-    }
-    return entrypoint;
-  };
-
   // Filter and sort web services by prefix length (longest first)
   // so more specific routes match before broader ones.
   const sortedWebServices = services
@@ -145,9 +141,12 @@ export function generateServicesRoutes(
     )
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
+  const allWebPrefixes = getWebRoutePrefixes(sortedWebServices);
+
   for (const service of sortedWebServices) {
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
+    const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
 
     // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
     // own route tables. Skip synthetic route generation for them.
@@ -159,29 +158,36 @@ export function generateServicesRoutes(
       // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
         defaults.push({ handle: 'filesystem' });
-        defaults.push({ src: '/(.*)', dest: '/index.html' });
+        defaults.push({
+          src: scopeRouteSourceToOwnership('/(.*)', ownershipGuard),
+          dest: '/index.html',
+        });
       } else {
         rewrites.push({
-          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          src: scopeRouteSourceToOwnership(
+            `^/${normalizedPrefix}(?:/.*)?$`,
+            ownershipGuard
+          ),
           dest: `/${normalizedPrefix}/index.html`,
         });
       }
     } else if (service.runtime) {
-      // Function service: rewrite to the function entrypoint
+      // Function service: rewrite to internal function namespace
       // `check: true` verifies the destination exists before applying the route
-      const builderSrc = service.builder.src || routePrefix;
-      // Match the v3 runtime output naming convention: extensionless function paths.
-      // For example, "api/index.ts" → "/api/index".
-      const extensionless = stripEntrypointExtension(builderSrc);
-      const functionPath = extensionless.startsWith('/')
-        ? extensionless
-        : `/${extensionless}`;
+      const functionPath = getInternalServiceFunctionPath(service.name);
 
       if (routePrefix === '/') {
-        defaults.push({ src: '^/(.*)$', dest: functionPath, check: true });
+        defaults.push({
+          src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
+          dest: functionPath,
+          check: true,
+        });
       } else {
         rewrites.push({
-          src: `^/${normalizedPrefix}(?:/.*)?$`,
+          src: scopeRouteSourceToOwnership(
+            `^/${normalizedPrefix}(?:/.*)?$`,
+            ownershipGuard
+          ),
           dest: functionPath,
           check: true,
         });
@@ -194,4 +200,15 @@ export function generateServicesRoutes(
   }
 
   return { rewrites, defaults, crons, workers };
+}
+
+function getWebRoutePrefixes(services: ResolvedService[]): string[] {
+  const unique = new Set<string>();
+  for (const service of services) {
+    if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
+      continue;
+    }
+    unique.add(normalizeRoutePrefix(service.routePrefix));
+  }
+  return Array.from(unique);
 }
