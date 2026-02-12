@@ -36,7 +36,7 @@ export default async function addon(client: Client, argv: string[]) {
   }
 
   // TODO: Implement addon purchase flow when API is available
-  output.warn('Addon purchase is not yet available. API integration pending.');
+  output.warn('Addons purchases are not yet available.');
 
   return 0;
 }

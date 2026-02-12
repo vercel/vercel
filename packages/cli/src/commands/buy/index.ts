@@ -16,16 +16,17 @@ import {
   domainSubcommand,
 } from './command';
 import { type Command, help } from '../help';
+import { getCommandAliases } from '..';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { BuyTelemetryClient } from '../../util/telemetry/commands/buy';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
-  credits: ['credits'],
-  addon: ['addon', 'addons'],
-  pro: ['pro'],
-  v0: ['v0'],
-  domain: ['domain'],
+  credits: getCommandAliases(creditsSubcommand),
+  addon: getCommandAliases(addonSubcommand),
+  pro: getCommandAliases(proSubcommand),
+  v0: getCommandAliases(v0Subcommand),
+  domain: getCommandAliases(domainSubcommand),
 };
 
 export default async function main(client: Client) {

@@ -30,9 +30,7 @@ export default async function v0(client: Client, argv: string[]) {
   output.log(`Purchasing v0 subscription for team ${contextName}...`);
 
   // TODO: Implement v0 subscription purchase flow when API is available
-  output.warn(
-    'v0 subscription purchase is not yet available. API integration pending.'
-  );
+  output.warn('v0 subscription purchase is not yet available.');
 
   return 0;
 }
