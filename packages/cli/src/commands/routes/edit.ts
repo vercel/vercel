@@ -976,34 +976,38 @@ export default async function edit(client: Client, argv: string[]) {
       ).length;
       const requestQuery = getTransformsByType(route, 'request.query').length;
 
+      const editChoices = [
+        { name: 'Name', value: 'name' },
+        { name: 'Description', value: 'description' },
+        { name: 'Source pattern & syntax', value: 'source' },
+        {
+          name: `Primary action (${getPrimaryActionLabel(route)})`,
+          value: 'action',
+        },
+        {
+          name: `Conditions (${hasConds} has, ${missingConds} missing)`,
+          value: 'conditions',
+        },
+        {
+          name: `Response Headers (${responseHeaders})`,
+          value: 'response-headers',
+        },
+        {
+          name: `Request Headers (${requestHeaders})`,
+          value: 'request-headers',
+        },
+        {
+          name: `Request Query (${requestQuery})`,
+          value: 'request-query',
+        },
+        { name: 'Done - save changes', value: 'done' },
+      ];
+
       const choice = await client.input.select({
         message: 'What would you like to edit?',
-        choices: [
-          { name: 'Name', value: 'name' },
-          { name: 'Description', value: 'description' },
-          { name: 'Source pattern & syntax', value: 'source' },
-          {
-            name: `Primary action (${getPrimaryActionLabel(route)})`,
-            value: 'action',
-          },
-          {
-            name: `Conditions (${hasConds} has, ${missingConds} missing)`,
-            value: 'conditions',
-          },
-          {
-            name: `Response Headers (${responseHeaders})`,
-            value: 'response-headers',
-          },
-          {
-            name: `Request Headers (${requestHeaders})`,
-            value: 'request-headers',
-          },
-          {
-            name: `Request Query (${requestQuery})`,
-            value: 'request-query',
-          },
-          { name: 'Done - save changes', value: 'done' },
-        ],
+        choices: editChoices,
+        pageSize: editChoices.length,
+        loop: false,
       });
 
       switch (choice) {
