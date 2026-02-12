@@ -32,7 +32,7 @@ pnpm test-unit
 
 ## Changesets
 
-**Always create a changeset when making a PR that affects packages.**
+**Always create a changeset for all PRs.**
 
 ```bash
 pnpm changeset
@@ -42,9 +42,10 @@ A changeset is a markdown file in `.changeset/` with YAML frontmatter listing af
 
 ### Changeset Rules
 
-1. If your change modifies a package in `/packages/*`, include it in the changeset frontmatter
-2. If your change only affects non-package files (docs, config, examples, internal tooling), create a changeset with **empty frontmatter** - just the description
-3. Packages in `/internals/*`, `/api`, and `/examples` are ignored by changesets (see `.changeset/config.json`)
+1. Every PR must include a changeset (use empty frontmatter for non-package changes).
+2. If your change modifies a package in `/packages/*`, include it in the changeset frontmatter
+3. If your change only affects non-package files (docs, config, examples, internal tooling), create a changeset with **empty frontmatter** - just the description
+4. Packages in `/internals/*`, `/api`, and `/examples` are ignored by changesets (see `.changeset/config.json`)
 
 Example changeset for a package change:
 
