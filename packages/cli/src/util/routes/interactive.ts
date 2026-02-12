@@ -174,7 +174,7 @@ export function validateActionFlags(
     case 'redirect':
       if (!dest) return '--action redirect requires --dest.';
       if (status === undefined)
-        return '--action redirect requires --status (301, 302, 307, or 308).';
+        return `--action redirect requires --status (${REDIRECT_STATUS_CODES.join(', ')}).`;
       if (!REDIRECT_STATUS_CODES.includes(status))
         return `Invalid redirect status: ${status}. Must be one of: ${REDIRECT_STATUS_CODES.join(', ')}`;
       break;
@@ -224,6 +224,7 @@ export async function collectActionDetails(
           { name: '308 - Permanent Redirect (preserves method)', value: 308 },
           { name: '301 - Moved Permanently (may change to GET)', value: 301 },
           { name: '302 - Found (may change to GET)', value: 302 },
+          { name: '303 - See Other', value: 303 },
         ],
       });
       Object.assign(flags, { '--dest': dest, '--status': status });

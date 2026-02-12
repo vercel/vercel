@@ -3,6 +3,7 @@ import type { TelemetryMethods } from '../../types';
 import type {
   routesCommand,
   addSubcommand,
+  editSubcommand,
 } from '../../../../commands/routes/command';
 
 export class RoutesTelemetryClient
@@ -323,6 +324,191 @@ export class RoutesAddTelemetryClient
   trackCliFlagRequestTransforms(hasRequestTransforms: boolean) {
     if (hasRequestTransforms) {
       this.trackCliFlag('request-transforms');
+    }
+  }
+}
+
+/**
+ * Telemetry client for the `routes edit` subcommand.
+ */
+export class RoutesEditTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof editSubcommand>
+{
+  trackCliArgumentNameOrId(id: string | undefined) {
+    if (id) {
+      this.trackCliArgument({ arg: 'name-or-id', value: this.redactedValue });
+    }
+  }
+
+  trackCliFlagYes(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliFlagNoDest(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-dest');
+    }
+  }
+
+  trackCliFlagNoStatus(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-status');
+    }
+  }
+
+  trackCliFlagClearConditions(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('clear-conditions');
+    }
+  }
+
+  trackCliFlagClearHeaders(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('clear-headers');
+    }
+  }
+
+  trackCliFlagClearTransforms(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('clear-transforms');
+    }
+  }
+
+  trackCliOptionName(name: string | undefined) {
+    if (name) {
+      this.trackCliOption({ option: 'name', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionDescription(desc: string | undefined) {
+    if (desc) {
+      this.trackCliOption({ option: 'description', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionSrc(src: string | undefined) {
+    if (src) {
+      this.trackCliOption({ option: 'src', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionSrcSyntax(syntax: string | undefined) {
+    if (syntax) {
+      this.trackCliOption({ option: 'src-syntax', value: syntax });
+    }
+  }
+
+  trackCliOptionAction(action: string | undefined) {
+    if (action) {
+      this.trackCliOption({ option: 'action', value: action });
+    }
+  }
+
+  trackCliOptionDest(dest: string | undefined) {
+    if (dest) {
+      this.trackCliOption({ option: 'dest', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionStatus(status: number | undefined) {
+    if (status !== undefined) {
+      this.trackCliOption({ option: 'status', value: String(status) });
+    }
+  }
+
+  trackCliOptionSetResponseHeader(h: [string] | undefined) {
+    if (h && h.length > 0) {
+      this.trackCliOption({
+        option: 'set-response-header',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionAppendResponseHeader(h: [string] | undefined) {
+    if (h && h.length > 0) {
+      this.trackCliOption({
+        option: 'append-response-header',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionDeleteResponseHeader(h: [string] | undefined) {
+    if (h && h.length > 0) {
+      this.trackCliOption({
+        option: 'delete-response-header',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSetRequestHeader(h: [string] | undefined) {
+    if (h && h.length > 0) {
+      this.trackCliOption({
+        option: 'set-request-header',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionAppendRequestHeader(h: [string] | undefined) {
+    if (h && h.length > 0) {
+      this.trackCliOption({
+        option: 'append-request-header',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionDeleteRequestHeader(h: [string] | undefined) {
+    if (h && h.length > 0) {
+      this.trackCliOption({
+        option: 'delete-request-header',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSetRequestQuery(p: [string] | undefined) {
+    if (p && p.length > 0) {
+      this.trackCliOption({
+        option: 'set-request-query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionAppendRequestQuery(p: [string] | undefined) {
+    if (p && p.length > 0) {
+      this.trackCliOption({
+        option: 'append-request-query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionDeleteRequestQuery(p: [string] | undefined) {
+    if (p && p.length > 0) {
+      this.trackCliOption({
+        option: 'delete-request-query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionHas(conditions: [string] | undefined) {
+    if (conditions && conditions.length > 0) {
+      this.trackCliOption({ option: 'has', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionMissing(conditions: [string] | undefined) {
+    if (conditions && conditions.length > 0) {
+      this.trackCliOption({ option: 'missing', value: this.redactedValue });
     }
   }
 }
