@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
@@ -843,6 +843,334 @@ describe('routes edit', () => {
 
       const body = capturedBodies.edit as any;
       expect(body.route.srcSyntax).toBe('equals'); // preserved
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Additional flag-mode tests
+  // ---------------------------------------------------------------------------
+
+  describe('additional flag-mode coverage', () => {
+    it('should remove destination with --no-dest alone (no --action)', async () => {
+      useEditRouteComprehensive();
+      // API Rewrite has dest but no status — removing dest makes it action-less
+      client.setArgv('routes', 'edit', 'API Rewrite', '--no-dest');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.dest).toBeUndefined();
+    });
+
+    it('should delete a response header via --delete-response-header', async () => {
+      useEditRouteComprehensive();
+      client.setArgv(
+        'routes',
+        'edit',
+        'API Rewrite',
+        '--delete-response-header',
+        'X-Powered-By'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      const transforms = body.route.route.transforms;
+      const deleteTransform = transforms.find(
+        (t: any) =>
+          t.type === 'response.headers' &&
+          t.op === 'delete' &&
+          t.target.key === 'X-Powered-By'
+      );
+      expect(deleteTransform).toBeDefined();
+    });
+
+    it('should append a request header via --append-request-header', async () => {
+      useEditRouteComprehensive();
+      client.setArgv(
+        'routes',
+        'edit',
+        'API Rewrite',
+        '--append-request-header',
+        'X-Chain=edge'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      const transforms = body.route.route.transforms;
+      const appendTransform = transforms.find(
+        (t: any) =>
+          t.type === 'request.headers' &&
+          t.op === 'append' &&
+          t.target.key === 'X-Chain'
+      );
+      expect(appendTransform).toBeDefined();
+    });
+
+    it('should delete a request header via --delete-request-header', async () => {
+      useEditRouteComprehensive();
+      client.setArgv(
+        'routes',
+        'edit',
+        'API Rewrite',
+        '--delete-request-header',
+        'X-Remove-Me'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      const transforms = body.route.route.transforms;
+      const deleteTransform = transforms.find(
+        (t: any) =>
+          t.type === 'request.headers' &&
+          t.op === 'delete' &&
+          t.target.key === 'X-Remove-Me'
+      );
+      expect(deleteTransform).toBeDefined();
+    });
+
+    it('should error on description too long', async () => {
+      useEditRouteComprehensive();
+      const longDesc = 'a'.repeat(1025);
+      client.setArgv(
+        'routes',
+        'edit',
+        'API Rewrite',
+        '--description',
+        longDesc
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('1024 characters or less');
+    });
+
+    it('should error on set-status with invalid range', async () => {
+      useEditRouteComprehensive();
+      client.setArgv(
+        'routes',
+        'edit',
+        'API Rewrite',
+        '--action',
+        'set-status',
+        '--status',
+        '999'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Status code must be between 100 and 599'
+      );
+    });
+
+    it('should error when non-TTY and no edit flags', async () => {
+      useEditRouteComprehensive();
+      (client.stdin as any).isTTY = false;
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('No edit flags provided');
+      // Restore TTY for other tests
+      (client.stdin as any).isTTY = true;
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Interactive mode tests
+  // ---------------------------------------------------------------------------
+
+  describe('interactive mode', () => {
+    it('should edit name interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['name', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi.fn().mockResolvedValue('Renamed API Proxy');
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.name).toBe('Renamed API Proxy');
+    });
+
+    it('should edit description interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['description', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi.fn().mockResolvedValue('New description');
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.description).toBe('New description');
+    });
+
+    it('should edit source interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['source', 'equals', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi.fn().mockResolvedValue('/new-exact-path');
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.src).toBe('/new-exact-path');
+      expect(body.route.srcSyntax).toBe('equals');
+    });
+
+    it('should edit primary action — change destination', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['action', 'change-dest', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi
+        .fn()
+        .mockResolvedValue('https://new-backend.internal/:path*');
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.dest).toBe('https://new-backend.internal/:path*');
+    });
+
+    it('should add a condition interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = [
+        'conditions',
+        'add',
+        'has',
+        'header',
+        'exists',
+        'back',
+        'done',
+      ];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi.fn().mockResolvedValue('X-Test');
+      client.input.confirm = vi.fn().mockResolvedValue(false);
+
+      client.setArgv('routes', 'edit', 'Blog Redirect');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.has).toHaveLength(1);
+    });
+
+    it('should remove a condition interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['conditions', 'remove', 0, 'back', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.has).toHaveLength(1);
+      expect(body.route.route.missing).toHaveLength(1);
+    });
+
+    it('should edit response headers interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = [
+        'response-headers',
+        'add',
+        'set',
+        'back',
+        'done',
+      ];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+
+      let textCallCount = 0;
+      const textResponses = ['X-New', 'new-value'];
+      client.input.text = vi.fn().mockImplementation(() => {
+        return Promise.resolve(textResponses[textCallCount++]);
+      });
+      client.input.confirm = vi.fn().mockResolvedValue(false);
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.headers['X-New']).toBe('new-value');
+    });
+
+    it('should edit request headers interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['request-headers', 'add', 'set', 'back', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+
+      let textCallCount = 0;
+      const textResponses = ['X-New-Req', 'req-val'];
+      client.input.text = vi.fn().mockImplementation(() => {
+        return Promise.resolve(textResponses[textCallCount++]);
+      });
+      client.input.confirm = vi.fn().mockResolvedValue(false);
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should edit request query interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['request-query', 'add', 'set', 'back', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+
+      let textCallCount = 0;
+      const textResponses = ['new-param', 'param-value'];
+      client.input.text = vi.fn().mockImplementation(() => {
+        return Promise.resolve(textResponses[textCallCount++]);
+      });
+      client.input.confirm = vi.fn().mockResolvedValue(false);
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
     });
   });
 });

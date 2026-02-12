@@ -246,7 +246,7 @@ function applyFlagMutations(
         const dest = destFlag ? stripQuotes(destFlag) : undefined;
         if (!dest) return '--action redirect requires --dest.';
         if (statusFlag === undefined)
-          return '--action redirect requires --status (301, 302, 307, or 308).';
+          return `--action redirect requires --status (${REDIRECT_STATUS_CODES.join(', ')}).`;
         if (!REDIRECT_STATUS_CODES.includes(statusFlag))
           return `Invalid redirect status: ${statusFlag}. Must be one of: ${REDIRECT_STATUS_CODES.join(', ')}`;
         route.route.dest = dest;
@@ -467,6 +467,7 @@ async function editPrimaryAction(
             { name: '308 - Permanent Redirect', value: 308 },
             { name: '301 - Moved Permanently', value: 301 },
             { name: '302 - Found', value: 302 },
+            { name: '303 - See Other', value: 303 },
           ],
         });
         route.route.status = status as number;
@@ -821,6 +822,68 @@ export default async function edit(client: Client, argv: string[]) {
   const skipConfirmation = flags['--yes'] as boolean | undefined;
   const identifier = args[0];
 
+  // Track telemetry
+  const { RoutesEditTelemetryClient } = await import(
+    '../../util/telemetry/commands/routes'
+  );
+  const telemetry = new RoutesEditTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
+
+  telemetry.trackCliArgumentNameOrId(identifier);
+  telemetry.trackCliFlagYes(skipConfirmation);
+  telemetry.trackCliOptionName(flags['--name'] as string | undefined);
+  telemetry.trackCliOptionDescription(
+    flags['--description'] as string | undefined
+  );
+  telemetry.trackCliOptionSrc(flags['--src'] as string | undefined);
+  telemetry.trackCliOptionSrcSyntax(
+    flags['--src-syntax'] as string | undefined
+  );
+  telemetry.trackCliOptionAction(flags['--action'] as string | undefined);
+  telemetry.trackCliOptionDest(flags['--dest'] as string | undefined);
+  telemetry.trackCliOptionStatus(flags['--status'] as number | undefined);
+  telemetry.trackCliFlagNoDest(flags['--no-dest'] as boolean | undefined);
+  telemetry.trackCliFlagNoStatus(flags['--no-status'] as boolean | undefined);
+  telemetry.trackCliFlagClearConditions(
+    flags['--clear-conditions'] as boolean | undefined
+  );
+  telemetry.trackCliFlagClearHeaders(
+    flags['--clear-headers'] as boolean | undefined
+  );
+  telemetry.trackCliFlagClearTransforms(
+    flags['--clear-transforms'] as boolean | undefined
+  );
+  telemetry.trackCliOptionSetResponseHeader(
+    flags['--set-response-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionAppendResponseHeader(
+    flags['--append-response-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionDeleteResponseHeader(
+    flags['--delete-response-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionSetRequestHeader(
+    flags['--set-request-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionAppendRequestHeader(
+    flags['--append-request-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionDeleteRequestHeader(
+    flags['--delete-request-header'] as [string] | undefined
+  );
+  telemetry.trackCliOptionSetRequestQuery(
+    flags['--set-request-query'] as [string] | undefined
+  );
+  telemetry.trackCliOptionAppendRequestQuery(
+    flags['--append-request-query'] as [string] | undefined
+  );
+  telemetry.trackCliOptionDeleteRequestQuery(
+    flags['--delete-request-query'] as [string] | undefined
+  );
+  telemetry.trackCliOptionHas(flags['--has'] as [string] | undefined);
+  telemetry.trackCliOptionMissing(flags['--missing'] as [string] | undefined);
+
   if (!identifier) {
     output.error(
       `Route name or ID is required. Usage: ${getCommandName('routes edit <name-or-id>')}`
@@ -883,6 +946,13 @@ export default async function edit(client: Client, argv: string[]) {
     }
   } else {
     // --- Interactive mode ---
+    if (!client.stdin.isTTY) {
+      output.error(
+        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${getCommandName('routes edit --help')} for all options.`
+      );
+      return 1;
+    }
+
     output.log(`\nEditing route "${originalRoute.name}"`);
     printRouteConfig(route);
 
