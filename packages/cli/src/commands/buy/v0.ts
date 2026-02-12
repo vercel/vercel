@@ -7,8 +7,8 @@ import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 
 export default async function v0(client: Client, argv: string[]) {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(v0Subcommand.options);
+  let parsedArgs;
   try {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -30,7 +30,6 @@ export default async function v0(client: Client, argv: string[]) {
   output.log(`Purchasing v0 subscription for team ${contextName}...`);
 
   // TODO: Implement v0 subscription purchase flow when API is available
-  output.warn('v0 subscription purchase is not yet available.');
-
-  return 0;
+  output.error('v0 subscription purchase is not yet available via the CLI.');
+  return 1;
 }

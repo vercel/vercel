@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { yesOption, formatOption, jsonOption } from '../../util/arg-common';
 
 export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
 export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
@@ -23,7 +24,14 @@ export const creditsSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'Purchase $100 of v0 credits',

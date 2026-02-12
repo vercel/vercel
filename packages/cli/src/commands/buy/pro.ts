@@ -7,8 +7,8 @@ import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 
 export default async function pro(client: Client, argv: string[]) {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(proSubcommand.options);
+  let parsedArgs;
   try {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -30,7 +30,7 @@ export default async function pro(client: Client, argv: string[]) {
   output.log(`Upgrading team ${contextName} to Vercel Pro...`);
 
   // TODO: Implement Pro subscription purchase flow when API is available
-  output.warn('Pro subscription purchase is not yet available.');
+  output.error('Pro subscription purchase is not yet available via the CLI.');
 
-  return 0;
+  return 1;
 }
