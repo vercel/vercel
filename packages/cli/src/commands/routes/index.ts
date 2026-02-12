@@ -30,7 +30,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   publish: getCommandAliases(publishSubcommand),
   restore: getCommandAliases(restoreSubcommand),
-  discard: getCommandAliases(discardSubcommand),
+  'discard-staging': getCommandAliases(discardSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -123,13 +123,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRestore(subcommandOriginal);
       return (await import('./restore')).default(client, args);
-    case 'discard':
+    case 'discard-staging':
       if (needHelp) {
         telemetry.trackCliFlagHelp('routes', subcommandOriginal);
         printHelp(discardSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandDiscard(subcommandOriginal);
+      telemetry.trackCliSubcommandDiscardStaging(subcommandOriginal);
       return (await import('./discard')).default(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
