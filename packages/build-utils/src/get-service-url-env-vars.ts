@@ -28,8 +28,8 @@ function computeServiceUrl(
   routePrefix: string,
   isOrigin: boolean
 ): string {
-  if (!isOrigin && routePrefix === '/') {
-    // This is deployment host
+  if (!isOrigin) {
+    // This is deployment host, needs https:// prefix
     baseUrl = `https://${baseUrl}`;
   }
 
