@@ -343,6 +343,16 @@ function applyFlagMutations(
     return `Too many conditions: ${totalConditions}. Maximum is ${MAX_CONDITIONS}.`;
   }
 
+  // Validate the route still has some action after mutations
+  const hasDest = !!route.route.dest;
+  const hasStatus = !!route.route.status;
+  const hasHeaders = Object.keys(route.route.headers ?? {}).length > 0;
+  const hasTransforms = ((route.route as any).transforms ?? []).length > 0;
+
+  if (!hasDest && !hasStatus && !hasHeaders && !hasTransforms) {
+    return 'This edit would leave the route with no action. Add --action, headers, or transforms.';
+  }
+
   return null;
 }
 
@@ -1035,7 +1045,22 @@ export default async function edit(client: Client, argv: string[]) {
           break;
       }
 
-      if (choice === 'done') break;
+      if (choice === 'done') {
+        // Validate route has some action before saving
+        const hasDest = !!route.route.dest;
+        const hasStatus = !!route.route.status;
+        const hasHeaders = Object.keys(route.route.headers ?? {}).length > 0;
+        const hasTransforms =
+          ((route.route as any).transforms ?? []).length > 0;
+
+        if (!hasDest && !hasStatus && !hasHeaders && !hasTransforms) {
+          output.warn(
+            'Route has no action (no destination, status, or headers). Add an action before saving.'
+          );
+          continue;
+        }
+        break;
+      }
     }
   }
 

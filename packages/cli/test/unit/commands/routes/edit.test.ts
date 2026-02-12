@@ -974,6 +974,71 @@ describe('routes edit', () => {
       // Restore TTY for other tests
       (client.stdin as any).isTTY = true;
     });
+
+    it('should error when --no-dest leaves route with no action', async () => {
+      useEditRouteComprehensive();
+      // API Rewrite has dest but no headers after clear
+      client.setArgv(
+        'routes',
+        'edit',
+        'API Rewrite',
+        '--no-dest',
+        '--clear-headers',
+        '--clear-transforms'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('no action');
+    });
+
+    it('should allow --no-dest when route has response headers', async () => {
+      useEditRouteComprehensive();
+      // CORS Headers has headers but no dest — removing dest (which doesn't exist) is fine
+      // But let's test: API Rewrite has dest + headers. Remove dest → headers remain → OK
+      client.setArgv('routes', 'edit', 'API Rewrite', '--no-dest');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.dest).toBeUndefined();
+      // Headers should still be present
+      expect(Object.keys(body.route.route.headers).length).toBeGreaterThan(0);
+    });
+
+    it('should allow --no-dest when adding headers in same command', async () => {
+      useEditRouteComprehensive();
+      client.setArgv(
+        'routes',
+        'edit',
+        'Blog Redirect',
+        '--no-dest',
+        '--no-status',
+        '--set-response-header',
+        'Cache-Control=public'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.dest).toBeUndefined();
+      expect(body.route.route.status).toBeUndefined();
+      expect(body.route.route.headers['Cache-Control']).toBe('public');
+    });
+
+    it('should error when --no-dest --no-status leaves route empty', async () => {
+      useEditRouteComprehensive();
+      // Blog Redirect has dest + status but no headers
+      client.setArgv(
+        'routes',
+        'edit',
+        'Blog Redirect',
+        '--no-dest',
+        '--no-status'
+      );
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('no action');
+    });
   });
 
   // ---------------------------------------------------------------------------
