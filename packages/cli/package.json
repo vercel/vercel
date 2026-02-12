@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "50.14.1",
+  "version": "50.15.1",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -89,6 +89,7 @@
     "@types/jest-expect-message": "1.0.3",
     "@types/json-parse-better-errors": "1.0.0",
     "@types/load-json-file": "2.0.7",
+    "@types/luxon": "3.6.2",
     "@types/mime-types": "2.1.0",
     "@types/minimatch": "3.0.3",
     "@types/mock-fs": "4.13.4",
@@ -156,6 +157,7 @@
     "jsonlines": "0.1.1",
     "line-async-iterator": "3.0.0",
     "load-json-file": "3.0.0",
+    "luxon": "3.7.2",
     "memfs": "4.14.0",
     "mime-types": "2.1.24",
     "minimatch": "3.1.2",

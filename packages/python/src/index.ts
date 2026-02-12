@@ -257,9 +257,17 @@ export const build: BuildV3 = async ({
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
+    const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
     try {
-      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
-      lock = JSON.parse(json);
+      const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
+      try {
+        lock = JSON.parse(pipfileLockContent);
+      } catch (err) {
+        console.log(
+          `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
+        );
+        throw err;
+      }
     } catch (err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',

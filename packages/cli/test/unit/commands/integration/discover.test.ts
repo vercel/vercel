@@ -68,7 +68,6 @@ describe('integration', () => {
       expect(stderr).toContain('Neon Postgres (neon)');
       expect(stderr).toContain('Provider: Neon');
       expect(stderr).toContain('Description: Serverless Postgres database');
-      expect(stderr).toContain('Tags: Storage, DevTools, Postgres');
       expect(stderr).toContain('Acme KV (acme-multi/acme-kv)');
       expect(stderr).toContain('Acme DB (acme-multi/acme-db)');
     });

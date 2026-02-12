@@ -226,7 +226,7 @@ export default class Now {
 
       if (error.limit && error.limit.reset) {
         const { reset } = error.limit;
-        const difference = reset * 1000 - Date.now();
+        const difference = reset - Date.now();
 
         msg += `Please retry in ${ms(difference, { long: true })}.`;
       } else {

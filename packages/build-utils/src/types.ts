@@ -419,7 +419,7 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    experimentalTriggers?: TriggerEvent[];
+    experimentalTriggers?: TriggerEventInput[];
     supportsCancellation?: boolean;
   };
 }
@@ -660,19 +660,9 @@ export interface Chain {
   headers: Record<string, string>;
 }
 
-/**
- * Queue trigger event for Vercel's queue system.
- * Handles "queue/v1beta" events with queue-specific configuration.
- */
-export interface TriggerEvent {
-  /** Event type - must be "queue/v1beta" (REQUIRED) */
-  type: 'queue/v1beta';
-
+interface TriggerEventBase {
   /** Name of the queue topic to consume from (REQUIRED) */
   topic: string;
-
-  /** Name of the consumer group for this trigger (REQUIRED) */
-  consumer: string;
 
   /**
    * Maximum number of delivery attempts for message processing (OPTIONAL)
@@ -701,6 +691,46 @@ export interface TriggerEvent {
    * Behavior when not specified depends on the server's default configuration.
    */
   maxConcurrency?: number;
+}
+
+/**
+ * Queue trigger input event for v1beta (from vercel.json config).
+ * Requires explicit consumer name.
+ */
+export interface TriggerEventInputV1 extends TriggerEventBase {
+  /** Event type - must be "queue/v1beta" (REQUIRED) */
+  type: 'queue/v1beta';
+
+  /** Name of the consumer group for this trigger (REQUIRED) */
+  consumer: string;
+}
+
+/**
+ * Queue trigger input event for v2beta (from vercel.json config).
+ * Consumer name is implicitly derived from the function path.
+ * Only one trigger per function is allowed.
+ */
+export interface TriggerEventInputV2 extends TriggerEventBase {
+  /** Event type - must be "queue/v2beta" (REQUIRED) */
+  type: 'queue/v2beta';
+}
+
+/**
+ * Queue trigger input event from vercel.json config.
+ * v1beta requires explicit consumer, v2beta derives consumer from function path.
+ */
+export type TriggerEventInput = TriggerEventInputV1 | TriggerEventInputV2;
+
+/**
+ * Processed queue trigger event for Lambda.
+ * Consumer is always present (explicitly provided for v1beta, derived for v2beta).
+ */
+export interface TriggerEvent extends TriggerEventBase {
+  /** Event type */
+  type: 'queue/v1beta' | 'queue/v2beta';
+
+  /** Name of the consumer group for this trigger (always present in processed output) */
+  consumer: string;
 }
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
