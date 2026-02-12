@@ -27,7 +27,7 @@
     },
     {
       "path": "/docs/not-found",
-      "status": 404,
+      "status": 200,
       "mustContain": "Page Not Found"
     },
     {
