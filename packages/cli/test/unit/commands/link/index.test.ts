@@ -1000,6 +1000,98 @@ describe('link', () => {
     ]);
   });
 
+  describe('repo.json interaction', () => {
+    it('should not prompt to select a repo-linked project during `vc link`', async () => {
+      const user = useUser();
+      const repoRoot = setupTmpDir();
+      const cwd = join(repoRoot, 'apps', 'docs');
+
+      // Create a repo.json that would normally cause the repo-link resolver
+      // to prompt ("Please select a Project:") due to ambiguous matches.
+      await mkdirp(join(repoRoot, '.vercel'));
+      await writeJSON(join(repoRoot, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [
+          {
+            id: 'repo-proj-1',
+            name: 'repo-proj-1',
+            directory: '.',
+            orgId: 'team_dummy',
+          },
+          {
+            id: 'repo-proj-2',
+            name: 'repo-proj-2',
+            directory: '.',
+            orgId: 'team_dummy',
+          },
+        ],
+      });
+
+      await mkdirp(cwd);
+
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'docs-project-id',
+        name: 'docs',
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv();
+
+      const originalSelect = client.input.select.bind(client.input);
+      const toCancelablePromise = <T>(value: T) => {
+        // Inquirer prompts return a `CancelablePromise`. For this test we sometimes
+        // need to short-circuit a prompt while still matching the return type.
+        const p = Promise.resolve(value) as any;
+        p.cancel = () => {};
+        return p as ReturnType<typeof originalSelect>;
+      };
+      let sawRepoProjectSelector = false;
+      const selectSpy = vi.spyOn(client.input, 'select').mockImplementation(((
+        opts: any
+      ) => {
+        if (opts?.message === 'Please select a Project:') {
+          sawRepoProjectSelector = true;
+          return toCancelablePromise(opts.choices[0].value);
+        }
+        return originalSelect(opts);
+      }) as typeof client.input.select);
+
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Found project');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      selectSpy.mockRestore();
+
+      expect(exitCode).toEqual(0);
+      expect(sawRepoProjectSelector).toBe(false);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Please select a Project:'
+      );
+    });
+  });
+
   describe('environment variable pull prompt', () => {
     it('should prompt to pull environment variables after successful linking', async () => {
       const user = useUser();
