@@ -236,6 +236,12 @@ interface EnsureUvProjectParams {
   pythonVersion: string;
   uv: UvRunner;
   generateLockFile?: boolean;
+  /**
+   * When true, generate lock files with --no-build --upgrade to ensure
+   * all packages have pre-built binary wheels available. This is required
+   * for runtime dependency installation.
+   */
+  requireBinaryWheels?: boolean;
 }
 
 export async function ensureUvProject({
@@ -245,6 +251,7 @@ export async function ensureUvProject({
   pythonVersion,
   uv,
   generateLockFile = false,
+  requireBinaryWheels = false,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
   const rootDir = repoRootPath ?? workPath;
 
@@ -324,13 +331,21 @@ export async function ensureUvProject({
       lockPath = join(rootDir, workspaceLockFile.path);
     } else {
       // Generate a lock file
-      await uv.lock(projectDir);
+      // When requireBinaryWheels is true, use --no-build --upgrade to ensure
+      // all resolved packages have pre-built wheels available.
+      await uv.lock(
+        projectDir,
+        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
+      );
     }
 
     // For runtime install, we may need to regenerate the lock file
     // even if a workspace lock exists, to ensure we have a local copy
     if (generateLockFile && !lockPath) {
-      await uv.lock(projectDir);
+      await uv.lock(
+        projectDir,
+        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
+      );
     }
   } else {
     // No manifest detected – create a minimal uv project at the workPath so
@@ -349,7 +364,12 @@ export async function ensureUvProject({
     });
     const content = stringifyManifest(minimalManifest);
     await fs.promises.writeFile(pyprojectPath, content);
-    await uv.lock(projectDir);
+    // When requireBinaryWheels is true, use --no-build --upgrade to ensure
+    // all resolved packages have pre-built wheels available.
+    await uv.lock(
+      projectDir,
+      requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
+    );
   }
 
   // Re-resolve lockfile in case earlier operations (uv add/lock) wrote it at a

@@ -395,6 +395,7 @@ export const build: BuildV3 = async ({
         pythonVersion: pythonVersion.version,
         uv,
         generateLockFile: runtimeInstallFeatureEnabled,
+        requireBinaryWheels: runtimeInstallFeatureEnabled,
       });
 
     uvLockPath = lockPath;
@@ -570,19 +571,17 @@ from vercel_runtime.vc_init import vc_handler
         `Enabling runtime dependency installation.`
     );
 
-    // If the earlier --no-build check failed, we know some packages don't have
-    // pre-built wheels. Runtime dependency installation requires all public
-    // packages to have wheels, so we error here with a helpful message.
+    // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
     if (noBuildCheckFailed) {
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
           `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
-          `but some packages in your uv.lock file do not have pre-built binary wheels available. ` +
+          `but some packages in your uv.lock file do not have pre-built binary wheels available.\n` +
           `Runtime dependency installation requires all public packages to have binary wheels.\n\n` +
           `To fix this, either:\n` +
-          `1. Remove the problematic packages, or\n` +
-          `2. Regenerate your lock file with: uv lock --upgrade --no-build`,
+          ` 1. Regenerate your lock file with: uv lock --upgrade --no-build, or\n` +
+          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
       });
     }
 
