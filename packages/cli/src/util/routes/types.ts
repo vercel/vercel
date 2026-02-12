@@ -48,7 +48,6 @@ export interface RoutingRule {
 export interface RouteVersion {
   id: string;
   lastModified: number;
-  createdBy: string;
   isStaging?: boolean;
   isLive?: boolean;
   ruleCount?: number;
