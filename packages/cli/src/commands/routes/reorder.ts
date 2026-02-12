@@ -78,13 +78,13 @@ export default async function reorder(client: Client, argv: string[]) {
   if (firstFlag) {
     targetIndex = 0;
   } else if (lastFlag) {
-    targetIndex = routes.length - 1;
+    targetIndex = routes.length;
   } else if (positionFlag) {
     // Handle 'first'/'last' aliases
     if (positionFlag === 'first') {
       targetIndex = 0;
     } else if (positionFlag === 'last') {
-      targetIndex = routes.length - 1;
+      targetIndex = routes.length;
     } else {
       // Try numeric position (1-based)
       const num = parseInt(positionFlag, 10);
@@ -93,7 +93,8 @@ export default async function reorder(client: Client, argv: string[]) {
           output.error('Position must be 1 or greater.');
           return 1;
         }
-        targetIndex = Math.min(num - 1, routes.length - 1);
+        // 1-based to 0-based; num > routes.length means "last"
+        targetIndex = Math.min(num - 1, routes.length);
       } else {
         // Delegate to shared parsePosition for start/end/before/after
         try {
@@ -102,7 +103,7 @@ export default async function reorder(client: Client, argv: string[]) {
           if (pos.placement === 'start') {
             targetIndex = 0;
           } else if (pos.placement === 'end') {
-            targetIndex = routes.length - 1;
+            targetIndex = routes.length;
           } else if (pos.placement === 'after' && pos.referenceId) {
             const refIndex = routes.findIndex(r => r.id === pos.referenceId);
             if (refIndex === -1) {
@@ -113,7 +114,7 @@ export default async function reorder(client: Client, argv: string[]) {
               );
               return 1;
             }
-            targetIndex = Math.min(refIndex + 1, routes.length - 1);
+            targetIndex = refIndex + 1;
           } else if (pos.placement === 'before' && pos.referenceId) {
             const refIndex = routes.findIndex(r => r.id === pos.referenceId);
             if (refIndex === -1) {
@@ -169,26 +170,32 @@ export default async function reorder(client: Client, argv: string[]) {
     if (input === 'first') {
       targetIndex = 0;
     } else if (input === 'last') {
-      targetIndex = routes.length - 1;
+      targetIndex = routes.length;
     } else {
       targetIndex = parseInt(input, 10) - 1;
     }
   }
 
-  // Clamp targetIndex
-  targetIndex = Math.max(0, Math.min(targetIndex, routes.length - 1));
+  // Compute the actual final position after splice adjustment.
+  // When we remove the route from currentIndex, all indices after it shift down by 1.
+  // So if the target is after the current position, we subtract 1 to compensate.
+  const adjustedTarget =
+    currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
 
-  if (currentIndex === targetIndex) {
+  // Clamp to valid array bounds (0 to routes.length - 1)
+  const clampedTarget = Math.max(
+    0,
+    Math.min(adjustedTarget, routes.length - 1)
+  );
+
+  if (currentIndex === clampedTarget) {
     output.log(
       `Route "${route.name}" is already at position ${currentPosition}.`
     );
     return 0;
   }
 
-  // Compute the actual final position after splice adjustment
-  const adjustedTarget =
-    currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
-  const finalPosition = adjustedTarget + 1; // 1-based
+  const finalPosition = clampedTarget + 1; // 1-based
 
   // Confirm
   if (!skipConfirmation) {
@@ -205,7 +212,7 @@ export default async function reorder(client: Client, argv: string[]) {
   // Perform the reorder: remove from current position, insert at target
   const reordered = [...routes];
   reordered.splice(currentIndex, 1);
-  reordered.splice(adjustedTarget, 0, route);
+  reordered.splice(clampedTarget, 0, route);
 
   const reorderStamp = stamp();
   output.spinner(`Moving route "${route.name}"`);
