@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
-import { apiFetch } from './helpers/api-fetch';
+import { apiFetch, deleteProject } from './helpers/api-fetch';
 import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
@@ -486,9 +486,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
 
-  await apiFetch(`/v2/projects/${projectName}`, {
-    method: 'DELETE',
-  });
+  await deleteProject(projectName);
 });
 
 test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
@@ -527,31 +525,35 @@ test('add a sensitive env var', async () => {
     },
   });
 
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  try {
+    await setupProject(vc, projectName, {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    });
 
-  await vc;
+    await vc;
 
-  const link = require(path.join(dir, '.vercel/project.json'));
+    const link = require(path.join(dir, '.vercel/project.json'));
 
-  const output = await execCli(
-    binaryPath,
-    ['env', 'add', 'envVarName', 'production', '--sensitive'],
-    {
-      env: {
-        VERCEL_ORG_ID: link.orgId,
-        VERCEL_PROJECT_ID: link.projectId,
-      },
-      input: 'test\n',
-    }
-  );
+    const output = await execCli(
+      binaryPath,
+      ['env', 'add', 'envVarName', 'production', '--sensitive'],
+      {
+        env: {
+          VERCEL_ORG_ID: link.orgId,
+          VERCEL_PROJECT_ID: link.projectId,
+        },
+        input: 'test\n',
+      }
+    );
 
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(
-    'Added Environment Variable envVarName to Project'
-  );
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+    expect(output.stderr).toContain(
+      'Added Environment Variable envVarName to Project'
+    );
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('override an existing env var', async () => {
@@ -570,50 +572,54 @@ test('override an existing env var', async () => {
     },
   });
 
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  try {
+    await setupProject(vc, projectName, {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    });
 
-  await vc;
+    await vc;
 
-  const link = require(path.join(dir, '.vercel/project.json'));
-  const options = {
-    env: {
-      VERCEL_ORG_ID: link.orgId,
-      VERCEL_PROJECT_ID: link.projectId,
-    },
-  };
+    const link = require(path.join(dir, '.vercel/project.json'));
+    const options = {
+      env: {
+        VERCEL_ORG_ID: link.orgId,
+        VERCEL_PROJECT_ID: link.projectId,
+      },
+    };
 
-  // 1. Initial add
-  const output = await execCli(
-    binaryPath,
-    ['env', 'add', 'envVarName', 'production'],
-    {
-      ...options,
-      input: 'test\n',
-    }
-  );
+    // 1. Initial add
+    const output = await execCli(
+      binaryPath,
+      ['env', 'add', 'envVarName', 'production'],
+      {
+        ...options,
+        input: 'test\n',
+      }
+    );
 
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(
-    'Added Environment Variable envVarName to Project'
-  );
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+    expect(output.stderr).toContain(
+      'Added Environment Variable envVarName to Project'
+    );
 
-  // 2. Override
-  const outputOverride = await execCli(
-    binaryPath,
-    ['env', 'add', 'envVarName', 'production', '--force'],
-    {
-      ...options,
-      input: 'test\n',
-    }
-  );
+    // 2. Override
+    const outputOverride = await execCli(
+      binaryPath,
+      ['env', 'add', 'envVarName', 'production', '--force'],
+      {
+        ...options,
+        input: 'test\n',
+      }
+    );
 
-  expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
-  expect(outputOverride.stderr).toContain(
-    'Overrode Environment Variable envVarName to Project'
-  );
+    expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
+    expect(outputOverride.stderr).toContain(
+      'Overrode Environment Variable envVarName to Project'
+    );
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
@@ -936,9 +942,7 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
 
   // Since this test asserts that we can create a new project based on the folder name, delete it after the test
   // to avoid polluting the project list.
-  await apiFetch(`/projects/${session}`, {
-    method: 'DELETE',
-  });
+  await deleteProject(session);
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
@@ -984,25 +988,29 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
+  try {
+    await waitForPrompt(vc, /Set up[^?]+\?/);
+    vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'Which scope should contain your project?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Link to existing project?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'What’s your project’s name?');
-  vc.stdin?.write(`${projectName}\n`);
+    await waitForPrompt(vc, "What's your project's name?");
+    vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write(`${projectRootDir}\n`);
+    await waitForPrompt(vc, 'In which directory is your code located?');
+    vc.stdin?.write(`${projectRootDir}\n`);
 
-  // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+    // This means the framework detection worked!
+    await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
-  vc.kill();
+    vc.kill();
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
@@ -1050,34 +1058,35 @@ test('[vc dev] should show prompts to set up project', async () => {
     },
   });
 
-  await setupProject(dev, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-
-  await waitForPrompt(dev, 'Ready! Available at');
-
-  // Ensure that `vc dev` also works
   try {
+    await setupProject(dev, projectName, {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    });
+
+    // Ensure .gitignore is created
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    expect(gitignore).toBe('.vercel\n');
+
+    // Ensure .vercel/project.json and .vercel/README.txt are created
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+      'project.json'
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+      'README.txt'
+    ).toBe(true);
+
+    await waitForPrompt(dev, 'Ready! Available at');
+
+    // Ensure that `vc dev` also works
     const response = await fetch(`http://localhost:${port}/`);
     const text = await response.text();
     expect(text).toContain('<h1>custom hello</h1>');
   } finally {
     process.kill(dev.pid!, 'SIGTERM');
+    await deleteProject(projectName);
   }
 });
 
@@ -1097,44 +1106,51 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
+  try {
+    await waitForPrompt(vc, /Set up[^?]+\?/);
+    vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'Which scope should contain your project?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Link to existing project?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'What’s your project’s name?');
-  vc.stdin?.write(`${projectName}\n`);
+    await waitForPrompt(vc, "What's your project's name?");
+    vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'In which directory is your code located?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(
+      vc,
+      'Do you want to change additional project settings?'
+    );
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Linked to');
+    await waitForPrompt(vc, 'Linked to');
 
-  const output = await vc;
+    const output = await vc;
 
-  // Ensure the exit code is right
-  expect(output.exitCode, formatOutput(output)).toBe(0);
+    // Ensure the exit code is right
+    expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+    // Ensure .gitignore is created
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    expect(gitignore).toBe('.vercel\n');
 
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
+    // Ensure .vercel/project.json and .vercel/README.txt are created
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+      'project.json'
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+      'README.txt'
+    ).toBe(true);
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('[vc dev] should send the platform proxy request headers to frontend dev server ', async () => {
@@ -1154,22 +1170,23 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
     },
   });
 
-  await setupProject(dev, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-    devCommand: 'node server.js',
-  });
-
-  await waitForPrompt(dev, 'Ready! Available at');
-
-  // Ensure that `vc dev` also works
   try {
+    await setupProject(dev, projectName, {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+      devCommand: 'node server.js',
+    });
+
+    await waitForPrompt(dev, 'Ready! Available at');
+
+    // Ensure that `vc dev` also works
     const response = await fetch(`http://localhost:${port}/`);
     const body = await response.json();
     expect(body.headers['x-vercel-deployment-url']).toBe(`localhost:${port}`);
     expect(body.env.NOW_REGION).toBe('dev1');
   } finally {
     process.kill(dev.pid!, 'SIGTERM');
+    await deleteProject(projectName);
   }
 });
 
@@ -1317,9 +1334,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   expect(text).toBe('1\n');
   // Since this test asserts that we can create a new project based on the folder name, delete it after the test
   // to avoid polluting the project list.
-  await apiFetch(`/projects/${randomDirectoryName}`, {
-    method: 'DELETE',
-  });
+  await deleteProject(randomDirectoryName);
 });
 
 test('vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides', async () => {

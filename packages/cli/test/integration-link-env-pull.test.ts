@@ -9,6 +9,7 @@ import {
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
+import { deleteProject } from './helpers/api-fetch';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -52,35 +53,42 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
+  try {
+    await waitForPrompt(vc, /Set up[^?]+\?/);
+    vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'Which scope should contain your project?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Link to existing project?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, `What's your project's name? (${projectName})`);
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'In which directory is your code located?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Want to modify these settings?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Want to modify these settings?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(
+      vc,
+      'Do you want to change additional project settings?'
+    );
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, /Linked to/);
+    await waitForPrompt(vc, /Linked to/);
 
-  const { exitCode, stdout, stderr } = await vc;
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    const { exitCode, stdout, stderr } = await vc;
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
-    true
-  );
+    expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
+      true
+    );
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('[vc link] should not create .env.local when linking new project', async () => {
@@ -97,37 +105,44 @@ test('[vc link] should not create .env.local when linking new project', async ()
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
+  try {
+    await waitForPrompt(vc, /Set up[^?]+\?/);
+    vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'Which scope should contain your project?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Link to existing project?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, `What's your project's name? (${projectName})`);
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'In which directory is your code located?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Want to modify these settings?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Want to modify these settings?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(
+      vc,
+      'Do you want to change additional project settings?'
+    );
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, /Linked to/);
+    await waitForPrompt(vc, /Linked to/);
 
-  const { exitCode, stdout, stderr } = await vc;
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    const { exitCode, stdout, stderr } = await vc;
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
-    true
-  );
+    expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
+      true
+    );
 
-  expect(await fs.pathExists(path.join(dir, '.env.local'))).toBe(false);
+    expect(await fs.pathExists(path.join(dir, '.env.local'))).toBe(false);
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('[vc link] should work with --yes flag and auto-confirm all prompts', async () => {
@@ -137,20 +152,24 @@ test('[vc link] should work with --yes flag and auto-confirm all prompts', async
   await fs.remove(path.join(dir, '.vercel'));
   await fs.remove(path.join(dir, '.env.local'));
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['link', `--project=${projectName}`, '--yes'],
-    {
-      cwd: dir,
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
+  try {
+    const { exitCode, stdout, stderr } = await execCli(
+      binaryPath,
+      ['link', `--project=${projectName}`, '--yes'],
+      {
+        cwd: dir,
+        env: {
+          FORCE_TTY: '1',
+        },
+      }
+    );
 
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
-    true
-  );
+    expect(await fs.pathExists(path.join(dir, '.vercel/project.json'))).toBe(
+      true
+    );
+  } finally {
+    await deleteProject(projectName);
+  }
 });
