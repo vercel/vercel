@@ -10,7 +10,7 @@ import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
-describe('routes discard', () => {
+describe('routes discard-staging', () => {
   beforeEach(() => {
     useUser();
     useTeams('team_dummy');
@@ -26,7 +26,7 @@ describe('routes discard', () => {
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'routes';
-      const subcommand = 'discard';
+      const subcommand = 'discard-staging';
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = routes(client);
@@ -44,7 +44,7 @@ describe('routes discard', () => {
   it('should discard staging changes with --yes', async () => {
     useUpdateRouteVersion();
     useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'discard', '--yes');
+    client.setArgv('routes', 'discard-staging', '--yes');
     const exitCode = await routes(client);
     expect(exitCode, 'exit code for "routes discard --yes"').toEqual(0);
     await expect(client.stderr).toOutput('Success!');
@@ -53,7 +53,7 @@ describe('routes discard', () => {
   it('should show what will be discarded', async () => {
     useUpdateRouteVersion();
     useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'discard', '--yes');
+    client.setArgv('routes', 'discard-staging', '--yes');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Changes to be discarded:');
@@ -64,7 +64,7 @@ describe('routes discard', () => {
       versions: [{ id: 'live-version', isLive: true }],
     });
     useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'discard', '--yes');
+    client.setArgv('routes', 'discard-staging', '--yes');
     const exitCode = await routes(client);
     expect(exitCode, 'exit code when no staging').toEqual(0);
     await expect(client.stderr).toOutput('No staged changes to discard');
@@ -73,14 +73,14 @@ describe('routes discard', () => {
   it('tracks subcommand invocation', async () => {
     useUpdateRouteVersion();
     useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'discard', '--yes');
+    client.setArgv('routes', 'discard-staging', '--yes');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:discard',
-        value: 'discard',
+        key: 'subcommand:discard-staging',
+        value: 'discard-staging',
       },
     ]);
   });
@@ -88,7 +88,7 @@ describe('routes discard', () => {
   it('should prompt for confirmation and cancel when declined', async () => {
     useUpdateRouteVersion();
     useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'discard');
+    client.setArgv('routes', 'discard-staging');
     // Simulate user declining confirmation
     client.input.confirm = vi.fn().mockResolvedValue(false);
 
@@ -100,7 +100,7 @@ describe('routes discard', () => {
   it('should proceed when user confirms', async () => {
     useUpdateRouteVersion();
     useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'discard');
+    client.setArgv('routes', 'discard-staging');
     // Simulate user confirming
     client.input.confirm = vi.fn().mockResolvedValue(true);
 

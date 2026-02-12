@@ -434,7 +434,7 @@ export const restoreSubcommand = {
 } as const;
 
 export const discardSubcommand = {
-  name: 'discard',
+  name: 'discard-staging',
   aliases: [],
   description: 'Discard staged routing changes',
   arguments: [],
@@ -447,11 +447,11 @@ export const discardSubcommand = {
   examples: [
     {
       name: 'Discard staged changes',
-      value: `${packageName} routes discard`,
+      value: `${packageName} routes discard-staging`,
     },
     {
       name: 'Discard without confirmation',
-      value: `${packageName} routes discard --yes`,
+      value: `${packageName} routes discard-staging --yes`,
     },
   ],
 } as const;

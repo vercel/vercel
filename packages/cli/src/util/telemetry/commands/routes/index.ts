@@ -51,9 +51,9 @@ export class RoutesTelemetryClient
     });
   }
 
-  trackCliSubcommandDiscard(actual: string) {
+  trackCliSubcommandDiscardStaging(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'discard',
+      subcommand: 'discard-staging',
       value: actual,
     });
   }
