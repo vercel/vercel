@@ -6,8 +6,8 @@ on:
       - main
 
 env:
-  TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'vercel'
+  TURBO_REMOTE_ONLY: "true"
+  TURBO_TEAM: "vercel"
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
@@ -62,7 +62,7 @@ jobs:
           publish: pnpm ci:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
-          NPM_CONFIG_PROVENANCE: 'true'
+          NPM_CONFIG_PROVENANCE: "true"
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
