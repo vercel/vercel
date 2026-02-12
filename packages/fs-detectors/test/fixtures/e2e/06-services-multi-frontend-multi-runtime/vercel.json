@@ -9,11 +9,6 @@
       "workspace": "apps/web",
       "routePrefix": "/"
     },
-    "docs": {
-      "framework": "docusaurus-2",
-      "workspace": "apps/docs",
-      "routePrefix": "/docs"
-    },
     "dashboard": {
       "framework": "nextjs",
       "workspace": "apps/dashboard",

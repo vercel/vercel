@@ -16,21 +16,6 @@
       "mustContain": "404 from Web Next.js"
     },
     {
-      "path": "/docs",
-      "status": 200,
-      "mustContain": "Hello from Docusaurus 2"
-    },
-    {
-      "path": "/docs/ping",
-      "status": 200,
-      "mustContain": "pong from Docusaurus 2"
-    },
-    {
-      "path": "/docs/not-found",
-      "status": 200,
-      "mustContain": "Page Not Found"
-    },
-    {
       "path": "/dashboard",
       "status": 200,
       "mustContain": "Hello from Dashboard Next.js"
