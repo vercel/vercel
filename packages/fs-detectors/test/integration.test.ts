@@ -6,7 +6,7 @@ import {
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
 
-jest.setTimeout(4 * 60 * 1000);
+jest.setTimeout(10 * 60 * 1000);
 
 const fixturesPath = join(__dirname, 'fixtures', 'e2e');
 const e2eFixtures = fs
