@@ -229,6 +229,71 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
         setup_logging(send_message, storage)
 
+# Runtime dependency installation for large Lambda functions
+# The _uv directory is at the Lambda root, two levels up from this file
+# (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
+_lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
+_uv_dir = os.path.join(_lambda_root, "_uv")
+_runtime_reqs = os.path.join(_uv_dir, "_runtime_requirements.txt")
+
+if os.path.exists(_runtime_reqs):
+    import site
+    import subprocess
+
+    _deps_dir = "/tmp/_vc_deps_overflow"
+    _marker = os.path.join(_deps_dir, ".installed")
+
+    if not os.path.exists(_marker):
+        # Cold start: install dependencies using bundled uv
+        _uv_path = os.path.join(_uv_dir, "uv")
+
+        _stderr("Installing runtime dependencies...")
+        _install_start = time.time()
+
+        try:
+            os.makedirs(_deps_dir, exist_ok=True)
+            _result = subprocess.run(
+                [
+                    _uv_path,
+                    "pip",
+                    "install",
+                    "--no-cache",
+                    "--no-config",
+                    "--only-binary=:all:",
+                    "--target",
+                    _deps_dir,
+                    "-r",
+                    _runtime_reqs,
+                ],
+                check=True,
+                text=True,
+            )
+            _install_duration = time.time() - _install_start
+            _stderr(f"Runtime dependencies installed in {_install_duration:.2f}s")
+        except subprocess.CalledProcessError as e:
+            _fatal(
+                f"Runtime dependency installation failed.\n"
+                f"Command: {' '.join(e.cmd)}\n"
+                f"Exit code: {e.returncode}"
+            )
+        except Exception as e:
+            _fatal(f"Runtime dependency installation failed with unexpected error: {e}")
+
+        # Mark installation complete for warm starts
+        open(_marker, "w").close()
+    else:
+        _stderr("Using cached runtime dependencies")
+
+    # Add runtime-installed deps to path (must come before user code import)
+    if os.path.isdir(_deps_dir):
+        site.addsitedir(_deps_dir)
+        # Move to front of path so these packages take precedence
+        try:
+            while _deps_dir in sys.path:
+                sys.path.remove(_deps_dir)
+        except ValueError:
+            pass
+        sys.path.insert(0, _deps_dir)
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:

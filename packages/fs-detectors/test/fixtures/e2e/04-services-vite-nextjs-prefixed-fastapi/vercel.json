@@ -1,0 +1,23 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "vite",
+      "workspace": "apps/web",
+      "routePrefix": "/"
+    },
+    "dashboard": {
+      "framework": "nextjs",
+      "workspace": "apps/dashboard",
+      "routePrefix": "/dashboard"
+    },
+    "backend": {
+      "framework": "fastapi",
+      "workspace": "backend",
+      "routePrefix": "/backend"
+    }
+  }
+}

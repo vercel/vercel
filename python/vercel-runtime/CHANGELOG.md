@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.4.0
+
+### Minor Changes
+
+- Install \_runtime_requirements.txt during lambda execution if provided. ([#15011](https://github.com/vercel/vercel/pull/15011))
+
 ## 0.3.0
 
 ### Minor Changes
