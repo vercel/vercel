@@ -14,7 +14,6 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
-import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type Client from '../client';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
@@ -34,7 +33,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
+import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -58,8 +57,6 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
-  /** When set, link directly to this project ID (requires org to be resolved). Overrides projectName lookup. */
-  projectId?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
@@ -75,7 +72,6 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName,
-    projectId,
     nonInteractive = false,
     pullEnv = true,
   }: SetupAndLinkOptions
@@ -141,25 +137,6 @@ export default async function setupAndLink(
     }
 
     throw err;
-  }
-
-  // When --project-id is provided, link directly to that project (no project selection)
-  if (projectId) {
-    const project = await getProjectByNameOrId(client, projectId, org.id);
-    if (project instanceof ProjectNotFound) {
-      output.prettyError(project);
-      return { status: 'error', exitCode: 1 };
-    }
-    await linkFolderToProject(
-      client,
-      path,
-      { projectId: project.id, orgId: org.id },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm || nonInteractive
-    );
-    return { status: 'linked', org, project };
   }
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
