@@ -16,6 +16,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, 'Version Packages')
     permissions:
       contents: write
       id-token: write
@@ -107,8 +108,16 @@ jobs:
     name: Summary (release)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Keep this status check deterministic even when `release` is intentionally skipped.
+    if: always()
     needs:
       - release
     steps:
       - name: Check All
-        run: echo OK
+        run: |
+          # Fail summary only when the gated `release` job actually fails/cancels.
+          if [ "${{ needs.release.result }}" = "failure" ] || [ "${{ needs.release.result }}" = "cancelled" ]; then
+            echo "Release job failed with result: ${{ needs.release.result }}"
+            exit 1
+          fi
+          echo "Release job result: ${{ needs.release.result }}"
