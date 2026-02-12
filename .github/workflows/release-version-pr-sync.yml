@@ -2,11 +2,6 @@ name: Release Version PR Sync
 
 on:
   workflow_dispatch:
-    inputs:
-      reason:
-        description: 'Why sync the release PR now?'
-        required: false
-        type: string
 
 env:
   TURBO_REMOTE_ONLY: 'true'
@@ -64,12 +59,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-  summary:
-    name: Summary (release version PR sync)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs:
-      - sync-release-pr
-    steps:
-      - name: Check All
-        run: echo OK
