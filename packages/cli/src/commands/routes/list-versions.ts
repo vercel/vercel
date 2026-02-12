@@ -66,15 +66,14 @@ function formatVersionsTable(versions: RouteVersion[]): string {
     const id = version.id.slice(0, 12);
     const routeCount =
       version.ruleCount !== undefined ? version.ruleCount.toString() : '-';
-    const creator = version.createdBy || '-';
     const age = getRelativeTime(version.lastModified);
 
-    return [status, id, routeCount, creator, age];
+    return [status, id, routeCount, age];
   });
 
   return formatTable(
-    ['Status', 'ID', 'Routes', 'Creator', 'Age'],
-    ['l', 'l', 'r', 'l', 'l'],
+    ['Status', 'ID', 'Routes', 'Age'],
+    ['l', 'l', 'r', 'l'],
     [{ rows }]
   );
 }
