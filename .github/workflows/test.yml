@@ -98,7 +98,6 @@ jobs:
           WAIT_URL: ${{ steps.waitForTarball.outputs.url }}
         with:
           script: |
-            const core = require('@actions/core');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber =
