@@ -96,36 +96,48 @@ export interface FunctionConfig {
   /**
    * An array of experimental triggers for this Serverless Function. Currently only supports queue triggers.
    */
-  experimentalTriggers?: {
-    /**
-     * Event type pattern this trigger handles
-     */
-    type: string;
-    /**
-     * Name of the queue topic to consume from
-     */
-    topic: string;
-    /**
-     * Name of the consumer group for this trigger
-     */
-    consumer: string;
-    /**
-     * Maximum number of delivery attempts
-     */
-    maxDeliveries?: number;
-    /**
-     * Delay in seconds before retrying failed executions
-     */
-    retryAfterSeconds?: number;
-    /**
-     * Initial delay in seconds before first execution attempt
-     */
-    initialDelaySeconds?: number;
-    /**
-     * Maximum number of concurrent executions for this consumer
-     */
-    maxConcurrency?: number;
-  }[];
+  experimentalTriggers?: (TriggerEventConfigV1 | TriggerEventConfigV2)[];
+}
+
+interface TriggerEventConfigBase {
+  /**
+   * Name of the queue topic to consume from
+   */
+  topic: string;
+  /**
+   * Maximum number of delivery attempts
+   */
+  maxDeliveries?: number;
+  /**
+   * Delay in seconds before retrying failed executions
+   */
+  retryAfterSeconds?: number;
+  /**
+   * Initial delay in seconds before first execution attempt
+   */
+  initialDelaySeconds?: number;
+  /**
+   * Maximum number of concurrent executions for this consumer
+   */
+  maxConcurrency?: number;
+}
+
+/**
+ * Queue trigger config for v1beta - requires explicit consumer name
+ */
+export interface TriggerEventConfigV1 extends TriggerEventConfigBase {
+  type: 'queue/v1beta';
+  /**
+   * Name of the consumer group for this trigger (required for v1beta)
+   */
+  consumer: string;
+}
+
+/**
+ * Queue trigger config for v2beta - consumer is derived from function path
+ */
+export interface TriggerEventConfigV2 extends TriggerEventConfigBase {
+  type: 'queue/v2beta';
 }
 
 export interface CronJob {
