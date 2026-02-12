@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.30
+
+### Patch Changes
+
+- Add new expirementalTrigger format for queues v2beta ([#14970](https://github.com/vercel/vercel/pull/14970))
+
 ## 0.0.29
 
 ### Patch Changes
