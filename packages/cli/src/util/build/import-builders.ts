@@ -162,7 +162,7 @@ export async function resolveBuilders(
     // 2. If in peerDeps and not found yet, install it
     if (!builderPkg && peerVersion) {
       output.debug(
-        `"${name}@${peerVersion}" not found in project or .vercel/builders, will install`
+        `"${name}@${peerVersion}" not found or .vercel/builders, will install`
       );
       buildersToAdd.add(`${name}@${peerVersion}`);
       continue;
