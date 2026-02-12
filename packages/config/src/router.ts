@@ -1106,6 +1106,18 @@ export class Router {
     }
     this.validateSourcePattern(src);
 
+    // Normalize aliases to canonical names (src/dest/status)
+    config.src = src;
+    delete config.source;
+    if (config.destination !== undefined) {
+      config.dest = config.dest ?? config.destination;
+      delete config.destination;
+    }
+    if (config.statusCode !== undefined) {
+      config.status = config.status ?? config.statusCode;
+      delete config.statusCode;
+    }
+
     // Auto-extract env vars from each transform if not already specified
     if (config.transforms) {
       const pathParams = this.extractPathParams(src);
