@@ -1,6 +1,5 @@
-import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../client';
-import type { BuyResponse } from './types';
+import type { BuyResponse, PurchaseItem } from './types';
 
 /**
  * Create a purchase via the billing buy API. All buy flows (credits, addon, pro,
@@ -9,7 +8,7 @@ import type { BuyResponse } from './types';
  */
 export async function createPurchase(
   client: Client,
-  item: JSONObject
+  item: PurchaseItem
 ): Promise<BuyResponse> {
   return client.fetch<BuyResponse>('/v1/billing/buy', {
     method: 'POST',

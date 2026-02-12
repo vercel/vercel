@@ -15,18 +15,26 @@ import { getCommandName } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import { createPurchase } from '../../util/buy/create-purchase';
 import { handlePurchaseError } from '../../util/buy/handle-purchase-error';
+import { validateJsonOutput } from '../../util/output-format';
 
 const MAX_CREDIT_PURCHASE_AMOUNT = 1_000;
 
 export default async function credits(client: Client, argv: string[]) {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(creditsSubcommand.options);
+  let parsedArgs;
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
   }
+
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   const { args } = parsedArgs;
   const [creditType, amountStr] = args;
@@ -54,10 +62,10 @@ export default async function credits(client: Client, argv: string[]) {
     return 1;
   }
 
-  const amount = parseInt(amountStr, 10);
-  if (isNaN(amount)) {
+  const amount = Number(amountStr);
+  if (!Number.isInteger(amount)) {
     output.error(
-      `Invalid amount "${amountStr}". Please specify a number (in dollars).`
+      `Invalid amount "${amountStr}". Please specify a whole number (in dollars).`
     );
     return 1;
   }
@@ -87,15 +95,24 @@ export default async function credits(client: Client, argv: string[]) {
 
   const typedCreditType = creditType as CreditType;
   const label = CREDIT_TYPE_LABELS[typedCreditType];
+  const yes = parsedArgs.flags['--yes'];
 
   // Confirm purchase
-  if (
-    !(await client.input.confirm(
-      `Purchase ${chalk.bold(`$${amount}`)} of ${label} credits for team ${chalk.bold(contextName)}?`,
-      false
-    ))
-  ) {
-    return 0;
+  if (!yes) {
+    if (!client.stdin.isTTY) {
+      output.error(
+        'Confirmation required. Use --yes to skip the confirmation prompt in non-interactive mode.'
+      );
+      return 1;
+    }
+    if (
+      !(await client.input.confirm(
+        `Purchase ${chalk.bold(`$${amount}`)} of ${label} credits for team ${chalk.bold(contextName)}?`,
+        false
+      ))
+    ) {
+      return 0;
+    }
   }
 
   const purchaseStamp = stamp();
@@ -109,10 +126,26 @@ export default async function credits(client: Client, argv: string[]) {
     });
 
     output.stopSpinner();
-    output.success(
-      `Purchased ${chalk.bold(`$${amount}`)} of ${label} credits for ${chalk.bold(contextName)} ${purchaseStamp()}`
-    );
-    output.debug(`Purchase intent: ${result.purchaseIntent.id}`);
+
+    if (asJson) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            creditType: typedCreditType,
+            amount,
+            team: contextName,
+            purchaseIntent: result.purchaseIntent,
+          },
+          null,
+          2
+        )}\n`
+      );
+    } else {
+      output.success(
+        `Purchased ${chalk.bold(`$${amount}`)} of ${label} credits for ${chalk.bold(contextName)} ${purchaseStamp()}`
+      );
+      output.debug(`Purchase intent: ${result.purchaseIntent.id}`);
+    }
 
     return 0;
   } catch (err: unknown) {
