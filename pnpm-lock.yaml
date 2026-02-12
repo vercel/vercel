@@ -586,6 +586,9 @@ importers:
       '@types/load-json-file':
         specifier: 2.0.7
         version: 2.0.7
+      '@types/luxon':
+        specifier: 3.6.2
+        version: 3.6.2
       '@types/mime-types':
         specifier: 2.1.0
         version: 2.1.0
@@ -790,6 +793,9 @@ importers:
       load-json-file:
         specifier: 3.0.0
         version: 3.0.0
+      luxon:
+        specifier: 3.7.2
+        version: 3.7.2
       memfs:
         specifier: 4.14.0
         version: 4.14.0
@@ -8970,6 +8976,10 @@ packages:
     resolution: {integrity: sha512-NrH6jPlV77QCVPhAHofWeiOr77TgpKt82c2RVxSBChWBJqyY/u4ngl3CA4mcsAg/w7rNLrkR7dkObMV0ihLLXw==}
     dev: true
 
+  /@types/luxon@3.6.2:
+    resolution: {integrity: sha512-R/BdP7OxEMc44l2Ex5lSXHoIXTB2JLNa3y2QISIbr58U/YcsffyQrYW//hZSdrfxrjRZj3GcUoxMPGdO8gSYuw==}
+    dev: true
+
   /@types/mime-types@2.1.0:
     resolution: {integrity: sha512-8LDSKVdJxwfJXZAcHRwFDxozsTCo3UmIpDjN1cOnYMTr0h4ivK9I+IdEMdtjnssFm0y66vbnpd21mAgGZ1oGAQ==}
     dev: true
@@ -16161,6 +16171,11 @@ packages:
 
   /lunr@2.3.9:
     resolution: {integrity: sha512-zTU3DaZaF3Rt9rhN3uBMGQD3dD2/vFQqnvZCDv4dl5iOzq2IZQqTxu90r4E5J+nP70J3ilqVCrbho2eWaeW8Ow==}
+    dev: true
+
+  /luxon@3.7.2:
+    resolution: {integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==}
+    engines: {node: '>=12'}
     dev: true
 
   /magic-string@0.30.17:

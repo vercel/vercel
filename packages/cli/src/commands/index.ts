@@ -4,6 +4,7 @@ import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { contractCommand } from './contract/command';
 import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
@@ -39,6 +40,7 @@ import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
+import { usageCommand } from './usage/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
@@ -53,6 +55,7 @@ const commandsStructs = [
   buildCommand,
   cacheCommand,
   certsCommand,
+  contractCommand,
   curlCommand,
   deployCommand,
   devCommand,
@@ -88,6 +91,7 @@ const commandsStructs = [
   telemetryCommand,
   upgradeCommand,
   webhooksCommand,
+  usageCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },

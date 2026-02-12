@@ -648,12 +648,16 @@ async function maybeLoadRequirementsTxt(
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       error.path = requirementsTxtRelPath;
+      if (!error.fileContent) {
+        error.fileContent = requirementsContent;
+      }
       throw error;
     }
     throw new PythonAnalysisError({
       message: `could not parse ${fileName}: ${error instanceof Error ? error.message : String(error)}`,
       code: 'PYTHON_REQUIREMENTS_PARSE_ERROR',
       path: requirementsTxtRelPath,
+      fileContent: requirementsContent,
     });
   }
 }
