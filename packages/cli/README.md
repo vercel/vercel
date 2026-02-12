@@ -74,14 +74,6 @@ To include your changes in a release, add a changeset before merging your PR:
 pnpm changeset
 ```
 
-### Canary Releases
-
-The Release Canary workflow has been removed. To install an existing canary release:
-
-```bash
-npm i -g vercel@canary
-```
-
 ### Full Testing
 
 `pnpm vercel` executes a locally built dist. Because this dist lives locally in this monorepo,
