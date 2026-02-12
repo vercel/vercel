@@ -141,7 +141,7 @@ export async function list(client: Client) {
         product: resource.product?.name,
         integration: resource.product?.slug,
         configurationId: resource.product?.integrationConfigurationId,
-        projects: resource.projectsMetadata?.map(projects => projects.name),
+        projects: resource.projectsMetadata?.map(project => project.name),
       };
     });
 
