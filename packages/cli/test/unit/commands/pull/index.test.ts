@@ -33,7 +33,8 @@ describe('pull', () => {
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
-      expect(payload.message).toContain('Multiple teams');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
       expect(Array.isArray(payload.choices)).toBe(true);
       expect(payload.choices.length).toBeGreaterThanOrEqual(2);
       expect(exitSpy).toHaveBeenCalledWith(1);
@@ -94,6 +95,7 @@ describe('pull', () => {
 
   it('should fail with message to pull without a link and without --env', async () => {
     client.stdin.isTTY = false;
+    (client as { nonInteractive: boolean }).nonInteractive = false;
 
     const cwd = setupUnitFixture('vercel-pull-unlinked');
     useUser();
@@ -118,6 +120,7 @@ describe('pull', () => {
 
     useUser();
     useTeams('team_dummy');
+    (client as { nonInteractive: boolean }).nonInteractive = false;
 
     client.setArgv('pull', cwd, '--yes');
     const exitCodePromise = pull(client);

@@ -36,7 +36,8 @@ describe('git connect', () => {
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
-      expect(payload.message).toContain('Multiple teams');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
       expect(Array.isArray(payload.choices)).toBe(true);
       expect(payload.choices.length).toBeGreaterThanOrEqual(2);
       expect(exitSpy).toHaveBeenCalledWith(1);
@@ -77,6 +78,7 @@ describe('git connect', () => {
       });
 
       client.cwd = cwd;
+      (client as { nonInteractive: boolean }).nonInteractive = false;
       await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
     });
 
@@ -247,6 +249,7 @@ describe('git connect', () => {
         id: 'unlinked',
         name: 'unlinked',
       });
+      (client as { nonInteractive: boolean }).nonInteractive = false;
       client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
       const gitPromise = git(client);
 
