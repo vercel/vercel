@@ -58,7 +58,7 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
-  /** When set, link directly to this project ID (requires org to be resolved) */
+  /** When set, link directly to this project ID (requires org to be resolved). Overrides projectName lookup. */
   projectId?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
@@ -74,7 +74,7 @@ export default async function setupAndLink(
     link,
     successEmoji = 'link',
     setupMsg = 'Set up',
-    projectName = basename(path),
+    projectName,
     projectId,
     nonInteractive = false,
     pullEnv = true,
@@ -167,7 +167,7 @@ export default async function setupAndLink(
     projectOrNewProjectName = await inputProject(
       client,
       org,
-      projectName,
+      projectName ?? basename(path),
       autoConfirm
     );
   } catch (err) {
