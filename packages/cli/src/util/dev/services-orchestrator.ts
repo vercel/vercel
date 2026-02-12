@@ -12,6 +12,7 @@ import {
   spawnCommand,
   NowBuildError,
   runNpmInstall,
+  getServiceUrlEnvVars,
   type BuilderV3,
   type Config,
 } from '@vercel/build-utils';
@@ -292,9 +293,12 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
-    const serviceUrlEnvVars = this.generateServiceUrlEnvVars(
-      framework?.envPrefix
-    );
+    const serviceUrlEnvVars = getServiceUrlEnvVars({
+      services: this.services,
+      frameworkList: framework ? [framework] : [],
+      origin: this.proxyOrigin,
+      currentEnv: this.env,
+    });
 
     const env = cloneEnv(
       {
@@ -631,28 +635,5 @@ export class ServicesOrchestrator {
         });
       }
     });
-  }
-
-  private generateServiceUrlEnvVars(
-    envPrefix?: string
-  ): Record<string, string> {
-    const envVars: Record<string, string> = {};
-
-    for (const service of this.services) {
-      const { name, routePrefix } = service;
-      if (!routePrefix) continue;
-
-      const baseName = name.toUpperCase().replace(/-/g, '_');
-      const key = envPrefix ? `${envPrefix}${baseName}_URL` : `${baseName}_URL`;
-
-      const url =
-        routePrefix === '/'
-          ? this.proxyOrigin
-          : `${this.proxyOrigin}${routePrefix.startsWith('/') ? '' : '/'}${routePrefix}`;
-
-      envVars[key] = url;
-    }
-
-    return envVars;
   }
 }
