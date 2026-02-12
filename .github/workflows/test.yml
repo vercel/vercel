@@ -136,7 +136,7 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All affected packages will run unit tests\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
@@ -150,14 +150,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: Only affected packages will run unit tests\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: Only affected packages will run type checks';
             } else if (strategy === 'no-tests') {
               message += '**Strategy**: No tests needed\n\n';
               message += '✨ No packages affected - skipping tests\n\n';
               message += '### Results\n\n';
               message += '- **Unit tests**: None\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: None';
             } else if (strategy === 'test-all') {
               message += '**Strategy**: Full unit test suite\n\n';
@@ -171,14 +171,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All packages will run unit tests\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: All packages will run type checks';
             } else {
               message += '**Strategy**: Unknown\n\n';
               message += `⚠️ Unknown strategy: ${strategy}\n\n`;
               message += '### Results\n\n';
               message += '- **Unit tests**: Unknown\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: Unknown';
             }
 
