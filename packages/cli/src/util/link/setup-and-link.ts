@@ -144,7 +144,7 @@ export default async function setupAndLink(
     projectOrNewProjectName = await inputProject(
       client,
       org,
-      projectName ?? basename(path),
+      projectName,
       autoConfirm
     );
   } catch (err) {
