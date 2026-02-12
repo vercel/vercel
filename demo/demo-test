@@ -104,12 +104,13 @@ def main() -> int:
         fail(f"Help missing expected flags\n{output}")
         failures += 1
 
-    # ── Step 2b: Provision with all flags ─────────────────────────────
+    # ── Step 2b: Provision with all flags (--no-connect) ────────────
     result = run_new([
         "integration", "add", "prisma",
         "--name", "demo-test-flagged",
         "--plan", "pro",
         "-m", "region=iad1",
+        "--no-connect",
     ])
     output = result.stdout + result.stderr
     if result.returncode == 0 and "successfully provisioned" in output.lower():
@@ -121,29 +122,11 @@ def main() -> int:
         cleanup()
         return failures
 
-    if "successfully connected" in output.lower():
-        ok("Auto-connected to project")
+    if "successfully connected" not in output.lower():
+        ok("Skipped auto-connect (--no-connect)")
     else:
-        fail("Did not auto-connect")
+        fail("Should not have auto-connected with --no-connect")
         failures += 1
-
-    if ".env.local" in output:
-        ok("Env vars pulled")
-    else:
-        fail("Did not pull env vars")
-        failures += 1
-
-    # ── Step 2c: Cleanup resource before step 3 ──────────────────────
-    print(f"\n{BOLD}Cleanup between steps{NC}")
-    result = run_new(["integration-resource", "remove", "demo-test-flagged", "-a", "-y"])
-    if result.returncode == 0 and "successfully deleted" in (result.stdout + result.stderr).lower():
-        ok("Removed demo-test-flagged")
-        resources_to_cleanup.remove("demo-test-flagged")
-    else:
-        fail(f"Could not remove demo-test-flagged\n{result.stdout}\n{result.stderr}")
-        failures += 1
-        cleanup()
-        return failures
 
     # ── Step 3: Zero-flag provision ───────────────────────────────────
     section(3, "New CLI — smart defaults (zero flags)")

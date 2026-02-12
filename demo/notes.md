@@ -48,15 +48,13 @@ Left pane = old CLI (`~/demo-old`), right pane = new CLI (`~/demo-new`).
 | "Every parameter the old CLI prompted for — name, region, billing plan — is now a flag." | Point at flags |
 | **"Generated from the actual product schema. The agent reads this, constructs the command, and runs it."** | |
 
-> **RUN (right pane):** `vc integration add prisma --name xyztest --plan pro -m region=iad1`
+> **RUN (right pane):** `vc integration add prisma --name xyztest --plan pro -m region=iad1 --no-connect`
 
 | Say | Show on screen |
 |-----|----------------|
 | "So let's use those flags." | Right pane: run the command above |
-| *(wait for output)* | Output scrolls: Installing... Provisioning... Success... Connected... env pull |
+| *(wait for output)* | Output scrolls: Installing... Provisioning... Success |
 | **"Same result. One command. Name, plan, region — all flags. Scriptable. CI-friendly. Agent-friendly."** | Full output visible |
-
-> **Cleanup (right pane):** `vc integration-resource remove xyztest -a -y`
 
 ---
 
