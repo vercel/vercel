@@ -130,6 +130,9 @@ export async function emitFlagsDefinitions(
 
   output.debug(`vercel-flags: found ${sdkKeys.length} SDK keys`);
 
+  // don't emit anything if no SDK keys are found
+  if (sdkKeys.length === 0) return;
+
   // Fetch definitions for each SDK key
   const fetchPromise = Promise.all(
     sdkKeys.map(async sdkKey => {
