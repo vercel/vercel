@@ -47,9 +47,7 @@ _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
 
 
-def setup_logging(
-    send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]
-):
+def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
     # Override logging.Handler to send logs to the platform when a request context is available.
     class VCLogHandler(logging.Handler):
         def emit(self, record: logging.LogRecord):
@@ -65,7 +63,7 @@ def setup_logging(
                     if exc_info is True:
                         exc_info = sys.exc_info()
                     if isinstance(exc_info, tuple):
-                        tb = "".join(traceback.format_exception(*exc_info))
+                        tb = ''.join(traceback.format_exception(*exc_info))
                         if tb:
                             if message:
                                 message = f"{message}\n{tb}"
@@ -85,31 +83,27 @@ def setup_logging(
 
             context = storage.get()
             if context is not None:
-                send_message(
-                    {
-                        "type": "log",
-                        "payload": {
-                            "context": {
-                                "invocationId": context["invocationId"],
-                                "requestId": context["requestId"],
-                            },
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "level": level,
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
                         },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
                     }
-                )
+                })
             else:
                 # If IPC is not ready, enqueue the message to be sent later.
-                enqueue_or_send_message(
-                    {
-                        "type": "log",
-                        "payload": {
-                            "context": {"invocationId": "0", "requestId": 0},
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "level": level,
-                        },
+                enqueue_or_send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {"invocationId": "0", "requestId": 0},
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
                     }
-                )
+                })
 
     # Override sys.stdout and sys.stderr to map logs to the correct request
     class StreamWrapper:
@@ -120,30 +114,26 @@ def setup_logging(
         def write(self, message: str):
             context = storage.get()
             if context is not None:
-                send_message(
-                    {
-                        "type": "log",
-                        "payload": {
-                            "context": {
-                                "invocationId": context["invocationId"],
-                                "requestId": context["requestId"],
-                            },
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "stream": self.stream_name,
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
                         },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
                     }
-                )
+                })
             else:
-                enqueue_or_send_message(
-                    {
-                        "type": "log",
-                        "payload": {
-                            "context": {"invocationId": "0", "requestId": 0},
-                            "message": base64.b64encode(message.encode()).decode(),
-                            "stream": self.stream_name,
-                        },
+                enqueue_or_send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {"invocationId": "0", "requestId": 0},
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
                     }
-                )
+                })
 
         def __getattr__(self, name):
             return getattr(self.stream, name)
@@ -157,7 +147,7 @@ def setup_logging(
     # attributed to the current request context.
     def print_wrapper(func: Callable[..., None]) -> Callable[..., None]:
         @functools.wraps(func)
-        def wrapper(*args, sep=" ", end="\n", file=None, flush=False):
+        def wrapper(*args, sep=' ', end='\n', file=None, flush=False):
             if file is None:
                 file = sys.stdout
             if file in (sys.stdout, sys.stderr):
@@ -167,7 +157,6 @@ def setup_logging(
             else:
                 # User specified a different file, use original print behavior
                 func(*args, sep=sep, end=end, file=file, flush=flush)
-
         return wrapper
 
     builtins.print = print_wrapper(builtins.print)
@@ -176,9 +165,7 @@ def setup_logging(
 # If running in the platform (IPC present), logging must be setup before importing user code so that
 # logs happening outside the request context are emitted correctly.
 ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-storage: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
-    "storage", default=None
-)
+storage: contextvars.ContextVar[dict | None] = contextvars.ContextVar('storage', default=None)
 send_message = lambda m: None
 
 
@@ -204,9 +191,7 @@ def enqueue_or_send_message(msg: dict):
         # Fallback so message is not lost if buffer is full
         with contextlib.suppress(Exception):
             payload = msg.get("payload", {})
-            decoded = base64.b64decode(payload.get("message", "")).decode(
-                errors="ignore"
-            )
+            decoded = base64.b64decode(payload.get("message", "")).decode(errors="ignore")
             _original_stderr.write(decoded + "\n")
 
 
@@ -234,16 +219,15 @@ def flush_init_log_buf_to_stderr():
 atexit.register(flush_init_log_buf_to_stderr)
 
 
-if "VERCEL_IPC_PATH" in os.environ:
+if 'VERCEL_IPC_PATH' in os.environ:
     with contextlib.suppress(Exception):
         ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
 
         def send_message(message: dict):
             with contextlib.suppress(Exception):
-                ipc_sock.sendall((json.dumps(message) + "\0").encode())
+                ipc_sock.sendall((json.dumps(message) + '\0').encode())
 
         setup_logging(send_message, storage)
-
 
 # Runtime dependency installation for large Lambda functions
 # The _uv directory is at the Lambda root, two levels up from this file
@@ -282,7 +266,6 @@ if os.path.exists(_runtime_reqs):
                     _runtime_reqs,
                 ],
                 check=True,
-                capture_output=True,
                 text=True,
             )
             _install_duration = time.time() - _install_start
@@ -314,7 +297,6 @@ if os.path.exists(_runtime_reqs):
             pass
         sys.path.insert(0, _deps_dir)
 
-
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:
     __vc_spec = util.spec_from_file_location(_entrypoint_modname, _entrypoint_abs)
@@ -323,17 +305,16 @@ try:
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
 except Exception:
-    _stderr(f"Error importing {_entrypoint_rel}:")
+    _stderr(f'Error importing {_entrypoint_rel}:')
     _stderr(traceback.format_exc())
     exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
-
 def format_headers(headers, decode=False):
     keyToList = {}
     for key, value in headers.items():
-        if decode and "decode" in dir(key) and "decode" in dir(value):
+        if decode and 'decode' in dir(key) and 'decode' in dir(value):
             key = key.decode()
             value = value.decode()
         if key not in keyToList:
@@ -350,35 +331,30 @@ class ASGIMiddleware:
     - Sets request context into `storage` for logging/metrics
     - Emits handler-started and end IPC messages
     """
-
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope.get("type") != "http":
+        if scope.get('type') != 'http':
             # Non-HTTP traffic is forwarded verbatim
             await self.app(scope, receive, send)
             return
 
-        if scope.get("path") == "/_vercel/ping":
-            await send(
-                {
-                    "type": "http.response.start",
-                    "status": 200,
-                    "headers": [],
-                }
-            )
-            await send(
-                {
-                    "type": "http.response.body",
-                    "body": b"",
-                    "more_body": False,
-                }
-            )
+        if scope.get('path') == '/_vercel/ping':
+            await send({
+                'type': 'http.response.start',
+                'status': 200,
+                'headers': [],
+            })
+            await send({
+                'type': 'http.response.body',
+                'body': b'',
+                'more_body': False,
+            })
             return
 
         # Extract internal headers and set per-request context
-        headers_list = scope.get("headers", []) or []
+        headers_list = scope.get('headers', []) or []
         new_headers = []
         invocation_id = "0"
         request_id = 0
@@ -387,63 +363,56 @@ class ASGIMiddleware:
             try:
                 return b.decode()
             except Exception:
-                return ""
+                return ''
 
         for k, v in headers_list:
             key = _b2s(k).lower()
             val = _b2s(v)
-            if key == "x-vercel-internal-invocation-id":
+            if key == 'x-vercel-internal-invocation-id':
                 invocation_id = val
                 continue
-            if key == "x-vercel-internal-request-id":
+            if key == 'x-vercel-internal-request-id':
                 request_id = int(val) if val.isdigit() else 0
                 continue
-            if key in ("x-vercel-internal-span-id", "x-vercel-internal-trace-id"):
+            if key in ('x-vercel-internal-span-id', 'x-vercel-internal-trace-id'):
                 continue
             new_headers.append((k, v))
 
         new_scope = dict(scope)
-        new_scope["headers"] = new_headers
+        new_scope['headers'] = new_headers
 
         # Announce handler start and set context for logging/metrics
-        send_message(
-            {
-                "type": "handler-started",
-                "payload": {
-                    "handlerStartedAt": int(time.time() * 1000),
-                    "context": {
-                        "invocationId": invocation_id,
-                        "requestId": request_id,
-                    },
-                },
+        send_message({
+            "type": "handler-started",
+            "payload": {
+                "handlerStartedAt": int(time.time() * 1000),
+                "context": {
+                    "invocationId": invocation_id,
+                    "requestId": request_id,
+                }
             }
-        )
+        })
 
-        token = storage.set(
-            {
-                "invocationId": invocation_id,
-                "requestId": request_id,
-            }
-        )
+        token = storage.set({
+            "invocationId": invocation_id,
+            "requestId": request_id,
+        })
 
         try:
             await self.app(new_scope, receive, send)
         finally:
             storage.reset(token)
-            send_message(
-                {
-                    "type": "end",
-                    "payload": {
-                        "context": {
-                            "invocationId": invocation_id,
-                            "requestId": request_id,
-                        }
-                    },
+            send_message({
+                "type": "end",
+                "payload": {
+                    "context": {
+                        "invocationId": invocation_id,
+                        "requestId": request_id,
+                    }
                 }
-            )
+            })
 
-
-if "VERCEL_IPC_PATH" in os.environ:
+if 'VERCEL_IPC_PATH' in os.environ:
     start_time = time.time()
 
     # Override urlopen from urllib3 (& requests) to send Request Metrics
@@ -453,7 +422,6 @@ if "VERCEL_IPC_PATH" in os.environ:
 
         def timed_request(func):
             fetchId = 0
-
             @functools.wraps(func)
             def wrapper(self, method, url, *args, **kwargs):
                 nonlocal fetchId
@@ -464,35 +432,29 @@ if "VERCEL_IPC_PATH" in os.environ:
                 parsed_url = urlparse(url)
                 context = storage.get()
                 if context is not None:
-                    send_message(
-                        {
-                            "type": "metric",
-                            "payload": {
-                                "context": {
-                                    "invocationId": context["invocationId"],
-                                    "requestId": context["requestId"],
-                                },
-                                "type": "fetch-metric",
-                                "payload": {
-                                    "pathname": parsed_url.path,
-                                    "search": parsed_url.query,
-                                    "start": start_time,
-                                    "duration": elapsed_time,
-                                    "host": parsed_url.hostname or self.host,
-                                    "statusCode": result.status,
-                                    "method": method,
-                                    "id": fetchId,
-                                },
+                    send_message({
+                        "type": "metric",
+                        "payload": {
+                            "context": {
+                                "invocationId": context['invocationId'],
+                                "requestId": context['requestId'],
                             },
+                            "type": "fetch-metric",
+                            "payload": {
+                                "pathname": parsed_url.path,
+                                "search": parsed_url.query,
+                                "start": start_time,
+                                "duration": elapsed_time,
+                                "host": parsed_url.hostname or self.host,
+                                "statusCode": result.status,
+                                "method": method,
+                                "id": fetchId
+                            }
                         }
-                    )
+                    })
                 return result
-
             return wrapper
-
-        urllib3.connectionpool.HTTPConnectionPool.urlopen = timed_request(
-            urllib3.connectionpool.HTTPConnectionPool.urlopen
-        )
+        urllib3.connectionpool.HTTPConnectionPool.urlopen = timed_request(urllib3.connectionpool.HTTPConnectionPool.urlopen)
     except:
         pass
 
@@ -501,14 +463,10 @@ if "VERCEL_IPC_PATH" in os.environ:
         # log to stdout instead of stderr.
         def log_message(self, format, *args):
             message = format % args
-            sys.stdout.write(
-                "%s - - [%s] %s\n"
-                % (
-                    self.address_string(),
-                    self.log_date_time_string(),
-                    message.translate(self._control_char_table),
-                )
-            )
+            sys.stdout.write("%s - - [%s] %s\n" %
+                             (self.address_string(),
+                              self.log_date_time_string(),
+                              message.translate(self._control_char_table)))
 
         # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
         # to send the end message after the response is fully sent.
@@ -520,83 +478,71 @@ if "VERCEL_IPC_PATH" in os.environ:
             if not self.parse_request():
                 return
 
-            if self.path == "/_vercel/ping":
+            if self.path == '/_vercel/ping':
                 self.send_response(200)
                 self.end_headers()
                 return
 
-            invocationId = self.headers.get("x-vercel-internal-invocation-id")
-            requestId = int(self.headers.get("x-vercel-internal-request-id"))
-            del self.headers["x-vercel-internal-invocation-id"]
-            del self.headers["x-vercel-internal-request-id"]
-            del self.headers["x-vercel-internal-span-id"]
-            del self.headers["x-vercel-internal-trace-id"]
+            invocationId = self.headers.get('x-vercel-internal-invocation-id')
+            requestId = int(self.headers.get('x-vercel-internal-request-id'))
+            del self.headers['x-vercel-internal-invocation-id']
+            del self.headers['x-vercel-internal-request-id']
+            del self.headers['x-vercel-internal-span-id']
+            del self.headers['x-vercel-internal-trace-id']
 
-            send_message(
-                {
-                    "type": "handler-started",
-                    "payload": {
-                        "handlerStartedAt": int(time.time() * 1000),
-                        "context": {
-                            "invocationId": invocationId,
-                            "requestId": requestId,
-                        },
-                    },
+            send_message({
+                "type": "handler-started",
+                "payload": {
+                    "handlerStartedAt": int(time.time() * 1000),
+                    "context": {
+                        "invocationId": invocationId,
+                        "requestId": requestId,
+                    }
                 }
-            )
+            })
 
-            token = storage.set(
-                {
-                    "invocationId": invocationId,
-                    "requestId": requestId,
-                }
-            )
+            token = storage.set({
+                "invocationId": invocationId,
+                "requestId": requestId,
+            })
 
             try:
                 self.handle_request()
             finally:
                 storage.reset(token)
-                send_message(
-                    {
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocationId,
-                                "requestId": requestId,
-                            }
-                        },
+                send_message({
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": invocationId,
+                            "requestId": requestId,
+                        }
                     }
-                )
+                })
 
-    if "handler" in __vc_variables or "Handler" in __vc_variables:
-        base = (
-            __vc_module.handler
-            if ("handler" in __vc_variables)
-            else __vc_module.Handler
-        )
+    if 'handler' in __vc_variables or 'Handler' in __vc_variables:
+        base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
         if not issubclass(base, BaseHTTPRequestHandler):
-            _stderr("Handler must inherit from BaseHTTPRequestHandler")
-            _stderr(
-                "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-            )
+            _stderr('Handler must inherit from BaseHTTPRequestHandler')
+            _stderr('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
             exit(1)
 
         class Handler(BaseHandler, base):
             def handle_request(self):
-                mname = "do_" + self.command
+                mname = 'do_' + self.command
                 if not hasattr(self, mname):
                     self.send_error(
                         http.HTTPStatus.NOT_IMPLEMENTED,
-                        "Unsupported method (%r)" % self.command,
-                    )
+                        "Unsupported method (%r)" % self.command)
                     return
                 method = getattr(self, mname)
                 method()
                 self.wfile.flush()
-    elif "app" in __vc_variables:
-        if not inspect.iscoroutinefunction(
-            __vc_module.app
-        ) and not inspect.iscoroutinefunction(__vc_module.app.__call__):
+    elif 'app' in __vc_variables:
+        if (
+            not inspect.iscoroutinefunction(__vc_module.app) and
+            not inspect.iscoroutinefunction(__vc_module.app.__call__)
+        ):
             from io import BytesIO
 
             string_types = (str,)
@@ -610,41 +556,39 @@ if "VERCEL_IPC_PATH" in os.environ:
             class Handler(BaseHandler):
                 def handle_request(self):
                     # Prepare WSGI environment
-                    if "?" in self.path:
-                        path, query = self.path.split("?", 1)
+                    if '?' in self.path:
+                        path, query = self.path.split('?', 1)
                     else:
-                        path, query = self.path, ""
-                    content_length = int(self.headers.get("Content-Length", 0))
+                        path, query = self.path, ''
+                    content_length = int(self.headers.get('Content-Length', 0))
                     env = {
-                        "CONTENT_LENGTH": str(content_length),
-                        "CONTENT_TYPE": self.headers.get("content-type", ""),
-                        "PATH_INFO": path,
-                        "QUERY_STRING": query,
-                        "REMOTE_ADDR": self.headers.get(
-                            "x-forwarded-for", self.headers.get("x-real-ip")
-                        ),
-                        "REQUEST_METHOD": self.command,
-                        "SERVER_NAME": self.headers.get("host", "lambda"),
-                        "SERVER_PORT": self.headers.get("x-forwarded-port", "80"),
-                        "SERVER_PROTOCOL": "HTTP/1.1",
-                        "wsgi.errors": sys.stderr,
-                        "wsgi.input": BytesIO(self.rfile.read(content_length)),
-                        "wsgi.multiprocess": False,
-                        "wsgi.multithread": False,
-                        "wsgi.run_once": False,
-                        "wsgi.url_scheme": self.headers.get(
-                            "x-forwarded-proto", "http"
-                        ),
-                        "wsgi.version": (1, 0),
+                        'CONTENT_LENGTH': str(content_length),
+                        'CONTENT_TYPE': self.headers.get('content-type', ''),
+                        'PATH_INFO': path,
+                        'QUERY_STRING': query,
+                        'REMOTE_ADDR': self.headers.get(
+                            'x-forwarded-for', self.headers.get(
+                                'x-real-ip')),
+                        'REQUEST_METHOD': self.command,
+                        'SERVER_NAME': self.headers.get('host', 'lambda'),
+                        'SERVER_PORT': self.headers.get('x-forwarded-port', '80'),
+                        'SERVER_PROTOCOL': 'HTTP/1.1',
+                        'wsgi.errors': sys.stderr,
+                        'wsgi.input': BytesIO(self.rfile.read(content_length)),
+                        'wsgi.multiprocess': False,
+                        'wsgi.multithread': False,
+                        'wsgi.run_once': False,
+                        'wsgi.url_scheme': self.headers.get('x-forwarded-proto', 'http'),
+                        'wsgi.version': (1, 0),
                     }
                     for key, value in env.items():
                         if isinstance(value, string_types):
                             env[key] = wsgi_encoding_dance(value)
                     for k, v in self.headers.items():
-                        env["HTTP_" + k.replace("-", "_").upper()] = v
+                        env['HTTP_' + k.replace('-', '_').upper()] = v
 
                     def start_response(status, headers, exc_info=None):
-                        self.send_response(int(status.split(" ")[0]))
+                        self.send_response(int(status.split(' ')[0]))
                         for name, value in headers:
                             self.send_header(name, value)
                         self.end_headers()
@@ -658,45 +602,41 @@ if "VERCEL_IPC_PATH" in os.environ:
                                 self.wfile.write(data)
                                 self.wfile.flush()
                     finally:
-                        if hasattr(response, "close"):
+                        if hasattr(response, 'close'):
                             response.close()
         else:
             # ASGI: Run with Uvicorn so we get proper lifespan and protocol handling
             from vercel_runtime._vendor import uvicorn
 
             # Prefer a callable app.asgi when available; some frameworks expose a boolean here
-            user_app_candidate = getattr(__vc_module.app, "asgi", None)
-            user_app = (
-                user_app_candidate if callable(user_app_candidate) else __vc_module.app
-            )
+            user_app_candidate = getattr(__vc_module.app, 'asgi', None)
+            user_app = user_app_candidate if callable(user_app_candidate) else __vc_module.app
             asgi_app = ASGIMiddleware(user_app)
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(("127.0.0.1", 0))
+            sock.bind(('127.0.0.1', 0))
             sock.listen(2048)
             http_port = sock.getsockname()[1]
 
             config = uvicorn.Config(
                 app=asgi_app,
                 fd=sock.fileno(),
-                lifespan="auto",
+                lifespan='auto',
                 access_log=False,
                 log_config=None,
-                log_level="warning",
+                log_level='warning',
             )
             server = uvicorn.Server(config)
 
-            send_message(
-                {
-                    "type": "server-started",
-                    "payload": {
-                        "initDuration": int((time.time() - start_time) * 1000),
-                        "httpPort": http_port,
-                    },
+            send_message({
+                "type": "server-started",
+                "payload": {
+                    "initDuration": int((time.time() - start_time) * 1000),
+                    "httpPort": http_port,
                 }
-            )
+            })
 
             # Mark IPC as ready and flush any buffered init logs
             _ipc_ready = True
@@ -709,17 +649,15 @@ if "VERCEL_IPC_PATH" in os.environ:
             # If the server ever returns, exit
             sys.exit(0)
 
-    if "Handler" in locals():
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        send_message(
-            {
-                "type": "server-started",
-                "payload": {
-                    "initDuration": int((time.time() - start_time) * 1000),
-                    "httpPort": server.server_address[1],
-                },
+    if 'Handler' in locals():
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        send_message({
+            "type": "server-started",
+            "payload": {
+                "initDuration": int((time.time() - start_time) * 1000),
+                "httpPort": server.server_address[1],
             }
-        )
+        })
         # Mark IPC as ready and flush any buffered init logs
         _ipc_ready = True
         for m in _init_log_buf:
@@ -728,71 +666,69 @@ if "VERCEL_IPC_PATH" in os.environ:
         server.serve_forever()
 
     _stderr(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
-    _stderr(
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-    )
+    _stderr('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
 
-if "handler" in __vc_variables or "Handler" in __vc_variables:
-    base = __vc_module.handler if ("handler" in __vc_variables) else __vc_module.Handler
+if 'handler' in __vc_variables or 'Handler' in __vc_variables:
+    base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
-        print("Handler must inherit from BaseHTTPRequestHandler")
-        print(
-            "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-        )
+        print('Handler must inherit from BaseHTTPRequestHandler')
+        print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
         exit(1)
 
-    print("using HTTP Handler")
+    print('using HTTP Handler')
     from http.server import HTTPServer
     import http
     import _thread
 
-    server = HTTPServer(("127.0.0.1", 0), base)
+    server = HTTPServer(('127.0.0.1', 0), base)
     port = server.server_address[1]
 
     def vc_handler(event, context):
         _thread.start_new_thread(server.handle_request, ())
 
-        payload = json.loads(event["body"])
-        path = payload["path"]
-        headers = payload["headers"]
-        method = payload["method"]
-        encoding = payload.get("encoding")
-        body = payload.get("body")
+        payload = json.loads(event['body'])
+        path = payload['path']
+        headers = payload['headers']
+        method = payload['method']
+        encoding = payload.get('encoding')
+        body = payload.get('body')
 
-        if (body is not None and len(body) > 0) and (
-            encoding is not None and encoding == "base64"
+        if (
+            (body is not None and len(body) > 0) and
+            (encoding is not None and encoding == 'base64')
         ):
             body = base64.b64decode(body)
 
-        request_body = body.encode("utf-8") if isinstance(body, str) else body
-        conn = http.client.HTTPConnection("127.0.0.1", port)
+        request_body = body.encode('utf-8') if isinstance(body, str) else body
+        conn = http.client.HTTPConnection('127.0.0.1', port)
         try:
             conn.request(method, path, headers=headers, body=request_body)
         except (http.client.HTTPException, socket.error) as ex:
-            print("Request Error: %s" % ex)
+            print ("Request Error: %s" % ex)
         res = conn.getresponse()
 
         return_dict = {
-            "statusCode": res.status,
-            "headers": format_headers(res.headers),
+            'statusCode': res.status,
+            'headers': format_headers(res.headers),
         }
 
         data = res.read()
 
         try:
-            return_dict["body"] = data.decode("utf-8")
+            return_dict['body'] = data.decode('utf-8')
         except UnicodeDecodeError:
-            return_dict["body"] = base64.b64encode(data).decode("utf-8")
-            return_dict["encoding"] = "base64"
+            return_dict['body'] = base64.b64encode(data).decode('utf-8')
+            return_dict['encoding'] = 'base64'
 
         return return_dict
 
-elif "app" in __vc_variables:
-    if not inspect.iscoroutinefunction(
-        __vc_module.app
-    ) and not inspect.iscoroutinefunction(__vc_module.app.__call__):
-        print("using Web Server Gateway Interface (WSGI)")
+elif 'app' in __vc_variables:
+    if (
+        not inspect.iscoroutinefunction(__vc_module.app) and
+        not inspect.iscoroutinefunction(__vc_module.app.__call__)
+    ):
+        print('using Web Server Gateway Interface (WSGI)')
         from io import BytesIO
         from urllib.parse import urlparse
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
@@ -815,43 +751,43 @@ elif "app" in __vc_variables:
             return s.decode("latin1", errors)
 
         def vc_handler(event, context):
-            payload = json.loads(event["body"])
+            payload = json.loads(event['body'])
 
-            headers = Headers(payload.get("headers", {}))
+            headers = Headers(payload.get('headers', {}))
 
-            body = payload.get("body", "")
-            if body != "":
-                if payload.get("encoding") == "base64":
+            body = payload.get('body', '')
+            if body != '':
+                if payload.get('encoding') == 'base64':
                     body = base64.b64decode(body)
             if isinstance(body, string_types):
-                body = to_bytes(body, charset="utf-8")
+                body = to_bytes(body, charset='utf-8')
 
-            url = urlparse(payload["path"])
+            url = urlparse(payload['path'])
             query = url.query
             path = url.path
 
             environ = {
-                "CONTENT_LENGTH": str(len(body)),
-                "CONTENT_TYPE": headers.get("content-type", ""),
-                "PATH_INFO": path,
-                "QUERY_STRING": query,
-                "REMOTE_ADDR": headers.get(
-                    "x-forwarded-for",
-                    headers.get("x-real-ip", payload.get("true-client-ip", "")),
-                ),
-                "REQUEST_METHOD": payload["method"],
-                "SERVER_NAME": headers.get("host", "lambda"),
-                "SERVER_PORT": headers.get("x-forwarded-port", "80"),
-                "SERVER_PROTOCOL": "HTTP/1.1",
-                "event": event,
-                "context": context,
-                "wsgi.errors": sys.stderr,
-                "wsgi.input": BytesIO(body),
-                "wsgi.multiprocess": False,
-                "wsgi.multithread": False,
-                "wsgi.run_once": False,
-                "wsgi.url_scheme": headers.get("x-forwarded-proto", "http"),
-                "wsgi.version": (1, 0),
+                'CONTENT_LENGTH': str(len(body)),
+                'CONTENT_TYPE': headers.get('content-type', ''),
+                'PATH_INFO': path,
+                'QUERY_STRING': query,
+                'REMOTE_ADDR': headers.get(
+                    'x-forwarded-for', headers.get(
+                        'x-real-ip', payload.get(
+                            'true-client-ip', ''))),
+                'REQUEST_METHOD': payload['method'],
+                'SERVER_NAME': headers.get('host', 'lambda'),
+                'SERVER_PORT': headers.get('x-forwarded-port', '80'),
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'event': event,
+                'context': context,
+                'wsgi.errors': sys.stderr,
+                'wsgi.input': BytesIO(body),
+                'wsgi.multiprocess': False,
+                'wsgi.multithread': False,
+                'wsgi.run_once': False,
+                'wsgi.url_scheme': headers.get('x-forwarded-proto', 'http'),
+                'wsgi.version': (1, 0),
             }
 
             for key, value in environ.items():
@@ -859,24 +795,24 @@ elif "app" in __vc_variables:
                     environ[key] = wsgi_encoding_dance(value)
 
             for key, value in headers.items():
-                key = "HTTP_" + key.upper().replace("-", "_")
-                if key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
+                key = 'HTTP_' + key.upper().replace('-', '_')
+                if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                     environ[key] = value
 
             response = Response.from_app(__vc_module.app, environ)
 
             return_dict = {
-                "statusCode": response.status_code,
-                "headers": format_headers(response.headers),
+                'statusCode': response.status_code,
+                'headers': format_headers(response.headers)
             }
 
             if response.data:
-                return_dict["body"] = base64.b64encode(response.data).decode("utf-8")
-                return_dict["encoding"] = "base64"
+                return_dict['body'] = base64.b64encode(response.data).decode('utf-8')
+                return_dict['encoding'] = 'base64'
 
             return return_dict
     else:
-        print("using Asynchronous Server Gateway Interface (ASGI)")
+        print('using Asynchronous Server Gateway Interface (ASGI)')
         # Originally authored by Jordan Eremieff and included under MIT license:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
@@ -885,14 +821,16 @@ elif "app" in __vc_variables:
         from urllib.parse import urlparse
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
 
+
         class ASGICycleState(enum.Enum):
             REQUEST = enum.auto()
             RESPONSE = enum.auto()
 
+
         class ASGICycle:
             def __init__(self, scope):
                 self.scope = scope
-                self.body = b""
+                self.body = b''
                 self.state = ASGICycleState.REQUEST
                 self.app_queue = None
                 self.response = {}
@@ -908,9 +846,7 @@ elif "app" in __vc_variables:
                     self.app_queue = asyncio.Queue(loop=loop)
                 else:
                     self.app_queue = asyncio.Queue()
-                self.put_message(
-                    {"type": "http.request", "body": body, "more_body": False}
-                )
+                self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
 
                 asgi_instance = app(self.scope, self.receive, self.send)
 
@@ -938,16 +874,16 @@ elif "app" in __vc_variables:
                 """
                 Awaited by the application to send messages to the current cycle instance.
                 """
-                message_type = message["type"]
+                message_type = message['type']
 
                 if self.state is ASGICycleState.REQUEST:
-                    if message_type != "http.response.start":
+                    if message_type != 'http.response.start':
                         raise RuntimeError(
                             f"Expected 'http.response.start', received: {message_type}"
                         )
 
-                    status_code = message["status"]
-                    raw_headers = message.get("headers", [])
+                    status_code = message['status']
+                    raw_headers = message.get('headers', [])
 
                     # Headers from werkzeug transform bytes header value
                     # from b'value' to "b'value'" so we need to process
@@ -955,9 +891,7 @@ elif "app" in __vc_variables:
                     decoded_headers = []
                     for key, value in raw_headers:
                         decoded_key = key.decode() if isinstance(key, bytes) else key
-                        decoded_value = (
-                            value.decode() if isinstance(value, bytes) else value
-                        )
+                        decoded_value = value.decode() if isinstance(value, bytes) else value
                         decoded_headers.append((decoded_key, decoded_value))
 
                     headers = Headers(decoded_headers)
@@ -966,42 +900,42 @@ elif "app" in __vc_variables:
                     self.state = ASGICycleState.RESPONSE
 
                 elif self.state is ASGICycleState.RESPONSE:
-                    if message_type != "http.response.body":
+                    if message_type != 'http.response.body':
                         raise RuntimeError(
                             f"Expected 'http.response.body', received: {message_type}"
                         )
 
-                    body = message.get("body", b"")
-                    more_body = message.get("more_body", False)
+                    body = message.get('body', b'')
+                    more_body = message.get('more_body', False)
 
                     # The body must be completely read before returning the response.
                     self.body += body
 
                     if not more_body:
                         self.on_response()
-                        self.put_message({"type": "http.disconnect"})
+                        self.put_message({'type': 'http.disconnect'})
 
             def on_request(self, headers, status_code):
-                self.response["statusCode"] = status_code
-                self.response["headers"] = format_headers(headers, decode=True)
+                self.response['statusCode'] = status_code
+                self.response['headers'] = format_headers(headers, decode=True)
 
             def on_response(self):
                 if self.body:
-                    self.response["body"] = base64.b64encode(self.body).decode("utf-8")
-                    self.response["encoding"] = "base64"
+                    self.response['body'] = base64.b64encode(self.body).decode('utf-8')
+                    self.response['encoding'] = 'base64'
 
         def vc_handler(event, context):
-            payload = json.loads(event["body"])
+            payload = json.loads(event['body'])
 
-            headers = payload.get("headers", {})
+            headers = payload.get('headers', {})
 
-            body = payload.get("body", b"")
-            if payload.get("encoding") == "base64":
+            body = payload.get('body', b'')
+            if payload.get('encoding') == 'base64':
                 body = base64.b64decode(body)
             elif not isinstance(body, bytes):
                 body = body.encode()
 
-            url = urlparse(payload["path"])
+            url = urlparse(payload['path'])
             query = url.query.encode()
             path = url.path
 
@@ -1009,33 +943,25 @@ elif "app" in __vc_variables:
             for k, v in headers.items():
                 # Cope with repeated headers in the encoding.
                 if isinstance(v, list):
-                    headers_encoded.append(
-                        [k.lower().encode(), [i.encode() for i in v]]
-                    )
+                    headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
                 else:
                     headers_encoded.append([k.lower().encode(), v.encode()])
 
             scope = {
-                "server": (
-                    headers.get("host", "lambda"),
-                    headers.get("x-forwarded-port", 80),
-                ),
-                "client": (
-                    headers.get(
-                        "x-forwarded-for",
-                        headers.get("x-real-ip", payload.get("true-client-ip", "")),
-                    ),
-                    0,
-                ),
-                "scheme": headers.get("x-forwarded-proto", "http"),
-                "root_path": "",
-                "query_string": query,
-                "headers": headers_encoded,
-                "type": "http",
-                "http_version": "1.1",
-                "method": payload["method"],
-                "path": path,
-                "raw_path": path.encode(),
+                'server': (headers.get('host', 'lambda'), headers.get('x-forwarded-port', 80)),
+                'client': (headers.get(
+                    'x-forwarded-for', headers.get(
+                        'x-real-ip', payload.get(
+                            'true-client-ip', ''))), 0),
+                'scheme': headers.get('x-forwarded-proto', 'http'),
+                'root_path': '',
+                'query_string': query,
+                'headers': headers_encoded,
+                'type': 'http',
+                'http_version': '1.1',
+                'method': payload['method'],
+                'path': path,
+                'raw_path': path.encode(),
             }
 
             asgi_cycle = ASGICycle(scope)
@@ -1044,7 +970,5 @@ elif "app" in __vc_variables:
 
 else:
     print(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
-    print(
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-    )
+    print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
