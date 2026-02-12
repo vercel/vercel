@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { join } from 'path';
 
 import {
@@ -5,16 +6,20 @@ import {
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
 
-jest.setTimeout(4 * 60 * 1000);
+jest.setTimeout(10 * 60 * 1000);
 
-it('Test `detectBuilders` and `detectRoutes`', async () => {
-  const fixture = join(__dirname, 'fixtures', '01-zero-config-api');
-  const deployment = await testDeployment(fixture);
-  expect(deployment).toBeDefined();
-});
+const fixturesPath = join(__dirname, 'fixtures', 'e2e');
+const e2eFixtures = fs
+  .readdirSync(fixturesPath)
+  .filter(name => fs.statSync(join(fixturesPath, name)).isDirectory())
+  .sort();
+const runFixtureTest = it.concurrent;
 
-it('Test `detectBuilders` with `index` files', async () => {
-  const fixture = join(__dirname, 'fixtures', '02-zero-config-api');
-  const deployment = await testDeployment(fixture);
-  expect(deployment).toBeDefined();
-});
+// eslint-disable-next-line no-restricted-syntax
+for (const fixture of e2eFixtures) {
+  // eslint-disable-next-line no-loop-func
+  runFixtureTest(`Test e2e fixture "${fixture}"`, async () => {
+    const deployment = await testDeployment(join(fixturesPath, fixture));
+    expect(deployment).toBeDefined();
+  });
+}
