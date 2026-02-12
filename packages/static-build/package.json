@@ -1,5 +1,6 @@
 {
   "name": "@vercel/static-build",
+  "description": "cache buster",
   "version": "2.8.36",
   "license": "Apache-2.0",
   "main": "./dist/index",
