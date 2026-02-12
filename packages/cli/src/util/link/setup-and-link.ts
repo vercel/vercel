@@ -57,6 +57,8 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
+  /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
+  nonInteractive?: boolean;
   pullEnv?: boolean;
 }
 
@@ -70,6 +72,7 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
+    nonInteractive = false,
     pullEnv = true,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -97,12 +100,13 @@ export default async function setupAndLink(
     remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
-  if (!isTTY && !autoConfirm) {
+  if (!isTTY && !autoConfirm && !nonInteractive) {
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
   const shouldStartSetup =
     autoConfirm ||
+    nonInteractive ||
     (await client.input.confirm(
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
@@ -135,12 +139,23 @@ export default async function setupAndLink(
     throw err;
   }
 
-  const projectOrNewProjectName = await inputProject(
-    client,
-    org,
-    projectName,
-    autoConfirm
-  );
+  let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
+  try {
+    projectOrNewProjectName = await inputProject(
+      client,
+      org,
+      projectName,
+      autoConfirm
+    );
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    }
+    throw err;
+  }
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
@@ -275,6 +290,12 @@ export default async function setupAndLink(
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
+    }
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
     }
     printError(err);
 

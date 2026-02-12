@@ -1,6 +1,6 @@
 import path from 'path';
 import ms from 'ms';
-import { Transform, type TransformCallback } from 'stream';
+import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
@@ -11,7 +11,10 @@ import {
   getNodeBinPaths,
   spawnCommand,
   NowBuildError,
+  runNpmInstall,
+  getServiceUrlEnvVars,
   type BuilderV3,
+  type Config,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
@@ -290,9 +293,12 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
-    const serviceUrlEnvVars = this.generateServiceUrlEnvVars(
-      framework?.envPrefix
-    );
+    const serviceUrlEnvVars = getServiceUrlEnvVars({
+      services: this.services,
+      frameworkList: framework ? [framework] : [],
+      origin: this.proxyOrigin,
+      currentEnv: this.env,
+    });
 
     const env = cloneEnv(
       {
@@ -367,16 +373,24 @@ export class ServicesOrchestrator {
           entrypoint = entrypoint.slice(wsPrefix.length);
         }
       }
+      // Mirror services build behavior in dev: when a service doesn't declare
+      // an explicit framework (runtime-only services), builders should still
+      // receive the project framework context of "services".
+      const frameworkForDev = service.framework || 'services';
       const result = await builder.startDevServer({
         entrypoint,
         workPath: workspacePath,
         repoRootPath: this.repoRoot,
-        config: { framework: service.framework },
+        config: {
+          ...(service.builder?.config || {}),
+          framework: frameworkForDev,
+        },
         meta: {
           isDev: true,
           env,
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
+          syncDependencies: true,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
@@ -424,6 +438,8 @@ export class ServicesOrchestrator {
         `No dev server available for service "${service.name}" (framework: ${service.framework})`
       );
     }
+
+    await this.syncDependencies(service.builder?.config, workspacePath, logger);
 
     const port = await getPort();
     env.PORT = `${port}`;
@@ -508,26 +524,116 @@ export class ServicesOrchestrator {
     return Promise.race([checkForPort(port, STARTUP_TIMEOUT), processError]);
   }
 
-  private generateServiceUrlEnvVars(
-    envPrefix?: string
-  ): Record<string, string> {
-    const envVars: Record<string, string> = {};
-
-    for (const service of this.services) {
-      const { name, routePrefix } = service;
-      if (!routePrefix) continue;
-
-      const baseName = name.toUpperCase().replace(/-/g, '_');
-      const key = envPrefix ? `${envPrefix}${baseName}_URL` : `${baseName}_URL`;
-
-      const url =
-        routePrefix === '/'
-          ? this.proxyOrigin
-          : `${this.proxyOrigin}${routePrefix.startsWith('/') ? '' : '/'}${routePrefix}`;
-
-      envVars[key] = url;
+  // This is needed, because only BuilderV3 exposes a dev server,
+  // but we still want to keep dependencies in sync for BuilderV2 (e.g. Next/Vite/etc).
+  // We'll try with the provided installCommand (if any) and then fallback
+  // to just trying to install dependencnies for Node.
+  private async syncDependencies(
+    config: Config | undefined,
+    workspacePath: string,
+    logger: ServiceLogger
+  ): Promise<void> {
+    logger.stdout.write(`${chalk.gray('Synchronizing dependencies...')}\n`);
+    const installCommand =
+      typeof config?.installCommand === 'string'
+        ? config.installCommand.trim()
+        : '';
+    if (installCommand) {
+      await this.runInstallCommand(installCommand, workspacePath, logger);
+    } else {
+      await this.maybeInstallJSDependencies(workspacePath, logger);
     }
+  }
 
-    return envVars;
+  private async runBuffered(
+    logger: ServiceLogger,
+    task: (stdout: Writable, stderr: Writable) => Promise<void>
+  ): Promise<void> {
+    const captured: Array<['stdout' | 'stderr', Buffer]> = [];
+    const bufStdout = new Writable({
+      write(chunk, _enc, cb) {
+        const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        captured.push(['stdout', b]);
+        if (output.debugEnabled) logger.stdout.write(b);
+        cb();
+      },
+    });
+    const bufStderr = new Writable({
+      write(chunk, _enc, cb) {
+        const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        captured.push(['stderr', b]);
+        if (output.debugEnabled) logger.stderr.write(b);
+        cb();
+      },
+    });
+
+    try {
+      await task(bufStdout, bufStderr);
+    } catch (err) {
+      for (const [channel, chunk] of captured) {
+        logger[channel].write(chunk);
+      }
+      throw err;
+    }
+  }
+
+  private async runInstallCommand(
+    command: string,
+    workspacePath: string,
+    logger: ServiceLogger
+  ): Promise<void> {
+    await this.runBuffered(logger, (stdout, stderr) => {
+      return new Promise<void>((resolve, reject) => {
+        output.debug(
+          `Running install command: "${command}" in ${workspacePath}`
+        );
+        const child = spawnCommand(command, {
+          cwd: workspacePath,
+          stdio: ['inherit', 'pipe', 'pipe'],
+        });
+
+        child.stdout?.on('data', (chunk: Buffer) => stdout.write(chunk));
+        child.stderr?.on('data', (chunk: Buffer) => stderr.write(chunk));
+
+        child.on('error', reject);
+        child.on('exit', (code, signal) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(
+              new NowBuildError({
+                code: 'INSTALL_COMMAND_FAILED',
+                message: `Install command "${command}" failed with code ${code}, signal ${signal}`,
+              })
+            );
+          }
+        });
+      });
+    });
+  }
+
+  private async maybeInstallJSDependencies(
+    workspacePath: string,
+    logger: ServiceLogger
+  ): Promise<void> {
+    await this.runBuffered(logger, async (stdout, stderr) => {
+      try {
+        await runNpmInstall(
+          workspacePath,
+          [],
+          undefined,
+          undefined,
+          undefined,
+          { stdout, stderr }
+        );
+      } catch (err) {
+        throw new NowBuildError({
+          code: 'NODE_DEPENDENCY_SYNC_FAILED',
+          message: `Failed to install Node.JS dependencies: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        });
+      }
+    });
   }
 }
