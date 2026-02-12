@@ -157,6 +157,15 @@ export async function detectInstallSource({
     });
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
+      if (
+        error.fileContent &&
+        (error.code.endsWith('_PARSE_ERROR') ||
+          error.code.endsWith('_VALIDATION_ERROR'))
+      ) {
+        console.log(
+          `Failed to parse "${error.path}". File content:\n${error.fileContent}`
+        );
+      }
       throw toBuildError(error);
     }
     throw error;
