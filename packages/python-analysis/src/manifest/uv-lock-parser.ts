@@ -1,5 +1,6 @@
 // Parser for uv.lock files.
 import toml from 'smol-toml';
+import { PythonAnalysisError } from '../util/error';
 
 /**
  * A source of a package in a uv.lock file
@@ -44,9 +45,22 @@ interface UvLockToml {
 
 /**
  * Parse the contents of a uv.lock file.
+ *
+ * @param content - The raw content of the uv.lock file
+ * @param path - Optional path to the file for error reporting
  */
-export function parseUvLock(content: string): UvLockFile {
-  const parsed = toml.parse(content) as UvLockToml;
+export function parseUvLock(content: string, path?: string): UvLockFile {
+  let parsed: UvLockToml;
+  try {
+    parsed = toml.parse(content) as UvLockToml;
+  } catch (error: unknown) {
+    throw new PythonAnalysisError({
+      message: `Could not parse uv.lock: ${error instanceof Error ? error.message : String(error)}`,
+      code: 'PYTHON_UV_LOCK_PARSE_ERROR',
+      path,
+      fileContent: content,
+    });
+  }
 
   const packages: UvLockPackage[] = (parsed.package ?? [])
     .filter(pkg => pkg.name && pkg.version)

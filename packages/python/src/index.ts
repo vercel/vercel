@@ -35,6 +35,7 @@ import {
   classifyPackages,
   generateRuntimeRequirements,
   parseUvLock,
+  PythonAnalysisError,
 } from '@vercel/python-analysis';
 import { detectInstallSource } from './install';
 import {
@@ -587,7 +588,23 @@ from vercel_runtime.vc_init import vc_handler
 
     // Read and parse the uv.lock file
     const lockContent = await fs.promises.readFile(uvLockPath, 'utf8');
-    const lockFile = parseUvLock(lockContent);
+    let lockFile;
+    try {
+      lockFile = parseUvLock(lockContent, uvLockPath);
+    } catch (error: unknown) {
+      if (error instanceof PythonAnalysisError) {
+        if (error.fileContent) {
+          console.log(
+            `Failed to parse "${error.path}". File content:\n${error.fileContent}`
+          );
+        }
+        throw new NowBuildError({
+          code: error.code,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
 
     // Exclude the project name from runtime installation requirements.
     const excludePackages: string[] = [];
