@@ -1,13 +1,8 @@
 import { packageName } from '../../util/pkg-name';
 
-/**
- * Supported credit types for purchase, matching the API's creditTypeSchema:
- *   z.enum(['v0', 'gateway', 'agent'])
- */
 export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
 export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
 
-/** Human-readable labels for each credit type */
 export const CREDIT_TYPE_LABELS: Record<CreditType, string> = {
   v0: 'v0',
   gateway: 'AI Gateway',
