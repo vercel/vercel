@@ -147,7 +147,6 @@ export default async function link(client: Client) {
       autoConfirm: yes,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
-      projectId: parsedArgs.flags['--project-id'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
     });

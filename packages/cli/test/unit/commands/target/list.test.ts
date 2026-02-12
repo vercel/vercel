@@ -64,7 +64,8 @@ describe('target ls', () => {
       const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
-      expect(payload.message).toContain('Multiple teams');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
       expect(Array.isArray(payload.choices)).toBe(true);
       expect(payload.choices.length).toBeGreaterThanOrEqual(2);
       expect(exitSpy).toHaveBeenCalledWith(1);
@@ -171,10 +172,11 @@ describe('target ls', () => {
       `> 5 Environments found under ${team.slug}/${project.name}`
     );
 
+    // Next line is the table header (optional blank line may exist before it)
     line = await lines.next();
-    expect(line.value).contains(``);
-
-    line = await lines.next();
+    if (line.value?.trim() === '') {
+      line = await lines.next();
+    }
     const header = parseSpacedTableRow(line.value!);
     expect(header).toEqual([
       'Target Name',

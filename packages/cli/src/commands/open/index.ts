@@ -36,8 +36,12 @@ export default async function openCommandHandler(
     return 0;
   }
 
+  const autoConfirm = !!parsedArgs.flags['--yes'];
+
   // ensureLink handles: already linked (returns link), not linked (prompts or outputs JSON in non-interactive)
-  const link = await ensureLink('open', client, client.cwd);
+  const link = await ensureLink('open', client, client.cwd, {
+    autoConfirm,
+  });
 
   if (typeof link === 'number') {
     return link;

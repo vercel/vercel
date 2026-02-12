@@ -53,14 +53,6 @@ export const linkCommand = {
       deprecated: false,
     },
     {
-      name: 'project-id',
-      description: 'Link to an existing project by ID',
-      shorthand: null,
-      argument: 'PROJECT_ID',
-      type: String,
-      deprecated: false,
-    },
-    {
       ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',

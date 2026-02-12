@@ -110,6 +110,18 @@ describe('open', () => {
         `Opening https://vercel.com/${team.slug}/static-project in your browser...`
       );
     });
+
+    it('accepts --yes and opens when linked', async () => {
+      const { team } = await setupLinkedProject();
+
+      client.setArgv('open', '--yes');
+      const exitCode = await openCommand(client);
+
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        `https://vercel.com/${team.slug}/static-project`
+      );
+    });
   });
 
   describe('without linked project', () => {
