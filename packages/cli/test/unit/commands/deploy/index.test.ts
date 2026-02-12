@@ -1307,6 +1307,7 @@ describe('deploy', () => {
       const directoryName = 'unlinked';
 
       beforeEach(() => {
+        (client as { nonInteractive: boolean }).nonInteractive = false;
         const user = useUser();
         client.scenario.get(`/v9/projects/:id`, (_req, res) => {
           return res.status(404).json({});
