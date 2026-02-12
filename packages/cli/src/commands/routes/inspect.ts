@@ -488,10 +488,6 @@ function formatRouteDetails(rule: RoutingRule): string {
   const syntaxLabel = getSrcSyntaxLabel(rule);
   const statusText =
     rule.enabled === false ? chalk.red('Disabled') : chalk.green('Enabled');
-  const stagedText = rule.staged
-    ? chalk.yellow('Staged (not yet published)')
-    : chalk.green('Published');
-
   lines.push(`  ${chalk.bold(rule.name)}`);
   lines.push(`  ${chalk.gray(rule.id)}`);
   lines.push('');
@@ -502,7 +498,15 @@ function formatRouteDetails(rule: RoutingRule): string {
   }
 
   lines.push(`  ${chalk.cyan('Status:')}      ${statusText}`);
-  lines.push(`  ${chalk.cyan('State:')}       ${stagedText}`);
+  if (rule.staged === true) {
+    lines.push(
+      `  ${chalk.cyan('State:')}       ${chalk.yellow('Staged (not yet published)')}`
+    );
+  } else if (rule.staged === false) {
+    lines.push(
+      `  ${chalk.cyan('State:')}       ${chalk.green('Published')}`
+    );
+  }
   lines.push(`  ${chalk.cyan('Type:')}        ${typeLabels}`);
   lines.push('');
 

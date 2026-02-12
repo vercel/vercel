@@ -22,7 +22,7 @@ export interface RoutingRule {
   name: string;
   description?: string;
   enabled?: boolean;
-  staged: boolean;
+  staged?: boolean;
   route: RouteWithSrc;
   /**
    * The syntax type of the source pattern.
