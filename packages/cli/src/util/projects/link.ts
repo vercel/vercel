@@ -79,10 +79,15 @@ export async function getProjectLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
-  return (
-    (await getProjectLinkFromRepoLink(client, path)) ||
-    (await getLinkFromDir(getVercelDirectory(path)))
-  );
+  // Prefer an explicit per-directory link (`.vercel/project.json`) over a
+  // repository-level link (`.vercel/repo.json`). This prevents scenarios where
+  // a freshly-created local link (e.g. after `vc link`) is ignored and the
+  // user is re-prompted to select a repo-linked project again.
+  const dirLink = await getLinkFromDir(getVercelDirectory(path));
+  if (dirLink) {
+    return dirLink;
+  }
+  return await getProjectLinkFromRepoLink(client, path);
 }
 
 async function getProjectLinkFromRepoLink(

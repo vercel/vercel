@@ -35,7 +35,15 @@ export async function ensureLink(
   const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;
   opts.nonInteractive = nonInteractive;
   if (!link) {
-    link = await getLinkedProject(client, cwd);
+    if (opts.forceDelete) {
+      // When `forceDelete` is enabled we will always run the interactive
+      // setup/link flow. Avoid an eager `getLinkedProject()` call, since it can
+      // trigger additional prompts (for example when `.vercel/repo.json` exists
+      // and the repo-linked project is ambiguous).
+      link = { status: 'not_linked', org: null, project: null };
+    } else {
+      link = await getLinkedProject(client, cwd);
+    }
     opts.link = link;
   }
 
