@@ -152,7 +152,17 @@ export async function list(client: Client) {
 
   if (asJson) {
     output.stopSpinner();
-    client.stdout.write(`${JSON.stringify({ resources: results }, null, 2)}\n`);
+    const jsonResources = results.map(result => ({
+      id: result.id,
+      name: result.name,
+      status: result.status,
+      product: result.product,
+      installationId: result.configurationId,
+      projects: result.projects,
+    }));
+    client.stdout.write(
+      `${JSON.stringify({ resources: jsonResources }, null, 2)}\n`
+    );
     return 0;
   }
 

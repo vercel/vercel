@@ -409,13 +409,13 @@ describe('integration', () => {
           expect(jsonOutput.resources[0]).toMatchObject({
             name: 'store-acme-connected-project',
             product: 'Acme',
-            integration: 'acme',
             projects: ['connected-project'],
           });
+          expect(jsonOutput.resources[0]).not.toHaveProperty('integration');
+          expect(jsonOutput.resources[0]).toHaveProperty('installationId');
           expect(jsonOutput.resources[1]).toMatchObject({
             name: 'store-foo-bar-both-projects',
             product: 'Foo Bar',
-            integration: 'foo-bar',
             projects: ['connected-project', 'other-project'],
           });
         });
