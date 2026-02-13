@@ -188,13 +188,15 @@ export class TelemetryClient {
 
   protected loginAttempt?: string;
   protected trackLoginState(
-    state: 'started' | 'error' | 'canceled' | 'success'
+    state: 'started' | 'browser-opened' | 'error' | 'canceled' | 'success'
   ) {
     if (state === 'started') this.loginAttempt = randomUUID();
     if (this.loginAttempt) {
       this.track({ key: `login:attempt:${this.loginAttempt}`, value: state });
     }
-    if (state !== 'started') this.loginAttempt = undefined;
+    if (state === 'canceled' || state === 'error') {
+      this.loginAttempt = undefined;
+    }
   }
 
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {

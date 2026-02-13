@@ -70,8 +70,9 @@ export async function login(
   )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
-    () => {
-      open.default(verification_uri_complete);
+    async () => {
+      await open.default(verification_uri_complete);
+      telemetry.trackState('browser-opened');
       o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
       o.spinner('Waiting for authentication...');
       rl.close();
