@@ -1,10 +1,6 @@
 name: Release Python Runtime Package
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'python/vercel-runtime/**'
   workflow_dispatch:
     inputs:
       force:
@@ -14,48 +10,7 @@ on:
         type: boolean
 
 jobs:
-  check-version:
-    runs-on: ubuntu-latest
-
-    outputs:
-      version_changed: ${{ steps.check.outputs.version_changed }}
-      version: ${{ steps.check.outputs.version }}
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
-
-      - name: Check if version has changed
-        id: check
-        run: |
-          CURRENT_VERSION=$(grep -Po '(?<=^version = ")[^"]+' python/vercel-runtime/pyproject.toml)
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
-          # For workflow_dispatch with force=true, skip version check
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-            echo "Force publish requested - proceeding with publish"
-            exit 0
-          fi
-
-          # Get the version from the previous commit
-          PREVIOUS_VERSION=$(
-            git show HEAD^:python/vercel-runtime/pyproject.toml 2>/dev/null \
-              | grep -Po '(?<=^version = ")[^"]+' || echo ""
-          )
-
-          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-            echo "Version changed from '$PREVIOUS_VERSION' to '$CURRENT_VERSION'"
-          else
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-            echo "Version unchanged at '$CURRENT_VERSION'"
-          fi
-
   publish:
-    needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true'
     runs-on: ubuntu-latest
 
     environment:
@@ -63,14 +18,18 @@ jobs:
 
     permissions:
       id-token: write
-      attestations: write
       contents: write
-      deployments: write
 
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 2
           persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -78,22 +37,9 @@ jobs:
           python-version-file: 'pyproject.toml'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           version: '0.9.22'
 
-      - name: Build
-        run: uv build --package vercel-runtime --out-dir python/vercel-runtime/dist/
-
-      - name: Smoke test (wheel)
-        run: |
-          uv run --isolated --no-project --with python/vercel-runtime/dist/*.whl \
-            python/vercel-runtime/tests/release_smoke_test.py
-
-      - name: Smoke test (source distribution)
-        run: |
-          uv run --isolated --no-project --with python/vercel-runtime/dist/*.tar.gz \
-            python/vercel-runtime/tests/release_smoke_test.py
-
       - name: Publish
-        run: uv publish --directory python/vercel-runtime/
+        run: node python/vercel-runtime/publish.mjs ${{ inputs.force == true && '--force' || '' }}

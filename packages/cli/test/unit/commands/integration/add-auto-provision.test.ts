@@ -945,7 +945,18 @@ describe('integration add (auto-provision)', () => {
       useAutoProvision({ responseKey: 'provisioned' });
     });
 
-    it('should prompt for product selection when multiple products', async () => {
+    it('should error when multiple products and no slug specified in non-TTY', async () => {
+      client.setArgv('integration', 'add', 'acme-two-products');
+      (client.stdin as any).isTTY = false;
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('has multiple products');
+      expect(stderr).toContain('acme-two-products/acme-a');
+      expect(stderr).toContain('acme-two-products/acme-b');
+    });
+
+    it('should prompt for product selection when multiple products in TTY', async () => {
       client.setArgv('integration', 'add', 'acme-two-products');
       const exitCodePromise = integrationCommand(client);
 
@@ -1035,11 +1046,11 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
     });
 
-    it('should accept multiple metadata flags', async () => {
+    it('should accept multiple metadata flags with slash syntax', async () => {
       client.setArgv(
         'integration',
         'add',
-        'acme-two-products',
+        'acme-two-products/acme-a',
         '--metadata',
         'version=5.4',
         '--metadata',
@@ -1047,10 +1058,7 @@ describe('integration add (auto-provision)', () => {
       );
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Select a product');
-      client.stdin.write('\n'); // Select first product (uses metadataSchema2)
-
-      // Auto-generated name, --metadata provides metadata — no prompts
+      // Slash syntax selects product, --metadata provides metadata — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;

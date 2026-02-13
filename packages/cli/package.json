@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "50.16.0",
+  "version": "50.17.1",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -42,7 +42,9 @@
     "chokidar": "4.0.0",
     "esbuild": "0.27.0",
     "form-data": "^4.0.0",
-    "jose": "5.9.6"
+    "jose": "5.9.6",
+    "luxon": "^3.4.0",
+    "proxy-agent": "6.4.0"
   },
   "peerDependencies": {
     "@vercel/backends": "workspace:*",
@@ -216,7 +218,6 @@
     "jsonlines": "0.1.1",
     "line-async-iterator": "3.0.0",
     "load-json-file": "3.0.0",
-    "luxon": "3.7.2",
     "memfs": "4.14.0",
     "mime-types": "2.1.24",
     "minimatch": "3.1.2",
@@ -230,7 +231,6 @@
     "pluralize": "7.0.0",
     "promisepipe": "3.0.0",
     "proxy": "2.1.1",
-    "proxy-agent": "6.4.0",
     "qr-image": "3.2.0",
     "raw-body": "2.4.1",
     "rimraf": "3.0.2",

@@ -54,8 +54,12 @@ export default async function selectOrg(
     0
   );
 
-  // Non-interactive: never default; output choices and exit so the user can explicitly pass --scope/--team
+  // Non-interactive: if user already passed --scope/--team (currentTeam set), use it; otherwise output choices and exit
   if (client.nonInteractive) {
+    if (currentTeam) {
+      const match = choices.find(c => c.value.id === currentTeam);
+      if (match) return match.value;
+    }
     const actionRequired: ActionRequiredPayload = {
       status: 'action_required',
       reason: 'missing_scope',

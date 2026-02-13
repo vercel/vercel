@@ -10,13 +10,17 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import {
+  outputActionRequired,
+  buildCommandWithYes,
+} from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import {
@@ -50,6 +54,7 @@ export default async function dev(
       link,
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
+      nonInteractive: client.nonInteractive,
     });
 
     if (link.status === 'not_linked') {
@@ -60,11 +65,29 @@ export default async function dev(
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      output.error(
-        `Command ${getCommandName(
-          'dev'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
+      if (client.nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'confirmation_required',
+            message: `Command ${getCommandNamePlain('dev')} requires confirmation. Use option --yes to confirm.`,
+            next: [
+              {
+                command: buildCommandWithYes(client.argv),
+                when: 'Confirm and run',
+              },
+            ],
+          },
+          link.exitCode
+        );
+      } else {
+        output.error(
+          `Command ${getCommandName(
+            'dev'
+          )} requires confirmation. Use option ${param('--yes')} to confirm.`
+        );
+      }
     }
     return link.exitCode;
   }
