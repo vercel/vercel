@@ -614,14 +614,35 @@ async function editConditions(
     }
 
     if (action === 'add') {
-      // Use the shared collector but with a temporary flags object
-      const tempFlags: Record<string, unknown> = {};
-      // Pre-populate with existing conditions for display
+      // Pre-populate temp flags with existing conditions so the collector
+      // displays all conditions (existing + new) during the add flow
+      const { formatCondition: formatCond } = await import(
+        '../../util/routes/parse-conditions'
+      );
+      const existingHasStrings = hasConds.map((c: any) =>
+        formatCond(c as HasField)
+      );
+      const existingMissingStrings = missingConds.map((c: any) =>
+        formatCond(c as HasField)
+      );
+      const tempFlags: Record<string, unknown> = {
+        '--has': existingHasStrings.length > 0 ? existingHasStrings : undefined,
+        '--missing':
+          existingMissingStrings.length > 0
+            ? existingMissingStrings
+            : undefined,
+      };
+
+      const hasBefore = existingHasStrings.length;
+      const missingBefore = existingMissingStrings.length;
+
       await collectInteractiveConditions(client, tempFlags);
 
-      // Append new conditions to route
-      const newHas = (tempFlags['--has'] as string[]) || [];
-      const newMissing = (tempFlags['--missing'] as string[]) || [];
+      // Only append the NEW conditions (after the existing ones)
+      const allHas = (tempFlags['--has'] as string[]) || [];
+      const allMissing = (tempFlags['--missing'] as string[]) || [];
+      const newHas = allHas.slice(hasBefore);
+      const newMissing = allMissing.slice(missingBefore);
 
       if (newHas.length > 0) {
         const parsed = parseConditions(newHas);
