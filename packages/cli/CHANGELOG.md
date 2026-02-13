@@ -1,5 +1,11 @@
 # vercel
 
+## 50.17.1
+
+### Patch Changes
+
+- Fix proxy-agent dependency issue ([#15044](https://github.com/vercel/vercel/pull/15044))
+
 ## 50.17.0
 
 ### Minor Changes
