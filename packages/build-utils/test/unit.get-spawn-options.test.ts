@@ -1,6 +1,7 @@
 import { delimiter } from 'path';
 import { getSpawnOptions } from '../src';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { getNodeVersionByMajor } from '../src/fs/node-version';
 
 describe('Test `getSpawnOptions()`', () => {
   const origProcessEnvPath = process.env.PATH;
@@ -21,82 +22,55 @@ describe('Test `getSpawnOptions()`', () => {
   }> = [
     {
       name: 'should do nothing when isDev and node14',
-      args: [
-        { isDev: true },
-        { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-      ],
+      args: [{ isDev: true }, getNodeVersionByMajor(14)!],
       envPath: '/foo',
       want: '/foo',
     },
     {
       name: 'should do nothing when isDev and node16',
-      args: [
-        { isDev: true },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: true }, getNodeVersionByMajor(16)!],
       envPath: '/foo',
       want: '/foo',
     },
     {
       name: 'should replace 14 with 16 when only path',
-      args: [
-        { isDev: false },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(16)!],
       envPath: '/node14/bin',
       want: '/node16/bin',
     },
     {
       name: 'should replace 14 with 16 at beginning',
-      args: [
-        { isDev: false },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(16)!],
       envPath: `/node14/bin${delimiter}/foo`,
       want: `/node16/bin${delimiter}/foo`,
     },
     {
       name: 'should replace 14 with 16 at end',
-      args: [
-        { isDev: false },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(16)!],
       envPath: `/foo${delimiter}/node14/bin`,
       want: `/foo${delimiter}/node16/bin`,
     },
     {
       name: 'should replace 14 with 16 in middle',
-      args: [
-        { isDev: false },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(16)!],
       envPath: `/foo${delimiter}/node14/bin${delimiter}/bar`,
       want: `/foo${delimiter}/node16/bin${delimiter}/bar`,
     },
     {
       name: 'should prepend 16 at beginning when nothing to replace',
-      args: [
-        { isDev: false },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(16)!],
       envPath: `/foo`,
       want: `/node16/bin${delimiter}/foo`,
     },
     {
       name: 'should prepend 16 at beginning no path input',
-      args: [
-        { isDev: false },
-        { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(16)!],
       envPath: '',
       want: `/node16/bin`,
     },
     {
       name: 'should replace 12 with 14 when only path',
-      args: [
-        { isDev: false },
-        { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-      ],
+      args: [{ isDev: false }, getNodeVersionByMajor(14)!],
       envPath: '/node12/bin',
       want: '/node14/bin',
     },
