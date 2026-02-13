@@ -152,13 +152,13 @@ export async function resolveBuilders(
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         const cachedPkg: PackageJson = await readJSON(pkgPath);
         output.debug(
-          `Found "${name}@${cachedPkg.version}" in .vercel/builders`
+          `"${name}@${cachedPkg.version}" found in .vercel/builders`
         );
 
         // Verify cached version matches peerDeps exactly
         if (peerVersion && cachedPkg.version !== peerVersion) {
           output.debug(
-            `Cached "${name}@${cachedPkg.version}" does not match peerDep "${peerVersion}", will reinstall`
+            `"${name}@${cachedPkg.version}" does not match peerDep "${peerVersion}", will reinstall`
           );
           buildersToAdd.add(`${name}@${peerVersion}`);
           continue;
