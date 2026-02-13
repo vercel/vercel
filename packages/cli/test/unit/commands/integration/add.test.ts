@@ -1039,6 +1039,168 @@ describe('integration', () => {
         });
       });
 
+      describe('--plan flag (legacy path)', () => {
+        describe('missing installation (web UI fallback)', () => {
+          beforeEach(() => {
+            useIntegration({ withInstallation: false });
+          });
+
+          it('should include planId in web UI URL when --plan is provided', async () => {
+            client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              `Installing Acme Product by Acme Integration under ${team.slug}`
+            );
+            await expect(client.stderr).toOutput(
+              'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            );
+            client.stdin.write('y\n');
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(0);
+            expect(openMock).toHaveBeenCalledWith(
+              'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&planId=pro&cmd=add'
+            );
+          });
+
+          it('should not include planId in web UI URL when --plan is not provided', async () => {
+            client.setArgv('integration', 'add', 'acme');
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            );
+            client.stdin.write('y\n');
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(0);
+            expect(openMock).toHaveBeenCalledWith(
+              expect.not.stringMatching(/planId=/)
+            );
+          });
+        });
+
+        describe('with installation (CLI provisioning)', () => {
+          beforeEach(() => {
+            useIntegration({ withInstallation: true, ownerId: team.id });
+            usePreauthorization();
+          });
+
+          it('should skip billing plan prompt when --plan matches a valid plan', async () => {
+            client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              `Installing Acme Product by Acme Integration under ${team.slug}`
+            );
+
+            await expect(client.stderr).toOutput(
+              'Choose your region (Use arrow keys)'
+            );
+            client.stdin.write('\n');
+
+            // Should NOT prompt for billing plan — --plan skips it
+            await expect(client.stderr).toOutput(
+              `Selected product:
+- Name: acme-gray-apple
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+            );
+            client.stdin.write('y\n');
+
+            await expect(client.stderr).toOutput('Validating payment...');
+            await expect(client.stderr).toOutput('Validation complete.');
+            await expect(client.stderr).toOutput(
+              'Acme Product successfully provisioned: acme-gray-apple'
+            );
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(0);
+          });
+
+          it('should error with available plans when --plan ID is invalid', async () => {
+            client.setArgv(
+              'integration',
+              'add',
+              'acme',
+              '--plan',
+              'nonexistent'
+            );
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              `Installing Acme Product by Acme Integration under ${team.slug}`
+            );
+
+            await expect(client.stderr).toOutput(
+              'Choose your region (Use arrow keys)'
+            );
+            client.stdin.write('\n');
+
+            await expect(client.stderr).toOutput(
+              'Error: Billing plan "nonexistent" not found. Available plans: pro, team'
+            );
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(1);
+          });
+
+          it('should accept -p shorthand for --plan flag', async () => {
+            client.setArgv('integration', 'add', 'acme', '-p', 'team');
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              `Installing Acme Product by Acme Integration under ${team.slug}`
+            );
+
+            await expect(client.stderr).toOutput(
+              'Choose your region (Use arrow keys)'
+            );
+            client.stdin.write('\n');
+
+            await expect(client.stderr).toOutput(`- Plan: Team Plan`);
+            client.stdin.write('y\n');
+
+            await expect(client.stderr).toOutput('Validating payment...');
+            await expect(client.stderr).toOutput('Validation complete.');
+            await expect(client.stderr).toOutput(
+              'Acme Product successfully provisioned: acme-gray-apple'
+            );
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(0);
+          });
+        });
+
+        describe('non-subscription plan web fallback', () => {
+          beforeEach(() => {
+            useIntegration({ withInstallation: true, ownerId: team.id });
+            usePreauthorization();
+          });
+
+          it('should include planId in web UI URL for non-subscription plan with --plan', async () => {
+            client.setArgv(
+              'integration',
+              'add',
+              'acme-prepayment',
+              '--plan',
+              'pro'
+            );
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              `Installing Acme Product by Acme Prepayment under ${team.slug}`
+            );
+            await expect(client.stderr).toOutput(
+              'Choose your region (Use arrow keys)'
+            );
+            client.stdin.write('\n');
+
+            // Non-subscription plan triggers web fallback (no project context, so no link prompt)
+            await expect(client.stderr).toOutput(
+              'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
+            );
+            client.stdin.write('y\n');
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(0);
+            expect(openMock).toHaveBeenCalledWith(
+              expect.stringMatching(/planId=pro/)
+            );
+          });
+        });
+      });
+
       describe('errors', () => {
         it('should error when no integration arugment was passed', async () => {
           client.setArgv('integration', 'add');

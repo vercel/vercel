@@ -3,6 +3,11 @@ import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { packageName } from '../pkg-name';
+import {
+  outputActionRequired,
+  type ActionRequiredPayload,
+} from '../agent-output';
 
 type Choice = { name: string; value: Org };
 
@@ -48,6 +53,31 @@ export default async function selectOrg(
     choices.findIndex(choice => choice.value.id === currentTeam),
     0
   );
+
+  // Non-interactive: if user already passed --scope/--team (currentTeam set), use it; otherwise output choices and exit
+  if (client.nonInteractive) {
+    if (currentTeam) {
+      const match = choices.find(c => c.value.id === currentTeam);
+      if (match) return match.value;
+    }
+    const actionRequired: ActionRequiredPayload = {
+      status: 'action_required',
+      reason: 'missing_scope',
+      message:
+        choices.length > 0
+          ? 'Provide --scope or --team explicitly. No default is applied in non-interactive mode.'
+          : 'No scopes available.',
+      choices: choices.map(c => ({
+        id: c.value.id,
+        name: c.value.slug,
+      })),
+      next: choices.map(c => ({
+        command: `${packageName} link --scope ${c.value.slug}`,
+      })),
+    };
+    outputActionRequired(client, actionRequired);
+    process.exit(1);
+  }
 
   if (autoConfirm) {
     return choices[defaultChoiceIndex].value;

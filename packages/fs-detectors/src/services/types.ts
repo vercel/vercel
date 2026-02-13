@@ -83,7 +83,14 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
   node: ['package.json'],
-  python: ['pyproject.toml', 'requirements.txt', 'Pipfile'],
+  python: [
+    'pyproject.toml',
+    'requirements.txt',
+    'Pipfile',
+    'pylock.yml',
+    'uv.lock',
+    'setup.py',
+  ],
   go: ['go.mod'],
   ruby: ['Gemfile'],
   rust: ['Cargo.toml'],

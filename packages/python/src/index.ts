@@ -25,10 +25,25 @@ import {
   ensureUvProject,
   resolveVendorDir,
   mirrorSitePackagesIntoVendor,
+  mirrorPrivatePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
+  calculateBundleSize,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
 } from './install';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
+import {
+  classifyPackages,
+  generateRuntimeRequirements,
+  parseUvLock,
+  PythonAnalysisError,
+} from '@vercel/python-analysis';
+import { detectInstallSource } from './install';
+import {
+  UvRunner,
+  getUvBinaryOrInstall,
+  getUvBinaryForBundling,
+  UV_BUNDLE_DIR,
+} from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import {
   getSupportedPythonVersion,
@@ -257,9 +272,17 @@ export const build: BuildV3 = async ({
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
+    const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
     try {
-      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
-      lock = JSON.parse(json);
+      const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
+      try {
+        lock = JSON.parse(pipfileLockContent);
+      } catch (err) {
+        console.log(
+          `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
+        );
+        throw err;
+      }
     } catch (err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',
@@ -349,26 +372,76 @@ export const build: BuildV3 = async ({
     );
   }
 
+  // Check if the experimental runtime install feature is enabled
+  const runtimeInstallFeatureEnabled =
+    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === '1' ||
+    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === 'true';
+
+  // Track the lock file path and project info for package classification (used when runtime install is enabled)
+  let uvLockPath: string | null = null;
+  let uvProjectDir: string | null = null;
+  let projectName: string | undefined;
+  let noBuildCheckFailed = false;
+
   if (!assumeDepsInstalled) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.
-    const { projectDir } = await ensureUvProject({
+    const { projectDir, lockPath, lockFileProvidedByUser } =
+      await ensureUvProject({
+        workPath,
+        entryDirectory,
+        repoRootPath,
+        pythonVersion: pythonVersion.version,
+        uv,
+        generateLockFile: runtimeInstallFeatureEnabled,
+        requireBinaryWheels: runtimeInstallFeatureEnabled,
+      });
+
+    uvLockPath = lockPath;
+    uvProjectDir = projectDir;
+
+    // Get the project name from python-analysis for package classification
+    const installInfo = await detectInstallSource({
       workPath,
       entryDirectory,
       repoRootPath,
-      pythonVersion: pythonVersion.version,
-      uv,
     });
+    projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+
+    // For user-provided lock files, check if all packages have binary wheels
+    // available BEFORE running the actual sync. We track this result so we can
+    // error later if runtime dependency installation is needed (which requires
+    // all public packages to have pre-built wheels).
+    if (lockFileProvidedByUser && runtimeInstallFeatureEnabled) {
+      try {
+        await uv.sync({
+          venvPath,
+          projectDir,
+          frozen: true,
+          noBuild: true,
+        });
+      } catch (err) {
+        // Note the failure but don't error yet - we only need wheels
+        // if runtime dependency install is required (bundle > 250MB)
+        noBuildCheckFailed = true;
+        debug(
+          `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
     // so we can use `uv sync` to install dependencies into the active
     // virtual environment.
+    // Use --frozen for user-provided lock files (respects exact versions),
+    // --locked for generated lock files (validates consistency).
     await uv.sync({
       venvPath,
       projectDir,
-      locked: true,
+      frozen: lockFileProvidedByUser,
+      locked: !lockFileProvidedByUser,
     });
   }
 
@@ -472,12 +545,169 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
 
-  const vendorFiles = await mirrorSitePackagesIntoVendor({
+  // Bundle dependencies
+  const allVendorFiles = await mirrorSitePackagesIntoVendor({
     venvPath,
     vendorDirName: vendorDir,
   });
-  for (const [p, f] of Object.entries(vendorFiles)) {
-    files[p] = f;
+
+  // Calculate the total bundle size with all dependencies
+  const tempFilesForSizing: Files = { ...files };
+  for (const [p, f] of Object.entries(allVendorFiles)) {
+    tempFilesForSizing[p] = f;
+  }
+  const totalBundleSize = await calculateBundleSize(tempFilesForSizing);
+  const totalBundleSizeMB = (totalBundleSize / (1024 * 1024)).toFixed(2);
+  debug(`Total bundle size: ${totalBundleSizeMB} MB`);
+
+  // Determine if runtime dependency installation is needed
+  const runtimeInstallEnabled =
+    runtimeInstallFeatureEnabled &&
+    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+    uvLockPath !== null;
+
+  if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
+    console.log(
+      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
+        `Enabling runtime dependency installation.`
+    );
+
+    // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
+    if (noBuildCheckFailed) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
+          `but some packages in your uv.lock file do not have pre-built binary wheels available.\n` +
+          `Runtime dependency installation requires all public packages to have binary wheels.\n\n` +
+          `To fix this, either:\n` +
+          ` 1. Regenerate your lock file with: uv lock --upgrade --no-build, or\n` +
+          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
+      });
+    }
+
+    // Read and parse the uv.lock file
+    let lockContent: string;
+    try {
+      lockContent = await readFile(uvLockPath, 'utf8');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(
+          `Failed to read uv.lock file at "${uvLockPath}": ${error.message}`
+        );
+      } else {
+        console.log(
+          `Failed to read uv.lock file at "${uvLockPath}": ${String(error)}`
+        );
+      }
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `Failed to read uv.lock file at "${uvLockPath}"`,
+      });
+    }
+    let lockFile: ReturnType<typeof parseUvLock>;
+    try {
+      lockFile = parseUvLock(lockContent, uvLockPath);
+    } catch (error: unknown) {
+      if (error instanceof PythonAnalysisError) {
+        if (error.fileContent) {
+          console.log(
+            `Failed to parse "${error.path}". File content:\n${error.fileContent}`
+          );
+        }
+        throw new NowBuildError({
+          code: error.code,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+
+    // Exclude the project name from runtime installation requirements.
+    const excludePackages: string[] = [];
+    if (projectName) {
+      excludePackages.push(projectName);
+      debug(
+        `Excluding project package "${projectName}" from runtime installation`
+      );
+    }
+
+    const classification = classifyPackages({
+      lockFile,
+      excludePackages,
+    });
+    debug(
+      `Package classification: ${classification.privatePackages.length} private, ` +
+        `${classification.publicPackages.length} public`
+    );
+
+    if (classification.publicPackages.length > 0) {
+      // Bundle only private packages and vercel-runtime
+      const privatePackagesWithRuntime = [
+        ...classification.privatePackages,
+        'vercel-runtime',
+        'vercel_runtime',
+      ];
+
+      const privateVendorFiles = await mirrorPrivatePackagesIntoVendor({
+        venvPath,
+        vendorDirName: vendorDir,
+        privatePackages: privatePackagesWithRuntime,
+      });
+
+      for (const [p, f] of Object.entries(privateVendorFiles)) {
+        files[p] = f;
+      }
+
+      // Everything else gets put into _runtime_requirements.txt for installation at runtime
+      const runtimeRequirementsContent =
+        generateRuntimeRequirements(classification);
+      const runtimeRequirementsPath = `${UV_BUNDLE_DIR}/_runtime_requirements.txt`;
+      files[runtimeRequirementsPath] = new FileBlob({
+        data: runtimeRequirementsContent,
+      });
+
+      // Skip uv bundling when running vercel build locally
+      if (process.env.VERCEL_BUILD_IMAGE) {
+        // Add the uv binary to the lambda zip
+        try {
+          const uvBinaryPath = await getUvBinaryForBundling(
+            pythonVersion.pythonPath
+          );
+
+          const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
+          const uvLocalPath = join(uvBundleDir, 'uv');
+          await fs.promises.mkdir(uvBundleDir, { recursive: true });
+          await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+          await fs.promises.chmod(uvLocalPath, 0o755);
+
+          const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+          files[uvBundlePath] = new FileFsRef({
+            fsPath: uvLocalPath,
+            mode: 0o100755, // Regular file + executable
+          });
+          debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+        } catch (err) {
+          throw new NowBuildError({
+            code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+            message: `Failed to bundle uv binary for runtime installation: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          });
+        }
+      }
+    } else {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          'Bundle size exceeds limit but no public packages found for runtime installation.',
+      });
+    }
+  } else {
+    // Bundle all dependencies since we're not doing runtime installation
+    for (const [p, f] of Object.entries(allVendorFiles)) {
+      files[p] = f;
+    }
   }
 
   // in order to allow the user to have `server.py`, we
@@ -492,6 +722,23 @@ from vercel_runtime.vc_init import vc_handler
   if (config.framework === 'fasthtml') {
     const { SESSKEY = '' } = process.env;
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
+  }
+
+  // When runtime installation is enabled, verify the bundle without public deps fits within Lambda limits.
+  if (runtimeInstallEnabled) {
+    const finalBundleSize = await calculateBundleSize(files);
+    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+      const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
+          `deferring public packages to runtime installation. This usually means your ` +
+          `private packages or source code are too large. Consider reducing the size of ` +
+          `private dependencies or splitting your application.`,
+      });
+    }
   }
 
   const output = new Lambda({

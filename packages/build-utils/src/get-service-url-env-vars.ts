@@ -12,6 +12,7 @@ export interface GetServiceUrlEnvVarsOptions {
   frameworkList: readonly FrameworkInfo[];
   currentEnv?: Envs;
   deploymentUrl?: string;
+  origin?: string;
 }
 
 /**
@@ -22,15 +23,24 @@ function serviceNameToEnvVar(name: string): string {
   return `${name.replace(/-/g, '_').toUpperCase()}_URL`;
 }
 
-function computeServiceUrl(deploymentUrl: string, routePrefix: string): string {
+function computeServiceUrl(
+  baseUrl: string,
+  routePrefix: string,
+  isOrigin: boolean
+): string {
+  if (!isOrigin) {
+    // This is deployment host, needs https:// prefix
+    baseUrl = `https://${baseUrl}`;
+  }
+
   if (routePrefix === '/') {
-    return `https://${deploymentUrl}`;
+    return baseUrl;
   }
 
   const normalizedPrefix = routePrefix.startsWith('/')
     ? routePrefix.slice(1)
     : routePrefix;
-  return `https://${deploymentUrl}/${normalizedPrefix}`;
+  return `${baseUrl}/${normalizedPrefix}`;
 }
 
 /**
@@ -65,10 +75,18 @@ function getFrameworkEnvPrefix(
 export function getServiceUrlEnvVars(
   options: GetServiceUrlEnvVarsOptions
 ): Record<string, string> {
-  const { services, frameworkList, currentEnv = {}, deploymentUrl } = options;
+  const {
+    services,
+    frameworkList,
+    currentEnv = {},
+    deploymentUrl,
+    origin,
+  } = options;
 
-  // Can't generate service URLs without a deployment URL
-  if (!deploymentUrl || !services || services.length === 0) {
+  const baseUrl = origin || deploymentUrl;
+
+  // Can't generate service URLs without a base URL
+  if (!baseUrl || !services || services.length === 0) {
     return {};
   }
 
@@ -90,7 +108,11 @@ export function getServiceUrlEnvVars(
     }
 
     const baseEnvVarName = serviceNameToEnvVar(service.name);
-    const absoluteUrl = computeServiceUrl(deploymentUrl, service.routePrefix);
+    const absoluteUrl = computeServiceUrl(
+      baseUrl,
+      service.routePrefix,
+      !!origin
+    );
 
     // Add the base env var with full absolute URL (e.g., BACKEND_URL)
     // for server-side use where relative paths won't resolve
