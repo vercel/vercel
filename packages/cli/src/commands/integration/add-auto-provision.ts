@@ -45,6 +45,7 @@ export async function addAutoProvision(
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
   telemetry.trackCliOptionPlan(options.billingPlanId);
+  telemetry.trackCliOptionEnvironment(options.environments);
 
   // 1. Get team context
   const { contextName, team } = await getScope(client);

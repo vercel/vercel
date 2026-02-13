@@ -8,6 +8,8 @@ import {
   useIntegration,
   usePreauthorization,
 } from '../../../mocks/integration';
+import { addSubcommand } from '../../../../src/commands/integration/command';
+import { VALID_ENVIRONMENTS } from '../../../../src/util/integration/post-provision-setup';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams, type Team } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -1523,6 +1525,140 @@ describe('integration', () => {
           expect(parsed.searchParams.get('metadata')).toEqual(
             JSON.stringify({ region: 'us-east-1' })
           );
+        });
+      });
+
+      describe('--environment flag', () => {
+        it('should list all VALID_ENVIRONMENTS in the help description', () => {
+          const envOption = addSubcommand.options.find(
+            o => o.name === 'environment'
+          );
+          expect(envOption).toBeDefined();
+          for (const env of VALID_ENVIRONMENTS) {
+            expect(envOption!.description).toContain(env);
+          }
+        });
+
+        it('should error on invalid environment value before any provisioning', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--environment',
+            'staging'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid environment value: "staging". Must be one of: production, preview, development'
+          );
+        });
+
+        it('should error on multiple invalid environment values', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--environment',
+            'staging',
+            '--environment',
+            'test'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
+          );
+        });
+
+        it('should accept valid environment values and provision successfully', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--environment',
+            'production'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput('Dashboard:');
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+        });
+
+        it('should accept -e shorthand for --environment flag', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '-e',
+            'production',
+            '-e',
+            'preview'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput('Dashboard:');
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
         });
       });
     });
