@@ -218,6 +218,24 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     expect(out.next![3].command).toBe('vercel deploy --scope team-b');
   });
 
+  it('preserves --project and other flags in link command when present in argv', () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      message: 'Choose scope.',
+      choices: [{ id: 'team_1', name: 'team-a' }],
+      next: [],
+    };
+    const argv = ['/node', '/vc.js', 'link', '--project', 'my-app'];
+    const out = enrichActionRequiredWithInvokingCommand(payload, argv);
+    expect(out.next).toHaveLength(2);
+    expect(out.next![0].command).toBe(
+      'vercel link --project my-app --scope team-a'
+    );
+    expect(out.next![1].command).toBe(
+      'vercel link --project my-app --scope team-a'
+    );
+  });
+
   it('returns payload unchanged when no choices', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',

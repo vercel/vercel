@@ -97,9 +97,11 @@ describe('selectOrg', () => {
   });
 
   describe('non-interactive mode', () => {
+    let firstTeam: ReturnType<typeof createTeam>;
+
     beforeEach(() => {
       user = useUser({ version: 'northstar' });
-      useTeam();
+      firstTeam = useTeam();
       createTeam(); // second team so choices.length > 1
       client.nonInteractive = true;
       delete client.config.currentTeam;
@@ -162,6 +164,17 @@ describe('selectOrg', () => {
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
+    });
+
+    it('returns org when --scope/--team was passed (currentTeam set)', async () => {
+      client.config.currentTeam = firstTeam.id;
+      const result = await selectOrg(client, 'Which scope?', false);
+      expect(result).toEqual({
+        type: 'team',
+        id: firstTeam.id,
+        slug: firstTeam.slug,
+      });
+      delete client.config.currentTeam;
     });
   });
 

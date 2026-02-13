@@ -43,6 +43,7 @@
     "esbuild": "0.27.0",
     "form-data": "^4.0.0",
     "jose": "5.9.6",
+    "luxon": "^3.4.0",
     "proxy-agent": "6.4.0"
   },
   "peerDependencies": {
@@ -217,7 +218,6 @@
     "jsonlines": "0.1.1",
     "line-async-iterator": "3.0.0",
     "load-json-file": "3.0.0",
-    "luxon": "3.7.2",
     "memfs": "4.14.0",
     "mime-types": "2.1.24",
     "minimatch": "3.1.2",
