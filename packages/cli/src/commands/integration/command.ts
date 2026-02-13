@@ -127,6 +127,22 @@ export const addSubcommand = {
   ],
 } as const;
 
+type FlagValue<T> = T extends readonly [StringConstructor]
+  ? string[]
+  : T extends StringConstructor
+    ? string
+    : T extends BooleanConstructor
+      ? boolean
+      : T extends NumberConstructor
+        ? number
+        : never;
+
+export type IntegrationAddFlags = {
+  [K in (typeof addSubcommand.options)[number] as `--${K['name']}`]?: FlagValue<
+    K['type']
+  >;
+};
+
 export const openSubcommand = {
   name: 'open',
   aliases: [],
