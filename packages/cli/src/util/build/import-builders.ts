@@ -138,50 +138,37 @@ export async function resolveBuilders(
     }
 
     // Resolution priority:
-    // 1. .vercel/builders (where we install builders)
-    // 2. peerDeps version (install if specified and not found)
-    // 3. CLI's node_modules (wherever CLI is installed - globally or as a project dep)
+    // 1. .vercel/builders (where we dynamically install builders)
+    // 2. CLI's node_modules (it looks at wherever this file and associated node modules)
+    // 3. Install into .vercel/builders if not found in either
 
     let pkgPath: string | undefined;
     let builderPkg: PackageJson | undefined;
     const peerVersion = peerDeps[name];
 
     // 1. Try .vercel/builders (where we install builders)
-    if (!builderPkg) {
-      try {
-        pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
-        const cachedPkg: PackageJson = await readJSON(pkgPath);
+    try {
+      pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
+      const cachedPkg: PackageJson = await readJSON(pkgPath);
+      output.debug(`"${name}@${cachedPkg.version}" found in .vercel/builders`);
+
+      // Verify cached version matches peerDeps exactly
+      if (peerVersion && cachedPkg.version !== peerVersion) {
         output.debug(
-          `Found "${name}@${cachedPkg.version}" in .vercel/builders`
+          `"${name}@${cachedPkg.version}" does not match peerDep "${peerVersion}", will reinstall`
         );
-
-        // Verify cached version matches peerDeps exactly
-        if (peerVersion && cachedPkg.version !== peerVersion) {
-          output.debug(
-            `Cached "${name}@${cachedPkg.version}" does not match peerDep "${peerVersion}", will reinstall`
-          );
-          buildersToAdd.add(`${name}@${peerVersion}`);
-          continue;
-        }
-        builderPkg = cachedPkg;
-      } catch (err: unknown) {
-        if (!isErrnoException(err) || err.code !== 'ENOENT') {
-          throw err;
-        }
-        output.debug(`"${name}@${peerVersion}" not found in .vercel/builders`);
+        buildersToAdd.add(`${name}@${peerVersion}`);
+        continue;
       }
+      builderPkg = cachedPkg;
+    } catch (err: unknown) {
+      if (!isErrnoException(err) || err.code !== 'ENOENT') {
+        throw err;
+      }
+      output.debug(`"${name}@${peerVersion}" not found in .vercel/builders`);
     }
 
-    // 2. If in peerDeps and not found yet, install it
-    if (!builderPkg && peerVersion) {
-      output.debug(
-        `"${name}@${peerVersion}" not found or .vercel/builders, will install`
-      );
-      buildersToAdd.add(`${name}@${peerVersion}`);
-      continue;
-    }
-
-    // 3. Try CLI's node_modules (wherever CLI is installed - globally or as a project dep)
+    // 2. Try CLI's node_modules (wherever CLI is installed - globally or as a project dep)
     if (!builderPkg) {
       try {
         pkgPath = require_.resolve(`${name}/package.json`, {
@@ -193,12 +180,12 @@ export async function resolveBuilders(
         if (!isErrnoException(err) || err.code !== 'MODULE_NOT_FOUND') {
           throw err;
         }
-        // Not found anywhere and no peerDep - this is an error on second run
+        // Not found in cache or CLI - install (or error on second run if no peerDep)
         if (resolvedSpecs) {
           throw new Error(`Builder "${name}" not found`);
         }
         output.debug(`"${name}" not found anywhere, will install`);
-        buildersToAdd.add(spec);
+        buildersToAdd.add(peerVersion ? `${name}@${peerVersion}` : spec);
         continue;
       }
     }
