@@ -7,13 +7,10 @@ import { useUser } from '../../../mocks/user';
 
 describe('integration', () => {
   describe('remove', () => {
-    beforeEach(() => {
-      useUser();
-    });
-
     describe('happy path', () => {
       let team: Team;
       beforeEach(() => {
+        useUser();
         const teams = useTeams('team_dummy');
         team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
@@ -96,9 +93,63 @@ describe('integration', () => {
       });
     });
 
+    describe('without currentTeam (defaultTeamId fallback)', () => {
+      it('finds integration when currentTeam is not set', async () => {
+        useUser({
+          version: 'northstar',
+          defaultTeamId: 'team_dummy',
+        });
+        useTeams('team_dummy');
+        // Explicitly do NOT set client.config.currentTeam
+        useResources();
+
+        // Mock that validates teamId is present in the request
+        client.scenario.get(
+          '/:version/integrations/configurations',
+          (req, res) => {
+            const { teamId, integrationIdOrSlug } = req.query;
+            if (!teamId) {
+              res.status(400).json({ error: 'teamId is required' });
+              return;
+            }
+            if (integrationIdOrSlug === 'acme') {
+              res.json([
+                {
+                  id: 'acme-1',
+                  integrationId: 'acme',
+                  ownerId: 'team_dummy',
+                  slug: 'acme',
+                  teamId: 'team_dummy',
+                  userId: 'user_dummy',
+                  scopes: ['read-write:integration-resource'],
+                  source: 'marketplace',
+                  installationType: 'marketplace',
+                  projects: [],
+                },
+              ]);
+            } else {
+              res.json([]);
+            }
+          }
+        );
+        mockDeleteIntegration();
+
+        client.setArgv('integration', 'remove', 'acme', '--yes');
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving integration…');
+        await expect(client.stderr).toOutput(
+          `> Success! acme successfully removed.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+    });
+
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
+          useUser();
           client.setArgv('integration', 'remove', 'acme');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
@@ -109,6 +160,7 @@ describe('integration', () => {
       describe('with team', () => {
         let team: Team;
         beforeEach(() => {
+          useUser();
           const teams = useTeams('team_dummy');
           team = Array.isArray(teams) ? teams[0] : teams.teams[0];
           client.config.currentTeam = team.id;

@@ -15,6 +15,7 @@ export async function fetchMarketplaceIntegrations(
     `/v2/integrations/configurations?${searchParams}`,
     {
       json: true,
+      useCurrentTeam: false,
     }
   );
 }
