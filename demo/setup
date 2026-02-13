@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEMO_OLD = HOME / "demo-old"
 DEMO_NEW = HOME / "demo-new"
 OLD_VERSION = "50.4.9"
-NEW_VERSION = "50.16.0"
+NEW_VERSION = "50.17.0"
 TEAM_SLUG = "acme-marketplace-team-vtest314"
 ZSHRC = HOME / ".zshrc"
 STARSHIP = HOME / ".config" / "starship.toml"
@@ -178,8 +178,37 @@ ok(f"Appended vc block to {ZSHRC}")
 # ── 5. Install starship vc_version module ────────────────────────────
 step(f"Installing vc_version in {STARSHIP}")
 
-snippet_file = Path(__file__).resolve().parent / "starship-snippet.toml"
-starship_block = snippet_file.read_text()
+# Generate snippet using the same old_bin/new_bin paths as the vc() function.
+# Starship runs commands in a non-interactive subshell (no .zshrc), so we
+# can't call the vc() function — we must reference the binaries directly.
+# Generating this inline from Python variables ensures the paths stay in sync.
+starship_block = f"""{STAR_START}
+[custom.vc_version]
+ignore_timeout = true
+when = \"\"\"case "$PWD" in "$HOME"/demo-old*|"$HOME"/demo-new*) true ;; *) false ;; esac\"\"\"
+command = \"\"\"
+case "$PWD" in
+  "$HOME"/demo-old*) ver=$("{old_bin}" --version 2>/dev/null) ;;
+  "$HOME"/demo-new*) ver=$("{new_bin}" --version 2>/dev/null) ;;
+esac
+team=$(python3 -c "
+import json,os
+cfg=os.path.expanduser('~/Library/Application Support/com.vercel.cli/config.json')
+d=json.load(open(cfg))
+tid=d.get('currentTeam','')
+teams={{'team_ZrswwWlkgu3cRre7Tk7Rr0HV':'acme-marketplace-team'}}
+print(teams.get(tid,tid[:12] if tid else '?'))
+" 2>/dev/null)
+project=$(python3 -c "
+import json,os
+pj=os.path.join(os.getcwd(),'.vercel','project.json')
+print(json.load(open(pj)).get('projectName','?') if os.path.exists(pj) else '?')
+" 2>/dev/null)
+printf "vc %s @ %s/%s" "${{ver:-?}}" "${{team:-?}}" "${{project:-?}}"
+\"\"\"
+format = " [\\\\[$output\\\\]](bold yellow) "
+{STAR_END}
+"""
 starship_content = STARSHIP.read_text()
 
 # Add vc_version to format string if not already there
