@@ -29,7 +29,7 @@ async function cleanupProjects(token: string) {
 
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
-  evals: 'marketplace/install-neon-postgres',
+  evals: 'marketplace/*',
   runs: 1,
   earlyExit: true,
   timeout: 600,

@@ -1,0 +1,10 @@
+{
+  "name": "install-neon-postgres-minimal",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "vitest": "^2.0.0"
+  }
+}
