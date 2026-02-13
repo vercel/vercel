@@ -70,7 +70,21 @@ export async function addAutoProvision(
     return 1;
   }
 
-  // 3. Select product (by slug, single auto-select, or interactive prompt)
+  // 3. Select product (by slug, single auto-select, or interactive prompt in TTY)
+  if (
+    !options.productSlug &&
+    integration.products.length > 1 &&
+    !client.stdin.isTTY
+  ) {
+    const choices = integration.products
+      .map(p => `  ${integrationSlug}/${p.slug}`)
+      .join('\n');
+    output.error(
+      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel integration add ${integrationSlug}/${integration.products[0].slug}`
+    );
+    return 1;
+  }
+
   const product = await selectProduct(
     client,
     integration.products,
