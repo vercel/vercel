@@ -5,6 +5,7 @@
   "type": "module",
   "devDependencies": {
     "@vercel/agent-eval": "^0.7.0",
+    "@vercel/sdk": "^1.18.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

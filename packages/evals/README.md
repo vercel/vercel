@@ -7,7 +7,7 @@ Test AI coding agents to measure what actually works.
 1. **Install dependencies:**
 
    ```bash
-   pnpm install --ignore-workspace
+   pnpm i
    ```
 
 2. **Configure environment variables:**
@@ -46,7 +46,7 @@ npx @vercel/agent-eval vercel-cli-cc
 Launch the web-based results viewer:
 
 ```bash
-npx @vercel/agent-eval playground
+npx @vercel/agent-eval playground --port 3000
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to browse results.

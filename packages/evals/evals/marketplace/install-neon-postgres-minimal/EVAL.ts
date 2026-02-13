@@ -29,9 +29,21 @@ function getToken(): string {
   throw new Error('No Vercel auth token found');
 }
 
+function getScope(): string {
+  // Read team/org ID from .vercel/project.json for --scope flag
+  try {
+    const project = JSON.parse(readFileSync('.vercel/project.json', 'utf-8'));
+    if (project.orgId) return `--scope ${project.orgId}`;
+  } catch {
+    // project.json not found; omit --scope
+  }
+  return '';
+}
+
 function run(cmd: string): string {
   const token = getToken();
-  return execSync(`${cmd} --token="${token}"`, {
+  const scope = getScope();
+  return execSync(`${cmd} --token="${token}" ${scope}`, {
     encoding: 'utf-8',
     stdio: 'pipe',
   }).trim();
