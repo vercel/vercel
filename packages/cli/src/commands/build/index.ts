@@ -43,7 +43,6 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  isRouteOwningBuilder,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -988,7 +987,6 @@ async function doBuild(
       if (
         hasDetectedServices &&
         service &&
-        isRouteOwningBuilder(service) &&
         'routes' in buildResult &&
         Array.isArray(buildResult.routes) &&
         detectedServices
@@ -1028,6 +1026,7 @@ async function doBuild(
               vercelConfig: localConfig,
               standalone,
               workPath: buildWorkPath,
+              service,
             })
           )
           .then(
