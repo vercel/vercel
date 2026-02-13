@@ -7,7 +7,7 @@ Test AI coding agents to measure what actually works.
 1. **Install dependencies:**
 
    ```bash
-   pnpm i
+   pnpm install --ignore-workspace
    ```
 
 2. **Configure environment variables:**

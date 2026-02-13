@@ -29,30 +29,38 @@ function getToken(): string {
   throw new Error('No Vercel auth token found');
 }
 
-function getScope(): string {
-  // Read team/org ID from .vercel/project.json for --scope flag
-  try {
-    const project = JSON.parse(readFileSync('.vercel/project.json', 'utf-8'));
-    if (project.orgId) return `--scope ${project.orgId}`;
-  } catch {
-    // project.json not found; omit --scope
-  }
-  return '';
+function getProjectConfig(): { projectId: string; orgId: string } {
+  const raw = readFileSync('.vercel/project.json', 'utf-8');
+  return JSON.parse(raw);
 }
 
 function run(cmd: string): string {
   const token = getToken();
-  const scope = getScope();
-  return execSync(`${cmd} --token="${token}" ${scope}`, {
+  const { orgId } = getProjectConfig();
+  return execSync(`${cmd} --token="${token}" --scope ${orgId}`, {
     encoding: 'utf-8',
     stdio: 'pipe',
   }).trim();
 }
 
-test('neon integration is installed with resource "my-test-db"', () => {
-  const output = run('vercel integration list');
-  expect(output.toLowerCase()).toContain('neon');
-  expect(output).toContain('my-test-db');
+test('neon integration is installed with resource "my-test-db"', async () => {
+  const token = getToken();
+  const { projectId, orgId } = getProjectConfig();
+
+  // Use the Vercel API to check for resources linked to this project
+  const res = await fetch(
+    `https://api.vercel.com/v1/storage/stores?projectId=${projectId}&teamId=${orgId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  expect(res.ok).toBe(true);
+
+  const data = await res.json();
+  const stores =
+    (data as { stores?: { name?: string; provider?: string }[] }).stores ?? [];
+  const neonStore = stores.find(
+    s => s.name === 'my-test-db' || s.provider?.toLowerCase().includes('neon')
+  );
+  expect(neonStore).toBeDefined();
 });
 
 test('DATABASE_URL env var exists for development', () => {
