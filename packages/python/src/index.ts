@@ -587,8 +587,25 @@ from vercel_runtime.vc_init import vc_handler
     }
 
     // Read and parse the uv.lock file
-    const lockContent = await fs.promises.readFile(uvLockPath, 'utf8');
-    let lockFile;
+    let lockContent: string;
+    try {
+      lockContent = await readFile(uvLockPath, 'utf8');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(
+          `Failed to read uv.lock file at "${uvLockPath}": ${error.message}`
+        );
+      } else {
+        console.log(
+          `Failed to read uv.lock file at "${uvLockPath}": ${String(error)}`
+        );
+      }
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `Failed to read uv.lock file at "${uvLockPath}"`,
+      });
+    }
+    let lockFile: ReturnType<typeof parseUvLock>;
     try {
       lockFile = parseUvLock(lockContent, uvLockPath);
     } catch (error: unknown) {
