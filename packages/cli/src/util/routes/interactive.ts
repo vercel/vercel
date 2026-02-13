@@ -220,10 +220,10 @@ export async function collectActionDetails(
       const status = await client.input.select({
         message: 'Status code:',
         choices: [
-          { name: '307 - Temporary Redirect (preserves method)', value: 307 },
-          { name: '308 - Permanent Redirect (preserves method)', value: 308 },
-          { name: '301 - Moved Permanently (may change to GET)', value: 301 },
-          { name: '302 - Found (may change to GET)', value: 302 },
+          { name: '307 - Temporary Redirect', value: 307 },
+          { name: '308 - Permanent Redirect', value: 308 },
+          { name: '301 - Moved Permanently', value: 301 },
+          { name: '302 - Found', value: 302 },
           { name: '303 - See Other', value: 303 },
         ],
       });
