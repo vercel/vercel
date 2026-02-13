@@ -927,6 +927,11 @@ export const prepareCache: PrepareCache = async ({
     await glob('**/.shadow-cljs/**', repoRootPath || workPath)
   );
 
+  Object.assign(
+    cacheFiles,
+    await glob('.yarn/berry/cache/**', process.env.HOME || '')
+  );
+
   // Framework cache files
   const pkg = getPkg(entrypoint, workPath);
   const framework = getFramework(config, pkg);

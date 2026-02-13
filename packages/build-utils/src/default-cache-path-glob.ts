@@ -1,1 +1,2 @@
-export const defaultCachePathGlob = '**/{node_modules,.yarn/cache}/**';
+export const defaultCachePathGlob =
+  '**/{node_modules,.yarn/cache,.yarn/berry}/**';
