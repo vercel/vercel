@@ -46,6 +46,26 @@ export {
 } from './manifest/serialize';
 
 // =============================================================================
+// uv.lock parsing and package classification
+// =============================================================================
+
+export type {
+  ClassifyPackagesOptions,
+  PackageClassification,
+  UvLockFile,
+  UvLockPackage,
+  UvLockPackageSource,
+} from './manifest/uv-lock-parser';
+
+export {
+  classifyPackages,
+  generateRuntimeRequirements,
+  isPrivatePackageSource,
+  normalizePackageName,
+  parseUvLock,
+} from './manifest/uv-lock-parser';
+
+// =============================================================================
 // Python selection (runtime + types)
 // =============================================================================
 
