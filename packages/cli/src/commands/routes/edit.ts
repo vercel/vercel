@@ -731,9 +731,9 @@ async function editResponseHeaders(
 
     const choices = [];
     if (allHeaders.length > 0) {
-      choices.push({ name: 'Remove a header', value: 'remove' });
+      choices.push({ name: 'Remove a response header', value: 'remove' });
     }
-    choices.push({ name: 'Add/modify a header', value: 'add' });
+    choices.push({ name: 'Add a response header', value: 'add' });
     choices.push({ name: 'Back', value: 'back' });
 
     const action = await client.input.select({
@@ -745,7 +745,7 @@ async function editResponseHeaders(
 
     if (action === 'remove') {
       const toRemove = await client.input.select({
-        message: 'Select header to remove:',
+        message: 'Select response header to remove:',
         choices: [
           ...allHeaders.map((h, i) => ({
             name:
@@ -847,6 +847,8 @@ async function editTransformsByType(
 ): Promise<void> {
   const label =
     transformType === 'request.headers' ? 'Request Headers' : 'Request Query';
+  const itemName =
+    transformType === 'request.headers' ? 'request header' : 'query parameter';
 
   while (true) {
     const allTransforms = ((route.route as any).transforms ??
@@ -868,9 +870,9 @@ async function editTransformsByType(
 
     const choices = [];
     if (matching.length > 0) {
-      choices.push({ name: 'Remove a transform', value: 'remove' });
+      choices.push({ name: `Remove a ${itemName}`, value: 'remove' });
     }
-    choices.push({ name: 'Add a transform', value: 'add' });
+    choices.push({ name: `Add a ${itemName}`, value: 'add' });
     choices.push({ name: 'Back', value: 'back' });
 
     const action = await client.input.select({
@@ -882,7 +884,7 @@ async function editTransformsByType(
 
     if (action === 'remove') {
       const toRemove = await client.input.select({
-        message: 'Select transform to remove:',
+        message: `Select ${itemName} to remove:`,
         choices: [
           ...matching.map((t, i) => ({
             name: formatTransformDisplay(t),
