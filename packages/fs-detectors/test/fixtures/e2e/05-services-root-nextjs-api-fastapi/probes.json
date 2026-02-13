@@ -1,0 +1,59 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Next.js"
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "Hello from Next API"
+    },
+    {
+      "path": "/api/py",
+      "status": 200,
+      "mustContain": "Hello from FastAPI"
+    },
+    {
+      "path": "/api/py/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/backend-from-env",
+      "status": 200,
+      "mustContain": "backend-status:ok"
+    },
+    {
+      "path": "/backend-from-env",
+      "status": 200,
+      "mustContain": "service-url:https://"
+    },
+    {
+      "path": "/backend-from-env",
+      "status": 200,
+      "mustContain": "/api/py"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/api/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/api/py/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from FastAPI"
+    },
+    {
+      "path": "/api/index",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    }
+  ]
+}

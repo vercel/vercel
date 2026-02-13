@@ -10,21 +10,24 @@ import {
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
 } from './types';
-import { getBuilderForRuntime, inferServiceRuntime } from './utils';
+import {
+  getBuilderForRuntime,
+  inferServiceRuntime,
+  INTERNAL_SERVICE_PREFIX,
+} from './utils';
 import frameworkList from '@vercel/frameworks';
+import { normalizeRoutePrefix } from '@vercel/routing-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 
-function normalizeRoutePrefix(routePrefix: string): string {
-  let normalized = routePrefix.startsWith('/')
-    ? routePrefix
-    : `/${routePrefix}`;
-  if (normalized !== '/' && normalized.endsWith('/')) {
-    normalized = normalized.slice(0, -1);
-  }
-  return normalized || '/';
+function isReservedServiceRoutePrefix(routePrefix: string): boolean {
+  const normalized = normalizeRoutePrefix(routePrefix);
+  return (
+    normalized === INTERNAL_SERVICE_PREFIX ||
+    normalized.startsWith(`${INTERNAL_SERVICE_PREFIX}/`)
+  );
 }
 
 /**
@@ -53,6 +56,17 @@ export function validateServiceConfig(
     return {
       code: 'MISSING_ROUTE_PREFIX',
       message: `Web service "${name}" must specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
+  if (
+    serviceType === 'web' &&
+    config.routePrefix &&
+    isReservedServiceRoutePrefix(config.routePrefix)
+  ) {
+    return {
+      code: 'RESERVED_ROUTE_PREFIX',
+      message: `Web service "${name}" cannot use routePrefix "${config.routePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
       serviceName: name,
     };
   }
