@@ -19,6 +19,7 @@ type Ignore = ReturnType<typeof ignore>;
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/files';
+export const API_FILES_UPLOADED = '/v2/files-uploaded';
 
 const EVENTS_ARRAY = [
   // File events
@@ -369,21 +370,42 @@ export const fetch = async (
   return res;
 };
 
+// `PreparedFile` is a parsed file that contains all the information required to
+// generate one of these:
+// - `PreUploadedFile`: used to create a deployment that references files that
+//   have been previously uploaded.
+// - `InlineFile`: used to create a deployment that contains the files to upload
+//   in the same HTTP query.
 export interface PreparedFile {
   file: string;
-  sha?: string;
-  size?: number;
+  sha: string;
+  size: number;
   mode: number;
+  data: Buffer;
 }
 
-const isWin = process.platform.includes('win');
+const IS_WIN = process.platform.includes('win');
 
+/**
+ * Given a file map, parse it and generate an array of prepared files, so that
+ * we can use these to generate pre-uploaded and inline files later on.
+ *
+ * @param files - Map with the files that need to be uploaded by the deployment.
+ * @param clientOptions - CLI options.
+ *
+ * @returns An array of `PreparedFile`, which can be used to generate pre-uploaded
+ * or inline files.
+ */
 export const prepareFiles = (
   files: FilesMap,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
   for (const [sha, file] of files) {
+    if (!sha) {
+      continue;
+    }
+
     for (const name of file.names) {
       let fileName: string;
 
@@ -399,17 +421,148 @@ export const prepareFiles = (
         fileName = segments[segments.length - 1];
       }
 
+      const size = file.data?.byteLength || file.data?.length;
+      if (size === undefined || size === null) {
+        throw new Error(`Could not get the size of file ${fileName}`);
+      }
+
       preparedFiles.push({
-        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data?.byteLength || file.data?.length,
+        file: IS_WIN ? fileName.replace(/\\/g, '/') : fileName,
+        size,
         mode: file.mode,
-        sha: sha || undefined,
+        sha,
+        data: file.data ?? Buffer.from([]),
       });
     }
   }
 
   return preparedFiles;
 };
+
+// File that has been pre-uploaded, and we only need to reference it when creating
+// a deployment.
+export interface PreUploadedFile {
+  file: string;
+  sha: string;
+  size: number;
+  mode: number;
+}
+
+export const getPreUploadedFiles = (
+  files: PreparedFile[]
+): PreUploadedFile[] => {
+  return files.map(({ file, sha, size, mode }) => ({
+    file,
+    sha,
+    size,
+    mode,
+  }));
+};
+
+// File that has not been uploaded and will be uploaded in the same HTTP query
+// as the deployment creation.
+export interface InlineFile {
+  file: string;
+  data: string;
+  encoding: 'utf-8' | 'base64';
+}
+
+export const getInlineFiles = (files: PreparedFile[]): InlineFile[] => {
+  return files.map(({ file, data }) => ({
+    file,
+    data: data.toString('base64'),
+    encoding: 'base64',
+  }));
+};
+
+/**
+ * Given an array of SHA, query the Vercel endpoint and return all the SHA that
+ * have not yet been uploaded, and should be uploaded prior to creating the
+ * deployment.
+ *
+ * @param shas - Array of SHA that will be checked if they exist or not in Vercel.
+ * @param clientOptions - CLI options.
+ *
+ * @returns SHA from missing files.
+ */
+export async function queryMissingFiles(
+  shas: string[],
+  clientOptions: VercelClientOptions
+): Promise<string[]> {
+  const { token, teamId, apiUrl, userAgent } = clientOptions;
+  const debug = createDebug(clientOptions.debug);
+
+  debug(`Querying missing files for ${shas.length} files`);
+
+  const response = await fetch(API_FILES_UPLOADED, token, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      files: shas,
+    }),
+    apiUrl,
+    userAgent,
+    teamId,
+  });
+
+  if (!response.ok) {
+    debug(
+      `Failed to query missing files: ${response.status} ${response.statusText}`
+    );
+    // Return all files as missing if there is an error with this endpoint.
+    return shas;
+  }
+
+  const result = await response.json();
+  const missingFiles = result.missingFiles || [];
+
+  debug(`${missingFiles.length} files are missing from cache`);
+
+  return missingFiles;
+}
+
+/**
+ * Given all the files that should be deployed, and the client options, return
+ * a default deployment name.
+ *
+ * @param files - All the files from the deployment.
+ * @param clientOptions - CLI options
+ * @returns Deployment name.
+ */
+export function getDefaultDeploymentName(
+  files: FilesMap,
+  clientOptions: VercelClientOptions
+): string {
+  const debug = createDebug(clientOptions.debug);
+  const { isDirectory, path } = clientOptions;
+
+  if (isDirectory && typeof path === 'string') {
+    debug('Provided path is a directory. Using last segment as default name');
+    return path.split('/').pop() || path;
+  } else {
+    debug(
+      'Provided path is not a directory. Using last segment of the first file as default name'
+    );
+
+    const fileValues = Array.from(files.values());
+
+    if (fileValues.length === 0) {
+      debug('No files provided. Using path as default name');
+      if (Array.isArray(path) && path.length > 0) {
+        return path[0].split('/').pop() || path[0];
+      } else if (typeof path === 'string') {
+        return path.split('/').pop() || path;
+      }
+      return 'deployment';
+    }
+
+    const filePath = fileValues[0].names[0];
+    return filePath.split('/').pop() || filePath;
+  }
+}
 
 export function createDebug(debug?: boolean) {
   if (debug) {
