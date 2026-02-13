@@ -5,3 +5,5 @@ dist/
 results/
 *.log
 .DS_Store
+.vercel
+.env*.local

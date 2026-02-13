@@ -11,10 +11,10 @@ async function cleanupProjects(token: string) {
   for (const { id, teamId } of createdProjects) {
     try {
       const qs = teamId ? `?teamId=${teamId}` : '';
-      const res = await fetch(
-        `https://api.vercel.com/v9/projects/${id}${qs}`,
-        { method: 'DELETE', headers: getAuthHeaders(token) }
-      );
+      const res = await fetch(`https://api.vercel.com/v9/projects/${id}${qs}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(token),
+      });
       if (res.ok || res.status === 404) {
         console.log(`Cleanup: Deleted project ${id}`);
       } else {
