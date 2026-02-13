@@ -1,4 +1,8 @@
 name: E2E Tests
+# any files changing in .github/workflows will ensure
+# that all e2e tests run. One easy way of doing this
+# is to increment the counter below.
+# cache buster: 1
 
 on:
   pull_request:
