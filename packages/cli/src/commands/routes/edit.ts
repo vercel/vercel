@@ -654,6 +654,7 @@ async function editConditions(
         const existing = ((route.route as any).missing ?? []) as HasField[];
         (route.route as any).missing = [...existing, ...parsed];
       }
+      break; // Return to main menu after adding
     }
   }
 }
@@ -833,6 +834,7 @@ async function editResponseHeaders(
       if (newTransforms.length > 0) {
         (route.route as any).transforms = [...existing, ...newTransforms];
       }
+      break; // Return to main menu after adding
     }
   }
 }
@@ -919,6 +921,7 @@ async function editTransformsByType(
       if (transforms.length > 0) {
         (route.route as any).transforms = [...allTransforms, ...transforms];
       }
+      break; // Return to main menu after adding
     }
   }
 }
