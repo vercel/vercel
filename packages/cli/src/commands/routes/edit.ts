@@ -378,7 +378,7 @@ async function editDescription(
   route: RoutingRule
 ): Promise<void> {
   const desc = await client.input.text({
-    message: `Description (current: ${route.description ?? '(none)'}):`,
+    message: `Description${route.description ? ` (current: ${route.description})` : ''}:`,
     validate: val =>
       val && val.length > MAX_DESCRIPTION_LENGTH
         ? `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`
@@ -592,19 +592,24 @@ async function editConditions(
 
       const toRemove = await client.input.select({
         message: 'Select condition to remove:',
-        choices: allConds.map((c, i) => ({
-          name: c.label,
-          value: i,
-        })),
+        choices: [
+          ...allConds.map((c, i) => ({
+            name: c.label,
+            value: i,
+          })),
+          { name: 'Cancel', value: -1 },
+        ],
       });
 
-      const selected = allConds[toRemove as number];
-      if (selected.kind === 'has') {
-        hasConds.splice(selected.idx, 1);
-        (route.route as any).has = hasConds;
-      } else {
-        missingConds.splice(selected.idx, 1);
-        (route.route as any).missing = missingConds;
+      if (toRemove !== -1) {
+        const selected = allConds[toRemove as number];
+        if (selected.kind === 'has') {
+          hasConds.splice(selected.idx, 1);
+          (route.route as any).has = hasConds;
+        } else {
+          missingConds.splice(selected.idx, 1);
+          (route.route as any).missing = missingConds;
+        }
       }
     }
 
@@ -632,19 +637,69 @@ async function editConditions(
   }
 }
 
+/**
+ * Represents a response header operation from either the headers object (set)
+ * or the transforms array (append/delete).
+ */
+interface ResponseHeaderItem {
+  op: 'set' | 'append' | 'delete';
+  key: string;
+  value?: string;
+  /** 'headers' = from route.headers object, 'transform' = from route.transforms array */
+  source: 'headers' | 'transform';
+}
+
+/**
+ * Collects all response header operations from both the headers object
+ * and the transforms array into a unified list.
+ */
+function getAllResponseHeaders(route: RoutingRule): ResponseHeaderItem[] {
+  const items: ResponseHeaderItem[] = [];
+
+  // Set operations from headers object
+  for (const [key, value] of Object.entries(route.route.headers ?? {})) {
+    items.push({ op: 'set', key, value, source: 'headers' });
+  }
+
+  // Append/delete operations from transforms
+  const transforms = ((route.route as any).transforms ?? []) as Transform[];
+  for (const t of transforms) {
+    if (t.type === 'response.headers') {
+      items.push({
+        op: t.op as 'append' | 'delete',
+        key:
+          typeof t.target.key === 'string'
+            ? t.target.key
+            : JSON.stringify(t.target.key),
+        value: typeof t.args === 'string' ? t.args : undefined,
+        source: 'transform',
+      });
+    }
+  }
+
+  return items;
+}
+
+function formatResponseHeaderItem(item: ResponseHeaderItem): string {
+  if (item.op === 'delete') {
+    return `${chalk.yellow(item.op)} ${chalk.cyan(item.key)}`;
+  }
+  return `${chalk.yellow(item.op)} ${chalk.cyan(item.key)} = ${item.value}`;
+}
+
 async function editResponseHeaders(
   client: Client,
   route: RoutingRule
 ): Promise<void> {
   while (true) {
-    const headers = getResponseHeaders(route);
+    const allHeaders = getAllResponseHeaders(route);
 
-    if (headers.length > 0) {
+    if (allHeaders.length > 0) {
       output.print('\n');
       output.print(`  ${chalk.cyan('Response Headers:')}\n`);
-      headers.forEach((h, i) => {
+      allHeaders.forEach((h, i) => {
         output.print(
-          `    ${chalk.gray(`${i + 1}.`)} ${chalk.cyan(h.key)} = ${h.value}\n`
+          `    ${chalk.gray(`${i + 1}.`)} ${formatResponseHeaderItem(h)}\n`
         );
       });
       output.print('\n');
@@ -653,7 +708,7 @@ async function editResponseHeaders(
     }
 
     const choices = [];
-    if (headers.length > 0) {
+    if (allHeaders.length > 0) {
       choices.push({ name: 'Remove a header', value: 'remove' });
     }
     choices.push({ name: 'Add/modify a header', value: 'add' });
@@ -669,23 +724,50 @@ async function editResponseHeaders(
     if (action === 'remove') {
       const toRemove = await client.input.select({
         message: 'Select header to remove:',
-        choices: headers.map((h, i) => ({
-          name: `${h.key} = ${h.value}`,
-          value: i,
-        })),
+        choices: [
+          ...allHeaders.map((h, i) => ({
+            name:
+              h.op === 'delete'
+                ? `${h.op} ${h.key}`
+                : `${h.op} ${h.key} = ${h.value}`,
+            value: i,
+          })),
+          { name: 'Cancel', value: -1 },
+        ],
       });
 
-      const headerKey = headers[toRemove as number].key;
-      const currentHeaders = { ...(route.route.headers ?? {}) };
-      delete currentHeaders[headerKey];
-      route.route.headers = currentHeaders;
+      if (toRemove !== -1) {
+        const item = allHeaders[toRemove as number];
+        if (item.source === 'headers') {
+          // Remove from headers object
+          const currentHeaders = { ...(route.route.headers ?? {}) };
+          delete currentHeaders[item.key];
+          route.route.headers = currentHeaders;
+        } else {
+          // Remove from transforms array — find the matching response.headers transform
+          const transforms = ((route.route as any).transforms ??
+            []) as Transform[];
+          const idx = transforms.findIndex(
+            t =>
+              t.type === 'response.headers' &&
+              t.op === item.op &&
+              (typeof t.target.key === 'string'
+                ? t.target.key
+                : JSON.stringify(t.target.key)) === item.key
+          );
+          if (idx !== -1) {
+            transforms.splice(idx, 1);
+            (route.route as any).transforms = transforms;
+          }
+        }
+      }
     }
 
     if (action === 'add') {
       const tempFlags: Record<string, unknown> = {};
       await collectInteractiveHeaders(client, 'response', tempFlags);
 
-      // Merge set headers
+      // Merge set headers into headers object
       const setHeaders = (tempFlags['--set-response-header'] as string[]) || [];
       for (const h of setHeaders) {
         const eqIdx = h.indexOf('=');
@@ -778,25 +860,30 @@ async function editTransformsByType(
     if (action === 'remove') {
       const toRemove = await client.input.select({
         message: 'Select transform to remove:',
-        choices: matching.map((t, i) => ({
-          name: formatTransformDisplay(t),
-          value: i,
-        })),
+        choices: [
+          ...matching.map((t, i) => ({
+            name: formatTransformDisplay(t),
+            value: i,
+          })),
+          { name: 'Cancel', value: -1 },
+        ],
       });
 
-      // Find the actual index in the full transforms array
-      let matchIdx = 0;
-      const removeIdx = allTransforms.findIndex(t => {
-        if (t.type === transformType) {
-          if (matchIdx === (toRemove as number)) return true;
-          matchIdx++;
+      if (toRemove !== -1) {
+        // Find the actual index in the full transforms array
+        let matchIdx = 0;
+        const removeIdx = allTransforms.findIndex(t => {
+          if (t.type === transformType) {
+            if (matchIdx === (toRemove as number)) return true;
+            matchIdx++;
+          }
+          return false;
+        });
+
+        if (removeIdx !== -1) {
+          allTransforms.splice(removeIdx, 1);
+          (route.route as any).transforms = allTransforms;
         }
-        return false;
-      });
-
-      if (removeIdx !== -1) {
-        allTransforms.splice(removeIdx, 1);
-        (route.route as any).transforms = allTransforms;
       }
     }
 
@@ -969,7 +1056,7 @@ export default async function edit(client: Client, argv: string[]) {
     while (true) {
       const hasConds = ((route.route as any).has ?? []).length;
       const missingConds = ((route.route as any).missing ?? []).length;
-      const responseHeaders = getResponseHeaders(route).length;
+      const responseHeaders = getAllResponseHeaders(route).length;
       const requestHeaders = getTransformsByType(
         route,
         'request.headers'
