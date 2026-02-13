@@ -2922,12 +2922,14 @@ exports[`help command > integration help output snapshots > integration help col
                          specifi…
                          marketp…
                          integra…
-  list      [project]    Lists   
-                         all     
+  list      [project]    List    
                          resourc…
                          from    
                          marketp…
                          integra…
+                         for the 
+                         current 
+                         project 
   discover               Discover
                          availab…
                          marketp…
@@ -3010,8 +3012,8 @@ exports[`help command > integration help output snapshots > integration help col
   add       integration  Installs a marketplace integration              
   balance   integration  Shows the balances and thresholds of a specified
                          marketplace integration                         
-  list      [project]    Lists all resources from marketplace            
-                         integrations                                    
+  list      [project]    List resources from marketplace integrations for
+                         the current project                             
   discover               Discover available marketplace integrations     
   open      name         Opens a marketplace integration's dashboard     
   remove    integration  Uninstalls a marketplace integration            
@@ -3052,7 +3054,7 @@ exports[`help command > integration help output snapshots > integration help col
 
   add       integration  Installs a marketplace integration                                                      
   balance   integration  Shows the balances and thresholds of a specified marketplace integration                
-  list      [project]    Lists all resources from marketplace integrations                                       
+  list      [project]    List resources from marketplace integrations for the current project                    
   discover               Discover available marketplace integrations                                             
   open      name         Opens a marketplace integration's dashboard                                             
   remove    integration  Uninstalls a marketplace integration                                                    
@@ -3085,11 +3087,12 @@ exports[`help command > integration help output snapshots > integration list sub
 "
   ▲ vercel integration list [project] [options]
 
-  Lists all resources from marketplace integrations                                                                     
+  List resources from marketplace integrations for the current project                                                  
 
   Options:
 
   -a,  --all                 Lists all resources regardless of project                                                  
+  -F,  --format <FORMAT>     Specify the output format (json)                                                           
   -i,  --integration <NAME>  Limits the resources listed to a designated integration                                    
 
 
@@ -3109,9 +3112,9 @@ exports[`help command > integration help output snapshots > integration list sub
 
   Examples:
 
-  - List all resources
+  - List resources for the current linked project
 
-    $ vercel integrations list
+    $ vercel integration list
 
   - Filter the resources to a single integration
 
@@ -3123,6 +3126,10 @@ exports[`help command > integration help output snapshots > integration list sub
 
     $ vercel integration list --all
     $ vercel integration list -a
+
+  - List resources as JSON
+
+    $ vercel integration list --format=json
 
 "
 `;

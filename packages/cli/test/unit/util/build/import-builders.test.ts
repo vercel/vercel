@@ -278,4 +278,25 @@ describe('resolveBuilders()', () => {
       await remove(cwd);
     }
   });
+
+  it('should resolve from CLI node_modules when not in .vercel/builders', async () => {
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    try {
+      // No .vercel/builders cache; @vercel/node should be found via CLI (workspace or node_modules)
+      const specs = new Set(['@vercel/node']);
+      const result = await resolveBuilders(cwd, buildersDir, specs);
+
+      expect('builders' in result).toBe(true);
+      expect('buildersToAdd' in result).toBe(false);
+      if (!('builders' in result)) return;
+      expect(result.builders.size).toBe(1);
+      const entry = result.builders.get('@vercel/node');
+      expect(entry?.pkg.name).toBe('@vercel/node');
+      // Resolved from CLI location, not from cwd's .vercel/builders
+      expect(entry?.pkgPath.startsWith(buildersDir)).toBe(false);
+    } finally {
+      await remove(cwd);
+    }
+  });
 });
