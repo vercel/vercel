@@ -65,9 +65,9 @@ describe('deploy', () => {
     client.setArgv('deploy', badName);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error: Could not find “${humanizePath(
+      `Error: The specified path "${humanizePath(
         join(client.cwd, 'does-not-exist')
-      )}”\n`
+      )}" does not exist and "does-not-exist" is not a known command.`
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(1);
