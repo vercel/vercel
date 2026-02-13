@@ -11,9 +11,8 @@ from pathlib import Path
 HOME = Path.home()
 DEMO_OLD = HOME / "demo-old"
 DEMO_NEW = HOME / "demo-new"
-MAIN_WORKTREE = HOME / "vercel" / "vercel"
-CLI_DIST = MAIN_WORKTREE / "packages" / "cli" / "dist" / "index.js"
 OLD_BIN = DEMO_OLD / "node_modules" / ".bin" / "vercel"
+NEW_BIN = DEMO_NEW / "node_modules" / ".bin" / "vercel"
 
 GREEN = "\033[0;32m"
 RED = "\033[0;31m"
@@ -39,7 +38,7 @@ def section(num: int, title: str):
 def run_new(args: list[str], cwd: Path = DEMO_NEW) -> subprocess.CompletedProcess:
     env = {**os.environ, "FF_AUTO_PROVISION_INSTALL": "1"}
     return subprocess.run(
-        ["node", str(CLI_DIST)] + args,
+        [str(NEW_BIN)] + args,
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -74,10 +73,10 @@ def main() -> int:
 
     # ── Preflight ─────────────────────────────────────────────────────
     print(f"{BOLD}Preflight checks{NC}")
-    if not CLI_DIST.exists():
-        fail(f"New CLI not built: {CLI_DIST}")
+    if not NEW_BIN.exists():
+        fail(f"New CLI not installed: {NEW_BIN}")
         return 1
-    ok("New CLI dist exists")
+    ok("New CLI installed")
 
     if not OLD_BIN.exists():
         fail(f"Old CLI not installed: {OLD_BIN}")

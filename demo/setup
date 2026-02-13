@@ -8,10 +8,10 @@ from pathlib import Path
 # ── Config ───────────────────────────────────────────────────────────
 HOME = Path.home()
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MAIN_WORKTREE = HOME / "vercel" / "vercel"  # main branch — used for CLI build
 DEMO_OLD = HOME / "demo-old"
 DEMO_NEW = HOME / "demo-new"
 OLD_VERSION = "50.4.9"
+NEW_VERSION = "50.16.0"
 TEAM_SLUG = "acme-marketplace-team-vtest314"
 ZSHRC = HOME / ".zshrc"
 STARSHIP = HOME / ".config" / "starship.toml"
@@ -52,9 +52,12 @@ def run(cmd, cwd=None, check=True):
     return result
 
 
-def run_visible(cmd, cwd=None):
+def run_visible(cmd, cwd=None, env_extra=None):
     """Run with stdout/stderr visible to the user."""
-    result = subprocess.run(cmd, cwd=cwd)
+    env = None
+    if env_extra:
+        env = {**os.environ, **env_extra}
+    result = subprocess.run(cmd, cwd=cwd, env=env)
     if result.returncode != 0:
         fail(f"Command failed: {' '.join(str(c) for c in cmd)}")
 
@@ -115,15 +118,28 @@ if need_install:
     ok(f"Installed vercel@{OLD_VERSION}")
 
 
-# ── 3. Build new CLI from source ────────────────────────────────────
-step(f"Building new CLI from {MAIN_WORKTREE}")
-run_visible(["pnpm", "--filter", "vercel...", "build"], cwd=MAIN_WORKTREE)
+# ── 3. Install new CLI ───────────────────────────────────────────────
+step(f"Installing vercel@{NEW_VERSION} in {DEMO_NEW}")
 
-dist = MAIN_WORKTREE / "packages" / "cli" / "dist" / "index.js"
-if dist.exists():
-    ok("Built: packages/cli/dist/index.js")
-else:
-    fail("Build failed — dist/index.js not found")
+pkg_json = DEMO_NEW / "package.json"
+if not pkg_json.exists():
+    pkg_json.write_text('{"private":true}\n')
+
+new_bin = DEMO_NEW / "node_modules" / ".bin" / "vercel"
+need_install = True
+
+if new_bin.exists():
+    result = run([str(new_bin), "--version"], check=False)
+    installed = result.stdout.strip()
+    if NEW_VERSION in installed:
+        ok(f"Already installed: {installed}")
+        need_install = False
+    else:
+        warn(f"Wrong version ({installed}), reinstalling...")
+
+if need_install:
+    run_visible(["pnpm", "install", f"vercel@{NEW_VERSION}"], cwd=DEMO_NEW)
+    ok(f"Installed vercel@{NEW_VERSION}")
 
 
 # ── 4. Install vc function in .zshrc ────────────────────────────────
@@ -134,10 +150,10 @@ vc_block = f"""{MARKER_START}
 vc() {{
   case "$PWD" in
     {DEMO_OLD}*)
-      {old_bin} "$@"
+      NO_UPDATE_NOTIFIER=1 {old_bin} "$@"
       ;;
     {DEMO_NEW}*)
-      FF_AUTO_PROVISION_INSTALL=1 node {dist} "$@"
+      NO_UPDATE_NOTIFIER=1 FF_AUTO_PROVISION_INSTALL=1 {new_bin} "$@"
       ;;
     *)
       command vc "$@"
@@ -184,11 +200,11 @@ ok(f"Appended vc_version to {STARSHIP}")
 # ── 6. Switch team scope ──────────────────────────────────────────────
 step(f"Switching team to {TEAM_SLUG}")
 
-run_visible([str(old_bin), "switch", TEAM_SLUG], cwd=DEMO_OLD)
+run_visible([str(old_bin), "switch", TEAM_SLUG], cwd=DEMO_OLD, env_extra={"NO_UPDATE_NOTIFIER": "1"})
 ok(f"demo-old → {TEAM_SLUG}")
 
 run_visible(
-    ["node", str(dist), "switch", TEAM_SLUG],
+    [str(new_bin), "switch", TEAM_SLUG],
     cwd=DEMO_NEW,
 )
 ok(f"demo-new → {TEAM_SLUG}")
@@ -211,13 +227,18 @@ step("Sanity checks")
 old_ver = run([str(old_bin), "--version"], check=False).stdout.strip() or "FAILED"
 print(f"  Old CLI: {old_ver}")
 
-new_ver = run(["node", str(dist), "--version"], check=False).stdout.strip() or "FAILED"
+new_ver = run([str(new_bin), "--version"], check=False).stdout.strip() or "FAILED"
 print(f"  New CLI: {new_ver}")
 
 if OLD_VERSION in old_ver:
     ok("Old version correct")
 else:
     warn(f"Old version mismatch: expected {OLD_VERSION}, got {old_ver}")
+
+if NEW_VERSION in new_ver:
+    ok("New version correct")
+else:
+    warn(f"New version mismatch: expected {NEW_VERSION}, got {new_ver}")
 
 print(f"""
 {GREEN}═══════════════════════════════════════════════{NC}
