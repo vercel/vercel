@@ -54,6 +54,7 @@ export interface CreateOptions {
   withFullLogs?: boolean;
   autoAssignCustomDomains?: boolean;
   agentName?: string;
+  manual?: boolean;
 }
 
 export interface RemoveOptions {
@@ -130,6 +131,7 @@ export default class Now {
       withFullLogs,
       autoAssignCustomDomains,
       agentName,
+      manual,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -180,6 +182,7 @@ export default class Now {
       noWait,
       withFullLogs,
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
+      manual,
     });
 
     if (deployment && deployment.warnings) {

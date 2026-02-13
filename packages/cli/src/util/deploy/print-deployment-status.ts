@@ -35,7 +35,8 @@ export async function printDeploymentStatus(
   },
   deployStamp: () => string,
   noWait: boolean,
-  guidanceMode: boolean
+  guidanceMode: boolean,
+  isInit?: boolean
 ): Promise<number> {
   indications = indications || [];
 
@@ -43,12 +44,10 @@ export async function printDeploymentStatus(
   if (noWait) {
     if (isDeploying(readyState)) {
       isStillBuilding = true;
-      output.print(
-        prependEmoji(
-          'Note: Deployment is still processing...',
-          emoji('notice')
-        ) + '\n'
-      );
+      const message = isInit
+        ? 'Deployment is awaiting continuation...'
+        : 'Note: Deployment is still processing...';
+      output.print(prependEmoji(message, emoji('notice')) + '\n');
     }
   }
 
