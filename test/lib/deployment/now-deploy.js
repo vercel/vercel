@@ -38,6 +38,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     VERCEL_FORCE_PYTHON_STREAMING,
     VERCEL_FORCE_BUILD_IN_HIVE,
     VERCEL_BUILD_CONTAINER_VERSION,
+    VERCEL_RUNTIME_PYTHON,
   } = process.env;
 
   // Warn if using custom build container configuration
@@ -80,6 +81,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
         VERCEL_FORCE_PYTHON_STREAMING,
         VERCEL_FORCE_BUILD_IN_HIVE,
         VERCEL_BUILD_CONTAINER_VERSION,
+        VERCEL_RUNTIME_PYTHON,
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
