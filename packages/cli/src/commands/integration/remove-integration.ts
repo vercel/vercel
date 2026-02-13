@@ -53,7 +53,8 @@ export async function remove(client: Client) {
   output.spinner('Retrieving integration…', 500);
   const integrationConfiguration = await getFirstConfiguration(
     client,
-    integrationName
+    integrationName,
+    team.id
   );
   output.stopSpinner();
 

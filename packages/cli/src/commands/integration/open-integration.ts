@@ -38,7 +38,11 @@ export async function openIntegration(client: Client, args: string[]) {
   let knownIntegrationSlug = false;
 
   try {
-    configuration = await getFirstConfiguration(client, integrationSlug);
+    configuration = await getFirstConfiguration(
+      client,
+      integrationSlug,
+      team.id
+    );
     knownIntegrationSlug = !!configuration;
   } catch (error) {
     output.error(
