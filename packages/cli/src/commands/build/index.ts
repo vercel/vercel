@@ -2,8 +2,9 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
+import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
+import { readdirSync, statSync } from 'fs';
 
 import {
   download,
@@ -31,6 +32,7 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  glob,
   type Service,
   isBackendBuilder,
   type Lambda,
@@ -43,7 +45,6 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  isRouteOwningBuilder,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -988,7 +989,6 @@ async function doBuild(
       if (
         hasDetectedServices &&
         service &&
-        isRouteOwningBuilder(service) &&
         'routes' in buildResult &&
         Array.isArray(buildResult.routes) &&
         detectedServices
@@ -1028,6 +1028,7 @@ async function doBuild(
               vercelConfig: localConfig,
               standalone,
               workPath: buildWorkPath,
+              service,
             })
           )
           .then(
@@ -1231,6 +1232,241 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+
+  // Analyze .vc-config.json files if environment variable is set
+  if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
+    await analyzeVcConfigFiles(cwd, outputDir);
+  }
+}
+
+function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
+  const funcPath = normalizePath(relative(outputDir, vcConfigPath))
+    .replace(/^functions\//, '')
+    .replace(/\/\.vc-config\.json$/, '')
+    .replace(/\.func$/, ''); // Remove .func suffix
+
+  return (
+    '/' +
+    funcPath
+      .split('/')
+      .filter(part => part && part !== 'index')
+      .join('/')
+  );
+}
+
+const LAMBDA_SIZE_LIMIT_MB = 250;
+
+function printFileSizeBreakdown(files: Map<string, number>): void {
+  // Group files by package or directory structure
+  const dependencies = new Map<string, number>();
+
+  for (const [bundlePath, sizeMB] of files.entries()) {
+    // Use first 3 segments to group
+    const depKey = bundlePath.split('/').slice(0, 3).join('/');
+
+    dependencies.set(depKey, (dependencies.get(depKey) || 0) + sizeMB);
+  }
+
+  // Sort by size and show top 10 largest dependencies
+  const sortedDeps = Array.from(dependencies.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  if (sortedDeps.length > 0) {
+    output.print(chalk.yellow('  Large dependencies:\n'));
+    for (const [dep, size] of sortedDeps) {
+      if (size >= 0.5) {
+        // Only show files >= 500KB
+        output.print(
+          `    ${chalk.gray('•')} ${dep}: ${chalk.bold(size.toFixed(2))} MB\n`
+        );
+      }
+    }
+    output.print('\n');
+  }
+}
+
+async function analyzeVcConfigFiles(
+  cwd: string,
+  outputDir: string
+): Promise<void> {
+  // Find all .vc-config.json files using @vercel/build-utils glob
+  const filesObject = await glob('**/.vc-config.json', {
+    cwd: outputDir,
+  });
+
+  // Filter out .rsc.func symlinks to avoid duplicates
+  const vcConfigFiles = Object.keys(filesObject)
+    .filter(relativePath => !relativePath.includes('.rsc.func'))
+    .map(relativePath => join(outputDir, relativePath));
+
+  if (vcConfigFiles.length === 0) {
+    output.print('No functions to analyze.\n');
+    return;
+  }
+
+  output.print(
+    `\nAnalyzing ${vcConfigFiles.length} function${vcConfigFiles.length === 1 ? '' : 's'}...\n`
+  );
+
+  // Analyze all functions in parallel
+  const results = await Promise.all(
+    vcConfigFiles.map(file => analyzeSingleFunction(file, cwd, outputDir))
+  );
+
+  // Filter out failed analyses
+  const validResults = results.filter(
+    (r): r is NonNullable<typeof r> => r !== null
+  );
+
+  // Separate exceeded and normal functions
+  const sortedResults = validResults.sort((a, b) => b.size - a.size);
+  const exceededFunctions = sortedResults.filter(
+    r => r.size > LAMBDA_SIZE_LIMIT_MB
+  );
+  const normalFunctions = sortedResults.filter(
+    r => r.size <= LAMBDA_SIZE_LIMIT_MB
+  );
+
+  // Show warning once if there are exceeded functions
+  if (exceededFunctions.length > 0) {
+    output.print(
+      `${chalk.red.bold(`⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached`)}\n\n`
+    );
+
+    // List all affected functions
+    for (const result of exceededFunctions) {
+      output.print(
+        `${chalk.red('Function :')} ${chalk.red.bold(result.path)}\n` +
+          `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
+      );
+
+      // Show breakdown of largest files/dependencies
+      printFileSizeBreakdown(result.files);
+      output.print('\n');
+    }
+
+    // Show summary of normal functions
+    if (normalFunctions.length > 0) {
+      output.print(chalk.cyan(`Other functions:\n`));
+      for (const result of normalFunctions) {
+        output.print(
+          `${chalk.cyan(result.path)}: ${chalk.bold(result.size.toFixed(2))} MB\n`
+        );
+      }
+    }
+
+    throw new NowBuildError({
+      code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
+      message: `${exceededFunctions.length} function${exceededFunctions.length === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
+      link: 'https://vercel.link/serverless-function-size',
+      action: 'Learn More',
+    });
+  }
+}
+
+async function analyzeSingleFunction(
+  file: string,
+  cwd: string,
+  outputDir: string
+): Promise<{
+  path: string;
+  size: number;
+  files: Map<string, number>;
+} | null> {
+  try {
+    const content = await fs.readFile(file, 'utf8');
+    const parsed = JSON.parse(content);
+    const funcDir = dirname(file);
+
+    // Size the files that were written into .func (FileBlob, zipBuffer, etc.)
+    const funcDirStats = getDirectorySizeInMB(funcDir);
+
+    // Also size FileFsRef entries from filePathMap — these live on disk
+    // outside .func so there's no overlap with the directory walk above.
+    const filePathMap =
+      parsed.filePathMap && typeof parsed.filePathMap === 'object'
+        ? Object.entries(parsed.filePathMap)
+            .filter(
+              (entry): entry is [string, string] => typeof entry[1] === 'string'
+            )
+            .map(([bundlePath, sourcePath]) => ({
+              bundlePath,
+              sourcePath: join(cwd, sourcePath),
+            }))
+        : [];
+
+    const fsRefStats = getTotalFileSizeInMB(filePathMap);
+
+    const totalSize = funcDirStats.size + fsRefStats.size;
+    const allFiles = new Map([...funcDirStats.files, ...fsRefStats.files]);
+
+    const functionUrlPath = getFunctionUrlPath(file, outputDir);
+
+    return {
+      path: functionUrlPath,
+      size: totalSize,
+      files: allFiles,
+    };
+  } catch (error) {
+    output.warn(`Failed to analyze ${file}: ${error}`);
+    return null;
+  }
+}
+
+function getTotalFileSizeInMB(
+  files: Array<{ bundlePath: string; sourcePath: string }>
+): {
+  size: number;
+  files: Map<string, number>;
+} {
+  let size = 0;
+  const filesSizeMap = new Map<string, number>();
+
+  for (const { bundlePath, sourcePath } of files) {
+    try {
+      const stats = statSync(sourcePath);
+      if (stats.isFile()) {
+        const fileSizeMB = stats.size / (1024 * 1024);
+        size += fileSizeMB;
+        // Use bundlePath (the key) for the map, not sourcePath
+        filesSizeMap.set(bundlePath, fileSizeMB);
+      }
+    } catch {
+      // File doesn't exist or can't be accessed
+    }
+  }
+
+  return { size, files: filesSizeMap };
+}
+
+function getDirectorySizeInMB(dir: string): {
+  size: number;
+  files: Map<string, number>;
+} {
+  let size = 0;
+  const filesSizeMap = new Map<string, number>();
+  try {
+    const entries = readdirSync(dir, { recursive: true });
+    for (const entry of entries) {
+      const entryPath =
+        typeof entry === 'string' ? entry : (entry as Buffer).toString();
+      const fullPath = join(dir, entryPath);
+      try {
+        const stats = statSync(fullPath);
+        if (stats.isFile()) {
+          const fileSizeMB = stats.size / (1024 * 1024);
+          size += fileSizeMB;
+          filesSizeMap.set(normalizePath(entryPath), fileSizeMB);
+        }
+      } catch {
+        // File doesn't exist or can't be accessed
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+  return { size, files: filesSizeMap };
 }
 
 async function getFramework(

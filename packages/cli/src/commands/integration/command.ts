@@ -128,7 +128,8 @@ export const openSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'Lists all resources from marketplace integrations',
+  description:
+    'List resources from marketplace integrations for the current project',
   arguments: [
     {
       name: 'project',
@@ -151,11 +152,12 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
     },
+    formatOption,
   ],
   examples: [
     {
-      name: 'List all resources',
-      value: [`${packageName} integrations list`],
+      name: 'List resources for the current linked project',
+      value: [`${packageName} integration list`],
     },
     {
       name: 'Filter the resources to a single integration',
@@ -171,6 +173,10 @@ export const listSubcommand = {
         `${packageName} integration list --all`,
         `${packageName} integration list -a`,
       ],
+    },
+    {
+      name: 'List resources as JSON',
+      value: [`${packageName} integration list --format=json`],
     },
   ],
 } as const;

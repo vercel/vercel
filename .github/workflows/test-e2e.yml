@@ -1,4 +1,8 @@
 name: E2E Tests
+# any files changing in .github/workflows will ensure
+# that all e2e tests run. One easy way of doing this
+# is to increment the counter below.
+# cache buster: 2
 
 on:
   pull_request:
@@ -19,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+      dplUrl: ${{ steps.resolveTarball.outputs.url }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
       affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
@@ -84,10 +88,83 @@ jobs:
           TEST_TYPE: e2e
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+      - name: Resolve Vercel tarball URL
+        id: resolveTarball
+        uses: actions/github-script@v7
+        env:
+          WAIT_URL: ${{ steps.waitForTarball.outputs.url }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber =
+              context.payload.pull_request?.number ?? context.issue.number;
+
+            const waitUrl = process.env.WAIT_URL || '';
+            if (waitUrl) {
+              core.info(`Using deployment URL from wait step: ${waitUrl}`);
+              core.setOutput('url', waitUrl);
+              return;
+            }
+
+            core.info(
+              'No deployment found for the current HEAD commit. Falling back to the most recent successful Vercel preview deployment for this PR.'
+            );
+
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            const shas = commits.map(c => c.sha).reverse();
+
+            for (const sha of shas) {
+              core.info(`Checking deployments for ${sha}...`);
+
+              const { data: deployments } =
+                await github.rest.repos.listDeployments({
+                  owner,
+                  repo,
+                  sha,
+                  environment: 'Preview',
+                  per_page: 5,
+                });
+
+              for (const deployment of deployments) {
+                if (deployment.creator?.login !== 'vercel[bot]') {
+                  continue;
+                }
+
+                const { data: statuses } =
+                  await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 10,
+                  });
+
+                const success = statuses.find(
+                  s => s.state === 'success' && s.environment_url
+                );
+
+                if (success?.environment_url) {
+                  core.info(`Resolved deployment URL: ${success.environment_url}`);
+                  core.setOutput('url', success.environment_url);
+                  return;
+                }
+              }
+            }
+
+            core.setFailed(
+              'No Vercel preview deployment found for any commit in this PR.'
+            );
 
   test:
     timeout-minutes: 120
@@ -118,6 +195,16 @@ jobs:
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Build vercel peer dependencies
+        if: matrix.packageName == 'vercel'
+        shell: bash
+        run: |
+          PEER_FILTERS=$(node utils/get-cli-peer-deps.js | xargs -I {} echo --filter={})
+          if [ -n "$PEER_FILTERS" ]; then
+            node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream $PEER_FILTERS
+          fi
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}

@@ -89,6 +89,7 @@ export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
     'Pipfile',
     'pylock.yml',
     'uv.lock',
+    'setup.py',
   ],
   go: ['go.mod'],
   ruby: ['Gemfile'],
