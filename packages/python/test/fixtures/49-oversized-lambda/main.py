@@ -6,6 +6,9 @@ import pandas as pd
 import scipy
 import matplotlib
 
+# Import private package to verify it gets bundled (not runtime installed)
+from my_private_pkg import get_info
+
 matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -75,6 +78,17 @@ def check_dependencies():
         }
     except Exception as e:
         results["scipy"] = {"status": "error", "error": str(e)}
+
+    # Test private package (should be bundled, not runtime installed)
+    try:
+        info = get_info()
+        results["my_private_pkg"] = {
+            "status": "ok",
+            "version": info["version"],
+            "test": info["message"],
+        }
+    except Exception as e:
+        results["my_private_pkg"] = {"status": "error", "error": str(e)}
 
     all_ok = all(r.get("status") == "ok" for r in results.values())
 

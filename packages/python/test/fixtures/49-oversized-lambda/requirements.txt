@@ -1,6 +1,0 @@
-scipy==1.12.0
-numpy==1.26.4
-pandas==2.2.1
-matplotlib==3.8.3
-pillow==10.2.0
-flask
