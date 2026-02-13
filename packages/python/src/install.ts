@@ -13,6 +13,7 @@ import {
   discoverPythonPackage,
   stringifyManifest,
   createMinimalManifest,
+  normalizePackageName,
   PythonAnalysisError,
   PythonLockFileKind,
   PythonManifestConvertedKind,
@@ -622,10 +623,6 @@ export async function mirrorPrivatePackagesIntoVendor({
     return vendorFiles;
   }
 
-  // Normalize package names for comparison (PEP 503: lowercase, replace - and _ with -)
-  const normalizePackageName = (name: string): string =>
-    name.toLowerCase().replace(/[-_.]+/g, '-');
-
   const privatePackageSet = new Set(privatePackages.map(normalizePackageName));
 
   try {
@@ -642,8 +639,10 @@ export async function mirrorPrivatePackagesIntoVendor({
           continue;
         }
 
-        // Check if this entry belongs to a private package
-        // Package directories are named like: package_name or package_name-version.dist-info
+        // Check if this entry belongs to a private package.
+        // Per PEP 427, dist-info directories are named {distribution}-{version}.dist-info
+        // where {distribution} has non-alphanumeric chars (except .) replaced with underscores.
+        // E.g., "my-package" becomes "my_package-1.0.0.dist-info"
         const entryBaseName = entry.name
           .replace(/-[\d.]+\.dist-info$/, '')
           .replace(/\.dist-info$/, '')
