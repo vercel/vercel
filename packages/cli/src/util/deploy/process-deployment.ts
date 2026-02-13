@@ -50,6 +50,7 @@ export default async function processDeployment({
   noWait,
   withFullLogs,
   agent,
+  manual,
   ...args
 }: {
   now: Now;
@@ -72,6 +73,7 @@ export default async function processDeployment({
   withFullLogs?: boolean;
   agent?: Agent;
   bulkRedirectsPath?: string | null;
+  manual?: boolean;
 }) {
   const {
     now,
@@ -112,6 +114,7 @@ export default async function processDeployment({
     agent,
     projectName,
     bulkRedirectsPath,
+    manual,
   };
 
   const deployingSpinnerVal = isSettingUpProject
