@@ -591,7 +591,7 @@ export async function calculateBundleSize(files: Files): Promise<number> {
         const stats = await fs.promises.stat(file.fsPath);
         totalSize += stats.size;
       } catch (err) {
-        debug(`Failed to stat file ${file.fsPath}: ${err}`);
+        console.warn(`Warning: Failed to stat file ${file.fsPath}, size will not be included in bundle calculation: ${err}`);
       }
     } else if ('data' in file) {
       // FileBlob with data
