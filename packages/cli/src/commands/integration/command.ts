@@ -210,7 +210,7 @@ export const balanceSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [formatOption],
   examples: [
     {
       name: 'Show the balance(s) & threshold(s) of a marketplace integration',
@@ -218,6 +218,10 @@ export const balanceSubcommand = {
         `${packageName} integration balance <integration-name>`,
         `${packageName} integration balance acme`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration balance acme --format=json`,
     },
   ],
 } as const;
@@ -238,6 +242,7 @@ export const removeSubcommand = {
       description:
         'Skip the confirmation prompt when uninstalling an integration',
     },
+    formatOption,
   ],
   examples: [
     {
@@ -246,6 +251,10 @@ export const removeSubcommand = {
         `${packageName} integration remove <integration>`,
         `${packageName} integration remove acme`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration remove acme --format=json --yes`,
     },
   ],
 } as const;

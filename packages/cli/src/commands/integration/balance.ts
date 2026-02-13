@@ -1,6 +1,10 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 import getScope from '../../util/get-scope';
 import { getBalanceInformation } from '../../util/integration/fetch-installation-prepayment-info';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
@@ -12,20 +16,40 @@ import type {
 import { IntegrationBalanceTelemetryClient } from '../../util/telemetry/commands/integration/balance';
 import type { Resource } from '../../util/integration-resource/types';
 import { getResources } from '../../util/integration-resource/get-resources';
+import { balanceSubcommand } from './command';
 
-export async function balance(client: Client, args: string[]) {
+export async function balance(client: Client) {
   const telemetry = new IntegrationBalanceTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
-  if (args.length > 1) {
+  let parsedArguments = null;
+  const flagsSpecification = getFlagsSpecification(balanceSubcommand.options);
+
+  try {
+    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  if (parsedArguments.args.length > 2) {
     output.error('Cannot specify more than one integration at a time');
     return 1;
   }
 
-  const integrationSlug = args[0];
+  const integrationSlug = parsedArguments.args[1];
 
   if (!integrationSlug) {
     output.error('You must pass an integration slug');
@@ -66,6 +90,17 @@ export async function balance(client: Client, args: string[]) {
   );
   if (prepaymentInfo === undefined) {
     return 1;
+  }
+
+  if (asJson) {
+    output.stopSpinner();
+    const jsonData = buildJsonOutput(
+      prepaymentInfo,
+      resources,
+      integrationSlug
+    );
+    client.stdout.write(`${JSON.stringify(jsonData, null, 2)}\n`);
+    return 0;
   }
 
   outputBalanceInformation(prepaymentInfo, resources, integrationSlug);
@@ -127,6 +162,46 @@ async function getResourcesForInstallation(
     output.error(`Failed to fetch resources: ${(error as Error).message}`);
     return;
   }
+}
+
+function buildJsonOutput(
+  prepaymentInfo: InstallationBalancesAndThresholds,
+  resources: Resource[],
+  integrationSlug: string
+) {
+  const balances = prepaymentInfo.balances.map(balance => {
+    const resourceName = balance.resourceId
+      ? (resources.find(r => r.externalResourceId === balance.resourceId)
+          ?.name ?? balance.resourceId)
+      : 'installation';
+    return {
+      resourceName,
+      resourceId: balance.resourceId ?? null,
+      amountInCents: balance.currencyValueInCents,
+      amount: formattedCurrency(balance.currencyValueInCents),
+    };
+  });
+
+  const thresholds = prepaymentInfo.thresholds.map(threshold => {
+    const resourceName = threshold.resourceId
+      ? (resources.find(r => r.externalResourceId === threshold.resourceId)
+          ?.name ?? threshold.resourceId)
+      : 'installation';
+    return {
+      resourceName,
+      resourceId: threshold.resourceId ?? null,
+      minimumAmountInCents: threshold.minimumAmountInCents,
+      minimumAmount: formattedCurrency(threshold.minimumAmountInCents),
+      purchaseAmountInCents: threshold.purchaseAmountInCents,
+      purchaseAmount: formattedCurrency(threshold.purchaseAmountInCents),
+    };
+  });
+
+  return {
+    integration: integrationSlug,
+    balances,
+    thresholds,
+  };
 }
 
 function outputBalanceInformation(

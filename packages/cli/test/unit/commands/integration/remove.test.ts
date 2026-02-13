@@ -146,6 +146,100 @@ describe('integration', () => {
       });
     });
 
+    describe('--format=json', () => {
+      let team: Team;
+      beforeEach(() => {
+        useUser();
+        const teams = useTeams('team_dummy');
+        team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useResources();
+      });
+
+      it('returns JSON output when removing an integration with --yes', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          'integration',
+          'remove',
+          integration,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toEqual({
+          integration,
+          removed: true,
+        });
+      });
+
+      it('should error when --format=json is used without --yes', async () => {
+        const integration = 'acme-no-projects';
+
+        client.setArgv('integration', 'remove', integration, '--format=json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: --format=json requires --yes to skip confirmation prompts'
+        );
+      });
+
+      it('should track --format option in telemetry', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          'integration',
+          'remove',
+          integration,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:remove',
+            value: 'remove',
+          },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+          {
+            key: 'argument:integration',
+            value: integration,
+          },
+        ]);
+      });
+
+      it('should error with an invalid format value', async () => {
+        client.setArgv(
+          'integration',
+          'remove',
+          'acme',
+          '--yes',
+          '--format=xml'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Invalid output format: "xml"'
+        );
+      });
+    });
+
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {

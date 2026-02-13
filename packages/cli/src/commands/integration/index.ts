@@ -208,7 +208,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandBalance(subcommandOriginal);
-      return balance(client, subArgs);
+      return balance(client);
     }
     case 'open': {
       if (needHelp) {

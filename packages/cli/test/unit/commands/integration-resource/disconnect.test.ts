@@ -200,6 +200,139 @@ describe('integration-resource', () => {
       });
     });
 
+    describe('--format=json', () => {
+      let team: Team;
+      beforeEach(() => {
+        const teams = useTeams('team_dummy');
+        team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useResources();
+      });
+
+      it('returns JSON output when disconnecting a single project with --yes', async () => {
+        useResources();
+        const resource = 'store-acme-connected-project';
+        const project = 'connected-project';
+        mockDisconnectResourceFromProject();
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource,
+          project,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toEqual({
+          resource,
+          disconnected: true,
+          project,
+        });
+      });
+
+      it('returns JSON output when disconnecting all projects with --all --yes', async () => {
+        useResources();
+        const resource = 'store-foo-bar-both-projects';
+        mockDisconnectResourceFromAllProjects();
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource,
+          '--all',
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toEqual({
+          resource,
+          disconnected: true,
+          projects: ['connected-project', 'other-project'],
+        });
+      });
+
+      it('should error when --format=json is used without --yes', async () => {
+        const resource = 'store-acme-connected-project';
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource,
+          'connected-project',
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: --format=json requires --yes to skip confirmation prompts'
+        );
+      });
+
+      it('should track --format option in telemetry', async () => {
+        useResources();
+        const resource = 'store-acme-connected-project';
+        const project = 'connected-project';
+        mockDisconnectResourceFromProject();
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource,
+          project,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:disconnect',
+            value: 'disconnect',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+          {
+            key: 'argument:resource',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'argument:project',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+        ]);
+      });
+
+      it('should error with an invalid format value', async () => {
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          'acme',
+          'project',
+          '--yes',
+          '--format=xml'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Invalid output format: "xml"'
+        );
+      });
+    });
+
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
