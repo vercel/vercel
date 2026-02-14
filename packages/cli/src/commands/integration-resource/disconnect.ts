@@ -130,7 +130,7 @@ export async function disconnect(client: Client) {
     if (asJson) {
       output.stopSpinner();
       const projects =
-        targetedResource.projectsMetadata?.map(p => p.name) ?? [];
+        targetedResource.projectsMetadata?.map(project => project.name) ?? [];
       client.stdout.write(
         `${JSON.stringify({ resource: resourceName, disconnected: true, projects }, null, 2)}\n`
       );
