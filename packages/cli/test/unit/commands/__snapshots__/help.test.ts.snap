@@ -2873,9 +2873,14 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
 "
-  ▲ vercel integration balance integration
+  ▲ vercel integration balance integration [options]
 
   Shows the balances and thresholds of a specified marketplace integration                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
 
   Global Options:
 
@@ -2897,6 +2902,10 @@ exports[`help command > integration help output snapshots > integration balance 
 
     $ vercel integration balance <integration-name>
     $ vercel integration balance acme
+
+  - Output as JSON
+
+    $ vercel integration balance acme --format=json
 
 "
 `;
@@ -3178,8 +3187,9 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --all  Disconnects all projects from the specified resource                                                      
-  -y,  --yes  Skip the confirmation prompt when disconnecting a resource                                                
+  -a,  --all              Disconnects all projects from the specified resource                                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when disconnecting a resource                                    
 
 
   Global Options:
@@ -3213,6 +3223,10 @@ exports[`help command > integration-resource help output snapshots > integration
 
     $ vercel integration-resource disconnect <resource> <project>
     $ vercel integration-resource disconnect my-acme-resource my-project
+
+  - Output as JSON
+
+    $ vercel integration-resource disconnect my-acme-resource --format=json --yes
 
 "
 `;
@@ -3386,8 +3400,9 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --disconnect-all  Disconnects all projects from the specified resource before deletion                           
-  -y,  --yes             Skip the confirmation prompt when deleting a resource                                          
+  -a,  --disconnect-all   Disconnects all projects from the specified resource before deletion                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when deleting a resource                                         
 
 
   Global Options:
@@ -3416,6 +3431,10 @@ exports[`help command > integration-resource help output snapshots > integration
     $ vercel integration-resource remove <resource> --disconnect-all
     $ vercel integration-resource remove my-acme-resource --disconnect-all
     $ vercel integration-resource remove my-acme-resource -a
+
+  - Output as JSON
+
+    $ vercel integration-resource remove my-acme-resource --format=json --yes
 
 "
 `;
