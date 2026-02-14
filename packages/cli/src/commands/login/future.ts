@@ -2,6 +2,7 @@ import readline from 'node:readline';
 import chalk from 'chalk';
 import * as open from 'open';
 import { eraseLines } from 'ansi-escapes';
+import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
@@ -47,7 +48,42 @@ export async function login(
     interval,
   } = deviceAuthorization;
 
-  let rlClosed = false;
+  // Determine if we should skip opening the browser (only in CI, but not in Cursor)
+  const isCursorAgent =
+    client.agentName === KNOWN_AGENTS.CURSOR ||
+    client.agentName === KNOWN_AGENTS.CURSOR_CLI;
+  const shouldSkipBrowser = process.env.CI && !isCursorAgent;
+
+  o.log(
+    `\n  Visit ${chalk.bold(
+      o.link(
+        verification_uri.replace('https://', ''),
+        verification_uri_complete,
+        { color: false, fallback: () => verification_uri_complete }
+      )
+    )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}\n`
+  );
+
+  // Open browser automatically unless we're in CI (excluding Cursor)
+  if (!shouldSkipBrowser) {
+    try {
+      await open.default(verification_uri_complete);
+    } catch (error) {
+      // Fail gracefully if browser can't be opened
+      o.debug(`Failed to open browser: ${error}`);
+
+      // If in non-interactive agent mode, provide specific instructions
+      if (client.isAgent && client.nonInteractive) {
+        o.log(
+          `\n${chalk.yellow('⚠')} ${chalk.bold('Browser could not be opened automatically.')}\n`
+        );
+        o.log(
+          `Please ask the user to manually visit the URL above and complete the authentication process.\n`
+        );
+      }
+    }
+  }
+
   const rl = readline
     .createInterface({
       input: process.stdin,
@@ -58,26 +94,6 @@ export async function login(
       telemetry.trackState('canceled');
       process.exit(0);
     });
-
-  rl.question(
-    `
-  Visit ${chalk.bold(
-    o.link(
-      verification_uri.replace('https://', ''),
-      verification_uri_complete,
-      { color: false, fallback: () => verification_uri_complete }
-    )
-  )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
-  ${chalk.grey('Press [ENTER] to open the browser')}
-`,
-    () => {
-      open.default(verification_uri_complete);
-      o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
-      o.spinner('Waiting for authentication...');
-      rl.close();
-      rlClosed = true;
-    }
-  );
 
   o.spinner('Waiting for authentication...');
 
@@ -171,9 +187,7 @@ export async function login(
   error = await pollForToken();
 
   o.stopSpinner();
-  if (!rlClosed) {
-    rl.close();
-  }
+  rl.close();
 
   if (!error) {
     telemetry.trackState('success');
