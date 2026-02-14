@@ -4,10 +4,10 @@ Test AI coding agents to measure what actually works.
 
 ## Setup
 
-1. **Install dependencies:**
+1. **Install dependencies** (from monorepo root):
 
    ```bash
-   pnpm install --ignore-workspace
+   pnpm install
    ```
 
 2. **Configure environment variables:**
