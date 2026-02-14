@@ -244,11 +244,60 @@ export async function resolveBuilders(
   return { builders };
 }
 
+/**
+ * Base URL for builder tarballs (e.g. from e2e workflow dplUrl).
+ * When set, builders are installed from ${VERCEL_TARBALL_BASE_URL}/tarballs/<encoded-name>.tgz
+ * instead of the npm registry.
+ */
+const VERCEL_TARBALL_BASE_URL = 'VERCEL_TARBALL_BASE_URL';
+
+function getTarballBaseUrl(): string | undefined {
+  const base = process.env[VERCEL_TARBALL_BASE_URL];
+  return base?.replace(/\/$/, '');
+}
+
+/**
+ * Match URL format from utils/pack.ts and api/_lib/script/build.ts:
+ * deployment serves at tarballs/<path from packageJson.name>.tgz;
+ * pack uses only @ → %40 (pnpm fails with @ in URL). Slash unchanged.
+ * Exported for testing.
+ */
+export function packageNameToTarballUrl(
+  baseUrl: string,
+  packageName: string
+): string {
+  const escapedName = packageName.replace('@', '%40');
+  return `${baseUrl}/tarballs/${escapedName}.tgz`;
+}
+
+/** When VERCEL_TARBALL_BASE_URL is set, map specs to tarball URLs for install. */
+function resolveInstallSpecs(specs: Set<string>): string[] {
+  const baseUrl = getTarballBaseUrl();
+  if (!baseUrl) {
+    return Array.from(specs);
+  }
+  const names = new Set<string>();
+  for (const spec of specs) {
+    const parsed = npa(spec);
+    if (parsed.name) {
+      names.add(parsed.name);
+    }
+  }
+  const urls = Array.from(names, name =>
+    packageNameToTarballUrl(baseUrl, name)
+  );
+  output.debug(
+    `Using builder tarball base URL: ${baseUrl} (${urls.length} packages)`
+  );
+  return urls;
+}
+
 async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>
 ) {
   const resolvedSpecs = new Map<string, string>();
+  const baseUrl = getTarballBaseUrl();
 
   // First create an empty package.json in the cache dir where
   // we store our downloaded builders.
@@ -265,22 +314,24 @@ async function installBuilders(
     if (err.code !== 'EEXIST') throw err;
   }
 
-  // Then npm install the list of packages we need to install.
+  const installSpecs = baseUrl
+    ? [
+        packageNameToTarballUrl(baseUrl, '@vercel/build-utils'),
+        ...resolveInstallSpecs(buildersToAdd),
+      ]
+    : ['@vercel/build-utils', ...buildersToAdd];
+
   output.log(
     `Installing ${plural('Builder', buildersToAdd.size)}: ${Array.from(
       buildersToAdd
     ).join(', ')}`
   );
   try {
-    const { stderr } = await execa(
-      'npm',
-      ['install', '@vercel/build-utils', ...buildersToAdd],
-      {
-        cwd: buildersDir,
-        stdio: 'pipe',
-        reject: true,
-      }
-    );
+    const { stderr } = await execa('npm', ['install', ...installSpecs], {
+      cwd: buildersDir,
+      stdio: 'pipe',
+      reject: true,
+    });
     stderr
       .split('/\r?\n/')
       .filter(line => line.includes('npm WARN deprecated'))
@@ -330,13 +381,22 @@ async function installBuilders(
   if (!buildersPkg) {
     throw new Error(`Failed to load "${buildersPkgPath}"`);
   }
-  for (const spec of buildersToAdd) {
-    for (const [name, version] of Object.entries(
-      buildersPkg.dependencies || {}
-    )) {
-      if (version === spec) {
-        output.debug(`Resolved Builder spec "${spec}" to name "${name}"`);
-        resolvedSpecs.set(spec, name);
+  if (baseUrl) {
+    for (const spec of buildersToAdd) {
+      const parsed = npa(spec);
+      if (parsed.name) {
+        resolvedSpecs.set(spec, parsed.name);
+      }
+    }
+  } else {
+    for (const spec of buildersToAdd) {
+      for (const [name, version] of Object.entries(
+        buildersPkg.dependencies || {}
+      )) {
+        if (version === spec) {
+          output.debug(`Resolved Builder spec "${spec}" to name "${name}"`);
+          resolvedSpecs.set(spec, name);
+        }
       }
     }
   }
