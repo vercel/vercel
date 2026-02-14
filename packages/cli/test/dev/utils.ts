@@ -407,6 +407,12 @@ export function testFixtureStdio(
             `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
           );
         }
+        if (process.env.VERCEL_TARBALL_BASE_URL) {
+          args.push(
+            '--build-env',
+            `VERCEL_TARBALL_BASE_URL=${process.env.VERCEL_TARBALL_BASE_URL}`
+          );
+        }
 
         args.push('--debug');
         args.push('--yes');

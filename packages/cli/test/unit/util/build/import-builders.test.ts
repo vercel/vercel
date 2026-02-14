@@ -6,6 +6,7 @@ import { client } from '../../../mocks/client';
 import {
   importBuilders,
   resolveBuilders,
+  packageNameToTarballUrl,
 } from '../../../../src/util/build/import-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
@@ -199,6 +200,21 @@ describe('importBuilders()', () => {
     );
     expect((err as any).link).toEqual(
       'https://vercel.link/builder-dependencies-install-failed'
+    );
+  });
+});
+
+describe('packageNameToTarballUrl()', () => {
+  it('encodes @ as %40 and leaves / unchanged (match utils/pack.ts)', () => {
+    const base = 'https://deploy.example.com';
+    expect(packageNameToTarballUrl(base, '@vercel/node')).toBe(
+      'https://deploy.example.com/tarballs/%40vercel/node.tgz'
+    );
+    expect(packageNameToTarballUrl(base, '@vercel/build-utils')).toBe(
+      'https://deploy.example.com/tarballs/%40vercel/build-utils.tgz'
+    );
+    expect(packageNameToTarballUrl(base, 'vercel-deno')).toBe(
+      'https://deploy.example.com/tarballs/vercel-deno.tgz'
     );
   });
 });
