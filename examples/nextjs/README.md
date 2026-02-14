@@ -50,7 +50,26 @@ This project includes agent skills installed from [skills.sh](https://skills.sh)
     - `next-cache-components`: Next.js 16 PPR and `use cache` directive
     - `next-upgrade`: Upgrade Next.js with migration guides and codemods
 
+### Platforms
+
+The installed skills will work out-of-the-box with the following AI agents:
+
+- [Amp](https://amp.dev) (Sourcegraph)
+- [Claude Code](https://claude.ai/code) (Anthropic)
+- [Codex](https://openai.com/index/introducing-codex/) (OpenAI)
+- [Cursor](https://cursor.com) (Anysphere)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) (Google)
+- [GitHub Copilot](https://github.com/features/copilot) (GitHub)
+- [Kimi Code CLI](https://github.com/aspect-build/kimi-code) (Moonshot AI)
+- [OpenCode](https://opencode.ai) (OpenCode AI)
+
+Skills are designed to be platform-agnostic and can be used by any AI agent that can call external APIs.
+
 ### Find More Skills
+
+Run `npx skills search` to find more skills that can help you with your Next.js project or any other development needs.
+
+### Ask an Agent to Find Skills
 
 The `find-skills` skill means you can ask an agent to find and install new skills on demand. 
 
@@ -58,11 +77,10 @@ For example:
 
 ```shell
 > claude
-> Find and install a skill that will help me run an ecommerce store with Next.js
-✶ Articulating… 
-> The shopify-expert skill seems like the best fit since it explicitly covers headless storefronts with React (which
-   pairs well with Next.js). Want me to install it?
-> Yes please
+> Find a skill that will help me use `ai-sdk` in my Next.js project.
+✶ Cogitating… 
+> vercel/ai@ai-sdk — This is the official AI SDK skill maintained by the Vercel team. Would you like to install it?
+> Yes, please
 ```
 
 ### Create Your Own Skills
