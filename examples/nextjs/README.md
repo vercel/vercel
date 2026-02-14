@@ -40,15 +40,17 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 This project includes agent skills installed from [skills.sh](https://skills.sh) that enhance AI coding assistants with specialized knowledge:
 
 - [`vercel-labs/skills`](https://skills.sh/vercel-labs/skills)
-    - `find-skills`: Discover and install agent skills
+    - `find-skills`: Search and install skills from the registry
 - [`vercel-labs/agent-skills`](https://skills.sh/vercel-labs/agent-skills)
-    - `vercel-composition-patterns`: Scalable React composition patterns
-    - `vercel-react-best-practices`: React and Next.js performance optimization
-    - `web-design-guidelines`: UI review for Web Interface Guidelines
+    - `vercel-composition-patterns`: Compound components and context patterns
+    - `vercel-react-best-practices`: React and Next.js performance rules
+    - `web-design-guidelines`: Review UI against Web Interface Guidelines
 - [`vercel-labs/next-skills`](https://skills.sh/vercel-labs/next-skills)
-    - `next-best-practices`: Next.js conventions and patterns
-    - `next-cache-components`: Next.js 16 PPR and `use cache` directive
-    - `next-upgrade`: Upgrade Next.js with migration guides and codemods
+    - `next-best-practices`: File conventions, RSC, data fetching, metadata
+    - `next-cache-components`: PPR, `use cache`, cacheLife, cacheTag
+    - `next-upgrade`: Upgrade Next.js with codemods and migration guides
+- [`vercel-labs/turbo-skills`](https://skills.sh/vercel-labs/turbo-skills)
+    - `turborepo`: Task pipelines, caching, filtering, and monorepo setup
 
 ### Platforms
 
