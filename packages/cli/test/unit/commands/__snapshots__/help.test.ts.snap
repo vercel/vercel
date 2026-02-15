@@ -2938,10 +2938,14 @@ exports[`help command > integration help output snapshots > integration help col
                          marketp…
                          integra…
                          dashboa…
-  remove    integration  Uninsta…
+  remove    [name]       Uninsta…
                          a       
                          marketp…
                          integra…
+                         or      
+                         removes 
+                         a       
+                         resource
 
 
   Global Options:
@@ -3016,7 +3020,8 @@ exports[`help command > integration help output snapshots > integration help col
                          the current project                             
   discover               Discover available marketplace integrations     
   open      name         Opens a marketplace integration's dashboard     
-  remove    integration  Uninstalls a marketplace integration            
+  remove    [name]       Uninstalls a marketplace integration or removes 
+                         a resource                                      
 
 
   Global Options:
@@ -3057,7 +3062,7 @@ exports[`help command > integration help output snapshots > integration help col
   list      [project]    List resources from marketplace integrations for the current project                    
   discover               Discover available marketplace integrations                                             
   open      name         Opens a marketplace integration's dashboard                                             
-  remove    integration  Uninstalls a marketplace integration                                                    
+  remove    [name]       Uninstalls a marketplace integration or removes a resource                              
 
 
   Global Options:

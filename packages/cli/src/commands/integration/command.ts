@@ -225,18 +225,33 @@ export const balanceSubcommand = {
 export const removeSubcommand = {
   name: 'remove',
   aliases: [],
-  description: 'Uninstalls a marketplace integration',
+  description: 'Uninstalls a marketplace integration or removes a resource',
   arguments: [
     {
-      name: 'integration',
-      required: true,
+      name: 'name',
+      required: false,
     },
   ],
   options: [
     {
       ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    {
+      name: 'resource',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Remove a resource by name instead of an integration',
+    },
+    {
+      name: 'disconnect-all',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
       description:
-        'Skip the confirmation prompt when uninstalling an integration',
+        'Disconnect all projects from the resource before removing it (requires --resource)',
     },
   ],
   examples: [
@@ -245,6 +260,19 @@ export const removeSubcommand = {
       value: [
         `${packageName} integration remove <integration>`,
         `${packageName} integration remove acme`,
+      ],
+    },
+    {
+      name: 'Remove a resource',
+      value: [
+        `${packageName} integration remove --resource <name>`,
+        `${packageName} integration remove --resource my-db`,
+      ],
+    },
+    {
+      name: 'Disconnect all projects from a resource, then remove it',
+      value: [
+        `${packageName} integration remove --resource my-db --disconnect-all`,
       ],
     },
   ],

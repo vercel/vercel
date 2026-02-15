@@ -62,7 +62,7 @@ describe('integration-resource', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
       });
 
-      it('exits gracefully when no resource is found to delete', async () => {
+      it('returns 1 when no resource is found to delete', async () => {
         useResources();
         const resource = 'not-a-real-project-to-find';
 
@@ -74,7 +74,7 @@ describe('integration-resource', () => {
           `Error: No resource ${resource} found.`
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       it('exits gracefully when cancelling confirmation for deleting a resource', async () => {
@@ -303,6 +303,20 @@ describe('integration-resource', () => {
           const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
             'Cannot specify more than one resource at a time.'
+          );
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('should error in non-TTY without `--yes`', async () => {
+          (client.stdin as { isTTY?: boolean }).isTTY = false;
+          client.setArgv(
+            'integration-resource',
+            'remove',
+            'store-acme-no-projects'
+          );
+          const exitCodePromise = integrationResourceCommand(client);
+          await expect(client.stderr).toOutput(
+            'Error: Confirmation required. Use `--yes` to skip confirmation in non-interactive mode.'
           );
           await expect(exitCodePromise).resolves.toEqual(1);
         });

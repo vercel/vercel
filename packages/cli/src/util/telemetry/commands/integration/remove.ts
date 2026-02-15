@@ -6,10 +6,10 @@ export class IntegrationRemoveTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof removeSubcommand>
 {
-  trackCliArgumentIntegration(v: string | undefined, known?: boolean) {
+  trackCliArgumentName(v: string | undefined, known?: boolean) {
     if (v) {
       this.trackCliArgument({
-        arg: 'integration',
+        arg: 'name',
         value: known ? v : this.redactedValue,
       });
     }
@@ -18,6 +18,21 @@ export class IntegrationRemoveTelemetryClient
   trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliOptionResource(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'resource',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagDisconnectAll(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('disconnect-all');
     }
   }
 }

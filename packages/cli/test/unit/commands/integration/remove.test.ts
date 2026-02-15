@@ -77,7 +77,7 @@ describe('integration', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
       });
 
-      it('exits gracefully when no integration is found', async () => {
+      it('returns 1 with nudge message when no integration is found', async () => {
         useConfiguration();
         const integration = 'acme-no-results';
 
@@ -86,8 +86,196 @@ describe('integration', () => {
 
         await expect(client.stderr).toOutput('Retrieving integration…');
         await expect(client.stderr).toOutput(
-          `No integration ${integration} found.`
+          `No integration ${integration} found. To remove a resource, use the \`--resource\` flag.`
         );
+
+        await expect(exitCodePromise).resolves.toEqual(1);
+      });
+    });
+
+    describe('remove --resource', () => {
+      let team: Team;
+      beforeEach(() => {
+        useUser();
+        const teams = useTeams('team_dummy');
+        team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useResources();
+      });
+
+      it('deletes a resource with no connected projects', async () => {
+        mockDeleteResource();
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv('integration', 'remove', `--resource=${resource}`);
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+
+        await expect(client.stderr).toOutput(
+          `> ${resource} will be deleted permanently.`
+        );
+        await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput('Deleting resource…');
+        await expect(client.stderr).toOutput(
+          `> Success! ${resource} successfully deleted.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('skips confirmation with `--yes`', async () => {
+        mockDeleteResource();
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv(
+          'integration',
+          'remove',
+          `--resource=${resource}`,
+          '--yes'
+        );
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+        await expect(client.stderr).toOutput('Deleting resource…');
+        await expect(client.stderr).toOutput(
+          `> Success! ${resource} successfully deleted.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('returns 1 when resource not found', async () => {
+        const resource = 'not-a-real-resource';
+
+        client.setArgv('integration', 'remove', `--resource=${resource}`);
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+        await expect(client.stderr).toOutput(
+          `Error: No resource ${resource} found.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(1);
+      });
+
+      it('disconnects all projects then deletes with `--disconnect-all`', async () => {
+        const resource = 'store-foo-bar-both-projects';
+        mockDisconnectResourceFromAllProjects();
+        mockDeleteResource();
+
+        client.setArgv(
+          'integration',
+          'remove',
+          `--resource=${resource}`,
+          '--disconnect-all'
+        );
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+        await expect(client.stderr).toOutput(
+          '> The following projects will be disconnected:\n  connected-project\n  other-project'
+        );
+        await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Disconnecting projects from resource…'
+        );
+        await expect(client.stderr).toOutput(
+          `> Success! Disconnected all projects from ${resource}`
+        );
+
+        await expect(client.stderr).toOutput(
+          `> ${resource} will be deleted permanently.`
+        );
+        await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput('Deleting resource…');
+        await expect(client.stderr).toOutput(
+          `> Success! ${resource} successfully deleted.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('skips all confirmations with `--disconnect-all --yes`', async () => {
+        const resource = 'store-foo-bar-both-projects';
+        mockDisconnectResourceFromAllProjects();
+        mockDeleteResource();
+
+        client.setArgv(
+          'integration',
+          'remove',
+          `--resource=${resource}`,
+          '--disconnect-all',
+          '--yes'
+        );
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+        await expect(client.stderr).toOutput(
+          'Disconnecting projects from resource…'
+        );
+        await expect(client.stderr).toOutput(
+          `> Success! Disconnected all projects from ${resource}`
+        );
+
+        await expect(client.stderr).toOutput('Deleting resource…');
+        await expect(client.stderr).toOutput(
+          `> Success! ${resource} successfully deleted.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('errors when resource has connected projects without `--disconnect-all`', async () => {
+        const resource = 'store-acme-connected-project';
+
+        client.setArgv('integration', 'remove', `--resource=${resource}`);
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+        await expect(client.stderr).toOutput(
+          `Error: Cannot delete resource ${resource} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(1);
+      });
+
+      it('errors when `--disconnect-all` is used without `--resource`', async () => {
+        client.setArgv(
+          'integration',
+          'remove',
+          'something',
+          '--disconnect-all'
+        );
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput(
+          'Error: The `--disconnect-all` flag can only be used with `--resource`.'
+        );
+
+        await expect(exitCodePromise).resolves.toEqual(1);
+      });
+
+      it('exits gracefully on cancel', async () => {
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv('integration', 'remove', `--resource=${resource}`);
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving resource…');
+        await expect(client.stderr).toOutput(
+          `> ${resource} will be deleted permanently.`
+        );
+        await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+        client.stdin.write('n\n');
+
+        await expect(client.stderr).toOutput('> Canceled');
 
         await expect(exitCodePromise).resolves.toEqual(0);
       });
@@ -185,6 +373,30 @@ describe('integration', () => {
           await expect(exitCodePromise).resolves.toEqual(1);
         });
 
+        it('should error in non-TTY without `--yes`', async () => {
+          (client.stdin as { isTTY?: boolean }).isTTY = false;
+          client.setArgv('integration', 'remove', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Error: Confirmation required. Use `--yes` to skip confirmation in non-interactive mode.'
+          );
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('should error in non-TTY without `--yes` when using `--resource`', async () => {
+          (client.stdin as { isTTY?: boolean }).isTTY = false;
+          client.setArgv(
+            'integration',
+            'remove',
+            '--resource=store-acme-no-projects'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Error: Confirmation required. Use `--yes` to skip confirmation in non-interactive mode.'
+          );
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
         it('should error when attempting to remove an integration with resources', async () => {
           useConfiguration();
           const integration = 'acme-no-projects';
@@ -239,6 +451,40 @@ function mockDeleteIntegration(options?: {
       }
 
       res.sendStatus(200);
+    }
+  );
+}
+
+function mockDeleteResource(options?: { error?: number }): void {
+  client.scenario.delete(
+    '/v1/storage/stores/integration/:resourceId',
+    (req, res) => {
+      if (options?.error) {
+        res.status(options.error);
+        res.end();
+        return;
+      }
+
+      res.status(200);
+      res.end();
+    }
+  );
+}
+
+function mockDisconnectResourceFromAllProjects(options?: {
+  error?: number;
+}): void {
+  client.scenario.delete(
+    '/:version/storage/stores/:resourceId/connections',
+    (req, res) => {
+      if (options?.error) {
+        res.status(options.error);
+        res.end();
+        return;
+      }
+
+      res.status(200);
+      res.end();
     }
   );
 }
