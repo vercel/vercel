@@ -39,7 +39,10 @@ afterEach(() => {
   }
 });
 
-function mockApi(user: Partial<User>) {
+function mockApi(
+  user: Partial<User>,
+  teams: Array<{ id: string; slug: string; name: string }> = []
+) {
   return function (req: http.IncomingMessage, res: http.ServerResponse) {
     const { url = '/', method } = req;
     const { pathname = '/', query = {} } = parseUrl(url, true);
@@ -59,6 +62,8 @@ function mockApi(user: Partial<User>) {
       res.end(JSON.stringify({ token: 'test' }));
     } else if (method === 'GET' && pathname === '/v2/user') {
       res.end(JSON.stringify({ user }));
+    } else if (method === 'GET' && pathname === '/v1/teams') {
+      res.end(JSON.stringify({ teams }));
     } else {
       res.statusCode = 405;
       res.end(JSON.stringify({ code: 'method_not_allowed' }));
@@ -67,10 +72,13 @@ function mockApi(user: Partial<User>) {
 }
 
 let localApiServer: any;
-function setupLocalApiServer(user: Partial<User>) {
+function setupLocalApiServer(
+  user: Partial<User>,
+  teams: Array<{ id: string; slug: string; name: string }> = []
+) {
   return new Promise<string>(resolve => {
     localApiServer = require('http')
-      .createServer(mockApi(user))
+      .createServer(mockApi(user, teams))
       .listen(0, () => {
         const { port } = localApiServer.address();
         const loginApiUrl = `http://localhost:${port}`;
@@ -164,6 +172,94 @@ describe('CLI initialization', () => {
         await waitForPrompt(
           vercel,
           'You cannot set your Personal Account as the scope.'
+        );
+        const output = await steps;
+        expect(output.exitCode, formatOutput(output)).toBe(1);
+      });
+
+      it('should prefer team when --scope matches both username and team slug', async () => {
+        const teams = [
+          {
+            id: 'team-matching-username',
+            slug: user.username,
+            name: 'Team With Username Slug',
+          },
+        ];
+        const loginApiUrl = await setupLocalApiServer(user, teams);
+        const vercel = execCli(
+          binaryPath,
+          [
+            'domains',
+            'invalidSubCommand',
+            '--api',
+            loginApiUrl,
+            '--scope',
+            user.username,
+          ],
+          { env: { FORCE_TTY: '1' } }
+        );
+        const steps = loginSteps(vercel, user);
+        await waitForPrompt(vercel, 'Please specify a valid subcommand');
+        const output = await steps;
+        expect(output.exitCode, formatOutput(output)).toBe(2);
+        const config = await fs.readJSON(getGlobalConfigPath());
+        expect(config.currentTeam).toEqual('team-matching-username');
+      });
+
+      it('should resolve --scope to team by id even when username matches', async () => {
+        const teams = [
+          {
+            id: 'team-by-id',
+            slug: 'different-slug',
+            name: 'Team By ID',
+          },
+        ];
+        const loginApiUrl = await setupLocalApiServer(user, teams);
+        const vercel = execCli(
+          binaryPath,
+          [
+            'domains',
+            'invalidSubCommand',
+            '--api',
+            loginApiUrl,
+            '--scope',
+            'team-by-id',
+          ],
+          { env: { FORCE_TTY: '1' } }
+        );
+        const steps = loginSteps(vercel, user);
+        await waitForPrompt(vercel, 'Please specify a valid subcommand');
+        const output = await steps;
+        expect(output.exitCode, formatOutput(output)).toBe(2);
+        const config = await fs.readJSON(getGlobalConfigPath());
+        expect(config.currentTeam).toEqual('team-by-id');
+      });
+
+      it('should error when --scope matches no team and no personal account', async () => {
+        const teams = [
+          {
+            id: 'some-team',
+            slug: 'some-team-slug',
+            name: 'Some Team',
+          },
+        ];
+        const loginApiUrl = await setupLocalApiServer(user, teams);
+        const vercel = execCli(
+          binaryPath,
+          [
+            'domains',
+            'invalidSubCommand',
+            '--api',
+            loginApiUrl,
+            '--scope',
+            'nonexistent-scope',
+          ],
+          { env: { FORCE_TTY: '1' } }
+        );
+        const steps = loginSteps(vercel, user);
+        await waitForPrompt(
+          vercel,
+          'The specified scope does not exist'
         );
         const output = await steps;
         expect(output.exitCode, formatOutput(output)).toBe(1);

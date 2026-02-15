@@ -584,7 +584,45 @@ const main = async () => {
       return 1;
     }
 
-    if (user.id === scope || user.email === scope || user.username === scope) {
+    const matchesPersonal =
+      user.id === scope || user.email === scope || user.username === scope;
+
+    // Always look up teams — even when the scope matches the personal account,
+    // because a team slug can be identical to the username.
+    let teams: Awaited<ReturnType<typeof getTeams>> = [];
+
+    try {
+      teams = await getTeams(client);
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'not_authorized') {
+        output.prettyError({
+          message: `You do not have access to the specified team`,
+          link: 'https://err.sh/vercel/scope-not-accessible',
+        });
+
+        return 1;
+      }
+
+      if (isErrnoException(err) && err.code === 'rate_limited') {
+        output.prettyError({
+          message:
+            'Rate limited. Too many requests to the same endpoint: /teams',
+        });
+
+        return 1;
+      }
+
+      output.error('Not able to load teams');
+      return 1;
+    }
+
+    const related =
+      teams && teams.find(team => team.id === scope || team.slug === scope);
+
+    if (related) {
+      // Team match takes priority — --scope is meaningless for personal accounts
+      client.config.currentTeam = related.id;
+    } else if (matchesPersonal) {
       if (user.version === 'northstar') {
         output.error('You cannot set your Personal Account as the scope.');
         return 1;
@@ -592,46 +630,12 @@ const main = async () => {
 
       delete client.config.currentTeam;
     } else {
-      let teams = [];
+      output.prettyError({
+        message: 'The specified scope does not exist',
+        link: 'https://err.sh/vercel/scope-not-existent',
+      });
 
-      try {
-        teams = await getTeams(client);
-      } catch (err: unknown) {
-        if (isErrnoException(err) && err.code === 'not_authorized') {
-          output.prettyError({
-            message: `You do not have access to the specified team`,
-            link: 'https://err.sh/vercel/scope-not-accessible',
-          });
-
-          return 1;
-        }
-
-        if (isErrnoException(err) && err.code === 'rate_limited') {
-          output.prettyError({
-            message:
-              'Rate limited. Too many requests to the same endpoint: /teams',
-          });
-
-          return 1;
-        }
-
-        output.error('Not able to load teams');
-        return 1;
-      }
-
-      const related =
-        teams && teams.find(team => team.id === scope || team.slug === scope);
-
-      if (!related) {
-        output.prettyError({
-          message: 'The specified scope does not exist',
-          link: 'https://err.sh/vercel/scope-not-existent',
-        });
-
-        return 1;
-      }
-
-      client.config.currentTeam = related.id;
+      return 1;
     }
   }
 

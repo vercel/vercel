@@ -124,37 +124,38 @@ export default async function change(client: Client, argv: string[]) {
     return 0;
   }
 
-  if (desiredSlug === user.username || desiredSlug === user.email) {
-    if (user.version === 'northstar') {
-      output.error('You cannot set your Personal Account as the scope.');
-      return 1;
-    }
-
-    // Switch to user's personal account
-    if (personalScopeSelected) {
-      output.log('No changes made');
-      return 0;
-    }
-
-    if (user.limited) {
-      await client.reauthenticate({
-        scope: user.username,
-        teamId: null,
-      });
-    }
-
-    updateCurrentTeam(config);
-
-    output.success(
-      `Your account (${chalk.bold(user.username)}) is now active!`
-    );
-    return 0;
-  }
-
-  // Switch to selected team
+  // Switch to selected team (check teams first so a team slug takes priority
+  // over a personal-account username when they collide)
   const newTeam = teams.find(team => team.slug === desiredSlug);
 
   if (!newTeam) {
+    if (desiredSlug === user.username || desiredSlug === user.email) {
+      if (user.version === 'northstar') {
+        output.error('You cannot set your Personal Account as the scope.');
+        return 1;
+      }
+
+      // Switch to user's personal account
+      if (personalScopeSelected) {
+        output.log('No changes made');
+        return 0;
+      }
+
+      if (user.limited) {
+        await client.reauthenticate({
+          scope: user.username,
+          teamId: null,
+        });
+      }
+
+      updateCurrentTeam(config);
+
+      output.success(
+        `Your account (${chalk.bold(user.username)}) is now active!`
+      );
+      return 0;
+    }
+
     output.error(
       `You do not have permission to access scope ${chalk.bold(desiredSlug)}.`
     );
