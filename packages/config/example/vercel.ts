@@ -10,7 +10,14 @@
  * - Cache control headers with pretty-cache-header syntax
  */
 
-import { VercelConfig, routes, deploymentEnv } from '@vercel/config/v1';
+import {
+  VercelConfig,
+  routes,
+  deploymentEnv,
+  header,
+  cookie,
+  host,
+} from '@vercel/config/v1';
 
 export const config: VercelConfig = {
   buildCommand: 'pnpm run generate-config',
@@ -62,7 +69,7 @@ export const config: VercelConfig = {
         { key: 'x-content-type-options', value: 'nosniff' },
       ],
       {
-        has: [{ type: 'host', value: 'secure.example.com' }],
+        has: [host('secure.example.com')],
       }
     ),
   ],
@@ -125,8 +132,8 @@ export const config: VercelConfig = {
     // Only rewrites if user has admin/moderator role AND secure session cookie
     routes.rewrite('/admin/(.*)', 'https://admin.backend.com/$1', {
       has: [
-        { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] },
-        { type: 'cookie', key: 'session', pre: 'secure-' },
+        header('x-user-role', { inc: ['admin', 'moderator'] }),
+        cookie('session', { pre: 'secure-' }),
       ],
     }),
 
@@ -137,10 +144,10 @@ export const config: VercelConfig = {
       'https://premium-api.backend.com/$1',
       {
         has: [
-          { type: 'header', key: 'x-api-version', gte: 2 },
-          { type: 'header', key: 'authorization', pre: 'Bearer ' },
+          header('x-api-version', { gte: 2 }),
+          header('authorization', { pre: 'Bearer ' }),
         ],
-        missing: [{ type: 'header', key: 'x-legacy-auth' }],
+        missing: [header('x-legacy-auth')],
       }
     ),
   ],
@@ -161,12 +168,12 @@ export const config: VercelConfig = {
 
     // Conditional redirect - redirect to login if no auth token
     routes.redirect('/dashboard/(.*)', '/login', {
-      missing: [{ type: 'cookie', key: 'auth-token' }],
+      missing: [cookie('auth-token')],
     }),
 
     // Host-based redirect - redirect non-www to www
     routes.redirect('/(.*)', 'https://www.example.com/$1', {
-      has: [{ type: 'host', value: 'example.com' }],
+      has: [host('example.com')],
     }),
   ],
 };

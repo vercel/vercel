@@ -231,6 +231,32 @@ export interface Condition extends ConditionOperators {
   value?: string;
 }
 
+function createKeyedConditionHelper(type: 'header' | 'cookie' | 'query') {
+  return (key: string, value?: string | ConditionOperators): Condition => {
+    if (value === undefined) {
+      return { type, key };
+    }
+    if (typeof value === 'string') {
+      return { type, key, value };
+    }
+    return { type, key, ...value };
+  };
+}
+
+function createKeylessConditionHelper(type: 'host') {
+  return (value: string | ConditionOperators): Condition => {
+    if (typeof value === 'string') {
+      return { type, value };
+    }
+    return { type, ...value };
+  };
+}
+
+export const header = createKeyedConditionHelper('header');
+export const cookie = createKeyedConditionHelper('cookie');
+export const query = createKeyedConditionHelper('query');
+export const host = createKeylessConditionHelper('host');
+
 /**
  * Transform type specifies the scope of what the transform will apply to.
  * - 'request.query': Transform query parameters in the request
