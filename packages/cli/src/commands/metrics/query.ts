@@ -329,15 +329,45 @@ export default async function query(
   }
 
   // Resolve scope
+  // Team context resolution priority:
+  //   1. Linked project's org (if in a linked project directory)
+  //   2. `vercel switch` team context (via getScope)
+  // This ensures --all and --project use the same team as the linked project
+  // when run from a project directory, which is the most intuitive behavior.
   let scope: Scope;
   let accountId: string | undefined;
 
+  // Try linked project first (used for all cases, including --all and --project)
+  const linkedProject = await getLinkedProject(client);
+  let teamSlug: string | undefined;
+  let teamId: string | undefined;
+
+  if (linkedProject.status === 'linked') {
+    teamSlug = linkedProject.org.slug;
+    teamId = linkedProject.org.id;
+  } else if (linkedProject.status === 'error') {
+    return linkedProject.exitCode;
+  }
+
+  // If no linked project, fall back to getScope for team context
+  if (!teamSlug && (project || all)) {
+    const { team } = await getScope(client);
+    if (!team) {
+      const errMsg =
+        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.';
+      if (jsonOutput) {
+        client.stdout.write(formatErrorJson('NO_TEAM', errMsg));
+      } else {
+        output.error(errMsg);
+      }
+      return 1;
+    }
+    teamSlug = team.slug;
+    teamId = team.id;
+  }
+
   if (!project && !all) {
     // Default: linked project
-    const linkedProject = await getLinkedProject(client);
-    if (linkedProject.status === 'error') {
-      return linkedProject.exitCode;
-    }
     if (linkedProject.status === 'not_linked') {
       const errMsg =
         'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
@@ -350,33 +380,20 @@ export default async function query(
     }
     scope = {
       type: 'project-with-slug',
-      teamSlug: linkedProject.org.slug,
+      teamSlug: teamSlug!,
       projectName: linkedProject.project.name,
     };
-    accountId = linkedProject.org.id;
+    accountId = teamId;
+  } else if (all) {
+    scope = { type: 'team-with-slug', teamSlug: teamSlug! };
+    accountId = teamId;
   } else {
-    // --project or --all: need team context
-    const { team } = await getScope(client);
-    if (!team) {
-      const errMsg =
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.';
-      if (jsonOutput) {
-        client.stdout.write(formatErrorJson('NO_TEAM', errMsg));
-      } else {
-        output.error(errMsg);
-      }
-      return 1;
-    }
-    if (all) {
-      scope = { type: 'team-with-slug', teamSlug: team.slug };
-    } else {
-      scope = {
-        type: 'project-with-slug',
-        teamSlug: team.slug,
-        projectName: project!,
-      };
-    }
-    accountId = team.id;
+    scope = {
+      type: 'project-with-slug',
+      teamSlug: teamSlug!,
+      projectName: project!,
+    };
+    accountId = teamId;
   }
 
   // Resolve time range

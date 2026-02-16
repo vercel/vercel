@@ -480,6 +480,11 @@ describe('query', () => {
     });
 
     it('should error when no team context with --all', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'not_linked',
+        org: null as any,
+        project: null as any,
+      });
       mockedGetScope.mockResolvedValue({
         contextName: 'user',
         team: null,
