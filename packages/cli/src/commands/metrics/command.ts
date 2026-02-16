@@ -1,5 +1,5 @@
-import { packageName } from '../../util/pkg-name';
 import { formatOption } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const querySubcommand = {
   name: 'query',
@@ -191,6 +191,6 @@ export const metricsCommand = {
   description: 'Query observability metrics for your Vercel project or team.',
   arguments: [],
   subcommands: [querySubcommand, schemaSubcommand],
-  options: [],
+  options: querySubcommand.options,
   examples: querySubcommand.examples,
 } as const;

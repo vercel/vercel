@@ -15,9 +15,12 @@ describe('metrics', () => {
       const exitCode = await metrics(client);
 
       expect(exitCode).toBe(2);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Query observability metrics'
-      );
+      const output = client.stderr.getFullOutput();
+      // Shows subcommands
+      expect(output).toContain('query');
+      expect(output).toContain('schema');
+      // Shows default subcommand options
+      expect(output).toContain('--event');
     });
 
     it('should track telemetry for help', async () => {

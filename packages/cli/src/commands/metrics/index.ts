@@ -67,7 +67,6 @@ export default async function metrics(client: Client): Promise<number> {
       const schemaFn = (await import('./schema')).default;
       return schemaFn(client, telemetry);
     }
-    case 'query':
     default: {
       // query is the default subcommand
       if (needHelp) {
