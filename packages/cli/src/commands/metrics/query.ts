@@ -199,7 +199,7 @@ function handleValidationError(
 
 function handleApiError(
   status: number,
-  body: any,
+  err: any,
   jsonOutput: boolean,
   client: Client
 ): number {
@@ -227,8 +227,8 @@ function handleApiError(
         'The query timed out. Try a shorter time range or fewer groups.';
       break;
     default:
-      code = body?.error?.code || 'BAD_REQUEST';
-      message = body?.error?.message || `API error (${status})`;
+      code = err?.code || 'BAD_REQUEST';
+      message = err?.serverMessage || `API error (${status})`;
   }
 
   if (jsonOutput) {
@@ -430,16 +430,18 @@ export default async function query(
 
   // Make API call
   output.spinner('Querying metrics...');
-  let res;
+  let response;
   try {
-    res = await client.fetch('/api/observability/metrics', {
+    response = await client.fetch('/api/observability/metrics', {
       method: 'POST',
       body: JSON.stringify(body),
       headers: { 'Content-Type': 'application/json' },
-      json: false,
     });
-  } catch (err) {
+  } catch (err: any) {
     output.stopSpinner();
+    if (err.status) {
+      return handleApiError(err.status, err, jsonOutput, client);
+    }
     const errMsg = (err as Error).message;
     if (jsonOutput) {
       client.stdout.write(formatErrorJson('NETWORK_ERROR', errMsg));
@@ -449,18 +451,6 @@ export default async function query(
     return 1;
   }
   output.stopSpinner();
-
-  if (!res.ok) {
-    let errorBody;
-    try {
-      errorBody = await res.json();
-    } catch {
-      errorBody = {};
-    }
-    return handleApiError(res.status, errorBody, jsonOutput, client);
-  }
-
-  const response = await res.json();
 
   // Format and output
   if (jsonOutput) {
