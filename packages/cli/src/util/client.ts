@@ -42,7 +42,7 @@ const isSAMLError = (v: any): v is SAMLError => {
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
-  body?: BodyInit | JSONObject;
+  body?: RequestInit['body'] | JSONObject;
   json?: boolean;
   retry?: RetryOptions;
   useCurrentTeam?: boolean;

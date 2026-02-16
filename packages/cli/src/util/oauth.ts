@@ -50,7 +50,7 @@ async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
 async function processDiscoveryEndpointResponse(
   response: Response
 ): Promise<[Error] | [null, AuthorizationServerMetadata]> {
-  const json = await response.json();
+  const json: any = await response.json();
 
   if (!response.ok) {
     return [new Error('Discovery endpoint request failed')];
@@ -146,7 +146,7 @@ export async function processDeviceAuthorizationResponse(
       },
     ]
 > {
-  const json = await response.json();
+  const json: any = await response.json();
 
   if (!response.ok) {
     return [new OAuthError('Device authorization request failed', json)];
@@ -248,7 +248,7 @@ interface TokenSet {
 export async function processTokenResponse(
   response: Response
 ): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
-  const json = await response.json();
+  const json: any = await response.json();
 
   if (!response.ok) {
     return [new OAuthError('Device access token request failed', json)];
@@ -300,7 +300,7 @@ export async function processRevocationResponse(
   response: Response
 ): Promise<[OAuthError | Error] | [null, null]> {
   if (response.ok) return [null, null];
-  const json = await response.json();
+  const json: any = await response.json();
 
   return [new OAuthError('Revocation request failed', json)];
 }
@@ -432,7 +432,7 @@ export async function processInspectTokenResponse(
   response: Response
 ): Promise<[IntrospectionError] | [null, AccessToken]> {
   try {
-    const token = await response.json();
+    const token: any = await response.json();
     if (!token || typeof token !== 'object' || !('active' in token)) {
       throw new IntrospectionError('Invalid token introspection response');
     }

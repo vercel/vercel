@@ -8,7 +8,7 @@ export default async function responseError(
   let bodyError;
 
   if (!res.ok) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();

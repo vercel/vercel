@@ -1,5 +1,6 @@
 import ms from 'ms';
 import path from 'path';
+import { Readable } from 'node:stream';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
@@ -304,7 +305,7 @@ async function fetchBinary(
   const cp = spawn('tar', ['-zx', '-C', dest], {
     stdio: ['pipe', 'ignore', 'ignore'],
   });
-  res.body.pipe(cp.stdin);
+  Readable.fromWeb(res.body! as any).pipe(cp.stdin);
   const [exitCode] = await once(cp, 'exit');
   if (exitCode !== 0) {
     throw new Error(

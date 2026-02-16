@@ -158,9 +158,7 @@ export async function displayRuntimeLogs(
   // handle the event stream and make the promise get rejected
   // if errors occur so we can retry
   return new Promise<number>((resolve, reject) => {
-    const body = Readable.fromWeb(
-      response.body as import('node:stream/web').ReadableStream
-    );
+    const body = Readable.fromWeb(response.body! as any);
     const stream = body.pipe(parse ? jsonlines.parse() : split());
     let finished = false;
     let errored = false;

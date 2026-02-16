@@ -36,7 +36,7 @@ const pickUrl = (stdout: string) => {
   return lines[lines.length - 1];
 };
 
-const waitForDeployment = async (href: RequestInfo) => {
+const waitForDeployment = async (href: string | URL | Request) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');

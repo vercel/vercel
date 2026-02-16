@@ -146,9 +146,7 @@ async function extractExample(
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        const body = Readable.fromWeb(
-          res.body as import('node:stream/web').ReadableStream
-        );
+        const body = Readable.fromWeb(res.body! as any);
         body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);

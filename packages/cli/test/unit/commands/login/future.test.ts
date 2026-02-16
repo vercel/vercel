@@ -90,7 +90,9 @@ describe('login', () => {
     );
 
     expect(
-      new Headers(fetchSpy.mock.calls[0][1]?.headers as HeadersInit).get('user-agent'),
+      new Headers(
+        fetchSpy.mock.calls[0][1]?.headers as RequestInit['headers']
+      ).get('user-agent'),
       'Passing the correct user agent so the user can verify'
     ).toBe(oauth.userAgent);
 

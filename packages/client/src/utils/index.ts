@@ -321,6 +321,7 @@ interface FetchOpts extends RequestInit {
   teamId?: string;
   headers?: { [key: string]: any };
   userAgent?: string;
+  agent?: import('http').Agent;
 }
 
 export const fetch = async (
@@ -361,7 +362,7 @@ export const fetch = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await fetch(url, opts);
+  const res = await globalThis.fetch(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
   semaphore.release();
 

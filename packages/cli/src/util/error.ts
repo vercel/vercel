@@ -23,7 +23,7 @@ export async function responseError(
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();
@@ -72,7 +72,7 @@ export async function responseErrorMessage(
   let message;
 
   if (res.status >= 400 && res.status < 500) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();

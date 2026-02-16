@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import jsonlines from 'jsonlines';
+import { Readable } from 'node:stream';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
@@ -217,7 +218,8 @@ async function processCharges(
 
   await new Promise<void>((resolve, reject) => {
     // gzip compression is assumed
-    const stream = response.body!.pipe(jsonlines.parse());
+    const body = Readable.fromWeb(response.body! as any);
+    const stream = body.pipe(jsonlines.parse());
 
     stream.on('data', (charge: FocusCharge) => {
       chargeCount++;

@@ -18,7 +18,7 @@ export function createProxy(client: Client): Server {
       const headers = toHeaders(req.headers);
       headers.delete('host');
       const fetchRes = await client.fetch(req.url || '/', {
-        headers: headers as HeadersInit,
+        headers: headers as RequestInit['headers'],
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
         useCurrentTeam: false,
@@ -36,9 +36,7 @@ export function createProxy(client: Client): Server {
 
       mergeIntoServerResponse(outgoingHeaders, res);
       if (fetchRes.body) {
-        Readable.fromWeb(
-          fetchRes.body as import('node:stream/web').ReadableStream
-        ).pipe(res);
+        Readable.fromWeb(fetchRes.body as any).pipe(res);
       } else {
         res.end();
       }

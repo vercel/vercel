@@ -1559,7 +1559,7 @@ export default class DevServer {
             }
           );
 
-          const middlewareBody = await middlewareRes.buffer();
+          const middlewareBody = Buffer.from(await middlewareRes.arrayBuffer());
 
           if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(

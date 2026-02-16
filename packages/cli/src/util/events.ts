@@ -65,9 +65,7 @@ async function printEvents(
         });
 
         if (eventsRes.ok) {
-          const readable = Readable.fromWeb(
-            eventsRes.body as import('node:stream/web').ReadableStream
-          );
+          const readable = Readable.fromWeb(eventsRes.body! as any);
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry
