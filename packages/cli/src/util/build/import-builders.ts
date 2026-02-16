@@ -48,7 +48,7 @@ export async function importBuilders(
 ): Promise<Map<string, BuilderWithPkg>> {
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
 
-  let importResult = await resolveBuilders(cwd, buildersDir, builderSpecs);
+  let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
   if ('buildersToAdd' in importResult) {
     const installResult = await installBuilders(
@@ -56,16 +56,12 @@ export async function importBuilders(
       importResult.buildersToAdd
     );
 
-    // resolve builders again, after they've been installed
-    // with specs from the newly installed builders.
     importResult = await resolveBuilders(
-      cwd,
       buildersDir,
       builderSpecs,
       installResult.resolvedSpecs
     );
 
-    // We shouldn't get buildersToAdd a second time from resolveBuilders.
     if ('buildersToAdd' in importResult) {
       throw new Error('Something went wrong!');
     }
@@ -81,44 +77,19 @@ export async function importBuilders(
   return importResult.builders;
 }
 
-// Cache for CLI package.json peerDependencies
-let peerDependencies: Record<string, string> | undefined;
-
-function getPeerDependencies(): Record<string, string> {
-  if (!peerDependencies) {
-    try {
-      const cliPkgPath = require_.resolve('vercel/package.json', {
-        paths: [__dirname],
-      });
-      const cliPkg = require_(cliPkgPath) as PackageJson;
-      peerDependencies =
-        (cliPkg.peerDependencies as Record<string, string>) || {};
-    } catch (e) {
-      output.error(
-        'Failed to parse peer dependencies from vercel/package.json'
-      );
-      peerDependencies = {};
-    }
-  }
-
-  return peerDependencies;
-}
-
 export async function resolveBuilders(
-  cwd: string,
   buildersDir: string,
   builderSpecs: Set<string>,
   resolvedSpecs?: Map<string, string>
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
-  const peerDeps = getPeerDependencies();
 
   for (const spec of builderSpecs) {
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
-    const { name } = parsed;
 
+    const { name } = parsed;
     if (!name) {
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file
@@ -137,103 +108,93 @@ export async function resolveBuilders(
       continue;
     }
 
-    // Resolution priority:
-    // 1. .vercel/builders (where we dynamically install builders)
-    // 2. CLI's node_modules (it looks at wherever this file and associated node modules)
-    // 3. Install into .vercel/builders if not found in either
-
-    let pkgPath: string | undefined;
-    let builderPkg: PackageJson | undefined;
-    const peerVersion = peerDeps[name];
-
-    // 1. Try .vercel/builders (where we install builders)
     try {
-      pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
-      const cachedPkg: PackageJson = await readJSON(pkgPath);
-      output.debug(`"${name}@${cachedPkg.version}" found in .vercel/builders`);
+      let pkgPath: string | undefined;
+      let builderPkg: PackageJson | undefined;
 
-      // Verify cached version matches peerDeps exactly
-      if (peerVersion && cachedPkg.version !== peerVersion) {
-        output.debug(
-          `"${name}@${cachedPkg.version}" does not match peerDep "${peerVersion}", will reinstall`
-        );
-        buildersToAdd.add(`${name}@${peerVersion}`);
-        continue;
-      }
-      builderPkg = cachedPkg;
-    } catch (err: unknown) {
-      if (!isErrnoException(err) || err.code !== 'ENOENT') {
-        throw err;
-      }
-      output.debug(`"${name}@${peerVersion}" not found in .vercel/builders`);
-    }
-
-    // 2. Try CLI's node_modules (wherever CLI is installed - globally or as a project dep)
-    if (!builderPkg) {
       try {
+        // First try `.vercel/builders`. The package name should always be available
+        // at the top-level of `node_modules` since CLI is installing those directly.
+        pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
+        builderPkg = await readJSON(pkgPath);
+      } catch (error: unknown) {
+        if (!isErrnoException(error)) {
+          throw error;
+        }
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+
+        // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
+        // dependency. `require.resolve()` will throw if the Builder is not a CLI
+        // dep, in which case we'll install it into `.vercel/builders`.
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
         builderPkg = await readJSON(pkgPath);
-        output.debug(`Found "${name}" in CLI's node_modules`);
-      } catch (err: unknown) {
-        if (!isErrnoException(err) || err.code !== 'MODULE_NOT_FOUND') {
-          throw err;
-        }
-        // Not found in cache or CLI - install (or error on second run if no peerDep)
-        if (resolvedSpecs) {
-          throw new Error(`Builder "${name}" not found`);
-        }
-        output.debug(`"${name}" not found anywhere, will install`);
-        buildersToAdd.add(peerVersion ? `${name}@${peerVersion}` : spec);
+      }
+
+      if (!builderPkg || !pkgPath) {
+        throw new Error(`Failed to load \`package.json\` for "${name}"`);
+      }
+
+      if (typeof builderPkg.version !== 'string') {
+        throw new Error(
+          `\`package.json\` for "${name}" does not contain a "version" field`
+        );
+      }
+
+      if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
+        // An explicit Builder version was specified but it does
+        // not match the version that is currently installed
+        output.debug(
+          `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
+        );
+        buildersToAdd.add(spec);
         continue;
       }
+
+      if (
+        parsed.type === 'range' &&
+        !satisfies(builderPkg.version, parsed.rawSpec)
+      ) {
+        // An explicit Builder range was specified but it is not
+        // compatible with the version that is currently installed
+        output.debug(
+          `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
+        );
+        buildersToAdd.add(spec);
+        continue;
+      }
+
+      // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
+
+      const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
+
+      const builder = require_(path);
+
+      builders.set(spec, {
+        builder,
+        pkg: {
+          name,
+          ...builderPkg,
+        },
+        path,
+        pkgPath,
+      });
+      output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
+    } catch (err: any) {
+      // `resolvedSpecs` is only passed into this function on the 2nd run,
+      // so if MODULE_NOT_FOUND happens in that case then we don't want to
+      // try to install again. Instead just pass through the error to the user
+      if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
+        output.debug(`Failed to import "${name}": ${err}`);
+        buildersToAdd.add(spec);
+      } else {
+        err.message = `Importing "${name}": ${err.message}`;
+        throw err;
+      }
     }
-
-    if (!builderPkg || !pkgPath) {
-      throw new Error(`Failed to load \`package.json\` for "${name}"`);
-    }
-
-    if (typeof builderPkg.version !== 'string') {
-      throw new Error(
-        `\`package.json\` for "${name}" does not contain a "version" field`
-      );
-    }
-
-    // Validate explicit version/range requirements from spec
-    if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
-      output.debug(
-        `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
-      );
-      buildersToAdd.add(spec);
-      continue;
-    }
-
-    if (
-      parsed.type === 'range' &&
-      !satisfies(builderPkg.version, parsed.rawSpec)
-    ) {
-      output.debug(
-        `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
-      );
-      buildersToAdd.add(spec);
-      continue;
-    }
-
-    // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
-    const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
-    const builder = require_(path);
-
-    builders.set(spec, {
-      builder,
-      pkg: {
-        name,
-        ...builderPkg,
-      },
-      path,
-      pkgPath,
-    });
-    output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
   }
 
   // Add any Builders that are not yet present into `.vercel/builders`
@@ -249,9 +210,6 @@ async function installBuilders(
   buildersToAdd: Set<string>
 ) {
   const resolvedSpecs = new Map<string, string>();
-
-  // First create an empty package.json in the cache dir where
-  // we store our downloaded builders.
   const buildersPkgPath = join(buildersDir, 'package.json');
   try {
     const emptyPkgJson = {
@@ -265,7 +223,6 @@ async function installBuilders(
     if (err.code !== 'EEXIST') throw err;
   }
 
-  // Then npm install the list of packages we need to install.
   output.log(
     `Installing ${plural('Builder', buildersToAdd.size)}: ${Array.from(
       buildersToAdd
@@ -314,6 +271,7 @@ async function installBuilders(
   // Symlink `@now/build-utils` -> `@vercel/build-utils` to support legacy Builders
   const nowScopePath = join(buildersDir, 'node_modules/@now');
   await mkdirp(nowScopePath);
+
   try {
     await symlink('../@vercel/build-utils', join(nowScopePath, 'build-utils'));
   } catch (err: unknown) {
