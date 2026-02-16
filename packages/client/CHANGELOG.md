@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.2.42
+
+### Patch Changes
+
+- Add experimental manual deployment support ([#14857](https://github.com/vercel/vercel/pull/14857))
+
 ## 17.2.41
 
 ### Patch Changes
