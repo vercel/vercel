@@ -14,14 +14,17 @@ function mockResponse(data: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
-function simulateTokenPolling(pollCount: number, finalResponse: Response) {
+async function simulateTokenPolling(
+  pollCount: number,
+  finalResponse: Response
+) {
   for (let i = 0; i < pollCount; i++) {
     fetchSpy.mockResolvedValueOnce(
       mockResponse({ error: 'authorization_pending' }, false)
     );
   }
   fetchSpy.mockResolvedValueOnce(finalResponse);
-  return finalResponse.json();
+  return (await finalResponse.json()) as Record<string, any>;
 }
 
 beforeEach(() => {

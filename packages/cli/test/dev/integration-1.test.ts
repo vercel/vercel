@@ -22,7 +22,7 @@ test('[verdel dev] should support serverless functions', async () => {
     await readyResolver;
     const res = await fetch(`http://localhost:${port}/api?foo=bar`);
     validateResponseHeaders(res);
-    const payload = await res.json();
+    const payload = (await res.json()) as Record<string, any>;
     expect(payload).toMatchObject({ url: '/api?foo=bar', method: 'GET' });
     expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
   } finally {
@@ -54,7 +54,7 @@ test('[vercel dev] should support edge functions', async () => {
 
     // support for edge functions has to manually ensure that these properties
     // are set up; so, we test that they are all passed through properly
-    const payload = await res.json();
+    const payload = (await res.json()) as Record<string, any>;
     expect(payload).toMatchObject({
       headers: { 'content-type': 'application/json' },
       url: `http://localhost:${port}/api/edge-success`,
@@ -384,7 +384,10 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
     validateResponseHeaders(res);
-    expect(await res.json()).toMatchObject({ body, readBody: body });
+    expect((await res.json()) as Record<string, any>).toMatchObject({
+      body,
+      readBody: body,
+    });
 
     // Test that `req` "data" events work in dev
     res = await fetch(`http://localhost:${port}/api/data-events`, {
@@ -747,7 +750,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
     {
       // Env var should be set from `vercel.json`
       const res = await fetch(`http://localhost:${port}/api`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.FOO).toBe('bar');
     }
 
@@ -756,7 +759,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
       await fs.remove(configPath);
 
       const res = await fetch(`http://localhost:${port}/api`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.FOO).toBe(undefined);
     }
   } finally {
@@ -777,7 +780,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
     {
       // Node.js helpers should be available by default
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.hasHelpers).toBe(true);
       expect(body.query.foo).toBe('bar');
     }
@@ -798,7 +801,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       await fs.writeJSON(configPath, config);
 
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.hasHelpers).toBe(false);
       expect(body.query).toBe(undefined);
     }
@@ -819,7 +822,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       await fs.writeJSON(configPath, config);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.hasHelpers).toBe(true);
       expect(body.query.foo).toBe('baz');
     }
@@ -837,7 +840,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       await fs.writeJSON(configPath, config);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.hasHelpers).toBe(false);
       expect(body.query).toBe(undefined);
     }
@@ -855,7 +858,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       await fs.writeJSON(configPath, config);
 
       const res = await fetch(`http://localhost:${port}/?foo=boo`);
-      const body = await res.json();
+      const body = (await res.json()) as Record<string, any>;
       expect(body.hasHelpers).toBe(true);
       expect(body.query.foo).toBe('boo');
     }

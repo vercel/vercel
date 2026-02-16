@@ -288,7 +288,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 
   expect(resEnv.status).toBe(200);
 
-  const json = await resEnv.json();
+  const json = (await resEnv.json()) as Record<string, any>;
 
   expect(json.buildCommand).toBe('mkdir public && echo "1" > public/index.txt');
 });
@@ -649,13 +649,13 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
     const apiUrl = `https://${host}/api/get-env`;
     const apiRes = await fetch(apiUrl);
     expect(apiRes.status, apiUrl).toBe(200);
-    const apiJson = await apiRes.json();
+    const apiJson = (await apiRes.json()) as Record<string, any>;
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
 
     const homeUrl = `https://${host}`;
     const homeRes = await fetch(homeUrl);
     expect(homeRes.status, homeUrl).toBe(200);
-    const homeJson = await homeRes.json();
+    const homeJson = (await homeRes.json()) as Record<string, any>;
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
   }
 
@@ -670,14 +670,14 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     expect(apiRes.status).toBe(200);
 
-    const apiJson = await apiRes.json();
+    const apiJson = (await apiRes.json()) as Record<string, any>;
 
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
 
     const homeUrl = localhost[0];
 
     const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
+    const homeJson = (await homeRes.json()) as Record<string, any>;
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
@@ -698,13 +698,13 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
     const apiRes = await fetch(apiUrl);
     expect(apiRes.status).toBe(200);
 
-    const apiJson = await apiRes.json();
+    const apiJson = (await apiRes.json()) as Record<string, any>;
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
     expect(apiJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
+    const homeJson = (await homeRes.json()) as Record<string, any>;
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
     expect(homeJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
 
@@ -771,7 +771,7 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     const localhostNoProtocol = localhost[0].slice('http://'.length);
 
-    const apiJson = await apiRes.json();
+    const apiJson = (await apiRes.json()) as Record<string, any>;
     // environment variables are not set in dev
     expect(apiJson['VERCEL']).toBeUndefined();
     expect(apiJson['VERCEL_ENV']).toBeUndefined();
@@ -783,7 +783,7 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
+    const homeJson = (await homeRes.json()) as Record<string, any>;
     expect(homeJson['VERCEL']).toBe('1');
     expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);
     expect(homeJson['VERCEL_ENV']).toBe('development');

@@ -17,7 +17,7 @@ export function getUser(retries = 3): Promise<User> {
         );
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as Record<string, any>;
 
       return data.user;
     },
@@ -40,9 +40,7 @@ export function getTeam(retries = 3): Promise<Team> {
         );
       }
 
-      const data = await res.json();
-
-      return data;
+      return (await res.json()) as Team;
     },
     { retries, factor: 1 }
   );

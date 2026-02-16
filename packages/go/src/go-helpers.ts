@@ -13,6 +13,7 @@ import { delimiter, dirname, join } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
+import { toNodeReadable } from './web-stream';
 import { promisify } from 'util';
 import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
@@ -405,7 +406,10 @@ async function download({ dest, version }: { dest: string; version: string }) {
   if (/\.zip$/.test(filename)) {
     const zipFile = join(tmpdir(), filename);
     try {
-      await streamPipeline(res.body, createWriteStream(zipFile));
+      await streamPipeline(
+        toNodeReadable(res.body!),
+        createWriteStream(zipFile)
+      );
       const zip = await yauzl.open(zipFile);
       let entry = await zip.readEntry();
       while (entry) {
@@ -435,7 +439,7 @@ async function download({ dest, version }: { dest: string; version: string }) {
   }
 
   await new Promise((resolve, reject) => {
-    res.body
+    toNodeReadable(res.body!)
       .on('error', reject)
       .pipe(extract({ cwd: dest, strip: 1 }))
       .on('error', reject)
