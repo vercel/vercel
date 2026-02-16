@@ -1,5 +1,29 @@
 # vercel
 
+## 50.18.0
+
+### Minor Changes
+
+- Support easier auth from cursor / claude ([#15050](https://github.com/vercel/vercel/pull/15050))
+
+### Patch Changes
+
+- non-interactive mode for link ([#14884](https://github.com/vercel/vercel/pull/14884))
+
+- Add experimental manual deployment support ([#14857](https://github.com/vercel/vercel/pull/14857))
+
+- Fix `integration remove`, `integration balance`, and `integration open` commands failing to find integrations by explicitly passing `teamId` to the configurations API ([#15054](https://github.com/vercel/vercel/pull/15054))
+
+- Require slash syntax for multi-product integrations in non-TTY mode, keep interactive product selector for TTY ([#15047](https://github.com/vercel/vercel/pull/15047))
+
+- Move builders back into bundle ([#15059](https://github.com/vercel/vercel/pull/15059))
+
+- Updated dependencies [[`463395162462988e7d3276781d2fdff0685e225b`](https://github.com/vercel/vercel/commit/463395162462988e7d3276781d2fdff0685e225b), [`6e58410ff849c281735c6acae59b3b0e86136f15`](https://github.com/vercel/vercel/commit/6e58410ff849c281735c6acae59b3b0e86136f15)]:
+  - @vercel/go@3.4.1
+  - @vercel/ruby@2.3.1
+  - @vercel/python@6.13.0
+  - @vercel/static-build@2.8.37
+
 ## 50.17.1
 
 ### Patch Changes
