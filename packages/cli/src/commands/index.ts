@@ -26,6 +26,7 @@ import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
+import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
@@ -99,6 +100,10 @@ const commandsStructs = [
 
 if (process.env.FF_GUIDANCE_MODE) {
   commandsStructs.push(guidanceCommand);
+}
+
+if (process.env.FF_METRICS) {
+  commandsStructs.push(metricsCommand);
 }
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
