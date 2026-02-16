@@ -7,7 +7,6 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
-const { logWithinTest } = require('./log');
 const {
   scanParentDirs,
   getSupportedNodeVersion,
@@ -20,15 +19,15 @@ async function packAndDeploy(builderPath, shouldUnlink = true) {
   });
   const tarballs = await glob('*.tgz', { cwd: builderPath });
   const tgzPath = path.join(builderPath, tarballs[0]);
-  logWithinTest('tgzPath', tgzPath);
+  console.log('tgzPath', tgzPath);
   const url = await nowDeployIndexTgz(tgzPath);
   await fetchTgzUrl(`https://${url}`);
-  logWithinTest('finished calling the tgz');
+  console.log('finished calling the tgz');
   if (shouldUnlink) {
     fs.unlinkSync(tgzPath);
-    logWithinTest('finished unlinking tgz');
+    console.log('finished unlinking tgz');
   } else {
-    logWithinTest('leaving tgz in place');
+    console.log('leaving tgz in place');
   }
   return url;
 }
@@ -77,7 +76,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           lastErr = err;
         }
         ctx.deploymentLogs = null;
-        logWithinTest(
+        console.log(
           'Retrying to fetch logs for',
           deploymentId,
           'in 2 seconds. Read lines:',
@@ -117,7 +116,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     }
 
     if (!found && shouldContain) {
-      logWithinTest({
+      console.log({
         deploymentId,
         deploymentUrl,
         deploymentLogs,
@@ -131,7 +130,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       error.retryDelay = 5000; // ms
       throw error;
     } else {
-      logWithinTest('finished testing', JSON.stringify(probe));
+      console.log('finished testing', JSON.stringify(probe));
       return;
     }
   }
@@ -152,7 +151,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     if (!ctx.nextBuildManifest) {
       const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/build-TfctsWXpff2fKS/_buildManifest.js`;
 
-      logWithinTest('fetching buildManifest at', manifestUrl);
+      console.log('fetching buildManifest at', manifestUrl);
       const { text: manifestContent } = await fetchDeploymentUrl(manifestUrl);
 
       // we must eval it since we use devalue to stringify it
@@ -209,7 +208,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 
   const { text, resp } = result;
 
-  logWithinTest('finished testing', JSON.stringify(probe));
+  console.log('finished testing', JSON.stringify(probe));
 
   let hadTest = false;
 
@@ -343,7 +342,7 @@ async function testDeployment(fixturePath, opts = {}) {
     .basename(fixturePath)
     .toLowerCase()
     .replace(/(_|\.)/g, '-');
-  logWithinTest(`testDeployment "${projectName}"`);
+  console.log(`testDeployment "${projectName}"`);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
@@ -442,7 +441,7 @@ async function testDeployment(fixturePath, opts = {}) {
 
   for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
-    logWithinTest('testing', stringifiedProbe);
+    console.log('testing', stringifiedProbe);
 
     try {
       await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
@@ -455,7 +454,7 @@ async function testDeployment(fixturePath, opts = {}) {
       const retryDelay = Math.max(probe.retryDelay || 0, err.retryDelay || 0);
 
       for (let i = 0; i < retries; i++) {
-        logWithinTest(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
+        console.log(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
         try {
           await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
@@ -466,7 +465,7 @@ async function testDeployment(fixturePath, opts = {}) {
           }
 
           if (retryDelay) {
-            logWithinTest(`Waiting ${retryDelay}ms before retrying`);
+            console.log(`Waiting ${retryDelay}ms before retrying`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
@@ -531,7 +530,7 @@ async function spawnAsync(...args) {
     child.on('error', reject);
     child.on('close', (code, signal) => {
       if (code !== 0) {
-        if (result) logWithinTest(result);
+        if (result) console.log(result);
         reject(new Error(`Exited with ${code || signal}`));
         return;
       }

@@ -5,7 +5,6 @@ const path = require('path');
 const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
-const { logWithinTest } = require('./log');
 const ms = require('ms');
 
 const IS_CI = !!process.env.CI;
@@ -43,12 +42,12 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   // Warn if using custom build container configuration
   if (VERCEL_FORCE_BUILD_IN_HIVE || VERCEL_BUILD_CONTAINER_VERSION) {
-    logWithinTest('⚠️ Running tests against a custom build container');
+    console.log('⚠️ Running tests against a custom build container');
     if (VERCEL_FORCE_BUILD_IN_HIVE) {
-      logWithinTest(`VERCEL_FORCE_BUILD_IN_HIVE=${VERCEL_FORCE_BUILD_IN_HIVE}`);
+      console.log(`VERCEL_FORCE_BUILD_IN_HIVE=${VERCEL_FORCE_BUILD_IN_HIVE}`);
     }
     if (VERCEL_BUILD_CONTAINER_VERSION) {
-      logWithinTest(
+      console.log(
         `VERCEL_BUILD_CONTAINER_VERSION=${VERCEL_BUILD_CONTAINER_VERSION}`
       );
     }
@@ -87,7 +86,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     },
   };
 
-  logWithinTest(`posting ${files.length} files`);
+  console.log(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
     await filePost(bodies[filename], digestOfFile(bodies[filename]));
@@ -104,13 +103,13 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     deploymentUrl = json.url;
   }
 
-  logWithinTest('id', deploymentId);
+  console.log('id', deploymentId);
 
   for (let i = 0; i < 750; i += 1) {
     const deployment = await deploymentGet(deploymentId);
     const { readyState } = deployment;
     if (readyState === 'ERROR') {
-      logWithinTest('state is ERROR, throwing');
+      console.log('state is ERROR, throwing');
       const error = new Error(
         `State of https://${deploymentUrl} is ERROR: ${deployment.errorMessage}`
       );
@@ -118,11 +117,11 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
       throw error;
     }
     if (readyState === 'READY') {
-      logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
+      console.log(`State of https://${deploymentUrl} is READY, moving on`);
       break;
     }
     if (i % 25 === 0) {
-      logWithinTest(
+      console.log(
         `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
       );
     }
@@ -160,7 +159,7 @@ async function filePost(body, digest) {
   if (json.error) {
     const { status, statusText, headers } = resp;
     const { message } = json.error;
-    logWithinTest('Fetch Error', { url, status, statusText, headers, digest });
+    console.log('Fetch Error', { url, status, statusText, headers, digest });
     throw new Error(message);
   }
   return json;
@@ -181,7 +180,7 @@ async function deploymentPost(payload, opts = {}) {
   if (json.error) {
     const { status, statusText, headers } = resp;
     const { message } = json.error;
-    logWithinTest('Fetch Error', { url, status, statusText, headers });
+    console.log('Fetch Error', { url, status, statusText, headers });
     throw new Error(message);
   }
   return json;
@@ -194,7 +193,7 @@ async function deploymentGet(deploymentId) {
   if (json.error) {
     const { status, statusText, headers } = resp;
     const { message } = json.error;
-    logWithinTest('Fetch Error', { url, status, statusText, headers, message });
+    console.log('Fetch Error', { url, status, statusText, headers, message });
     throw new Error(message);
   }
   return json;
@@ -244,9 +243,7 @@ async function fetchTokenWithRetry(retries = 5) {
   } = process.env;
   if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
     if (!TEMP_TOKEN && !IS_CI) {
-      logWithinTest(
-        'Your personal token will be used to make test deployments.'
-      );
+      console.log('Your personal token will be used to make test deployments.');
     }
     return VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN;
   }
@@ -285,12 +282,12 @@ async function fetchTokenWithRetry(retries = 5) {
 
     return data.token;
   } catch (error) {
-    logWithinTest(
+    console.log(
       `Failed to fetch token. Retries remaining: ${retries}`,
       error.message
     );
     if (retries === 0) {
-      logWithinTest(error);
+      console.log(error);
       throw error;
     }
     await sleep(500);
@@ -306,8 +303,8 @@ async function fetchApi(url, opts = {}) {
     : `https://${apiHost}${url}`;
 
   if (process.env.VERBOSE) {
-    logWithinTest('fetch', method, url);
-    if (body) logWithinTest(encodeURIComponent(body).slice(0, 80));
+    console.log('fetch', method, url);
+    if (body) console.log(encodeURIComponent(body).slice(0, 80));
   }
 
   if (!opts.headers) opts.headers = {};
