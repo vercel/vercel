@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
 
