@@ -162,7 +162,7 @@ export default class Now {
 
     const deployment = await processDeployment({
       now: this,
-      agent: this._client.agent,
+      dispatcher: this._client.dispatcher,
       path,
       requestBody,
       uploadStamp,

@@ -31,7 +31,7 @@ import type {
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
-import type { Agent } from 'http';
+import type { Dispatcher } from 'undici';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
@@ -57,7 +57,7 @@ export interface ClientOptions extends Stdio {
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   telemetryEventStore: TelemetryEventStore;
   /** Whether the CLI is being run by an AI agent */
   isAgent?: boolean;
@@ -98,7 +98,7 @@ export default class Client extends EventEmitter implements Stdio {
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
   config: GlobalConfig;
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
@@ -117,7 +117,7 @@ export default class Client extends EventEmitter implements Stdio {
 
   constructor(opts: ClientOptions) {
     super();
-    this.agent = opts.agent;
+    this.dispatcher = opts.dispatcher;
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -372,6 +372,9 @@ export default class Client extends EventEmitter implements Stdio {
     const fetchOpts: Record<string, unknown> = { ...opts, headers, body };
     if (body && typeof body === 'object' && 'pipe' in body) {
       fetchOpts.duplex = 'half';
+    }
+    if (this.dispatcher) {
+      fetchOpts.dispatcher = this.dispatcher;
     }
     return output.time(
       res => {

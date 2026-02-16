@@ -97,7 +97,7 @@ export async function* checkDeploymentStatus(
           teamId ? `?teamId=${teamId}` : ''
         }`,
         token,
-        { apiUrl, userAgent, agent: clientOptions.agent }
+        { apiUrl, userAgent, dispatcher: clientOptions.dispatcher }
       );
 
       retriesLeft--;

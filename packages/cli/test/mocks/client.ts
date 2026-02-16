@@ -249,8 +249,8 @@ export class MockClient extends Client {
 
     this.scenario = Router();
 
-    this.agent?.destroy();
-    this.agent = undefined;
+    this.dispatcher?.close();
+    this.dispatcher = undefined;
 
     this.cwd = originalCwd;
     this.telemetryEventStore.reset();

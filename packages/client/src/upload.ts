@@ -1,5 +1,3 @@
-import http from 'http';
-import https from 'https';
 import { Readable } from 'stream';
 import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
@@ -9,7 +7,7 @@ import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import type { Agent } from 'http';
+import type { Dispatcher } from 'undici';
 import type {
   VercelClientOptions,
   DeploymentOptions,
@@ -80,7 +78,7 @@ export async function* upload(
   };
 
   const uploadGenerator = uploadFiles({
-    agent: clientOptions.agent,
+    dispatcher: clientOptions.dispatcher,
     apiUrl: clientOptions.apiUrl,
     debug: clientOptions.debug,
     teamId: clientOptions.teamId,
@@ -122,7 +120,7 @@ export async function* upload(
  * Uploads files to the /v2/files endpoint with retry and fault tolerance.
  */
 export async function* uploadFiles(options: {
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   apiUrl?: string;
   debug?: boolean;
   files: FilesMap;
@@ -138,9 +136,6 @@ export async function* uploadFiles(options: {
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const defaultAgent = options.apiUrl?.startsWith('https://')
-    ? new https.Agent({ keepAlive: true })
-    : new http.Agent({ keepAlive: true });
   const abortControllers = new Set<AbortController>();
   let aborted = false;
 
@@ -204,7 +199,7 @@ export async function* uploadFiles(options: {
             API_FILES,
             options.token,
             {
-              agent: options.agent || defaultAgent,
+              dispatcher: options.dispatcher,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',

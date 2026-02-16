@@ -13,7 +13,7 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
+import type { Dispatcher } from 'undici';
 import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
@@ -49,7 +49,7 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
-  agent,
+  dispatcher,
   manual,
   ...args
 }: {
@@ -71,7 +71,7 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
 }) {
@@ -111,7 +111,7 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    agent,
+    dispatcher,
     projectName,
     bulkRedirectsPath,
     manual,

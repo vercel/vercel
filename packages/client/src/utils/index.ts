@@ -321,7 +321,7 @@ interface FetchOpts extends RequestInit {
   teamId?: string;
   headers?: { [key: string]: any };
   userAgent?: string;
-  agent?: import('http').Agent;
+  dispatcher?: import('undici').Dispatcher;
 }
 
 export const fetch = async (

@@ -191,7 +191,7 @@ export default async function redeploy(client: Client): Promise<number> {
       } else {
         try {
           const clientOptions: VercelClientOptions = {
-            agent: client.agent,
+            dispatcher: client.dispatcher,
             apiUrl: client.apiUrl,
             debug: output.debugEnabled,
             path: '', // unused by checkDeploymentStatus()

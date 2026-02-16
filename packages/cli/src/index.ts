@@ -67,7 +67,6 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -362,13 +361,24 @@ const main = async () => {
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
   );
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
-  const agent = hasProxyConfig()
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
+  // Use undici dispatcher for proxy support with the built-in fetch
+  const { ProxyAgent: UndiciProxyAgent, Agent: UndiciAgent } = await import(
+    'undici'
+  );
+  const proxyUrl =
+    process.env.HTTPS_PROXY ||
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy ||
+    process.env.ALL_PROXY ||
+    process.env.all_proxy;
+  const dispatcher =
+    hasProxyConfig() && proxyUrl
+      ? new UndiciProxyAgent({ uri: proxyUrl })
+      : new UndiciAgent({ keepAliveTimeout: 30_000 });
 
   client = new Client({
-    agent,
+    dispatcher,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
