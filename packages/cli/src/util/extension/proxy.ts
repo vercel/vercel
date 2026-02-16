@@ -17,10 +17,13 @@ export function createProxy(client: Client): Server {
       // Proxy to the upstream Vercel REST API
       const headers = toHeaders(req.headers);
       headers.delete('host');
+      const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
       const fetchRes = await client.fetch(req.url || '/', {
         headers: headers as RequestInit['headers'],
         method: req.method,
-        body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+        body: hasBody ? req : undefined,
+        // The built-in fetch requires duplex: 'half' when body is a stream
+        ...(hasBody ? { duplex: 'half' as const } : {}),
         useCurrentTeam: false,
         json: false,
       });

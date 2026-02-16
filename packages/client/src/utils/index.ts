@@ -360,6 +360,11 @@ export const fetch = async (
     'user-agent': userAgent,
   };
 
+  // The built-in fetch requires duplex: 'half' when body is a stream
+  if (opts.body && typeof opts.body === 'object' && 'pipe' in opts.body) {
+    (opts as Record<string, unknown>).duplex = 'half';
+  }
+
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
   const res = await globalThis.fetch(url, opts);

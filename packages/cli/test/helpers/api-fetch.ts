@@ -1,4 +1,3 @@
-
 export const apiFetch = (
   path: string,
   { headers, ...options }: RequestInit = {}

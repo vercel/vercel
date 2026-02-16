@@ -43,6 +43,7 @@ const isSAMLError = (v: any): v is SAMLError => {
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
   body?: RequestInit['body'] | JSONObject;
+  duplex?: 'half';
   json?: boolean;
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
@@ -367,6 +368,11 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     const requestId = this.requestIdCounter++;
+    // The built-in fetch requires duplex: 'half' when body is a stream
+    const fetchOpts: Record<string, unknown> = { ...opts, headers, body };
+    if (body && typeof body === 'object' && 'pipe' in body) {
+      fetchOpts.duplex = 'half';
+    }
     return output.time(
       res => {
         if (res) {
@@ -377,7 +383,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { ...opts, headers, body })
+      fetch(url, fetchOpts as RequestInit)
     );
   }
 

@@ -374,9 +374,14 @@ export default class Now {
       body = opts.body;
     }
 
+    // The built-in fetch requires duplex: 'half' when body is a stream
+    const fetchOpts: Record<string, unknown> = { ...opts, body };
+    if (body && typeof body === 'object' && 'pipe' in body) {
+      fetchOpts.duplex = 'half';
+    }
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, fetchOpts as RequestInit)
     );
     printIndications(res);
     return res;
