@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { Readable } from 'node:stream';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
@@ -113,7 +114,7 @@ export default class FileRef implements FileBase {
             if (resp.status === 403) error.bail = true;
             throw error;
           }
-          return resp.body;
+          return Readable.fromWeb(resp.body! as any);
         },
         { factor: 1, retries: 3 }
       );
