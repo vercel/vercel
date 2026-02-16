@@ -330,6 +330,7 @@ export default async function query(
 
   // Resolve scope
   let scope: Scope;
+  let accountId: string | undefined;
 
   if (!project && !all) {
     // Default: linked project
@@ -352,6 +353,7 @@ export default async function query(
       teamSlug: linkedProject.org.slug,
       projectName: linkedProject.project.name,
     };
+    accountId = linkedProject.org.id;
   } else {
     // --project or --all: need team context
     const { team } = await getScope(client);
@@ -374,6 +376,7 @@ export default async function query(
         projectName: project!,
       };
     }
+    accountId = team.id;
   }
 
   // Resolve time range
@@ -416,7 +419,7 @@ export default async function query(
     reason: 'agent' as const,
     scope,
     event: event!,
-    rollups: { value: { measure, aggregation } },
+    rollups: { [rollupColumn]: { measure, aggregation } },
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),
     granularity: granResult.duration,
@@ -429,13 +432,22 @@ export default async function query(
   };
 
   // Make API call
+  // The observability metrics API is on vercel.com, not api.vercel.com
+  // In tests, client.apiUrl points to the mock server, so use that
+  const baseUrl =
+    client.apiUrl === 'https://api.vercel.com'
+      ? 'https://vercel.com'
+      : client.apiUrl;
+  const metricsUrl = `${baseUrl}/api/observability/metrics`;
+
   output.spinner('Querying metrics...');
   let response;
   try {
-    response = await client.fetch('/api/observability/metrics', {
+    response = await client.fetch(metricsUrl, {
       method: 'POST',
       body: JSON.stringify(body),
       headers: { 'Content-Type': 'application/json' },
+      accountId,
     });
   } catch (err: any) {
     output.stopSpinner();

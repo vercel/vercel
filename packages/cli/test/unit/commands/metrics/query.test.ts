@@ -325,8 +325,8 @@ describe('query', () => {
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.rollups.value.measure).toBe('count');
-      expect(requestBody.rollups.value.aggregation).toBe('sum');
+      expect(requestBody.rollups.count_sum.measure).toBe('count');
+      expect(requestBody.rollups.count_sum.aggregation).toBe('sum');
     });
   });
 
@@ -969,8 +969,10 @@ describe('query', () => {
       expect(exitCode).toBe(0);
       expect(requestBody.reason).toBe('agent');
       expect(requestBody.event).toBe('incomingRequest');
-      expect(requestBody.rollups.value.measure).toBe('requestDurationMs');
-      expect(requestBody.rollups.value.aggregation).toBe('p95');
+      expect(requestBody.rollups.requestDurationMs_p95.measure).toBe(
+        'requestDurationMs'
+      );
+      expect(requestBody.rollups.requestDurationMs_p95.aggregation).toBe('p95');
       expect(requestBody.groupBy).toEqual(['httpStatus']);
       expect(requestBody.granularity).toEqual({ minutes: 15 });
       expect(requestBody.limitRanking).toBe('top_by_summary');
