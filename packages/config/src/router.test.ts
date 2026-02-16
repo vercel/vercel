@@ -1,13 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  createRoutes,
-  Router,
-  deploymentEnv,
-  header,
-  cookie,
-  query,
-  host,
-} from './router';
+import { createRoutes, Router, deploymentEnv, matchers } from './router';
+
+const { header, cookie, query, host } = matchers;
 import { cacheHeader } from 'pretty-cache-header';
 
 describe('Router', () => {

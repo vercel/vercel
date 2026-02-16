@@ -252,10 +252,12 @@ function createKeylessConditionHelper(type: 'host') {
   };
 }
 
-export const header = createKeyedConditionHelper('header');
-export const cookie = createKeyedConditionHelper('cookie');
-export const query = createKeyedConditionHelper('query');
-export const host = createKeylessConditionHelper('host');
+export const matchers = {
+  header: createKeyedConditionHelper('header'),
+  cookie: createKeyedConditionHelper('cookie'),
+  query: createKeyedConditionHelper('query'),
+  host: createKeylessConditionHelper('host'),
+};
 
 /**
  * Transform type specifies the scope of what the transform will apply to.

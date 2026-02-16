@@ -14,10 +14,10 @@ import {
   VercelConfig,
   routes,
   deploymentEnv,
-  header,
-  cookie,
-  host,
+  matchers,
 } from '@vercel/config/v1';
+
+const { header, cookie, host } = matchers;
 
 export const config: VercelConfig = {
   buildCommand: 'pnpm run generate-config',
