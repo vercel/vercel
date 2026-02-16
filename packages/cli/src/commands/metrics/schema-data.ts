@@ -985,6 +985,36 @@ export function getMeasures(eventName: string): MeasureSchema[] {
   return SCHEMA[eventName]?.measures ?? [];
 }
 
+export function getDefaultAggregation(
+  eventName: string,
+  measureName: string
+): string {
+  if (measureName === 'count') return 'sum';
+
+  const event = SCHEMA[eventName];
+  if (!event) return 'sum';
+
+  const measure = event.measures.find(m => m.name === measureName);
+  if (!measure) return 'sum';
+
+  switch (measure.unit) {
+    case 'count':
+    case 'bytes':
+    case 'tokens':
+    case 'US dollars':
+      return 'sum';
+    case 'milliseconds':
+    case 'seconds':
+    case 'megabytes':
+    case 'gigabyte hours':
+    case 'ratio':
+    case 'percent':
+      return 'avg';
+    default:
+      return 'sum';
+  }
+}
+
 export function getAggregations(
   eventName: string,
   measureName: string

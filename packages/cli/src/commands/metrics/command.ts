@@ -31,7 +31,8 @@ export const querySubcommand = {
       shorthand: 'a',
       type: String,
       deprecated: false,
-      description: 'Aggregation function (default: sum)',
+      description:
+        'Aggregation function (default: sum for counts/bytes/tokens, avg for durations/memory/ratios)',
       argument: 'FN',
     },
     {

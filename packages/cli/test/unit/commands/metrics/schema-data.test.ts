@@ -5,6 +5,7 @@ import {
   getDimensions,
   getMeasures,
   getAggregations,
+  getDefaultAggregation,
 } from '../../../../src/commands/metrics/schema-data';
 
 describe('schema-data', () => {
@@ -110,5 +111,71 @@ describe('schema-data', () => {
 
   it('should return empty measures for unknown event', () => {
     expect(getMeasures('bogus')).toEqual([]);
+  });
+
+  describe('getDefaultAggregation', () => {
+    it('should return sum for count measure', () => {
+      expect(getDefaultAggregation('incomingRequest', 'count')).toBe('sum');
+    });
+
+    it('should return avg for milliseconds unit', () => {
+      expect(
+        getDefaultAggregation('functionExecution', 'requestDurationMs')
+      ).toBe('avg');
+    });
+
+    it('should return sum for bytes unit', () => {
+      expect(getDefaultAggregation('incomingRequest', 'fdtOutBytes')).toBe(
+        'sum'
+      );
+    });
+
+    it('should return avg for megabytes unit', () => {
+      expect(getDefaultAggregation('functionExecution', 'peakMemoryMb')).toBe(
+        'avg'
+      );
+    });
+
+    it('should return avg for ratio unit', () => {
+      expect(
+        getDefaultAggregation('imageTransformation', 'compressionRatio')
+      ).toBe('avg');
+    });
+
+    it('should return sum for tokens unit', () => {
+      expect(getDefaultAggregation('aiGatewayRequest', 'inputTokens')).toBe(
+        'sum'
+      );
+    });
+
+    it('should return avg for seconds unit', () => {
+      expect(getDefaultAggregation('prReview', 'reviewTimeSeconds')).toBe(
+        'avg'
+      );
+    });
+
+    it('should return avg for gigabyte hours unit', () => {
+      expect(
+        getDefaultAggregation('middlewareInvocation', 'functionDurationGbhr')
+      ).toBe('avg');
+    });
+
+    it('should return avg for percent unit', () => {
+      expect(
+        getDefaultAggregation('imageTransformation', 'sizeChangePercent')
+      ).toBe('avg');
+    });
+
+    it('should return sum for US dollars unit', () => {
+      expect(getDefaultAggregation('aiGatewayRequest', 'cost')).toBe('sum');
+    });
+
+    it('should return sum for unknown event', () => {
+      expect(getDefaultAggregation('bogus', 'count')).toBe('sum');
+    });
+
+    it('should return sum for unknown measure', () => {
+      expect(getDefaultAggregation('incomingRequest', 'bogus')).toBe('sum');
+    });
   });
 });

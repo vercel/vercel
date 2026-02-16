@@ -13,6 +13,7 @@ import {
   validateGroupBy,
   validateMutualExclusivity,
 } from './validation';
+import { getDefaultAggregation } from './schema-data';
 import {
   formatCsv,
   formatQueryJson,
@@ -265,7 +266,9 @@ export default async function query(
   // Track telemetry
   const event = flags['--event'] as string | undefined;
   const measure = (flags['--measure'] as string | undefined) ?? 'count';
-  const aggregation = (flags['--aggregation'] as string | undefined) ?? 'sum';
+  const aggregation =
+    (flags['--aggregation'] as string | undefined) ??
+    getDefaultAggregation(event!, measure);
   const groupBy = (flags['--group-by'] as string[] | undefined) ?? [];
   const limit = flags['--limit'] as number | undefined;
   const orderBy = flags['--order-by'] as string | undefined;

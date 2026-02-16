@@ -328,6 +328,54 @@ describe('query', () => {
       expect(requestBody.rollups.count_sum.measure).toBe('count');
       expect(requestBody.rollups.count_sum.aggregation).toBe('sum');
     });
+
+    it('should default to avg for duration measures', async () => {
+      let requestBody: any;
+      client.scenario.post('/api/observability/metrics', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockLinkedProject();
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'functionExecution',
+        '--measure',
+        'requestDurationMs'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(requestBody.rollups.requestDurationMs_avg.measure).toBe(
+        'requestDurationMs'
+      );
+      expect(requestBody.rollups.requestDurationMs_avg.aggregation).toBe('avg');
+    });
+
+    it('should default to sum for byte measures', async () => {
+      let requestBody: any;
+      client.scenario.post('/api/observability/metrics', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockLinkedProject();
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'incomingRequest',
+        '--measure',
+        'fdtOutBytes'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(requestBody.rollups.fdtOutBytes_sum.measure).toBe('fdtOutBytes');
+      expect(requestBody.rollups.fdtOutBytes_sum.aggregation).toBe('sum');
+    });
   });
 
   describe('unknown dimension', () => {
