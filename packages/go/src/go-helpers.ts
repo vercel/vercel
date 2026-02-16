@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import { extract } from 'tar';
 import execa from 'execa';
-import fetch from 'node-fetch';
 import {
   createWriteStream,
   mkdirp,

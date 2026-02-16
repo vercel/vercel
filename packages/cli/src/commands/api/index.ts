@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';

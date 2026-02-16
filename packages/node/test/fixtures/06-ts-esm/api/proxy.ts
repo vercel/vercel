@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 export default async function handler(

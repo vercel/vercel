@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import ms from 'ms';
 import jsonlines from 'jsonlines';
 import split from 'split2';
+import { Readable } from 'node:stream';
 import { URLSearchParams } from 'url';
 import type Client from '../util/client';
 import printEvents from './events';
@@ -142,7 +143,6 @@ export async function displayRuntimeLogs(
 
   const response = await client.fetch(url, {
     json: false,
-    // @ts-expect-error: typescipt is getting confused with the signal types from node (web & server) and node-fetch (server only)
     signal: abortController.signal,
     retry: {
       retries: 3,
@@ -158,7 +158,10 @@ export async function displayRuntimeLogs(
   // handle the event stream and make the promise get rejected
   // if errors occur so we can retry
   return new Promise<number>((resolve, reject) => {
-    const stream = response.body.pipe(parse ? jsonlines.parse() : split());
+    const body = Readable.fromWeb(
+      response.body as import('node:stream/web').ReadableStream
+    );
+    const stream = body.pipe(parse ? jsonlines.parse() : split());
     let finished = false;
     let errored = false;
 
@@ -211,7 +214,7 @@ export async function displayRuntimeLogs(
     stream.on('end', finish);
     stream.on('data', handleData);
     stream.on('error', handleError);
-    response.body.on('error', handleError);
+    body.on('error', handleError);
   });
 }
 

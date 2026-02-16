@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
 
 export async function getHugoUrl(

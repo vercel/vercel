@@ -1,5 +1,4 @@
 import assert from 'assert';
-import fetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';

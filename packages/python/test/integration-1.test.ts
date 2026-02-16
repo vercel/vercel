@@ -3,7 +3,6 @@ require('./integration-setup')(1);
 // NOTE: The fixture `00-request-path` has special case handling for local dev support below
 
 const assert = require('assert');
-const nodeFetch = require('node-fetch');
 const execa = require('execa');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -56,7 +55,7 @@ it.skip('should match the probes against Python dev servers', async () => {
 
     for (const { path, mustContain } of probes) {
       const port = ports.get(path.substring(0, path.indexOf('?')));
-      const res = await nodeFetch(`http://localhost:${port}${path}`);
+      const res = await fetch(`http://localhost:${port}${path}`);
       const body = await res.text();
       assert(
         body.includes(mustContain),

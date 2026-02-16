@@ -1,16 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from 'node-fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
 function mockResponse(data: unknown, ok = true): Response {
   return {
@@ -22,11 +16,11 @@ function mockResponse(data: unknown, ok = true): Response {
 
 function simulateTokenPolling(pollCount: number, finalResponse: Response) {
   for (let i = 0; i < pollCount; i++) {
-    fetch.mockResolvedValueOnce(
+    fetchSpy.mockResolvedValueOnce(
       mockResponse({ error: 'authorization_pending' }, false)
     );
   }
-  fetch.mockResolvedValueOnce(finalResponse);
+  fetchSpy.mockResolvedValueOnce(finalResponse);
   return finalResponse.json();
 }
 
@@ -36,7 +30,7 @@ beforeEach(() => {
 
 describe('login', () => {
   it('successful login', async () => {
-    fetch.mockResolvedValueOnce(
+    fetchSpy.mockResolvedValueOnce(
       mockResponse({
         issuer: 'https://vercel.com',
         device_authorization_endpoint: 'https://vercel.com',
@@ -57,7 +51,7 @@ describe('login', () => {
       interval: 0.005,
     };
 
-    fetch.mockResolvedValueOnce(mockResponse(authorizationResult));
+    fetchSpy.mockResolvedValueOnce(mockResponse(authorizationResult));
 
     const pollCount = 2;
     const tokenResult = await simulateTokenPolling(
@@ -80,9 +74,9 @@ describe('login', () => {
     expect(await exitCodePromise, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
+    expect(fetchSpy).toHaveBeenCalledTimes(pollCount + 4);
 
-    expect(fetch).toHaveBeenNthCalledWith(
+    expect(fetchSpy).toHaveBeenNthCalledWith(
       2,
       _as.device_authorization_endpoint,
       expect.objectContaining({
@@ -96,13 +90,12 @@ describe('login', () => {
     );
 
     expect(
-      // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
-      new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
+      new Headers(fetchSpy.mock.calls[0][1]?.headers as HeadersInit).get('user-agent'),
       'Passing the correct user agent so the user can verify'
     ).toBe(oauth.userAgent);
 
     expect(
-      fetch.mock.calls[1][1]?.body?.toString(),
+      (fetchSpy.mock.calls[1][1] as RequestInit)?.body?.toString(),
       'Requesting a device code with the correct params'
     ).toBe(
       new URLSearchParams({
@@ -112,7 +105,7 @@ describe('login', () => {
     );
 
     expect(
-      fetch.mock.calls[pollCount + 1][1]?.body?.toString(),
+      (fetchSpy.mock.calls[pollCount + 1][1] as RequestInit)?.body?.toString(),
       'Polling with the received device code'
     ).toBe(
       new URLSearchParams({

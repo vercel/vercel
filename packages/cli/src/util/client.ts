@@ -13,12 +13,6 @@ import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
-import fetch, {
-  type BodyInit,
-  Headers,
-  type RequestInit,
-  type Response,
-} from 'node-fetch';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
@@ -383,7 +377,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url, { ...opts, headers, body })
     );
   }
 

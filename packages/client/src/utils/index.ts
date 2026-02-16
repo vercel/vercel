@@ -1,5 +1,4 @@
 import { FilesMap } from './hashes';
-import nodeFetch, { RequestInit } from 'node-fetch';
 import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
@@ -362,7 +361,7 @@ export const fetch = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
+  const res = await fetch(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
   semaphore.release();
 

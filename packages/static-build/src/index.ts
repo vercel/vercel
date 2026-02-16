@@ -1,6 +1,5 @@
 import ms from 'ms';
 import path from 'path';
-import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';

@@ -36,7 +36,6 @@
     "esbuild": "0.27.0",
     "etag": "1.8.1",
     "mime-types": "2.1.35",
-    "node-fetch": "2.6.9",
     "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
     "path-to-regexp": "6.1.0",
     "ts-morph": "12.0.0",

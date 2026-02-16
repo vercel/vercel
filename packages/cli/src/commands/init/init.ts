@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
@@ -145,10 +146,13 @@ async function extractExample(
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        res.body.on('error', reject);
+        const body = Readable.fromWeb(
+          res.body as import('node:stream/web').ReadableStream
+        );
+        body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        res.body.pipe(extractor);
+        body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(

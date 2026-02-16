@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import type Client from '../../util/client';
 
 export default async function flush(_client: Client, args: string[]) {

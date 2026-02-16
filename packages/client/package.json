@@ -31,7 +31,6 @@
     "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
     "@types/node": "20.11.0",
-    "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
     "jest-junit": "16.0.0",
@@ -49,7 +48,6 @@
     "ignore": "4.0.6",
     "minimatch": "5.0.1",
     "ms": "2.1.2",
-    "node-fetch": "2.6.7",
     "querystring": "^0.2.0",
     "sleep-promise": "8.0.1",
     "tar-fs": "1.16.3"

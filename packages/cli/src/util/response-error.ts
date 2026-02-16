@@ -1,4 +1,3 @@
-import type { Response } from 'node-fetch';
 import { APIError } from './errors-ts';
 
 export default async function responseError(

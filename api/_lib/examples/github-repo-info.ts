@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { Repo } from '../types';
 import { getExampleList } from './example-list';
 

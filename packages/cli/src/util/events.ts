@@ -1,5 +1,6 @@
 // Native
 import { URLSearchParams } from 'url';
+import { Readable } from 'node:stream';
 
 // Packages
 import retry from 'async-retry';
@@ -60,12 +61,13 @@ async function printEvents(
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
-          // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
           signal: abortController?.signal,
         });
 
         if (eventsRes.ok) {
-          const readable = eventsRes.body;
+          const readable = Readable.fromWeb(
+            eventsRes.body as import('node:stream/web').ReadableStream
+          );
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry

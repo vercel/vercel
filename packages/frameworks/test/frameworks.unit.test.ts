@@ -3,7 +3,6 @@ import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import fetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 

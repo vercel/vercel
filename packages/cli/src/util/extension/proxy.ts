@@ -1,6 +1,5 @@
 import { createServer } from 'http';
-import { Headers } from 'node-fetch';
-import type { HeadersInit } from 'node-fetch';
+import { Readable } from 'node:stream';
 import {
   toOutgoingHeaders,
   mergeIntoServerResponse,
@@ -10,9 +9,7 @@ import type { Server } from 'http';
 import type Client from '../client';
 import output from '../../output-manager';
 
-const toHeaders = buildToHeaders({
-  Headers: Headers as unknown as typeof globalThis.Headers,
-});
+const toHeaders = buildToHeaders({ Headers });
 
 export function createProxy(client: Client): Server {
   return createServer(async (req, res) => {
@@ -21,7 +18,7 @@ export function createProxy(client: Client): Server {
       const headers = toHeaders(req.headers);
       headers.delete('host');
       const fetchRes = await client.fetch(req.url || '/', {
-        headers: headers as unknown as HeadersInit,
+        headers: headers as HeadersInit,
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
         useCurrentTeam: false,
@@ -29,9 +26,7 @@ export function createProxy(client: Client): Server {
       });
       res.statusCode = fetchRes.status;
 
-      const outgoingHeaders = toOutgoingHeaders(
-        fetchRes.headers as unknown as globalThis.Headers
-      );
+      const outgoingHeaders = toOutgoingHeaders(fetchRes.headers);
 
       // Remove content-encoding header because fetch() automatically decompresses
       // the response body but retains the header, which would cause the downstream
@@ -40,7 +35,13 @@ export function createProxy(client: Client): Server {
       delete outgoingHeaders['content-length'];
 
       mergeIntoServerResponse(outgoingHeaders, res);
-      fetchRes.body.pipe(res);
+      if (fetchRes.body) {
+        Readable.fromWeb(
+          fetchRes.body as import('node:stream/web').ReadableStream
+        ).pipe(res);
+      } else {
+        res.end();
+      }
     } catch (err: unknown) {
       output.prettyError(err);
       if (!res.headersSent) {

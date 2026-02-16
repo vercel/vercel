@@ -2,7 +2,6 @@
 const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
-const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const ms = require('ms');
@@ -255,7 +254,7 @@ async function fetchTokenWithRetry(retries = 5) {
     );
   }
   try {
-    const res = await _fetch(VERCEL_TEST_REGISTRATION_URL, {
+    const res = await fetch(VERCEL_TEST_REGISTRATION_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${VERCEL_TEST_TOKEN}`,
