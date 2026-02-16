@@ -4,9 +4,9 @@ import { format } from 'date-fns';
 import ms from 'ms';
 import jsonlines from 'jsonlines';
 import split from 'split2';
-import { Readable } from 'node:stream';
 import { URLSearchParams } from 'url';
 import type Client from '../util/client';
+import { toNodeReadable } from '../util/web-stream';
 import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
 import output from '../output-manager';
@@ -158,7 +158,7 @@ export async function displayRuntimeLogs(
   // handle the event stream and make the promise get rejected
   // if errors occur so we can retry
   return new Promise<number>((resolve, reject) => {
-    const body = Readable.fromWeb(response.body! as any);
+    const body = toNodeReadable(response.body!);
     const stream = body.pipe(parse ? jsonlines.parse() : split());
     let finished = false;
     let errored = false;

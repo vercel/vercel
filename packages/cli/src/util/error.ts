@@ -23,17 +23,17 @@ export async function responseError(
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
-    let body: any;
+    let body: Record<string, Record<string, unknown> | undefined>;
 
     try {
-      body = await res.json();
-    } catch (err) {
-      body = parsedBody;
+      body = (await res.json()) as typeof body;
+    } catch (_err) {
+      body = parsedBody as typeof body;
     }
 
     // Some APIs wrongly return `err` instead of `error`
     bodyError = body.error || body.err || {};
-    message = bodyError.message;
+    message = String(bodyError.message ?? '');
   }
 
   if (!message) {
@@ -49,7 +49,7 @@ export async function responseError(
   if (bodyError) {
     for (const field of Object.keys(bodyError)) {
       if (field !== 'message') {
-        err[field] = bodyError[field];
+        err[field] = bodyError[field] as unknown;
       }
     }
   }
@@ -72,11 +72,11 @@ export async function responseErrorMessage(
   let message;
 
   if (res.status >= 400 && res.status < 500) {
-    let body: any;
+    let body: Record<string, Record<string, unknown> | undefined>;
 
     try {
-      body = await res.json();
-    } catch (err) {
+      body = (await res.json()) as typeof body;
+    } catch (_err) {
       body = {};
     }
 

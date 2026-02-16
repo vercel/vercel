@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Readable } from 'node:stream';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
@@ -9,6 +8,7 @@ import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import toHumanPath from '../../util/humanize-path';
 import type Client from '../../util/client';
+import { toNodeReadable } from '../../util/web-stream';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
@@ -146,7 +146,7 @@ async function extractExample(
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        const body = Readable.fromWeb(res.body! as any);
+        const body = toNodeReadable(res.body!);
         body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);

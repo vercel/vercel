@@ -1,5 +1,4 @@
 import { createServer } from 'http';
-import { Readable } from 'node:stream';
 import {
   toOutgoingHeaders,
   mergeIntoServerResponse,
@@ -7,6 +6,7 @@ import {
 } from '@edge-runtime/node-utils';
 import type { Server } from 'http';
 import type Client from '../client';
+import { toNodeReadable } from '../web-stream';
 import output from '../../output-manager';
 
 const toHeaders = buildToHeaders({ Headers });
@@ -36,7 +36,7 @@ export function createProxy(client: Client): Server {
 
       mergeIntoServerResponse(outgoingHeaders, res);
       if (fetchRes.body) {
-        Readable.fromWeb(fetchRes.body as any).pipe(res);
+        toNodeReadable(fetchRes.body).pipe(res);
       } else {
         res.end();
       }

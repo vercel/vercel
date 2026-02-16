@@ -1,13 +1,12 @@
 // Native
 import { URLSearchParams } from 'url';
-import { Readable } from 'node:stream';
-
 // Packages
 import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
 import type Client from './client';
+import { toNodeReadable } from './web-stream';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
@@ -64,8 +63,8 @@ async function printEvents(
           signal: abortController?.signal,
         });
 
-        if (eventsRes.ok) {
-          const readable = Readable.fromWeb(eventsRes.body! as any);
+        if (eventsRes.ok && eventsRes.body) {
+          const readable = toNodeReadable(eventsRes.body);
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry

@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import jsonlines from 'jsonlines';
-import { Readable } from 'node:stream';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
@@ -11,6 +10,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { UsageTelemetryClient } from '../../util/telemetry/commands/usage';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
+import { toNodeReadable } from '../../util/web-stream';
 import { isErrnoException } from '@vercel/error-utils';
 import type { FocusCharge } from '../../util/billing/focus-charge';
 import type {
@@ -218,7 +218,7 @@ async function processCharges(
 
   await new Promise<void>((resolve, reject) => {
     // gzip compression is assumed
-    const body = Readable.fromWeb(response.body! as any);
+    const body = toNodeReadable(response.body!);
     const stream = body.pipe(jsonlines.parse());
 
     stream.on('data', (charge: FocusCharge) => {
@@ -290,7 +290,7 @@ async function processCharges(
 
     stream.on('end', resolve);
     stream.on('error', reject);
-    response.body!.on('error', reject);
+    body.on('error', reject);
   });
 
   return {
