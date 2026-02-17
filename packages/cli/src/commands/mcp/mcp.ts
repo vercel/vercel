@@ -11,6 +11,7 @@ function getAvailableClients(): string[] {
     'Claude.ai and Claude for desktop',
     'Cursor',
     'VS Code with Copilot',
+    'OpenCode',
   ];
 }
 
@@ -385,6 +386,111 @@ export default async function mcp(client: Client) {
         );
         output.print('   7. Click Add\n');
         output.print('   8. Follow the authorization steps\n');
+        output.print('─'.repeat(50) + '\n');
+      }
+    } else if (clientName === 'OpenCode') {
+      const mcpUrl = isProjectSpecific
+        ? (await getProjectSpecificUrl(client))?.url
+        : MCP_ENDPOINT;
+      const serverName = isProjectSpecific
+        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
+        : 'vercel';
+
+      // Determine OpenCode config path based on platform
+      const opencodeConfigPath =
+        process.platform === 'darwin' || process.platform === 'linux'
+          ? `${process.env.HOME}/.config/opencode/opencode.json`
+          : process.platform === 'win32'
+            ? `${process.env.APPDATA}/opencode/opencode.json`
+            : `${process.env.HOME}/.config/opencode/opencode.json`;
+
+      let opencodeAlreadyConfigured = false;
+      try {
+        const fs = require('fs');
+
+        if (fs.existsSync(opencodeConfigPath)) {
+          const configContent = fs.readFileSync(opencodeConfigPath, 'utf8');
+          const config = JSON.parse(configContent);
+          const mcpServers = config.mcp || {};
+          opencodeAlreadyConfigured = Object.values(mcpServers).some(
+            (server: any) =>
+              server.url === mcpUrl || server.url === MCP_ENDPOINT
+          );
+        }
+      } catch (error) {
+        // If we can't read the config, assume it's not configured
+      }
+
+      if (opencodeAlreadyConfigured) {
+        summary.push('✅ OpenCode: Vercel MCP already configured');
+        output.print('ℹ️  Vercel MCP is already configured in OpenCode\n');
+        output.print('─'.repeat(50) + '\n');
+        continue;
+      }
+
+      // Try to write the config
+      try {
+        const fs = require('fs');
+        const path = require('path');
+
+        let config: any = {};
+
+        // Read existing config if it exists
+        if (fs.existsSync(opencodeConfigPath)) {
+          try {
+            const configContent = fs.readFileSync(opencodeConfigPath, 'utf8');
+            config = JSON.parse(configContent);
+          } catch (error) {
+            // If we can't parse, start fresh
+            config = {};
+          }
+        }
+
+        // Ensure mcp section exists
+        if (!config.mcp) {
+          config.mcp = {};
+        }
+
+        // Add the Vercel MCP server
+        config.mcp[serverName] = {
+          type: 'remote',
+          url: mcpUrl,
+        };
+
+        // Create directory if it doesn't exist
+        const dir = path.dirname(opencodeConfigPath);
+        fs.mkdirSync(dir, { recursive: true });
+
+        // Write the config
+        fs.writeFileSync(
+          opencodeConfigPath,
+          JSON.stringify(config, null, 2) + '\n'
+        );
+
+        summary.push('✅ OpenCode: Vercel MCP added successfully');
+        output.print('✅ Successfully added Vercel MCP to OpenCode\n');
+        output.print(
+          '   💡 Run `opencode mcp auth ' +
+            serverName +
+            '` to complete authentication\n'
+        );
+        output.print('─'.repeat(50) + '\n');
+      } catch (error) {
+        summary.push('❌ OpenCode: Failed to add MCP server');
+        output.print('💡 Manual setup required:\n');
+        output.print('   1. Open your OpenCode config file:\n');
+        output.print(`      ${opencodeConfigPath}\n`);
+        output.print('   2. Add the following to the "mcp" section:\n');
+        output.print(`      "${serverName}": {{\n`);
+        output.print('        "type": "remote",\n');
+        output.print(`        "url": "${mcpUrl}"\n`);
+        output.print('      }\n');
+        output.print('   3. Save the file\n');
+        output.print(
+          '   4. Run `opencode mcp auth ' +
+            serverName +
+            '` to complete authentication\n'
+        );
         output.print('─'.repeat(50) + '\n');
       }
     }
