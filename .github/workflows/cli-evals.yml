@@ -1,5 +1,5 @@
-# Bare-bones CLI evals: runs on PRs touching packages/cli. Dry run only (no credentials).
-# Add evals under packages/cli/evals/evals/ and configure secrets to run real evals later.
+# CLI evals: runs on PRs touching packages/cli. Runs real evals when evals exist; add
+# VERCEL_OIDC_TOKEN (and optionally AI_GATEWAY_API_KEY, etc.) in repo secrets when ready.
 name: CLI Evals
 
 on:
@@ -10,7 +10,13 @@ on:
 jobs:
   evals:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    env:
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_OIDC_TOKEN: ${{ secrets.VERCEL_OIDC_TOKEN }}
+      CLI_EVAL_TEAM_ID: ${{ secrets.CLI_EVAL_TEAM_ID }}
+      CLI_EVAL_PROJECT_ID: ${{ secrets.CLI_EVAL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,8 +34,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: CLI evals (dry run)
+      - name: Build CLI
+        run: cd packages/cli && pnpm build
+
+      - name: Run CLI evals
         run: |
           cd packages/cli/evals
           pnpm install --no-frozen-lockfile
-          pnpm test:dry
+          pnpm test
+        env:
+          PATH: ${{ github.workspace }}/packages/cli/dist:${{ env.PATH }}

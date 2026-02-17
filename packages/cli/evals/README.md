@@ -25,6 +25,6 @@ From `packages/cli/evals/`:
 
 ## CI
 
-The GitHub Action runs on **pull requests** that touch `packages/cli/**`. It runs a dry run only so no credentials are required. When you add evals and configure secrets (e.g. `VERCEL_OIDC_TOKEN`), you can switch the workflow to run `pnpm test` instead of `pnpm test:dry`.
+The GitHub Action runs on **pull requests** that touch `packages/cli/**`. It runs `pnpm test` (real evals when evals exist). Add these repo secrets when you have evals and want them to run in CI: `VERCEL_OIDC_TOKEN`, and optionally `AI_GATEWAY_API_KEY`, `VERCEL_TOKEN`, `CLI_EVAL_TEAM_ID`, `CLI_EVAL_PROJECT_ID`. Until then, the job exits successfully when there are no evals.
 
 See `.github/workflows/cli-evals.yml`.
