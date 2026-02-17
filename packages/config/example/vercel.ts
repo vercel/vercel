@@ -17,8 +17,6 @@ import {
   matchers,
 } from '@vercel/config/v1';
 
-const { header, cookie, host } = matchers;
-
 export const config: VercelConfig = {
   buildCommand: 'pnpm run generate-config',
   installCommand: 'pnpm install --no-frozen-lockfile',
@@ -69,7 +67,7 @@ export const config: VercelConfig = {
         { key: 'x-content-type-options', value: 'nosniff' },
       ],
       {
-        has: [host('secure.example.com')],
+        has: [matchers.host('secure.example.com')],
       }
     ),
   ],
@@ -132,8 +130,8 @@ export const config: VercelConfig = {
     // Only rewrites if user has admin/moderator role AND secure session cookie
     routes.rewrite('/admin/(.*)', 'https://admin.backend.com/$1', {
       has: [
-        header('x-user-role', { inc: ['admin', 'moderator'] }),
-        cookie('session', { pre: 'secure-' }),
+        matchers.header('x-user-role', { inc: ['admin', 'moderator'] }),
+        matchers.cookie('session', { pre: 'secure-' }),
       ],
     }),
 
@@ -144,10 +142,10 @@ export const config: VercelConfig = {
       'https://premium-api.backend.com/$1',
       {
         has: [
-          header('x-api-version', { gte: 2 }),
-          header('authorization', { pre: 'Bearer ' }),
+          matchers.header('x-api-version', { gte: 2 }),
+          matchers.header('authorization', { pre: 'Bearer ' }),
         ],
-        missing: [header('x-legacy-auth')],
+        missing: [matchers.header('x-legacy-auth')],
       }
     ),
   ],
@@ -168,12 +166,12 @@ export const config: VercelConfig = {
 
     // Conditional redirect - redirect to login if no auth token
     routes.redirect('/dashboard/(.*)', '/login', {
-      missing: [cookie('auth-token')],
+      missing: [matchers.cookie('auth-token')],
     }),
 
     // Host-based redirect - redirect non-www to www
     routes.redirect('/(.*)', 'https://www.example.com/$1', {
-      has: [host('example.com')],
+      has: [matchers.host('example.com')],
     }),
   ],
 };
