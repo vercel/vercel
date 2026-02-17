@@ -97,9 +97,11 @@ describe('selectOrg', () => {
   });
 
   describe('non-interactive mode', () => {
+    let firstTeam: ReturnType<typeof createTeam>;
+
     beforeEach(() => {
       user = useUser({ version: 'northstar' });
-      useTeam();
+      firstTeam = useTeam();
       createTeam(); // second team so choices.length > 1
       client.nonInteractive = true;
       delete client.config.currentTeam;
@@ -137,6 +139,30 @@ describe('selectOrg', () => {
       logSpy.mockRestore();
     });
 
+    it('returns org when --scope flag is present in argv (non-interactive, no currentTeam)', async () => {
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.setArgv('deploy', '--scope', firstTeam.slug);
+
+      const result = await selectOrg(client, 'Which scope?', false);
+      expect(result).toEqual({
+        type: 'team',
+        id: firstTeam.id,
+        slug: firstTeam.slug,
+      });
+
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
     it('outputs action_required and exits even with single scope (no defaulting)', async () => {
       // Single team only (northstar user + one team)
       user = useUser({ version: 'northstar' });
@@ -162,6 +188,17 @@ describe('selectOrg', () => {
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
+    });
+
+    it('returns org when --scope/--team was passed (currentTeam set)', async () => {
+      client.config.currentTeam = firstTeam.id;
+      const result = await selectOrg(client, 'Which scope?', false);
+      expect(result).toEqual({
+        type: 'team',
+        id: firstTeam.id,
+        slug: firstTeam.slug,
+      });
+      delete client.config.currentTeam;
     });
   });
 

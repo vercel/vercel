@@ -45,6 +45,14 @@ export const linkCommand = {
       deprecated: false,
     },
     {
+      name: 'team',
+      description: 'Scope (team ID or slug) to link the project to',
+      shorthand: null,
+      argument: 'TEAM_ID_OR_SLUG',
+      type: String,
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',

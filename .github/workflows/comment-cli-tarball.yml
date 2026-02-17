@@ -58,6 +58,23 @@ jobs:
             message += '}\n';
             message += '```\n';
 
+            // Check if a Python runtime wheel was built
+            try {
+              const resp = await fetch(`${deploymentUrl}/tarballs/vercel-runtime-wheel.json`);
+              if (resp.ok) {
+                const { filename } = await resp.json();
+                const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
+                message += '\n### Python Runtime Wheel\n\n';
+                message += 'A Python runtime wheel was also built for this PR.\n';
+                message += 'To use in your Python project builds, also set this environment variable:\n\n';
+                message += '```\n';
+                message += `VERCEL_RUNTIME_PYTHON="vercel-runtime @ ${wheelUrl}"\n`;
+                message += '```\n';
+              }
+            } catch {
+              // No wheel available, skip
+            }
+
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,

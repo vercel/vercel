@@ -197,22 +197,22 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
-      - name: Build vercel peer dependencies
-        if: matrix.packageName == 'vercel'
-        shell: bash
+      - name: Resolve Python runtime wheel URL
+        id: python-wheel
         run: |
-          PEER_FILTERS=$(node utils/get-cli-peer-deps.js | xargs -I {} echo --filter={})
-          if [ -n "$PEER_FILTERS" ]; then
-            node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream $PEER_FILTERS
+          WHEEL_NAME=$(curl -sf "${{ needs.setup.outputs.dplUrl }}/tarballs/vercel-runtime-wheel.json" | jq -r '.filename' || echo "")
+          if [ -n "$WHEEL_NAME" ]; then
+            echo "spec=vercel-runtime @ ${{ needs.setup.outputs.dplUrl }}/tarballs/$WHEEL_NAME" >> $GITHUB_OUTPUT
+          else
+            echo "spec=" >> $GITHUB_OUTPUT
           fi
-        env:
-          FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
         run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_RUNTIME_PYTHON: ${{ steps.python-wheel.outputs.spec }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}

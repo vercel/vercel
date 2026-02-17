@@ -7,16 +7,54 @@ import { randomBytes } from 'crypto';
 import { fileNameSymbol } from '@vercel/client';
 import { client } from '../../../mocks/client';
 import deploy from '../../../../src/commands/deploy';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupUnitFixture,
+  setupTmpDir,
+} from '../../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useDeployment, useBuildLogs } from '../../../mocks/deployment';
-import { useTeams } from '../../../mocks/team';
+import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import humanizePath from '../../../../src/util/humanize-path';
 import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
 
 describe('deploy', () => {
+  describe('--non-interactive', () => {
+    it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      createTeam();
+      client.cwd = cwd;
+      client.setArgv('deploy', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(deploy(client)).rejects.toThrow('process.exit(1)');
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
+      expect(Array.isArray(payload.choices)).toBe(true);
+      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'deploy';
@@ -1270,6 +1308,7 @@ describe('deploy', () => {
       const directoryName = 'unlinked';
 
       beforeEach(() => {
+        (client as { nonInteractive: boolean }).nonInteractive = false;
         const user = useUser();
         client.scenario.get(`/v9/projects/:id`, (_req, res) => {
           return res.status(404).json({});

@@ -50,6 +50,98 @@ async function main() {
     });
     await fs.writeJson(packageJsonPath, originalPackageObj, { spaces: 2 });
   }
+
+  // Build the Python runtime wheel so it can be hosted on preview deployments
+  await buildPythonWheel();
+}
+
+async function buildPythonWheel() {
+  const pythonRuntimeDir = path.join(rootDir, 'python', 'vercel-runtime');
+  const pyprojectPath = path.join(pythonRuntimeDir, 'pyproject.toml');
+  const tag = '@vercel/python-runtime@*';
+  const pkgPath = 'python/vercel-runtime';
+
+  try {
+    // Find the last release tag for this package
+    let lastTag: string;
+    try {
+      const { stdout } = await execa('git', [
+        'describe',
+        '--tags',
+        '--match',
+        tag,
+        '--abbrev=0',
+      ]);
+      lastTag = stdout.trim();
+    } catch {
+      console.log(
+        'No previous @vercel/python-runtime tag found, building wheel.'
+      );
+      lastTag = '';
+    }
+
+    // Check if there are changes since the last tag
+    // (git diff --quiet exits 0 if no changes, 1 if changes)
+    if (lastTag) {
+      const result = await execa('git', [
+        'diff',
+        '--quiet',
+        lastTag,
+        'HEAD',
+        '--',
+        pkgPath,
+      ]).catch(err => err);
+
+      if (result.exitCode === 0) {
+        console.log(
+          `No changes to ${pkgPath} since ${lastTag}, skipping wheel build.`
+        );
+        return;
+      }
+    }
+
+    const sha = (await getSha()).trim();
+    let timestamp: number;
+    try {
+      const { stdout } = await execa('git', ['log', '-1', '--format=%ct'], {
+        env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' },
+      });
+      timestamp = Number(stdout.trim()) || 0;
+    } catch {
+      timestamp = 0;
+    }
+    const original = await fs.readFile(pyprojectPath, 'utf8');
+    // e.g. 0.4.0 -> 0.5.0.dev1739371200+d496c36
+    const devVersion = original.replace(
+      /^(version\s*=\s*")(\d+)\.(\d+)\.(\d+)(")/m,
+      (
+        _m: string,
+        pre: string,
+        major: string,
+        minor: string,
+        _patch: string,
+        post: string
+      ) => `${pre}${major}.${Number(minor) + 1}.0.dev${timestamp}+${sha}${post}`
+    );
+    await fs.writeFile(pyprojectPath, devVersion);
+
+    console.log(
+      `Building Python runtime wheel (dev${timestamp}+${sha}, ${lastTag || 'no prior tag'})...`
+    );
+
+    try {
+      await execa('uv', ['build', '--wheel', '--out-dir', 'dist/'], {
+        cwd: pythonRuntimeDir,
+        stdio: 'inherit',
+      });
+      console.log('Python runtime wheel built successfully.');
+    } finally {
+      await fs.writeFile(pyprojectPath, original);
+    }
+  } catch (err) {
+    console.error('Failed to build Python runtime wheel:', err);
+    throw err;
+  }
 }
 
 async function getSha(): Promise<string> {

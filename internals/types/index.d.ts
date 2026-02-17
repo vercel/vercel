@@ -39,6 +39,11 @@ interface AuthConfig {
    * Used to optimistically check if the token is still valid.
    */
   expiresAt?: number;
+  /**
+   * Indicates where the token was provided from when using external tokens.
+   * Only set when token is provided via `--token` flag or `VERCEL_TOKEN` env var.
+   */
+  tokenSource?: 'flag' | 'env';
 }
 
 export interface GlobalConfig {
