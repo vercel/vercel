@@ -2036,8 +2036,8 @@ describe('runtime dependency installation support', () => {
       expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
     });
 
-    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 510 MB', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(510 * 1024 * 1024);
+    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
     });
 
     it('ephemeral storage limit is greater than the bundle size threshold', () => {

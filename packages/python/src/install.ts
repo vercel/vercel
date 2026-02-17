@@ -26,9 +26,9 @@ import { DEFAULT_PYTHON_VERSION } from './version';
 // AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 
-// AWS Lambda ephemeral storage (/tmp) is 512MB. Use 510MB to leave a buffer
+// AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
-export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 510 * 1024 * 1024;
+export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
