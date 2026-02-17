@@ -364,6 +364,181 @@ type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
 
 export type RoutesManifest = RoutesManifestV4 | RoutesManifestOld;
 
+const ROUTE_KEY_VALUE_SUFFIX = 'Param';
+const RESERVED_INTERNAL_ROUTE_PARAM_NAMES = new Set([
+  'path',
+  'segment',
+  'segments',
+  'segmentPath',
+  'rscSuffix',
+  'nxtSegmentSuffix',
+]);
+
+function shouldNormalizeRouteKeyValue(routeKeyValue: string): boolean {
+  if (!routeKeyValue.startsWith('nxtP')) {
+    return false;
+  }
+
+  return RESERVED_INTERNAL_ROUTE_PARAM_NAMES.has(routeKeyValue.slice(4));
+}
+
+function getRouteKeyRenames(
+  routeKeys?: Record<string, string>
+): Map<string, string> {
+  const routeKeyRenames = new Map<string, string>();
+
+  if (!routeKeys) {
+    return routeKeyRenames;
+  }
+
+  const usedRouteKeyValues = new Set(Object.values(routeKeys));
+
+  for (const routeKeyValue of Object.values(routeKeys)) {
+    if (!shouldNormalizeRouteKeyValue(routeKeyValue)) {
+      continue;
+    }
+
+    if (routeKeyRenames.has(routeKeyValue)) {
+      continue;
+    }
+
+    let normalizedRouteKeyValue = `${routeKeyValue}${ROUTE_KEY_VALUE_SUFFIX}`;
+    while (usedRouteKeyValues.has(normalizedRouteKeyValue)) {
+      normalizedRouteKeyValue += ROUTE_KEY_VALUE_SUFFIX;
+    }
+
+    routeKeyRenames.set(routeKeyValue, normalizedRouteKeyValue);
+    usedRouteKeyValues.add(normalizedRouteKeyValue);
+  }
+
+  return routeKeyRenames;
+}
+
+function applyRouteKeyRenamesToMap(
+  routeKeys: Record<string, string> | undefined,
+  routeKeyRenames: ReadonlyMap<string, string>
+): Record<string, string> | undefined {
+  if (!routeKeys || routeKeyRenames.size === 0) {
+    return routeKeys;
+  }
+
+  return Object.fromEntries(
+    Object.entries(routeKeys).map(([key, value]) => [
+      routeKeyRenames.get(key) ?? key,
+      routeKeyRenames.get(value) ?? value,
+    ])
+  );
+}
+
+function applyRouteKeyRenamesToString(
+  value: string | undefined,
+  routeKeyRenames: ReadonlyMap<string, string>
+): string | undefined {
+  if (!value || routeKeyRenames.size === 0) {
+    return value;
+  }
+
+  let normalizedValue = value;
+  for (const [routeKeyValue, normalizedRouteKeyValue] of routeKeyRenames) {
+    const escapedRouteKeyValue = escapeStringRegexp(routeKeyValue);
+
+    normalizedValue = normalizedValue
+      .replace(
+        new RegExp(`\\(\\?<${escapedRouteKeyValue}>`, 'g'),
+        `(?<${normalizedRouteKeyValue}>`
+      )
+      .replace(
+        new RegExp(`\\\\k<${escapedRouteKeyValue}>`, 'g'),
+        `\\k<${normalizedRouteKeyValue}>`
+      )
+      .replace(
+        new RegExp(`\\$${escapedRouteKeyValue}(?=[^a-zA-Z0-9_]|$)`, 'g'),
+        `$${normalizedRouteKeyValue}`
+      )
+      .replace(
+        new RegExp(`([?&])${escapedRouteKeyValue}(?==)`, 'g'),
+        `$1${normalizedRouteKeyValue}`
+      );
+  }
+
+  return normalizedValue;
+}
+
+function mergeRouteKeyRenames(
+  ...routeKeyRenamesList: ReadonlyMap<string, string>[]
+): Map<string, string> {
+  const mergedRouteKeyRenames = new Map<string, string>();
+  for (const routeKeyRenames of routeKeyRenamesList) {
+    for (const [key, value] of routeKeyRenames.entries()) {
+      mergedRouteKeyRenames.set(key, value);
+    }
+  }
+  return mergedRouteKeyRenames;
+}
+
+function normalizeRoutesManifestRouteKeys(routesManifest: RoutesManifest) {
+  for (const route of routesManifest.dynamicRoutes || []) {
+    if (!('routeKeys' in route)) {
+      continue;
+    }
+
+    const routeKeyRenames = getRouteKeyRenames(route.routeKeys);
+
+    route.routeKeys = applyRouteKeyRenamesToMap(
+      route.routeKeys,
+      routeKeyRenames
+    );
+    route.regex =
+      applyRouteKeyRenamesToString(route.regex, routeKeyRenames) || route.regex;
+    route.namedRegex =
+      applyRouteKeyRenamesToString(route.namedRegex, routeKeyRenames) ||
+      route.namedRegex;
+
+    for (const prefetchSegmentDataRoute of route.prefetchSegmentDataRoutes ||
+      []) {
+      const prefetchRouteKeyRenames = getRouteKeyRenames(
+        prefetchSegmentDataRoute.routeKeys
+      );
+      const allRouteKeyRenames = mergeRouteKeyRenames(
+        routeKeyRenames,
+        prefetchRouteKeyRenames
+      );
+
+      prefetchSegmentDataRoute.routeKeys = applyRouteKeyRenamesToMap(
+        prefetchSegmentDataRoute.routeKeys,
+        prefetchRouteKeyRenames
+      );
+      prefetchSegmentDataRoute.source =
+        applyRouteKeyRenamesToString(
+          prefetchSegmentDataRoute.source,
+          allRouteKeyRenames
+        ) || prefetchSegmentDataRoute.source;
+      prefetchSegmentDataRoute.destination =
+        applyRouteKeyRenamesToString(
+          prefetchSegmentDataRoute.destination,
+          allRouteKeyRenames
+        ) || prefetchSegmentDataRoute.destination;
+    }
+  }
+
+  for (const route of routesManifest.dataRoutes || []) {
+    const routeKeyRenames = getRouteKeyRenames(route.routeKeys);
+
+    route.routeKeys = applyRouteKeyRenamesToMap(
+      route.routeKeys,
+      routeKeyRenames
+    );
+    route.dataRouteRegex =
+      applyRouteKeyRenamesToString(route.dataRouteRegex, routeKeyRenames) ||
+      route.dataRouteRegex;
+    route.namedDataRouteRegex =
+      applyRouteKeyRenamesToString(
+        route.namedDataRouteRegex,
+        routeKeyRenames
+      ) || route.namedDataRouteRegex;
+  }
+}
+
 export async function getRoutesManifest(
   entryPath: string,
   outputDirectory: string,
@@ -413,6 +588,7 @@ export async function getRoutesManifest(
       delete route.namedRegex;
     }
   }
+  normalizeRoutesManifestRouteKeys(routesManifest);
 
   return routesManifest;
 }

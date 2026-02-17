@@ -12,6 +12,30 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     Object.assign(ctx, info);
   });
 
+  it('should cache dynamic RSC routes for catch-all params named "segments"', async () => {
+    const rscUrl = `${ctx.deploymentUrl}/catch/foobar/one?_rsc=segcache-rsc`;
+    const headers = { RSC: '1' };
+
+    let secondCacheStatus;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const first = await fetch(rscUrl, { headers });
+      expect(first.status).toBe(200);
+
+      const second = await fetch(rscUrl, { headers });
+      expect(second.status).toBe(200);
+
+      secondCacheStatus = second.headers.get('x-vercel-cache');
+      if (secondCacheStatus && secondCacheStatus !== 'MISS') {
+        return;
+      }
+
+      await setTimeout(500 * (attempt + 1));
+    }
+
+    expect(secondCacheStatus).toBeTruthy();
+    expect(secondCacheStatus).not.toBe('MISS');
+  });
+
   it('should cache prefetch segment routes for catch-all params named "segments"', async () => {
     const assertCached = async (rsc, segmentPrefetchValue) => {
       const prefetchUrl = `${ctx.deploymentUrl}/catch/foobar/one?_rsc=${rsc}`;
