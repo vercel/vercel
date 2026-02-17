@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import { TurboDryRun } from './types';
 
 const rootDir = path.join(__dirname, '..');
-const ignoredPackages = ['api', 'examples'];
+const ignoredPackages = ['api', 'evals', 'examples'];
 
 async function main() {
   const sha = await getSha();

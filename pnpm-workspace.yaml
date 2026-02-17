@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'api'
+  - 'evals'
   - 'examples'
   - 'internals/*'
   - 'python/vercel-runtime'

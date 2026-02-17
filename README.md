@@ -170,6 +170,30 @@ Sometimes you want to test changes to a Builder against an existing project, may
 
 **Note:** You will need to turn off vercel authentication in settings -> deployment protection so the builder can be downloaded
 
+## Running Evals
+
+The `evals/` directory contains an agent evaluation suite for testing AI coding agents against Vercel CLI tasks. See [`evals/README.md`](./evals/README.md) for full setup instructions.
+
+Quick start:
+
+```bash
+cd evals
+cp .env.example .env.local
+# Edit .env.local with your API keys and VERCEL_TOKEN
+```
+
+Preview what will run (no cost):
+
+```bash
+pnpm --filter evals exec npx @vercel/agent-eval vercel-cli-cc --dry
+```
+
+Run an experiment:
+
+```bash
+pnpm --filter evals exec npx @vercel/agent-eval vercel-cli-cc
+```
+
 ## Reference
 
 - [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
