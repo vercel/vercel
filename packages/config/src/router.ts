@@ -349,6 +349,8 @@ export interface Route {
    * When false, caching is disabled for this rewrite.
    */
   respectOriginCacheControl?: boolean;
+  /** An array of region identifiers to restrict which regions a serverless function can execute in */
+  allowedFunctionRegions?: string[];
 }
 
 /**
@@ -534,6 +536,8 @@ export interface RewriteRule {
    * When false, caching is disabled for this rewrite.
    */
   respectOriginCacheControl?: boolean;
+  /** An array of region identifiers to restrict which regions a serverless function can execute in */
+  allowedFunctionRegions?: string[];
 }
 
 /**
