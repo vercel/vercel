@@ -17,8 +17,9 @@ export default async function reauthenticate(
   }
 
   // Use the device code flow for all re-authentication cases.
-  // When the team has a missing scope, pass the team ID so the
-  // device flow page can require SAML before granting the token.
+  // When the team has a missing scope (SAML, MFA, etc.), pass the
+  // team ID so the device flow page can enforce the required
+  // authorization before granting the token.
   const tokens = await performDeviceCodeFlow(client, {
     teamId: error.teamId || undefined,
   });
