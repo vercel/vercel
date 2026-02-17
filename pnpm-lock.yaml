@@ -289,6 +289,9 @@ importers:
 
   packages/build-utils:
     dependencies:
+      '@vercel/frameworks':
+        specifier: workspace:*
+        version: link:../frameworks
       '@vercel/python-analysis':
         specifier: workspace:*
         version: link:../python-analysis

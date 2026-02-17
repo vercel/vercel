@@ -1,7 +1,4 @@
-import {
-  isBackendFramework,
-  isPythonFramework,
-} from '@vercel/build-utils/dist/framework-helpers';
+import { isBackendFramework, isPythonFramework } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,

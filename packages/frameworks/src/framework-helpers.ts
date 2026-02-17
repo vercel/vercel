@@ -1,5 +1,3 @@
-import { Builder } from '.';
-
 /**
  * List of backend frameworks supported by the experimental backends feature
  */
@@ -13,6 +11,10 @@ export const BACKEND_FRAMEWORKS = [
   'elysia',
 ] as const;
 
+/**
+ * List of Python frameworks (for runtime inference and experimental features).
+ * Includes FastAPI, Flask, and the generic Python preset.
+ */
 export const PYTHON_FRAMEWORKS = [
   'fastapi',
   'flask',
@@ -44,20 +46,33 @@ export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
 export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
 
 /**
- * Checks if the given framework is a backend framework
+ * Checks if the given framework is a backend framework (Node.js)
  */
 export function isBackendFramework(
   framework: string | null | undefined
 ): framework is BackendFramework {
   if (!framework) return false;
+  if (isPythonFramework(framework)) return true;
   return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
 }
 
+/**
+ * Checks if the given framework is a Python framework (FastAPI, Flask, or generic Python)
+ */
 export function isPythonFramework(
   framework: string | null | undefined
 ): framework is (typeof PYTHON_FRAMEWORKS)[number] {
   if (!framework) return false;
   return PYTHON_FRAMEWORKS.includes(framework as PythonFramework);
+}
+
+/**
+ * Checks if the given framework is either a backend framework or a Python framework
+ */
+export function isRuntimeFramework(
+  framework: string | null | undefined
+): boolean {
+  return isBackendFramework(framework) || isPythonFramework(framework);
 }
 
 // Opt builds into experimental builder, but don't introspect the app
@@ -75,7 +90,14 @@ export function isExperimentalBackendsEnabled(): boolean {
   );
 }
 
-export function isBackendBuilder(builder: Builder | null | undefined): boolean {
+/** Builder-like object with at least a `use` property (e.g. from @vercel/build-utils Builder) */
+export interface BuilderLike {
+  use?: string;
+}
+
+export function isBackendBuilder(
+  builder: BuilderLike | null | undefined
+): boolean {
   if (!builder) return false;
   if (builder.use === UNIFIED_BACKEND_BUILDER) return true;
   const use = builder.use as (typeof BACKEND_BUILDERS)[number];
