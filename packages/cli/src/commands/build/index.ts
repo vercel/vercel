@@ -620,7 +620,7 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, span);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
