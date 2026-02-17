@@ -1978,7 +1978,11 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 // installation to runtime.
 // --------------------------------------------------------------------------
 
-import { calculateBundleSize } from '../src/install';
+import {
+  calculateBundleSize,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+  LAMBDA_EPHEMERAL_STORAGE_BYTES,
+} from '../src/install';
 import {
   classifyPackages,
   generateRuntimeRequirements,
@@ -2026,6 +2030,23 @@ describe('runtime dependency installation support', () => {
       expect(size).toBe(0);
     });
   });
+
+  describe('Lambda size constants', () => {
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 249 MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
+    });
+
+    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 510 MB', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(510 * 1024 * 1024);
+    });
+
+    it('ephemeral storage limit is greater than the bundle size threshold', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
+        LAMBDA_SIZE_THRESHOLD_BYTES
+      );
+    });
+  });
+
   describe('classifyPackages', () => {
     it('classifies PyPI packages as public', () => {
       const lockContent = `
