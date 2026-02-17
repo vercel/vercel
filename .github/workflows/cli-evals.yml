@@ -31,13 +31,12 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build CLI
-        if: false  # skip for now; enable when monorepo build works in CI
+        if: false # skip for now; enable when monorepo build works in CI
         run: cd packages/cli && pnpm build
 
       - name: Run CLI evals
         run: |
-          cd packages/cli/evals
-          pnpm install --no-frozen-lockfile
-          pnpm test
+          pnpm --dir packages/cli/evals install --no-frozen-lockfile
+          pnpm --dir packages/cli/evals test
         env:
           PATH: ${{ github.workspace }}/packages/cli/dist:${{ env.PATH }}
