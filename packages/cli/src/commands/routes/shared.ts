@@ -127,7 +127,11 @@ export function formatTransform(transform: {
       ? transform.target.key
       : JSON.stringify(transform.target.key);
 
-  const parts = [chalk.gray(`[${typeLabel}]`), chalk.yellow(opLabel), chalk.cyan(key)];
+  const parts = [
+    chalk.gray(`[${typeLabel}]`),
+    chalk.yellow(opLabel),
+    chalk.cyan(key),
+  ];
 
   if (transform.args !== undefined && transform.op !== 'delete') {
     const argsStr = Array.isArray(transform.args)
