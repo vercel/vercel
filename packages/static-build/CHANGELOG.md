@@ -1,5 +1,16 @@
 # @vercel/static-build
 
+## 2.8.38
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.136
+
 ## 2.8.37
 
 ### Patch Changes

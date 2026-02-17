@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.18.0
+
+### Minor Changes
+
+- Make experimental multi-service autodetection work with SvelteKit. ([#15040](https://github.com/vercel/vercel/pull/15040))
+
 ## 3.17.1
 
 ### Patch Changes

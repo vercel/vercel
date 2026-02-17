@@ -1,5 +1,40 @@
 # vercel
 
+## 50.18.2
+
+### Patch Changes
+
+- Fix `integration add` auto-provision to exit 1 when browser fallback is triggered instead of falsely reporting success. Add `.catch()` to all `open()` calls to prevent unhandled promise rejections in headless/CI environments. ([#15048](https://github.com/vercel/vercel/pull/15048))
+
+- fix(cli): validate auto-generated resource names against product-specific rules ([#15052](https://github.com/vercel/vercel/pull/15052))
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
+- Creating an evals directory to start adding in ai evals ([#15086](https://github.com/vercel/vercel/pull/15086))
+
+- Updated dependencies [[`55f0afe883f44c25eab02a9334b2b17b6130c140`](https://github.com/vercel/vercel/commit/55f0afe883f44c25eab02a9334b2b17b6130c140), [`e7685ebeba19b30ae6549860aa8fcd07ba49a6d0`](https://github.com/vercel/vercel/commit/e7685ebeba19b30ae6549860aa8fcd07ba49a6d0), [`1a42226920e36b035b0bd19717c5691103f61199`](https://github.com/vercel/vercel/commit/1a42226920e36b035b0bd19717c5691103f61199)]:
+  - @vercel/next@4.15.29
+  - @vercel/build-utils@13.4.1
+  - @vercel/static-build@2.8.38
+  - @vercel/python@6.14.0
+  - @vercel/backends@0.0.34
+  - @vercel/elysia@0.1.37
+  - @vercel/express@0.1.46
+  - @vercel/fastify@0.1.40
+  - @vercel/go@3.4.1
+  - @vercel/h3@0.1.46
+  - @vercel/hono@0.2.40
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.20
+  - @vercel/nestjs@0.2.41
+  - @vercel/node@5.6.4
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/ruby@2.3.1
+  - @vercel/rust@1.0.5
+
 ## 50.18.1
 
 ### Patch Changes
