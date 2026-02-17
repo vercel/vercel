@@ -9,7 +9,7 @@ import { parseArguments } from '../../util/get-args';
 import { addStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
-import { isAccess } from '../../util/blob/access';
+import { parseAccessFlag } from '../../util/blob/access';
 
 export default async function addStore(
   client: Client,
@@ -37,13 +37,8 @@ export default async function addStore(
   } = parsedArgs;
 
   const accessFlag = flags['--access'];
-  const access = accessFlag ?? 'public';
-  if (!isAccess(access)) {
-    output.error(
-      `Invalid access value: '${access}'. Must be 'public' or 'private'.`
-    );
-    return 1;
-  }
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
 
   const region = flags['--region'] || 'iad1';
 
