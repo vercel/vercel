@@ -92,12 +92,22 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
  * because the token is not valid anymore.
  */
 export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
-  constructor() {
+  constructor(tokenSource?: 'flag' | 'env') {
+    let message: string;
+    if (tokenSource === 'flag') {
+      message =
+        'The token provided via `--token` argument is not valid. Please provide a valid token.';
+    } else if (tokenSource === 'env') {
+      message =
+        'The token provided via VERCEL_TOKEN environment variable is not valid. Please provide a valid token.';
+    } else {
+      message = `The specified token is not valid. Use ${getCommandName(
+        'login'
+      )} to generate a new token.`;
+    }
     super({
-      code: `NOT_AUTHORIZED`,
-      message: `The specified token is not valid. Use ${getCommandName(
-        `login`
-      )} to generate a new token.`,
+      code: 'NOT_AUTHORIZED',
+      message,
       meta: {},
     });
   }
