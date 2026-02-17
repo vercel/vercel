@@ -230,7 +230,7 @@ describe('integration-resource', () => {
         expect(jsonOutput).toEqual({
           resource,
           disconnected: true,
-          project,
+          projects: [project],
         });
       });
 

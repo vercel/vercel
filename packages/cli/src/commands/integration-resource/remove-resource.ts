@@ -93,7 +93,8 @@ export async function remove(client: Client) {
       await handleDisconnectAllProjects(
         client,
         targetedResource,
-        skipConfirmation
+        skipConfirmation,
+        asJson
       );
     } catch (error) {
       if (error instanceof CancelledError) {

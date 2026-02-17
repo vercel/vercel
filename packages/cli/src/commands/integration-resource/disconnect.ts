@@ -113,7 +113,8 @@ export async function disconnect(client: Client) {
       await handleDisconnectAllProjects(
         client,
         targetedResource,
-        !!parsedArguments.flags['--yes']
+        !!parsedArguments.flags['--yes'],
+        asJson
       );
     } catch (error) {
       if (error instanceof CancelledError) {
@@ -128,11 +129,10 @@ export async function disconnect(client: Client) {
     }
 
     if (asJson) {
-      output.stopSpinner();
       const projects =
         targetedResource.projectsMetadata?.map(project => project.name) ?? [];
       client.stdout.write(
-        `${JSON.stringify({ resource: resourceName, disconnected: true, projects }, null, 2)}\n`
+        `${JSON.stringify({ resource: targetedResource.name, disconnected: true, projects }, null, 2)}\n`
       );
     }
     return 0;
@@ -200,7 +200,7 @@ async function handleDisconnectProject(
   if (asJson) {
     output.stopSpinner();
     client.stdout.write(
-      `${JSON.stringify({ resource: resource.name, disconnected: true, project: projectName }, null, 2)}\n`
+      `${JSON.stringify({ resource: resource.name, disconnected: true, projects: [projectName] }, null, 2)}\n`
     );
     return 0;
   }
@@ -214,7 +214,8 @@ async function handleDisconnectProject(
 export async function handleDisconnectAllProjects(
   client: Client,
   resource: Resource,
-  skipConfirmation: boolean
+  skipConfirmation: boolean,
+  asJson = false
 ): Promise<void> {
   if (resource.projectsMetadata?.length === 0) {
     output.log(`${chalk.bold(resource.name)} has no projects to disconnect.`);
@@ -231,9 +232,13 @@ export async function handleDisconnectAllProjects(
   try {
     output.spinner('Disconnecting projects from resource…', 500);
     await disconnectResourceFromAllProjects(client, resource);
-    output.success(
-      `Disconnected all projects from ${chalk.bold(resource.name)}`
-    );
+    if (asJson) {
+      output.stopSpinner();
+    } else {
+      output.success(
+        `Disconnected all projects from ${chalk.bold(resource.name)}`
+      );
+    }
   } catch (error) {
     throw new FailedError(
       `A problem occurred while disconnecting all projects: ${(error as Error).message}`
