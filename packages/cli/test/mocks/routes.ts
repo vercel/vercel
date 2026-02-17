@@ -19,7 +19,20 @@ function createRoute(index: number) {
   const isRedirect = index % 3 === 1;
   const isSetStatus = index % 3 === 2;
 
-  const route: Record<string, unknown> = {
+  const route: {
+    src: string;
+    dest?: string;
+    status?: number;
+    headers?: Record<string, string>;
+    continue?: boolean;
+    transforms?: Array<{
+      type: string;
+      op: string;
+      target: { key: string };
+      args?: string;
+    }>;
+    has?: Array<{ type: string; key?: string; value?: string }>;
+  } = {
     src: `/path-${index}/(.*)`,
   };
 
@@ -64,11 +77,11 @@ function createRoute(index: number) {
     staged: index % 5 === 1, // Every 5th route (starting at 1) is staged
     srcSyntax: index % 2 === 0 ? 'regex' : 'path-to-regexp',
     route,
-    routeTypes: isSetStatus
-      ? ['set_status']
+    routeType: isSetStatus
+      ? ('set_status' as const)
       : isRedirect
-        ? ['redirect']
-        : ['rewrite'],
+        ? ('redirect' as const)
+        : ('rewrite' as const),
   };
 }
 
@@ -768,7 +781,7 @@ export function useEditRouteComprehensive() {
         missing: [{ type: 'header', key: 'X-Block' }],
         continue: true,
       },
-      routeTypes: ['rewrite', 'transform'],
+      routeType: 'rewrite',
     },
     {
       id: 'redirect-route',
@@ -782,7 +795,7 @@ export function useEditRouteComprehensive() {
         dest: '/articles',
         status: 301,
       },
-      routeTypes: ['redirect'],
+      routeType: 'redirect',
     },
     {
       id: 'status-route',
@@ -795,7 +808,7 @@ export function useEditRouteComprehensive() {
         src: '^/admin/.*$',
         status: 403,
       },
-      routeTypes: ['set_status'],
+      routeType: 'set_status',
     },
     {
       id: 'header-only-route',
@@ -811,7 +824,7 @@ export function useEditRouteComprehensive() {
         },
         continue: true,
       },
-      routeTypes: ['header'],
+      routeType: 'transform',
     },
   ];
 
