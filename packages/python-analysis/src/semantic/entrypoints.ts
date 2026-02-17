@@ -3,7 +3,7 @@
  * source code.
  */
 
-import { importWasmModule } from './load';
+import { importWasmModule } from '../wasm/load';
 
 /**
  * Check if Python source code contains or exports:

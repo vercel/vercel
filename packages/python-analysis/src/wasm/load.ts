@@ -28,7 +28,7 @@ function getWasmDir(): string {
 
 async function getCoreModule(path: string): Promise<WebAssembly.Module> {
   const wasmPath = join(getWasmDir(), path);
-  const wasmBytes = await readFile(wasmPath);
+  const wasmBytes = new Uint8Array(await readFile(wasmPath));
   return WebAssembly.compile(wasmBytes);
 }
 

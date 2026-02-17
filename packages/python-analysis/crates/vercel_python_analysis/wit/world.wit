@@ -9,4 +9,75 @@ world python-analysis {
     /// Returns true if found, false otherwise.
     /// Returns false for invalid Python syntax.
     export contains-app-or-handler: func(source: string) -> bool;
+
+    // =========================================================================
+    // Installed package distribution metadata parsing
+    // =========================================================================
+
+    /// A single entry from a RECORD file (PEP 376).
+    record record-entry {
+        path: string,
+        hash: option<string>,
+        size: option<u64>,
+    }
+
+    /// Core Metadata 2.3 fields parsed from a METADATA file.
+    record dist-metadata {
+        metadata-version: string,
+        name: string,
+        version: string,
+        summary: option<string>,
+        description: option<string>,
+        description-content-type: option<string>,
+        requires-dist: list<string>,
+        requires-python: option<string>,
+        provides-extra: list<string>,
+        author: option<string>,
+        author-email: option<string>,
+        maintainer: option<string>,
+        maintainer-email: option<string>,
+        license: option<string>,
+        license-expression: option<string>,
+        classifiers: list<string>,
+        home-page: option<string>,
+        project-urls: list<tuple<string, string>>,
+        platforms: list<string>,
+        dynamic: list<string>,
+    }
+
+    /// PEP 610 direct_url.json data.
+    variant direct-url-info {
+        local-directory(dir-url-info),
+        archive(archive-url-info),
+        vcs(vcs-url-info),
+    }
+
+    record dir-url-info {
+        url: string,
+        editable: bool,
+    }
+
+    record archive-url-info {
+        url: string,
+        hash: option<string>,
+    }
+
+    record vcs-url-info {
+        url: string,
+        vcs: string,
+        commit-id: option<string>,
+        requested-revision: option<string>,
+    }
+
+    /// Parse a METADATA file (Core Metadata 2.3) from raw bytes.
+    export parse-dist-metadata: func(content: list<u8>) -> result<dist-metadata, string>;
+
+    /// Parse a RECORD file (headerless CSV with path, hash, size columns).
+    export parse-record: func(content: string) -> result<list<record-entry>, string>;
+
+    /// Parse a direct_url.json file (PEP 610).
+    export parse-direct-url: func(content: string) -> result<direct-url-info, string>;
+
+    /// Normalize a package name per PEP 503.
+    export normalize-package-name: func(name: string) -> string;
 }

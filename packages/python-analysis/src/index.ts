@@ -14,6 +14,19 @@
 export { containsAppOrHandler } from './semantic/entrypoints';
 
 // =============================================================================
+// Installed package analysis (WASM-based .dist-info parsing)
+// =============================================================================
+
+export type {
+  Distribution,
+  DistributionIndex,
+  PackagePath,
+  DirectUrlInfo,
+} from './manifest/dist-metadata';
+
+export { scanDistributions } from './manifest/dist-metadata';
+
+// =============================================================================
 // Package discovery (runtime + types)
 // =============================================================================
 
