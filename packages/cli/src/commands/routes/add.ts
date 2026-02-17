@@ -23,7 +23,6 @@ import {
   stripQuotes,
   extractTransformFlags,
   collectHeadersAndTransforms,
-  hasAnyTransformFlags,
   validateActionFlags,
   ALL_ACTION_CHOICES,
   collectActionDetails,
@@ -200,7 +199,6 @@ export default async function add(client: Client, argv: string[]) {
     ? stripQuotes(flags['--dest'] as string)
     : undefined;
   const status = flags['--status'] as number | undefined;
-  const hasTransforms = hasAnyTransformFlags(flags);
 
   // In flag-based mode, --action is required when --dest or --status is provided
   const actionError = validateActionFlags(actionFlag, dest, status);

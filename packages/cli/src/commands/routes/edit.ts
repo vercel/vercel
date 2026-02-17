@@ -527,7 +527,7 @@ async function editConditions(
   client: Client,
   route: RoutingRule
 ): Promise<void> {
-  while (true) {
+  for (;;) {
     const hasConds = ((route.route as any).has ?? []) as Array<{
       type: string;
       key?: string;
@@ -713,7 +713,7 @@ async function editResponseHeaders(
   client: Client,
   route: RoutingRule
 ): Promise<void> {
-  while (true) {
+  for (;;) {
     const allHeaders = getAllResponseHeaders(route);
 
     if (allHeaders.length > 0) {
@@ -850,7 +850,7 @@ async function editTransformsByType(
   const itemName =
     transformType === 'request.headers' ? 'request header' : 'query parameter';
 
-  while (true) {
+  for (;;) {
     const allTransforms = ((route.route as any).transforms ??
       []) as Transform[];
     const matching = allTransforms.filter(t => t.type === transformType);
@@ -1079,7 +1079,7 @@ export default async function edit(client: Client, argv: string[]) {
     output.log(`\nEditing route "${originalRoute.name}"`);
     printRouteConfig(route);
 
-    while (true) {
+    for (;;) {
       const hasConds = ((route.route as any).has ?? []).length;
       const missingConds = ((route.route as any).missing ?? []).length;
       const responseHeaders = getAllResponseHeaders(route).length;
