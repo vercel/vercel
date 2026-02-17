@@ -16,7 +16,7 @@ vi.mock('node-fetch', async () => ({
 }));
 
 import * as fsp from 'node:fs/promises';
-import { emitFlagsDefinitions } from '../../../../src/commands/build/emit-flags-definitions';
+import { emitFlagsDatafiles } from '../../../../src/commands/build/emit-flags-datafiles';
 
 function sha256(input: string): string {
   return createHash('sha256').update(input).digest('hex');
@@ -36,12 +36,12 @@ beforeEach(() => {
   vol.reset();
 });
 
-describe('emitFlagsDefinitions', () => {
+describe('emitFlagsDatafiles', () => {
   it('should do nothing when no SDK keys are present', async () => {
     const writeFileSpy = vi.spyOn(fsp, 'writeFile');
     const mkdirSpy = vi.spyOn(fsp, 'mkdir');
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       SOME_VAR: 'hello',
     });
 
@@ -60,7 +60,7 @@ describe('emitFlagsDefinitions', () => {
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       FLAGS_SECRET: sdkKey,
     });
 
@@ -101,7 +101,7 @@ describe('emitFlagsDefinitions', () => {
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       MY_FLAG_VAR: `flags:sdkKey=${sdkKey}&other=value`,
     });
 
@@ -122,7 +122,7 @@ describe('emitFlagsDefinitions', () => {
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       VAR1: sdkKey,
       VAR2: sdkKey,
       VAR3: `flags:sdkKey=${sdkKey}`,
@@ -141,7 +141,7 @@ describe('emitFlagsDefinitions', () => {
       .mockResolvedValueOnce(mockFetchResponse(defs1))
       .mockResolvedValueOnce(mockFetchResponse(defs2));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       VAR1: key1,
       VAR2: key2,
     });
@@ -169,7 +169,7 @@ describe('emitFlagsDefinitions', () => {
       .mockResolvedValueOnce(mockFetchResponse(sameDefs))
       .mockResolvedValueOnce(mockFetchResponse(sameDefs));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       VAR1: key1,
       VAR2: key2,
     });
@@ -194,7 +194,7 @@ describe('emitFlagsDefinitions', () => {
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       SDK_KEY: sdkKey,
     });
 
@@ -230,7 +230,7 @@ describe('emitFlagsDefinitions', () => {
 
     fetch.mockResolvedValueOnce(mockFetchResponse({}));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       MY_KEY: sdkKey,
       VERCEL_PROJECT_ID: 'prj_123',
       VERCEL_ENV: 'production',
@@ -256,13 +256,13 @@ describe('emitFlagsDefinitions', () => {
 
     fetch.mockResolvedValueOnce(mockFetchResponse(null, false));
 
-    await expect(emitFlagsDefinitions('/app', { KEY: sdkKey })).rejects.toThrow(
+    await expect(emitFlagsDatafiles('/app', { KEY: sdkKey })).rejects.toThrow(
       'Failed to fetch flag definitions'
     );
   });
 
   it('should ignore env vars that do not contain SDK keys', async () => {
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       HOME: '/home/user',
       PATH: '/usr/bin',
       NODE_ENV: 'production',
@@ -276,7 +276,7 @@ describe('emitFlagsDefinitions', () => {
   it('should write version field in the generated module', async () => {
     fetch.mockResolvedValueOnce(mockFetchResponse({}));
 
-    await emitFlagsDefinitions('/app', {
+    await emitFlagsDatafiles('/app', {
       KEY: 'vf_version_test',
     });
 

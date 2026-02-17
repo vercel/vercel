@@ -520,8 +520,8 @@ async function doBuild(
   }
 
   if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
-    const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
-    await emitFlagsDefinitions(cwd, process.env);
+    const { emitFlagsDatafiles } = await import('./emit-flags-datafiles');
+    await emitFlagsDatafiles(cwd, process.env);
   }
 
   // Get a list of source files

@@ -103,7 +103,7 @@ function generateDefinitionsModule(
  * from flags.vercel.com, and writes them to a synthetic package that can be
  * imported at runtime.
  */
-export async function emitFlagsDefinitions(
+export async function emitFlagsDatafiles(
   cwd: string,
   env: NodeJS.ProcessEnv
 ): Promise<void> {
