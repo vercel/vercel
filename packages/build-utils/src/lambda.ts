@@ -565,12 +565,8 @@ export async function getLambdaOptionsFromFunction({
           memory: fn.memory,
           maxDuration: fn.maxDuration,
           regions: fn.regions,
-<<<<<<< feat/function-level-failover-regions
           functionFailoverRegions: fn.functionFailoverRegions,
-          experimentalTriggers: fn.experimentalTriggers,
-=======
           experimentalTriggers,
->>>>>>> main
           supportsCancellation: fn.supportsCancellation,
         };
       }
