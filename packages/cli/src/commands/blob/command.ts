@@ -1,3 +1,13 @@
+const accessOption = {
+  name: 'access',
+  shorthand: 'a',
+  type: String,
+  deprecated: false,
+  description: 'Access level for the blob: public or private (default: public)',
+  argument: 'String',
+  choices: ['public', 'private'],
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -54,16 +64,7 @@ export const putSubcommand = {
     },
   ],
   options: [
-    {
-      name: 'access',
-      shorthand: 'a',
-      type: String,
-      deprecated: false,
-      description:
-        'Access level for the blob: public or private (default: public)',
-      argument: 'String',
-      choices: ['public', 'private'],
-    },
+    accessOption,
     {
       name: 'add-random-suffix',
       shorthand: 'r',
@@ -148,16 +149,7 @@ export const copySubcommand = {
     },
   ],
   options: [
-    {
-      name: 'access',
-      shorthand: 'a',
-      type: String,
-      deprecated: false,
-      description:
-        'Access level for the blob: public or private (default: public)',
-      argument: 'String',
-      choices: ['public', 'private'],
-    },
+    accessOption,
     {
       name: 'add-random-suffix',
       shorthand: 'r',
@@ -199,16 +191,7 @@ export const getSubcommand = {
     },
   ],
   options: [
-    {
-      name: 'access',
-      shorthand: 'a',
-      type: String,
-      deprecated: false,
-      description:
-        'Access level for the blob: public or private (default: public)',
-      argument: 'String',
-      choices: ['public', 'private'],
-    },
+    accessOption,
     {
       name: 'output',
       shorthand: 'o',
@@ -232,16 +215,7 @@ export const addStoreSubcommand = {
     },
   ],
   options: [
-    {
-      name: 'access',
-      shorthand: 'a',
-      type: String,
-      deprecated: false,
-      description:
-        'Access level for the Blob store: public or private (default: public)',
-      argument: 'String',
-      choices: ['public', 'private'],
-    },
+    accessOption,
     {
       name: 'region',
       shorthand: 'r',

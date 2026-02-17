@@ -329,6 +329,33 @@ describe('blob put', () => {
       );
     });
 
+    it('should handle --access private option', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'private', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ access: 'private' })
+      );
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:pathToFile',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'private',
+        },
+      ]);
+    });
+
     it('should handle --multipart flag (enabled by default)', async () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(client, ['--multipart', testFile], testToken);

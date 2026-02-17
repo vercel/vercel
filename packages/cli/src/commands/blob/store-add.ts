@@ -73,7 +73,11 @@ export default async function addStore(
 
     output.spinner('Creating new blob store');
 
-    const requestBody: { name: string; region: string; access: string } = {
+    const requestBody: {
+      name: string;
+      region: string;
+      access: 'public' | 'private';
+    } = {
       name,
       region,
       access,
