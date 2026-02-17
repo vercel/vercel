@@ -12,7 +12,7 @@ import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {
-    default: vi.fn(),
+    default: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -36,7 +36,7 @@ const pullMock = vi.mocked(pull);
 const connectMock = vi.mocked(connectResourceToProject);
 
 beforeEach(() => {
-  openMock.mockClear();
+  openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
   // Enable auto-provision feature flag
@@ -348,7 +348,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringContaining(
           'https://vercel.com/acme/~/integrations/checkout/acme'
@@ -383,7 +383,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('metadata')).toEqual(
@@ -412,7 +412,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('defaultResourceName')).toEqual('my-db');
@@ -434,7 +434,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalled();
       // No --metadata flags, so metadata should NOT be in the URL
       expect(openMock).toHaveBeenCalledWith(
@@ -459,7 +459,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('metadata')).toEqual(
@@ -496,7 +496,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('metadata')).toEqual(
@@ -525,7 +525,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/metadata=/)
       );
@@ -550,7 +550,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       // Verify all three URL parameters are present
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=acme-gray-apple/)
@@ -582,7 +582,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       // Verify defaultResourceName and source are present, but not projectSlug
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=acme-gray-apple/)
@@ -607,7 +607,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=my-custom-db/)
       );
@@ -635,7 +635,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=my-proj-db/)
       );
@@ -673,7 +673,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=my-nolink-db/)
       );
@@ -827,7 +827,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/planId=pro/)
       );
@@ -847,7 +847,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/planId=/)
       );

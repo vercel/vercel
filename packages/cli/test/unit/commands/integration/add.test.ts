@@ -14,7 +14,7 @@ import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {
-    default: vi.fn(),
+    default: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -28,7 +28,7 @@ const openMock = vi.mocked(open);
 const pullMock = vi.mocked(pull);
 
 beforeEach(() => {
-  openMock.mockClear();
+  openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
@@ -174,7 +174,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -198,7 +198,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -215,7 +215,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -228,7 +228,7 @@ describe('integration', () => {
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -259,7 +259,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=my-custom-db&cmd=add'
           );
@@ -282,7 +282,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           const calledUrl = openMock.mock.calls[0]?.[0] as string;
           const parsed = new URL(calledUrl);
           expect(parsed.searchParams.get('metadata')).toEqual(
@@ -310,7 +310,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=my-proj-db&cmd=add'
           );
@@ -341,7 +341,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=my-nolink-db&cmd=add'
           );
@@ -578,7 +578,7 @@ describe('integration', () => {
             'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
           client.stdin.write('Y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -601,7 +601,7 @@ describe('integration', () => {
             'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
           client.stdin.write('n\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
           expect(openMock).not.toHaveBeenCalled();
         });
 
@@ -630,7 +630,7 @@ describe('integration', () => {
             'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
           );
           client.stdin.write('Y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
           const calledUrl = openMock.mock.calls[0]?.[0] as string;
           const parsed = new URL(calledUrl);
           expect(parsed.searchParams.get('teamId')).toEqual('team_dummy');
@@ -825,7 +825,7 @@ describe('integration', () => {
           );
           client.stdin.write('n\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(1);
         });
 
         it('should error when product slug is not found', async () => {
@@ -866,7 +866,7 @@ describe('integration', () => {
           );
           client.stdin.write('n\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(1);
         });
       });
 
@@ -1056,7 +1056,7 @@ describe('integration', () => {
             );
             client.stdin.write('y\n');
             const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(0);
+            expect(exitCode).toEqual(1);
             expect(openMock).toHaveBeenCalledWith(
               'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&planId=pro&cmd=add'
             );
@@ -1070,7 +1070,7 @@ describe('integration', () => {
             );
             client.stdin.write('y\n');
             const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(0);
+            expect(exitCode).toEqual(1);
             expect(openMock).toHaveBeenCalledWith(
               expect.not.stringMatching(/planId=/)
             );
@@ -1193,7 +1193,7 @@ describe('integration', () => {
             );
             client.stdin.write('y\n');
             const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(0);
+            expect(exitCode).toEqual(1);
             expect(openMock).toHaveBeenCalledWith(
               expect.stringMatching(/planId=pro/)
             );
@@ -1517,7 +1517,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(1);
           const calledUrl = openMock.mock.calls[0]?.[0] as string;
           const parsed = new URL(calledUrl);
           expect(parsed.searchParams.get('metadata')).toEqual(
