@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const addSubcommand = {
@@ -20,6 +20,38 @@ export const addSubcommand = {
       type: String,
       deprecated: false,
       argument: 'NAME',
+    },
+    {
+      name: 'metadata',
+      description:
+        'Metadata for the resource as KEY=VALUE (can be repeated). Run `vercel integration add <name> --help` to see available keys.',
+      shorthand: 'm',
+      type: [String],
+      deprecated: false,
+      argument: 'KEY=VALUE',
+    },
+    {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      argument: 'PLAN_ID',
+      description: 'Billing plan ID to use for the resource',
+    },
+    {
+      name: 'no-connect',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Skip connecting the resource to the current project (also skips env pull)',
+    },
+    {
+      name: 'no-env-pull',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Skip running env pull after provisioning',
     },
   ],
   examples: [
@@ -45,8 +77,28 @@ export const addSubcommand = {
       ],
     },
     {
+      name: 'Install with metadata options',
+      value: [
+        `${packageName} integration add acme --metadata region=us-east-1`,
+        `${packageName} integration add acme -m region=us-east-1 -m version=16`,
+        `${packageName} integration add acme -m auth=true`,
+        `${packageName} integration add acme -m "readRegions=sfo1,iad1"`,
+      ],
+    },
+    {
+      name: 'Install with a specific billing plan',
+      value: [
+        `${packageName} integration add acme --plan pro`,
+        `${packageName} integration add acme -p pro`,
+      ],
+    },
+    {
       name: 'Show available products for an integration',
       value: `${packageName} integration add acme --help`,
+    },
+    {
+      name: 'Discover available marketplace products and their slugs',
+      value: `${packageName} integration discover`,
     },
   ],
 } as const;
@@ -76,7 +128,8 @@ export const openSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'Lists all resources from marketplace integrations',
+  description:
+    'List resources from marketplace integrations for the current project',
   arguments: [
     {
       name: 'project',
@@ -99,11 +152,12 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
     },
+    formatOption,
   ],
   examples: [
     {
-      name: 'List all resources',
-      value: [`${packageName} integrations list`],
+      name: 'List resources for the current linked project',
+      value: [`${packageName} integration list`],
     },
     {
       name: 'Filter the resources to a single integration',
@@ -119,6 +173,28 @@ export const listSubcommand = {
         `${packageName} integration list --all`,
         `${packageName} integration list -a`,
       ],
+    },
+    {
+      name: 'List resources as JSON',
+      value: [`${packageName} integration list --format=json`],
+    },
+  ],
+} as const;
+
+export const discoverSubcommand = {
+  name: 'discover',
+  aliases: [],
+  description: 'Discover available marketplace integrations',
+  arguments: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Discover marketplace integrations',
+      value: [`${packageName} integration discover`],
+    },
+    {
+      name: 'Discover marketplace integrations as JSON',
+      value: [`${packageName} integration discover --json`],
     },
   ],
 } as const;
@@ -184,6 +260,7 @@ export const integrationCommand = {
     addSubcommand,
     balanceSubcommand,
     listSubcommand,
+    discoverSubcommand,
     openSubcommand,
     removeSubcommand,
   ],

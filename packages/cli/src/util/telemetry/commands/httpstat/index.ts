@@ -42,4 +42,10 @@ export class HttpstatTelemetryClient
       });
     }
   }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
 }

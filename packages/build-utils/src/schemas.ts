@@ -1,4 +1,4 @@
-const triggerEventSchema = {
+const triggerEventSchemaV1 = {
   type: 'object',
   properties: {
     type: {
@@ -32,6 +32,42 @@ const triggerEventSchema = {
   },
   required: ['type', 'topic', 'consumer'],
   additionalProperties: false,
+};
+
+const triggerEventSchemaV2 = {
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      const: 'queue/v2beta',
+    },
+    topic: {
+      type: 'string',
+      minLength: 1,
+    },
+    maxDeliveries: {
+      type: 'number',
+      minimum: 1,
+    },
+    retryAfterSeconds: {
+      type: 'number',
+      exclusiveMinimum: 0,
+    },
+    initialDelaySeconds: {
+      type: 'number',
+      minimum: 0,
+    },
+    maxConcurrency: {
+      type: 'number',
+      minimum: 1,
+    },
+  },
+  required: ['type', 'topic'],
+  additionalProperties: false,
+};
+
+const triggerEventSchema = {
+  oneOf: [triggerEventSchemaV1, triggerEventSchemaV2],
 };
 
 export const functionsSchema = {

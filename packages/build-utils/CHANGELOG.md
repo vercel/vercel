@@ -1,5 +1,39 @@
 # @vercel/build-utils
 
+## 13.4.0
+
+### Minor Changes
+
+- [services] synchronize dependencies in dev mode for JS/TS and Python services ([#14987](https://github.com/vercel/vercel/pull/14987))
+
+- [services] inject service URLs into web services as local paths ([#15024](https://github.com/vercel/vercel/pull/15024))
+
+### Patch Changes
+
+- Add new expirementalTrigger format for queues v2beta ([#14970](https://github.com/vercel/vercel/pull/14970))
+
+- Updated dependencies [[`a960cf23a42ff1a570c808ee9567670c24422f98`](https://github.com/vercel/vercel/commit/a960cf23a42ff1a570c808ee9567670c24422f98)]:
+  - @vercel/python-analysis@0.4.1
+
+## 13.3.5
+
+### Patch Changes
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 13.3.4
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+- [services] set framework prefixed env var urls to relative path ([#14958](https://github.com/vercel/vercel/pull/14958))
+
 ## 13.3.3
 
 ### Patch Changes

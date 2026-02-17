@@ -1460,7 +1460,7 @@ describe('.python-version file priority', () => {
     );
   });
 
-  it('warns and falls back to default when .python-version has invalid content', async () => {
+  it('throws error when .python-version has invalid content', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       '.python-version': new FileBlob({ data: 'invalid-version\n' }),
@@ -1469,24 +1469,17 @@ describe('.python-version file priority', () => {
       }),
     } as Record<string, FileBlob>;
 
-    await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'handler.py',
-      meta: { isDev: false },
-      config: {},
-      repoRootPath: mockWorkPath,
-    });
-
-    // Should warn about invalid .python-version and fall back to default
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Warning: Python version "invalid-version" detected in .python-version is invalid'
-      )
-    );
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using python version: 3.12')
-    );
+    // Should throw an error about invalid .python-version content
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow('could not parse .python-version file');
   });
 });
 
@@ -1973,6 +1966,199 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
+    });
+  });
+});
+
+// --------------------------------------------------------------------------
+// Runtime Dependency Installation Tests
+// --------------------------------------------------------------------------
+// These tests cover the new functionality for handling Python Lambda functions
+// that exceed the 250MB uncompressed size limit by deferring public dependency
+// installation to runtime.
+// --------------------------------------------------------------------------
+
+import { calculateBundleSize } from '../src/install';
+import {
+  classifyPackages,
+  generateRuntimeRequirements,
+  parseUvLock,
+} from '@vercel/python-analysis';
+import { FileFsRef } from '@vercel/build-utils';
+
+describe('runtime dependency installation support', () => {
+  describe('calculateBundleSize', () => {
+    it('calculates size from FileFsRef objects', async () => {
+      const tempDir = path.join(tmpdir(), `size-test-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Create test files with known sizes
+      const file1Path = path.join(tempDir, 'file1.txt');
+      const file2Path = path.join(tempDir, 'file2.txt');
+      fs.writeFileSync(file1Path, 'a'.repeat(100)); // 100 bytes
+      fs.writeFileSync(file2Path, 'b'.repeat(200)); // 200 bytes
+
+      const files = {
+        'file1.txt': new FileFsRef({ fsPath: file1Path }),
+        'file2.txt': new FileFsRef({ fsPath: file2Path }),
+      };
+
+      try {
+        const size = await calculateBundleSize(files);
+        expect(size).toBe(300);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('calculates size from FileBlob objects', async () => {
+      const files = {
+        'file1.txt': new FileBlob({ data: 'a'.repeat(100) }),
+        'file2.txt': new FileBlob({ data: Buffer.from('b'.repeat(200)) }),
+      };
+
+      const size = await calculateBundleSize(files);
+      expect(size).toBe(300);
+    });
+
+    it('returns 0 for empty files object', async () => {
+      const size = await calculateBundleSize({});
+      expect(size).toBe(0);
+    });
+  });
+  describe('classifyPackages', () => {
+    it('classifies PyPI packages as public', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.publicPackages).toContain('requests');
+      expect(result.privatePackages).not.toContain('requests');
+      expect(result.packageVersions['requests']).toBe('2.31.0');
+    });
+
+    it('classifies git source packages as private', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-private-pkg"
+version = "1.0.0"
+
+[package.source]
+git = "https://github.com/myorg/private-pkg.git"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('my-private-pkg');
+      expect(result.publicPackages).not.toContain('my-private-pkg');
+    });
+
+    it('classifies path source packages as private', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "local-pkg"
+version = "0.1.0"
+
+[package.source]
+path = "./packages/local-pkg"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('local-pkg');
+      expect(result.publicPackages).not.toContain('local-pkg');
+    });
+
+    it('classifies non-PyPI registry packages as private', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "internal-pkg"
+version = "1.0.0"
+
+[package.source]
+registry = "https://private.pypi.mycompany.com/simple"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toContain('internal-pkg');
+      expect(result.publicPackages).not.toContain('internal-pkg');
+    });
+
+    it('returns empty classification for empty lock file', () => {
+      const lockFile = { packages: [] };
+      const result = classifyPackages({ lockFile });
+      expect(result.privatePackages).toHaveLength(0);
+      expect(result.publicPackages).toHaveLength(0);
+    });
+
+    it('excludes specified packages from classification', () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = classifyPackages({
+        lockFile,
+        excludePackages: ['my-app'],
+      });
+      // my-app should be excluded entirely
+      expect(result.publicPackages).not.toContain('my-app');
+      expect(result.privatePackages).not.toContain('my-app');
+      expect(result.packageVersions['my-app']).toBeUndefined();
+      // requests should still be classified
+      expect(result.publicPackages).toContain('requests');
+    });
+  });
+
+  describe('generateRuntimeRequirements', () => {
+    it('generates requirements file content with versions', () => {
+      const classification = {
+        privatePackages: ['private-pkg'],
+        publicPackages: ['requests', 'flask'],
+        packageVersions: {
+          'private-pkg': '1.0.0',
+          requests: '2.31.0',
+          flask: '3.0.0',
+        },
+      };
+
+      const content = generateRuntimeRequirements(classification);
+      expect(content).toContain('requests==2.31.0');
+      expect(content).toContain('flask==3.0.0');
+      expect(content).not.toContain('private-pkg');
+    });
+
+    it('generates empty requirements for no public packages', () => {
+      const classification = {
+        privatePackages: ['private-pkg'],
+        publicPackages: [],
+        packageVersions: { 'private-pkg': '1.0.0' },
+      };
+
+      const content = generateRuntimeRequirements(classification);
+      expect(content).toContain('# Auto-generated');
+      expect(content).not.toContain('==');
     });
   });
 });

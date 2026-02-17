@@ -25,6 +25,7 @@ export default async function httpstat(client: Client): Promise<number> {
   const result = await getDeploymentUrlAndToken(client, 'httpstat', path, {
     deploymentFlag,
     protectionBypassFlag,
+    autoConfirm: setup.yes,
   });
 
   if (typeof result === 'number') {

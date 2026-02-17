@@ -42,6 +42,11 @@ export interface VercelClientOptions {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
+  /**
+   * When true, creates an experimental manual deployment. This mode requires
+   * that the user later continues the deployment with an API call.
+   */
+  manual?: boolean;
 }
 
 /** @deprecated Use VercelClientOptions instead. */

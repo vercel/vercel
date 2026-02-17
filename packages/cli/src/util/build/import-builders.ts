@@ -1,28 +1,37 @@
-import { URL } from 'url';
-import plural from 'pluralize';
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
-import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
+import { readJSON } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import type { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
-import execa from 'execa';
+import type {
+  BuilderV2,
+  BuilderV3,
+  PackageJson,
+  Span,
+} from '@vercel/build-utils';
 import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
-import readJSONFile from '../read-json-file';
-import { CantParseJSONFile } from '../errors-ts';
-import { isErrnoException, isError } from '@vercel/error-utils';
-import cmd from '../output/cmd';
-import code from '../output/code';
-import type { Writable } from 'stream';
+import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
+import { installBuilders, untracedInstallBuilders } from './install-builders';
 
 export interface BuilderWithPkg {
+  /**
+   * the absolute path to the entrypoint for this builder (e.g. dist/index.js)
+   */
   path: string;
+  /**
+   * absolute path to the package.json of the builder
+   */
   pkgPath: string;
   builder: BuilderV2 | BuilderV3;
   pkg: PackageJson & { name: string };
+  /**
+   * true if the builder was installed into `.vercel/builders` (e.g. via npm);
+   * false if resolved from CLI dependencies or built-in (e.g. @vercel/static).
+   */
+  dynamicallyInstalled: boolean;
 }
 
 type ResolveBuildersResult =
@@ -38,22 +47,23 @@ const require_ = createRequire(__filename);
  */
 export async function importBuilders(
   builderSpecs: Set<string>,
-  cwd: string
+  cwd: string,
+  span?: Span
 ): Promise<Map<string, BuilderWithPkg>> {
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
 
   let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
   if ('buildersToAdd' in importResult) {
-    const installResult = await installBuilders(
-      buildersDir,
-      importResult.buildersToAdd
-    );
+    const { buildersToAdd } = importResult;
+    const installResult = span
+      ? await installBuilders(buildersDir, buildersToAdd, span)
+      : await untracedInstallBuilders(buildersDir, buildersToAdd);
 
     importResult = await resolveBuilders(
       buildersDir,
       builderSpecs,
-      installResult.resolvedSpecs
+      installResult
     );
 
     if ('buildersToAdd' in importResult) {
@@ -61,6 +71,13 @@ export async function importBuilders(
     }
   }
 
+  // Figure out what
+  const resolvedBuildersDebug = [];
+  for (const [spec, builderSpec] of importResult.builders) {
+    resolvedBuildersDebug.push(`${spec} => ${builderSpec.pkg.version}`);
+  }
+
+  output.debug(`Resolved builders: "${resolvedBuildersDebug.join(', ')}"`);
   return importResult.builders;
 }
 
@@ -91,6 +108,7 @@ export async function resolveBuilders(
         pkg: { name },
         path: '',
         pkgPath: '',
+        dynamicallyInstalled: false,
       });
       continue;
     }
@@ -155,10 +173,11 @@ export async function resolveBuilders(
       }
 
       // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
-
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
       const builder = require_(path);
+
+      const dynamicallyInstalled = pkgPath.startsWith(buildersDir);
 
       builders.set(spec, {
         builder,
@@ -168,6 +187,7 @@ export async function resolveBuilders(
         },
         path,
         pkgPath,
+        dynamicallyInstalled,
       });
       output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
     } catch (err: any) {
@@ -190,117 +210,4 @@ export async function resolveBuilders(
   }
 
   return { builders };
-}
-
-async function installBuilders(
-  buildersDir: string,
-  buildersToAdd: Set<string>
-) {
-  const resolvedSpecs = new Map<string, string>();
-  const buildersPkgPath = join(buildersDir, 'package.json');
-  try {
-    const emptyPkgJson = {
-      private: true,
-      license: 'UNLICENSED',
-    };
-    await outputJSON(buildersPkgPath, emptyPkgJson, {
-      flag: 'wx',
-    });
-  } catch (err: any) {
-    if (err.code !== 'EEXIST') throw err;
-  }
-
-  output.log(
-    `Installing ${plural('Builder', buildersToAdd.size)}: ${Array.from(
-      buildersToAdd
-    ).join(', ')}`
-  );
-  try {
-    const { stderr } = await execa(
-      'npm',
-      ['install', '@vercel/build-utils', ...buildersToAdd],
-      {
-        cwd: buildersDir,
-        stdio: 'pipe',
-        reject: true,
-      }
-    );
-    stderr
-      .split('/\r?\n/')
-      .filter(line => line.includes('npm WARN deprecated'))
-      .forEach(line => {
-        output.warn(line);
-      });
-  } catch (err: unknown) {
-    if (isError(err)) {
-      const execaMessage = err.message;
-      let message = getErrorMessage(err, execaMessage);
-      if (execaMessage.startsWith('Command failed with ENOENT')) {
-        // `npm` is not installed
-        message = `Please install ${cmd('npm')} before continuing`;
-      } else {
-        const notFound = /GET (.*) - Not found/.exec(message);
-        if (notFound) {
-          const url = new URL(notFound[1]);
-          const packageName = decodeURIComponent(url.pathname.slice(1));
-          message = `The package ${code(
-            packageName
-          )} is not published on the npm registry`;
-        }
-      }
-      err.message = message;
-      (err as any).link =
-        'https://vercel.link/builder-dependencies-install-failed';
-    }
-    throw err;
-  }
-
-  // Symlink `@now/build-utils` -> `@vercel/build-utils` to support legacy Builders
-  const nowScopePath = join(buildersDir, 'node_modules/@now');
-  await mkdirp(nowScopePath);
-
-  try {
-    await symlink('../@vercel/build-utils', join(nowScopePath, 'build-utils'));
-  } catch (err: unknown) {
-    if (!isErrnoException(err) || err.code !== 'EEXIST') {
-      // Throw unless the error is due to the symlink already existing
-      throw err;
-    }
-  }
-
-  // Cross-reference any builderSpecs from the saved `package.json` file,
-  // in case they were installed from a URL
-  const buildersPkg = await readJSONFile<PackageJson>(buildersPkgPath);
-  if (buildersPkg instanceof CantParseJSONFile) throw buildersPkg;
-  if (!buildersPkg) {
-    throw new Error(`Failed to load "${buildersPkgPath}"`);
-  }
-  for (const spec of buildersToAdd) {
-    for (const [name, version] of Object.entries(
-      buildersPkg.dependencies || {}
-    )) {
-      if (version === spec) {
-        output.debug(`Resolved Builder spec "${spec}" to name "${name}"`);
-        resolvedSpecs.set(spec, name);
-      }
-    }
-  }
-
-  return { resolvedSpecs };
-}
-
-type BonusError = Error & {
-  stderr?: string | Writable;
-};
-
-function getErrorMessage(err: BonusError, execaMessage: string) {
-  if (!err || !('stderr' in err)) {
-    return execaMessage;
-  }
-
-  if (typeof err.stderr === 'string') {
-    return err.stderr;
-  }
-
-  return execaMessage;
 }

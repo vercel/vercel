@@ -30,7 +30,9 @@ import {
   type TriggerEvent,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
+  type Service,
 } from '@vercel/build-utils';
+import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
@@ -68,6 +70,7 @@ export async function writeBuildResult(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
+  service?: Service;
 }) {
   const {
     repoRootPath,
@@ -79,6 +82,7 @@ export async function writeBuildResult(args: {
     vercelConfig,
     standalone,
     workPath,
+    service,
   } = args;
   const version = builder.version;
   if (typeof version !== 'number' || version === 2) {
@@ -90,6 +94,7 @@ export async function writeBuildResult(args: {
       vercelConfig,
       standalone,
       workPath,
+      service,
     });
   } else if (version === 3) {
     return writeBuildResultV3({
@@ -100,6 +105,7 @@ export async function writeBuildResult(args: {
       vercelConfig,
       standalone,
       workPath,
+      service,
     });
   }
   throw new Error(
@@ -148,6 +154,7 @@ async function writeBuildResultV2(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
+  service?: Service;
 }) {
   const {
     repoRootPath,
@@ -290,6 +297,7 @@ async function writeBuildResultV3(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
+  service?: Service;
 }) {
   const {
     repoRootPath,
@@ -299,6 +307,7 @@ async function writeBuildResultV3(args: {
     vercelConfig,
     standalone,
     workPath,
+    service,
   } = args;
   const { output } = buildResult;
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
@@ -370,9 +379,14 @@ async function writeBuildResultV3(args: {
     : {};
 
   const ext = extname(src);
-  const path = stripDuplicateSlashes(
-    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
-  );
+  const path =
+    service?.type === 'web' && typeof service.runtime === 'string'
+      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+      : stripDuplicateSlashes(
+          build.config?.zeroConfig
+            ? src.substring(0, src.length - ext.length)
+            : src
+        );
   if (isLambda(output)) {
     await writeLambda(
       repoRootPath,

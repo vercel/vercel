@@ -99,6 +99,41 @@ async function main() {
     await fs.copyFile(srcTarballPath, destTarballPath);
   }
 
+  // Copy Python wheels to tarballs, preserving the original filename
+  // (uv requires valid wheel tags in the filename for URL installs).
+  // Write a well-known sidecar .json with full .whl name.
+  const pythonDir = join(repoRoot, 'python');
+  try {
+    const pythonPackages = await fs.readdir(pythonDir, { withFileTypes: true });
+    for (const entry of pythonPackages) {
+      if (!entry.isDirectory()) continue;
+      const distDir = join(pythonDir, entry.name, 'dist');
+      let distFiles: string[];
+      try {
+        distFiles = await fs.readdir(distDir);
+      } catch {
+        continue;
+      }
+      // Wheels sort lexicographically by version; pick the latest.
+      const wheelFiles = distFiles.filter(f => f.endsWith('.whl')).sort();
+      const wheelFile = wheelFiles.at(-1);
+      if (wheelFile) {
+        await fs.mkdir(tarballsDir, { recursive: true });
+        await fs.copyFile(
+          join(distDir, wheelFile),
+          join(tarballsDir, wheelFile)
+        );
+        await fs.writeFile(
+          join(tarballsDir, `${entry.name}-wheel.json`),
+          JSON.stringify({ filename: wheelFile })
+        );
+        console.log(`Copied Python wheel ${wheelFile} to tarballs/`);
+      }
+    }
+  } catch {
+    console.log('No Python packages found - skipping wheel copy');
+  }
+
   // Create (ungzipped) tarballs of the examples / templates
   const examplesOutputDir = join(pubDir, 'api/examples/download');
   await fs.mkdir(examplesOutputDir, { recursive: true });

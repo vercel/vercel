@@ -27,7 +27,19 @@ const VERCEL_DIR = '.vercel';
 const VERCEL_DIR_MICROFRONTENDS = 'microfrontends.json';
 
 export default async function pull(client: Client): Promise<number> {
-  const link = await ensureLink('microfrontends', client, client.cwd);
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(pullSubcommand.options);
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
+  const autoConfirm = !!parsedArgs.flags['--yes'];
+  const link = await ensureLink('microfrontends', client, client.cwd, {
+    autoConfirm,
+  });
   if (typeof link === 'number') {
     return link;
   }
@@ -47,15 +59,6 @@ export default async function pull(client: Client): Promise<number> {
   output.spinner(
     `Fetching microfrontends configuration in ${chalk.bold(contextName)}`
   );
-
-  let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(pullSubcommand.options);
-  try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (error) {
-    printError(error);
-    return 1;
-  }
 
   let rawConfig: MicrofrontendsConfig;
   const dpl = parsedArgs.flags['--dpl'];

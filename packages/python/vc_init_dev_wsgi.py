@@ -112,7 +112,7 @@ if __name__ == "__main__":
     host = "127.0.0.1"
     try:
         from werkzeug.serving import run_simple
-        run_simple(host, 0, app, use_reloader=False)
+        run_simple(host, 0, app, use_reloader=True)
     except Exception:
         import sys
         print(_color("Werkzeug not installed; falling back to wsgiref (no reloader).", _YELLOW), file=sys.stderr)

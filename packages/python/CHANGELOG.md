@@ -1,5 +1,53 @@
 # @vercel/python
 
+## 6.13.0
+
+### Minor Changes
+
+- Add runtime dependency install to support larger Python functions ([#14976](https://github.com/vercel/vercel/pull/14976))
+
+  This adds logic to calculate the total size of a lambda at build time and offload dependencies
+  to a \_runtime_requirements.txt file so they can be installed at runtime by uv. This allows us to
+  deploy functions up to the total size of the /tmp folder.
+
+## 6.12.0
+
+### Minor Changes
+
+- [services] synchronize dependencies in dev mode for JS/TS and Python services ([#14987](https://github.com/vercel/vercel/pull/14987))
+
+### Patch Changes
+
+- log contents of malformed manifests ([#15019](https://github.com/vercel/vercel/pull/15019))
+
+- Updated dependencies [[`a960cf23a42ff1a570c808ee9567670c24422f98`](https://github.com/vercel/vercel/commit/a960cf23a42ff1a570c808ee9567670c24422f98)]:
+  - @vercel/python-analysis@0.4.1
+
+## 6.11.1
+
+### Patch Changes
+
+- [python] preserve error code on uv error ([#14990](https://github.com/vercel/vercel/pull/14990))
+
+## 6.11.0
+
+### Minor Changes
+
+- Use python-analysis for manifest detection and conversion ([#14956](https://github.com/vercel/vercel/pull/14956))
+
+- [services] detect and manage virtual environments for Python services ([#14952](https://github.com/vercel/vercel/pull/14952))
+
+### Patch Changes
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 6.10.0
+
+### Minor Changes
+
+- [python] prefer `fastapi dev` to start ASGI application if FastAPI CLI is available and monitor module changes ([#14861](https://github.com/vercel/vercel/pull/14861))
+
 ## 6.9.0
 
 ### Minor Changes
