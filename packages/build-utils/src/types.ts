@@ -416,6 +416,7 @@ export interface BuilderFunctions {
     memory?: number;
     maxDuration?: number;
     regions?: string[];
+    functionFailoverRegions?: string[];
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;

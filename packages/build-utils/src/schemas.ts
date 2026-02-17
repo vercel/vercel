@@ -103,6 +103,12 @@ export const functionsSchema = {
             type: 'string',
           },
         },
+        functionFailoverRegions: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
         includeFiles: {
           type: 'string',
           maxLength: 256,

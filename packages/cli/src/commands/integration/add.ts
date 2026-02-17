@@ -237,7 +237,7 @@ export async function add(
       );
     }
 
-    return 0;
+    return 1;
   }
 
   return await provisionResourceViaCLI(
@@ -284,7 +284,9 @@ function provisionResourceViaWebUI(
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   output.debug(`Opening URL: ${url.href}`);
-  open(url.href);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
 }
 
 async function provisionResourceViaCLI(
@@ -401,7 +403,7 @@ async function provisionResourceViaCLI(
       );
     }
 
-    return 0;
+    return 1;
   }
 
   const confirmed = await confirmProductSelection(
@@ -618,7 +620,9 @@ function handleManualVerificationAction(
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   output.debug(`Opening URL: ${url.href}`);
-  open(url.href);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
 }
 
 async function provisionStorageProduct(
