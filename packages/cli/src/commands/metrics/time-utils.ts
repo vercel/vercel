@@ -100,6 +100,14 @@ function getMinGranularity(rangeMs: number): string {
   return FALLBACK_GRANULARITY;
 }
 
+/**
+ * Determines the query granularity (time bucket size).
+ * - If no explicit value is provided, auto-selects based on the time range
+ *   (e.g. 1m for ≤1h, 1h for ≤3d — see GRANULARITY_THRESHOLDS).
+ * - If the user provides a value, validates it against the minimum allowed for
+ *   the range and adjusts upward if too fine (e.g. 1m over 30 days → 4h).
+ *   When adjusted, `adjusted: true` is returned so callers can notify the user.
+ */
 export function computeGranularity(
   rangeMs: number,
   explicit?: string
@@ -116,6 +124,7 @@ export function computeGranularity(
   const explicitMs = toGranularityMs(explicit);
   const minMs = toGranularityMs(minG);
 
+  // User's granularity is too fine for this range — bump up to the minimum
   if (explicitMs < minMs) {
     const rangeDays = Math.round(rangeMs / (24 * 60 * 60 * 1000));
     const rangeHours = Math.round(rangeMs / (60 * 60 * 1000));
@@ -134,6 +143,14 @@ export function computeGranularity(
   };
 }
 
+/**
+ * Floors start and ceils end to the nearest granularity boundary so every
+ * time bucket covers the full granularity interval. Without rounding,
+ * the first and last buckets could be shorter than the rest
+ * (e.g. 1h buckets over 14:23–16:47 would produce a 37-min first bucket
+ * and a 47-min last bucket). Rounding to 14:00–17:00 ensures all three
+ * buckets are full 1-hour intervals.
+ */
 export function roundTimeBoundaries(
   start: Date,
   end: Date,

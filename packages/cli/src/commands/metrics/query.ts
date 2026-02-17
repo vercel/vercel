@@ -278,14 +278,18 @@ export default async function query(
     return 1;
   }
 
-  // Compute granularity
+  // Compute granularity — may adjust the user's --granularity upward if it's
+  // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
   if (granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
 
-  // Round time boundaries
+  // Round start/end to granularity boundaries so every time bucket is complete.
+  // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
+  // When the granularity was adjusted, use the adjusted value for rounding so
+  // the boundaries match what's actually sent to the API.
   const granMs = granularity
     ? toGranularityMs(granularity)
     : toGranularityMs(getAutoGranularity(rangeMs) || '1h');
