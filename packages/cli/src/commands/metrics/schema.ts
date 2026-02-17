@@ -6,12 +6,7 @@ import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { validateEvent } from './validation';
-import {
-  getEventNames,
-  getEvent,
-  getAggregations,
-  SCHEMA,
-} from './schema-data';
+import { getEventNames, getEvent, getAggregations } from './schema-data';
 import {
   formatSchemaListCsv,
   formatSchemaListJson,
@@ -44,9 +39,9 @@ export default async function schema(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const event = flags['--event'] as string | undefined;
+  const event = flags['--event'];
   telemetry.trackCliOptionEvent(event);
-  telemetry.trackCliOptionFormat(flags['--format'] as string | undefined);
+  telemetry.trackCliOptionFormat(flags['--format']);
 
   if (event) {
     // Event detail
@@ -94,7 +89,7 @@ export default async function schema(
     // Event list
     const events = getEventNames().map(name => ({
       name,
-      description: SCHEMA[name].description,
+      description: getEvent(name)!.description,
     }));
 
     if (jsonOutput) {

@@ -21,9 +21,15 @@ import {
   getRollupColumnName,
 } from './output';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
-import type { Scope } from './types';
+import type {
+  Scope,
+  Granularity,
+  ValidationError,
+  MetricsQueryResponse,
+} from './types';
 import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
+import { isAPIError } from '../../util/errors-ts';
 
 const RELATIVE_TIME_RE = /^(\d+)(m|h|d|w)$/;
 
@@ -59,7 +65,7 @@ export function resolveTimeRange(
   return { startTime, endTime };
 }
 
-export function toGranularityDuration(input: string): Record<string, number> {
+export function toGranularityDuration(input: string): Granularity {
   const match = RELATIVE_TIME_RE.exec(input);
   if (!match) {
     throw new Error(
@@ -92,7 +98,7 @@ export function toGranularityMs(input: string): number {
 }
 
 interface GranularityResult {
-  duration: Record<string, number>;
+  duration: Granularity;
   adjusted: boolean;
   notice?: string;
 }
@@ -174,12 +180,7 @@ export function roundTimeBoundaries(
 }
 
 function handleValidationError(
-  result: {
-    valid: false;
-    code: string;
-    message: string;
-    allowedValues?: string[];
-  },
+  result: ValidationError,
   jsonOutput: boolean,
   client: Client
 ): number {
@@ -199,15 +200,14 @@ function handleValidationError(
 }
 
 function handleApiError(
-  status: number,
-  err: any,
+  err: { status: number; code?: string; serverMessage?: string },
   jsonOutput: boolean,
   client: Client
 ): number {
   let code: string;
   let message: string;
 
-  switch (status) {
+  switch (err.status) {
     case 402:
       code = 'PAYMENT_REQUIRED';
       message =
@@ -228,8 +228,8 @@ function handleApiError(
         'The query timed out. Try a shorter time range or fewer groups.';
       break;
     default:
-      code = err?.code || 'BAD_REQUEST';
-      message = err?.serverMessage || `API error (${status})`;
+      code = err.code || 'BAD_REQUEST';
+      message = err.serverMessage || `API error (${err.status})`;
   }
 
   if (jsonOutput) {
@@ -238,6 +238,84 @@ function handleApiError(
     output.error(message);
   }
   return 1;
+}
+
+async function resolveQueryScope(
+  client: Client,
+  opts: {
+    project: string | undefined;
+    all: boolean | undefined;
+    jsonOutput: boolean;
+  }
+): Promise<{ scope: Scope; accountId: string } | number> {
+  // Try linked project first (used for all cases, including --all and --project)
+  const linkedProject = await getLinkedProject(client);
+  let teamSlug: string | undefined;
+  let teamId: string | undefined;
+
+  if (linkedProject.status === 'linked') {
+    teamSlug = linkedProject.org.slug;
+    teamId = linkedProject.org.id;
+  } else if (linkedProject.status === 'error') {
+    return linkedProject.exitCode;
+  }
+
+  // If no linked project, fall back to getScope for team context
+  if (!teamSlug && (opts.project || opts.all)) {
+    const { team } = await getScope(client);
+    if (!team) {
+      const errMsg =
+        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.';
+      if (opts.jsonOutput) {
+        client.stdout.write(formatErrorJson('NO_TEAM', errMsg));
+      } else {
+        output.error(errMsg);
+      }
+      return 1;
+    }
+    teamSlug = team.slug;
+    teamId = team.id;
+  }
+
+  if (!opts.project && !opts.all) {
+    // Default: linked project
+    if (linkedProject.status === 'not_linked') {
+      const errMsg =
+        'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
+      if (opts.jsonOutput) {
+        client.stdout.write(formatErrorJson('NOT_LINKED', errMsg));
+      } else {
+        output.error(errMsg);
+      }
+      return 1;
+    }
+    // At this point linkedProject.status === 'linked', so teamSlug and teamId are set
+    return {
+      scope: {
+        type: 'project-with-slug',
+        teamSlug: teamSlug!,
+        projectName: linkedProject.project.name,
+      },
+      accountId: teamId!,
+    };
+  }
+
+  // At this point teamSlug and teamId are guaranteed set (either from linked project or getScope)
+  if (opts.all) {
+    return {
+      scope: { type: 'team-with-slug', teamSlug: teamSlug! },
+      accountId: teamId!,
+    };
+  }
+
+  return {
+    scope: {
+      type: 'project-with-slug',
+      teamSlug: teamSlug!,
+      projectName: opts.project!,
+    },
+    accountId: teamId!,
+  };
 }
 
 export default async function query(
@@ -263,27 +341,24 @@ export default async function query(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  // Track telemetry
-  const event = flags['--event'] as string | undefined;
-  const measure = (flags['--measure'] as string | undefined) ?? 'count';
-  const aggregation =
-    (flags['--aggregation'] as string | undefined) ??
-    getDefaultAggregation(event!, measure);
-  const groupBy = (flags['--group-by'] as string[] | undefined) ?? [];
-  const limit = flags['--limit'] as number | undefined;
-  const orderBy = flags['--order-by'] as string | undefined;
-  const filter = flags['--filter'] as string | undefined;
-  const since = flags['--since'] as string | undefined;
-  const until = flags['--until'] as string | undefined;
-  const granularity = flags['--granularity'] as string | undefined;
-  const project = flags['--project'] as string | undefined;
-  const all = flags['--all'] as boolean | undefined;
+  // Extract raw flag values
+  const eventFlag = flags['--event'];
+  const measure = flags['--measure'] ?? 'count';
+  const aggregationFlag = flags['--aggregation'];
+  const groupBy = flags['--group-by'] ?? [];
+  const limit = flags['--limit'];
+  const orderBy = flags['--order-by'];
+  const filter = flags['--filter'];
+  const since = flags['--since'];
+  const until = flags['--until'];
+  const granularity = flags['--granularity'];
+  const project = flags['--project'];
+  const all = flags['--all'];
 
-  telemetry.trackCliOptionEvent(event);
-  telemetry.trackCliOptionMeasure(flags['--measure'] as string | undefined);
-  telemetry.trackCliOptionAggregation(
-    flags['--aggregation'] as string | undefined
-  );
+  // Track telemetry
+  telemetry.trackCliOptionEvent(eventFlag);
+  telemetry.trackCliOptionMeasure(flags['--measure']);
+  telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionOrderBy(orderBy);
@@ -293,34 +368,38 @@ export default async function query(
   telemetry.trackCliOptionGranularity(granularity);
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
-  telemetry.trackCliOptionFormat(flags['--format'] as string | undefined);
+  telemetry.trackCliOptionFormat(flags['--format']);
 
   // Validate --event (required)
-  const requiredResult = validateRequiredEvent(event);
+  const requiredResult = validateRequiredEvent(eventFlag);
   if (!requiredResult.valid) {
     return handleValidationError(requiredResult, jsonOutput, client);
   }
+  const event = requiredResult.value;
+
+  // Compute aggregation after event is validated
+  const aggregation = aggregationFlag ?? getDefaultAggregation(event, measure);
 
   // Validate event name
-  const eventResult = validateEvent(event!);
+  const eventResult = validateEvent(event);
   if (!eventResult.valid) {
     return handleValidationError(eventResult, jsonOutput, client);
   }
 
   // Validate measure
-  const measureResult = validateMeasure(event!, measure);
+  const measureResult = validateMeasure(event, measure);
   if (!measureResult.valid) {
     return handleValidationError(measureResult, jsonOutput, client);
   }
 
   // Validate aggregation
-  const aggResult = validateAggregation(event!, measure, aggregation);
+  const aggResult = validateAggregation(event, measure, aggregation);
   if (!aggResult.valid) {
     return handleValidationError(aggResult, jsonOutput, client);
   }
 
   // Validate group-by dimensions
-  const groupByResult = validateGroupBy(event!, groupBy);
+  const groupByResult = validateGroupBy(event, groupBy);
   if (!groupByResult.valid) {
     return handleValidationError(groupByResult, jsonOutput, client);
   }
@@ -332,72 +411,15 @@ export default async function query(
   }
 
   // Resolve scope
-  // Team context resolution priority:
-  //   1. Linked project's org (if in a linked project directory)
-  //   2. `vercel switch` team context (via getScope)
-  // This ensures --all and --project use the same team as the linked project
-  // when run from a project directory, which is the most intuitive behavior.
-  let scope: Scope;
-  let accountId: string | undefined;
-
-  // Try linked project first (used for all cases, including --all and --project)
-  const linkedProject = await getLinkedProject(client);
-  let teamSlug: string | undefined;
-  let teamId: string | undefined;
-
-  if (linkedProject.status === 'linked') {
-    teamSlug = linkedProject.org.slug;
-    teamId = linkedProject.org.id;
-  } else if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
+  const scopeResult = await resolveQueryScope(client, {
+    project,
+    all,
+    jsonOutput,
+  });
+  if (typeof scopeResult === 'number') {
+    return scopeResult;
   }
-
-  // If no linked project, fall back to getScope for team context
-  if (!teamSlug && (project || all)) {
-    const { team } = await getScope(client);
-    if (!team) {
-      const errMsg =
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.';
-      if (jsonOutput) {
-        client.stdout.write(formatErrorJson('NO_TEAM', errMsg));
-      } else {
-        output.error(errMsg);
-      }
-      return 1;
-    }
-    teamSlug = team.slug;
-    teamId = team.id;
-  }
-
-  if (!project && !all) {
-    // Default: linked project
-    if (linkedProject.status === 'not_linked') {
-      const errMsg =
-        'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
-      if (jsonOutput) {
-        client.stdout.write(formatErrorJson('NOT_LINKED', errMsg));
-      } else {
-        output.error(errMsg);
-      }
-      return 1;
-    }
-    scope = {
-      type: 'project-with-slug',
-      teamSlug: teamSlug!,
-      projectName: linkedProject.project.name,
-    };
-    accountId = teamId;
-  } else if (all) {
-    scope = { type: 'team-with-slug', teamSlug: teamSlug! };
-    accountId = teamId;
-  } else {
-    scope = {
-      type: 'project-with-slug',
-      teamSlug: teamSlug!,
-      projectName: project!,
-    };
-    accountId = teamId;
-  }
+  const { scope, accountId } = scopeResult;
 
   // Resolve time range
   let startTime: Date;
@@ -405,7 +427,7 @@ export default async function query(
   try {
     ({ startTime, endTime } = resolveTimeRange(since, until));
   } catch (err) {
-    const errMsg = (err as Error).message;
+    const errMsg = err instanceof Error ? err.message : String(err);
     if (jsonOutput) {
       client.stdout.write(formatErrorJson('INVALID_TIME', errMsg));
     } else {
@@ -438,7 +460,7 @@ export default async function query(
   const body = {
     reason: 'agent' as const,
     scope,
-    event: event!,
+    event,
     rollups: { [rollupColumn]: { measure, aggregation } },
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),
@@ -461,20 +483,20 @@ export default async function query(
   const metricsUrl = `${baseUrl}/api/observability/metrics`;
 
   output.spinner('Querying metrics...');
-  let response;
+  let response: MetricsQueryResponse;
   try {
-    response = await client.fetch(metricsUrl, {
+    response = await client.fetch<MetricsQueryResponse>(metricsUrl, {
       method: 'POST',
       body: JSON.stringify(body),
       headers: { 'Content-Type': 'application/json' },
       accountId,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     output.stopSpinner();
-    if (err.status) {
-      return handleApiError(err.status, err, jsonOutput, client);
+    if (isAPIError(err)) {
+      return handleApiError(err, jsonOutput, client);
     }
-    const errMsg = (err as Error).message;
+    const errMsg = err instanceof Error ? err.message : String(err);
     if (jsonOutput) {
       client.stdout.write(formatErrorJson('NETWORK_ERROR', errMsg));
     } else {
@@ -489,7 +511,7 @@ export default async function query(
     client.stdout.write(
       formatQueryJson(
         {
-          event: event!,
+          event,
           measure,
           aggregation,
           groupBy,
@@ -508,16 +530,12 @@ export default async function query(
   return 0;
 }
 
-function toGranularityMsFromDuration(duration: Record<string, number>): number {
-  let ms = 0;
-  if (duration.minutes) {
-    ms += duration.minutes * 60 * 1000;
+function toGranularityMsFromDuration(duration: Granularity): number {
+  if ('minutes' in duration) {
+    return duration.minutes * 60 * 1000;
   }
-  if (duration.hours) {
-    ms += duration.hours * 60 * 60 * 1000;
+  if ('hours' in duration) {
+    return duration.hours * 60 * 60 * 1000;
   }
-  if (duration.days) {
-    ms += duration.days * 24 * 60 * 60 * 1000;
-  }
-  return ms;
+  return duration.days * 24 * 60 * 60 * 1000;
 }

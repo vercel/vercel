@@ -160,6 +160,7 @@ describe('validation', () => {
     it('should pass when event is provided', () => {
       expect(validateRequiredEvent('incomingRequest')).toEqual({
         valid: true,
+        value: 'incomingRequest',
       });
     });
 

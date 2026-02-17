@@ -120,6 +120,11 @@ describe('output', () => {
         event: 'incomingRequest',
         measure: 'count',
         aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 5 } as const,
       };
       const response = {
         data: [{ timestamp: '2025-01-15T10:00:00Z', value: 42 }],
@@ -134,9 +139,17 @@ describe('output', () => {
     });
 
     it('should handle missing optional fields', () => {
-      const result = JSON.parse(
-        formatQueryJson({ event: 'test' }, { statistics: {} })
-      );
+      const query = {
+        event: 'test',
+        measure: 'count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+      const result = JSON.parse(formatQueryJson(query, { statistics: {} }));
       expect(result.data).toEqual([]);
       expect(result.summary).toEqual([]);
     });

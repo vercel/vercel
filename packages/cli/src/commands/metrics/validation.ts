@@ -1,4 +1,4 @@
-import type { ValidationResult } from './types';
+import type { ValidationResult, ValidatedResult } from './types';
 import {
   getEventNames,
   getEvent,
@@ -96,9 +96,9 @@ export function validateMutualExclusivity(
 
 export function validateRequiredEvent(
   event: string | undefined
-): ValidationResult {
+): ValidatedResult<string> {
   if (event) {
-    return { valid: true };
+    return { valid: true, value: event };
   }
   return {
     valid: false,

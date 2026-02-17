@@ -35,7 +35,7 @@ const VALUE_AGGREGATIONS = [
 
 // All 24 events from the observability query engine.
 // Measures with "cannot be used in rollups" are excluded since the CLI only supports aggregated queries.
-export const SCHEMA: Record<string, EventSchema> = {
+export const SCHEMA = {
   aiGatewayRequest: {
     description: 'AI Gateway request events for tracking AI model API usage',
     dimensions: [
@@ -967,22 +967,24 @@ export const SCHEMA: Record<string, EventSchema> = {
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
-};
+} satisfies Record<string, EventSchema>;
+
+export type EventName = keyof typeof SCHEMA;
 
 export function getEventNames(): string[] {
   return Object.keys(SCHEMA).sort();
 }
 
 export function getEvent(name: string): EventSchema | undefined {
-  return SCHEMA[name];
+  return (SCHEMA as Record<string, EventSchema>)[name];
 }
 
 export function getDimensions(eventName: string): DimensionSchema[] {
-  return SCHEMA[eventName]?.dimensions ?? [];
+  return getEvent(eventName)?.dimensions ?? [];
 }
 
 export function getMeasures(eventName: string): MeasureSchema[] {
-  return SCHEMA[eventName]?.measures ?? [];
+  return getEvent(eventName)?.measures ?? [];
 }
 
 export function getDefaultAggregation(
@@ -991,7 +993,7 @@ export function getDefaultAggregation(
 ): string {
   if (measureName === 'count') return 'sum';
 
-  const event = SCHEMA[eventName];
+  const event = getEvent(eventName);
   if (!event) return 'sum';
 
   const measure = event.measures.find(m => m.name === measureName);
@@ -1019,7 +1021,7 @@ export function getAggregations(
   eventName: string,
   measureName: string
 ): readonly string[] {
-  const event = SCHEMA[eventName];
+  const event = getEvent(eventName);
   if (!event) {
     return [];
   }

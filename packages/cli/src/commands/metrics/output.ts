@@ -1,6 +1,13 @@
 import type { EventSchema } from './schema-data';
+import type {
+  MetricsDataRow,
+  QueryMetadata,
+  MetricsQueryResponse,
+} from './types';
 
-export function escapeCsvValue(value: any): string {
+export function escapeCsvValue(
+  value: string | number | boolean | null | undefined
+): string {
   if (value === null || value === undefined) {
     return '';
   }
@@ -19,7 +26,7 @@ export function getRollupColumnName(
 }
 
 export function formatCsv(
-  data: Array<Record<string, any>>,
+  data: MetricsDataRow[],
   groupBy: string[],
   rollupColumn: string
 ): string {
@@ -32,8 +39,8 @@ export function formatCsv(
 }
 
 export function formatQueryJson(
-  query: Record<string, any>,
-  response: Record<string, any>
+  query: QueryMetadata,
+  response: MetricsQueryResponse
 ): string {
   return JSON.stringify(
     {
@@ -83,7 +90,10 @@ export function formatSchemaDetailJson(
   aggregations: readonly string[]
 ): string {
   const dimensions = event.dimensions.map(d => {
-    const obj: Record<string, any> = { name: d.name, label: d.label };
+    const obj: { name: string; label: string; filterOnly?: boolean } = {
+      name: d.name,
+      label: d.label,
+    };
     if (d.filterOnly) {
       obj.filterOnly = true;
     }
@@ -118,7 +128,10 @@ export function formatErrorJson(
   message: string,
   allowedValues?: string[]
 ): string {
-  const error: Record<string, any> = { code, message };
+  const error: { code: string; message: string; allowedValues?: string[] } = {
+    code,
+    message,
+  };
   if (allowedValues && allowedValues.length > 0) {
     error.allowedValues = allowedValues;
   }
