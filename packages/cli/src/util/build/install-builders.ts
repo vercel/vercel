@@ -28,7 +28,7 @@ function getErrorMessage(err: BonusError, execaMessage: string) {
   return execaMessage;
 }
 
-export async function installBuilders(
+export async function untracedInstallBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>
 ): Promise<Map<string, string>> {
@@ -125,7 +125,7 @@ export async function installBuilders(
   return resolvedSpecs;
 }
 
-export async function tracedInstallBuilders(
+export async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
   span: Span
@@ -135,7 +135,7 @@ export async function tracedInstallBuilders(
   });
   return installSpan.trace(async s => {
     try {
-      return await installBuilders(buildersDir, buildersToAdd);
+      return await untracedInstallBuilders(buildersDir, buildersToAdd);
     } catch (err) {
       s.setAttributes({
         error: isError(err) ? err.message : String(err),
