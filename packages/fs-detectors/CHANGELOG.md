@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.8.7
+
+### Patch Changes
+
+- [services] infer workspace from manifest: when workspace is not explicitly configured, infer from nearest manifest to entrypoint ([#14986](https://github.com/vercel/vercel/pull/14986))
+
 ## 5.8.6
 
 ### Patch Changes
