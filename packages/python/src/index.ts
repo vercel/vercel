@@ -392,7 +392,7 @@ export const build: BuildV3 = async ({
         pythonVersion: pythonVersion.version,
         uv,
         generateLockFile: true,
-        requireBinaryWheels: true,
+        requireBinaryWheels: false,
       });
 
     uvLockPath = lockPath;
