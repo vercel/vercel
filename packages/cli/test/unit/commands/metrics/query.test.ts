@@ -888,8 +888,6 @@ describe('query', () => {
       expect(requestBody.rollups.requestDurationMs_p95.aggregation).toBe('p95');
       expect(requestBody.groupBy).toEqual(['httpStatus']);
       expect(requestBody.granularity).toEqual({ minutes: 15 });
-      expect(requestBody.limitRanking).toBe('top_by_summary');
-      expect(requestBody.tailRollup).toBe('truncate');
     });
   });
 });

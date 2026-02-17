@@ -310,8 +310,6 @@ export default async function query(
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
-    limitRanking: 'top_by_summary' as const,
-    tailRollup: 'truncate' as const,
     ...(orderBy ? { orderBy } : {}),
   };
 

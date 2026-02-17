@@ -40,8 +40,6 @@ export interface MetricsQueryRequest {
   groupBy?: string[];
   filter?: string;
   limit?: number;
-  limitRanking: 'top_by_summary';
-  tailRollup: 'truncate';
   orderBy?: string;
 }
 
