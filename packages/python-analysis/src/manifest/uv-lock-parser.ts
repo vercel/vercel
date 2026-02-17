@@ -83,12 +83,49 @@ const PUBLIC_PYPI_PATTERNS = [
 ];
 
 /**
- * Check if a registry URL is a public PyPI registry.
+ * Get the list of public registry patterns, including any custom index URLs
+ * from environment variables (UV_INDEX_URL, UV_DEFAULT_INDEX, UV_EXTRA_INDEX_URL).
+ *
+ * This allows packages from custom indexes to be treated as "public" for
+ * runtime installation purposes, enabling them to be installed at Lambda
+ * startup rather than bundled at build time.
+ */
+function getPublicRegistryPatterns(): string[] {
+  const patterns = [...PUBLIC_PYPI_PATTERNS];
+
+  // Add UV_INDEX_URL if set (primary index replacement)
+  const uvIndexUrl = process.env.UV_INDEX_URL;
+  if (uvIndexUrl) {
+    patterns.push(uvIndexUrl.toLowerCase());
+  }
+
+  // Add UV_DEFAULT_INDEX if set (newer equivalent of UV_INDEX_URL)
+  const uvDefaultIndex = process.env.UV_DEFAULT_INDEX;
+  if (uvDefaultIndex) {
+    patterns.push(uvDefaultIndex.toLowerCase());
+  }
+
+  // Add UV_EXTRA_INDEX_URL if set (space-separated list of additional indexes)
+  const uvExtraIndexUrl = process.env.UV_EXTRA_INDEX_URL;
+  if (uvExtraIndexUrl) {
+    for (const url of uvExtraIndexUrl.split(/\s+/)) {
+      if (url) {
+        patterns.push(url.toLowerCase());
+      }
+    }
+  }
+
+  return patterns;
+}
+
+/**
+ * Check if a registry URL is a public PyPI registry or a configured custom index.
  */
 function isPublicPyPIRegistry(registryUrl: string | undefined): boolean {
   if (!registryUrl) return true; // Default registry is PyPI
   const normalized = registryUrl.toLowerCase();
-  return PUBLIC_PYPI_PATTERNS.some(pattern => normalized.includes(pattern));
+  const patterns = getPublicRegistryPatterns();
+  return patterns.some(pattern => normalized.includes(pattern));
 }
 
 /**

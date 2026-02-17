@@ -2097,6 +2097,91 @@ registry = "https://private.pypi.mycompany.com/simple"
       expect(result.publicPackages).not.toContain('internal-pkg');
     });
 
+    it('classifies custom registry packages as public when UV_INDEX_URL matches', () => {
+      const originalEnv = process.env.UV_INDEX_URL;
+      try {
+        process.env.UV_INDEX_URL = 'https://private.pypi.mycompany.com/simple';
+        const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "internal-pkg"
+version = "1.0.0"
+
+[package.source]
+registry = "https://private.pypi.mycompany.com/simple"
+`;
+        const lockFile = parseUvLock(lockContent);
+        const result = classifyPackages({ lockFile });
+        expect(result.publicPackages).toContain('internal-pkg');
+        expect(result.privatePackages).not.toContain('internal-pkg');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.UV_INDEX_URL;
+        } else {
+          process.env.UV_INDEX_URL = originalEnv;
+        }
+      }
+    });
+
+    it('classifies custom registry packages as public when UV_DEFAULT_INDEX matches', () => {
+      const originalEnv = process.env.UV_DEFAULT_INDEX;
+      try {
+        process.env.UV_DEFAULT_INDEX = 'https://custom.index.com/simple';
+        const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "custom-pkg"
+version = "2.0.0"
+
+[package.source]
+registry = "https://custom.index.com/simple"
+`;
+        const lockFile = parseUvLock(lockContent);
+        const result = classifyPackages({ lockFile });
+        expect(result.publicPackages).toContain('custom-pkg');
+        expect(result.privatePackages).not.toContain('custom-pkg');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.UV_DEFAULT_INDEX;
+        } else {
+          process.env.UV_DEFAULT_INDEX = originalEnv;
+        }
+      }
+    });
+
+    it('classifies custom registry packages as public when UV_EXTRA_INDEX_URL matches', () => {
+      const originalEnv = process.env.UV_EXTRA_INDEX_URL;
+      try {
+        process.env.UV_EXTRA_INDEX_URL =
+          'https://extra1.index.com/simple https://extra2.index.com/simple';
+        const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "extra-pkg"
+version = "3.0.0"
+
+[package.source]
+registry = "https://extra2.index.com/simple"
+`;
+        const lockFile = parseUvLock(lockContent);
+        const result = classifyPackages({ lockFile });
+        expect(result.publicPackages).toContain('extra-pkg');
+        expect(result.privatePackages).not.toContain('extra-pkg');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.UV_EXTRA_INDEX_URL;
+        } else {
+          process.env.UV_EXTRA_INDEX_URL = originalEnv;
+        }
+      }
+    });
+
     it('returns empty classification for empty lock file', () => {
       const lockFile = { packages: [] };
       const result = classifyPackages({ lockFile });
