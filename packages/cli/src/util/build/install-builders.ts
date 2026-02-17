@@ -12,10 +12,6 @@ import code from '../output/code';
 import type { Writable } from 'stream';
 import output from '../../output-manager';
 
-export interface InstallBuildersResult {
-  resolvedSpecs: Map<string, string>;
-}
-
 type BonusError = Error & {
   stderr?: string | Writable;
 };
@@ -35,7 +31,7 @@ function getErrorMessage(err: BonusError, execaMessage: string) {
 export async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>
-): Promise<InstallBuildersResult> {
+): Promise<Map<string, string>> {
   const resolvedSpecs = new Map<string, string>();
   const buildersPkgPath = join(buildersDir, 'package.json');
   try {
@@ -126,28 +122,25 @@ export async function installBuilders(
     }
   }
 
-  return { resolvedSpecs };
+  return resolvedSpecs;
 }
 
 export async function tracedInstallBuilders(
-  span: Span | undefined,
   buildersDir: string,
-  buildersToAdd: Set<string>
-): Promise<InstallBuildersResult> {
-  const installSpan = span?.child('vc.installBuilders', {
+  buildersToAdd: Set<string>,
+  span: Span
+): Promise<Map<string, string>> {
+  const installSpan = span.child('vc.installBuilders', {
     packages: Array.from(buildersToAdd).join(','),
   });
-  if (installSpan) {
-    return installSpan.trace(async s => {
-      try {
-        return await installBuilders(buildersDir, buildersToAdd);
-      } catch (err) {
-        s.setAttributes({
-          error: isError(err) ? err.message : String(err),
-        });
-        throw err;
-      }
-    });
-  }
-  return installBuilders(buildersDir, buildersToAdd);
+  return installSpan.trace(async s => {
+    try {
+      return await installBuilders(buildersDir, buildersToAdd);
+    } catch (err) {
+      s.setAttributes({
+        error: isError(err) ? err.message : String(err),
+      });
+      throw err;
+    }
+  });
 }
