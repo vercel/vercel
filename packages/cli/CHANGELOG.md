@@ -1,5 +1,17 @@
 # vercel
 
+## 50.18.1
+
+### Patch Changes
+
+- Add more precise errors and debug messages for auth issues ([#14992](https://github.com/vercel/vercel/pull/14992))
+
+- Add tracing when installing builders ([#15071](https://github.com/vercel/vercel/pull/15071))
+
+- Use namespaced vc.builder span attributes (builder.name, builder.version, builder.dynamicallyInstalled) so they appear correctly in Datadog and don't conflict with reserved `version` tag ([#15078](https://github.com/vercel/vercel/pull/15078))
+
+- non-interactive mode should allow scope argument ([#15077](https://github.com/vercel/vercel/pull/15077))
+
 ## 50.18.0
 
 ### Minor Changes
