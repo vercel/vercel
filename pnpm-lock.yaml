@@ -510,6 +510,9 @@ importers:
       luxon:
         specifier: ^3.4.0
         version: 3.4.0
+      path-to-regexp:
+        specifier: 6.1.0
+        version: 6.1.0
       proxy-agent:
         specifier: 6.4.0
         version: 6.4.0
