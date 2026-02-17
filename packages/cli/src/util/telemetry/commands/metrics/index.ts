@@ -128,13 +128,4 @@ export class MetricsTelemetryClient
       this.trackCliFlag('all');
     }
   }
-
-  trackCliOptionFormat(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'format',
-        value: v,
-      });
-    }
-  }
 }
