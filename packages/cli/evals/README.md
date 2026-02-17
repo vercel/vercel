@@ -35,6 +35,14 @@ When evals are added, agents in the sandbox can use the local CLI build (`dist/v
 
 ## CI
 
-The GitHub Action runs on **pull requests** that touch `packages/cli/**`. It runs `pnpm test:evals` from `packages/cli/` (real evals when evals exist). Add these repo secrets when you have evals and want them to run in CI: `VERCEL_OIDC_TOKEN`, and optionally `AI_GATEWAY_API_KEY`, `VERCEL_TOKEN`, `CLI_EVAL_TEAM_ID`, `CLI_EVAL_PROJECT_ID`. Until then, the job exits successfully when there are no evals.
+The GitHub Action runs on **pull requests** that touch `packages/cli/**`. It runs `pnpm test:evals` from `packages/cli/`. Evals use **separate repo secrets** (EVAL\_\*) so you can point to a dedicated evals team:
 
-See `.github/workflows/cli-evals.yml`.
+| GitHub secret             | Passed as env       | Purpose                   |
+| ------------------------- | ------------------- | ------------------------- |
+| `EVAL_OIDC_TOKEN`         | VERCEL_OIDC_TOKEN   | OIDC for AI Gateway / CI  |
+| `EVAL_TOKEN`              | VERCEL_TOKEN        | Vercel token (e.g. evals) |
+| `EVAL_AI_GATEWAY_API_KEY` | AI_GATEWAY_API_KEY  | AI Gateway key            |
+| `EVAL_TEAM_ID`            | CLI_EVAL_TEAM_ID    | Evals team ID             |
+| `EVAL_PROJECT_ID`         | CLI_EVAL_PROJECT_ID | Evals project ID          |
+
+Until these are set and evals exist, the job exits successfully when there are no evals. See `.github/workflows/cli-evals.yml`.

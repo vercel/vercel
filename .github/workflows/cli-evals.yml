@@ -10,12 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: release
+    # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team
     env:
-      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_OIDC_TOKEN: ${{ secrets.VERCEL_OIDC_TOKEN }}
-      CLI_EVAL_TEAM_ID: ${{ secrets.CLI_EVAL_TEAM_ID }}
-      CLI_EVAL_PROJECT_ID: ${{ secrets.CLI_EVAL_PROJECT_ID }}
+      AI_GATEWAY_API_KEY: ${{ secrets.EVAL_AI_GATEWAY_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.EVAL_TOKEN }}
+      VERCEL_OIDC_TOKEN: ${{ secrets.EVAL_OIDC_TOKEN }}
+      CLI_EVAL_TEAM_ID: ${{ secrets.EVAL_TEAM_ID }}
+      CLI_EVAL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,4 +39,3 @@ jobs:
       - name: Run CLI evals
         run: cd packages/cli && pnpm test:evals
         env:
-        
