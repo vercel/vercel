@@ -73,6 +73,7 @@ export default async function getStore(
         billingState: string;
         size: number;
         region?: string;
+        access?: string;
       };
     }>(`/v1/storage/stores/${storeId}`, {
       method: 'GET',
@@ -85,6 +86,10 @@ export default async function getStore(
       ? `\nRegion: ${store.store.region}`
       : '';
 
+    const accessInfo = store.store.access
+      ? `\nAccess: ${store.store.access === 'private' ? 'Private' : 'Public'}`
+      : '';
+
     output.print(
       `Blob Store: ${chalk.bold(store.store.name)} (${chalk.dim(store.store.id)})
 Billing State: ${
@@ -92,7 +97,7 @@ Billing State: ${
           ? chalk.green('Active')
           : chalk.red('Inactive')
       }
-Size: ${bytes(store.store.size)}${regionInfo}
+Size: ${bytes(store.store.size)}${regionInfo}${accessInfo}
 Created At: ${format(new Date(store.store.createdAt), dateTimeFormat)}
 Updated At: ${format(new Date(store.store.updatedAt), dateTimeFormat)}\n`
     );

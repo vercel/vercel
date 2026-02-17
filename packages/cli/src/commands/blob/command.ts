@@ -55,6 +55,16 @@ export const putSubcommand = {
   ],
   options: [
     {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description:
+        'Access level for the blob: public or private (default: public)',
+      argument: 'String',
+      choices: ['public', 'private'],
+    },
+    {
       name: 'add-random-suffix',
       shorthand: 'r',
       type: Boolean,
@@ -139,6 +149,16 @@ export const copySubcommand = {
   ],
   options: [
     {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description:
+        'Access level for the blob: public or private (default: public)',
+      argument: 'String',
+      choices: ['public', 'private'],
+    },
+    {
       name: 'add-random-suffix',
       shorthand: 'r',
       type: Boolean,
@@ -168,6 +188,39 @@ export const copySubcommand = {
   examples: [],
 } as const;
 
+export const getSubcommand = {
+  name: 'get',
+  aliases: [],
+  description: 'Download a blob by URL or pathname',
+  arguments: [
+    {
+      name: 'urlOrPathname',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description:
+        'Access level for the blob: public or private (default: public)',
+      argument: 'String',
+      choices: ['public', 'private'],
+    },
+    {
+      name: 'output',
+      shorthand: 'o',
+      type: String,
+      deprecated: false,
+      description: 'Save blob content to a file instead of stdout',
+      argument: 'PATH',
+    },
+  ],
+  examples: [],
+} as const;
+
 export const addStoreSubcommand = {
   name: 'add',
   aliases: [],
@@ -179,6 +232,16 @@ export const addStoreSubcommand = {
     },
   ],
   options: [
+    {
+      name: 'access',
+      shorthand: 'a',
+      type: String,
+      deprecated: false,
+      description:
+        'Access level for the Blob store: public or private (default: public)',
+      argument: 'String',
+      choices: ['public', 'private'],
+    },
     {
       name: 'region',
       shorthand: 'r',
@@ -197,6 +260,10 @@ export const addStoreSubcommand = {
     {
       name: 'Create a blob store in a specific region',
       value: 'vercel blob store add my-store --region cdg1',
+    },
+    {
+      name: 'Create a private blob store',
+      value: 'vercel blob store add my-private-store --access private',
     },
   ],
 } as const;
@@ -247,6 +314,7 @@ export const blobCommand = {
   subcommands: [
     listSubcommand,
     putSubcommand,
+    getSubcommand,
     delSubcommand,
     copySubcommand,
     storeSubcommand,
