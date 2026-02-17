@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.14.0
+
+### Minor Changes
+
+- Enable runtime dependency installs for lambdas >250MB in size ([#15082](https://github.com/vercel/vercel/pull/15082))
+
 ## 6.13.0
 
 ### Minor Changes
