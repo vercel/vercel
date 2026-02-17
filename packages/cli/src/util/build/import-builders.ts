@@ -27,6 +27,11 @@ export interface BuilderWithPkg {
   pkgPath: string;
   builder: BuilderV2 | BuilderV3;
   pkg: PackageJson & { name: string };
+  /**
+   * true if the builder was installed into `.vercel/builders` (e.g. via npm);
+   * false if resolved from CLI dependencies or built-in (e.g. @vercel/static).
+   */
+  dynamicallyInstalled: boolean;
 }
 
 type ResolveBuildersResult =
@@ -103,6 +108,7 @@ export async function resolveBuilders(
         pkg: { name },
         path: '',
         pkgPath: '',
+        dynamicallyInstalled: false,
       });
       continue;
     }
@@ -171,6 +177,8 @@ export async function resolveBuilders(
 
       const builder = require_(path);
 
+      const dynamicallyInstalled = pkgPath.startsWith(buildersDir);
+
       builders.set(spec, {
         builder,
         pkg: {
@@ -179,6 +187,7 @@ export async function resolveBuilders(
         },
         path,
         pkgPath,
+        dynamicallyInstalled,
       });
       output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
     } catch (err: any) {
