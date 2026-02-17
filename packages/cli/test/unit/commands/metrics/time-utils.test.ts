@@ -97,6 +97,30 @@ describe('time-utils', () => {
       expect(toGranularityDuration('4h')).toEqual({ hours: 4 });
     });
 
+    it('should convert 1w to { days: 7 }', () => {
+      expect(toGranularityDuration('1w')).toEqual({ days: 7 });
+    });
+
+    it('should convert 90m to { hours: 1.5 } (cross-boundary)', () => {
+      expect(toGranularityDuration('90m')).toEqual({ hours: 1.5 });
+    });
+
+    it('should convert 60m to { hours: 1 } (boundary)', () => {
+      expect(toGranularityDuration('60m')).toEqual({ hours: 1 });
+    });
+
+    it('should convert 30s to { minutes: 0.5 }', () => {
+      expect(toGranularityDuration('30s')).toEqual({ minutes: 0.5 });
+    });
+
+    it('should accept long form "1 hour"', () => {
+      expect(toGranularityDuration('1 hour')).toEqual({ hours: 1 });
+    });
+
+    it('should accept decimal "2.5h"', () => {
+      expect(toGranularityDuration('2.5h')).toEqual({ hours: 2.5 });
+    });
+
     it('should throw on invalid format', () => {
       expect(() => toGranularityDuration('invalid')).toThrow(
         'Invalid granularity format'

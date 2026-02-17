@@ -5,8 +5,6 @@ const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-const RELATIVE_TIME_RE = /^(\d+)(m|h|d|w)$/;
-
 export function parseTimeFlag(input: string): Date {
   const milliseconds = ms(input);
   if (milliseconds !== undefined) {
@@ -31,26 +29,19 @@ export function resolveTimeRange(
 }
 
 export function toGranularityDuration(input: string): Granularity {
-  const match = RELATIVE_TIME_RE.exec(input);
-  if (!match) {
+  const milliseconds = ms(input);
+  if (milliseconds === undefined) {
     throw new Error(
       `Invalid granularity format "${input}". Use 1m, 5m, 15m, 1h, 4h, 1d.`
     );
   }
-  const [, amount, unit] = match;
-  const num = parseInt(amount, 10);
-  switch (unit) {
-    case 'm':
-      return { minutes: num };
-    case 'h':
-      return { hours: num };
-    case 'd':
-      return { days: num };
-    case 'w':
-      return { days: num * 7 };
-    default:
-      throw new Error(`Unknown time unit "${unit}".`);
+  if (milliseconds >= DAY_MS) {
+    return { days: milliseconds / DAY_MS };
   }
+  if (milliseconds >= HOUR_MS) {
+    return { hours: milliseconds / HOUR_MS };
+  }
+  return { minutes: milliseconds / MINUTE_MS };
 }
 
 export function toGranularityMs(input: string): number {
