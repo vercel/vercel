@@ -1098,6 +1098,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    supersedes: ['vite'],
     sort: 99,
     envPrefix: 'VITE_',
     detectors: {
@@ -1139,6 +1140,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    supersedes: ['vite'],
     detectors: {
       every: [
         {
