@@ -1,0 +1,11 @@
+{
+  "name": "non-interactive",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "echo ok"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

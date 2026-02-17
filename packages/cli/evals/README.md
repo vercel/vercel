@@ -2,7 +2,7 @@
 
 Bare-bones evals infrastructure for the Vercel CLI using [@vercel/agent-eval](https://github.com/vercel-labs/agent-eval). Evals are colocated in `packages/cli/evals/` so CLI maintainers can own them. Scripts are in the CLI `package.json` (collocated with the `build` script).
 
-**Status:** Infrastructure only. The runner discovers evals in `evals/evals/` (dirs with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` when ready.
+**Status:** One eval: **non-interactive** (tests that the agent prefers non-interactive CLI flags, e.g. `--yes` for `vercel link`). The runner discovers evals in `evals/evals/` (dirs with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` when ready.
 
 ## Structure
 
