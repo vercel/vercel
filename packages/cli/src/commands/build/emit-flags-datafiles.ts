@@ -7,7 +7,7 @@ import output from '../../output-manager';
 import pkg from '../../util/pkg';
 
 const FLAGS_HOST = 'https://flags.vercel.com';
-const FLAGS_DEFINITIONS_VERSION = '1.0.0';
+const FLAGS_DEFINITIONS_VERSION = '1.0.1';
 
 type BundledDefinitions = Record<string, unknown>;
 
