@@ -4357,6 +4357,37 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'Mastra',
+    slug: 'mastra',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/mastra.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/mastra-dark.svg',
+    tagline: 'Build AI agents with a modern TypeScript stack',
+    description:
+      'Mastra is a framework for building AI-powered apps and agents with workflows, memory, streaming, evals, tracing, and Studio, an interactive UI for dev and testing.',
+    website: 'https://mastra.ai',
+    detectors: {
+      every: [{ matchPackage: 'mastra' }],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `mastra build`',
+        value: 'mastra build',
+      },
+      devCommand: {
+        value: 'mastra dev',
+      },
+      outputDirectory: {
+        value: '.mastra',
+      },
+    },
+    getOutputDirName: async () => '.mastra',
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
