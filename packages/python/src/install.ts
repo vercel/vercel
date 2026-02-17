@@ -1,19 +1,19 @@
 import execa from 'execa';
 import fs from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve, sep } from 'path';
 import {
   FileFsRef,
   Files,
   Meta,
   NowBuildError,
   debug,
-  glob,
 } from '@vercel/build-utils';
 import {
   discoverPythonPackage,
   stringifyManifest,
   createMinimalManifest,
   normalizePackageName,
+  scanDistributions,
   PythonAnalysisError,
   PythonLockFileKind,
   PythonManifestConvertedKind,
@@ -549,29 +549,27 @@ export async function mirrorSitePackagesIntoVendor({
   vendorDirName: string;
 }): Promise<Files> {
   const vendorFiles: Files = {};
-  // Map the files from site-packages in the virtual environment
-  // into the Lambda bundle under `_vendor`.
   try {
     const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
     for (const dir of sitePackageDirs) {
       if (!fs.existsSync(dir)) continue;
 
-      const dirFiles = await glob('**', dir);
-      for (const relativePath of Object.keys(dirFiles)) {
-        if (
-          relativePath.endsWith('.pyc') ||
-          relativePath.includes('__pycache__')
-        ) {
-          continue;
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+      const distributions = await scanDistributions(dir);
+      for (const dist of distributions.values()) {
+        for (const { path: filePath } of dist.files) {
+          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+          if (filePath.endsWith('.pyc') || filePath.includes('__pycache__')) {
+            continue;
+          }
+          const srcFsPath = join(dir, filePath);
+          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
         }
-
-        const srcFsPath = join(dir, relativePath);
-
-        const bundlePath = join(vendorDirName, relativePath).replace(
-          /\\/g,
-          '/'
-        );
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
       }
     }
   } catch (err) {
@@ -633,63 +631,26 @@ export async function mirrorPrivatePackagesIntoVendor({
 
   try {
     const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-
     for (const dir of sitePackageDirs) {
       if (!fs.existsSync(dir)) continue;
 
-      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+      const distributions = await scanDistributions(dir);
+      for (const [name, dist] of distributions) {
+        if (!privatePackageSet.has(name)) continue;
 
-      for (const entry of entries) {
-        // Skip __pycache__ and .pyc files
-        if (entry.name === '__pycache__' || entry.name.endsWith('.pyc')) {
-          continue;
-        }
-
-        // Check if this entry belongs to a private package.
-        // Per PEP 427, dist-info directories are named {distribution}-{version}.dist-info
-        // where {distribution} has non-alphanumeric chars (except .) replaced with underscores.
-        // E.g., "my-package" becomes "my_package-1.0.0.dist-info"
-        const entryBaseName = entry.name
-          .replace(/-[\d.]+\.dist-info$/, '')
-          .replace(/\.dist-info$/, '')
-          .replace(/-[\d.]+\.egg-info$/, '')
-          .replace(/\.egg-info$/, '');
-
-        const normalizedEntry = normalizePackageName(entryBaseName);
-
-        // Include if it matches a private package
-        const isPrivate = privatePackageSet.has(normalizedEntry);
-
-        if (isPrivate) {
-          const entryPath = join(dir, entry.name);
-
-          if (entry.isDirectory()) {
-            // Recursively add all files in the directory
-            const dirFiles = await glob('**', entryPath);
-            for (const relativePath of Object.keys(dirFiles)) {
-              if (
-                relativePath.endsWith('.pyc') ||
-                relativePath.includes('__pycache__')
-              ) {
-                continue;
-              }
-
-              const srcFsPath = join(entryPath, relativePath);
-              const bundlePath = join(
-                vendorDirName,
-                entry.name,
-                relativePath
-              ).replace(/\\/g, '/');
-              vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-            }
-          } else {
-            // Single file
-            const bundlePath = join(vendorDirName, entry.name).replace(
-              /\\/g,
-              '/'
-            );
-            vendorFiles[bundlePath] = new FileFsRef({ fsPath: entryPath });
+        for (const { path: filePath } of dist.files) {
+          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
           }
+          if (filePath.endsWith('.pyc') || filePath.includes('__pycache__')) {
+            continue;
+          }
+          const srcFsPath = join(dir, filePath);
+          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
         }
       }
     }
