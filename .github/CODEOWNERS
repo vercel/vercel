@@ -4,7 +4,7 @@
 # Restricted Paths
 *                                        @vercel/ci-cd
 /.github/workflows                       @vercel/ci-cd @ijjk
-/packages/fs-detectors                   @vercel/ci-cd @vercel/team-python @agadzik
+/packages/fs-detectors                   @vercel/ci-cd @vercel/team-python @agadzik @chloetedder
 /packages/next                           @vercel/ci-cd @timneutkens @ijjk @ztanner @huozhi
 /packages/routing-utils                  @vercel/ci-cd @ijjk
 /packages/static-build                   @vercel/ci-cd
