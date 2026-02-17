@@ -136,13 +136,13 @@ async function showRouteDiff(
     versionId: productionVersion.id,
   });
 
-  const productionRoute = productionRoutes.find(
-    r => r.id === stagingRoute.id
-  );
+  const productionRoute = productionRoutes.find(r => r.id === stagingRoute.id);
 
   if (!productionRoute) {
     // Route only exists in staging — it's new
-    output.print(`\n  ${chalk.bold(stagingRoute.name)} ${chalk.green('(new)')}\n`);
+    output.print(
+      `\n  ${chalk.bold(stagingRoute.name)} ${chalk.green('(new)')}\n`
+    );
     output.print(`  ${chalk.gray(stagingRoute.id)}\n`);
     output.print(
       `  ${chalk.green('This route does not exist in production yet.')}\n`
@@ -217,11 +217,17 @@ function formatRouteDiff(
   // Description diff
   if (production.description !== staging.description) {
     if (!production.description && staging.description) {
-      lines.push(`${chalk.green('+')} ${chalk.cyan('Description:')}  ${staging.description}`);
+      lines.push(
+        `${chalk.green('+')} ${chalk.cyan('Description:')}  ${staging.description}`
+      );
     } else if (production.description && !staging.description) {
-      lines.push(`${chalk.red('-')} ${chalk.cyan('Description:')}  ${chalk.strikethrough(production.description)}`);
+      lines.push(
+        `${chalk.red('-')} ${chalk.cyan('Description:')}  ${chalk.strikethrough(production.description)}`
+      );
     } else {
-      lines.push(`${chalk.yellow('~')} ${chalk.cyan('Description:')}  ${chalk.red(production.description!)} → ${chalk.green(staging.description!)}`);
+      lines.push(
+        `${chalk.yellow('~')} ${chalk.cyan('Description:')}  ${chalk.red(production.description!)} → ${chalk.green(staging.description!)}`
+      );
     }
     lines.push('');
   } else if (staging.description) {
@@ -230,10 +236,8 @@ function formatRouteDiff(
   }
 
   // Status diff
-  const prodStatusText =
-    production.enabled === false ? 'Disabled' : 'Enabled';
-  const stagingStatusText =
-    staging.enabled === false ? 'Disabled' : 'Enabled';
+  const prodStatusText = production.enabled === false ? 'Disabled' : 'Enabled';
+  const stagingStatusText = staging.enabled === false ? 'Disabled' : 'Enabled';
   lines.push(
     diffField('Status:', prodStatusText, stagingStatusText) ||
       `  ${chalk.cyan('Status:')}      ${stagingStatusText}`
@@ -318,7 +322,9 @@ function formatRouteDiff(
       const key = stagingKeys[i];
       const prodIdx = prodKeys.indexOf(key);
       if (prodIdx === -1) {
-        lines.push(`${chalk.green('+')} ${formatTransform(stagingTransforms[i])}`);
+        lines.push(
+          `${chalk.green('+')} ${formatTransform(stagingTransforms[i])}`
+        );
       } else {
         const prodArgs = stringifyArgs(prodTransforms[prodIdx].args);
         const stagingArgs = stringifyArgs(stagingTransforms[i].args);
@@ -396,8 +402,15 @@ function normalizeForComparison(rule: RoutingRule) {
   };
 }
 
-function transformKey(t: { type: string; op: string; target: { key: unknown } }): string {
-  const key = typeof t.target.key === 'string' ? t.target.key : JSON.stringify(t.target.key);
+function transformKey(t: {
+  type: string;
+  op: string;
+  target: { key: unknown };
+}): string {
+  const key =
+    typeof t.target.key === 'string'
+      ? t.target.key
+      : JSON.stringify(t.target.key);
   return `${t.type}:${t.op}:${key}`;
 }
 
@@ -432,7 +445,11 @@ function formatTransformPlain(transform: {
   return parts.join(' ');
 }
 
-function conditionKey(c: { type: string; key?: string; value?: unknown }): string {
+function conditionKey(c: {
+  type: string;
+  key?: string;
+  value?: unknown;
+}): string {
   return JSON.stringify({ type: c.type, key: c.key, value: c.value });
 }
 

@@ -134,8 +134,7 @@ export const inspectSubcommand = {
   options: [
     {
       name: 'diff',
-      description:
-        'Show changes between staging and production for this route',
+      description: 'Show changes between staging and production for this route',
       shorthand: null,
       type: Boolean,
       deprecated: false,

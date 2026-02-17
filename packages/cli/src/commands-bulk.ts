@@ -39,6 +39,7 @@ export { default as redirects } from './commands/redirects';
 export { default as remove } from './commands/remove';
 export { default as rollback } from './commands/rollback';
 export { default as rollingRelease } from './commands/rolling-release';
+export { default as routes } from './commands/routes';
 export { default as target } from './commands/target';
 export { default as teams } from './commands/teams';
 export { default as telemetry } from './commands/telemetry';
