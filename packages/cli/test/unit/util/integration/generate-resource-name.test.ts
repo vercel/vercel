@@ -4,6 +4,7 @@ import {
   generateDefaultResourceName,
   getValidationRuleForProduct,
   validateResourceName,
+  resolveResourceName,
 } from '../../../../src/util/integration/generate-resource-name';
 
 describe('generateRandomNameSuffix', () => {
@@ -265,6 +266,81 @@ describe('validateResourceName', () => {
       expect(validateResourceName('my resource', 'aws-dynamodb')).toBe(
         'Resource name can only contain letters, numbers, underscores, and hyphens'
       );
+    });
+  });
+});
+
+describe('resolveResourceName', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('with user-provided name', () => {
+    it('returns valid user-provided name', () => {
+      const result = resolveResourceName('neon', 'my-resource');
+      expect(result).toEqual({ resourceName: 'my-resource' });
+    });
+
+    it('returns error for invalid user-provided name', () => {
+      const result = resolveResourceName('neon', 'my resource');
+      expect(result).toEqual({
+        error:
+          'Resource name can only contain letters, numbers, underscores, and hyphens',
+      });
+    });
+  });
+
+  describe('with auto-generated name', () => {
+    it('generates and validates name for default products', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const result = resolveResourceName('neon');
+      expect(result).toEqual({ resourceName: 'neon-gray-apple' });
+    });
+
+    it('generates and validates name for aws-apg (strict custom validation)', () => {
+      // aws-apg has customValidation that rejects trailing hyphens and consecutive hyphens.
+      // Auto-generated names like "aws-apg-gray-apple" start with a letter and have
+      // no trailing hyphens or consecutive hyphens, so they should pass.
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const result = resolveResourceName('aws-apg');
+      expect(result).toEqual({ resourceName: 'aws-apg-gray-apple' });
+    });
+
+    it('generates and validates name for aws-dynamodb (minLength: 3)', () => {
+      // aws-dynamodb requires minLength: 3. Auto-generated names like
+      // "aws-dynamodb-gray-apple" are well above 3 characters.
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const result = resolveResourceName('aws-dynamodb');
+      expect(result).toEqual({ resourceName: 'aws-dynamodb-gray-apple' });
+    });
+
+    it('respects product-specific maxLength during generation', () => {
+      // Use a long slug that will trigger truncation against aws-apg's maxLength of 50
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const result = resolveResourceName('aws-apg');
+      if ('resourceName' in result) {
+        // aws-apg maxLength is 50; generated name must respect it
+        expect(result.resourceName.length).toBeLessThanOrEqual(50);
+        // Also verify truncation works for generateDefaultResourceName directly
+        const longSlug = 'a'.repeat(45);
+        const truncated = generateDefaultResourceName(longSlug, 50);
+        expect(truncated.length).toBeLessThanOrEqual(50);
+      } else {
+        expect.unreachable('Expected a resourceName, got an error');
+      }
+    });
+
+    it('user-provided validation errors do not include --name guidance', () => {
+      // When a user provides an invalid name, the error should NOT suggest --name
+      // (since they already used --name). This verifies the two error paths differ.
+      const result = resolveResourceName('aws-apg', '1-bad-name');
+      expect(result).toEqual({
+        error:
+          'Resource name must start with a letter and can only contain letters, numbers, and hyphens',
+      });
+      if ('error' in result) {
+        expect(result.error).not.toContain('--name');
+      }
     });
   });
 });
