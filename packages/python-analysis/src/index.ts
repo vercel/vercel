@@ -59,7 +59,6 @@ export type {
 
 export {
   classifyPackages,
-  generateRuntimeRequirements,
   isPrivatePackageSource,
   normalizePackageName,
   parseUvLock,
