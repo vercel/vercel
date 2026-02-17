@@ -298,6 +298,49 @@ describe('blob copy', () => {
     });
   });
 
+  describe('access option', () => {
+    it('should handle --access private option', async () => {
+      client.setArgv(
+        'blob',
+        'copy',
+        '--access',
+        'private',
+        'source.txt',
+        'dest.txt'
+      );
+
+      const exitCode = await copy(
+        client,
+        ['--access', 'private', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+        token: testToken,
+        access: 'private',
+        addRandomSuffix: false,
+        contentType: undefined,
+        cacheControlMaxAge: undefined,
+      });
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:fromUrlOrPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:toPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'private',
+        },
+      ]);
+    });
+  });
+
   describe('flag variations', () => {
     it('should handle addRandomSuffix flag correctly when false', async () => {
       const exitCode = await copy(

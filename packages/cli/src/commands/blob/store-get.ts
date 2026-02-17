@@ -86,9 +86,7 @@ export default async function getStore(
       ? `\nRegion: ${store.store.region}`
       : '';
 
-    const accessInfo = store.store.access
-      ? `\nAccess: ${store.store.access === 'private' ? 'Private' : 'Public'}`
-      : '';
+    const accessInfo = `\nAccess: ${store.store.access === 'private' ? 'Private' : 'Public'}`;
 
     output.print(
       `Blob Store: ${chalk.bold(store.store.name)} (${chalk.dim(store.store.id)})

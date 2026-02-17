@@ -93,6 +93,7 @@ export default async function get(
       await pipeline(nodeStream, client.stdout, { end: false });
     }
   } catch (err) {
+    output.stopSpinner();
     printError(err);
     return 1;
   }
