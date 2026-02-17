@@ -266,7 +266,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   /**
    * @type Record<string, string[]>
    */
-  const rawHeaders = resp.headers.raw();
+  const rawHeaders = headersToRaw(resp.headers);
   if (probe.responseHeaders) {
     // eslint-disable-next-line no-loop-func
     Object.keys(probe.responseHeaders).forEach(header => {
@@ -537,6 +537,30 @@ async function spawnAsync(...args) {
       resolve(result);
     });
   });
+}
+
+/**
+ * Converts a `Headers` object into a `Record<string, string[]>` mapping,
+ * equivalent to the `node-fetch`–specific `headers.raw()` method.
+ *
+ * The standard `Headers` API folds duplicate header values into a single
+ * comma-separated string.  `set-cookie` is the only header where the
+ * individual values matter, so we special-case it via `getSetCookie()`.
+ *
+ * @param {Headers} headers
+ * @returns {Record<string, string[]>}
+ */
+function headersToRaw(headers) {
+  /** @type {Record<string, string[]>} */
+  const raw = {};
+  headers.forEach((value, name) => {
+    if (name === 'set-cookie') {
+      raw[name] = headers.getSetCookie();
+    } else {
+      raw[name] = [value];
+    }
+  });
+  return raw;
 }
 
 /**
