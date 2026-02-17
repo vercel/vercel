@@ -213,6 +213,7 @@ async function readFunctionsConfig({ workPath }: { workPath: string }) {
       runtime?: string;
       handler?: string;
       regions?: string[];
+      functionFailoverRegions?: string[];
     }
   >();
 
@@ -239,6 +240,7 @@ function parseFunctionConfig(data: Record<string, unknown>) {
     runtime?: string;
     handler?: string;
     regions?: string[];
+    functionFailoverRegions?: string[];
   } = {};
 
   if (typeof data.memory === 'number') {
@@ -260,6 +262,13 @@ function parseFunctionConfig(data: Record<string, unknown>) {
     data.regions.every(r => typeof r === 'string')
   ) {
     config.regions = data.regions;
+  }
+
+  if (
+    Array.isArray(data.functionFailoverRegions) &&
+    data.functionFailoverRegions.every(r => typeof r === 'string')
+  ) {
+    config.functionFailoverRegions = data.functionFailoverRegions;
   }
 
   return config;
