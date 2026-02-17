@@ -6,6 +6,15 @@ export class BlobCopyTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof copySubcommand>
 {
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
+
   trackCliArgumentFromUrlOrPathname(value: string | undefined) {
     if (value) {
       this.trackCliArgument({

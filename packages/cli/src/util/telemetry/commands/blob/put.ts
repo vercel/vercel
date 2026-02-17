@@ -6,6 +6,15 @@ export class BlobPutTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof putSubcommand>
 {
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
+
   trackCliArgumentPathToFile(pathToFile: string | undefined) {
     if (pathToFile) {
       this.trackCliArgument({

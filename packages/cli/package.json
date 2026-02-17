@@ -37,7 +37,7 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "@vercel/blob": "1.0.2",
+    "@vercel/blob": "2.3.0-cc8f7be-20260217140255",
     "@vercel/build-utils": "workspace:*",
     "@vercel/detect-agent": "workspace:*",
     "@vercel/fun": "1.3.0",
