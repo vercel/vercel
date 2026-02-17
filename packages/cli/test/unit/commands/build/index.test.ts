@@ -995,6 +995,7 @@ describe.skipIf(flakey)('build', () => {
       handler: 'api/memory.js',
       memory: 128,
       regions: ['sfo1'],
+      functionFailoverRegions: ['dub1'],
       environment: {},
       launcherType: 'Nodejs',
       shouldAddHelpers: true,
