@@ -4,7 +4,7 @@
 
 ### References
 
-- [unstable\_checkRateLimit](README.md#unstable_checkratelimit)
+- [unstable_checkRateLimit](README.md#unstable_checkratelimit)
 
 ### Functions
 
@@ -12,7 +12,7 @@
 
 ## References
 
-### unstable\_checkRateLimit
+### unstable_checkRateLimit
 
 Renames and re-exports [checkRateLimit](README.md#checkratelimit)
 
@@ -20,7 +20,7 @@ Renames and re-exports [checkRateLimit](README.md#checkratelimit)
 
 ### checkRateLimit
 
-▸ **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise )<{ `error?`: ``"not-found"`` \| ``"blocked"`` ; `rateLimited`: `boolean`  }\>
+▸ **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
 
 Experimental: Check rate-limits defined through the Vercel Firewall.
 
@@ -46,21 +46,21 @@ export async function POST() {
 
 #### Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `rateLimitId` | `string` | The ID of the rate limit to check. The same ID must be defined in the Vercel Firewall as a @vercel/firewall rule condition. |
-| `options?` | `Object` |  |
-| `options.firewallHostForDevelopment?` | `string` | The host name on which the rate limit rules are defined |
-| `options.headers?` | `Headers` \| [`Record`]( https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type )<`string`, `string`\> \| [`Record`]( https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type )<`string`, `string` \| `string`[]\> | The headers for the current request. Optional. |
-| `options.rateLimitKey?` | `string` | The key to use for rate-limiting. If not defined, defaults to the user's IP address. |
-| `options.request?` | `Request` | The current request object. Optional. |
+| Name                                  | Type                                                                                                                                                                                                                                                            | Description                                                                                                                 |
+| :------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| `rateLimitId`                         | `string`                                                                                                                                                                                                                                                        | The ID of the rate limit to check. The same ID must be defined in the Vercel Firewall as a @vercel/firewall rule condition. |
+| `options?`                            | `Object`                                                                                                                                                                                                                                                        |                                                                                                                             |
+| `options.firewallHostForDevelopment?` | `string`                                                                                                                                                                                                                                                        | The host name on which the rate limit rules are defined                                                                     |
+| `options.headers?`                    | `Headers` \| [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)<`string`, `string`\> \| [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)<`string`, `string` \| `string`[]\> | The headers for the current request. Optional.                                                                              |
+| `options.rateLimitKey?`               | `string`                                                                                                                                                                                                                                                        | The key to use for rate-limiting. If not defined, defaults to the user's IP address.                                        |
+| `options.request?`                    | `Request`                                                                                                                                                                                                                                                       | The current request object. Optional.                                                                                       |
 
 #### Returns
 
-[`Promise`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise )<{ `error?`: ``"not-found"`` \| ``"blocked"`` ; `rateLimited`: `boolean`  }\>
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
 
 A promise that resolves to an object with a `rateLimited` property that is `true` if the request is rate-limited, and `false` otherwise. The
-  `error` property is defined if the request was blocked by the firewall or the rate limit ID was not found.
+`error` property is defined if the request was blocked by the firewall or the rate limit ID was not found.
 
 #### Defined in
 
