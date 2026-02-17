@@ -2,4 +2,12 @@
 'vercel': minor
 ---
 
-Add private Blob storage support: new `blob get` command for downloading blobs, `--access` flag on `put`, `copy`, `get`, and `store add` commands (defaults to `public` for backward compatibility), and display access type in `store get` output
+Add private Blob storage support:
+
+- Create private stores: `vercel blob store add my-store --access private`
+- Upload to private stores: `vercel blob put file.txt --access private`
+- Download blobs with the new `blob get` command: `vercel blob get file.txt --access private` (works with both public and private stores)
+- Copy blobs: `vercel blob copy source.txt dest.txt --access private`
+- Display access type (Public/Private) in `vercel blob store get` output
+
+The `--access` flag defaults to `public` for backward compatibility.

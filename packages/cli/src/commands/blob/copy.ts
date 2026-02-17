@@ -7,7 +7,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { copySubcommand } from './command';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
-import { isAccess } from '../../util/blob/access';
+import { parseAccessFlag } from '../../util/blob/access';
 
 export default async function copy(
   client: Client,
@@ -49,13 +49,8 @@ export default async function copy(
     },
   } = parsedArgs;
 
-  const access = accessFlag ?? 'public';
-  if (!isAccess(access)) {
-    output.error(
-      `Invalid access value: '${access}'. Must be 'public' or 'private'.`
-    );
-    return 1;
-  }
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
 
   telemetryClient.trackCliArgumentFromUrlOrPathname(fromUrl);
   telemetryClient.trackCliArgumentToPathname(toPathname);

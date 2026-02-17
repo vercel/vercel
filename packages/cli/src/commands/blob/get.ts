@@ -7,7 +7,7 @@ import { getSubcommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { BlobGetTelemetryClient } from '../../util/telemetry/commands/blob/get';
 import { printError } from '../../util/error';
-import { isAccess } from '../../util/blob/access';
+import { parseAccessFlag } from '../../util/blob/access';
 import { createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
@@ -47,13 +47,8 @@ export default async function get(
     return 1;
   }
 
-  const access = accessFlag ?? 'public';
-  if (!isAccess(access)) {
-    output.error(
-      `Invalid access value: '${access}'. Must be 'public' or 'private'.`
-    );
-    return 1;
-  }
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
 
   telemetryClient.trackCliArgumentUrlOrPathname(urlOrPathname);
   telemetryClient.trackCliOptionAccess(accessFlag);

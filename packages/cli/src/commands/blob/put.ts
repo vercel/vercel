@@ -12,7 +12,7 @@ import { getCommandName } from '../../util/pkg-name';
 import chalk from 'chalk';
 import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
 import { printError } from '../../util/error';
-import { isAccess } from '../../util/blob/access';
+import { parseAccessFlag } from '../../util/blob/access';
 
 export default async function put(
   client: Client,
@@ -48,13 +48,8 @@ export default async function put(
     '--force': force,
   } = flags;
 
-  const access = accessFlag ?? 'public';
-  if (!isAccess(access)) {
-    output.error(
-      `Invalid access value: '${access}'. Must be 'public' or 'private'.`
-    );
-    return 1;
-  }
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
 
   // Only track file path if one was provided
   if (filePath) {
