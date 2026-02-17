@@ -27,6 +27,8 @@ export default withApiHandler(async function (
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // NOTE: `withApiHandler()` already sets the CORS and method headers and handles OPTIONS/405.
+  // Keeping duplicate header logic here increases the risk of divergence if one side changes.
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
   res.setHeader(

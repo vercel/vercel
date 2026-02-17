@@ -215,6 +215,9 @@ export default class Client extends EventEmitter implements Stdio {
     // If we had an error, during the refresh process, empty the auth config
     // to force the user to re-authenticate
     if (tokensError) {
+      // NOTE: This treats any token refresh failure the same (including transient network/API errors)
+      // and will clear persisted auth state. This can force a re-login even if the refresh token is
+      // still valid but the request failed intermittently.
       output.debug('Error refreshing token, emptying auth config.');
       this.emptyAuthConfig();
       this.writeToAuthConfigFile();
