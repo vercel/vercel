@@ -20,10 +20,26 @@ import {
 import o from '../../output-manager';
 import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
-export async function login(
+export interface DeviceCodeTokens {
+  access_token: string;
+  expires_in: number;
+  refresh_token?: string;
+}
+
+/**
+ * Core device code flow: initiates the device authorization request,
+ * displays the verification URL, opens the browser, and polls for
+ * the token. Returns the token set on success or `null` on failure.
+ *
+ * @param options.teamId - The ID of the team that the current token
+ *   lacks access to. When provided, `&team_id={id}` is appended to the
+ *   verification URL so the device flow page enforces authorization
+ *   for that team (e.g., SAML) before completing the request.
+ */
+export async function performDeviceCodeFlow(
   client: Client,
-  telemetry: LoginTelemetryClient
-): Promise<number> {
+  options?: { teamId?: string }
+): Promise<DeviceCodeTokens | null> {
   const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   o.debug(
@@ -35,18 +51,22 @@ export async function login(
 
   if (deviceAuthorizationError) {
     printError(deviceAuthorizationError);
-    telemetry.trackState('error');
-    return 1;
+    return null;
   }
 
-  const {
-    device_code,
-    user_code,
-    verification_uri,
-    verification_uri_complete,
-    expiresAt,
-    interval,
-  } = deviceAuthorization;
+  const { device_code, user_code, verification_uri, expiresAt, interval } =
+    deviceAuthorization;
+
+  let { verification_uri_complete } = deviceAuthorization;
+
+  // When re-authenticating for a missing scope (e.g., a SAML-enforced team),
+  // append the team ID as a `team_id` query parameter so the device flow
+  // page requires the user to authorize that team before completing.
+  if (options?.teamId) {
+    const url = new URL(verification_uri_complete);
+    url.searchParams.set('team_id', options.teamId);
+    verification_uri_complete = url.toString();
+  }
 
   // Determine if we should skip opening the browser (only in CI, but not in Cursor)
   const isCursorAgent =
@@ -91,14 +111,14 @@ export async function login(
     })
     // HACK: https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-172282009, https://github.com/SBoudrias/Inquirer.js/pull/569
     .on('SIGINT', () => {
-      telemetry.trackState('canceled');
       process.exit(0);
     });
 
   o.spinner('Waiting for authentication...');
 
   let intervalMs = interval * 1000;
-  let error: Error | undefined = new Error(
+  let result: DeviceCodeTokens | null = null;
+  let flowError: Error | undefined = new Error(
     'Timed out waiting for authentication. Please try again.'
   );
 
@@ -146,33 +166,64 @@ export async function login(
 
       if (tokensError) return tokensError;
 
-      // If we get here, we throw away any possible token errors like polling, or timeouts
-      error = undefined;
-
       o.print(eraseLines(2));
 
-      // user is not currently authenticated on this machine
-      const isInitialLogin = !client.authConfig.token;
+      result = {
+        access_token: tokens.access_token,
+        expires_in: tokens.expires_in,
+        refresh_token: tokens.refresh_token,
+      };
 
-      client.updateAuthConfig({
-        token: tokens.access_token,
-        expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-        refreshToken: tokens.refresh_token,
-      });
+      return;
+    }
+  }
 
-      client.updateConfig({ currentTeam: undefined });
+  flowError = await pollForToken();
 
-      // If we have a brand new login, update `currentTeam`
-      if (isInitialLogin) {
-        await updateCurrentTeamAfterLogin(client);
-      }
+  o.stopSpinner();
+  rl.close();
 
-      client.writeToAuthConfigFile();
-      client.writeToConfigFile();
+  if (flowError) {
+    printError(flowError);
+    return null;
+  }
 
-      o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+  return result;
+}
 
-      o.print(`
+export async function login(
+  client: Client,
+  telemetry: LoginTelemetryClient
+): Promise<number> {
+  const tokens = await performDeviceCodeFlow(client);
+
+  if (!tokens) {
+    telemetry.trackState('error');
+    return 1;
+  }
+
+  // user is not currently authenticated on this machine
+  const isInitialLogin = !client.authConfig.token;
+
+  client.updateAuthConfig({
+    token: tokens.access_token,
+    expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+    refreshToken: tokens.refresh_token,
+  });
+
+  client.updateConfig({ currentTeam: undefined });
+
+  // If we have a brand new login, update `currentTeam`
+  if (isInitialLogin) {
+    await updateCurrentTeamAfterLogin(client);
+  }
+
+  client.writeToAuthConfigFile();
+  client.writeToConfigFile();
+
+  o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+
+  o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.
 
   To deploy something, run ${getCommandName()}.
@@ -180,23 +231,8 @@ export async function login(
   ${emoji('tip')} To deploy every commit automatically,
   connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
 
-      return;
-    }
-  }
-
-  error = await pollForToken();
-
-  o.stopSpinner();
-  rl.close();
-
-  if (!error) {
-    telemetry.trackState('success');
-    return 0;
-  }
-
-  printError(error);
-  telemetry.trackState('error');
-  return 1;
+  telemetry.trackState('success');
+  return 0;
 }
 
 async function wait(intervalMs: number): Promise<void> {
