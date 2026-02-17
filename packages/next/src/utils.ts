@@ -227,6 +227,12 @@ type RoutesManifestRegex = {
   regexKeys: string[];
 };
 
+type PrefetchSegmentDataRoute = {
+  source: string;
+  destination: string;
+  routeKeys?: { [named: string]: string };
+};
+
 type RoutesManifestRoute = {
   page: string;
   regex: string;
@@ -244,11 +250,7 @@ type RoutesManifestRoute = {
    * the prefetch segment data routes (or the inverse) to the correct
    * destination.
    */
-  prefetchSegmentDataRoutes?: {
-    source: string;
-    destination: string;
-    routeKeys?: { [named: string]: string };
-  }[];
+  prefetchSegmentDataRoutes?: PrefetchSegmentDataRoute[];
 };
 
 type RoutesManifestOld = {
@@ -419,10 +421,10 @@ function getDestinationForSegmentRoute(
   isDev: boolean,
   entryDirectory: string,
   routeKeys: Record<string, string> | undefined,
-  prefetchSegmentDataRoute: {
-    destination: string;
-    routeKeys?: Record<string, string>;
-  }
+  prefetchSegmentDataRoute: Pick<
+    PrefetchSegmentDataRoute,
+    'destination' | 'routeKeys'
+  >
 ) {
   return `${
     !isDev
@@ -435,6 +437,31 @@ function getDestinationForSegmentRoute(
   }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
     .map(([key, value]) => `${value}=$${key}`)
     .join('&')}`;
+}
+
+const PREFETCH_SEGMENT_SUFFIX_CAPTURE = 'segment';
+const PREFETCH_SEGMENT_SUFFIX_CAPTURE_SAFE = 'nxtSegmentSuffix';
+
+function normalizePrefetchSegmentDataRoute(
+  prefetchSegmentDataRoute: PrefetchSegmentDataRoute
+): PrefetchSegmentDataRoute {
+  // The runtime destination replacement for "$segment" can also match the
+  // "$segment" prefix in literals like "$segments". Remap the capture name to
+  // avoid accidental partial replacements.
+  const source = prefetchSegmentDataRoute.source.replace(
+    `(?<${PREFETCH_SEGMENT_SUFFIX_CAPTURE}>`,
+    `(?<${PREFETCH_SEGMENT_SUFFIX_CAPTURE_SAFE}>`
+  );
+  const destination = prefetchSegmentDataRoute.destination.replace(
+    new RegExp(`\\$${PREFETCH_SEGMENT_SUFFIX_CAPTURE}(?=\\?|$)`),
+    `$${PREFETCH_SEGMENT_SUFFIX_CAPTURE_SAFE}`
+  );
+
+  return {
+    ...prefetchSegmentDataRoute,
+    source,
+    destination,
+  };
 }
 
 export async function getDynamicRoutes({
@@ -584,13 +611,15 @@ export async function getDynamicRoutes({
             prefetchSegmentDataRoutes.length > 0
           ) {
             for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
+              const normalizedPrefetchSegmentDataRoute =
+                normalizePrefetchSegmentDataRoute(prefetchSegmentDataRoute);
               routes.push({
-                src: prefetchSegmentDataRoute.source,
+                src: normalizedPrefetchSegmentDataRoute.source,
                 dest: getDestinationForSegmentRoute(
                   isDev === true,
                   entryDirectory,
                   routeKeys,
-                  prefetchSegmentDataRoute
+                  normalizedPrefetchSegmentDataRoute
                 ),
                 check: true,
                 override: true,
