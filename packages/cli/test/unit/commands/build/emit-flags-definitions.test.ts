@@ -15,7 +15,6 @@ vi.mock('node-fetch', async () => ({
   default: vi.fn(),
 }));
 
-import * as fsp from 'node:fs/promises';
 import { emitFlagsDatafiles } from '../../../../src/commands/build/emit-flags-datafiles';
 
 function sha256(input: string): string {
@@ -37,21 +36,25 @@ beforeEach(() => {
 });
 
 describe('emitFlagsDatafiles', () => {
-  it('should do nothing when no SDK keys are present', async () => {
-    const writeFileSpy = vi.spyOn(fsp, 'writeFile');
-    const mkdirSpy = vi.spyOn(fsp, 'mkdir');
-
+  it('should emit an empty package when no SDK keys are present', async () => {
     await emitFlagsDatafiles('/app', {
       SOME_VAR: 'hello',
     });
 
     expect(fetch).not.toHaveBeenCalled();
-    expect(mkdirSpy).not.toHaveBeenCalled();
-    expect(writeFileSpy).not.toHaveBeenCalled();
-    expect(vol.toJSON()).toEqual({});
 
-    writeFileSpy.mockRestore();
-    mkdirSpy.mockRestore();
+    const files = vol.toJSON();
+    const storageDir = '/app/node_modules/@vercel/flags-definitions';
+
+    // index.js should exist with an empty map
+    const indexJs = files[`${storageDir}/index.js`] as string;
+    expect(indexJs).toBeDefined();
+    expect(indexJs).toContain('export function get(hashedSdkKey)');
+    expect(indexJs).toContain('const map = {\n};');
+
+    // index.d.ts and package.json should exist
+    expect(files[`${storageDir}/index.d.ts`]).toBeDefined();
+    expect(files[`${storageDir}/package.json`]).toBeDefined();
   });
 
   it('should fetch definitions for a direct vf_ key and write files', async () => {
@@ -222,7 +225,7 @@ describe('emitFlagsDatafiles', () => {
     expect(indexJs).not.toContain(sdkKey);
 
     // Version is included
-    expect(indexJs).toContain('export const version = "1.0.0"');
+    expect(indexJs).toContain('export const version = "1.0.1"');
   });
 
   it('should include Vercel metadata headers when env vars are set', async () => {
@@ -284,6 +287,6 @@ describe('emitFlagsDatafiles', () => {
     const indexJs = files[
       '/app/node_modules/@vercel/flags-definitions/index.js'
     ] as string;
-    expect(indexJs).toContain('export const version = "1.0.0"');
+    expect(indexJs).toContain('export const version = "1.0.1"');
   });
 });
