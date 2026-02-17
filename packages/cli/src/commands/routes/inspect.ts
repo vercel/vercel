@@ -503,9 +503,7 @@ function formatRouteDetails(rule: RoutingRule): string {
       `  ${chalk.cyan('State:')}       ${chalk.yellow('Staged (not yet published)')}`
     );
   } else if (rule.staged === false) {
-    lines.push(
-      `  ${chalk.cyan('State:')}       ${chalk.green('Published')}`
-    );
+    lines.push(`  ${chalk.cyan('State:')}       ${chalk.green('Published')}`);
   }
   lines.push(`  ${chalk.cyan('Type:')}        ${typeLabels}`);
   lines.push('');
