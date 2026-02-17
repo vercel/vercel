@@ -1,7 +1,7 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getSubcommand from '../../util/get-subcommand';
+import resolveSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import list from './list';
 import {
@@ -53,7 +53,7 @@ export default async function main(client: Client) {
   }
 
   const subArgs = parsedArgs.args.slice(1);
-  const { subcommand, args, subcommandOriginal } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = resolveSubcommand(
     subArgs,
     COMMAND_CONFIG
   );

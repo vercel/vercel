@@ -39,6 +39,7 @@ describe('blob put', () => {
       pathname: 'uploaded-file.txt',
       contentType: 'text/plain',
       contentDisposition: 'attachment; filename="uploaded-file.txt"',
+      etag: 'test-etag',
     });
   });
 

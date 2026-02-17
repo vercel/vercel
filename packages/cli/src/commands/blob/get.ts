@@ -71,12 +71,12 @@ export default async function get(
       access,
     });
 
-    if (!result) {
+    if (!result || !result.stream) {
       output.error(`Blob not found: ${urlOrPathname}`);
       return 1;
     }
 
-    const nodeStream = Readable.fromWeb(result.body as NodeWebReadableStream);
+    const nodeStream = Readable.fromWeb(result.stream as NodeWebReadableStream);
 
     if (outputPath) {
       const writeStream = createWriteStream(outputPath);
@@ -84,10 +84,10 @@ export default async function get(
 
       output.stopSpinner();
 
-      const sizeInfo = result.contentLength
-        ? ` (${bytes(result.contentLength)})`
+      const sizeInfo = result.blob.size ? ` (${bytes(result.blob.size)})` : '';
+      const typeInfo = result.blob.contentType
+        ? `, ${result.blob.contentType}`
         : '';
-      const typeInfo = result.contentType ? `, ${result.contentType}` : '';
       output.success(`Saved to ${outputPath}${sizeInfo}${typeInfo}`);
     } else {
       await pipeline(nodeStream, client.stdout, { end: false });

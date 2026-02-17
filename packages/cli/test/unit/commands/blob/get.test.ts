@@ -2,8 +2,10 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import get from '../../../../src/commands/blob/get';
 import * as blobModule from '@vercel/blob';
+import type { GetBlobResult } from '@vercel/blob';
 import output from '../../../../src/output-manager';
 import { Readable } from 'node:stream';
+import { ReadableStream as WebReadableStream } from 'node:stream/web';
 import * as fs from 'node:fs';
 import * as streamPromises from 'node:stream/promises';
 
@@ -32,7 +34,7 @@ const mockedPipeline = vi.mocked(streamPromises.pipeline);
 
 function createMockGetResult(body?: string) {
   const content = body ?? 'file content here';
-  const readable = new ReadableStream({
+  const stream = new WebReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(content));
       controller.close();
@@ -40,14 +42,21 @@ function createMockGetResult(body?: string) {
   });
 
   return {
-    url: 'https://example.com/test-file.txt',
-    downloadUrl: 'https://example.com/test-file.txt',
-    pathname: 'test-file.txt',
-    contentType: 'text/plain',
-    contentDisposition: 'attachment; filename="test-file.txt"',
-    contentLength: content.length,
-    body: readable,
-  };
+    statusCode: 200 as const,
+    stream,
+    headers: new Headers(),
+    blob: {
+      url: 'https://example.com/test-file.txt',
+      downloadUrl: 'https://example.com/test-file.txt',
+      pathname: 'test-file.txt',
+      contentType: 'text/plain',
+      contentDisposition: 'attachment; filename="test-file.txt"',
+      cacheControl: 'public, max-age=2592000',
+      uploadedAt: new Date(),
+      etag: 'test-etag',
+      size: content.length,
+    },
+  } as unknown as GetBlobResult;
 }
 
 describe('blob get', () => {

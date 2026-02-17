@@ -32,6 +32,7 @@ describe('blob copy', () => {
       pathname: 'copied-file.txt',
       contentType: 'text/plain',
       contentDisposition: 'attachment; filename="copied-file.txt"',
+      etag: 'test-etag',
     });
   });
 
