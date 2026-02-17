@@ -1979,11 +1979,7 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 // --------------------------------------------------------------------------
 
 import { calculateBundleSize } from '../src/install';
-import {
-  classifyPackages,
-  generateRuntimeRequirements,
-  parseUvLock,
-} from '@vercel/python-analysis';
+import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef } from '@vercel/build-utils';
 
 describe('runtime dependency installation support', () => {
@@ -2128,37 +2124,6 @@ version = "2.31.0"
       expect(result.packageVersions['my-app']).toBeUndefined();
       // requests should still be classified
       expect(result.publicPackages).toContain('requests');
-    });
-  });
-
-  describe('generateRuntimeRequirements', () => {
-    it('generates requirements file content with versions', () => {
-      const classification = {
-        privatePackages: ['private-pkg'],
-        publicPackages: ['requests', 'flask'],
-        packageVersions: {
-          'private-pkg': '1.0.0',
-          requests: '2.31.0',
-          flask: '3.0.0',
-        },
-      };
-
-      const content = generateRuntimeRequirements(classification);
-      expect(content).toContain('requests==2.31.0');
-      expect(content).toContain('flask==3.0.0');
-      expect(content).not.toContain('private-pkg');
-    });
-
-    it('generates empty requirements for no public packages', () => {
-      const classification = {
-        privatePackages: ['private-pkg'],
-        publicPackages: [],
-        packageVersions: { 'private-pkg': '1.0.0' },
-      };
-
-      const content = generateRuntimeRequirements(classification);
-      expect(content).toContain('# Auto-generated');
-      expect(content).not.toContain('==');
     });
   });
 });

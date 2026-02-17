@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { promisify } from 'util';
-import { join, dirname, basename, parse } from 'path';
+import { join, dirname, basename, parse, relative } from 'path';
 import { VERCEL_RUNTIME_VERSION } from './runtime-version';
 import {
   download,
@@ -33,7 +33,6 @@ import {
 } from './install';
 import {
   classifyPackages,
-  generateRuntimeRequirements,
   parseUvLock,
   PythonAnalysisError,
 } from '@vercel/python-analysis';
@@ -659,12 +658,33 @@ from vercel_runtime.vc_init import vc_handler
         files[p] = f;
       }
 
-      // Everything else gets put into _runtime_requirements.txt for installation at runtime
-      const runtimeRequirementsContent =
-        generateRuntimeRequirements(classification);
-      const runtimeRequirementsPath = `${UV_BUNDLE_DIR}/_runtime_requirements.txt`;
-      files[runtimeRequirementsPath] = new FileBlob({
-        data: runtimeRequirementsContent,
+      // Write a runtime config marker so the bootstrap knows to run
+      // `uv sync --inexact --frozen` at cold start. The pyproject.toml
+      // and uv.lock are already part of the Lambda zip (globbed from
+      // workPath). For workspace layouts where the project root lives
+      // above workPath we bundle them explicitly under _uv/.
+      const projectDirRel = relative(workPath, uvProjectDir);
+      const uvLockRel = relative(workPath, uvLockPath);
+      const isOutsideWorkPath =
+        projectDirRel.startsWith('..') || uvLockRel.startsWith('..');
+
+      if (isOutsideWorkPath) {
+        // Bundle pyproject.toml and uv.lock into _uv/ so they are
+        // available inside the Lambda even for workspace monorepos.
+        const srcPyproject = join(uvProjectDir, 'pyproject.toml');
+        files[`${UV_BUNDLE_DIR}/pyproject.toml`] = new FileFsRef({
+          fsPath: srcPyproject,
+        });
+        files[`${UV_BUNDLE_DIR}/uv.lock`] = new FileFsRef({
+          fsPath: uvLockPath,
+        });
+      }
+
+      const runtimeConfigData = JSON.stringify({
+        projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
+      });
+      files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
+        data: runtimeConfigData,
       });
 
       // Skip uv bundling when running vercel build locally
