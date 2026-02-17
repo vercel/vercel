@@ -830,9 +830,11 @@ async function doBuild(
       }
 
       const builderSpan = span.child('vc.builder', {
-        name: builderPkg.name,
-        version: builderPkg.version,
-        dynamicallyInstalled: String(builderWithPkg.dynamicallyInstalled),
+        'builder.name': builderPkg.name,
+        'builder.version': builderPkg.version,
+        'builder.dynamicallyInstalled': String(
+          builderWithPkg.dynamicallyInstalled
+        ),
       });
 
       const serviceRoutePrefix = build.config?.routePrefix;
