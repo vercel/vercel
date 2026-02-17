@@ -1,0 +1,34 @@
+{
+  "name": "mastra",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "mastra dev",
+    "build": "mastra build",
+    "start": "mastra start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@mastra/core": "1.4.0",
+    "@mastra/deployer-vercel": "1.0.5",
+    "@mastra/evals": "1.1.1",
+    "@mastra/libsql": "1.4.0",
+    "@mastra/loggers": "1.0.1",
+    "@mastra/memory": "1.3.0",
+    "@mastra/observability": "1.2.0",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "mastra": "1.3.1",
+    "typescript": "5.9.3"
+  }
+}
