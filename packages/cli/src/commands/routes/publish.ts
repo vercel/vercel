@@ -11,6 +11,7 @@ import {
 } from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
+import type { RouteVersion } from '../../util/routes/types';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -31,9 +32,8 @@ export default async function publish(client: Client, argv: string[]) {
 
   const { versions } = await getRouteVersions(client, project.id, { teamId });
 
-  let version;
+  let version: RouteVersion | undefined;
   if (versionIdentifier) {
-    // User provided a specific version ID (supports partial IDs)
     const result = findVersionById(versions, versionIdentifier);
     if (result.error) {
       output.error(result.error);
@@ -41,7 +41,6 @@ export default async function publish(client: Client, argv: string[]) {
     }
     version = result.version;
   } else {
-    // Auto-find staging version
     version = versions.find(v => v.isStaging);
     if (!version) {
       output.warn(
@@ -51,6 +50,13 @@ export default async function publish(client: Client, argv: string[]) {
       );
       return 0;
     }
+  }
+
+  // At this point version is guaranteed to be defined
+  // (both branches either assign it or return early)
+  if (!version) {
+    output.error('No version found.');
+    return 1;
   }
 
   if (version.isLive) {

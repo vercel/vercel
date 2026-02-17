@@ -44,6 +44,10 @@ export default async function restore(client: Client, argv: string[]) {
     return 1;
   }
   const version = result.version;
+  if (!version) {
+    output.error('Version not found.');
+    return 1;
+  }
 
   if (version.isLive) {
     output.error(
