@@ -38,6 +38,4 @@ jobs:
       - name: Run CLI evals
         run: cd packages/cli && pnpm test:evals
         env:
-          # When evals are added, agents can use the local CLI build via:
-          # PATH: ${{ github.workspace }}/packages/cli/dist:${{ env.PATH }}
-          # or by installing: npm install -g ${{ github.workspace }}/packages/cli/dist/vc.js
+        
