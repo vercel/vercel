@@ -23,8 +23,6 @@ import {
 import {
   resolveTimeRange,
   computeGranularity,
-  toGranularityMs,
-  getAutoGranularity,
   roundTimeBoundaries,
   toGranularityMsFromDuration,
 } from './time-utils';
@@ -288,17 +286,10 @@ export default async function query(
 
   // Round start/end to granularity boundaries so every time bucket is complete.
   // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
-  // When the granularity was adjusted, use the adjusted value for rounding so
-  // the boundaries match what's actually sent to the API.
-  const granMs = granularity
-    ? toGranularityMs(granularity)
-    : toGranularityMs(getAutoGranularity(rangeMs) || '1h');
   const rounded = roundTimeBoundaries(
     startTime,
     endTime,
-    granResult.adjusted
-      ? toGranularityMsFromDuration(granResult.duration)
-      : granMs
+    toGranularityMsFromDuration(granResult.duration)
   );
 
   // Build request body
