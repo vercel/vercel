@@ -232,19 +232,27 @@ if 'VERCEL_IPC_PATH' in os.environ:
 # Runtime dependency installation for large Lambda functions
 # The _uv directory is at the Lambda root, two levels up from this file
 # (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
-_lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
-_uv_dir = os.path.join(_lambda_root, "_uv")
-_runtime_reqs = os.path.join(_uv_dir, "_runtime_requirements.txt")
+lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
+_uv_dir = os.path.join(lambda_root, "_uv")
+_runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
 
-if os.path.exists(_runtime_reqs):
+if os.path.exists(_runtime_config_path):
     import site
     import subprocess
 
-    _deps_dir = "/tmp/_vc_deps_overflow"
+    _config = json.loads(open(_runtime_config_path).read())
+    _project_dir = os.path.join(lambda_root, _config["projectDir"])
+
+    _deps_dir = "/tmp/_vc_deps"
+    _site_packages = os.path.join(
+        _deps_dir, "lib",
+        f"python{sys.version_info.major}.{sys.version_info.minor}",
+        "site-packages",
+    )
     _marker = os.path.join(_deps_dir, ".installed")
 
     if not os.path.exists(_marker):
-        # Cold start: install dependencies using bundled uv
+        # Cold start: install public dependencies using bundled uv
         _uv_path = os.path.join(_uv_dir, "uv")
 
         _stderr("Installing runtime dependencies...")
@@ -252,21 +260,42 @@ if os.path.exists(_runtime_reqs):
 
         try:
             os.makedirs(_deps_dir, exist_ok=True)
-            _result = subprocess.run(
+
+            # Create a minimal venv for uv sync to install into.
+            subprocess.run(
+                [_uv_path, "venv", _deps_dir, "--python", sys.executable],
+                check=True,
+                text=True,
+                env={
+                    "PATH": os.environ.get("PATH", ""),
+                    "UV_PYTHON_DOWNLOADS": "never",
+                },
+            )
+
+            # Use uv sync --inexact --frozen to install only the
+            # missing public packages. --inexact avoids removing
+            # packages already present in _vendor (private deps).
+            subprocess.run(
                 [
                     _uv_path,
-                    "pip",
-                    "install",
+                    "sync",
+                    "--inexact",
+                    "--frozen",
+                    "--no-dev",
+                    "--no-editable",
+                    "--no-install-project",
+                    "--no-build",
                     "--no-cache",
-                    "--no-config",
-                    "--only-binary=:all:",
-                    "--target",
-                    _deps_dir,
-                    "-r",
-                    _runtime_reqs,
+                    "--link-mode", "copy",
                 ],
                 check=True,
                 text=True,
+                cwd=_project_dir,
+                env={
+                    "PATH": os.environ.get("PATH", ""),
+                    "VIRTUAL_ENV": _deps_dir,
+                    "UV_PYTHON_DOWNLOADS": "never",
+                },
             )
             _install_duration = time.time() - _install_start
             _stderr(f"Runtime dependencies installed in {_install_duration:.2f}s")
@@ -285,15 +314,15 @@ if os.path.exists(_runtime_reqs):
         _stderr("Using cached runtime dependencies")
 
     # Add runtime-installed deps to path (must come before user code import)
-    if os.path.isdir(_deps_dir):
-        site.addsitedir(_deps_dir)
+    if os.path.isdir(_site_packages):
+        site.addsitedir(_site_packages)
         # Move to front of path so these packages take precedence
         try:
-            while _deps_dir in sys.path:
-                sys.path.remove(_deps_dir)
+            while _site_packages in sys.path:
+                sys.path.remove(_site_packages)
         except ValueError:
             pass
-        sys.path.insert(0, _deps_dir)
+        sys.path.insert(0, _site_packages)
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:
