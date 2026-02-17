@@ -1,0 +1,17 @@
+{
+  "name": "@vercel/cli-evals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Evals infrastructure for Vercel CLI (agent-eval framework)",
+  "scripts": {
+    "test": "tsx run.ts",
+    "test:dry": "tsx run.ts --dry"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@vercel/agent-eval": "^0.7.1",
+    "tsx": "^4.20.4",
+    "typescript": "^5.8.3"
+  }
+}
