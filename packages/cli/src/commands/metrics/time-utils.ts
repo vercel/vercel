@@ -1,20 +1,16 @@
+import ms from 'ms';
 import type { Granularity } from './types';
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
 const RELATIVE_TIME_RE = /^(\d+)(m|h|d|w)$/;
 
-const UNIT_TO_MS: Record<string, number> = {
-  m: 60 * 1000,
-  h: 60 * 60 * 1000,
-  d: 24 * 60 * 60 * 1000,
-  w: 7 * 24 * 60 * 60 * 1000,
-};
-
 export function parseTimeFlag(input: string): Date {
-  const match = RELATIVE_TIME_RE.exec(input);
-  if (match) {
-    const [, amount, unit] = match;
-    const ms = parseInt(amount, 10) * UNIT_TO_MS[unit];
-    return new Date(Date.now() - ms);
+  const milliseconds = ms(input);
+  if (milliseconds !== undefined) {
+    return new Date(Date.now() - milliseconds);
   }
   const date = new Date(input);
   if (isNaN(date.getTime())) {
@@ -58,12 +54,11 @@ export function toGranularityDuration(input: string): Granularity {
 }
 
 export function toGranularityMs(input: string): number {
-  const match = RELATIVE_TIME_RE.exec(input);
-  if (!match) {
+  const milliseconds = ms(input);
+  if (milliseconds === undefined) {
     throw new Error(`Invalid granularity format "${input}".`);
   }
-  const [, amount, unit] = match;
-  return parseInt(amount, 10) * UNIT_TO_MS[unit];
+  return milliseconds;
 }
 
 export interface GranularityResult {
@@ -74,11 +69,11 @@ export interface GranularityResult {
 
 // Auto-granularity thresholds: [maxRangeMs, defaultGranularity, minGranularity]
 const GRANULARITY_THRESHOLDS: [number, string, string][] = [
-  [1 * 60 * 60 * 1000, '1m', '1m'], // ≤1h
-  [2 * 60 * 60 * 1000, '5m', '5m'], // ≤2h
-  [12 * 60 * 60 * 1000, '15m', '5m'], // ≤12h
-  [3 * 24 * 60 * 60 * 1000, '1h', '1h'], // ≤3d
-  [30 * 24 * 60 * 60 * 1000, '4h', '4h'], // ≤30d
+  [1 * HOUR_MS, '1m', '1m'], // ≤1h
+  [2 * HOUR_MS, '5m', '5m'], // ≤2h
+  [12 * HOUR_MS, '15m', '5m'], // ≤12h
+  [3 * DAY_MS, '1h', '1h'], // ≤3d
+  [30 * DAY_MS, '4h', '4h'], // ≤30d
 ];
 const FALLBACK_GRANULARITY = '1d';
 
@@ -126,8 +121,8 @@ export function computeGranularity(
 
   // User's granularity is too fine for this range — bump up to the minimum
   if (explicitMs < minMs) {
-    const rangeDays = Math.round(rangeMs / (24 * 60 * 60 * 1000));
-    const rangeHours = Math.round(rangeMs / (60 * 60 * 1000));
+    const rangeDays = Math.round(rangeMs / DAY_MS);
+    const rangeHours = Math.round(rangeMs / HOUR_MS);
     const rangeLabel =
       rangeDays >= 1 ? `${rangeDays}-day` : `${rangeHours}-hour`;
     return {
@@ -167,10 +162,10 @@ export function roundTimeBoundaries(
 
 export function toGranularityMsFromDuration(duration: Granularity): number {
   if ('minutes' in duration) {
-    return duration.minutes * 60 * 1000;
+    return duration.minutes * MINUTE_MS;
   }
   if ('hours' in duration) {
-    return duration.hours * 60 * 60 * 1000;
+    return duration.hours * HOUR_MS;
   }
-  return duration.days * 24 * 60 * 60 * 1000;
+  return duration.days * DAY_MS;
 }
