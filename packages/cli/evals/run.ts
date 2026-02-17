@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// run.ts is in packages/cli/evals/, so evals fixtures are in packages/cli/evals/evals/
 const EVALS_DIR = join(__dirname, 'evals');
 
 function discoverEvals(): string[] {

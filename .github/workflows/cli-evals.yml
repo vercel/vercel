@@ -9,6 +9,7 @@ jobs:
   evals:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: release
     env:
       AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -24,8 +25,8 @@ jobs:
         with:
           node-version: 20.x
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -35,8 +36,8 @@ jobs:
         run: cd packages/cli && pnpm build
 
       - name: Run CLI evals
-        run: |
-          pnpm --dir packages/cli/evals install --no-frozen-lockfile
-          pnpm --dir packages/cli/evals test
+        run: cd packages/cli && pnpm test:evals
         env:
-          PATH: ${{ github.workspace }}/packages/cli/dist:${{ env.PATH }}
+          # When evals are added, agents can use the local CLI build via:
+          # PATH: ${{ github.workspace }}/packages/cli/dist:${{ env.PATH }}
+          # or by installing: npm install -g ${{ github.workspace }}/packages/cli/dist/vc.js
