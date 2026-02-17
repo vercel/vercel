@@ -452,13 +452,16 @@ export function useRoutesForInspectDiff() {
     const versionId = req.query.versionId as string;
     const search = req.query.q as string;
 
-    let routes =
-      versionId === 'prod-version-id' ? productionRoutes : stagingRoutes;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let routes: any[] =
+      versionId === 'prod-version-id'
+        ? [...productionRoutes]
+        : [...stagingRoutes];
 
     if (search) {
       const query = search.toLowerCase();
       routes = routes.filter(
-        r =>
+        (r: any) =>
           r.name.toLowerCase().includes(query) ||
           r.id.toLowerCase().includes(query)
       );
