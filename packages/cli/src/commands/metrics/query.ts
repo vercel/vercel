@@ -103,20 +103,8 @@ async function resolveQueryScope(
     jsonOutput: boolean;
   }
 ): Promise<{ scope: Scope; accountId: string } | number> {
-  // Try linked project first (used for all cases, including --all and --project)
-  const linkedProject = await getLinkedProject(client);
-  let teamSlug: string | undefined;
-  let teamId: string | undefined;
-
-  if (linkedProject.status === 'linked') {
-    teamSlug = linkedProject.org.slug;
-    teamId = linkedProject.org.id;
-  } else if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
-  }
-
-  // If no linked project, fall back to getScope for team context
-  if (!teamSlug && (opts.project || opts.all)) {
+  // --project or --all: resolve team context via getScope
+  if (opts.project || opts.all) {
     const { team } = await getScope(client);
     if (!team) {
       const errMsg =
@@ -128,48 +116,47 @@ async function resolveQueryScope(
       }
       return 1;
     }
-    teamSlug = team.slug;
-    teamId = team.id;
-  }
 
-  if (!opts.project && !opts.all) {
-    // Default: linked project
-    if (linkedProject.status === 'not_linked') {
-      const errMsg =
-        'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
-      if (opts.jsonOutput) {
-        client.stdout.write(formatErrorJson('NOT_LINKED', errMsg));
-      } else {
-        output.error(errMsg);
-      }
-      return 1;
+    if (opts.all) {
+      return {
+        scope: { type: 'team-with-slug', teamSlug: team.slug },
+        accountId: team.id,
+      };
     }
-    // At this point linkedProject.status === 'linked', so teamSlug and teamId are set
+
     return {
       scope: {
         type: 'project-with-slug',
-        teamSlug: teamSlug!,
-        projectName: linkedProject.project.name,
+        teamSlug: team.slug,
+        projectName: opts.project!,
       },
-      accountId: teamId!,
+      accountId: team.id,
     };
   }
 
-  // At this point teamSlug and teamId are guaranteed set (either from linked project or getScope)
-  if (opts.all) {
-    return {
-      scope: { type: 'team-with-slug', teamSlug: teamSlug! },
-      accountId: teamId!,
-    };
+  // Default: use linked project
+  const linkedProject = await getLinkedProject(client);
+  if (linkedProject.status === 'error') {
+    return linkedProject.exitCode;
+  }
+  if (linkedProject.status === 'not_linked') {
+    const errMsg =
+      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
+    if (opts.jsonOutput) {
+      client.stdout.write(formatErrorJson('NOT_LINKED', errMsg));
+    } else {
+      output.error(errMsg);
+    }
+    return 1;
   }
 
   return {
     scope: {
       type: 'project-with-slug',
-      teamSlug: teamSlug!,
-      projectName: opts.project!,
+      teamSlug: linkedProject.org.slug,
+      projectName: linkedProject.project.name,
     },
-    accountId: teamId!,
+    accountId: linkedProject.org.id,
   };
 }
 

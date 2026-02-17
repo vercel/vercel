@@ -345,11 +345,6 @@ describe('query', () => {
     });
 
     it('should error when no team context with --all', async () => {
-      mockedGetLinkedProject.mockResolvedValue({
-        status: 'not_linked',
-        org: null as any,
-        project: null as any,
-      });
       mockedGetScope.mockResolvedValue({
         contextName: 'user',
         team: null,
@@ -361,6 +356,54 @@ describe('query', () => {
 
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain('No team context found');
+    });
+
+    it('should error when no team context with --project', async () => {
+      mockedGetScope.mockResolvedValue({
+        contextName: 'user',
+        team: null,
+        user: { id: 'user_dummy' } as any,
+      });
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'incomingRequest',
+        '--project',
+        'my-app'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain('No team context found');
+    });
+
+    it('should use getScope team for --project even when linked to a different team', async () => {
+      let requestBody: any;
+      client.scenario.post('/api/observability/metrics', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockLinkedProject(); // linked to 'my-team'
+      mockTeamScope('other-team'); // getScope returns 'other-team'
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'incomingRequest',
+        '--project',
+        'other-app'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(requestBody.scope).toEqual({
+        type: 'project-with-slug',
+        teamSlug: 'other-team',
+        projectName: 'other-app',
+      });
     });
   });
 
