@@ -1,5 +1,11 @@
 # vercel
 
+## 50.19.1
+
+### Patch Changes
+
+- Prompt for Marketplace terms inline and install before provisioning in `integration add` ([#15030](https://github.com/vercel/vercel/pull/15030))
+
 ## 50.19.0
 
 ### Minor Changes
