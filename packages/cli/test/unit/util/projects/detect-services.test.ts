@@ -39,6 +39,7 @@ describe('tryDetectServices()', () => {
   });
 
   it('should return services when configured', async () => {
+    await mkdir(join(tempDir, 'api'), { recursive: true });
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
@@ -47,6 +48,10 @@ describe('tryDetectServices()', () => {
           backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
         },
       })
+    );
+    await writeFile(
+      join(tempDir, 'api/index.py'),
+      'def app():\n  return None\n'
     );
 
     const result = await tryDetectServices(tempDir);

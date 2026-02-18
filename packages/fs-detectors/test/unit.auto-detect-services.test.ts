@@ -379,6 +379,7 @@ describe('detectServices with auto-detection', () => {
             },
           },
         }),
+        'src/index.ts': 'export default {}',
         'package.json': JSON.stringify({
           dependencies: {
             next: '14.0.0',
