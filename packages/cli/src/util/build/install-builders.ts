@@ -28,7 +28,7 @@ function getErrorMessage(err: BonusError, execaMessage: string) {
   return execaMessage;
 }
 
-export async function untracedInstallBuilders(
+async function untracedInstallBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>
 ): Promise<Map<string, string>> {
@@ -128,8 +128,11 @@ export async function untracedInstallBuilders(
 export async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
-  span: Span
+  span?: Span
 ): Promise<Map<string, string>> {
+  if (!span) {
+    return untracedInstallBuilders(buildersDir, buildersToAdd);
+  }
   const installSpan = span.child('vc.installBuilders', {
     packages: Array.from(buildersToAdd).join(','),
   });

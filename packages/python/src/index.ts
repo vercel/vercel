@@ -28,6 +28,7 @@ import {
   installRequirement,
 } from './install';
 import {
+  shouldEnableRuntimeInstall,
   mirrorSitePackagesIntoVendor,
   mirrorPrivatePackagesIntoVendor,
   mirrorSelectedPackagesIntoVendor,
@@ -561,10 +562,11 @@ from vercel_runtime.vc_init import vc_handler
   const totalBundleSizeMB = (totalBundleSize / (1024 * 1024)).toFixed(2);
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-  // Determine if runtime dependency installation is needed.
-  // Enabled when the bundle exceeds the Lambda size threshold
-  const runtimeInstallEnabled =
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES && uvLockPath !== null;
+  // Determine if runtime dependency installation is needed
+  const runtimeInstallEnabled = shouldEnableRuntimeInstall({
+    totalBundleSize,
+    uvLockPath,
+  });
 
   if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
     console.log(

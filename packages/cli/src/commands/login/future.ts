@@ -67,7 +67,11 @@ export async function login(
   // Open browser automatically unless we're in CI (excluding Cursor)
   if (!shouldSkipBrowser) {
     try {
-      await open.default(verification_uri_complete);
+      const browserProcess = await open.default(verification_uri_complete);
+      browserProcess.on('error', (error: Error) => {
+        // ignore errors if this fails and prompt user to open browser manually
+        o.debug(`Failed to open browser: ${error}`);
+      });
     } catch (error) {
       // Fail gracefully if browser can't be opened
       o.debug(`Failed to open browser: ${error}`);

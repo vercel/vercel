@@ -16,6 +16,27 @@ export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
+export function shouldEnableRuntimeInstall({
+  totalBundleSize,
+  uvLockPath,
+}: {
+  totalBundleSize: number;
+  uvLockPath: string | null;
+}): boolean {
+  const pythonOnHiveEnabled =
+    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+  if (pythonOnHiveEnabled) {
+    return false;
+  } else if (
+    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+    uvLockPath !== null
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function mirrorSitePackagesIntoVendor({
   venvPath,
   vendorDirName,
