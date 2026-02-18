@@ -171,4 +171,94 @@ describe('getServiceUrlEnvVars', () => {
 
     expect(result).toEqual({});
   });
+
+  describe('origin mode', () => {
+    it('generates absolute URLs using origin', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'frontend',
+            type: 'web',
+            routePrefix: '/',
+          }),
+          createService({
+            name: 'backend',
+            type: 'web',
+            routePrefix: '/_/backend',
+          }),
+        ],
+        frameworkList: [],
+        origin: 'http://localhost:3000',
+      });
+
+      expect(result).toEqual({
+        FRONTEND_URL: 'http://localhost:3000',
+        BACKEND_URL: 'http://localhost:3000/_/backend',
+      });
+    });
+
+    it('generates framework-prefixed vars with relative paths', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'frontend',
+            type: 'web',
+            routePrefix: '/',
+            framework: 'nextjs',
+          }),
+          createService({
+            name: 'api',
+            type: 'web',
+            routePrefix: '/_/api',
+          }),
+        ],
+        frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+        origin: 'http://localhost:3000',
+      });
+
+      expect(result).toEqual({
+        FRONTEND_URL: 'http://localhost:3000',
+        API_URL: 'http://localhost:3000/_/api',
+        NEXT_PUBLIC_FRONTEND_URL: '/',
+        NEXT_PUBLIC_API_URL: '/_/api',
+      });
+    });
+
+    it('does not overwrite existing env vars', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'backend',
+            type: 'web',
+            routePrefix: '/_/backend',
+            framework: 'vite',
+          }),
+        ],
+        frameworkList: [{ slug: 'vite', envPrefix: 'VITE_' }],
+        currentEnv: {
+          BACKEND_URL: 'https://custom-backend.com',
+        },
+        origin: 'http://localhost:3000',
+      });
+
+      expect(result).toEqual({
+        VITE_BACKEND_URL: '/_/backend',
+      });
+    });
+
+    it('returns empty object when neither origin nor deploymentUrl provided', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'backend',
+            type: 'web',
+            routePrefix: '/_/backend',
+          }),
+        ],
+        frameworkList: [],
+      });
+
+      expect(result).toEqual({});
+    });
+  });
 });

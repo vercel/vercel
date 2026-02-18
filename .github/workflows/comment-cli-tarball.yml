@@ -19,6 +19,7 @@ jobs:
       - name: Wait for Vercel deployment
         uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForDeployment
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
@@ -56,6 +57,23 @@ jobs:
             message += '  }\n';
             message += '}\n';
             message += '```\n';
+
+            // Check if a Python runtime wheel was built
+            try {
+              const resp = await fetch(`${deploymentUrl}/tarballs/vercel-runtime-wheel.json`);
+              if (resp.ok) {
+                const { filename } = await resp.json();
+                const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
+                message += '\n### Python Runtime Wheel\n\n';
+                message += 'A Python runtime wheel was also built for this PR.\n';
+                message += 'To use in your Python project builds, also set this environment variable:\n\n';
+                message += '```\n';
+                message += `VERCEL_RUNTIME_PYTHON="vercel-runtime @ ${wheelUrl}"\n`;
+                message += '```\n';
+              }
+            } catch {
+              // No wheel available, skip
+            }
 
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({

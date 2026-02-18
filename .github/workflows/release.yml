@@ -16,6 +16,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, 'Version Packages')
+    environment: release
     permissions:
       contents: write
       id-token: write
@@ -38,6 +40,16 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.9.22'
 
       - name: install npm@9
         run: npm i -g npm@9
@@ -74,26 +86,6 @@ jobs:
             const script = require('./utils/trigger-update-workflow.js')
             await script({ github, context })
 
-      - name: Trigger Python Runtime Release (if @vercel/python-runtime changed)
-        if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
-          script: |
-            const publishedPackages = JSON.parse('${{ steps.changesets.outputs.publishedPackages }}' || '[]');
-            const pythonRuntimePublished = publishedPackages.some(pkg => pkg.name === '@vercel/python-runtime');
-            if (pythonRuntimePublished) {
-              console.log('@vercel/python-runtime was published, triggering Python runtime release workflow');
-              await github.rest.actions.createWorkflowDispatch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'release-python-runtime.yml',
-                ref: 'main',
-              });
-            } else {
-              console.log('@vercel/python-runtime was not in the published packages, skipping Python release');
-            }
-
       - name: Set latest Release to `vercel` (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'
         uses: actions/github-script@v7
@@ -107,8 +99,16 @@ jobs:
     name: Summary (release)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Keep this status check deterministic even when `release` is intentionally skipped.
+    if: always()
     needs:
       - release
     steps:
       - name: Check All
-        run: echo OK
+        run: |
+          # Fail summary only when the gated `release` job actually fails/cancels.
+          if [ "${{ needs.release.result }}" = "failure" ] || [ "${{ needs.release.result }}" = "cancelled" ]; then
+            echo "Release job failed with result: ${{ needs.release.result }}"
+            exit 1
+          fi
+          echo "Release job result: ${{ needs.release.result }}"

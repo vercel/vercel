@@ -1,18 +1,19 @@
 import execa from 'execa';
 import fs from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve, sep } from 'path';
 import {
   FileFsRef,
   Files,
   Meta,
   NowBuildError,
   debug,
-  glob,
 } from '@vercel/build-utils';
 import {
   discoverPythonPackage,
   stringifyManifest,
   createMinimalManifest,
+  normalizePackageName,
+  scanDistributions,
   PythonAnalysisError,
   PythonLockFileKind,
   PythonManifestConvertedKind,
@@ -21,6 +22,13 @@ import {
 import { getVenvPythonBin } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
+
+// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
+
+// AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
+// for runtime overhead (.pyc generation, uv cache, metadata, etc.)
+export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -80,7 +88,7 @@ async function areRequirementsInstalled(
 }
 
 async function getSitePackagesDirs(pythonBin: string): Promise<string[]> {
-  // Ask the venv’s interpreter which directories it adds to sys.path for pure
+  // Ask the venv's interpreter which directories it adds to sys.path for pure
   // Python packages and platform-specific packages so we mirror the exact same
   // paths when mounting `_vendor` in the Lambda bundle.
   const code = `
@@ -223,6 +231,7 @@ export interface UvProjectInfo {
   projectDir: string;
   pyprojectPath: string;
   lockPath: string;
+  lockFileProvidedByUser: boolean;
 }
 
 interface EnsureUvProjectParams {
@@ -231,6 +240,13 @@ interface EnsureUvProjectParams {
   repoRootPath?: string;
   pythonVersion: string;
   uv: UvRunner;
+  generateLockFile?: boolean;
+  /**
+   * When true, generate lock files with --no-build --upgrade to ensure
+   * all packages have pre-built binary wheels available. This is required
+   * for runtime dependency installation.
+   */
+  requireBinaryWheels?: boolean;
 }
 
 export async function ensureUvProject({
@@ -239,6 +255,8 @@ export async function ensureUvProject({
   repoRootPath,
   pythonVersion,
   uv,
+  generateLockFile = false,
+  requireBinaryWheels = false,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
   const rootDir = repoRootPath ?? workPath;
 
@@ -253,8 +271,11 @@ export async function ensureUvProject({
   let projectDir: string;
   let pyprojectPath: string;
   let lockPath: string | null = null;
+  let lockFileProvidedByUser = false;
 
   if (manifestType === 'uv.lock' || manifestType === 'pylock.toml') {
+    // User provided a lock file
+    lockFileProvidedByUser = true;
     // Lock file exists - use it directly
     const lockFile =
       pythonPackage?.manifest?.lockFile ?? pythonPackage?.workspaceLockFile;
@@ -315,7 +336,21 @@ export async function ensureUvProject({
       lockPath = join(rootDir, workspaceLockFile.path);
     } else {
       // Generate a lock file
-      await uv.lock(projectDir);
+      // When requireBinaryWheels is true, use --no-build --upgrade to ensure
+      // all resolved packages have pre-built wheels available.
+      await uv.lock(
+        projectDir,
+        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
+      );
+    }
+
+    // For runtime install, we may need to regenerate the lock file
+    // even if a workspace lock exists, to ensure we have a local copy
+    if (generateLockFile && !lockPath) {
+      await uv.lock(
+        projectDir,
+        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
+      );
     }
   } else {
     // No manifest detected – create a minimal uv project at the workPath so
@@ -334,7 +369,12 @@ export async function ensureUvProject({
     });
     const content = stringifyManifest(minimalManifest);
     await fs.promises.writeFile(pyprojectPath, content);
-    await uv.lock(projectDir);
+    // When requireBinaryWheels is true, use --no-build --upgrade to ensure
+    // all resolved packages have pre-built wheels available.
+    await uv.lock(
+      projectDir,
+      requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
+    );
   }
 
   // Re-resolve lockfile in case earlier operations (uv add/lock) wrote it at a
@@ -344,7 +384,12 @@ export async function ensureUvProject({
       ? lockPath
       : join(projectDir, 'uv.lock');
 
-  return { projectDir, pyprojectPath, lockPath: resolvedLockPath };
+  return {
+    projectDir,
+    pyprojectPath,
+    lockPath: resolvedLockPath,
+    lockFileProvidedByUser,
+  };
 }
 
 async function pipInstall(
@@ -504,33 +549,127 @@ export async function mirrorSitePackagesIntoVendor({
   vendorDirName: string;
 }): Promise<Files> {
   const vendorFiles: Files = {};
-  // Map the files from site-packages in the virtual environment
-  // into the Lambda bundle under `_vendor`.
   try {
     const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
     for (const dir of sitePackageDirs) {
       if (!fs.existsSync(dir)) continue;
 
-      const dirFiles = await glob('**', dir);
-      for (const relativePath of Object.keys(dirFiles)) {
-        if (
-          relativePath.endsWith('.pyc') ||
-          relativePath.includes('__pycache__')
-        ) {
-          continue;
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+      const distributions = await scanDistributions(dir);
+      for (const dist of distributions.values()) {
+        for (const { path: rawPath } of dist.files) {
+          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
+          const filePath = rawPath.replaceAll('/', sep);
+          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+          if (
+            filePath.endsWith('.pyc') ||
+            filePath.split(sep).includes('__pycache__')
+          ) {
+            continue;
+          }
+          const srcFsPath = join(dir, filePath);
+          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
         }
-
-        const srcFsPath = join(dir, relativePath);
-
-        const bundlePath = join(vendorDirName, relativePath).replace(
-          /\\/g,
-          '/'
-        );
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
       }
     }
   } catch (err) {
     console.log('Failed to collect site-packages from virtual environment');
+    throw err;
+  }
+
+  return vendorFiles;
+}
+
+/**
+ * Calculate the total uncompressed size of files in a Files object.
+ */
+export async function calculateBundleSize(files: Files): Promise<number> {
+  let totalSize = 0;
+
+  for (const filePath of Object.keys(files)) {
+    const file = files[filePath];
+    if ('fsPath' in file && file.fsPath) {
+      try {
+        const stats = await fs.promises.stat(file.fsPath);
+        totalSize += stats.size;
+      } catch (err) {
+        console.warn(
+          `Warning: Failed to stat file ${file.fsPath}, size will not be included in bundle calculation: ${err}`
+        );
+      }
+    } else if ('data' in file) {
+      // FileBlob with data
+      const data = (file as { data: string | Buffer }).data;
+      totalSize +=
+        typeof data === 'string' ? Buffer.byteLength(data) : data.length;
+    }
+  }
+
+  return totalSize;
+}
+
+/**
+ * Mirror only private packages from site-packages into the _vendor directory.
+ */
+export async function mirrorPrivatePackagesIntoVendor({
+  venvPath,
+  vendorDirName,
+  privatePackages,
+}: {
+  venvPath: string;
+  vendorDirName: string;
+  privatePackages: string[];
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+
+  if (privatePackages.length === 0) {
+    debug('No private packages to bundle');
+    return vendorFiles;
+  }
+
+  const privatePackageSet = new Set(privatePackages.map(normalizePackageName));
+
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+      const distributions = await scanDistributions(dir);
+      for (const [name, dist] of distributions) {
+        if (!privatePackageSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
+          const filePath = rawPath.replaceAll('/', sep);
+          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+          if (
+            filePath.endsWith('.pyc') ||
+            filePath.split(sep).includes('__pycache__')
+          ) {
+            continue;
+          }
+          const srcFsPath = join(dir, filePath);
+          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+        }
+      }
+    }
+
+    debug(
+      `Bundled ${Object.keys(vendorFiles).length} files from private packages`
+    );
+  } catch (err) {
+    console.log('Failed to collect private packages from virtual environment');
     throw err;
   }
 

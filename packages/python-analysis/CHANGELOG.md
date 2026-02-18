@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.4.1
+
+### Patch Changes
+
+- log contents of malformed manifests ([#15019](https://github.com/vercel/vercel/pull/15019))
+
 ## 0.4.0
 
 ### Minor Changes

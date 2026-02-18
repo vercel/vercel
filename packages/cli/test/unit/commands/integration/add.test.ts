@@ -8,13 +8,15 @@ import {
   useIntegration,
   usePreauthorization,
 } from '../../../mocks/integration';
+import { addSubcommand } from '../../../../src/commands/integration/command';
+import { VALID_ENVIRONMENTS } from '../../../../src/util/integration/post-provision-setup';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams, type Team } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {
-    default: vi.fn(),
+    default: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -28,7 +30,7 @@ const openMock = vi.mocked(open);
 const pullMock = vi.mocked(pull);
 
 beforeEach(() => {
-  openMock.mockClear();
+  openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
@@ -174,7 +176,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -198,7 +200,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -215,7 +217,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -228,7 +230,7 @@ describe('integration', () => {
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -259,7 +261,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=my-custom-db&cmd=add'
           );
@@ -282,7 +284,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           const calledUrl = openMock.mock.calls[0]?.[0] as string;
           const parsed = new URL(calledUrl);
           expect(parsed.searchParams.get('metadata')).toEqual(
@@ -310,7 +312,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=my-proj-db&cmd=add'
           );
@@ -341,7 +343,7 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=my-nolink-db&cmd=add'
           );
@@ -578,7 +580,7 @@ describe('integration', () => {
             'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
           client.stdin.write('Y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
@@ -601,7 +603,7 @@ describe('integration', () => {
             'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
           client.stdin.write('n\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
           expect(openMock).not.toHaveBeenCalled();
         });
 
@@ -630,7 +632,7 @@ describe('integration', () => {
             'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
           );
           client.stdin.write('Y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(exitCodePromise).resolves.toEqual(1);
           const calledUrl = openMock.mock.calls[0]?.[0] as string;
           const parsed = new URL(calledUrl);
           expect(parsed.searchParams.get('teamId')).toEqual('team_dummy');
@@ -825,7 +827,7 @@ describe('integration', () => {
           );
           client.stdin.write('n\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(1);
         });
 
         it('should error when product slug is not found', async () => {
@@ -866,7 +868,7 @@ describe('integration', () => {
           );
           client.stdin.write('n\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(1);
         });
       });
 
@@ -1056,7 +1058,7 @@ describe('integration', () => {
             );
             client.stdin.write('y\n');
             const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(0);
+            expect(exitCode).toEqual(1);
             expect(openMock).toHaveBeenCalledWith(
               'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&planId=pro&cmd=add'
             );
@@ -1070,7 +1072,7 @@ describe('integration', () => {
             );
             client.stdin.write('y\n');
             const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(0);
+            expect(exitCode).toEqual(1);
             expect(openMock).toHaveBeenCalledWith(
               expect.not.stringMatching(/planId=/)
             );
@@ -1193,7 +1195,7 @@ describe('integration', () => {
             );
             client.stdin.write('y\n');
             const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(0);
+            expect(exitCode).toEqual(1);
             expect(openMock).toHaveBeenCalledWith(
               expect.stringMatching(/planId=pro/)
             );
@@ -1517,12 +1519,146 @@ describe('integration', () => {
           );
           client.stdin.write('y\n');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(1);
           const calledUrl = openMock.mock.calls[0]?.[0] as string;
           const parsed = new URL(calledUrl);
           expect(parsed.searchParams.get('metadata')).toEqual(
             JSON.stringify({ region: 'us-east-1' })
           );
+        });
+      });
+
+      describe('--environment flag', () => {
+        it('should list all VALID_ENVIRONMENTS in the help description', () => {
+          const envOption = addSubcommand.options.find(
+            o => o.name === 'environment'
+          );
+          expect(envOption).toBeDefined();
+          for (const env of VALID_ENVIRONMENTS) {
+            expect(envOption!.description).toContain(env);
+          }
+        });
+
+        it('should error on invalid environment value before any provisioning', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--environment',
+            'staging'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid environment value: "staging". Must be one of: production, preview, development'
+          );
+        });
+
+        it('should error on multiple invalid environment values', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--environment',
+            'staging',
+            '--environment',
+            'test'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
+          );
+        });
+
+        it('should accept valid environment values and provision successfully', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--environment',
+            'production'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput('Dashboard:');
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+        });
+
+        it('should accept -e shorthand for --environment flag', async () => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '-e',
+            'production',
+            '-e',
+            'preview'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput('Dashboard:');
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
         });
       });
     });

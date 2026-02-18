@@ -12,7 +12,7 @@ import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {
-    default: vi.fn(),
+    default: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -36,7 +36,7 @@ const pullMock = vi.mocked(pull);
 const connectMock = vi.mocked(connectResourceToProject);
 
 beforeEach(() => {
-  openMock.mockClear();
+  openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
   // Enable auto-provision feature flag
@@ -348,7 +348,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringContaining(
           'https://vercel.com/acme/~/integrations/checkout/acme'
@@ -383,7 +383,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('metadata')).toEqual(
@@ -412,7 +412,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('defaultResourceName')).toEqual('my-db');
@@ -434,7 +434,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalled();
       // No --metadata flags, so metadata should NOT be in the URL
       expect(openMock).toHaveBeenCalledWith(
@@ -459,7 +459,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('metadata')).toEqual(
@@ -496,7 +496,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
       expect(parsed.searchParams.get('metadata')).toEqual(
@@ -525,7 +525,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/metadata=/)
       );
@@ -550,7 +550,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       // Verify all three URL parameters are present
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=acme-gray-apple/)
@@ -582,7 +582,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       // Verify defaultResourceName and source are present, but not projectSlug
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=acme-gray-apple/)
@@ -607,7 +607,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=my-custom-db/)
       );
@@ -635,7 +635,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=my-proj-db/)
       );
@@ -673,7 +673,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/defaultResourceName=my-nolink-db/)
       );
@@ -827,7 +827,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/planId=pro/)
       );
@@ -847,7 +847,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(1);
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/planId=/)
       );
@@ -945,7 +945,18 @@ describe('integration add (auto-provision)', () => {
       useAutoProvision({ responseKey: 'provisioned' });
     });
 
-    it('should prompt for product selection when multiple products', async () => {
+    it('should error when multiple products and no slug specified in non-TTY', async () => {
+      client.setArgv('integration', 'add', 'acme-two-products');
+      (client.stdin as any).isTTY = false;
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('has multiple products');
+      expect(stderr).toContain('acme-two-products/acme-a');
+      expect(stderr).toContain('acme-two-products/acme-b');
+    });
+
+    it('should prompt for product selection when multiple products in TTY', async () => {
       client.setArgv('integration', 'add', 'acme-two-products');
       const exitCodePromise = integrationCommand(client);
 
@@ -1035,11 +1046,11 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
     });
 
-    it('should accept multiple metadata flags', async () => {
+    it('should accept multiple metadata flags with slash syntax', async () => {
       client.setArgv(
         'integration',
         'add',
-        'acme-two-products',
+        'acme-two-products/acme-a',
         '--metadata',
         'version=5.4',
         '--metadata',
@@ -1047,10 +1058,7 @@ describe('integration add (auto-provision)', () => {
       );
       const exitCodePromise = integrationCommand(client);
 
-      await expect(client.stderr).toOutput('Select a product');
-      client.stdin.write('\n'); // Select first product (uses metadataSchema2)
-
-      // Auto-generated name, --metadata provides metadata — no prompts
+      // Slash syntax selects product, --metadata provides metadata — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -1264,6 +1272,185 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+    });
+  });
+
+  describe('--environment flag', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should connect to only production when --environment production is specified', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production']
+      );
+    });
+
+    it('should connect to multiple environments when repeated', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production',
+        '--environment',
+        'preview'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview']
+      );
+    });
+
+    it('should deduplicate repeated environment values', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production']
+      );
+    });
+
+    it('should connect to all 3 environments when no --environment flag is provided', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development']
+      );
+    });
+
+    it('should accept -e shorthand for --environment flag', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '-e', 'development');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['development']
+      );
+    });
+
+    it('should error on invalid environment value', async () => {
+      client.setArgv('integration', 'add', 'acme', '--environment', 'staging');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid environment value: "staging". Must be one of: production, preview, development'
+      );
+    });
+
+    it('should error on multiple invalid environment values', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'staging',
+        '--environment',
+        'test'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
+      );
     });
   });
 });
