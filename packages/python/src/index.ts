@@ -26,10 +26,14 @@ import {
   resolveVendorDir,
   mirrorSitePackagesIntoVendor,
   mirrorPrivatePackagesIntoVendor,
+  mirrorSelectedPackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
   calculateBundleSize,
+  calculatePerPackageSizes,
+  lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
+  LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
 } from './install';
 import {
@@ -555,9 +559,13 @@ from vercel_runtime.vc_init import vc_handler
   const totalBundleSizeMB = (totalBundleSize / (1024 * 1024)).toFixed(2);
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-  // Determine if runtime dependency installation is needed
+  // Determine if runtime dependency installation is needed.
+  // Enabled when the bundle exceeds the Lambda size threshold, or when
+  // VERCEL_PYTHON_ON_HIVE is set (for proactive packing).
   const runtimeInstallEnabled =
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES && uvLockPath !== null;
+    (totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES ||
+      process.env.VERCEL_PYTHON_ON_HIVE) &&
+    uvLockPath !== null;
 
   if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
     console.log(
@@ -652,22 +660,69 @@ from vercel_runtime.vc_init import vc_handler
     );
 
     if (classification.publicPackages.length > 0) {
-      // Bundle only private packages and vercel-runtime
-      const privatePackagesWithRuntime = [
+      // Calculate per-package sizes for public packages
+      const packageSizes = await calculatePerPackageSizes(venvPath);
+
+      // Calculate fixed overhead: source files + private packages + vercel-runtime.
+      // These are always bundled and not part of the knapsack.
+      const alwaysBundled = [
         ...classification.privatePackages,
         'vercel-runtime',
         'vercel_runtime',
       ];
-
-      const privateVendorFiles = await mirrorPrivatePackagesIntoVendor({
+      const alwaysBundledFiles = await mirrorPrivatePackagesIntoVendor({
         venvPath,
         vendorDirName: vendorDir,
-        privatePackages: privatePackagesWithRuntime,
+        privatePackages: alwaysBundled,
       });
 
-      for (const [p, f] of Object.entries(privateVendorFiles)) {
+      const baseFiles: Files = { ...files };
+      for (const [p, f] of Object.entries(alwaysBundledFiles)) {
+        baseFiles[p] = f;
+      }
+      const fixedOverhead = await calculateBundleSize(baseFiles);
+      const remainingCapacity = LAMBDA_PACKING_TARGET_BYTES - fixedOverhead;
+
+      debug(
+        `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
+          `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
+      );
+
+      // Build size list for public packages and run the knapsack algorithm
+      const publicPackageSizes = classification.publicPackages.map(name => ({
+        name,
+        size: packageSizes.get(name) ?? 0,
+      }));
+
+      const { bundled: bundledPublic, deferred } = lambdaKnapsack(
+        publicPackageSizes,
+        remainingCapacity
+      );
+
+      debug(
+        `Knapsack result: ${bundledPublic.length} public packages bundled, ` +
+          `${deferred.length} deferred to runtime`
+      );
+
+      // Mirror the selected packages (always-bundled + knapsack-selected public)
+      const allBundledPackages = [...alwaysBundled, ...bundledPublic];
+      const selectedVendorFiles = await mirrorSelectedPackagesIntoVendor({
+        venvPath,
+        vendorDirName: vendorDir,
+        selectedPackages: allBundledPackages,
+      });
+
+      for (const [p, f] of Object.entries(selectedVendorFiles)) {
         files[p] = f;
       }
+
+      // The bundledPackages list for runtime config includes private packages
+      // and any public packages we selected for bundling. These will be
+      // passed as --no-install-package to uv sync at runtime.
+      const bundledPackagesForConfig = [
+        ...classification.privatePackages,
+        ...bundledPublic,
+      ];
 
       // Write a runtime config marker so the bootstrap knows to run
       // `uv sync --inexact --frozen` at cold start. The pyproject.toml
@@ -691,42 +746,49 @@ from vercel_runtime.vc_init import vc_handler
         });
       }
 
-      const runtimeConfigData = JSON.stringify({
-        projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
-        bundledPackages: classification.privatePackages,
-      });
-      files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
-        data: runtimeConfigData,
-      });
+      if (deferred.length > 0) {
+        // Only write runtime config when there are packages to install at runtime
+        const runtimeConfigData = JSON.stringify({
+          projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
+          bundledPackages: bundledPackagesForConfig,
+        });
+        files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
+          data: runtimeConfigData,
+        });
 
-      // Skip uv bundling when running vercel build locally
-      if (process.env.VERCEL_BUILD_IMAGE) {
-        // Add the uv binary to the lambda zip
-        try {
-          const uvBinaryPath = await getUvBinaryForBundling(
-            pythonVersion.pythonPath
-          );
+        // Skip uv bundling when running vercel build locally
+        if (process.env.VERCEL_BUILD_IMAGE) {
+          // Add the uv binary to the lambda zip
+          try {
+            const uvBinaryPath = await getUvBinaryForBundling(
+              pythonVersion.pythonPath
+            );
 
-          const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
-          const uvLocalPath = join(uvBundleDir, 'uv');
-          await fs.promises.mkdir(uvBundleDir, { recursive: true });
-          await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
-          await fs.promises.chmod(uvLocalPath, 0o755);
+            const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
+            const uvLocalPath = join(uvBundleDir, 'uv');
+            await fs.promises.mkdir(uvBundleDir, { recursive: true });
+            await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+            await fs.promises.chmod(uvLocalPath, 0o755);
 
-          const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
-          files[uvBundlePath] = new FileFsRef({
-            fsPath: uvLocalPath,
-            mode: 0o100755, // Regular file + executable
-          });
-          debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
-        } catch (err) {
-          throw new NowBuildError({
-            code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-            message: `Failed to bundle uv binary for runtime installation: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-          });
+            const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+            files[uvBundlePath] = new FileFsRef({
+              fsPath: uvLocalPath,
+              mode: 0o100755, // Regular file + executable
+            });
+            debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+          } catch (err) {
+            throw new NowBuildError({
+              code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+              message: `Failed to bundle uv binary for runtime installation: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            });
+          }
         }
+      } else {
+        debug(
+          'All public packages fit within the bundle; no runtime installation needed'
+        );
       }
     } else {
       throw new NowBuildError({

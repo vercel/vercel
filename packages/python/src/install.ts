@@ -26,6 +26,19 @@ import { DEFAULT_PYTHON_VERSION } from './version';
 // AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 
+// Target size for packing dependencies into the Lambda bundle.
+// Defaults to 245MB but can be overridden via VERCEL_PYTHON_PACKING_TARGET_MB.
+const packingTargetMB = parseInt(
+  process.env.VERCEL_PYTHON_PACKING_TARGET_MB || '245',
+  10
+);
+export const LAMBDA_PACKING_TARGET_BYTES =
+  (Number.isFinite(packingTargetMB) && packingTargetMB > 0
+    ? packingTargetMB
+    : 245) *
+  1024 *
+  1024;
+
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
@@ -670,6 +683,172 @@ export async function mirrorPrivatePackagesIntoVendor({
     );
   } catch (err) {
     console.log('Failed to collect private packages from virtual environment');
+    throw err;
+  }
+
+  return vendorFiles;
+}
+
+/**
+ * Input for the knapsack packing algorithm.
+ */
+export interface PackageSize {
+  name: string;
+  size: number;
+}
+
+/**
+ * Result of the knapsack packing algorithm.
+ */
+export interface KnapsackResult {
+  /** Packages selected to be bundled into the Lambda zip. */
+  bundled: string[];
+  /** Packages deferred to runtime installation. */
+  deferred: string[];
+}
+
+/**
+ * Greedy largest-first knapsack packing algorithm.
+ *
+ * Given a list of packages with their sizes and a capacity in bytes,
+ * selects packages to bundle into the Lambda zip to fill as much of
+ * the capacity as possible.
+ *
+ * Packages are sorted by size descending and greedily selected if they
+ * fit within the remaining capacity.
+ */
+export function lambdaKnapsack(
+  packages: PackageSize[],
+  capacity: number
+): KnapsackResult {
+  const bundled: string[] = [];
+  const deferred: string[] = [];
+
+  if (capacity <= 0) {
+    return { bundled: [], deferred: packages.map(p => p.name) };
+  }
+
+  // Sort by size descending so we pack the largest packages first.
+  const sorted = [...packages].sort((a, b) => b.size - a.size);
+
+  let remaining = capacity;
+  for (const pkg of sorted) {
+    if (pkg.size <= remaining) {
+      bundled.push(pkg.name);
+      remaining -= pkg.size;
+    } else {
+      deferred.push(pkg.name);
+    }
+  }
+
+  return { bundled, deferred };
+}
+
+/**
+ * Calculate the uncompressed size of each installed distribution.
+ *
+ * Returns a map of normalized package name to total size in bytes,
+ * measured from the actual files on disk.
+ */
+export async function calculatePerPackageSizes(
+  venvPath: string
+): Promise<Map<string, number>> {
+  const sizes = new Map<string, number>();
+  const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+
+  for (const dir of sitePackageDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    const resolvedDir = resolve(dir);
+    const dirPrefix = resolvedDir + sep;
+    const distributions = await scanDistributions(dir);
+
+    for (const [name, dist] of distributions) {
+      let totalSize = 0;
+
+      for (const { path: rawPath } of dist.files) {
+        const filePath = rawPath.replaceAll('/', sep);
+        // Skip files outside site-packages
+        if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+          continue;
+        }
+        // Skip .pyc and __pycache__
+        if (
+          filePath.endsWith('.pyc') ||
+          filePath.split(sep).includes('__pycache__')
+        ) {
+          continue;
+        }
+        try {
+          const stats = await fs.promises.stat(join(dir, filePath));
+          totalSize += stats.size;
+        } catch {
+          // File listed in RECORD but missing on disk; skip it
+        }
+      }
+
+      sizes.set(name, totalSize);
+    }
+  }
+
+  return sizes;
+}
+
+/**
+ * Mirror a specific set of packages from site-packages into the _vendor directory.
+ */
+export async function mirrorSelectedPackagesIntoVendor({
+  venvPath,
+  vendorDirName,
+  selectedPackages,
+}: {
+  venvPath: string;
+  vendorDirName: string;
+  selectedPackages: string[];
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+
+  if (selectedPackages.length === 0) {
+    debug('No packages to bundle');
+    return vendorFiles;
+  }
+
+  const packageSet = new Set(selectedPackages.map(normalizePackageName));
+
+  try {
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+      const distributions = await scanDistributions(dir);
+      for (const [name, dist] of distributions) {
+        if (!packageSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          const filePath = rawPath.replaceAll('/', sep);
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+            continue;
+          }
+          if (
+            filePath.endsWith('.pyc') ||
+            filePath.split(sep).includes('__pycache__')
+          ) {
+            continue;
+          }
+          const srcFsPath = join(dir, filePath);
+          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+        }
+      }
+    }
+
+    debug(
+      `Bundled ${Object.keys(vendorFiles).length} files from ${selectedPackages.length} packages`
+    );
+  } catch (err) {
+    console.log('Failed to collect packages from virtual environment');
     throw err;
   }
 

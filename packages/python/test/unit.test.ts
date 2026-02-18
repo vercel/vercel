@@ -1980,7 +1980,9 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 
 import {
   calculateBundleSize,
+  lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
+  LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
 } from '../src/install';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
@@ -2145,6 +2147,136 @@ version = "2.31.0"
       expect(result.packageVersions['my-app']).toBeUndefined();
       // requests should still be classified
       expect(result.publicPackages).toContain('requests');
+    });
+  });
+
+  describe('lambdaKnapsack', () => {
+    it('bundles all packages when they fit within capacity', () => {
+      const packages = [
+        { name: 'a', size: 10 },
+        { name: 'b', size: 20 },
+        { name: 'c', size: 30 },
+      ];
+      const result = lambdaKnapsack(packages, 100);
+      expect(result.bundled).toHaveLength(3);
+      expect(result.deferred).toHaveLength(0);
+      expect(result.bundled).toContain('a');
+      expect(result.bundled).toContain('b');
+      expect(result.bundled).toContain('c');
+    });
+
+    it('defers all packages when capacity is zero', () => {
+      const packages = [
+        { name: 'a', size: 10 },
+        { name: 'b', size: 20 },
+      ];
+      const result = lambdaKnapsack(packages, 0);
+      expect(result.bundled).toHaveLength(0);
+      expect(result.deferred).toHaveLength(2);
+    });
+
+    it('defers all packages when capacity is negative', () => {
+      const packages = [
+        { name: 'a', size: 10 },
+        { name: 'b', size: 20 },
+      ];
+      const result = lambdaKnapsack(packages, -5);
+      expect(result.bundled).toHaveLength(0);
+      expect(result.deferred).toEqual(['a', 'b']);
+    });
+
+    it('returns empty arrays for empty package list', () => {
+      const result = lambdaKnapsack([], 100);
+      expect(result.bundled).toHaveLength(0);
+      expect(result.deferred).toHaveLength(0);
+    });
+
+    it('selects larger packages first for efficient packing', () => {
+      // 49MB capacity, packages: 10MB, 20MB, 20MB
+      // Should pick the two 20MB packages (40MB total) instead of
+      // 20MB + 10MB (30MB total)
+      const packages = [
+        { name: 'pkg-10', size: 10 * 1024 * 1024 },
+        { name: 'pkg-20a', size: 20 * 1024 * 1024 },
+        { name: 'pkg-20b', size: 20 * 1024 * 1024 },
+      ];
+      const capacity = 49 * 1024 * 1024;
+      const result = lambdaKnapsack(packages, capacity);
+      expect(result.bundled).toEqual(['pkg-20a', 'pkg-20b']);
+      expect(result.deferred).toEqual(['pkg-10']);
+    });
+
+    it('fills remaining capacity with smaller packages after large ones', () => {
+      const packages = [
+        { name: 'large', size: 100 },
+        { name: 'medium', size: 40 },
+        { name: 'small', size: 10 },
+        { name: 'tiny', size: 5 },
+      ];
+      const result = lambdaKnapsack(packages, 150);
+      // large (100) + medium (40) = 140, then small (10) = 150
+      expect(result.bundled).toEqual(['large', 'medium', 'small']);
+      expect(result.deferred).toEqual(['tiny']);
+    });
+
+    it('handles a single package that exactly fits', () => {
+      const packages = [{ name: 'exact', size: 100 }];
+      const result = lambdaKnapsack(packages, 100);
+      expect(result.bundled).toEqual(['exact']);
+      expect(result.deferred).toHaveLength(0);
+    });
+
+    it('defers a single package that is too large', () => {
+      const packages = [{ name: 'toobig', size: 101 }];
+      const result = lambdaKnapsack(packages, 100);
+      expect(result.bundled).toHaveLength(0);
+      expect(result.deferred).toEqual(['toobig']);
+    });
+
+    it('handles packages with zero size', () => {
+      const packages = [
+        { name: 'empty', size: 0 },
+        { name: 'real', size: 50 },
+      ];
+      const result = lambdaKnapsack(packages, 50);
+      expect(result.bundled).toContain('real');
+      expect(result.bundled).toContain('empty');
+      expect(result.deferred).toHaveLength(0);
+    });
+
+    it('does not mutate the input array', () => {
+      const packages = [
+        { name: 'c', size: 30 },
+        { name: 'a', size: 10 },
+        { name: 'b', size: 20 },
+      ];
+      const original = [...packages];
+      lambdaKnapsack(packages, 50);
+      expect(packages).toEqual(original);
+    });
+
+    it('packs many small packages efficiently', () => {
+      // 10 packages of 10 bytes each, capacity of 95
+      // Should fit 9 packages (90 bytes)
+      const packages = Array.from({ length: 10 }, (_, i) => ({
+        name: `pkg-${i}`,
+        size: 10,
+      }));
+      const result = lambdaKnapsack(packages, 95);
+      expect(result.bundled).toHaveLength(9);
+      expect(result.deferred).toHaveLength(1);
+    });
+  });
+
+  describe('LAMBDA_PACKING_TARGET_BYTES', () => {
+    it('defaults to 245 MB', () => {
+      expect(LAMBDA_PACKING_TARGET_BYTES).toBe(245 * 1024 * 1024);
+    });
+
+    it('is less than LAMBDA_SIZE_THRESHOLD_BYTES', () => {
+      expect(LAMBDA_PACKING_TARGET_BYTES).toBeLessThan(
+        LAMBDA_SIZE_THRESHOLD_BYTES
+      );
     });
   });
 });
