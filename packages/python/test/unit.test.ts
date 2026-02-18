@@ -2091,7 +2091,7 @@ describe('runtime dependency installation support', () => {
       ).toBe(false);
     });
 
-    it('returns false when VERCEL_PYTHON_ON_HIVE is an unrecognised value', () => {
+    it('returns true when VERCEL_PYTHON_ON_HIVE is an unrecognised value', () => {
       process.env.VERCEL_PYTHON_ON_HIVE = 'yes';
       expect(
         shouldEnableRuntimeInstall({
