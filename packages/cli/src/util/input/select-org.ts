@@ -41,6 +41,25 @@ export default async function selectOrg(
     config: { currentTeam },
   } = client;
 
+  // Fast path: when non-interactive and the scope is already known we only
+  // need the teams list (skip getUser) to resolve the Org value.  This avoids
+  // a redundant /v2/user call that the global scope resolution in index.ts
+  // already made.
+  if (client.nonInteractive) {
+    const targetScope = currentTeam || getScopeOrTeamFromArgv(client.argv);
+    if (targetScope) {
+      const teams = await getTeams(client);
+      const match = teams.find(
+        t => t.id === targetScope || t.slug === targetScope
+      );
+      if (match) {
+        return { type: 'team', id: match.id, slug: match.slug };
+      }
+      // targetScope didn't match any team — fall through to the full flow
+      // so the action_required payload includes the complete choices list.
+    }
+  }
+
   output.spinner('Loading scopes…', 1000);
   let user: User;
   let teams: Team[];
@@ -75,21 +94,8 @@ export default async function selectOrg(
     0
   );
 
-  // Non-interactive: if user already passed --scope/--team (currentTeam set or via argv), use it; otherwise output choices and exit
+  // Non-interactive without a resolved scope: output choices and exit
   if (client.nonInteractive) {
-    if (currentTeam) {
-      const match = choices.find(c => c.value.id === currentTeam);
-      if (match) return match.value;
-    }
-
-    const explicitScope = getScopeOrTeamFromArgv(client.argv);
-    if (explicitScope) {
-      const match = choices.find(
-        c => c.value.id === explicitScope || c.value.slug === explicitScope
-      );
-      if (match) return match.value;
-    }
-
     const actionRequired: ActionRequiredPayload = {
       status: 'action_required',
       reason: 'missing_scope',
