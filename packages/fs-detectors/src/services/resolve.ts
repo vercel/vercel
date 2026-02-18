@@ -273,10 +273,6 @@ export function validateServiceConfig(
   return null;
 }
 
-/**
- * Validate entrypoint-dependent rules that require a resolved entrypoint path.
- * Must be called after the entrypoint has been resolved from the filesystem.
- */
 export function validateServiceEntrypoint(
   name: string,
   config: ExperimentalServiceConfig,
