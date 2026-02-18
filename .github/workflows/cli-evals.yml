@@ -1,9 +1,11 @@
 name: CLI Evals
 
-# Disabled for automatic runs to control AI gateway costs. Run manually via "Run workflow" in the Actions tab.
-# To re-enable on PRs (e.g. only when evals change): add pull_request with paths: ['packages/cli/evals/**'].
+# Runs on PRs only when evals change (to limit AI gateway cost). Also runnable manually via "Run workflow".
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/cli/evals/**'
 
 jobs:
   evals:
