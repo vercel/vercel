@@ -13,6 +13,7 @@ const config: ExperimentConfig = {
   runs: 1,
   earlyExit: true,
   timeout: 600,
+  sandbox: 'docker', // Use Docker sandbox in CI (no OIDC required; Vercel sandbox prefers OIDC)
   setup: async sandbox => {
     const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
     const projectId = process.env.CLI_EVAL_PROJECT_ID ?? '';
