@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { describe, expect, it, test } from 'vitest';
 import {
+  normalizeLocalhostOrigin,
   parseListen,
   replaceLocalhost,
 } from '../../../../src/util/dev/parse-listen';
@@ -87,5 +88,85 @@ describe('replaceLocalhost', () => {
     { input: 'http://[::]:3002', output: 'http://localhost:3002' },
   ])('"$input" → "$output"', ({ input, output }) => {
     expect(replaceLocalhost(input)).toEqual(output);
+  });
+});
+
+describe('normalizeLocalhostOrigin', () => {
+  test.each([
+    {
+      input: 'http://localhost:3000',
+      output: 'http://localhost:3000',
+      desc: 'keeps localhost as-is',
+    },
+    {
+      input: 'http://127.0.0.1:3000',
+      output: 'http://localhost:3000',
+      desc: 'normalizes 127.0.0.1 to localhost',
+    },
+    {
+      input: 'http://[::1]:3000',
+      output: 'http://localhost:3000',
+      desc: 'normalizes [::1] to localhost',
+    },
+    {
+      input: 'http://0.0.0.0:3000',
+      output: 'http://localhost:3000',
+      desc: 'normalizes 0.0.0.0 to localhost',
+    },
+    {
+      input: 'http://[::]:3000',
+      output: 'http://localhost:3000',
+      desc: 'normalizes [::] to localhost',
+    },
+    {
+      input: 'http://localhost:4000',
+      output: 'http://localhost:4000',
+      desc: 'preserves different port',
+    },
+    {
+      input: 'http://127.0.0.1:5000',
+      output: 'http://localhost:5000',
+      desc: 'normalizes IPv4 loopback with different port',
+    },
+    {
+      input: 'https://localhost:3000',
+      output: 'https://localhost:3000',
+      desc: 'preserves https protocol',
+    },
+    {
+      input: 'http://example.com:3000',
+      output: 'http://example.com:3000',
+      desc: 'does not normalize non-localhost hosts',
+    },
+    {
+      input: 'http://192.168.0.1:3000',
+      output: 'http://192.168.0.1:3000',
+      desc: 'does not normalize LAN addresses',
+    },
+    {
+      input: 'not-a-url',
+      output: 'not-a-url',
+      desc: 'returns invalid input as-is',
+    },
+  ])('$desc: "$input" → "$output"', ({ input, output }) => {
+    expect(normalizeLocalhostOrigin(input)).toEqual(output);
+  });
+
+  it('treats localhost variants on the same port as equal', () => {
+    const origins = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://[::1]:3000',
+      'http://0.0.0.0:3000',
+      'http://[::]:3000',
+    ];
+    const normalized = origins.map(normalizeLocalhostOrigin);
+    expect(new Set(normalized).size).toBe(1);
+  });
+
+  it('treats localhost variants on different ports as different', () => {
+    expect(normalizeLocalhostOrigin('http://127.0.0.1:3000')).not.toEqual(
+      normalizeLocalhostOrigin('http://127.0.0.1:4000')
+    );
   });
 });

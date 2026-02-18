@@ -99,7 +99,7 @@ import {
 } from '@vercel/error-utils';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
-import { replaceLocalhost } from './parse-listen';
+import { normalizeLocalhostOrigin, replaceLocalhost } from './parse-listen';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1629,8 +1629,10 @@ export default class DevServer {
             if (isURL(rewritePath)) {
               const rewriteUrlParsed = new URL(rewritePath);
 
-              // `this.address` already has localhost normalized from ip4 and ip6 values
-              if (this.address.origin === rewriteUrlParsed.origin) {
+              if (
+                normalizeLocalhostOrigin(this.address.origin) ===
+                normalizeLocalhostOrigin(rewriteUrlParsed.origin)
+              ) {
                 // remove origin, leaving the path
                 req.url =
                   rewritePath.slice(rewriteUrlParsed.origin.length) || '/';
@@ -2706,11 +2708,11 @@ function filterFrontendBuilds(build: Builder) {
 
 function hasNewRoutingProperties(vercelConfig: VercelConfig) {
   return (
-    typeof vercelConfig.cleanUrls !== undefined ||
-    typeof vercelConfig.headers !== undefined ||
-    typeof vercelConfig.redirects !== undefined ||
-    typeof vercelConfig.rewrites !== undefined ||
-    typeof vercelConfig.trailingSlash !== undefined
+    vercelConfig.cleanUrls !== undefined ||
+    vercelConfig.headers !== undefined ||
+    vercelConfig.redirects !== undefined ||
+    vercelConfig.rewrites !== undefined ||
+    vercelConfig.trailingSlash !== undefined
   );
 }
 

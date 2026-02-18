@@ -51,3 +51,29 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
 export function replaceLocalhost(address: string): string {
   return address.replace('[::]', 'localhost').replace('0.0.0.0', 'localhost');
 }
+
+const LOCALHOST_HOSTNAMES = new Set([
+  'localhost',
+  '127.0.0.1',
+  '[::1]',
+  '[::]',
+  '0.0.0.0',
+]);
+
+/**
+ * Normalizes a URL origin so that all localhost variants
+ * (`127.0.0.1`, `[::1]`, `[::]`, `0.0.0.0`) compare equal to `localhost`.
+ * Non-localhost origins are returned unchanged.
+ */
+export function normalizeLocalhostOrigin(origin: string): string {
+  try {
+    const parsed = new URL(origin);
+    if (LOCALHOST_HOSTNAMES.has(parsed.hostname)) {
+      parsed.hostname = 'localhost';
+      return parsed.origin;
+    }
+  } catch {
+    // invalid URL, return as-is
+  }
+  return origin;
+}
