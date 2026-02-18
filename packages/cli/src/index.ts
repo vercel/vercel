@@ -1046,5 +1046,6 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     }
 
     process.exitCode = exitCode;
+    client?.agent?.destroy();
   })
   .catch(handleUnexpected);
