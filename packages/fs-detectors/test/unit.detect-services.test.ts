@@ -551,7 +551,6 @@ describe('detectServices', () => {
               [name]: { entrypoint: 'index.ts', routePrefix: '/' },
             },
           }),
-          'index.ts': 'export default {}',
         });
         const result = await detectServices({ fs });
 
