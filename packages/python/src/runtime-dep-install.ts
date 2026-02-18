@@ -1,11 +1,24 @@
 import fs from 'fs';
-import { join, resolve, sep } from 'path';
-import { FileFsRef, Files, debug } from '@vercel/build-utils';
+import { promisify } from 'util';
+import { join, relative, resolve, sep } from 'path';
 import {
+  FileBlob,
+  FileFsRef,
+  Files,
+  NowBuildError,
+  debug,
+} from '@vercel/build-utils';
+import {
+  classifyPackages,
   normalizePackageName,
+  parseUvLock,
+  PythonAnalysisError,
   scanDistributions,
 } from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from './install';
+import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
+
+const readFile = promisify(fs.readFile);
 
 // AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
@@ -16,6 +29,329 @@ export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
+interface RuntimeDependencyInstallOptions {
+  venvPath: string;
+  vendorDir: string;
+  workPath: string;
+  uvLockPath: string | null;
+  uvProjectDir: string | null;
+  projectName: string | undefined;
+  noBuildCheckFailed: boolean;
+  pythonPath: string;
+}
+
+export class RuntimeDependencyInstall {
+  private venvPath: string;
+  private vendorDir: string;
+  private workPath: string;
+  private uvLockPath: string | null;
+  private uvProjectDir: string | null;
+  private projectName: string | undefined;
+  private noBuildCheckFailed: boolean;
+  private pythonPath: string;
+
+  // Populated by analyze()
+  private allVendorFiles: Files = {};
+  private totalBundleSize: number = 0;
+  private analyzed = false;
+
+  constructor(options: RuntimeDependencyInstallOptions) {
+    this.venvPath = options.venvPath;
+    this.vendorDir = options.vendorDir;
+    this.workPath = options.workPath;
+    this.uvLockPath = options.uvLockPath;
+    this.uvProjectDir = options.uvProjectDir;
+    this.projectName = options.projectName;
+    this.noBuildCheckFailed = options.noBuildCheckFailed;
+    this.pythonPath = options.pythonPath;
+  }
+
+  /**
+   * Analyze the bundle: mirror all vendor files, calculate total size,
+   * and determine whether runtime installation is needed.
+   * Must be called before generateBundle().
+   */
+  async analyze(files: Files): Promise<{
+    shouldInstall: boolean;
+    allVendorFiles: Files;
+  }> {
+    this.allVendorFiles = await mirrorSitePackagesIntoVendor({
+      venvPath: this.venvPath,
+      vendorDirName: this.vendorDir,
+    });
+
+    const tempFilesForSizing: Files = { ...files };
+    for (const [p, f] of Object.entries(this.allVendorFiles)) {
+      tempFilesForSizing[p] = f;
+    }
+    this.totalBundleSize = await calculateBundleSize(tempFilesForSizing);
+    this.analyzed = true;
+
+    const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
+    debug(`Total bundle size: ${totalBundleSizeMB} MB`);
+
+    const shouldInstall = shouldEnableRuntimeInstall({
+      totalBundleSize: this.totalBundleSize,
+      uvLockPath: this.uvLockPath,
+    });
+
+    return { shouldInstall, allVendorFiles: this.allVendorFiles };
+  }
+
+  /**
+   * Generate the optimally-packed Lambda bundle.
+   * Mutates `files` in place: adds vendor files (private + knapsack-selected
+   * public), runtime config, and uv binary. Throws on failure.
+   * Must be called after analyze().
+   */
+  async generateBundle(files: Files): Promise<void> {
+    if (!this.analyzed) {
+      throw new Error(
+        'RuntimeDepInstall.analyze() must be called before generateBundle()'
+      );
+    }
+    if (!this.uvLockPath || !this.uvProjectDir) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          'Runtime dependency installation requires a uv.lock file and project directory.',
+      });
+    }
+
+    const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
+
+    console.log(
+      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
+        `Enabling runtime dependency installation.`
+    );
+
+    // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
+    if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
+      const ephemeralLimitMB = (
+        LAMBDA_EPHEMERAL_STORAGE_BYTES /
+        (1024 * 1024)
+      ).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
+          `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
+          `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
+          `to Lambda functions. Consider removing unused dependencies or splitting your ` +
+          `application into smaller functions.`,
+      });
+    }
+
+    // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
+    if (this.noBuildCheckFailed) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
+          `but some packages in your uv.lock file do not have pre-built binary wheels available.\n` +
+          `Runtime dependency installation requires all public packages to have binary wheels.\n\n` +
+          `To fix this, either:\n` +
+          ` 1. Regenerate your lock file with: uv lock --upgrade --no-build, or\n` +
+          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
+      });
+    }
+
+    // Read and parse the uv.lock file
+    let lockContent: string;
+    try {
+      lockContent = await readFile(this.uvLockPath, 'utf8');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(
+          `Failed to read uv.lock file at "${this.uvLockPath}": ${error.message}`
+        );
+      } else {
+        console.log(
+          `Failed to read uv.lock file at "${this.uvLockPath}": ${String(error)}`
+        );
+      }
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `Failed to read uv.lock file at "${this.uvLockPath}"`,
+      });
+    }
+    let lockFile: ReturnType<typeof parseUvLock>;
+    try {
+      lockFile = parseUvLock(lockContent, this.uvLockPath);
+    } catch (error: unknown) {
+      if (error instanceof PythonAnalysisError) {
+        if (error.fileContent) {
+          console.log(
+            `Failed to parse "${error.path}". File content:\n${error.fileContent}`
+          );
+        }
+        throw new NowBuildError({
+          code: error.code,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+
+    // Exclude the project name from runtime installation requirements.
+    const excludePackages: string[] = [];
+    if (this.projectName) {
+      excludePackages.push(this.projectName);
+      debug(
+        `Excluding project package "${this.projectName}" from runtime installation`
+      );
+    }
+
+    const classification = classifyPackages({
+      lockFile,
+      excludePackages,
+    });
+    debug(
+      `Package classification: ${classification.privatePackages.length} private, ` +
+        `${classification.publicPackages.length} public`
+    );
+
+    if (classification.publicPackages.length === 0) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          'Bundle size exceeds limit but no public packages found for runtime installation.',
+      });
+    }
+
+    // Calculate per-package sizes for public packages
+    const packageSizes = await calculatePerPackageSizes(this.venvPath);
+
+    // Calculate fixed overhead: source files + private packages + vercel-runtime.
+    // These are always bundled and not part of the knapsack.
+    const alwaysBundled = [
+      ...classification.privatePackages,
+      'vercel-runtime',
+      'vercel_runtime',
+    ];
+    const alwaysBundledFiles = await mirrorPrivatePackagesIntoVendor({
+      venvPath: this.venvPath,
+      vendorDirName: this.vendorDir,
+      privatePackages: alwaysBundled,
+    });
+
+    const baseFiles: Files = { ...files };
+    for (const [p, f] of Object.entries(alwaysBundledFiles)) {
+      baseFiles[p] = f;
+    }
+    const fixedOverhead = await calculateBundleSize(baseFiles);
+    const remainingCapacity = LAMBDA_PACKING_TARGET_BYTES - fixedOverhead;
+
+    debug(
+      `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
+        `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
+    );
+
+    // Build size map for public packages and run the knapsack algorithm
+    const publicPackageSizes = new Map(
+      [...packageSizes].filter(([name]) =>
+        classification.publicPackages.includes(name)
+      )
+    );
+
+    const bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
+
+    // Mirror the selected packages (always-bundled + knapsack-selected public)
+    const allBundledPackages = [...alwaysBundled, ...bundledPublic];
+    const selectedVendorFiles = await mirrorSelectedPackagesIntoVendor({
+      venvPath: this.venvPath,
+      vendorDirName: this.vendorDir,
+      selectedPackages: allBundledPackages,
+    });
+
+    for (const [p, f] of Object.entries(selectedVendorFiles)) {
+      files[p] = f;
+    }
+
+    // The bundledPackages list for runtime config includes private packages
+    // and any public packages we selected for bundling. These will be
+    // passed as --no-install-package to uv sync at runtime.
+    const bundledPackagesForConfig = [
+      ...classification.privatePackages,
+      ...bundledPublic,
+    ];
+
+    // Write a runtime config marker so the bootstrap knows to run
+    // `uv sync --inexact --frozen` at cold start. The pyproject.toml
+    // and uv.lock are already part of the Lambda zip (globbed from
+    // workPath). For workspace layouts where the project root lives
+    // above workPath we bundle them explicitly under _uv/.
+    const projectDirRel = relative(this.workPath, this.uvProjectDir);
+    const uvLockRel = relative(this.workPath, this.uvLockPath);
+    const isOutsideWorkPath =
+      projectDirRel.startsWith('..') || uvLockRel.startsWith('..');
+
+    if (isOutsideWorkPath) {
+      // Bundle pyproject.toml and uv.lock into _uv/ so they are
+      // available inside the Lambda even for workspace monorepos.
+      const srcPyproject = join(this.uvProjectDir, 'pyproject.toml');
+      files[`${UV_BUNDLE_DIR}/pyproject.toml`] = new FileFsRef({
+        fsPath: srcPyproject,
+      });
+      files[`${UV_BUNDLE_DIR}/uv.lock`] = new FileFsRef({
+        fsPath: this.uvLockPath,
+      });
+    }
+
+    const runtimeConfigData = JSON.stringify({
+      projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
+      bundledPackages: bundledPackagesForConfig,
+    });
+    files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
+      data: runtimeConfigData,
+    });
+
+    // Skip uv bundling when running vercel build locally
+    if (process.env.VERCEL_BUILD_IMAGE) {
+      // Add the uv binary to the lambda zip
+      try {
+        const uvBinaryPath = await getUvBinaryForBundling(this.pythonPath);
+
+        const uvBundleDir = join(this.workPath, UV_BUNDLE_DIR);
+        const uvLocalPath = join(uvBundleDir, 'uv');
+        await fs.promises.mkdir(uvBundleDir, { recursive: true });
+        await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+        await fs.promises.chmod(uvLocalPath, 0o755);
+
+        const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+        files[uvBundlePath] = new FileFsRef({
+          fsPath: uvLocalPath,
+          mode: 0o100755, // Regular file + executable
+        });
+        debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+      } catch (err) {
+        throw new NowBuildError({
+          code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+          message: `Failed to bundle uv binary for runtime installation: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        });
+      }
+    }
+
+    // Final size verification
+    const finalBundleSize = await calculateBundleSize(files);
+    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+      const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
+          `deferring public packages to runtime installation. This usually means your ` +
+          `private packages or source code are too large. Consider reducing the size of ` +
+          `private dependencies or splitting your application.`,
+      });
+    }
+  }
+}
+
+// Utility functions
 export function shouldEnableRuntimeInstall({
   totalBundleSize,
   uvLockPath,
@@ -112,7 +448,7 @@ export async function calculateBundleSize(files: Files): Promise<number> {
 /**
  * Mirror only private packages from site-packages into the _vendor directory.
  */
-export async function mirrorPrivatePackagesIntoVendor({
+async function mirrorPrivatePackagesIntoVendor({
   venvPath,
   vendorDirName,
   privatePackages,
@@ -211,7 +547,7 @@ export function lambdaKnapsack(
  * Returns a map of normalized package name to total size in bytes,
  * measured from the actual files on disk.
  */
-export async function calculatePerPackageSizes(
+async function calculatePerPackageSizes(
   venvPath: string
 ): Promise<Map<string, number>> {
   const sizes = new Map<string, number>();
@@ -258,7 +594,7 @@ export async function calculatePerPackageSizes(
 /**
  * Mirror a specific set of packages from site-packages into the _vendor directory.
  */
-export async function mirrorSelectedPackagesIntoVendor({
+async function mirrorSelectedPackagesIntoVendor({
   venvPath,
   vendorDirName,
   selectedPackages,
