@@ -692,7 +692,7 @@ describe('integration-resource', () => {
         });
 
         it('should error when specified resource is not a prepayment-based resource', async () => {
-          const resourceName = 'store-acme-connected-project';
+          const resourceName = 'store-acme-other-project';
 
           client.setArgv(
             'integration-resource',

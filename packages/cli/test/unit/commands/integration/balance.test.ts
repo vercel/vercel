@@ -258,6 +258,21 @@ describe('integration', () => {
           'Error: Cannot specify more than one integration at a time'
         );
       });
+
+      it('should error when integration does not use prepayment billing', async () => {
+        const teams = useTeams('team_dummy');
+        const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useConfiguration();
+        useResources();
+
+        client.setArgv('integration', 'balance', 'acme-subscription');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: The integration acme-subscription does not use prepayment billing. This command is only for integrations with prepayment billing plans.'
+        );
+      });
     });
   });
 });

@@ -59,6 +59,16 @@ export async function balance(client: Client, args: string[]) {
     return 1;
   }
 
+  const hasPrepaymentResources = resources.some(
+    resource => resource.billingPlan?.type === 'prepayment'
+  );
+  if (!hasPrepaymentResources) {
+    output.error(
+      `The integration ${chalk.bold(integrationSlug)} does not use prepayment billing. This command is only for integrations with prepayment billing plans.`
+    );
+    return 1;
+  }
+
   const prepaymentInfo = await getBalanceInformation(
     client,
     installationId,

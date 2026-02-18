@@ -203,7 +203,7 @@ export const balanceSubcommand = {
   name: 'balance',
   aliases: [],
   description:
-    'Shows the balances and thresholds of a specified marketplace integration',
+    'Shows the balances and thresholds of a marketplace integration that uses prepayment billing',
   arguments: [
     {
       name: 'integration',
@@ -213,7 +213,7 @@ export const balanceSubcommand = {
   options: [],
   examples: [
     {
-      name: 'Show the balance(s) & threshold(s) of a marketplace integration',
+      name: 'Show the balance(s) & threshold(s) of a prepayment marketplace integration',
       value: [
         `${packageName} integration balance <integration-name>`,
         `${packageName} integration balance acme`,

@@ -447,6 +447,20 @@ const configurations: Record<string, Configuration[]> = {
       projects: ['acme-project'],
     },
   ],
+  'acme-subscription': [
+    {
+      id: 'acme-sub-1',
+      integrationId: 'acme-subscription',
+      ownerId: 'team_dummy',
+      slug: 'acme-subscription',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
   'acme-no-results': [],
 };
 
@@ -784,13 +798,26 @@ const resources: { stores: Resource[] } = {
         },
       ],
       externalResourceId: 'ext_store_1',
+      billingPlan: {
+        id: 'bp1',
+        type: 'prepayment',
+        name: 'Prepayment Plan',
+        scope: 'resource',
+        description: 'Prepayment billing plan',
+        paymentMethodRequired: true,
+        details: [],
+      },
     },
     {
       id: 'store_2',
       type: 'integration',
       name: 'store-acme-other-project',
       status: 'available',
-      product: { name: 'Acme', slug: 'acme' },
+      product: {
+        name: 'Acme',
+        slug: 'acme',
+        integrationConfigurationId: 'acme-sub-1',
+      },
       projectsMetadata: [
         {
           id: 'spc_2',
@@ -800,6 +827,15 @@ const resources: { stores: Resource[] } = {
         },
       ],
       externalResourceId: 'ext_store_2',
+      billingPlan: {
+        id: 'bp2',
+        type: 'subscription',
+        name: 'Subscription Plan',
+        scope: 'resource',
+        description: 'Subscription billing plan',
+        paymentMethodRequired: true,
+        details: [],
+      },
     },
     {
       id: 'store_3',
