@@ -34,7 +34,7 @@ import {
   DEFAULT_PYTHON_VERSION,
   resetInstalledPythonsCache,
 } from '../src/version';
-import { build } from '../src/index';
+import { build, shouldEnableRuntimeInstall } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { createPyprojectToml } from '../src/install';
@@ -2044,6 +2044,81 @@ describe('runtime dependency installation support', () => {
       expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
+    });
+  });
+
+  describe('shouldEnableRuntimeInstall', () => {
+    const originalEnv = process.env.VERCEL_PYTHON_ON_HIVE;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_ON_HIVE;
+      } else {
+        process.env.VERCEL_PYTHON_ON_HIVE = originalEnv;
+      }
+    });
+
+    const oversized = LAMBDA_SIZE_THRESHOLD_BYTES + 1;
+    const undersized = LAMBDA_SIZE_THRESHOLD_BYTES - 1;
+
+    it('returns true when bundle exceeds threshold and uvLockPath is present', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(true);
+    });
+
+    it('returns false when VERCEL_PYTHON_ON_HIVE is "1"', () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = '1';
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(false);
+    });
+
+    it('returns false when VERCEL_PYTHON_ON_HIVE is "true"', () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = 'true';
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(false);
+    });
+
+    it('returns false when VERCEL_PYTHON_ON_HIVE is an unrecognised value', () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = 'yes';
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(true);
+    });
+
+    it('returns false when bundle is under threshold', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: undersized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(false);
+    });
+
+    it('returns false when uvLockPath is null', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: null,
+        })
+      ).toBe(false);
     });
   });
 
