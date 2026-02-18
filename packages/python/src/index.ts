@@ -693,6 +693,7 @@ from vercel_runtime.vc_init import vc_handler
 
       const runtimeConfigData = JSON.stringify({
         projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
+        bundledPackages: classification.privatePackages,
       });
       files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
         data: runtimeConfigData,

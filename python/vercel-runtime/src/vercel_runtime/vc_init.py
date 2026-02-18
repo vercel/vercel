@@ -278,21 +278,24 @@ if os.path.exists(_runtime_config_path):
 
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
-            # packages already present in _vendor (private deps).
+            # packages already present in _vendor (bundled deps).
+            _sync_cmd = [
+                _uv_path,
+                "sync",
+                "--inexact",
+                "--active",
+                "--frozen",
+                "--no-dev",
+                "--no-editable",
+                "--no-install-project",
+                "--no-build",
+                "--no-cache",
+                "--link-mode", "copy",
+            ]
+            for _pkg in _config.get("bundledPackages", []):
+                _sync_cmd.extend(["--no-install-package", _pkg])
             subprocess.run(
-                [
-                    _uv_path,
-                    "sync",
-                    "--inexact",
-                    "--active",
-                    "--frozen",
-                    "--no-dev",
-                    "--no-editable",
-                    "--no-install-project",
-                    "--no-build",
-                    "--no-cache",
-                    "--link-mode", "copy",
-                ],
+                _sync_cmd,
                 check=True,
                 text=True,
                 cwd=_project_dir,
