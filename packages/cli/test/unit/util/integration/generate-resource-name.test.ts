@@ -24,7 +24,7 @@ describe('generateRandomNameSuffix', () => {
 
   it('returns last color and noun when random approaches 1', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.999);
-    expect(generateRandomNameSuffix()).toBe('sky-grass');
+    expect(generateRandomNameSuffix()).toBe('fulvous-sail');
   });
 
   it('has uniform distribution (edge elements are not biased)', () => {
@@ -37,7 +37,7 @@ describe('generateRandomNameSuffix', () => {
     // Test that last index is reachable with random just under 1
     vi.spyOn(Math, 'random').mockReturnValue(0.9999);
     const result2 = generateRandomNameSuffix();
-    expect(result2).toBe('sky-grass');
+    expect(result2).toBe('fulvous-sail');
   });
 });
 
