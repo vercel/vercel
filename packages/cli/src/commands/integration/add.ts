@@ -13,12 +13,14 @@ import {
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import type {
+  AcceptedPolicies,
   BillingPlan,
   Integration,
   IntegrationInstallation,
   IntegrationProduct,
   Metadata,
 } from '../../util/integration/types';
+import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
@@ -168,7 +170,7 @@ export async function add(
 
   if (installationsResult.status === 'rejected') {
     output.error(
-      `Failed to get integration installations: ${installationsResult.reason}`
+      `Failed to get integration installations: ${(installationsResult.reason as Error).message}`
     );
     return 1;
   }
@@ -188,7 +190,7 @@ export async function add(
     return 1;
   }
 
-  const installation = teamInstallations[0] as
+  let installation = teamInstallations[0] as
     | IntegrationInstallation
     | undefined;
 
@@ -223,14 +225,35 @@ export async function add(
     parsedMetadata = parsed;
   }
 
-  // The provisioning via cli is possible when
-  // 1. The integration was installed once (terms have been accepted)
-  // 2. EITHER metadata is provided via flags OR wizard is supported
-  // 3. The selected billing plan is supported (handled at time of billing plan selection)
-  const provisionResourceViaCLIIsSupported =
-    installation && (parsedMetadata || metadataWizard.isSupported);
+  // Handle missing installation — prompt for terms and install
+  if (!installation) {
+    const acceptedPolicies = await promptForTermAcceptance(client, integration);
+    if (!acceptedPolicies) {
+      return 1;
+    }
+    let installResult;
+    try {
+      installResult = await installMarketplaceIntegration(
+        client,
+        integration.id,
+        acceptedPolicies
+      );
+    } catch (error) {
+      output.error(
+        `Failed to install integration: ${(error as Error).message}`
+      );
+      return 1;
+    }
+    installation = {
+      id: installResult.id,
+      integrationId: integration.id,
+      installationType: 'marketplace',
+      ownerId: team.id,
+    };
+  }
 
-  if (!provisionResourceViaCLIIsSupported) {
+  // Check if CLI provisioning is possible (metadata-wise)
+  if (!(parsedMetadata || metadataWizard.isSupported)) {
     const projectLink = await getLinkedProjectField(
       client,
       options.noConnect,
@@ -241,9 +264,7 @@ export async function add(
     }
 
     const openInWeb = await client.input.confirm(
-      !installation
-        ? 'Terms have not been accepted. Open Vercel Dashboard?'
-        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
+      'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
       true
     );
 
@@ -308,6 +329,21 @@ function provisionResourceViaWebUI(
   output.debug(`Opening URL: ${url.href}`);
   open(url.href).catch((err: unknown) =>
     output.debug(`Failed to open browser: ${err}`)
+  );
+}
+
+async function installMarketplaceIntegration(
+  client: Client,
+  integrationId: string,
+  acceptedPolicies: AcceptedPolicies
+): Promise<{ id: string }> {
+  return await client.fetch<{ id: string }>(
+    `/v2/integrations/integration/${encodeURIComponent(integrationId)}/marketplace/install`,
+    {
+      method: 'POST',
+      json: true,
+      body: { acceptedPolicies, source: 'cli' },
+    }
   );
 }
 
