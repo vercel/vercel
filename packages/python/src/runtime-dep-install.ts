@@ -101,7 +101,7 @@ export class RuntimeDependencyInstall {
   /**
    * Generate the optimally-packed Lambda bundle.
    * Mutates `files` in place: adds vendor files (private + knapsack-selected
-   * public), runtime config, and uv binary. Throws on failure.
+   * public), runtime config, and uv binary.
    * Must be called after analyze().
    */
   async generateBundle(files: Files): Promise<void> {
