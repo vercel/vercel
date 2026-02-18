@@ -1,16 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
-import _fetch, { Request, Response } from 'node-fetch';
 
 import whoami from '../../../../src/commands/whoami';
 import { Chance } from 'chance';
 
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetch = vi.fn<typeof globalThis.fetch>();
+vi.stubGlobal('fetch', fetch);
 
 describe('OAuth Token Refresh', () => {
   it('should refresh the token when it is expired', async () => {

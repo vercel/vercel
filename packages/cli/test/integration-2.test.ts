@@ -1,6 +1,5 @@
 import path from 'path';
 import { URL } from 'url';
-import fetch from 'node-fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
@@ -161,7 +160,7 @@ test.skip('assign a domain to a project', async () => {
   const host = deploymentOutput.stdout?.trim().replace('https://', '');
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json() as any);
 
   expect(typeof deployment.name).toBe('string');
   const project = deployment.name;
@@ -1165,7 +1164,7 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
   // Ensure that `vc dev` also works
   try {
     const response = await fetch(`http://localhost:${port}/`);
-    const body = await response.json();
+    const body: any = await response.json();
     expect(body.headers['x-vercel-deployment-url']).toBe(`localhost:${port}`);
     expect(body.env.NOW_REGION).toBe('dev1');
   } finally {

@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
-import { ProxyAgent } from 'proxy-agent';
 import { createServer } from 'http';
+import { EnvHttpProxyAgent } from 'undici';
 import { client } from '../../mocks/client';
+import type { FetchOptions } from '../../../src/util/client';
 
 describe('Client', () => {
   describe('fetch()', () => {
     beforeEach(() => {
       delete process.env.HTTPS_PROXY;
       delete process.env.HTTP_PROXY;
-      client.agent?.destroy();
-      client.agent = undefined;
+      client.dispatcher = undefined;
     });
 
     it('should respect the `HTTP_PROXY` env var', async () => {
@@ -19,8 +19,8 @@ describe('Client', () => {
       const proxy = createProxy();
       const proxyUrl = await listen(proxy);
 
-      // For HTTP proxying, listen to 'request' events instead of 'connect'
-      proxy.on('request', () => {
+      // undici uses CONNECT tunneling for all proxied requests (including HTTP)
+      proxy.on('connect', () => {
         requestCount++;
       });
 
@@ -33,19 +33,17 @@ describe('Client', () => {
 
       try {
         process.env.HTTP_PROXY = proxyUrl.href;
-
-        client.agent = new ProxyAgent({
-          keepAlive: true,
-          // Ensure localhost isn't bypassed
-          rejectUnauthorized: false,
-        });
+        // Cast needed: undici@6 Dispatcher is structurally compatible with
+        // undici-types@5 Dispatcher (from @types/node) but TS can't verify.
+        client.dispatcher =
+          new EnvHttpProxyAgent() as unknown as FetchOptions['dispatcher'];
 
         expect(requestCount).toEqual(0);
         const res = await client.fetch(mockServerUrl.href, { json: false });
         expect(requestCount).toEqual(1);
         expect(res.status).toEqual(200);
       } finally {
-        client.agent?.destroy();
+        client.dispatcher = undefined;
         await new Promise<void>(resolve => {
           proxy.close(() => resolve());
         });

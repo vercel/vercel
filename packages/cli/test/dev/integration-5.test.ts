@@ -3,7 +3,6 @@ import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
 import {
   sleep,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,

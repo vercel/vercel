@@ -49,7 +49,7 @@ import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
-import Client from './util/client';
+import Client, { type FetchOptions } from './util/client';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
@@ -362,13 +362,22 @@ const main = async () => {
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
   );
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
+  // Only load proxy modules if proxy env vars are configured (saves ~60ms startup)
   const agent = hasProxyConfig()
     ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
     : new HttpsAgent({ keepAlive: true });
+  // EnvHttpProxyAgent from undici@6 is structurally compatible with the
+  // Dispatcher type from undici-types@5 (used by @types/node@20), but
+  // TypeScript can't verify this across package versions.
+  const dispatcher = hasProxyConfig()
+    ? (new (
+        await import('undici')
+      ).EnvHttpProxyAgent() as unknown as FetchOptions['dispatcher'])
+    : undefined;
 
   client = new Client({
     agent,
+    dispatcher,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,

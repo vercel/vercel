@@ -1,4 +1,3 @@
-import fetch, { type Response } from 'node-fetch';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -51,7 +50,7 @@ async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
 async function processDiscoveryEndpointResponse(
   response: Response
 ): Promise<[Error] | [null, AuthorizationServerMetadata]> {
-  const json = await response.json();
+  const json: any = await response.json();
 
   if (!response.ok) {
     return [new Error('Discovery endpoint request failed')];
@@ -215,9 +214,6 @@ export async function deviceAccessTokenRequest(options: {
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           ...options,
         }),
-        // TODO: Drop `node-fetch` and just use `signal`
-        timeout: 10 * 1000,
-        // @ts-expect-error: Signal is part of `fetch` spec, should drop `node-fetch`
         signal: AbortSignal.timeout(10 * 1000),
       }),
     ];
@@ -252,7 +248,7 @@ interface TokenSet {
 export async function processTokenResponse(
   response: Response
 ): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
-  const json = await response.json();
+  const json: any = await response.json();
 
   if (!response.ok) {
     return [new OAuthError('Device access token request failed', json)];
@@ -436,7 +432,7 @@ export async function processInspectTokenResponse(
   response: Response
 ): Promise<[IntrospectionError] | [null, AccessToken]> {
   try {
-    const token = await response.json();
+    const token: any = await response.json();
     if (!token || typeof token !== 'object' || !('active' in token)) {
       throw new IntrospectionError('Invalid token introspection response');
     }

@@ -5,7 +5,6 @@ import {
   sleep,
   shouldSkip,
   fetchWithRetry,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
