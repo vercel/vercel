@@ -2,8 +2,6 @@ name: CLI Evals
 
 on:
   pull_request:
-    paths:
-      - 'packages/cli/**'
 
 jobs:
   evals:
@@ -38,4 +36,3 @@ jobs:
 
       - name: Run CLI evals
         run: cd packages/cli && pnpm test:evals
-        env:
