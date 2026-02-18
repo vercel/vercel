@@ -9,19 +9,8 @@ import { getVenvSitePackagesDirs } from './install';
 
 // AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
-
-// Target size for packing dependencies into the Lambda bundle.
-// Defaults to 245MB but can be overridden via VERCEL_PYTHON_PACKING_TARGET_MB.
-const packingTargetMB = parseInt(
-  process.env.VERCEL_PYTHON_PACKING_TARGET_MB || '245',
-  10
-);
-export const LAMBDA_PACKING_TARGET_BYTES =
-  (Number.isFinite(packingTargetMB) && packingTargetMB > 0
-    ? packingTargetMB
-    : 245) *
-  1024 *
-  1024;
+// Pack Lambda up to 245MB to leave a buffer
+export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
