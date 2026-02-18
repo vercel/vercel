@@ -25,6 +25,31 @@ import { normalizeRoutePrefix } from '@vercel/routing-utils';
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+
+function normalizeServiceEntrypoint(entrypoint: string): string {
+  const normalized = posixPath.normalize(entrypoint);
+  return normalized === '' ? '.' : normalized;
+}
+
+/**
+ * A services `entrypoint` may be either:
+ * - a file path (e.g. "apps/api/src/main.py")
+ * - a directory path (e.g. "apps/web")
+ *
+ * We treat paths with an extension as file paths.
+ * Paths without an extension (or trailing slash) are treated as directories.
+ */
+function isDirectoryEntrypoint(entrypoint: string): boolean {
+  if (entrypoint.endsWith('/')) {
+    return true;
+  }
+  const normalized = normalizeServiceEntrypoint(entrypoint);
+  if (normalized === '.' || normalized === '/') {
+    return true;
+  }
+  return posixPath.extname(normalized) === '';
+}
+
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -176,6 +201,9 @@ export function validateServiceConfig(
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
   const hasEntrypoint = Boolean(config.entrypoint);
+  const entrypointIsDirectory =
+    typeof config.entrypoint === 'string' &&
+    isDirectoryEntrypoint(config.entrypoint);
 
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
     return {
@@ -188,6 +216,13 @@ export function validateServiceConfig(
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
+      serviceName: name,
+    };
+  }
+  if (entrypointIsDirectory && !hasFramework) {
+    return {
+      code: 'INVALID_ENTRYPOINT_DIRECTORY',
+      message: `Service "${name}" uses a directory entrypoint "${config.entrypoint}". Directory entrypoints are only supported when "framework" is specified.`,
       serviceName: name,
     };
   }
@@ -216,13 +251,29 @@ export async function resolveConfiguredService(
   group?: string
 ): Promise<Service> {
   const type = config.type || 'web';
-  const inferredRuntime = inferServiceRuntime(config);
-  let workspace = config.workspace || '.';
-  let resolvedEntrypoint = config.entrypoint;
+  const rawEntrypoint = config.entrypoint;
+  const normalizedEntrypoint =
+    typeof rawEntrypoint === 'string'
+      ? normalizeServiceEntrypoint(rawEntrypoint)
+      : undefined;
+  const entrypointIsDirectory =
+    typeof rawEntrypoint === 'string' && isDirectoryEntrypoint(rawEntrypoint);
 
-  // If no explicit workspace is provided, infer from the nearest runtime
-  // manifest relative to the configured entrypoint.
-  if (!config.workspace) {
+  const inferredRuntime = inferServiceRuntime({
+    ...config,
+    entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
+  });
+  let workspace = '.';
+  let resolvedEntrypoint =
+    entrypointIsDirectory || !normalizedEntrypoint
+      ? undefined
+      : normalizedEntrypoint;
+
+  // Directory entrypoints define the service workspace directly.
+  if (entrypointIsDirectory && normalizedEntrypoint) {
+    workspace = normalizedEntrypoint;
+  } else {
+    // File entrypoints infer workspace from nearest runtime manifest.
     const inferredWorkspace = await inferWorkspaceFromNearestManifest({
       fs,
       entrypoint: resolvedEntrypoint,
@@ -269,8 +320,7 @@ export async function resolveConfiguredService(
       : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces.
-  // Always prepend — the entrypoint in the config is relative to the workspace,
-  // never repo-root-relative.
+  // Always prepend — by this point, file entrypoints are workspace-relative.
   const isRoot = workspace === '.';
   if (!isRoot) {
     builderSrc = posixPath.join(workspace, builderSrc);

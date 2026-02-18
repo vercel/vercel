@@ -6,12 +6,12 @@
   "experimentalServices": {
     "frontend": {
       "framework": "nextjs",
-      "workspace": "frontend",
+      "entrypoint": "frontend",
       "routePrefix": "/"
     },
     "backend": {
       "framework": "fastapi",
-      "workspace": "backend",
+      "entrypoint": "backend",
       "routePrefix": "/api/py"
     }
   }

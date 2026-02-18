@@ -745,16 +745,12 @@ export type ServiceType = 'web' | 'cron' | 'worker';
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
   /**
-   * Entry file for the service, relative to the workspace directory.
-   * @example "src/index.ts", "main.py", "api/server.go"
+   * Service entrypoint, relative to the project root.
+   * Can be either a file path (runtime entrypoint) or a directory path
+   * (service workspace for framework-based services).
+   * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
-  /**
-   * Path to the directory containing the service's manifest file
-   * (package.json, pyproject.toml, etc.).
-   * Defaults to "." (project root) if not specified.
-   */
-  workspace?: string;
 
   /** Framework to use */
   framework?: string;

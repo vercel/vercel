@@ -6,17 +6,17 @@
   "experimentalServices": {
     "web": {
       "framework": "vite",
-      "workspace": "apps/web",
+      "entrypoint": "apps/web",
       "routePrefix": "/"
     },
     "dashboard": {
       "framework": "nextjs",
-      "workspace": "apps/dashboard",
+      "entrypoint": "apps/dashboard",
       "routePrefix": "/dashboard"
     },
     "backend": {
       "framework": "fastapi",
-      "workspace": "backend",
+      "entrypoint": "backend",
       "routePrefix": "/backend"
     }
   }

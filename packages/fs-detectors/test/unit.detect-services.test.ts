@@ -80,16 +80,12 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toHaveLength(1);
     });
 
-    it('should not confuse entrypoint with workspace when paths share a prefix', async () => {
-      // Edge case: workspace is "api" and entrypoint is "api/handler.go"
-      // (meaning the file lives at api/api/handler.go in the repo).
-      // The entrypoint must always be treated as workspace-relative.
+    it('should resolve file entrypoint paths without explicit workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             'my-api': {
-              workspace: 'api',
-              entrypoint: 'api/handler.go',
+              entrypoint: 'api/api/handler.go',
               routePrefix: '/api',
             },
           },
@@ -99,7 +95,6 @@ describe('detectServices', () => {
 
       expect(result.services).toHaveLength(1);
       expect(result.errors).toEqual([]);
-      // builder.src should be "api/api/handler.go" (workspace + entrypoint)
       expect(result.services[0].builder.src).toBe('api/api/handler.go');
     });
 
@@ -108,22 +103,22 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             frontend: {
-              workspace: 'apps/web',
+              entrypoint: 'apps/web',
               framework: 'nextjs',
               routePrefix: '/',
             },
             api: {
-              workspace: 'apps/api',
-              entrypoint: 'src/server.ts',
+              entrypoint: 'apps/api/src/server.ts',
               routePrefix: '/api',
             },
             admin: {
-              workspace: 'apps/admin',
-              entrypoint: 'src/index.ts',
+              entrypoint: 'apps/admin/src/index.ts',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/api/package.json': JSON.stringify({ name: 'api' }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
       });
       const result = await detectServices({ fs });
 
@@ -325,22 +320,20 @@ describe('detectServices', () => {
       });
     });
 
-    it('should prefer explicitly configured workspace over inferred manifest workspace', async () => {
+    it('should use directory entrypoint as service workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             api: {
-              workspace: 'apps/api',
-              entrypoint: 'src/main.py',
+              entrypoint: 'apps/api',
               framework: 'fastapi',
               routePrefix: '/api',
             },
           },
         }),
-        // Should be ignored because workspace is explicitly configured.
+        // Should be ignored because directory entrypoint sets workspace directly.
         'services/fastapi-api/pyproject.toml':
           '[project]\nname = "fastapi-api"\n',
-        'apps/api/src/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
 
@@ -348,9 +341,9 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         workspace: 'apps/api',
-        entrypoint: 'src/main.py',
+        entrypoint: undefined,
       });
-      expect(result.services[0].builder.src).toBe('apps/api/src/main.py');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
     });
 
     it('should default topic and consumer to "default" for workers', async () => {
@@ -673,7 +666,7 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             admin: {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
@@ -741,7 +734,7 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             admin: {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
@@ -762,7 +755,7 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             frontend: {
-              workspace: 'packages/web',
+              entrypoint: 'packages/web',
               framework: 'vite',
               routePrefix: '/',
             },
@@ -787,7 +780,7 @@ describe('detectServices', () => {
               routePrefix: '/',
             },
             'admin-panel': {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
@@ -846,22 +839,22 @@ describe('detectServices', () => {
     //   fastapi-api  → @vercel/python     at /api/fastapi    (runtime)
     const SERVICES_CONFIG = {
       web: {
-        workspace: 'apps/web',
+        entrypoint: 'apps/web',
         framework: 'nextjs',
         routePrefix: '/',
       },
       admin: {
-        workspace: 'apps/admin',
+        entrypoint: 'apps/admin',
         framework: 'vite',
         routePrefix: '/admin',
       },
       dashboard: {
-        workspace: 'apps/dashboard',
+        entrypoint: 'apps/dashboard',
         framework: 'nextjs',
         routePrefix: '/dashboard',
       },
       docs: {
-        workspace: 'apps/docs',
+        entrypoint: 'apps/docs',
         framework: 'docusaurus-2',
         routePrefix: '/docs',
       },

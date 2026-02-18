@@ -6,35 +6,31 @@
   "experimentalServices": {
     "web": {
       "framework": "nextjs",
-      "workspace": "apps/web",
+      "entrypoint": "apps/web",
       "routePrefix": "/"
     },
     "dashboard": {
       "framework": "nextjs",
-      "workspace": "apps/dashboard",
+      "entrypoint": "apps/dashboard",
       "routePrefix": "/dashboard"
     },
     "go-api": {
-      "workspace": "services/go-api",
-      "entrypoint": "index.go",
+      "entrypoint": "services/go-api/index.go",
       "routePrefix": "/api/go"
     },
     "py-api": {
       "framework": "flask",
-      "workspace": "services/py-api",
-      "entrypoint": "index.py",
+      "entrypoint": "services/py-api/index.py",
       "routePrefix": "/api/py"
     },
     "js-api": {
       "framework": "express",
-      "workspace": "services/js-api",
-      "entrypoint": "index.js",
+      "entrypoint": "services/js-api/index.js",
       "routePrefix": "/api/js"
     },
     "rb-api": {
-      "workspace": "services/rb-api",
       "runtime": "ruby",
-      "entrypoint": "config.ru",
+      "entrypoint": "services/rb-api/config.ru",
       "routePrefix": "/api/rb"
     }
   }
