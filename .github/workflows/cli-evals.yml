@@ -1,0 +1,41 @@
+name: CLI Evals
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cli/**'
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team
+    env:
+      AI_GATEWAY_API_KEY: ${{ secrets.EVAL_AI_GATEWAY_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.EVAL_TOKEN }}
+      VERCEL_OIDC_TOKEN: ${{ secrets.EVAL_OIDC_TOKEN }}
+      CLI_EVAL_TEAM_ID: ${{ secrets.EVAL_TEAM_ID }}
+      CLI_EVAL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build CLI
+        if: false # skip for now; enable when monorepo build works in CI
+        run: cd packages/cli && pnpm build
+
+      - name: Run CLI evals
+        run: cd packages/cli && pnpm test:evals
+        env:
