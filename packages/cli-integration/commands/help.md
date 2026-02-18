@@ -1,0 +1,89 @@
+# Help Command Tests
+
+Tests for `vercel --help` command.
+
+## Shows full help output
+
+```scrut
+$ $VERCEL_CLI --help
+Vercel CLI \d+\.\d+\.\d+ (re)
+
+  ▲ vercel [options] <command | path>
+
+  For deploy command help, run `vercel deploy --help`
+
+  Commands:
+
+    Basic
+
+      deploy               [path]      Performs a deployment (default)
+      build                            Build the project locally into './vercel/output'
+      cache                [cmd]       Manages cache for your current Project
+      dev                              Start a local development server
+      env                              Manages the Environment Variables for your current Project
+      git                              Manage Git provider repository for your current Project
+      help                 [cmd]       Displays complete help for [cmd]
+      init                 [example]   Initialize an example project
+      inspect              [id]        Displays information related to a deployment
+      i | install          [name]      Install an integration from the Marketplace
+      integration          [cmd]       Manages your Marketplace integrations
+      link                 [path]      Link local directory to a Vercel Project
+      ls | list            [app]       Lists deployments
+      login                [email]     Logs into your account or creates a new one
+      logout                           Logs out of your account
+      open                             Opens the current project in the Vercel Dashboard
+      promote              [url|id]    Promote an existing deployment to current
+      pull                 [path]      Pull your Project Settings from the cloud
+      redeploy             [url|id]    Rebuild and deploy a previous deployment.
+      rollback             [url|id]    Quickly revert back to a previous deployment
+      switch               [scope]     Switches between different scopes
+
+    Advanced
+
+      alias                [cmd]       Manages your domain aliases
+      bisect                           Use binary search to find the deployment that introduced a bug
+      certs                [cmd]       Manages your SSL certificates
+      curl                 [path]      cURL requests to your linked project's deployment [beta]
+      dns                  [name]      Manages your DNS records
+      domains              [name]      Manages your domain names
+      logs                 [url]       Displays the logs for a deployment
+      microfrontends                   Manages your microfrontends
+      projects                         Manages your Projects
+      redirects            [cmd]       Manages redirects for your current Project
+      rm | remove          [id]        Removes a deployment
+      teams                            Manages your teams
+      upgrade                          Upgrade the Vercel CLI to the latest version
+      whoami                           Shows the username of the currently logged in user
+      blob                 [cmd]       Manages your Blob stores and files
+      webhooks             [cmd]       Manages webhooks [beta]
+
+  Global Options:
+
+    -h, --help                     Output usage information
+    -v, --version                  Output the version number
+    --cwd                          Current working directory
+    -A FILE, --local-config=FILE   Path to the local `vercel.json` file
+    -Q DIR, --global-config=DIR    Path to the global `.vercel` directory
+    -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
+    -S, --scope                    Set a custom scope
+    -t TOKEN, --token=TOKEN        Login token
+
+  Examples:
+
+  – Deploy the current directory
+
+    $ vercel
+
+  – Deploy a custom path
+
+    $ vercel /usr/src/project
+
+  – Deploy with Environment Variables
+
+    $ vercel -e NODE_ENV=production
+
+  – Show the usage information for the sub command `list`
+
+    $ vercel help list
+```
