@@ -53,6 +53,15 @@ export const addSubcommand = {
       deprecated: false,
       description: 'Skip running env pull after provisioning',
     },
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: [String],
+      deprecated: false,
+      argument: 'ENV',
+      description:
+        'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
+    },
   ],
   examples: [
     {
@@ -91,6 +100,21 @@ export const addSubcommand = {
         `${packageName} integration add acme --plan pro`,
         `${packageName} integration add acme -p pro`,
       ],
+    },
+    {
+      name: 'Install and connect to specific environments only',
+      value: [
+        `${packageName} integration add acme --environment production`,
+        `${packageName} integration add acme -e production -e preview`,
+      ],
+    },
+    {
+      name: 'Install without connecting to the current project',
+      value: `${packageName} integration add acme --no-connect`,
+    },
+    {
+      name: 'Install without pulling environment variables',
+      value: `${packageName} integration add acme --no-env-pull`,
     },
     {
       name: 'Show available products for an integration',

@@ -6,16 +6,41 @@ import { getLinkedProject } from '../projects/link';
 import { connectResourceToProject } from '../integration-resource/connect-resource-to-project';
 import pull from '../../commands/env/pull';
 
+export const VALID_ENVIRONMENTS = [
+  'production',
+  'preview',
+  'development',
+] as const;
+
 export interface PostProvisionOptions {
   noConnect?: boolean;
   noEnvPull?: boolean;
+  environments?: string[];
+}
+
+/**
+ * Validates the provided environment values against the allowed set.
+ * Returns `{ valid: true }` if all values are valid, or `{ valid: false, invalid: string[] }` with the invalid values.
+ */
+export function validateEnvironments(
+  environments: string[]
+): { valid: true } | { valid: false; invalid: string[] } {
+  const invalid = environments.filter(
+    env =>
+      !VALID_ENVIRONMENTS.includes(env as (typeof VALID_ENVIRONMENTS)[number])
+  );
+  if (invalid.length > 0) {
+    return { valid: false, invalid };
+  }
+  return { valid: true };
 }
 
 /**
  * Handles post-provisioning setup: prints dashboard URL, auto-connects
  * resource to the linked project (all environments), and runs env pull.
  *
- * Respects `--no-connect` (skip linking) and `--no-env-pull` (skip env pull).
+ * Respects `--no-connect` (skip linking), `--no-env-pull` (skip env pull),
+ * and `--environment` (connect to specific environments only).
  */
 export async function postProvisionSetup(
   client: Client,
@@ -42,7 +67,13 @@ export async function postProvisionSetup(
   }
 
   const { project } = linkedProject;
-  const environments = ['production', 'preview', 'development'];
+  const environments = [
+    ...new Set(
+      options.environments && options.environments.length > 0
+        ? options.environments
+        : [...VALID_ENVIRONMENTS]
+    ),
+  ];
   output.debug(`Selected environments: ${JSON.stringify(environments)}`);
 
   output.spinner(
