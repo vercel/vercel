@@ -327,7 +327,6 @@ export default async function query(
       accountId,
     });
   } catch (err: unknown) {
-    output.stopSpinner();
     if (isAPIError(err)) {
       return handleApiError(err, jsonOutput, client);
     }
@@ -338,8 +337,9 @@ export default async function query(
       output.error(errMsg);
     }
     return 1;
+  } finally {
+    output.stopSpinner();
   }
-  output.stopSpinner();
 
   // Format and output
   if (jsonOutput) {
