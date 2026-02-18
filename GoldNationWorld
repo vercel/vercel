@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goldnation (GLDN) – Digital Gold Infrastructure</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+font-family:'Montserrat',sans-serif;
+background:#0b0b0b;
+color:#fff;
+line-height:1.6;
+scroll-behavior:smooth;
+}
+
+section{
+padding:100px 20px;
+max-width:1200px;
+margin:auto;
+text-align:center;
+}
+
+h1{
+font-size:64px;
+font-weight:800;
+color:#D4AF37;
+letter-spacing:3px;
+}
+
+h2{
+font-size:38px;
+color:#D4AF37;
+margin-bottom:20px;
+}
+
+p{
+color:#ccc;
+max-width:850px;
+margin:15px auto;
+}
+
+.btn{
+display:inline-block;
+padding:14px 35px;
+margin:10px;
+border-radius:6px;
+font-weight:600;
+text-decoration:none;
+transition:0.3s;
+}
+
+.primary{
+background:#D4AF37;
+color:#000;
+}
+
+.secondary{
+border:1px solid #D4AF37;
+color:#D4AF37;
+}
+
+.primary:hover{
+background:#FFD700;
+}
+
+.secondary:hover{
+background:#D4AF37;
+color:#000;
+}
+
+.hero{
+padding:160px 20px;
+background:linear-gradient(180deg,#000,#111);
+}
+
+.countdown{
+font-size:28px;
+margin-top:25px;
+color:#FFD700;
+font-weight:600;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:30px;
+margin-top:50px;
+}
+
+.card{
+background:#111;
+padding:35px;
+border-radius:10px;
+border:1px solid #1c1c1c;
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-5px);
+border-color:#D4AF37;
+}
+
+.token-box{
+background:#111;
+padding:45px;
+border-radius:12px;
+border:1px solid #1c1c1c;
+margin-top:40px;
+}
+
+.metric{
+font-size:28px;
+color:#FFD700;
+font-weight:700;
+}
+
+footer{
+background:#000;
+padding:60px 20px;
+font-size:14px;
+color:#777;
+text-align:center;
+border-top:1px solid #1a1a1a;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HERO -->
+<section class="hero">
+<h1>GLDN</h1>
+<p>Digital Gold Infrastructure on Solana</p>
+<p>Fixed Supply • Structured Allocation • Institutional Positioning</p>
+
+<div class="countdown" id="countdown"></div>
+
+<a href="https://pump.fun" target="_blank" class="btn primary">Launch on Pump.fun</a>
+<a href="#whitepaper" class="btn secondary">View Whitepaper</a>
+<a href="https://t.me/golnation" target="_blank" class="btn secondary">Telegram</a>
+<a href="https://x.com/GoldNationWorld" target="_blank" class="btn secondary">Follow on X</a>
+</section>
+
+<!-- ABOUT -->
+<section>
+<h2>About Goldnation</h2>
+<p>
+Goldnation (GLDN) is a fixed-supply digital asset launching March 15.
+Built on Solana, GLDN merges premium branding with structured tokenomics and institutional-grade transparency.
+</p>
+</section>
+
+<!-- INVESTOR METRICS -->
+<section>
+<h2>Investor Metrics</h2>
+
+<div class="grid">
+<div class="card">
+<div class="metric">1,000,000,000</div>
+<p>Total Fixed Supply</p>
+</div>
+
+<div class="card">
+<div class="metric">70%</div>
+<p>Public Circulation at Launch</p>
+</div>
+
+<div class="card">
+<div class="metric">30%</div>
+<p>Development Allocation (Vested)</p>
+</div>
+
+<div class="card">
+<div class="metric">12 Months</div>
+<p>Dev Linear Vesting (3M Cliff)</p>
+</div>
+</div>
+</section>
+
+<!-- TOKENOMICS -->
+<section>
+<h2>Token Structure</h2>
+
+<div class="token-box">
+<p><strong>Public Allocation:</strong> 700,000,000 GLDN (Pump.fun Launch)</p>
+<p><strong>Development Allocation:</strong> 300,000,000 GLDN</p>
+<p><strong>Vesting:</strong> 12-month linear schedule with 3-month cliff</p>
+<p><strong>Blockchain:</strong> Solana</p>
+<p><strong>Supply Model:</strong> Fixed – No Inflation</p>
+</div>
+</section>
+
+<!-- LIQUIDITY STRATEGY -->
+<section>
+<h2>Liquidity Strategy</h2>
+
+<div class="grid">
+<div class="card">Phase 1 – Bonding Curve Launch</div>
+<div class="card">Phase 2 – Volume Acceleration</div>
+<div class="card">Phase 3 – Structured Liquidity Pools</div>
+<div class="card">Phase 4 – Market Maker Alignment</div>
+</div>
+</section>
+
+<!-- EXCHANGE READINESS -->
+<section>
+<h2>Exchange Readiness</h2>
+<p>
+GLDN maintains transparent allocation, fixed supply mechanics, and structured vesting aligned with centralized exchange evaluation frameworks.
+Future listing applications will be supported by liquidity metrics, holder distribution data, and volume analytics.
+</p>
+</section>
+
+<!-- SECURITY -->
+<section>
+<h2>Security & Transparency</h2>
+<p>
+The official smart contract address will be published on March 15.
+Only trust links shared via official Telegram and X channels.
+</p>
+</section>
+
+<!-- SMART CONTRACT -->
+<section>
+<h2>Smart Contract</h2>
+<p id="contract">To be published at launch.</p>
+</section>
+
+<footer>
+© 2026 Goldnation (GLDN). All Rights Reserved.<br>
+This website does not constitute financial advice.
+</footer>
+
+<script>
+var countDownDate = new Date("Mar 15, 2026 00:00:00").getTime();
+
+var x = setInterval(function() {
+
+var now = new Date().getTime();
+var distance = countDownDate - now;
+
+var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+document.getElementById("countdown").innerHTML =
+days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+
+if (distance < 0) {
+clearInterval(x);
+document.getElementById("countdown").innerHTML = "LAUNCHED";
+}
+}, 1000);
+</script>
+
+</body>
+</html>
