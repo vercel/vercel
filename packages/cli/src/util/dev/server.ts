@@ -1075,6 +1075,7 @@ export default class DevServer {
     }
 
     ops.push(close(this.server));
+    this.server.closeAllConnections();
 
     if (this.watcher) {
       debug(`Closing file watcher`);
