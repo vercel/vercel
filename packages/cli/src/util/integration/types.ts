@@ -83,6 +83,8 @@ export interface Integration {
   slug: string;
   name: string;
   products?: IntegrationProduct[];
+  eulaDocUri?: string;
+  privacyDocUri?: string;
 }
 
 export interface IntegrationInstallation {
@@ -156,8 +158,9 @@ export interface MarketplaceBillingAuthorizationState {
 
 // Auto-provision types
 
-// AcceptedPolicies: key = policy name ('privacy' | 'eula'), value = ISO timestamp
-export type AcceptedPolicies = Record<string, string>;
+export type AcceptedPolicies = Partial<
+  Record<'toc' | 'privacy' | 'eula', string>
+>;
 
 export interface AutoProvisionIntegration {
   id: string;
@@ -198,7 +201,7 @@ export interface AutoProvisionedResponse {
 }
 
 export interface AutoProvisionFallback {
-  kind: 'install' | 'metadata' | 'unknown';
+  kind: 'metadata' | 'unknown';
   url: string;
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;
