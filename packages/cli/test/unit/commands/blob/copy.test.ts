@@ -53,6 +53,7 @@ describe('blob copy', () => {
         addRandomSuffix: false,
         contentType: undefined,
         cacheControlMaxAge: undefined,
+        ifMatch: undefined,
       });
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Copying blob');
       expect(mockedOutput.stopSpinner).toHaveBeenCalled();
@@ -106,6 +107,7 @@ describe('blob copy', () => {
         addRandomSuffix: true,
         contentType: 'image/png',
         cacheControlMaxAge: 86400,
+        ifMatch: undefined,
       });
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -145,6 +147,7 @@ describe('blob copy', () => {
         addRandomSuffix: false,
         contentType: undefined,
         cacheControlMaxAge: undefined,
+        ifMatch: undefined,
       });
     });
 
@@ -166,6 +169,59 @@ describe('blob copy', () => {
         contentType: undefined,
         cacheControlMaxAge: undefined,
       });
+    });
+  });
+
+  describe('--if-match option', () => {
+    it('should pass --if-match to blob.copy', async () => {
+      client.setArgv(
+        'blob',
+        'copy',
+        '--if-match',
+        '"some-etag"',
+        'source.txt',
+        'dest.txt'
+      );
+
+      const exitCode = await copy(
+        client,
+        ['--if-match', '"some-etag"', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+        token: testToken,
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: undefined,
+        cacheControlMaxAge: undefined,
+        ifMatch: '"some-etag"',
+      });
+    });
+
+    it('should track --if-match telemetry', async () => {
+      const exitCode = await copy(
+        client,
+        ['--if-match', '"etag-value"', 'source.txt', 'dest.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:fromUrlOrPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:toPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:if-match',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 
@@ -323,6 +379,7 @@ describe('blob copy', () => {
         addRandomSuffix: false,
         contentType: undefined,
         cacheControlMaxAge: undefined,
+        ifMatch: undefined,
       });
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -357,6 +414,7 @@ describe('blob copy', () => {
         addRandomSuffix: false,
         contentType: undefined,
         cacheControlMaxAge: undefined,
+        ifMatch: undefined,
       });
     });
 
@@ -374,6 +432,7 @@ describe('blob copy', () => {
         addRandomSuffix: true,
         contentType: undefined,
         cacheControlMaxAge: undefined,
+        ifMatch: undefined,
       });
     });
   });
@@ -479,6 +538,7 @@ describe('blob copy', () => {
           addRandomSuffix: true,
           contentType: 'application/pdf',
           cacheControlMaxAge: 7200,
+          ifMatch: undefined,
         }
       );
 

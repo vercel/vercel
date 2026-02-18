@@ -45,8 +45,14 @@ export default async function put(
     '--multipart': multipart,
     '--content-type': contentType,
     '--cache-control-max-age': cacheControlMaxAge,
+    '--allow-overwrite': allowOverwrite,
     '--force': force,
+    '--if-match': ifMatch,
   } = flags;
+
+  if (force) {
+    output.warn('--force is deprecated, use --allow-overwrite instead');
+  }
 
   const access = parseAccessFlag(accessFlag);
   if (!access) return 1;
@@ -61,7 +67,9 @@ export default async function put(
   telemetryClient.trackCliFlagMultipart(multipart);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliFlagAllowOverwrite(allowOverwrite);
   telemetryClient.trackCliFlagForce(force);
+  telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   // ReadableStream works for both stdin and ReadStream
   let putBody: ReadableStream;
@@ -143,7 +151,8 @@ export default async function put(
       multipart: multipart ?? true,
       contentType,
       cacheControlMaxAge,
-      allowOverwrite: force ?? false,
+      allowOverwrite: allowOverwrite ?? force ?? false,
+      ifMatch,
     });
   } catch (err) {
     printError(err);

@@ -4,7 +4,7 @@
 
 Add private Blob storage support:
 
-- Create private stores: `vercel blob store add my-store --access private`
+- Create private stores: `vercel blob create-store my-store --access private`
 - Upload to private stores: `vercel blob put file.txt --access private`
 - Download blobs with the new `blob get` command: `vercel blob get file.txt --access private` (works with both public and private stores)
 - Copy blobs: `vercel blob copy source.txt dest.txt --access private`

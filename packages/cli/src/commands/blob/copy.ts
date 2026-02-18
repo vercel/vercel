@@ -46,6 +46,7 @@ export default async function copy(
       '--add-random-suffix': addRandomSuffix,
       '--content-type': contentType,
       '--cache-control-max-age': cacheControlMaxAge,
+      '--if-match': ifMatch,
     },
   } = parsedArgs;
 
@@ -58,6 +59,7 @@ export default async function copy(
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   let result: blob.PutBlobResult;
   try {
@@ -71,6 +73,7 @@ export default async function copy(
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,
       cacheControlMaxAge,
+      ifMatch,
     });
   } catch (err) {
     printError(err);

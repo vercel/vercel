@@ -1,3 +1,23 @@
+const ifMatchOption = {
+  name: 'if-match',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    "Only perform the operation if the blob's ETag matches this value",
+  argument: 'STRING',
+} as const;
+
+const ifNoneMatchOption = {
+  name: 'if-none-match',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    "Only return content if the blob's ETag does not match this value (returns 304 if unchanged)",
+  argument: 'STRING',
+} as const;
+
 const accessOption = {
   name: 'access',
   shorthand: 'a',
@@ -109,13 +129,23 @@ export const putSubcommand = {
       argument: 'Number',
     },
     {
-      name: 'force',
-      shorthand: 'f',
+      name: 'allow-overwrite',
+      shorthand: null,
       type: Boolean,
       deprecated: false,
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
+    {
+      name: 'force',
+      shorthand: 'f',
+      type: Boolean,
+      deprecated: true,
+      description:
+        'Overwrite the file if it already exists (deprecated, use --allow-overwrite)',
+      argument: 'Boolean',
+    },
+    ifMatchOption,
   ],
   examples: [],
 } as const;
@@ -130,7 +160,7 @@ export const delSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [ifMatchOption],
   examples: [],
 } as const;
 
@@ -176,6 +206,7 @@ export const copySubcommand = {
         'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
       argument: 'Number',
     },
+    ifMatchOption,
   ],
   examples: [],
 } as const;
@@ -200,6 +231,7 @@ export const getSubcommand = {
       description: 'Save blob content to a file instead of stdout',
       argument: 'PATH',
     },
+    ifNoneMatchOption,
   ],
   examples: [],
 } as const;
@@ -270,6 +302,72 @@ export const getStoreSubcommand = {
   examples: [],
 } as const;
 
+export const createStoreSubcommand = {
+  name: 'create-store',
+  aliases: [],
+  description: 'Create a new Blob store',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    accessOption,
+    {
+      name: 'region',
+      shorthand: 'r',
+      type: String,
+      deprecated: false,
+      description:
+        'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
+      argument: 'STRING',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a blob store (uses default region "iad1")',
+      value: 'vercel blob create-store my-store',
+    },
+    {
+      name: 'Create a blob store in a specific region',
+      value: 'vercel blob create-store my-store --region cdg1',
+    },
+    {
+      name: 'Create a private blob store',
+      value: 'vercel blob create-store my-private-store --access private',
+    },
+  ],
+} as const;
+
+export const deleteStoreSubcommand = {
+  name: 'delete-store',
+  aliases: [],
+  description: 'Delete a Blob store',
+  arguments: [
+    {
+      name: 'storeId',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const getStoreInfoSubcommand = {
+  name: 'get-store',
+  aliases: [],
+  description: 'Get a Blob store',
+  arguments: [
+    {
+      name: 'storeId',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const storeSubcommand = {
   name: 'store',
   aliases: [],
@@ -291,6 +389,9 @@ export const blobCommand = {
     getSubcommand,
     delSubcommand,
     copySubcommand,
+    createStoreSubcommand,
+    deleteStoreSubcommand,
+    getStoreInfoSubcommand,
     storeSubcommand,
   ],
   options: [

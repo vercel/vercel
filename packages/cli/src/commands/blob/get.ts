@@ -38,7 +38,11 @@ export default async function get(
     flags,
     args: [urlOrPathname],
   } = parsedArgs;
-  const { '--access': accessFlag, '--output': outputPath } = flags;
+  const {
+    '--access': accessFlag,
+    '--output': outputPath,
+    '--if-none-match': ifNoneMatch,
+  } = flags;
 
   if (!urlOrPathname) {
     output.error(
@@ -53,6 +57,7 @@ export default async function get(
   telemetryClient.trackCliArgumentUrlOrPathname(urlOrPathname);
   telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliOptionOutput(outputPath);
+  telemetryClient.trackCliOptionIfNoneMatch(ifNoneMatch);
 
   try {
     output.debug('Downloading blob');
@@ -64,7 +69,13 @@ export default async function get(
     const result = await blob.get(urlOrPathname, {
       token: rwToken,
       access,
+      ifNoneMatch,
     });
+
+    if (result && result.statusCode === 304) {
+      output.log('Not modified (304)');
+      return 0;
+    }
 
     if (!result || !result.stream) {
       output.error(`Blob not found: ${urlOrPathname}`);
