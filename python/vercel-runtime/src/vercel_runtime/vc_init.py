@@ -258,7 +258,7 @@ if os.path.exists(_runtime_config_path):
         # Cold start: install public dependencies using bundled uv
         _uv_path = os.path.join(_uv_dir, "uv")
 
-        _stderr("Installing runtime dependencies...")
+        print("Installing runtime dependencies...")
         _install_start = time.time()
 
         try:
@@ -313,7 +313,7 @@ if os.path.exists(_runtime_config_path):
             if _result.stderr:
                 sys.stdout.write(_result.stderr)
             _install_duration = time.time() - _install_start
-            _stderr(f"Runtime dependencies installed in {_install_duration:.2f}s")
+            print(f"Runtime dependencies installed in {_install_duration:.2f}s")
         except subprocess.CalledProcessError as e:
             _fatal(
                 f"Runtime dependency installation failed.\n"
@@ -327,7 +327,7 @@ if os.path.exists(_runtime_config_path):
         # Mark installation complete for warm starts
         open(_marker, "w").close()
     else:
-        _stderr("Using cached runtime dependencies")
+        print("Using cached runtime dependencies")
 
     # Add runtime-installed deps to path (must come before user code import)
     if os.path.isdir(_site_packages):
