@@ -158,7 +158,7 @@ export const inspectSubcommand = {
 
 export const routesCommand = {
   name: 'routes',
-  aliases: ['route'],
+  aliases: [],
   description:
     'Manage routing rules for a project. Routes managed at the project level apply to all deployments and environments.',
   arguments: [],
