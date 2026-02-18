@@ -222,12 +222,10 @@ describe('integration', () => {
         client.setArgv('integration', 'guide', 'neon');
         const exitCode = await integrationCommand(client);
         expect(exitCode).toEqual(0);
-        await expect(client.stderr).toOutput('Neon');
-        await expect(client.stderr).toOutput('Install the driver');
-        await expect(client.stderr).toOutput('Create a connection');
+        await expect(client.stdout).toOutput('# Neon');
       });
 
-      it('tracks telemetry', async () => {
+      it('tracks telemetry with known integration slug', async () => {
         client.setArgv('integration', 'guide', 'neon');
         await integrationCommand(client);
 
@@ -238,7 +236,7 @@ describe('integration', () => {
           },
           {
             key: 'argument:integration',
-            value: '[REDACTED]',
+            value: 'neon',
           },
         ]);
       });
@@ -255,8 +253,7 @@ describe('integration', () => {
         client.setArgv('integration', 'guide', 'aws/aws-dynamodb');
         const exitCode = await integrationCommand(client);
         expect(exitCode).toEqual(0);
-        await expect(client.stderr).toOutput('Amazon DynamoDB');
-        await expect(client.stderr).toOutput('Install dependencies');
+        await expect(client.stdout).toOutput('# Amazon DynamoDB');
       });
 
       it('should prompt for product selection in TTY mode', async () => {
@@ -303,7 +300,7 @@ describe('integration', () => {
         );
         const exitCode = await integrationCommand(client);
         expect(exitCode).toEqual(0);
-        await expect(client.stderr).toOutput('Install Supabase for Remix');
+        await expect(client.stdout).toOutput('Install Supabase for Remix');
       });
 
       it('should error when framework is not found', async () => {
@@ -319,20 +316,6 @@ describe('integration', () => {
         await expect(client.stderr).toOutput(
           'Error: Framework "angular" not found'
         );
-      });
-
-      it('should work with --raw and --framework combined', async () => {
-        client.setArgv(
-          'integration',
-          'guide',
-          'supabase',
-          '--framework',
-          'nextjs',
-          '--raw'
-        );
-        const exitCode = await integrationCommand(client);
-        expect(exitCode).toEqual(0);
-        await expect(client.stderr).toOutput('# Supabase');
       });
 
       it('tracks --framework telemetry', async () => {
@@ -356,48 +339,7 @@ describe('integration', () => {
           },
           {
             key: 'argument:integration',
-            value: '[REDACTED]',
-          },
-        ]);
-      });
-    });
-
-    describe('--raw flag', () => {
-      beforeEach(() => {
-        client.scenario.get(
-          '/v2/integrations/integration/neon',
-          (_req, res) => {
-            res.json(singleProductIntegration);
-          }
-        );
-      });
-
-      it('should output raw markdown with --raw', async () => {
-        client.setArgv('integration', 'guide', 'neon', '--raw');
-        const exitCode = await integrationCommand(client);
-        expect(exitCode).toEqual(0);
-
-        // Raw markdown is written via output.print (stderr in tests).
-        // Use a single toOutput check since the stream is consumed sequentially.
-        await expect(client.stderr).toOutput('# Neon');
-      });
-
-      it('tracks --raw telemetry', async () => {
-        client.setArgv('integration', 'guide', 'neon', '--raw');
-        await integrationCommand(client);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'subcommand:guide',
-            value: 'guide',
-          },
-          {
-            key: 'flag:raw',
-            value: 'TRUE',
-          },
-          {
-            key: 'argument:integration',
-            value: '[REDACTED]',
+            value: 'supabase',
           },
         ]);
       });

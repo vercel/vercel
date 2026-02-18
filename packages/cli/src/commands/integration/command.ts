@@ -303,14 +303,6 @@ export const guideSubcommand = {
   ],
   options: [
     {
-      name: 'raw',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description:
-        'Output raw markdown without terminal formatting (useful for coding agents)',
-    },
-    {
       name: 'framework',
       shorthand: 'f',
       type: String,
@@ -334,10 +326,6 @@ export const guideSubcommand = {
         `${packageName} integration guide <integration>/<product>`,
         `${packageName} integration guide aws/aws-dynamodb`,
       ],
-    },
-    {
-      name: 'Output raw markdown',
-      value: `${packageName} integration guide neon --raw`,
     },
     {
       name: 'Show the Next.js guide without prompts (useful for CI/agents)',

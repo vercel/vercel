@@ -2911,7 +2911,6 @@ exports[`help command > integration help output snapshots > integration guide su
 
   -f,  --framework <FRAMEWORK>  Select a framework guide without interactive prompt (e.g., nextjs, remix, astro, nuxtjs,
                                 sveltekit)                                                                              
-       --raw                    Output raw markdown without terminal formatting (useful for coding agents)              
 
 
   Global Options:
@@ -2939,10 +2938,6 @@ exports[`help command > integration help output snapshots > integration guide su
 
     $ vercel integration guide <integration>/<product>
     $ vercel integration guide aws/aws-dynamodb
-
-  - Output raw markdown
-
-    $ vercel integration guide neon --raw
 
   - Show the Next.js guide without prompts (useful for CI/agents)
 

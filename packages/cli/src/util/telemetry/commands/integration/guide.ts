@@ -15,12 +15,6 @@ export class IntegrationGuideTelemetryClient
     }
   }
 
-  trackCliFlagRaw(v: boolean | undefined) {
-    if (v) {
-      this.trackCliFlag('raw');
-    }
-  }
-
   trackCliOptionFramework(v: string | undefined) {
     if (v) {
       this.trackCliOption({

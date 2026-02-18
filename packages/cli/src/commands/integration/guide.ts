@@ -1,6 +1,4 @@
 import chalk from 'chalk';
-import { Marked } from 'marked';
-import { markedTerminal } from 'marked-terminal';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
@@ -15,12 +13,6 @@ import type {
 import output from '../../output-manager';
 import { guideSubcommand } from './command';
 import { IntegrationGuideTelemetryClient } from '../../util/telemetry/commands/integration/guide';
-
-const terminalMarked = new Marked(markedTerminal());
-
-function renderMarkdown(content: string): string {
-  return terminalMarked.parse(content) as string;
-}
 
 export async function guide(client: Client, subArgs: string[]) {
   const flagsSpecification = getFlagsSpecification(guideSubcommand.options);
@@ -37,12 +29,10 @@ export async function guide(client: Client, subArgs: string[]) {
     opts: { store: client.telemetryEventStore },
   });
 
-  const rawOutput = parsedArguments.flags['--raw'] as boolean | undefined;
   const frameworkFlag = parsedArguments.flags['--framework'] as
     | string
     | undefined;
 
-  telemetry.trackCliFlagRaw(rawOutput);
   telemetry.trackCliOptionFramework(frameworkFlag);
 
   const rawArg = parsedArguments.args[0];
@@ -56,19 +46,20 @@ export async function guide(client: Client, subArgs: string[]) {
   const integrationSlug = rawArg.split('/')[0];
   const productSlug = rawArg.includes('/') ? rawArg.split('/')[1] : undefined;
 
-  telemetry.trackCliArgumentIntegration(integrationSlug);
-
   output.spinner('Fetching integration details…', 500);
 
   let integration;
   try {
     integration = await fetchIntegration(client, integrationSlug);
   } catch (error) {
+    telemetry.trackCliArgumentIntegration(integrationSlug);
     output.error(
       `Failed to fetch integration "${integrationSlug}": ${(error as Error).message}`
     );
     return 1;
   }
+
+  telemetry.trackCliArgumentIntegration(integrationSlug, true);
 
   const products = integration.products ?? [];
 
@@ -129,11 +120,7 @@ export async function guide(client: Client, subArgs: string[]) {
   if (guides.length === 0 && snippets.length === 0) {
     output.log(`No guides or snippets available for "${product.name}" yet.`);
     if (resourceLinks.length > 0) {
-      if (rawOutput) {
-        printResourceLinksRaw(resourceLinks);
-      } else {
-        printResourceLinks(resourceLinks);
-      }
+      printResourceLinks(client, resourceLinks);
     }
     return 0;
   }
@@ -156,7 +143,7 @@ export async function guide(client: Client, subArgs: string[]) {
       }
     } else if (guides.length === 1) {
       selectedGuide = guides[0];
-    } else if (client.stdin.isTTY && !rawOutput) {
+    } else if (client.stdin.isTTY) {
       selectedGuide = await client.input.select<IntegrationGuide>({
         message: 'Select a framework guide:',
         choices: guides.map(g => ({
@@ -169,18 +156,13 @@ export async function guide(client: Client, subArgs: string[]) {
     }
   }
 
-  if (rawOutput) {
-    printRaw(product, selectedGuide, snippets, resourceLinks);
-  } else {
-    printFormatted(product, selectedGuide, snippets, resourceLinks);
-  }
+  printGuide(client, product, selectedGuide, snippets, resourceLinks);
 
   return 0;
 }
 
-// ── Raw markdown output ──────────────────────────────────────────
-
-function printRaw(
+function printGuide(
+  client: Client,
   product: IntegrationProduct,
   guide: IntegrationGuide | undefined,
   snippets: IntegrationSnippet[],
@@ -219,82 +201,26 @@ function printRaw(
   }
 
   if (resourceLinks.length > 0) {
-    lines.push('## Resources');
-    lines.push('');
-    for (const link of resourceLinks) {
-      lines.push(`- [${link.title}](${link.href})`);
-    }
-    lines.push('');
+    appendResourceLinks(resourceLinks, lines);
   }
 
-  output.print(lines.join('\n'));
+  client.stdout.write(`${lines.join('\n')}\n`);
 }
 
-// ── Formatted terminal output ────────────────────────────────────
-
-function printFormatted(
-  product: IntegrationProduct,
-  guide: IntegrationGuide | undefined,
-  snippets: IntegrationSnippet[],
-  resourceLinks: IntegrationResourceLink[]
+function appendResourceLinks(
+  links: IntegrationResourceLink[],
+  lines: string[]
 ) {
-  // Header
-  output.print('\n');
-  output.print(
-    `${chalk.bold(product.name)} ${chalk.dim(`(${product.shortDescription})`)}\n`
-  );
-  output.print(`${chalk.dim('─'.repeat(60))}\n`);
-
-  if (guide) {
-    printGuide(guide);
-  }
-
-  if (snippets.length > 0) {
-    printSnippets(snippets);
-  }
-
-  if (resourceLinks.length > 0) {
-    printResourceLinks(resourceLinks);
-  }
-}
-
-function printGuide(guide: IntegrationGuide) {
-  output.print(renderMarkdown(`## Getting Started with ${guide.title}`));
-
-  for (let i = 0; i < guide.steps.length; i++) {
-    const step = guide.steps[i];
-    output.print(renderMarkdown(`### Step ${i + 1}: ${step.title}`));
-    output.print(renderMarkdown(step.content));
-  }
-}
-
-function printSnippets(snippets: IntegrationSnippet[]) {
-  output.print(`\n${chalk.dim('─'.repeat(60))}\n`);
-  output.print(renderMarkdown('## Code Snippets'));
-
-  for (const snippet of snippets) {
-    const md = `### ${snippet.name}\n\n\`\`\`${snippet.language}\n${snippet.content}\n\`\`\``;
-    output.print(renderMarkdown(md));
-  }
-}
-
-function printResourceLinks(links: IntegrationResourceLink[]) {
-  output.print(`\n${chalk.dim('─'.repeat(60))}\n`);
-  output.print(renderMarkdown('## Resources'));
-
-  for (const link of links) {
-    output.print(
-      `  ${chalk.cyan('→')} ${output.link(link.title, link.href, { fallback: () => `${link.title} ${chalk.dim(`(${link.href})`)}` })}\n`
-    );
-  }
-  output.print('\n');
-}
-
-function printResourceLinksRaw(links: IntegrationResourceLink[]) {
-  const lines = ['## Resources', ''];
+  lines.push('## Resources');
+  lines.push('');
   for (const link of links) {
     lines.push(`- [${link.title}](${link.href})`);
   }
   lines.push('');
-  output.print(lines.join('\n'));
+}
+
+function printResourceLinks(client: Client, links: IntegrationResourceLink[]) {
+  const lines: string[] = [];
+  appendResourceLinks(links, lines);
+  client.stdout.write(`${lines.join('\n')}\n`);
 }
