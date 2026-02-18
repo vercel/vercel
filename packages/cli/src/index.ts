@@ -353,10 +353,11 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize.
-  // Non-interactive when: --non-interactive flag, or agent running without a TTY (so Cursor terminal stays interactive).
+  // Non-interactive when: --non-interactive flag, agent detected (auto-opted in), or no TTY (CI/headless).
+  // When agent is detected we always use non-interactive so the CLI outputs actionable JSON (e.g. next: [{ command: "vercel link --yes" }]) instead of blocking on prompts.
   const stdinIsTTY = process.stdin?.isTTY === true;
   const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
-  const nonInteractive = nonInteractiveFlag || (isAgent && !stdinIsTTY);
+  const nonInteractive = nonInteractiveFlag || isAgent || !stdinIsTTY;
 
   output.debug(
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
