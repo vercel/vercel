@@ -11,7 +11,7 @@ import type { ExperimentConfig } from '@vercel/agent-eval';
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   runs: 1,
-  earlyExit: true,
+  earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 600,
   sandbox: 'docker', // Use Docker sandbox in CI (no OIDC required; Vercel sandbox prefers OIDC)
   setup: async sandbox => {
