@@ -1,4 +1,0 @@
----
----
-
-Bump waitForPrompt test util
