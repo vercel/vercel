@@ -26,6 +26,14 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 type RoutePrefixSource = 'configured' | 'generated';
+
+interface ResolveConfiguredServiceOptions {
+  name: string;
+  config: ExperimentalServiceConfig;
+  fs: DetectorFilesystem;
+  group?: string;
+  routePrefixSource?: RoutePrefixSource;
+}
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -211,12 +219,9 @@ export function validateServiceConfig(
  * Resolve a single service from user configuration.
  */
 export async function resolveConfiguredService(
-  name: string,
-  config: ExperimentalServiceConfig,
-  fs: DetectorFilesystem,
-  group?: string,
-  routePrefixSource: RoutePrefixSource = 'configured'
+  options: ResolveConfiguredServiceOptions
 ): Promise<Service> {
+  const { name, config, fs, group, routePrefixSource = 'configured' } = options;
   const type = config.type || 'web';
   const inferredRuntime = inferServiceRuntime(config);
   let workspace = config.workspace || '.';
@@ -358,13 +363,12 @@ export async function resolveAllConfiguredServices(
       continue;
     }
 
-    const service = await resolveConfiguredService(
+    const service = await resolveConfiguredService({
       name,
-      serviceConfig,
+      config: serviceConfig,
       fs,
-      undefined,
-      routePrefixSource
-    );
+      routePrefixSource,
+    });
 
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);

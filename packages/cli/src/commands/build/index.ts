@@ -721,10 +721,9 @@ async function doBuild(
         ? servicesByBuilderSrc.get(build.src)
         : undefined;
       const stripServiceRoutePrefix =
-        service !== undefined &&
-        service.routePrefix !== undefined &&
-        service.routePrefix !== '/' &&
-        service.routePrefixSource === 'generated';
+        !!service?.routePrefix &&
+        service?.routePrefix !== '/' &&
+        service?.routePrefixSource === 'generated';
 
       let buildWorkPath = workPath;
       let buildEntrypoint = build.src;
