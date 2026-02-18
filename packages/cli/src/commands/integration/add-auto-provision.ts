@@ -45,6 +45,7 @@ export async function addAutoProvision(
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
   telemetry.trackCliOptionPlan(options.billingPlanId);
+  telemetry.trackCliOptionEnvironment(options.environments);
 
   // 1. Get team context
   const { contextName, team } = await getScope(client);
@@ -245,8 +246,10 @@ export async function addAutoProvision(
       url.searchParams.set('planId', options.billingPlanId);
     }
     output.debug(`Opening URL: ${url.href}`);
-    open(url.href);
-    return 0;
+    open(url.href).catch((err: unknown) =>
+      output.debug(`Failed to open browser: ${err}`)
+    );
+    return 1;
   }
 
   // 9. Success!

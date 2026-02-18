@@ -1,5 +1,13 @@
 # @vercel/router-sdk
 
+## 0.0.31
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
 ## 0.0.30
 
 ### Patch Changes

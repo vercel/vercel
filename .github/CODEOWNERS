@@ -4,7 +4,7 @@
 # Restricted Paths
 *                                        @vercel/ci-cd
 /.github/workflows                       @vercel/ci-cd @ijjk
-/packages/fs-detectors                   @vercel/ci-cd @vercel/team-python @agadzik @chloetedder
+/packages/fs-detectors                   @vercel/ci-cd @vercel/team-python @agadzik
 /packages/next                           @vercel/ci-cd @timneutkens @ijjk @ztanner @huozhi
 /packages/routing-utils                  @vercel/ci-cd @ijjk
 /packages/static-build                   @vercel/ci-cd
@@ -23,11 +23,13 @@
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 /packages/config                         @vercel/ci-cd @MatthewStanciu
 /packages/cli/                           @vercel/ci-cd @vercel/vercel-cli-approvers
+/packages/cli/src/commands/install/       @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/util/integration/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/util/telemetry/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/test/mocks/integration.ts  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/commands/install/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/test/unit/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/test/unit/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/test/unit/util/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
