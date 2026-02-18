@@ -3,7 +3,7 @@ require 'webrick'
 require 'net/http'
 require 'base64'
 require 'json'
-require 'uri'
+require_relative 'vc_utils'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
 
@@ -11,99 +11,8 @@ ENV['RAILS_ENV'] ||= 'production'
 ENV['RACK_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
 
-# Returns an empty string when unset/blank/root ("/"), otherwise:
-# - always starts with "/"
-# - has no trailing slash
-def normalize_service_route_prefix(raw_prefix)
-  return '' if raw_prefix.nil?
 
-  prefix = raw_prefix.strip
-  return '' if prefix.empty?
-
-  prefix = "/#{prefix}" unless prefix.start_with?('/')
-
-  if prefix != '/'
-    prefix = prefix.sub(%r{/+\z}, '')
-    prefix = '/' if prefix.empty?
-  end
-
-  prefix == '/' ? '' : prefix
-end
-
-def service_route_prefix_strip_enabled?
-  raw = ENV['VERCEL_SERVICE_ROUTE_PREFIX_STRIP']
-  return false if raw.nil? || raw.empty?
-
-  %w[1 true].include?(raw.downcase)
-end
-
-# Split an HTTP request-target into [path, query].
-#
-# Supports:
-# - origin-form: "/a/b?x=1"
-# - absolute-form: "https://example.com/a/b?x=1"
-# - asterisk-form: "*"
-def split_request_target(target)
-  return ['/', ''] if target.nil? || target.empty?
-
-  begin
-    parsed = URI.parse(target)
-    if parsed.scheme && parsed.host
-      path = parsed.path.nil? || parsed.path.empty? ? '/' : parsed.path
-      return [path, parsed.query.to_s]
-    end
-  rescue URI::InvalidURIError
-  end
-
-  return ['*', ''] if target == '*'
-
-  path, query = target.split('?', 2)
-  path = '/' if path.nil? || path.empty?
-  path = "/#{path}" unless path.start_with?('/')
-  [path, query.to_s]
-end
-
-# Strip the configured service route prefix from a request path.
-#
-# Returns:
-# - stripped path passed to the user app
-# - matched mount prefix (empty when no prefix matched)
-def strip_service_route_prefix(path)
-  return [path, ''] if path == '*'
-
-  normalized_path = path.nil? || path.empty? ? '/' : path
-  normalized_path = "/#{normalized_path}" unless normalized_path.start_with?('/')
-
-  prefix = $service_route_prefix
-  return [normalized_path, ''] if prefix.empty?
-
-  return ['/', prefix] if normalized_path == prefix
-
-  if normalized_path.start_with?("#{prefix}/")
-    stripped = normalized_path[prefix.length..]
-    return [stripped.nil? || stripped.empty? ? '/' : stripped, prefix]
-  end
-
-  [normalized_path, '']
-end
-
-# Apply service-prefix stripping to a full request-target.
-#
-# Returns:
-# - updated request-target (path + optional query)
-# - matched mount prefix for Rack SCRIPT_NAME (or "")
-def apply_service_route_prefix_to_target(target)
-  path, query = split_request_target(target)
-  path, script_name = strip_service_route_prefix(path)
-  updated = query.empty? ? path : "#{path}?#{query}"
-  [updated, script_name]
-end
-
-$service_route_prefix = if service_route_prefix_strip_enabled?
-  normalize_service_route_prefix(ENV['VERCEL_SERVICE_ROUTE_PREFIX'])
-else
-  ''
-end
+$service_route_prefix = resolve_service_route_prefix
 
 def rack_handler(httpMethod, path, body, headers, script_name = '')
   require 'rack'
@@ -192,7 +101,10 @@ def vc__handler(event:, context:)
     body = Base64.decode64(body)
   end
 
-  path, script_name = apply_service_route_prefix_to_target(path)
+  path, script_name = apply_service_route_prefix_to_target(
+    path,
+    $service_route_prefix
+  )
 
   if $entrypoint.end_with? '.ru'
     return rack_handler(httpMethod, path, body, headers, script_name)

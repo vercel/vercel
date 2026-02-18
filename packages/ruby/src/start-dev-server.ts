@@ -106,10 +106,14 @@ function createDevRubyShim(
     const vercelRubyDir = join(workPath, '.vercel', 'ruby');
     mkdirSync(vercelRubyDir, { recursive: true });
     const shimPath = join(vercelRubyDir, `vc_init_dev.rb`);
+    const utilsPath = join(vercelRubyDir, 'vc_utils.rb');
     const templatePath = join(__dirname, '..', 'vc_init_dev.rb');
+    const utilsTemplatePath = join(__dirname, '..', 'vc_utils.rb');
     const template = readFileSync(templatePath, 'utf8');
+    const utilsTemplate = readFileSync(utilsTemplatePath, 'utf8');
     const shimSource = template.replace(/__VC_DEV_ENTRYPOINT__/g, entrypoint);
     writeFileSync(shimPath, shimSource, 'utf8');
+    writeFileSync(utilsPath, utilsTemplate, 'utf8');
     debug(`Prepared Ruby dev shim at ${shimPath}`);
     return shimPath;
   } catch (err: any) {

@@ -10,58 +10,14 @@ require 'rack'
 require 'rack/handler/webrick'
 require 'webrick'
 require 'socket'
+require_relative 'vc_utils'
 
 $stdout.sync = true
 $stderr.sync = true
 
 USER_ENTRYPOINT = "__VC_DEV_ENTRYPOINT__"
 PUBLIC_DIR = 'public'
-
-def normalize_service_route_prefix(raw_prefix)
-  return '' if raw_prefix.nil?
-
-  prefix = raw_prefix.strip
-  return '' if prefix.empty?
-
-  prefix = "/#{prefix}" unless prefix.start_with?('/')
-
-  if prefix != '/'
-    prefix = prefix.sub(%r{/+\z}, '')
-    prefix = '/' if prefix.empty?
-  end
-
-  prefix == '/' ? '' : prefix
-end
-
-def service_route_prefix_strip_enabled?
-  raw = ENV['VERCEL_SERVICE_ROUTE_PREFIX_STRIP']
-  return false if raw.nil? || raw.empty?
-
-  %w[1 true].include?(raw.downcase)
-end
-
-SERVICE_ROUTE_PREFIX = if service_route_prefix_strip_enabled?
-  normalize_service_route_prefix(ENV['VERCEL_SERVICE_ROUTE_PREFIX'])
-else
-  ''
-end
-
-def strip_service_route_prefix(path_info)
-  normalized_path = path_info.nil? || path_info.empty? ? '/' : path_info
-  normalized_path = "/#{normalized_path}" unless normalized_path.start_with?('/')
-
-  prefix = SERVICE_ROUTE_PREFIX
-  return [normalized_path, ''] if prefix.empty?
-
-  return ['/', prefix] if normalized_path == prefix
-
-  if normalized_path.start_with?("#{prefix}/")
-    stripped = normalized_path[prefix.length..]
-    return [stripped.nil? || stripped.empty? ? '/' : stripped, prefix]
-  end
-
-  [normalized_path, '']
-end
+SERVICE_ROUTE_PREFIX = resolve_service_route_prefix
 
 def build_user_app
   if USER_ENTRYPOINT.end_with?('.ru')
@@ -84,7 +40,8 @@ class StaticThenApp
   def call(env)
     effective_env = env.dup
     req_path, matched_prefix = strip_service_route_prefix(
-      effective_env['PATH_INFO'] || '/'
+      effective_env['PATH_INFO'] || '/',
+      SERVICE_ROUTE_PREFIX
     )
     effective_env['PATH_INFO'] = req_path
 

@@ -246,6 +246,8 @@ export const build: BuildV3 = async ({
 
   const originalRbPath = join(__dirname, '..', 'vc_init.rb');
   const originalHandlerRbContents = await readFile(originalRbPath, 'utf8');
+  const originalUtilsRbPath = join(__dirname, '..', 'vc_utils.rb');
+  const originalUtilsRbContents = await readFile(originalUtilsRbPath, 'utf8');
 
   // will be used on `require_relative '$here'` or for loading rack config.ru file
   // for example, `require_relative 'api/users'`
@@ -259,6 +261,7 @@ export const build: BuildV3 = async ({
   // in order to allow the user to have `server.rb`, we need our `server.rb` to be called
   // something else
   const handlerRbFilename = 'vc__handler__ruby';
+  const utilsRbFilename = 'vc_utils.rb';
 
   // Apply predefined default excludes similar to Python runtime
   const predefinedExcludes = [
@@ -281,6 +284,9 @@ export const build: BuildV3 = async ({
   outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
     data: nowHandlerRbContents,
   });
+  outputFiles[utilsRbFilename] = new FileBlob({
+    data: originalUtilsRbContents,
+  });
 
   // static analysis is impossible with ruby.
   // instead, provide `includeFiles` and `excludeFiles` config options to reduce bundle size.
@@ -298,7 +304,10 @@ export const build: BuildV3 = async ({
       }
 
       // whitelist handler
-      if (excludedPaths[i] === `${handlerRbFilename}.rb`) {
+      if (
+        excludedPaths[i] === `${handlerRbFilename}.rb` ||
+        excludedPaths[i] === utilsRbFilename
+      ) {
         continue;
       }
 
