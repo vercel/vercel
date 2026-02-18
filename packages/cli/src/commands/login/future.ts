@@ -67,20 +67,26 @@ export async function login(
   // Open browser automatically unless we're in CI (excluding Cursor)
   if (!shouldSkipBrowser) {
     try {
-      await open.default(verification_uri_complete);
-    } catch (error) {
-      // Fail gracefully if browser can't be opened
-      o.debug(`Failed to open browser: ${error}`);
+      // open@8.4.0 with wait:false (default) returns a ChildProcess directly.
+      // We must attach the error handler synchronously to prevent unhandled
+      // 'error' events when the browser opener (e.g. xdg-open) is unavailable.
+      const browserProcess: any = open.default(verification_uri_complete);
+      browserProcess.on?.('error', (error: Error) => {
+        o.debug(`Failed to open browser: ${error}`);
 
-      // If in non-interactive agent mode, provide specific instructions
-      if (client.isAgent && client.nonInteractive) {
-        o.log(
-          `\n${chalk.yellow('⚠')} ${chalk.bold('Browser could not be opened automatically.')}\n`
-        );
-        o.log(
-          `Please ask the user to manually visit the URL above and complete the authentication process.\n`
-        );
-      }
+        // If in non-interactive agent mode, provide specific instructions
+        if (client.isAgent && client.nonInteractive) {
+          o.log(
+            `\n${chalk.yellow('⚠')} ${chalk.bold('Browser could not be opened automatically.')}\n`
+          );
+          o.log(
+            `Please ask the user to manually visit the URL above and complete the authentication process.\n`
+          );
+        }
+      });
+    } catch (error) {
+      // Handle any synchronous errors from open.default() itself
+      o.debug(`Failed to open browser: ${error}`);
     }
   }
 
