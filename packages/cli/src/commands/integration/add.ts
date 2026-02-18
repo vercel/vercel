@@ -38,16 +38,23 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
-export type AddOptions = PostProvisionOptions;
+import type { IntegrationAddFlags } from './command';
+
+type AddOptions = PostProvisionOptions;
 
 export async function add(
   client: Client,
   args: string[],
-  resourceNameArg?: string,
-  metadataFlags?: string[],
-  billingPlanId?: string,
-  options: AddOptions = {}
+  flags: IntegrationAddFlags
 ) {
+  const resourceNameArg = flags['--name'];
+  const metadataFlags = flags['--metadata'];
+  const billingPlanId = flags['--plan'];
+  const options: AddOptions = {
+    noConnect: flags['--no-connect'],
+    noEnvPull: flags['--no-env-pull'],
+    environments: flags['--environment'],
+  };
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;

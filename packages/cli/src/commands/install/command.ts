@@ -1,5 +1,6 @@
 import type { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { addSubcommand } from '../integration/command';
 
 export const installCommand: Command = {
   name: 'install',
@@ -12,7 +13,7 @@ export const installCommand: Command = {
       required: true,
     },
   ],
-  options: [],
+  options: addSubcommand.options,
   examples: [
     {
       name: 'Install an integration from the marketplace',
