@@ -83,7 +83,7 @@ export async function importBuilders(
   return importResult.builders;
 }
 
-export async function resolveBuilders(
+async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
   resolvedSpecs?: Map<string, string>
