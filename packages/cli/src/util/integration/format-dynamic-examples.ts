@@ -51,6 +51,44 @@ export function formatDynamicExamples(
     lines.push(`    ${chalk.cyan(`$ ${metadataExample}`)}`);
   }
 
+  // Billing plan
+  lines.push('');
+  lines.push(`  ${chalk.dim('-')} Install with a specific billing plan`);
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --plan pro`)}`
+  );
+
+  // Environment
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Install and connect to specific environments only`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} -e production -e preview`)}`
+  );
+
+  // No-connect
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Install without connecting to the current project`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --no-connect`)}`
+  );
+
+  // No-env-pull
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Install without pulling environment variables`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --no-env-pull`)}`
+  );
+
   lines.push('');
 
   return lines.join('\n');

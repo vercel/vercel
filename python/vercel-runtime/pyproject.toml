@@ -1,6 +1,6 @@
 [project]
 name = "vercel-runtime"
-version = "0.4.0"
+version = "0.4.1"
 license = "Apache-2.0"
 license-files = [
   "src/vercel_runtime/_vendor/*/LICEN[CS]E*",

@@ -620,7 +620,7 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, span);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -830,7 +830,11 @@ async function doBuild(
       }
 
       const builderSpan = span.child('vc.builder', {
-        name: builderPkg.name,
+        'builder.name': builderPkg.name,
+        'builder.version': builderPkg.version,
+        'builder.dynamicallyInstalled': String(
+          builderWithPkg.dynamicallyInstalled
+        ),
       });
 
       const serviceRoutePrefix = build.config?.routePrefix;
