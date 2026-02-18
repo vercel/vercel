@@ -538,10 +538,10 @@ from vercel_runtime.vc_init import vc_handler
     pythonPath: pythonVersion.pythonPath,
   });
 
-  const { shouldInstall, allVendorFiles } =
+  const { overLambdaLimit, allVendorFiles } =
     await runtimeDepInstall.analyze(files);
 
-  if (shouldInstall) {
+  if (overLambdaLimit) {
     await runtimeDepInstall.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation

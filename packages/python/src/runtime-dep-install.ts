@@ -72,7 +72,7 @@ export class RuntimeDependencyInstall {
    * Must be called before generateBundle().
    */
   async analyze(files: Files): Promise<{
-    shouldInstall: boolean;
+    overLambdaLimit: boolean;
     allVendorFiles: Files;
   }> {
     this.allVendorFiles = await mirrorSitePackagesIntoVendor({
@@ -90,12 +90,12 @@ export class RuntimeDependencyInstall {
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-    const shouldInstall = shouldEnableRuntimeInstall({
+    const overLambdaLimit = shouldEnableRuntimeInstall({
       totalBundleSize: this.totalBundleSize,
       uvLockPath: this.uvLockPath,
     });
 
-    return { shouldInstall, allVendorFiles: this.allVendorFiles };
+    return { overLambdaLimit, allVendorFiles: this.allVendorFiles };
   }
 
   /**
@@ -240,10 +240,28 @@ export class RuntimeDependencyInstall {
       baseFiles[p] = f;
     }
     const fixedOverhead = await calculateBundleSize(baseFiles);
-    const remainingCapacity = LAMBDA_PACKING_TARGET_BYTES - fixedOverhead;
+
+    // Account for the uv binary that will be added to the bundle.
+    // This must be subtracted from capacity before running the knapsack
+    // so we don't over-pack and exceed the Lambda size limit.
+    let runtimeToolingOverhead = 0;
+    if (process.env.VERCEL_BUILD_IMAGE) {
+      try {
+        const uvBinaryPath = await getUvBinaryForBundling(this.pythonPath);
+        const uvStats = await fs.promises.stat(uvBinaryPath);
+        runtimeToolingOverhead = uvStats.size;
+      } catch {
+        // If we can't stat the binary, use a conservative estimate
+        runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
+      }
+    }
+
+    const remainingCapacity =
+      LAMBDA_PACKING_TARGET_BYTES - fixedOverhead - runtimeToolingOverhead;
 
     debug(
       `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
+        `runtime tooling: ${(runtimeToolingOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
