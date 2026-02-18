@@ -72,6 +72,11 @@ export default async function metrics(client: Client): Promise<number> {
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 2;
       }
+      // Show help if --event is not provided (required for query)
+      if (!parsedArgs.flags['--event']) {
+        output.print(help(metricsCommand, { columns: client.stderr.columns }));
+        return 2;
+      }
       const queryFn = (await import('./query')).default;
       return queryFn(client, telemetry);
     }
