@@ -36,12 +36,6 @@ function normalizeServiceEntrypoint(entrypoint: string): string {
   return normalized === '' ? '.' : normalized;
 }
 
-/**
- * Resolve entrypoint path semantics.
- *
- * Entrypoints must exist in the project. We derive whether the path
- * represents a file or directory from filesystem metadata.
- */
 async function resolveEntrypointPath({
   fs,
   serviceName,
