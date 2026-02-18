@@ -311,7 +311,7 @@ export class ServicesOrchestrator {
     );
 
     if (service.routePrefix && service.routePrefix !== '/') {
-      env.VERCEL_SERVICE_BASE_PATH = service.routePrefix;
+      env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
     }
 
     // Try to use builder's startDevServer if available
