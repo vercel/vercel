@@ -52,7 +52,6 @@ export function isBackendFramework(
   framework: string | null | undefined
 ): framework is BackendFramework {
   if (!framework) return false;
-  if (isPythonFramework(framework)) return true;
   return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
 }
 
