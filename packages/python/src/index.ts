@@ -68,6 +68,27 @@ import {
   detectPythonEntrypoint,
 } from './entrypoint';
 
+export function shouldEnableRuntimeInstall({
+  totalBundleSize,
+  uvLockPath,
+}: {
+  totalBundleSize: number;
+  uvLockPath: string | null;
+}): boolean {
+  const pythonOnHiveEnabled =
+    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+  if (pythonOnHiveEnabled) {
+    return false;
+  } else if (
+    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+    uvLockPath !== null
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export const version = 3;
 
 export async function downloadFilesInWorkPath({
@@ -557,8 +578,10 @@ from vercel_runtime.vc_init import vc_handler
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
   // Determine if runtime dependency installation is needed
-  const runtimeInstallEnabled =
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES && uvLockPath !== null;
+  const runtimeInstallEnabled = shouldEnableRuntimeInstall({
+    totalBundleSize,
+    uvLockPath,
+  });
 
   if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
     console.log(
