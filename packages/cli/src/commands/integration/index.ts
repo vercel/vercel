@@ -159,33 +159,7 @@ export default async function main(client: Client) {
         printError(error);
         return 1;
       }
-      const resourceName = addParsedArgs.flags['--name'] as string | undefined;
-      const metadataFlags = addParsedArgs.flags['--metadata'] as
-        | string[]
-        | undefined;
-      const billingPlanId = addParsedArgs.flags['--plan'] as string | undefined;
-      const noConnect = addParsedArgs.flags['--no-connect'] as
-        | boolean
-        | undefined;
-      const noEnvPull = addParsedArgs.flags['--no-env-pull'] as
-        | boolean
-        | undefined;
-      const environmentFlags = addParsedArgs.flags['--environment'] as
-        | string[]
-        | undefined;
-
-      return add(
-        client,
-        addParsedArgs.args,
-        resourceName,
-        metadataFlags,
-        billingPlanId,
-        {
-          noConnect,
-          noEnvPull,
-          environments: environmentFlags,
-        }
-      );
+      return add(client, addParsedArgs.args, addParsedArgs.flags);
     }
     case 'list': {
       if (needHelp) {
