@@ -1,5 +1,16 @@
 # @vercel/python
 
+## 6.14.1
+
+### Patch Changes
+
+- Skip runtime dependency install logic when VERCEL_PYTHON_ON_HIVE is set ([#15111](https://github.com/vercel/vercel/pull/15111))
+
+- Use dist-info RECORD to properly manage installed Python dependencies ([#15083](https://github.com/vercel/vercel/pull/15083))
+
+- Updated dependencies [[`88353afe588b95709af20ba2b82ba83d8a60f90c`](https://github.com/vercel/vercel/commit/88353afe588b95709af20ba2b82ba83d8a60f90c)]:
+  - @vercel/python-analysis@0.5.0
+
 ## 6.14.0
 
 ### Minor Changes
