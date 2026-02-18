@@ -82,7 +82,7 @@ _service_route_prefix = _normalize_service_route_prefix(
 
 def _split_request_target(target: str) -> tuple[str, str]:
     """
-    Split an HTTP request-target into (path, query) in a tolerant way.
+    Split an HTTP request-target into (path, query).
 
     Supports:
       - origin-form: "/a/b?x=1"
