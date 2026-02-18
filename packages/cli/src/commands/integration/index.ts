@@ -14,6 +14,7 @@ import {
   addSubcommand,
   balanceSubcommand,
   discoverSubcommand,
+  guideSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -23,6 +24,7 @@ import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 import { discover } from './discover';
+import { guide } from './guide';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
 import { formatBillingPlansHelp } from '../../util/integration/format-billing-plans-help';
@@ -35,6 +37,7 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
   discover: getCommandAliases(discoverSubcommand),
+  guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
 };
@@ -200,6 +203,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDiscover(subcommandOriginal);
       return discover(client, subArgs);
+    }
+    case 'guide': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(guideSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandGuide(subcommandOriginal);
+      return guide(client, subArgs);
     }
     case 'balance': {
       if (needHelp) {
