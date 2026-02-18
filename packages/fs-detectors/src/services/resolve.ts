@@ -181,7 +181,6 @@ function isReservedServiceRoutePrefix(routePrefix: string): boolean {
 
 /**
  * Validate a service configuration from vercel.json experimentalServices.
- * Checks config-level fields only — does not require filesystem access.
  */
 export function validateServiceConfig(
   name: string,
