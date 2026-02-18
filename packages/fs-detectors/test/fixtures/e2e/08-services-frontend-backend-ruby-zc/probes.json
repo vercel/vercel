@@ -1,0 +1,64 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Next.js"
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "Hello from Next API"
+    },
+    {
+      "path": "/_/backend",
+      "status": 200,
+      "mustContain": "Hello from Sinatra"
+    },
+    {
+      "path": "/_/backend/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/backend-from-env",
+      "status": 200,
+      "mustContain": "backend-status:ok"
+    },
+    {
+      "path": "/backend-from-env",
+      "status": 200,
+      "mustContain": "service-url:https://"
+    },
+    {
+      "path": "/backend-from-env",
+      "status": 200,
+      "mustContain": "/_/backend"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/api/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/_/backend/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Sinatra"
+    },
+    {
+      "path": "/backend",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/backend/index",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    }
+  ]
+}
