@@ -24,18 +24,20 @@ import {
 import {
   ensureUvProject,
   resolveVendorDir,
+  installRequirementsFile,
+  installRequirement,
+} from './install';
+import {
   mirrorSitePackagesIntoVendor,
   mirrorPrivatePackagesIntoVendor,
   mirrorSelectedPackagesIntoVendor,
-  installRequirementsFile,
-  installRequirement,
   calculateBundleSize,
   calculatePerPackageSizes,
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
-} from './install';
+} from './runtime-dep-install';
 import {
   classifyPackages,
   parseUvLock,
@@ -560,12 +562,9 @@ from vercel_runtime.vc_init import vc_handler
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
   // Determine if runtime dependency installation is needed.
-  // Enabled when the bundle exceeds the Lambda size threshold, or when
-  // VERCEL_PYTHON_ON_HIVE is set (for proactive packing).
+  // Enabled when the bundle exceeds the Lambda size threshold
   const runtimeInstallEnabled =
-    (totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES ||
-      process.env.VERCEL_PYTHON_ON_HIVE) &&
-    uvLockPath !== null;
+    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES && uvLockPath !== null;
 
   if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
     console.log(
