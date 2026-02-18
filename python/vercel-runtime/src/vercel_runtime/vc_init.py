@@ -312,8 +312,7 @@ if os.path.exists(_runtime_config_path):
             _fatal(
                 f"Runtime dependency installation failed.\n"
                 f"Command: {' '.join(e.cmd)}\n"
-                f"Exit code: {e.returncode}\n"
-                f"{e.stderr}"
+                f"Exit code: {e.returncode}"
             )
         except Exception as e:
             _fatal(f"Runtime dependency installation failed with unexpected error: {e}")
