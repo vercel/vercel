@@ -23,7 +23,7 @@ import {
   removeSubcommand,
   archiveSubcommand,
   disableSubcommand,
-  emitDatafilesSubcommand,
+  prepareSubcommand,
   enableSubcommand,
   sdkKeysSubcommand,
 } from './command';
@@ -38,7 +38,7 @@ const COMMAND_CONFIG = {
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
   'sdk-keys': getCommandAliases(sdkKeysSubcommand),
-  'emit-datafiles': getCommandAliases(emitDatafilesSubcommand),
+  prepare: getCommandAliases(prepareSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -139,10 +139,10 @@ export default async function main(client: Client) {
     case 'sdk-keys':
       telemetry.trackCliSubcommandSdkKeys(subcommandOriginal);
       return sdkKeys(client);
-    case 'emit-datafiles':
+    case 'prepare':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
-        printHelp(emitDatafilesSubcommand);
+        printHelp(prepareSubcommand);
         return 2;
       }
       telemetry.trackCliSubcommandEmitDatafiles(subcommandOriginal);

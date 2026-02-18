@@ -334,8 +334,8 @@ export const sdkKeysSubcommand = {
   examples: [],
 } as const;
 
-export const emitDatafilesSubcommand = {
-  name: 'emit-datafiles',
+export const prepareSubcommand = {
+  name: 'prepare',
   aliases: [],
   description:
     'Fetch Vercel Flags datafiles and write them to node_modules/@vercel/flags-definitions',
@@ -344,7 +344,7 @@ export const emitDatafilesSubcommand = {
   examples: [
     {
       name: 'Embed Vercel Flags datafiles using SDK keys from environment variables',
-      value: `${packageName} flags emit-datafiles`,
+      value: `${packageName} flags prepare`,
     },
   ],
 } as const;
@@ -366,7 +366,7 @@ export const flagsCommand = {
     disableSubcommand,
     enableSubcommand,
     sdkKeysSubcommand,
-    emitDatafilesSubcommand,
+    prepareSubcommand,
   ],
   options: [],
   examples: [],
