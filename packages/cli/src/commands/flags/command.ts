@@ -1,5 +1,5 @@
-import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const listSubcommand = {
   name: 'list',
@@ -337,16 +337,10 @@ export const sdkKeysSubcommand = {
 export const prepareSubcommand = {
   name: 'prepare',
   aliases: [],
-  description:
-    'Fetch Vercel Flags datafiles and write them to node_modules/@vercel/flags-definitions',
+  description: 'Prepare flag definition fallbacks for the build',
   arguments: [],
   options: [],
-  examples: [
-    {
-      name: 'Embed Vercel Flags datafiles using SDK keys from environment variables',
-      value: `${packageName} flags prepare`,
-    },
-  ],
+  examples: [],
 } as const;
 
 export const flagsCommand = {
