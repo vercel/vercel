@@ -145,7 +145,7 @@ export default async function main(client: Client) {
         printHelp(prepareSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandEmitDatafiles(subcommandOriginal);
+      telemetry.trackCliSubcommandPrepare(subcommandOriginal);
       return emitDatafiles(client);
     default:
       if (needHelp) {

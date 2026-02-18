@@ -62,9 +62,9 @@ export class FlagsTelemetryClient
     });
   }
 
-  trackCliSubcommandEmitDatafiles(actual: string) {
+  trackCliSubcommandPrepare(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'emit-datafiles',
+      subcommand: 'prepare',
       value: actual,
     });
   }
