@@ -51,7 +51,7 @@ describe('query', () => {
   describe('missing --event', () => {
     it('should return error with schema suggestion', async () => {
       mockLinkedProject();
-      client.setArgv('metrics', 'query');
+      client.setArgv('metrics');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -63,7 +63,7 @@ describe('query', () => {
   describe('unknown event', () => {
     it('should return error with available events', async () => {
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'bogus');
+      client.setArgv('metrics', '--event', 'bogus');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -73,7 +73,7 @@ describe('query', () => {
 
     it('should return JSON error with --format=json', async () => {
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'bogus', '--format=json');
+      client.setArgv('metrics', '--event', 'bogus', '--format=json');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -137,7 +137,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -243,7 +243,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -288,7 +288,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockTeamScope('my-team');
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest', '--all');
+      client.setArgv('metrics', '--event', 'incomingRequest', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -324,7 +324,7 @@ describe('query', () => {
         org: null as any,
         project: null as any,
       });
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -337,7 +337,7 @@ describe('query', () => {
         status: 'error',
         exitCode: 1,
       });
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -350,7 +350,7 @@ describe('query', () => {
         team: null,
         user: { id: 'user_dummy' } as any,
       });
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest', '--all');
+      client.setArgv('metrics', '--event', 'incomingRequest', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -420,7 +420,7 @@ describe('query', () => {
         });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -470,7 +470,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -588,7 +588,7 @@ describe('query', () => {
         res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -603,7 +603,7 @@ describe('query', () => {
         res.status(403).json({ error: { code: 'FORBIDDEN' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -616,7 +616,7 @@ describe('query', () => {
         res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -631,7 +631,7 @@ describe('query', () => {
           .json({ error: { code: 'BAD_REQUEST', message: 'Invalid query' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -665,7 +665,7 @@ describe('query', () => {
     it('should track event option', async () => {
       mockApiSuccess();
       mockLinkedProject();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'incomingRequest');
 
       await query(client, new MockTelemetry());
 
@@ -780,7 +780,7 @@ describe('query', () => {
     it('should track --all flag', async () => {
       mockApiSuccess();
       mockTeamScope();
-      client.setArgv('metrics', 'query', '--event', 'incomingRequest', '--all');
+      client.setArgv('metrics', '--event', 'incomingRequest', '--all');
 
       await query(client, new MockTelemetry());
 

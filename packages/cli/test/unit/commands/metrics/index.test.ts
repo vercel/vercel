@@ -16,8 +16,7 @@ describe('metrics', () => {
 
       expect(exitCode).toBe(2);
       const output = client.stderr.getFullOutput();
-      // Shows subcommands
-      expect(output).toContain('query');
+      // Shows schema subcommand
       expect(output).toContain('schema');
       // Shows default subcommand options
       expect(output).toContain('--event');
@@ -54,15 +53,6 @@ describe('metrics', () => {
       const exitCode = await metrics(client);
 
       // Unknown event → error
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Unknown event');
-    });
-
-    it('should route to query with explicit subcommand', async () => {
-      client.setArgv('metrics', 'query', '--event', 'bogus_event_for_test');
-
-      const exitCode = await metrics(client);
-
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain('Unknown event');
     });

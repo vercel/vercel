@@ -1,13 +1,58 @@
 import { formatOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
-export const querySubcommand = {
-  name: 'query',
+export const schemaSubcommand = {
+  name: 'schema',
   aliases: [],
-  description:
-    "Run an observability query against your project's metrics data.",
-  default: true,
+  description: 'List available events, dimensions, and measures.',
   arguments: [],
+  options: [
+    {
+      name: 'event',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description: 'Show details for a specific event',
+      argument: 'NAME',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List all events',
+      value: `${packageName} metrics schema`,
+    },
+    {
+      name: 'Show event details',
+      value: `${packageName} metrics schema -e functionExecution`,
+    },
+    {
+      name: 'Schema as JSON for agents',
+      value: `${packageName} metrics schema -e incomingRequest --format=json`,
+    },
+  ],
+} as const;
+
+export const metricsCommand = {
+  name: 'metrics',
+  aliases: [],
+  description: 'Query observability metrics for your Vercel project or team.',
+  arguments: [],
+  subcommands: [
+    // Hidden placeholder so the help synopsis renders [command] as optional
+    // (help.ts treats `command` as required unless a subcommand has `default: true`)
+    {
+      name: 'query',
+      aliases: [],
+      description: '',
+      default: true,
+      hidden: true,
+      arguments: [],
+      options: [],
+      examples: [],
+    },
+    schemaSubcommand,
+  ],
   options: [
     {
       name: 'event',
@@ -152,46 +197,4 @@ export const querySubcommand = {
       value: `${packageName} metrics --all -e incomingRequest --group-by projectName --since 24h`,
     },
   ],
-} as const;
-
-export const schemaSubcommand = {
-  name: 'schema',
-  aliases: [],
-  description: 'List available events, dimensions, and measures.',
-  arguments: [],
-  options: [
-    {
-      name: 'event',
-      shorthand: 'e',
-      type: String,
-      deprecated: false,
-      description: 'Show details for a specific event',
-      argument: 'NAME',
-    },
-    formatOption,
-  ],
-  examples: [
-    {
-      name: 'List all events',
-      value: `${packageName} metrics schema`,
-    },
-    {
-      name: 'Show event details',
-      value: `${packageName} metrics schema -e functionExecution`,
-    },
-    {
-      name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema -e incomingRequest --format=json`,
-    },
-  ],
-} as const;
-
-export const metricsCommand = {
-  name: 'metrics',
-  aliases: [],
-  description: 'Query observability metrics for your Vercel project or team.',
-  arguments: [],
-  subcommands: [querySubcommand, schemaSubcommand],
-  options: querySubcommand.options,
-  examples: querySubcommand.examples,
 } as const;

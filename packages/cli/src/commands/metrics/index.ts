@@ -3,7 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { help } from '../help';
-import { metricsCommand, querySubcommand, schemaSubcommand } from './command';
+import { metricsCommand, schemaSubcommand } from './command';
 import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
@@ -11,7 +11,6 @@ import { printError } from '../../util/error';
 import type { Command } from '../help';
 
 const COMMAND_CONFIG = {
-  query: getCommandAliases(querySubcommand),
   schema: getCommandAliases(schemaSubcommand),
 };
 
@@ -68,14 +67,10 @@ export default async function metrics(client: Client): Promise<number> {
       return schemaFn(client, telemetry);
     }
     default: {
-      // query is the default subcommand
       if (needHelp) {
         telemetry.trackCliFlagHelp('metrics', subcommandOriginal);
-        printSubHelp(querySubcommand);
+        output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 2;
-      }
-      if (subcommand === 'query') {
-        telemetry.trackCliSubcommandQuery(subcommandOriginal);
       }
       const queryFn = (await import('./query')).default;
       return queryFn(client, telemetry);

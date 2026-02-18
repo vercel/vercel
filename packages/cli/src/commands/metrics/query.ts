@@ -3,7 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import { querySubcommand } from './command';
+import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
   validateRequiredEvent,
@@ -163,7 +163,7 @@ export default async function query(
   telemetry: MetricsTelemetryClient
 ): Promise<number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(querySubcommand.options);
+  const flagsSpecification = getFlagsSpecification(metricsCommand.options);
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
