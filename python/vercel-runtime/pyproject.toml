@@ -25,13 +25,17 @@ requires = ["uv_build>=0.9.22,<0.10.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = [
+test = [
+    "attrs~=25.3.0",
     "basedpyright~=1.37.0",
     "mypy~=1.19.0",
     "pytest~=9.0.2",
     "pytest-cov~=7.0.0",
-    "ruff~=0.14.0",
+    "ruff~=0.15.1",
 ]
+
+[tool.uv]
+default-groups = ["test"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -50,14 +54,29 @@ ignore_errors = true
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["src/vercel_runtime", "tests"]
+exclude = ["tests/fixtures"]
 extraPaths = ["src"]
 
 [[tool.basedpyright.executionEnvironments]]
 root = "src/vercel_runtime/_vendor"
-typeCheckingMode = "off"
+reportMissingParameterType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+
+[[tool.basedpyright.executionEnvironments]]
+root = "tests/fixtures"
+reportMissingParameterType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportCallIssue = false
 
 [[tool.basedpyright.executionEnvironments]]
 root = "tests"
+extraPaths = [".", "src"]
 reportPrivateUsage = false
 
 [tool.ruff]
@@ -101,16 +120,35 @@ extend-ignore = [
     "D213",    # multi-line-summary-second-line
     "F541",    # f-string-missing-placeholders
     "PLW1514", # unspecified-encoding (UTF-8 is Python 3 default)
+    "RUF067",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-    "N806",    # allow uppercase variable names (e.g., ValueDep = Depends(...))
+    "D100",    # tests don't have to have docstrings
+    "D101",    # tests don't have to have docstrings
+    "D102",    # tests don't have to have docstrings
+    "D103",    # tests don't have to have docstrings
+    "D104",    # tests don't have to have docstrings
+    "D107",    # __init__ docstrings not required in tests
+    "N806",    # allow uppercase variable names
+    "PLC0415", # guarded/conditional imports in tests
     "PLC2701", # allow private imports in tests
+]
+"tests/fixtures/**/*.py" = [
+    "N801",    # handler must be lowercase (vc_init.py convention)
+    "N802",    # do_GET is BaseHTTPRequestHandler convention
+    "T201",    # print is used intentionally in fixtures
+    "PLC0415", # conditional imports in fixtures are fine
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["vercel_runtime"]
+parallel = true
+omit = ["src/vercel_runtime/_vendor/*"]
 
 [tool.coverage.report]
 exclude_lines = [
