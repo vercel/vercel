@@ -146,20 +146,47 @@ export type IntegrationAddFlags = {
 export const openSubcommand = {
   name: 'open',
   aliases: [],
-  description: "Opens a marketplace integration's dashboard",
+  description:
+    "Opens a marketplace integration's or resource's dashboard via SSO",
   arguments: [
     {
       name: 'name',
       required: true,
     },
+    {
+      name: 'resource',
+      required: false,
+    },
   ],
-  options: [],
+  options: [
+    {
+      name: 'print-only',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Print the SSO link to stdout instead of opening it',
+    },
+  ],
   examples: [
     {
       name: "Open a marketplace integration's dashboard",
       value: [
         `${packageName} integration open <integration-name>`,
         `${packageName} integration open acme`,
+      ],
+    },
+    {
+      name: "Open a resource's dashboard within an integration",
+      value: [
+        `${packageName} integration open <integration-name> <resource-name>`,
+        `${packageName} integration open acme my-acme-store`,
+      ],
+    },
+    {
+      name: 'Print the SSO link without opening',
+      value: [
+        `${packageName} integration open acme --print-only`,
+        `${packageName} integration open acme my-acme-store --print-only`,
       ],
     },
   ],

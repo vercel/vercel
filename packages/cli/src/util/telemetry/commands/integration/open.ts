@@ -12,4 +12,19 @@ export class IntegrationOpenTelemetryClient
       value: known ? v : this.redactedValue,
     });
   }
+
+  trackCliArgumentResource(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'resource',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagPrintOnly(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('print-only');
+    }
+  }
 }

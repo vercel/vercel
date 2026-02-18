@@ -6,24 +6,34 @@ import type { Configuration } from '../../util/integration/types';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationOpenTelemetryClient } from '../../util/telemetry/commands/integration/open';
+import { getResources } from '../../util/integration-resource/get-resources';
 import output from '../../output-manager';
 
-export async function openIntegration(client: Client, args: string[]) {
+export async function openIntegration(
+  client: Client,
+  args: string[],
+  printOnly?: boolean
+) {
   const telemetry = new IntegrationOpenTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
-  if (args.length > 1) {
-    output.error('Cannot open more than one dashboard at a time');
+  telemetry.trackCliFlagPrintOnly(printOnly);
+
+  if (args.length > 2) {
+    output.error(
+      'Too many arguments. Usage: integration open <name> [resource]'
+    );
     return 1;
   }
 
   const integrationSlug = args[0];
+  const resourceName = args[1];
 
   if (!integrationSlug) {
-    output.error('You must pass an integration slug');
+    output.error('You must pass an integration name');
     return 1;
   }
 
@@ -51,6 +61,9 @@ export async function openIntegration(client: Client, args: string[]) {
     return 1;
   } finally {
     telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
+    if (resourceName) {
+      telemetry.trackCliArgumentResource(resourceName);
+    }
   }
 
   if (!configuration) {
@@ -60,9 +73,49 @@ export async function openIntegration(client: Client, args: string[]) {
     return 1;
   }
 
-  output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
+  // If a resource name is provided, look it up and build SSO link with resource_id
+  if (resourceName) {
+    const resources = await getResources(client, team.id);
+    const resource = resources.find(
+      r =>
+        r.name === resourceName &&
+        r.product?.integrationConfigurationId === configuration.id
+    );
 
-  open(buildSSOLink(team, configuration.id));
+    if (!resource) {
+      output.error(
+        `Resource ${chalk.bold(`"${resourceName}"`)} not found for integration ${chalk.bold(`"${integrationSlug}"`)}.`
+      );
+      return 1;
+    }
+
+    const link = buildSSOLink(
+      team,
+      configuration.id,
+      resource.externalResourceId
+    );
+
+    if (printOnly) {
+      output.print(`${link}\n`);
+    } else {
+      output.print(
+        `Opening the ${chalk.bold(resourceName)} resource dashboard...`
+      );
+      open(link);
+    }
+
+    return 0;
+  }
+
+  // No resource specified — open the integration dashboard
+  const link = buildSSOLink(team, configuration.id);
+
+  if (printOnly) {
+    output.print(`${link}\n`);
+  } else {
+    output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
+    open(link);
+  }
 
   return 0;
 }

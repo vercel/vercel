@@ -207,7 +207,20 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandOpen(subcommandOriginal);
-      return openIntegration(client, subArgs);
+
+      const openFlagsSpec = getFlagsSpecification(openSubcommand.options);
+      let openParsedArgs;
+      try {
+        openParsedArgs = parseArguments(subArgs, openFlagsSpec);
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+      const printOnly = openParsedArgs.flags['--print-only'] as
+        | boolean
+        | undefined;
+
+      return openIntegration(client, openParsedArgs.args, printOnly);
     }
     case 'remove': {
       if (needHelp) {
