@@ -2,12 +2,13 @@ name: CLI Evals
 
 on:
   pull_request:
+    paths:
+      - 'packages/cli/**'
 
 jobs:
   evals:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: release
     # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team
     env:
       AI_GATEWAY_API_KEY: ${{ secrets.EVAL_AI_GATEWAY_API_KEY }}
