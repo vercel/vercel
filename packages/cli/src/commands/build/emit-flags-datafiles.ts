@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
+import { NowBuildError } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { NowBuildError } from '@vercel/build-utils';
 import fetch from 'node-fetch';
 import output from '../../output-manager';
 import pkg from '../../util/pkg';
