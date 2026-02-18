@@ -82,4 +82,19 @@ describe('getDynamicRoutes', () => {
       '/catch/[...segment].segments/catch/$c$segment$nxtSegmentSuffix?nxtPsegment=$nxtPsegment'
     );
   });
+
+  it('uses a unique internal segment suffix capture name when "nxtSegmentSuffix" already exists', async () => {
+    const route = await getPrefetchSegmentRoute({
+      page: '/catch/[...segments]',
+      routeKey: 'nxtSegmentSuffix',
+      source:
+        '^/catch/(?<nxtSegmentSuffix>.+?)\\.segments/catch/\\$c\\$segments(?<segment>/__PAGE__\\.segment\\.rsc|\\.segment\\.rsc)(?:/)?$',
+      destination: '/catch/[...segments].segments/catch/$c$segments$segment',
+    });
+
+    expect(route.src).toContain('(?<nxtSegmentSuffix1>');
+    expect(route.dest).toBe(
+      '/catch/[...segments].segments/catch/$c$segments$nxtSegmentSuffix1?nxtSegmentSuffix=$nxtSegmentSuffix'
+    );
+  });
 });

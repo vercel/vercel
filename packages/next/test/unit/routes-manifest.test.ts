@@ -3,7 +3,7 @@ import { getRoutesManifest } from '../../src/utils';
 import { genDir } from '../utils';
 
 describe('getRoutesManifest', () => {
-  it('normalizes route keys for params named "segments"', async () => {
+  it('preserves route keys for params named "segments"', async () => {
     const entryPath = await genDir({
       '.next/routes-manifest.json': JSON.stringify(
         {
@@ -70,26 +70,24 @@ describe('getRoutesManifest', () => {
       const dataRoute = routesManifest!.dataRoutes![0];
 
       expect(dynamicRoute.routeKeys).toEqual({
-        nxtPsegmentsParam: 'nxtPsegmentsParam',
+        nxtPsegments: 'nxtPsegments',
       });
-      expect(dynamicRoute.regex).toContain('(?<nxtPsegmentsParam>');
-      expect(dynamicRoute.namedRegex).toContain('(?<nxtPsegmentsParam>');
+      expect(dynamicRoute.regex).toContain('(?<nxtPsegments>');
+      expect(dynamicRoute.namedRegex).toContain('(?<nxtPsegments>');
 
       expect(prefetchSegmentDataRoute.routeKeys).toEqual({
-        nxtPsegmentsParam: 'nxtPsegmentsParam',
+        nxtPsegments: 'nxtPsegments',
       });
-      expect(prefetchSegmentDataRoute.source).toContain(
-        '(?<nxtPsegmentsParam>'
-      );
+      expect(prefetchSegmentDataRoute.source).toContain('(?<nxtPsegments>');
       expect(prefetchSegmentDataRoute.destination).toContain(
-        'nxtPsegmentsParam=$nxtPsegmentsParam'
+        'nxtPsegments=$nxtPsegments'
       );
 
       expect(dataRoute.routeKeys).toEqual({
-        nxtPsegmentsParam: 'nxtPsegmentsParam',
+        nxtPsegments: 'nxtPsegments',
       });
-      expect(dataRoute.dataRouteRegex).toContain('(?<nxtPsegmentsParam>');
-      expect(dataRoute.namedDataRouteRegex).toContain('(?<nxtPsegmentsParam>');
+      expect(dataRoute.dataRouteRegex).toContain('(?<nxtPsegments>');
+      expect(dataRoute.namedDataRouteRegex).toContain('(?<nxtPsegments>');
     } finally {
       await fs.remove(entryPath);
     }
