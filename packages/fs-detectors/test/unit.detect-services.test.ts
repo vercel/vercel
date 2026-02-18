@@ -57,8 +57,17 @@ describe('detectServices', () => {
         name: 'backend',
         workspace: 'backend',
         framework: 'ruby',
+        runtime: 'ruby',
         routePrefix: '/_/backend',
         routePrefixSource: 'generated',
+      });
+
+      const backendRoute = findMatchingRoute(
+        result.routes.rewrites,
+        '/_/backend/ping'
+      );
+      expect(backendRoute).toMatchObject({
+        dest: '/_svc/backend/index',
       });
     });
   });
