@@ -1,4 +1,24 @@
-# AI Agent Skills Guide
+# Next.js Example — AI Agent Documentation
+
+## About This Example
+
+This is a [Next.js](https://nextjs.org) example project located in the Vercel monorepo at `examples/nextjs/`. It serves as:
+
+- **Reference implementation**: A standard Next.js app using the latest App Router features
+- **Testing fixture**: Used for integration tests to validate Vercel platform behavior with Next.js deployments
+- **Documentation example**: Demonstrates how to structure agent documentation for projects in this repository
+
+This example is bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app) and uses modern Next.js features including:
+
+- App Router architecture
+- TypeScript support
+- Tailwind CSS for styling
+- ESLint configuration
+- Font optimization with [Geist](https://vercel.com/font)
+
+For basic usage instructions (running the dev server, building, etc.), see the [README.md](./README.md) file.
+
+## AI Agent Skills Guide
 
 This guide explains how to find, install, and use skills when working with AI agents on the Vercel platform.
 
