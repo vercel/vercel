@@ -265,16 +265,19 @@ if os.path.exists(_runtime_config_path):
             os.makedirs(_deps_dir, exist_ok=True)
 
             # Create a minimal venv for uv sync to install into.
-            subprocess.run(
+            _result = subprocess.run(
                 [_uv_path, "venv", _deps_dir, "--python", sys.executable],
                 check=True,
                 text=True,
+                stderr=subprocess.PIPE,
                 env={
                     "PATH": os.environ.get("PATH", ""),
                     "UV_PYTHON_DOWNLOADS": "never",
                     "UV_NO_CACHE": "1",
                 },
             )
+            if _result.stderr:
+                sys.stdout.write(_result.stderr)
 
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
@@ -294,10 +297,11 @@ if os.path.exists(_runtime_config_path):
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
-            subprocess.run(
+            _result = subprocess.run(
                 _sync_cmd,
                 check=True,
                 text=True,
+                stderr=subprocess.PIPE,
                 cwd=_project_dir,
                 env={
                     "PATH": os.environ.get("PATH", ""),
@@ -306,13 +310,16 @@ if os.path.exists(_runtime_config_path):
                     "UV_NO_CACHE": "1",
                 },
             )
+            if _result.stderr:
+                sys.stdout.write(_result.stderr)
             _install_duration = time.time() - _install_start
             _stderr(f"Runtime dependencies installed in {_install_duration:.2f}s")
         except subprocess.CalledProcessError as e:
             _fatal(
                 f"Runtime dependency installation failed.\n"
                 f"Command: {' '.join(e.cmd)}\n"
-                f"Exit code: {e.returncode}"
+                f"Exit code: {e.returncode}\n"
+                f"{e.stderr}"
             )
         except Exception as e:
             _fatal(f"Runtime dependency installation failed with unexpected error: {e}")
