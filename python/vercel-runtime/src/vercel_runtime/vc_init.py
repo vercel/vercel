@@ -75,8 +75,23 @@ def _normalize_service_route_prefix(raw_prefix: str | None) -> str:
     return '' if prefix == '/' else prefix
 
 
-_service_route_prefix = _normalize_service_route_prefix(
-    os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX')
+def _is_service_route_prefix_strip_enabled() -> bool:
+    """
+    Return whether service-prefix stripping is explicitly enabled.
+
+    Stripping is gated behind a dedicated env var so manually configured
+    route prefixes can be preserved by default.
+    """
+    raw = os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX_STRIP')
+    if not raw:
+        return False
+    return raw.lower() in ('1', 'true')
+
+
+_service_route_prefix = (
+    _normalize_service_route_prefix(os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX'))
+    if _is_service_route_prefix_strip_enabled()
+    else ''
 )
 
 
