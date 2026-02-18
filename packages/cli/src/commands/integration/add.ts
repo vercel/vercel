@@ -8,6 +8,8 @@ import indent from '../../util/output/indent';
 import {
   getLinkedProjectField,
   postProvisionSetup,
+  VALID_ENVIRONMENTS,
+  validateEnvironments,
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import type {
@@ -75,6 +77,17 @@ export async function add(
     integrationSlug = rawArg;
   }
 
+  // Validate --environment values early (before any network requests)
+  if (options.environments?.length) {
+    const envValidation = validateEnvironments(options.environments);
+    if (!envValidation.valid) {
+      output.error(
+        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
+      );
+      return 1;
+    }
+  }
+
   // Note: Resource name validation happens after product selection
   // to apply product-specific validation rules
 
@@ -86,6 +99,7 @@ export async function add(
       billingPlanId,
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
+      environments: options.environments,
     });
   }
 
@@ -99,6 +113,7 @@ export async function add(
   telemetry.trackCliOptionPlan(billingPlanId);
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
+  telemetry.trackCliOptionEnvironment(options.environments);
 
   const { contextName, team } = await getScope(client);
 
@@ -237,7 +252,7 @@ export async function add(
       );
     }
 
-    return 0;
+    return 1;
   }
 
   return await provisionResourceViaCLI(
@@ -284,7 +299,9 @@ function provisionResourceViaWebUI(
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   output.debug(`Opening URL: ${url.href}`);
-  open(url.href);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
 }
 
 async function provisionResourceViaCLI(
@@ -401,7 +418,7 @@ async function provisionResourceViaCLI(
       );
     }
 
-    return 0;
+    return 1;
   }
 
   const confirmed = await confirmProductSelection(
@@ -618,7 +635,9 @@ function handleManualVerificationAction(
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   output.debug(`Opening URL: ${url.href}`);
-  open(url.href);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
 }
 
 async function provisionStorageProduct(
@@ -653,7 +672,9 @@ async function provisionStorageProduct(
   } finally {
     output.stopSpinner();
   }
-  output.log(`${product.name} successfully provisioned: ${chalk.bold(name)}`);
+  output.success(
+    `${product.name} successfully provisioned: ${chalk.bold(name)}`
+  );
 
   return postProvisionSetup(client, name, storeId, contextName, options);
 }

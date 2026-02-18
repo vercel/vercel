@@ -396,6 +396,69 @@ describe('detectServices with auto-detection', () => {
     });
   });
 
+  describe('SvelteKit in frontend/, backend in backend/', () => {
+    it('should detect SvelteKit in frontend/ and FastAPI in backend/', async () => {
+      const fs = new VirtualFilesystem({
+        'frontend/package.json': JSON.stringify({
+          devDependencies: {
+            '@sveltejs/adapter-auto': '^6.0.0',
+            '@sveltejs/kit': '^2.0.0',
+            svelte: '^5.0.0',
+            vite: '^6.1.0',
+          },
+        }),
+        'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+        'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+      });
+
+      const result = await autoDetectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).not.toBeNull();
+      expect(result.services!.frontend).toMatchObject({
+        framework: 'sveltekit-1',
+        workspace: 'frontend',
+        routePrefix: '/',
+      });
+      expect(result.services!.backend).toMatchObject({
+        framework: 'fastapi',
+        workspace: 'backend',
+        routePrefix: '/_/backend',
+      });
+    });
+  });
+
+  describe('SvelteKit at root, backend in backend/', () => {
+    it('should detect SvelteKit in frontend/ and FastAPI in backend/', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          devDependencies: {
+            '@sveltejs/adapter-auto': '^6.0.0',
+            '@sveltejs/kit': '^2.0.0',
+            svelte: '^5.0.0',
+            vite: '^6.1.0',
+          },
+        }),
+        'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+        'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+      });
+
+      const result = await autoDetectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).not.toBeNull();
+      expect(result.services!.frontend).toMatchObject({
+        framework: 'sveltekit-1',
+        routePrefix: '/',
+      });
+      expect(result.services!.backend).toMatchObject({
+        framework: 'fastapi',
+        workspace: 'backend',
+        routePrefix: '/_/backend',
+      });
+    });
+  });
+
   describe('auto-detection fallback', () => {
     it('should auto-detect services when no experimentalServices configured', async () => {
       const fs = new VirtualFilesystem({

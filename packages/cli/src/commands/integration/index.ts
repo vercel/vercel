@@ -170,6 +170,9 @@ export default async function main(client: Client) {
       const noEnvPull = addParsedArgs.flags['--no-env-pull'] as
         | boolean
         | undefined;
+      const environmentFlags = addParsedArgs.flags['--environment'] as
+        | string[]
+        | undefined;
 
       return add(
         client,
@@ -180,6 +183,7 @@ export default async function main(client: Client) {
         {
           noConnect,
           noEnvPull,
+          environments: environmentFlags,
         }
       );
     }
