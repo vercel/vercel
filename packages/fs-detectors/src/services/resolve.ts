@@ -301,16 +301,22 @@ export function validateServiceEntrypoint(
 /**
  * Resolve a single service from user configuration.
  */
-export async function resolveConfiguredService(
-  name: string,
-  config: ExperimentalServiceConfig,
-  fs: DetectorFilesystem,
-  group?: string,
-  resolvedEntrypointPathArg?: ResolvedEntrypointPath
-): Promise<Service> {
+export async function resolveConfiguredService({
+  name,
+  config,
+  fs,
+  group,
+  resolvedEntrypoint,
+}: {
+  name: string;
+  config: ExperimentalServiceConfig;
+  fs: DetectorFilesystem;
+  group?: string;
+  resolvedEntrypoint?: ResolvedEntrypointPath;
+}): Promise<Service> {
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
-  let resolvedEntrypointPath = resolvedEntrypointPathArg;
+  let resolvedEntrypointPath = resolvedEntrypoint;
   if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
     const resolved = await resolveEntrypointPath({
       fs,
@@ -525,13 +531,12 @@ export async function resolveAllConfiguredServices(
       };
     }
 
-    const service = await resolveConfiguredService(
+    const service = await resolveConfiguredService({
       name,
-      resolvedConfig,
+      config: resolvedConfig,
       fs,
-      undefined,
-      resolvedEntrypoint
-    );
+      resolvedEntrypoint,
+    });
 
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
