@@ -13,9 +13,9 @@ vi.mock('../../../../src/util/build/install-builders', async importOriginal => {
   )();
   return {
     ...actual,
-    untracedInstallBuilders: vi.fn(
-      (...args: Parameters<typeof actual.untracedInstallBuilders>) =>
-        actual.untracedInstallBuilders(...args)
+    installBuilders: vi.fn(
+      (...args: Parameters<typeof actual.installBuilders>) =>
+        actual.installBuilders(...args)
     ),
   };
 });
@@ -210,9 +210,9 @@ describe('importBuilders()', () => {
     const cwd = await getWriteableDirectory();
     const buildersDir = join(cwd, '.vercel', 'builders');
 
-    vi.mocked(
-      installBuildersModule.untracedInstallBuilders
-    ).mockResolvedValueOnce(new Map());
+    vi.mocked(installBuildersModule.installBuilders).mockResolvedValueOnce(
+      new Map()
+    );
     let err: Error | undefined;
     try {
       await importBuilders(specs, cwd);
@@ -222,7 +222,7 @@ describe('importBuilders()', () => {
       await remove(cwd);
     }
 
-    expect(installBuildersModule.untracedInstallBuilders).toHaveBeenCalledWith(
+    expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
       buildersDir,
       new Set([spec])
     );
@@ -242,21 +242,21 @@ describe('importBuilders()', () => {
     const pkgName = 'fake-builder';
     const builderModuleDir = join(buildersDir, 'node_modules', pkgName);
 
-    vi.mocked(
-      installBuildersModule.untracedInstallBuilders
-    ).mockImplementationOnce(async (dir, buildersToAdd) => {
-      await ensureDir(join(dir, 'node_modules', pkgName));
-      await outputJSON(join(dir, 'node_modules', pkgName, 'package.json'), {
-        name: pkgName,
-        version: '1.0.0',
-        main: 'index.js',
-      });
-      await writeFile(
-        join(dir, 'node_modules', pkgName, 'index.js'),
-        `exports.version = 3; exports.build = async function() { return { output: {} }; };`
-      );
-      return new Map([[Array.from(buildersToAdd)[0], pkgName]]);
-    });
+    vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
+      async (dir, buildersToAdd) => {
+        await ensureDir(join(dir, 'node_modules', pkgName));
+        await outputJSON(join(dir, 'node_modules', pkgName, 'package.json'), {
+          name: pkgName,
+          version: '1.0.0',
+          main: 'index.js',
+        });
+        await writeFile(
+          join(dir, 'node_modules', pkgName, 'index.js'),
+          `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+        );
+        return new Map([[Array.from(buildersToAdd)[0], pkgName]]);
+      }
+    );
 
     try {
       const builders = await importBuilders(specs, cwd);
