@@ -106,7 +106,7 @@ function createDevRubyShim(
     const vercelRubyDir = join(workPath, '.vercel', 'ruby');
     mkdirSync(vercelRubyDir, { recursive: true });
     const shimPath = join(vercelRubyDir, `vc_init_dev.rb`);
-    const utilsPath = join(vercelRubyDir, 'vc_utils.rb');
+    const utilsPath = join(vercelRubyDir, 'vc__utils__ruby.rb');
     const templatePath = join(__dirname, '..', 'vc_init_dev.rb');
     const utilsTemplatePath = join(__dirname, '..', 'vc_utils.rb');
     const template = readFileSync(templatePath, 'utf8');

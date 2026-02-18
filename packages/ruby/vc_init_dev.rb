@@ -10,7 +10,7 @@ require 'rack'
 require 'rack/handler/webrick'
 require 'webrick'
 require 'socket'
-require_relative 'vc_utils'
+require_relative 'vc__utils__ruby'
 
 $stdout.sync = true
 $stderr.sync = true

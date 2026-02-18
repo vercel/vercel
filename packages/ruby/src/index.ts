@@ -261,7 +261,7 @@ export const build: BuildV3 = async ({
   // in order to allow the user to have `server.rb`, we need our `server.rb` to be called
   // something else
   const handlerRbFilename = 'vc__handler__ruby';
-  const utilsRbFilename = 'vc_utils.rb';
+  const utilsRbFilename = 'vc__utils__ruby.rb';
 
   // Apply predefined default excludes similar to Python runtime
   const predefinedExcludes = [

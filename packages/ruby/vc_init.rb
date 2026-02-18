@@ -3,7 +3,7 @@ require 'webrick'
 require 'net/http'
 require 'base64'
 require 'json'
-require_relative 'vc_utils'
+require_relative 'vc__utils__ruby'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
 
