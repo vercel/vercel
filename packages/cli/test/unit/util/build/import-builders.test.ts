@@ -224,7 +224,8 @@ describe('importBuilders()', () => {
 
     expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
       buildersDir,
-      new Set([spec])
+      new Set([spec]),
+      undefined
     );
     if (!err) {
       throw new Error('Expected `err` to be defined');
