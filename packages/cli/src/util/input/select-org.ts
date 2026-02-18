@@ -94,8 +94,19 @@ export default async function selectOrg(
     0
   );
 
-  // Non-interactive without a resolved scope: output choices and exit
+  // Non-interactive: the fast path above only checked teams.  If the user
+  // passed --scope/--team pointing at their personal account (non-northstar),
+  // currentTeam was cleared by index.ts and the fast path missed it.  Check
+  // the full choices list (which includes the personal account) before giving up.
   if (client.nonInteractive) {
+    const targetScope = currentTeam || getScopeOrTeamFromArgv(client.argv);
+    if (targetScope) {
+      const match = choices.find(
+        c => c.value.id === targetScope || c.value.slug === targetScope
+      );
+      if (match) return match.value;
+    }
+
     const actionRequired: ActionRequiredPayload = {
       status: 'action_required',
       reason: 'missing_scope',
