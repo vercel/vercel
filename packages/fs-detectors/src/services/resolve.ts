@@ -181,13 +181,12 @@ function isReservedServiceRoutePrefix(routePrefix: string): boolean {
 
 /**
  * Validate a service configuration from vercel.json experimentalServices.
+ * Checks config-level fields only — does not require filesystem access.
  */
-export async function validateServiceConfig(
+export function validateServiceConfig(
   name: string,
-  config: ExperimentalServiceConfig,
-  fs: DetectorFilesystem,
-  resolvedEntrypoint?: ResolvedEntrypointPath
-): Promise<ServiceDetectionError | null> {
+  config: ExperimentalServiceConfig
+): ServiceDetectionError | null {
   if (!SERVICE_NAME_REGEX.test(name)) {
     return {
       code: 'INVALID_SERVICE_NAME',
@@ -256,19 +255,6 @@ export async function validateServiceConfig(
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
   const hasEntrypoint = Boolean(config.entrypoint);
-  let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof config.entrypoint === 'string') {
-    const resolved = await resolveEntrypointPath({
-      fs,
-      serviceName: name,
-      entrypoint: config.entrypoint,
-    });
-    if (resolved.error) {
-      return resolved.error;
-    }
-    resolvedEntrypointPath = resolved.entrypoint;
-  }
-  const entrypointIsDirectory = Boolean(resolvedEntrypointPath?.isDirectory);
 
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
     return {
@@ -284,17 +270,25 @@ export async function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (entrypointIsDirectory && hasBuilderOrRuntime && !hasFramework) {
-    return {
-      code: 'INVALID_ENTRYPOINT_DIRECTORY',
-      message: `Service "${name}" uses directory entrypoint "${config.entrypoint}" with "${config.builder ? 'builder' : 'runtime'}". Directory entrypoints require a framework.`,
-      serviceName: name,
-    };
-  }
-  if (hasEntrypoint && !hasBuilderOrRuntime && !hasFramework) {
-    if (entrypointIsDirectory) {
-      return null;
-    }
+  return null;
+}
+
+/**
+ * Validate entrypoint-dependent rules that require a resolved entrypoint path.
+ * Must be called after the entrypoint has been resolved from the filesystem.
+ */
+export function validateServiceEntrypoint(
+  name: string,
+  config: ExperimentalServiceConfig,
+  resolvedEntrypoint: ResolvedEntrypointPath
+): ServiceDetectionError | null {
+  // File entrypoints without builder/runtime/framework must have a supported extension
+  if (
+    !resolvedEntrypoint.isDirectory &&
+    !config.builder &&
+    !config.runtime &&
+    !config.framework
+  ) {
     const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
@@ -473,17 +467,13 @@ export async function resolveAllConfiguredServices(
 
   for (const name of Object.keys(services)) {
     const serviceConfig = services[name];
-    const validationError = await validateServiceConfig(
-      name,
-      serviceConfig,
-      fs
-    );
+
+    const validationError = validateServiceConfig(name, serviceConfig);
     if (validationError) {
       errors.push(validationError);
       continue;
     }
 
-    let resolvedConfig = serviceConfig;
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
     if (typeof serviceConfig.entrypoint === 'string') {
       const resolvedPath = await resolveEntrypointPath({
@@ -498,11 +488,22 @@ export async function resolveAllConfiguredServices(
       resolvedEntrypoint = resolvedPath.entrypoint;
     }
 
+    if (resolvedEntrypoint) {
+      const entrypointError = validateServiceEntrypoint(
+        name,
+        serviceConfig,
+        resolvedEntrypoint
+      );
+      if (entrypointError) {
+        errors.push(entrypointError);
+        continue;
+      }
+    }
+
+    let resolvedConfig = serviceConfig;
+
     const shouldDetectFramework =
-      !serviceConfig.framework &&
-      !serviceConfig.builder &&
-      !serviceConfig.runtime &&
-      Boolean(resolvedEntrypoint?.isDirectory);
+      !serviceConfig.framework && Boolean(resolvedEntrypoint?.isDirectory);
 
     if (shouldDetectFramework) {
       const workspace = resolvedEntrypoint!.normalized;

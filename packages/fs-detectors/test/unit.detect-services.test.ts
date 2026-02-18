@@ -481,7 +481,7 @@ describe('detectServices', () => {
       expect(result.errors[0].message).toContain('apps/web');
     });
 
-    it('should reject directory entrypoint with explicit runtime and no framework', async () => {
+    it('should error when directory entrypoint with runtime has no detectable framework', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -498,8 +498,35 @@ describe('detectServices', () => {
 
       expect(result.services).toEqual([]);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('INVALID_ENTRYPOINT_DIRECTORY');
+      expect(result.errors[0].code).toBe('MISSING_SERVICE_FRAMEWORK');
       expect(result.errors[0].serviceName).toBe('api');
+    });
+
+    it('should auto-detect framework for directory entrypoint with explicit runtime', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              runtime: 'python',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+        workspace: 'apps/api',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
     });
 
     it('should default topic and consumer to "default" for workers', async () => {
