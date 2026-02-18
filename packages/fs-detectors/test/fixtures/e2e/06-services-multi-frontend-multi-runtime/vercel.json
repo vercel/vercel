@@ -5,12 +5,10 @@
   },
   "experimentalServices": {
     "web": {
-      "framework": "nextjs",
       "entrypoint": "apps/web",
       "routePrefix": "/"
     },
     "dashboard": {
-      "framework": "nextjs",
       "entrypoint": "apps/dashboard",
       "routePrefix": "/dashboard"
     },
@@ -19,17 +17,14 @@
       "routePrefix": "/api/go"
     },
     "py-api": {
-      "framework": "flask",
       "entrypoint": "services/py-api/index.py",
       "routePrefix": "/api/py"
     },
     "js-api": {
-      "framework": "express",
       "entrypoint": "services/js-api/index.js",
       "routePrefix": "/api/js"
     },
     "rb-api": {
-      "runtime": "ruby",
       "entrypoint": "services/rb-api/config.ru",
       "routePrefix": "/api/rb"
     }

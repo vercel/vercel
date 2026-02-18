@@ -5,17 +5,14 @@
   },
   "experimentalServices": {
     "web": {
-      "framework": "vite",
       "entrypoint": "apps/web",
       "routePrefix": "/"
     },
     "dashboard": {
-      "framework": "nextjs",
       "entrypoint": "apps/dashboard",
       "routePrefix": "/dashboard"
     },
     "backend": {
-      "framework": "fastapi",
       "entrypoint": "backend",
       "routePrefix": "/backend"
     }
