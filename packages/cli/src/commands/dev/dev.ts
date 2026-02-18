@@ -29,6 +29,7 @@ import {
 } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
+import { isExperimentalSkipDevLinkEnabled } from '../../util/dev/experimental';
 
 type Options = {
   '--listen': string;
@@ -49,17 +50,23 @@ export default async function dev(
   let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--yes'],
-      link,
-      successEmoji: 'link',
-      setupMsg: 'Set up and develop',
-      nonInteractive: client.nonInteractive,
-    });
+    if (isExperimentalSkipDevLinkEnabled()) {
+      output.log(
+        `Project is not linked to Vercel. Run ${getCommandName('link')} to sync environment variables and project settings.`
+      );
+    } else {
+      link = await setupAndLink(client, cwd, {
+        autoConfirm: opts['--yes'],
+        link,
+        successEmoji: 'link',
+        setupMsg: 'Set up and develop',
+        nonInteractive: client.nonInteractive,
+      });
 
-    if (link.status === 'not_linked') {
-      // User aborted project linking questions
-      return 0;
+      if (link.status === 'not_linked') {
+        // User aborted project linking questions
+        return 0;
+      }
     }
   }
 
