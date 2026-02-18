@@ -163,27 +163,9 @@ export async function mirrorPrivatePackagesIntoVendor({
 }
 
 /**
- * Input for the knapsack packing algorithm.
- */
-export interface PackageSize {
-  name: string;
-  size: number;
-}
-
-/**
- * Result of the knapsack packing algorithm.
- */
-export interface KnapsackResult {
-  /** Packages selected to be bundled into the Lambda zip. */
-  bundled: string[];
-  /** Packages deferred to runtime installation. */
-  deferred: string[];
-}
-
-/**
  * Greedy largest-first knapsack packing algorithm.
  *
- * Given a list of packages with their sizes and a capacity in bytes,
+ * Given a map of package names to sizes (in bytes) and a capacity,
  * selects packages to bundle into the Lambda zip to fill as much of
  * the capacity as possible.
  *
@@ -191,30 +173,26 @@ export interface KnapsackResult {
  * fit within the remaining capacity.
  */
 export function lambdaKnapsack(
-  packages: PackageSize[],
+  packages: Map<string, number>,
   capacity: number
-): KnapsackResult {
-  const bundled: string[] = [];
-  const deferred: string[] = [];
-
+): string[] {
   if (capacity <= 0) {
-    return { bundled: [], deferred: packages.map(p => p.name) };
+    return [...packages.keys()];
   }
 
   // Sort by size descending so we pack the largest packages first.
-  const sorted = [...packages].sort((a, b) => b.size - a.size);
+  const sorted = [...packages.entries()].sort(([, a], [, b]) => b - a);
 
+  const bundled: string[] = [];
   let remaining = capacity;
-  for (const pkg of sorted) {
-    if (pkg.size <= remaining) {
-      bundled.push(pkg.name);
-      remaining -= pkg.size;
-    } else {
-      deferred.push(pkg.name);
+  for (const [name, size] of sorted) {
+    if (size <= remaining) {
+      bundled.push(name);
+      remaining -= size;
     }
   }
 
-  return { bundled, deferred };
+  return bundled;
 }
 
 /**

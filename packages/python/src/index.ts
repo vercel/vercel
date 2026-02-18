@@ -687,20 +687,16 @@ from vercel_runtime.vc_init import vc_handler
           `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
       );
 
-      // Build size list for public packages and run the knapsack algorithm
-      const publicPackageSizes = classification.publicPackages.map(name => ({
-        name,
-        size: packageSizes.get(name) ?? 0,
-      }));
-
-      const { bundled: bundledPublic, deferred } = lambdaKnapsack(
-        publicPackageSizes,
-        remainingCapacity
+      // Build size map for public packages and run the knapsack algorithm
+      const publicPackageSizes = new Map(
+        [...packageSizes].filter(([name]) =>
+          classification.publicPackages.includes(name)
+        )
       );
 
-      debug(
-        `Knapsack result: ${bundledPublic.length} public packages bundled, ` +
-          `${deferred.length} deferred to runtime`
+      const bundledPublic = lambdaKnapsack(
+        publicPackageSizes,
+        remainingCapacity
       );
 
       // Mirror the selected packages (always-bundled + knapsack-selected public)
@@ -745,49 +741,42 @@ from vercel_runtime.vc_init import vc_handler
         });
       }
 
-      if (deferred.length > 0) {
-        // Only write runtime config when there are packages to install at runtime
-        const runtimeConfigData = JSON.stringify({
-          projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
-          bundledPackages: bundledPackagesForConfig,
-        });
-        files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
-          data: runtimeConfigData,
-        });
+      const runtimeConfigData = JSON.stringify({
+        projectDir: isOutsideWorkPath ? UV_BUNDLE_DIR : projectDirRel,
+        bundledPackages: bundledPackagesForConfig,
+      });
+      files[`${UV_BUNDLE_DIR}/_runtime_config.json`] = new FileBlob({
+        data: runtimeConfigData,
+      });
 
-        // Skip uv bundling when running vercel build locally
-        if (process.env.VERCEL_BUILD_IMAGE) {
-          // Add the uv binary to the lambda zip
-          try {
-            const uvBinaryPath = await getUvBinaryForBundling(
-              pythonVersion.pythonPath
-            );
+      // Skip uv bundling when running vercel build locally
+      if (process.env.VERCEL_BUILD_IMAGE) {
+        // Add the uv binary to the lambda zip
+        try {
+          const uvBinaryPath = await getUvBinaryForBundling(
+            pythonVersion.pythonPath
+          );
 
-            const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
-            const uvLocalPath = join(uvBundleDir, 'uv');
-            await fs.promises.mkdir(uvBundleDir, { recursive: true });
-            await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
-            await fs.promises.chmod(uvLocalPath, 0o755);
+          const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
+          const uvLocalPath = join(uvBundleDir, 'uv');
+          await fs.promises.mkdir(uvBundleDir, { recursive: true });
+          await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
+          await fs.promises.chmod(uvLocalPath, 0o755);
 
-            const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
-            files[uvBundlePath] = new FileFsRef({
-              fsPath: uvLocalPath,
-              mode: 0o100755, // Regular file + executable
-            });
-            debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
-          } catch (err) {
-            throw new NowBuildError({
-              code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-              message: `Failed to bundle uv binary for runtime installation: ${
-                err instanceof Error ? err.message : String(err)
-              }`,
-            });
-          }
+          const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
+          files[uvBundlePath] = new FileFsRef({
+            fsPath: uvLocalPath,
+            mode: 0o100755, // Regular file + executable
+          });
+          debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
+        } catch (err) {
+          throw new NowBuildError({
+            code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+            message: `Failed to bundle uv binary for runtime installation: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          });
         }
-      } else {
-        debug(
-          'All public packages fit within the bundle; no runtime installation needed'
-        );
       }
     } else {
       throw new NowBuildError({
