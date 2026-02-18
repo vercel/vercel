@@ -73,7 +73,11 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: GEMINI } };
   }
 
-  if (process.env.CODEX_SANDBOX) {
+  if (
+    process.env.CODEX_SANDBOX ||
+    process.env.CODEX_SANDBOX_NETWORK_DISABLED ||
+    process.env.CODEX_MANAGED_BY_NPM
+  ) {
     return { isAgent: true, agent: { name: CODEX } };
   }
 
@@ -81,7 +85,7 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: AUGMENT_CLI } };
   }
 
-  if (process.env.OPENCODE_CLIENT) {
+  if (process.env.OPENCODE_CLIENT || process.env.OPENCODE) {
     return { isAgent: true, agent: { name: OPENCODE } };
   }
 
