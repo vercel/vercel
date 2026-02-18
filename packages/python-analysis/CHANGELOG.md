@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.5.0
+
+### Minor Changes
+
+- Use dist-info RECORD to properly manage installed Python dependencies ([#15083](https://github.com/vercel/vercel/pull/15083))
+
 ## 0.4.1
 
 ### Patch Changes

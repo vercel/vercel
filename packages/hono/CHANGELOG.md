@@ -1,5 +1,12 @@
 # @vercel/hono
 
+## 0.2.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.5
+
 ## 0.2.40
 
 ### Patch Changes
