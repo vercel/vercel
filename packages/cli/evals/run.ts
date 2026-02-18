@@ -43,6 +43,15 @@ async function main() {
   }
 
   const args = process.argv.slice(2);
+  const isDryRun = args.includes('--dry');
+  const hasCreds = Boolean(process.env.AI_GATEWAY_API_KEY);
+  if (!isDryRun && !hasCreds) {
+    process.stderr.write(
+      'Evals require AI_GATEWAY_API_KEY (e.g. from Vercel → AI Gateway → API Keys). Set it in .env or CI secrets (or use --dry to preview).\n'
+    );
+    process.exit(1);
+  }
+
   const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
 
   const child = spawn('npx', agentEvalArgs, {

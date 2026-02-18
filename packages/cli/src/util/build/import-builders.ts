@@ -14,7 +14,7 @@ import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
-import { installBuilders, untracedInstallBuilders } from './install-builders';
+import { installBuilders } from './install-builders';
 
 export interface BuilderWithPkg {
   /**
@@ -56,9 +56,11 @@ export async function importBuilders(
 
   if ('buildersToAdd' in importResult) {
     const { buildersToAdd } = importResult;
-    const installResult = span
-      ? await installBuilders(buildersDir, buildersToAdd, span)
-      : await untracedInstallBuilders(buildersDir, buildersToAdd);
+    const installResult = await installBuilders(
+      buildersDir,
+      buildersToAdd,
+      span
+    );
 
     importResult = await resolveBuilders(
       buildersDir,
@@ -81,7 +83,7 @@ export async function importBuilders(
   return importResult.builders;
 }
 
-export async function resolveBuilders(
+async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
   resolvedSpecs?: Map<string, string>
