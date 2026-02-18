@@ -258,26 +258,23 @@ if os.path.exists(_runtime_config_path):
         # Cold start: install public dependencies using bundled uv
         _uv_path = os.path.join(_uv_dir, "uv")
 
-        print("Installing runtime dependencies...")
+        _stderr("Installing runtime dependencies...")
         _install_start = time.time()
 
         try:
             os.makedirs(_deps_dir, exist_ok=True)
 
             # Create a minimal venv for uv sync to install into.
-            _result = subprocess.run(
+            subprocess.run(
                 [_uv_path, "venv", _deps_dir, "--python", sys.executable],
                 check=True,
                 text=True,
-                stderr=subprocess.PIPE,
                 env={
                     "PATH": os.environ.get("PATH", ""),
                     "UV_PYTHON_DOWNLOADS": "never",
                     "UV_NO_CACHE": "1",
                 },
             )
-            if _result.stderr:
-                sys.stdout.write(_result.stderr)
 
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
@@ -297,11 +294,10 @@ if os.path.exists(_runtime_config_path):
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
-            _result = subprocess.run(
+            subprocess.run(
                 _sync_cmd,
                 check=True,
                 text=True,
-                stderr=subprocess.PIPE,
                 cwd=_project_dir,
                 env={
                     "PATH": os.environ.get("PATH", ""),
@@ -310,10 +306,8 @@ if os.path.exists(_runtime_config_path):
                     "UV_NO_CACHE": "1",
                 },
             )
-            if _result.stderr:
-                sys.stdout.write(_result.stderr)
             _install_duration = time.time() - _install_start
-            print(f"Runtime dependencies installed in {_install_duration:.2f}s")
+            _stderr(f"Runtime dependencies installed in {_install_duration:.2f}s")
         except subprocess.CalledProcessError as e:
             _fatal(
                 f"Runtime dependency installation failed.\n"
@@ -327,7 +321,7 @@ if os.path.exists(_runtime_config_path):
         # Mark installation complete for warm starts
         open(_marker, "w").close()
     else:
-        print("Using cached runtime dependencies")
+        _stderr("Using cached runtime dependencies")
 
     # Add runtime-installed deps to path (must come before user code import)
     if os.path.isdir(_site_packages):
