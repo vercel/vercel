@@ -80,6 +80,7 @@ describe('blob get', () => {
       expect(mockedBlob.get).toHaveBeenCalledWith('test-file.txt', {
         token: testToken,
         access: 'public',
+        ifNoneMatch: undefined,
       });
       expect(mockedPipeline).toHaveBeenCalledWith(
         expect.any(Readable),
@@ -111,6 +112,7 @@ describe('blob get', () => {
       expect(mockedBlob.get).toHaveBeenCalledWith('test-file.txt', {
         token: testToken,
         access: 'public',
+        ifNoneMatch: undefined,
       });
       expect(mockedCreateWriteStream).toHaveBeenCalledWith('./local.txt');
       expect(mockedPipeline).toHaveBeenCalledWith(
@@ -147,6 +149,7 @@ describe('blob get', () => {
       expect(mockedBlob.get).toHaveBeenCalledWith('private-file.txt', {
         token: testToken,
         access: 'private',
+        ifNoneMatch: undefined,
       });
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -171,6 +174,7 @@ describe('blob get', () => {
       expect(mockedBlob.get).toHaveBeenCalledWith(blobUrl, {
         token: testToken,
         access: 'public',
+        ifNoneMatch: undefined,
       });
     });
 
@@ -190,6 +194,78 @@ describe('blob get', () => {
       client.setArgv('blob', 'get', 'test-file.txt', '--output', 'out.txt');
       await get(client, ['test-file.txt', '--output', 'out.txt'], testToken);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Downloading blob');
+    });
+  });
+
+  describe('--if-none-match option', () => {
+    it('should pass --if-none-match to blob.get', async () => {
+      client.setArgv(
+        'blob',
+        'get',
+        'test-file.txt',
+        '--if-none-match',
+        '"some-etag"'
+      );
+
+      const exitCode = await get(
+        client,
+        ['test-file.txt', '--if-none-match', '"some-etag"'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.get).toHaveBeenCalledWith('test-file.txt', {
+        token: testToken,
+        access: 'public',
+        ifNoneMatch: '"some-etag"',
+      });
+    });
+
+    it('should handle 304 Not Modified response', async () => {
+      mockedBlob.get.mockResolvedValue({
+        statusCode: 304,
+        stream: null,
+        headers: new Headers(),
+        blob: null,
+      } as unknown as GetBlobResult);
+
+      client.setArgv(
+        'blob',
+        'get',
+        'test-file.txt',
+        '--if-none-match',
+        '"some-etag"'
+      );
+
+      const exitCode = await get(
+        client,
+        ['test-file.txt', '--if-none-match', '"some-etag"'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.log).toHaveBeenCalledWith('Not modified (304)');
+      expect(mockedPipeline).not.toHaveBeenCalled();
+    });
+
+    it('should track --if-none-match telemetry', async () => {
+      const exitCode = await get(
+        client,
+        ['test-file.txt', '--if-none-match', '"etag-value"'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:urlOrPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:if-none-match',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 

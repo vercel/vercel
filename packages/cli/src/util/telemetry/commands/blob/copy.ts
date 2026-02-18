@@ -56,4 +56,13 @@ export class BlobCopyTelemetryClient
       });
     }
   }
+
+  trackCliOptionIfMatch(ifMatch: string | undefined) {
+    if (ifMatch) {
+      this.trackCliOption({
+        option: 'if-match',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

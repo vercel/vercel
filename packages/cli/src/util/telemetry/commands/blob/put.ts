@@ -70,9 +70,24 @@ export class BlobPutTelemetryClient
     }
   }
 
+  trackCliFlagAllowOverwrite(allowOverwrite: boolean | undefined) {
+    if (allowOverwrite) {
+      this.trackCliFlag('allow-overwrite');
+    }
+  }
+
   trackCliFlagForce(force: boolean | undefined) {
     if (force) {
       this.trackCliFlag('force');
+    }
+  }
+
+  trackCliOptionIfMatch(ifMatch: string | undefined) {
+    if (ifMatch) {
+      this.trackCliOption({
+        option: 'if-match',
+        value: this.redactedValue,
+      });
     }
   }
 }

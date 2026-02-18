@@ -32,4 +32,13 @@ export class BlobGetTelemetryClient
       });
     }
   }
+
+  trackCliOptionIfNoneMatch(ifNoneMatch: string | undefined) {
+    if (ifNoneMatch) {
+      this.trackCliOption({
+        option: 'if-none-match',
+        value: this.redactedValue,
+      });
+    }
+  }
 }
