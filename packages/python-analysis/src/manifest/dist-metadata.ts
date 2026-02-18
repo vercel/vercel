@@ -134,19 +134,21 @@ export async function scanDistributions(
     const distInfoPath = join(sitePackagesDir, dirName);
 
     // METADATA is required
-    let metadataContent: Buffer;
-    try {
-      metadataContent = await readFile(join(distInfoPath, 'METADATA'));
-    } catch {
-      continue; // Skip if no METADATA
+    const metadataContent = await readDistInfoFile(distInfoPath, 'METADATA');
+    if (!metadataContent) {
+      console.debug(`Missing METADATA in ${dirName}`);
+      continue;
     }
 
     // Parse METADATA via WASM
     let metadata;
     try {
-      metadata = mod.parseDistMetadata(new Uint8Array(metadataContent));
-    } catch {
-      continue; // Skip unparseable metadata
+      metadata = mod.parseDistMetadata(
+        new TextEncoder().encode(metadataContent)
+      );
+    } catch (e) {
+      console.debug(`Failed to parse METADATA for ${dirName}: ${e}`);
+      continue;
     }
 
     // Normalize the package name
@@ -158,8 +160,8 @@ export async function scanDistributions(
     if (recordContent) {
       try {
         files = mod.parseRecord(recordContent);
-      } catch {
-        // Non-fatal: proceed without RECORD
+      } catch (e) {
+        console.warn(`Failed to parse RECORD for ${dirName}: ${e}`);
       }
     }
 
@@ -172,8 +174,8 @@ export async function scanDistributions(
     if (directUrlContent) {
       try {
         origin = mod.parseDirectUrl(directUrlContent);
-      } catch {
-        // Non-fatal: proceed without origin info
+      } catch (e) {
+        console.debug(`Failed to parse direct_url.json for ${dirName}: ${e}`);
       }
     }
 

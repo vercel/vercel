@@ -558,12 +558,17 @@ export async function mirrorSitePackagesIntoVendor({
       const dirPrefix = resolvedDir + sep;
       const distributions = await scanDistributions(dir);
       for (const dist of distributions.values()) {
-        for (const { path: filePath } of dist.files) {
+        for (const { path: rawPath } of dist.files) {
+          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
+          const filePath = rawPath.replaceAll('/', sep);
           // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
           if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
             continue;
           }
-          if (filePath.endsWith('.pyc') || filePath.includes('__pycache__')) {
+          if (
+            filePath.endsWith('.pyc') ||
+            filePath.split(sep).includes('__pycache__')
+          ) {
             continue;
           }
           const srcFsPath = join(dir, filePath);
@@ -640,12 +645,17 @@ export async function mirrorPrivatePackagesIntoVendor({
       for (const [name, dist] of distributions) {
         if (!privatePackageSet.has(name)) continue;
 
-        for (const { path: filePath } of dist.files) {
+        for (const { path: rawPath } of dist.files) {
+          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
+          const filePath = rawPath.replaceAll('/', sep);
           // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
           if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
             continue;
           }
-          if (filePath.endsWith('.pyc') || filePath.includes('__pycache__')) {
+          if (
+            filePath.endsWith('.pyc') ||
+            filePath.split(sep).includes('__pycache__')
+          ) {
             continue;
           }
           const srcFsPath = join(dir, filePath);
