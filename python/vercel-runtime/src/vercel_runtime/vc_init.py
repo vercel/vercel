@@ -269,6 +269,7 @@ if os.path.exists(_runtime_config_path):
                 env={
                     "PATH": os.environ.get("PATH", ""),
                     "UV_PYTHON_DOWNLOADS": "never",
+                    "UV_NO_CACHE": "1",
                 },
             )
 
@@ -295,6 +296,7 @@ if os.path.exists(_runtime_config_path):
                     "PATH": os.environ.get("PATH", ""),
                     "VIRTUAL_ENV": _deps_dir,
                     "UV_PYTHON_DOWNLOADS": "never",
+                    "UV_NO_CACHE": "1",
                 },
             )
             _install_duration = time.time() - _install_start
