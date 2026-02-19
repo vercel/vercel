@@ -2,6 +2,7 @@ import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
 import { VERCEL_RUNTIME_VERSION } from './runtime-version';
+import { VERCEL_WORKERS_VERSION } from './workers-version';
 import {
   download,
   glob,
@@ -83,6 +84,8 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
+  // In services projects, worker services are built with framework "services".
+  const shouldInstallVercelWorkers = framework === 'services';
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -445,6 +448,21 @@ export const build: BuildV3 = async ({
     projectDir: join(workPath, entryDirectory),
     args: ['install', runtimeDep],
   });
+
+  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+  const workersDep =
+    baseEnv.VERCEL_WORKERS_PYTHON ||
+    (shouldInstallVercelWorkers
+      ? `vercel-workers==${VERCEL_WORKERS_VERSION}`
+      : undefined);
+  if (workersDep) {
+    debug(`Installing ${workersDep}`);
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: ['install', workersDep],
+    });
+  }
 
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
