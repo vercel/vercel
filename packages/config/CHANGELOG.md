@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.32
+
+### Patch Changes
+
+- Add a new `matchers` export that exposes helpers to make matching against headers, query params, cookies, and host simpler to write. ([#15064](https://github.com/vercel/vercel/pull/15064))
+
 ## 0.0.31
 
 ### Patch Changes
