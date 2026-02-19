@@ -295,6 +295,39 @@ describe('web handlers', () => {
         },
         { runtime }
       ));
+    (runtime === 'bun' ? test : test.skip)(
+      'bun stderr outputs string not Buffer',
+      async () => {
+        const capturedCalls: unknown[][] = [];
+        const originalError = console.error;
+
+        console.error = (...args: unknown[]) => {
+          capturedCalls.push(args);
+        };
+
+        try {
+          await withDevServer(
+            './bun-stderr.js',
+            async (url: string) => {
+              await fetch(`${url}/api/bun-stderr`);
+              await setTimeout(500);
+            },
+            { runtime }
+          );
+        } finally {
+          console.error = originalError;
+        }
+        const stderrCall = capturedCalls.find(call =>
+          call.some(arg => String(arg).includes('STDERR_TEST_MESSAGE'))
+        );
+
+        expect(stderrCall, 'stderr message should be captured').toBeDefined();
+        expect(
+          stderrCall!.some(arg => Buffer.isBuffer(arg)),
+          'stderr should output string, not Buffer'
+        ).toBe(false);
+      }
+    );
   });
 
   describe('for edge runtime', () => {

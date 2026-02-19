@@ -71,7 +71,7 @@ export async function forkDevServer(options: {
         console.log(output);
       }
     });
-    child.stderr?.on('data', console.error);
+    child.stderr?.on('data', data => console.error(data.toString()));
   } else {
     let nodeOptions = process.env.NODE_OPTIONS || '';
 
