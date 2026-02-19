@@ -52,7 +52,7 @@ export default async function update(client: Client, argv: string[]) {
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+        `env update <name> ${getEnvTargetPlaceholder()} <branch>`
       )}`
     );
     return 1;
@@ -61,7 +61,7 @@ export default async function update(client: Client, argv: string[]) {
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> <target> <gitbranch> < <file>`
+        `env update <name> <target> <branch> < <file>`
       )}`
     );
     return 1;

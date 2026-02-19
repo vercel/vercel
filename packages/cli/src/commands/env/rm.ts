@@ -39,7 +39,7 @@ export default async function rm(client: Client, argv: string[]) {
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env rm <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+        `env rm <name> ${getEnvTargetPlaceholder()} <branch>`
       )}`
     );
     return 1;

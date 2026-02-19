@@ -108,11 +108,16 @@ export default async function pull(
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     if (client.nonInteractive) {
-      // Preserve original args (e.g. --cwd, --non-interactive) like other non-interactive flows
+      // Preserve original args (e.g. --cwd, --non-interactive) and add scope/project placeholders (consistent with env add)
+      const preserved = client.argv.slice(4);
       const linkArgv = [
         ...client.argv.slice(0, 2),
         'link',
-        ...client.argv.slice(4),
+        '--scope',
+        '<scope>',
+        '--project',
+        '<project>',
+        ...preserved,
       ];
       outputAgentError(
         client,
@@ -184,11 +189,11 @@ export async function envPullCommandLogic(
         message: `File ${param(filename)} already exists and was not created by Vercel CLI. Use --yes to overwrite or specify a different filename.`,
         next: [
           {
-            command: getCommandName(`env pull ${filename} --yes`),
+            command: getCommandNamePlain(`env pull ${filename} --yes`),
             when: 'Overwrite this file',
           },
           {
-            command: getCommandName('env pull <filename>'),
+            command: getCommandNamePlain('env pull <filename>'),
             when: 'Use a different filename',
           },
         ],

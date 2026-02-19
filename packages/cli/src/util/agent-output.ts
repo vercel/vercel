@@ -55,6 +55,56 @@ export function buildCommandWithYes(
 }
 
 /**
+ * Returns args that should be preserved when suggesting a "next" command for "env add".
+ * These are all args after "env add" and its 0–3 positionals (name, target, git-branch).
+ */
+export function getPreservedArgsForEnvAdd(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const addIdx = args.indexOf('add');
+  if (addIdx === -1 || args[addIdx - 1] !== 'env') return args;
+  let i = addIdx + 1;
+  let positionals = 0;
+  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
+    positionals++;
+    i++;
+  }
+  return args.slice(i);
+}
+
+/**
+ * Builds a suggested "env add" command with the given template and appends
+ * preserved flags from argv (e.g. --cwd, --non-interactive) so the next command
+ * can be run with the same context. Omits preserved flags that already appear
+ * in the template (e.g. --yes) to avoid duplicates.
+ */
+export function buildEnvAddCommandWithPreservedArgs(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName
+): string {
+  let preserved = getPreservedArgsForEnvAdd(argv);
+  // Avoid duplicating flags that are already in the template (e.g. --yes)
+  if (commandTemplate.includes('--yes')) {
+    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
+  }
+  if (commandTemplate.includes('--value')) {
+    const out: string[] = [];
+    for (let j = 0; j < preserved.length; j++) {
+      if (preserved[j] === '--value' && j + 1 < preserved.length) {
+        j++; // skip --value and its value
+        continue;
+      }
+      if (preserved[j].startsWith('--value=')) continue;
+      out.push(preserved[j]);
+    }
+    preserved = out;
+  }
+  const base = `${pkgName} ${commandTemplate}`;
+  if (preserved.length === 0) return base;
+  return `${base} ${preserved.join(' ')}`;
+}
+
+/**
  * Builds the invoking CLI command with --scope set to the given slug
  * (strips existing --scope/--team from argv so the result is canonical).
  */

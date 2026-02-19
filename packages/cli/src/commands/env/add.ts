@@ -28,14 +28,47 @@ import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
-import { outputActionRequired } from '../../util/agent-output';
+import {
+  outputActionRequired,
+  outputAgentError,
+  buildCommandWithYes,
+  buildEnvAddCommandWithPreservedArgs,
+  getPreservedArgsForEnvAdd,
+} from '../../util/agent-output';
+
+/**
+ * Ensures --git-branch has a value so the arg parser does not consume the next flag.
+ * When the user passes --git-branch '' the shell may drop the empty string; when
+ * the next token is a flag (e.g. --yes) we insert '' so "all Preview branches" is preserved.
+ */
+function normalizeEnvAddArgv(argv: string[]): string[] {
+  const gbIdx = argv.indexOf('--git-branch');
+  if (gbIdx === -1) return argv;
+  const next = argv[gbIdx + 1];
+  if (next === undefined || next.startsWith('-')) {
+    return [...argv.slice(0, gbIdx + 1), '', ...argv.slice(gbIdx + 1)];
+  }
+  return argv;
+}
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  const argvToParse = normalizeEnvAddArgv(argv);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseArguments(argvToParse, flagsSpecification);
   } catch (err) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: err instanceof Error ? err.message : String(err),
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
@@ -43,6 +76,8 @@ export default async function add(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArgs;
 
   const stdInput = await readStandardInput(client.stdin);
+  const valueFromFlag =
+    typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
   // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
   if (envGitBranch === undefined && typeof opts['--git-branch'] === 'string') {
@@ -56,7 +91,8 @@ export default async function add(client: Client, argv: string[]) {
   });
   telemetryClient.trackCliArgumentName(envName);
   telemetryClient.trackCliArgumentEnvironment(envTargetArg);
-  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliOptionGitBranch(opts['--git-branch'] ?? envGitBranch);
+  telemetryClient.trackCliOptionValue(opts['--value']);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
@@ -65,7 +101,7 @@ export default async function add(client: Client, argv: string[]) {
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+        `env add <name> ${getEnvTargetPlaceholder()} <branch>`
       )}`
     );
     return 1;
@@ -74,7 +110,7 @@ export default async function add(client: Client, argv: string[]) {
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> <gitbranch> < <file>`
+        `env add <name> <target> <branch> <file>`
       )}`
     );
     return 1;
@@ -93,8 +129,9 @@ export default async function add(client: Client, argv: string[]) {
         message: 'Provide the variable name as an argument.',
         next: [
           {
-            command: getCommandName(
-              `env add <name> ${getEnvTargetPlaceholder()} [git-branch] --yes`
+            command: buildEnvAddCommandWithPreservedArgs(
+              client.argv,
+              `env add <name> ${getEnvTargetPlaceholder()} --value <value> --yes`
             ),
           },
         ],
@@ -107,7 +144,8 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   // Validate key name early (before value entry) with re-entry option
-  const skipConfirm = opts['--yes'] || !!stdInput;
+  const skipConfirm =
+    opts['--yes'] || !!stdInput || valueFromFlag !== undefined;
   if (!skipConfirm) {
     let keyAccepted = false;
     while (!keyAccepted) {
@@ -135,11 +173,17 @@ export default async function add(client: Client, argv: string[]) {
           ],
           next: [
             {
-              command: getCommandName(`env add ${envName} --yes`),
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} ${getEnvTargetPlaceholder()} --value <value> --yes`
+              ),
               when: 'Leave as is',
             },
             {
-              command: getCommandName(`env add ${nameWithoutPrefix} --yes`),
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${nameWithoutPrefix} ${getEnvTargetPlaceholder()} --value <value> --yes`
+              ),
               when: 'Rename',
             },
           ],
@@ -188,11 +232,58 @@ export default async function add(client: Client, argv: string[]) {
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
+    if (client.nonInteractive) {
+      const preserved = getPreservedArgsForEnvAdd(client.argv);
+      const linkPreserved = preserved.filter((a, i) => {
+        if (a === '--value') return false;
+        if (a.startsWith('--value=')) return false;
+        if (i > 0 && preserved[i - 1] === '--value') return false;
+        return true;
+      });
+      // Only add scope/project placeholders when project is not linked
+      const linkArgv = [
+        ...client.argv.slice(0, 2),
+        'link',
+        ...(link.status === 'not_linked'
+          ? ['--scope', '<scope>', '--project', '<project>']
+          : []),
+        ...linkPreserved,
+      ];
+      let envAddRetryArgv = client.argv;
+      if (envTargetArg === 'preview' && !client.argv.includes('--git-branch')) {
+        const args = client.argv.slice(2);
+        const previewIdx = args.indexOf('preview');
+        if (previewIdx !== -1) {
+          envAddRetryArgv = [
+            ...client.argv.slice(0, previewIdx + 3),
+            '--git-branch',
+            '<branch>',
+            ...client.argv.slice(previewIdx + 3),
+          ];
+        }
+      }
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+            'link'
+          )} to begin. Use --yes for non-interactive; use --project and --scope to specify project and team. Then run your env add command.`,
+          next: [
+            { command: buildCommandWithYes(linkArgv) },
+            { command: buildCommandWithYes(envAddRetryArgv) },
+          ],
+        },
+        1
+      );
+    } else {
+      output.error(
+        `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+          'link'
+        )} to begin.`
+      );
+    }
     return 1;
   }
   client.config.currentTeam =
@@ -247,17 +338,20 @@ export default async function add(client: Client, argv: string[]) {
 
   if (stdInput) {
     envValue = stdInput;
+  } else if (valueFromFlag !== undefined) {
+    envValue = valueFromFlag;
   } else {
     if (client.nonInteractive) {
       outputActionRequired(client, {
         status: 'action_required',
         reason: 'missing_value',
         message:
-          'In non-interactive mode provide the value via stdin. Example: echo -n "value" | vercel env add <name> <environment> --yes',
+          "In non-interactive mode provide the value via --value or stdin. Example: vercel env add <name> <environment> --value 'value' --yes",
         next: [
           {
-            command: getCommandName(
-              `env add <name> ${getEnvTargetPlaceholder()} --yes`
+            command: buildEnvAddCommandWithPreservedArgs(
+              client.argv,
+              `env add <name> ${getEnvTargetPlaceholder()} --value <value> --yes`
             ),
           },
         ],
@@ -298,15 +392,19 @@ export default async function add(client: Client, argv: string[]) {
       outputActionRequired(client, {
         status: 'action_required',
         reason: 'missing_environment',
-        message: `Specify at least one environment. Add as argument or use: ${getCommandName(
-          `env add ${envName} <environment> --yes`
+        message: `Specify at least one environment. Add as argument or use: ${buildEnvAddCommandWithPreservedArgs(
+          client.argv,
+          `env add ${envName} <environment> --value <value> --yes`
         )}`,
         choices: choices.map(c => ({
           id: c.value,
           name: typeof c.name === 'string' ? c.name : c.value,
         })),
         next: choices.slice(0, 5).map(c => ({
-          command: getCommandName(`env add ${envName} ${c.value} --yes`),
+          command: buildEnvAddCommandWithPreservedArgs(
+            client.argv,
+            `env add ${envName} ${c.value} --value <value> --yes`
+          ),
         })),
       });
     }
@@ -321,7 +419,6 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   if (
-    !stdInput &&
     envGitBranch === undefined &&
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
@@ -335,14 +432,16 @@ export default async function add(client: Client, argv: string[]) {
           message: `Add ${envName} to which Git branch for Preview? Pass --git-branch <branch> or use an empty value for all Preview branches.`,
           next: [
             {
-              command: getCommandNamePlain(
-                `env add ${envName} preview --git-branch <branch> --yes`
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} preview --value <value> --git-branch <branch> --yes`
               ),
               when: 'Add to a specific Git branch',
             },
             {
-              command: getCommandNamePlain(
-                `env add ${envName} preview --git-branch "" --yes`
+              command: buildEnvAddCommandWithPreservedArgs(
+                client.argv,
+                `env add ${envName} preview --value <value> --git-branch= --yes`
               ),
               when: 'Add to all Preview branches',
             },

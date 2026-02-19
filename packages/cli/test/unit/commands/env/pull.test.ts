@@ -657,14 +657,60 @@ describe('env pull', () => {
           { command: expect.any(String) },
         ],
       });
-      // First next: link with same original args (e.g. --non-interactive, --cwd)
+      // First next: link with scope/project placeholders and preserved args
       expect(payload.next[0].command).toMatch(/link/);
+      expect(payload.next[0].command).toContain('--scope');
+      expect(payload.next[0].command).toContain('<scope>');
+      expect(payload.next[0].command).toContain('--project');
+      expect(payload.next[0].command).toContain('<project>');
       // Second next: retry same command (env pull) with original args
       expect(payload.next[1].command).toMatch(/env pull/);
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
       vi.restoreAllMocks();
+    });
+  });
+
+  describe('non-interactive env_file_exists', () => {
+    it('outputs next commands without ANSI (getCommandNamePlain)', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const { setupUnitFixture } = await import(
+        '../../../helpers/setup-unit-fixture'
+      );
+      const cwd = setupUnitFixture('vercel-env-pull');
+      const otherFile = path.join(cwd, 'other.env');
+      await fs.writeFile(otherFile, 'EXISTING=1');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('env', 'pull', 'other.env', '--non-interactive');
+
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload.reason).toBe('env_file_exists');
+      expect(payload.next).toHaveLength(2);
+      payload.next.forEach((n: { command: string }) => {
+        expect(n.command).not.toMatch(/\u001b|\[\d+m/);
+        expect(n.command).toMatch(/vercel env pull/);
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 

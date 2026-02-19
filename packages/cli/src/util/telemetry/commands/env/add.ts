@@ -30,10 +30,19 @@ export class EnvAddTelemetryClient
     }
   }
 
-  trackCliArgumentGitBranch(gitBranch: string | undefined) {
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
     if (gitBranch) {
-      this.trackCliArgument({
-        arg: 'git-branch',
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionValue(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'value',
         value: this.redactedValue,
       });
     }

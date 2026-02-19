@@ -79,6 +79,15 @@ export const addSubcommand = {
       argument: 'BRANCH',
       deprecated: false,
     },
+    {
+      name: 'value',
+      description:
+        'Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -106,7 +115,7 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <git-branch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <branch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -117,6 +126,10 @@ export const addSubcommand = {
         `cat ~/.npmrc | ${packageName} env add NPM_RC preview`,
         `${packageName} env add API_URL production < url.txt`,
       ],
+    },
+    {
+      name: 'Add with value as argument (non-interactive)',
+      value: `${packageName} env add API_TOKEN production --value "secret" --yes`,
     },
   ],
 } as const;
@@ -160,7 +173,7 @@ export const removeSubcommand = {
     {
       name: 'Remove a variable from a specific Environment and Git Branch',
       value: [
-        `${packageName} env rm <name> ${targetPlaceholder} <gitbranch>`,
+        `${packageName} env rm <name> ${targetPlaceholder} <branch>`,
         `${packageName} env rm NPM_RC preview feat1`,
       ],
     },
@@ -304,7 +317,7 @@ export const updateSubcommand = {
     {
       name: 'Update a variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env update <name> ${targetPlaceholder} <gitbranch>`,
+        `${packageName} env update <name> ${targetPlaceholder} <branch>`,
         `${packageName} env update NPM_RC preview feat1`,
       ],
     },
