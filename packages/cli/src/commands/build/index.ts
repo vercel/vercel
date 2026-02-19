@@ -1745,7 +1745,7 @@ function getServicesMergeEntrypoint(
 }
 
 function attachWorkerServiceTrigger(
-  buildOutput: BuildResultV2['output'] | BuildResultV3['output'],
+  buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
   const trigger: TriggerEvent = {
