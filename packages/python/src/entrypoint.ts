@@ -1,6 +1,11 @@
 import { join, posix as pathPosix } from 'path';
 import type { FileFsRef, PythonFramework } from '@vercel/build-utils';
-import { glob, debug, isPythonEntrypoint } from '@vercel/build-utils';
+import {
+  glob,
+  debug,
+  isDirectory,
+  isPythonEntrypoint,
+} from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 
 export const PYTHON_ENTRYPOINT_FILENAMES = [
@@ -13,12 +18,17 @@ export const PYTHON_ENTRYPOINT_FILENAMES = [
 ];
 export const PYTHON_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
 
-export const PYTHON_CANDIDATE_ENTRYPOINTS = PYTHON_ENTRYPOINT_FILENAMES.flatMap(
-  (filename: string) =>
-    PYTHON_ENTRYPOINT_DIRS.map((dir: string) =>
+export const PYTHON_CANDIDATE_ENTRYPOINTS = getCandidateEntrypointsInDirs(
+  PYTHON_ENTRYPOINT_DIRS
+);
+
+function getCandidateEntrypointsInDirs(dirs: string[]) {
+  return dirs.flatMap((dir: string) =>
+    PYTHON_ENTRYPOINT_FILENAMES.map((filename: string) =>
       pathPosix.join(dir, `${filename}.py`)
     )
-);
+  );
+}
 
 export async function getPyprojectEntrypoint(
   workPath: string
@@ -61,6 +71,7 @@ export async function getPyprojectEntrypoint(
  * Detect a Python entrypoint for any Python framework using AST-based detection.
  */
 export async function detectGenericPythonEntrypoint(
+  _framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
 ): Promise<string | null> {
@@ -81,9 +92,23 @@ export async function detectGenericPythonEntrypoint(
     }
 
     // Search candidate locations using AST-based detection
-    const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
+    let base_candidates: string[];
+    if (_framework !== 'django') {
+      base_candidates = PYTHON_CANDIDATE_ENTRYPOINTS;
+    } else {
+      const rootGlobs = await glob('*', {
+        cwd: workPath,
+        includeDirectories: true,
+      });
+      const dirs = Object.keys(rootGlobs).filter(
+        name =>
+          !name.startsWith('.') &&
+          rootGlobs[name].mode != null &&
+          isDirectory(rootGlobs[name].mode)
+      );
+      base_candidates = getCandidateEntrypointsInDirs(dirs);
+    }
+    const candidates = base_candidates.filter((c: string) => !!fsFiles[c]);
 
     for (const candidate of candidates) {
       const isValid = await isPythonEntrypoint(fsFiles[candidate] as FileFsRef);
@@ -110,6 +135,7 @@ export async function detectPythonEntrypoint(
   configuredEntrypoint: string
 ): Promise<string | null> {
   const entrypoint = await detectGenericPythonEntrypoint(
+    _framework,
     workPath,
     configuredEntrypoint
   );
