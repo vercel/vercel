@@ -1,5 +1,13 @@
 # vercel-runtime
 
+## 0.4.3
+
+### Patch Changes
+
+- [services] strip services route prefix in python runtime ([#15097](https://github.com/vercel/vercel/pull/15097))
+
+- fix formatting and lint ([#15142](https://github.com/vercel/vercel/pull/15142))
+
 ## 0.4.2
 
 ### Patch Changes

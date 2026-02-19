@@ -1022,15 +1022,26 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          const shouldUpgrade = await client.input.confirm(
-            'Would you like to upgrade now?',
-            true
-          );
+          try {
+            const shouldUpgrade = await client.input.confirm(
+              'Would you like to upgrade now?',
+              true
+            );
 
-          if (shouldUpgrade) {
-            const upgradeExitCode = await executeUpgrade();
-            process.exitCode = upgradeExitCode;
-            return;
+            if (shouldUpgrade) {
+              const upgradeExitCode = await executeUpgrade();
+              process.exitCode = upgradeExitCode;
+              return;
+            }
+          } catch (err: unknown) {
+            if (
+              err instanceof Error &&
+              err.message.includes('User force closed the prompt')
+            ) {
+              // User pressed Ctrl+C to dismiss the prompt
+            } else {
+              throw err;
+            }
           }
         } else {
           const errorMsg =

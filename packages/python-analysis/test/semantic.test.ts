@@ -50,6 +50,22 @@ async def app(scope, receive, send):
       expect(await containsAppOrHandler(source)).toBe(true);
     });
 
+    it('detects Django WSGI application', async () => {
+      const source = `
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
+    it('detects Django ASGI application', async () => {
+      const source = `
+from django.core.asgi import get_asgi_application
+application = get_asgi_application()
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
     it('detects imported app', async () => {
       const source = `
 from server import app
@@ -60,6 +76,20 @@ from server import app
     it('detects aliased import as app', async () => {
       const source = `
 from server import application as app
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
+    it('detects imported application', async () => {
+      const source = `
+from server import application as app
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
+    it('detects aliased import as application', async () => {
+      const source = `
+from server import callable as application
 `;
       expect(await containsAppOrHandler(source)).toBe(true);
     });
@@ -142,14 +172,6 @@ if __name__ == "__main__":
     it('returns false for invalid Python syntax', async () => {
       const source = `
 def invalid(
-`;
-      expect(await containsAppOrHandler(source)).toBe(false);
-    });
-
-    it('does not detect application variable (not app)', async () => {
-      const source = `
-from fastapi import FastAPI
-application = FastAPI()
 `;
       expect(await containsAppOrHandler(source)).toBe(false);
     });
