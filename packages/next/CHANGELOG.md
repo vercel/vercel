@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.15.30
+
+### Patch Changes
+
+- Update to latest Next.js adapter version' ([#15124](https://github.com/vercel/vercel/pull/15124))
+
+- Add `NEXT_BUILDER_INTEGRATION` env to all `packages/next` vercel.json fixtures. ([#15124](https://github.com/vercel/vercel/pull/15124))
+
 ## 4.15.29
 
 ### Patch Changes
