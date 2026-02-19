@@ -350,7 +350,6 @@ const transformsSchema = {
  */
 export const routesSchema = {
   type: 'array',
-  deprecated: true,
   description:
     'A list of routes objects used to rewrite paths to point towards other internal or external paths',
   example: [{ dest: 'https://docs.example.com', src: '/docs' }],
