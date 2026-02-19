@@ -178,6 +178,23 @@ export function vercelPreset(): Preset {
 
     const assetsDir = viteConfig?.build?.assetsDir;
 
+    // Create a stable entry point for local development (re-exports the dynamic bundle)
+    try {
+      const buildDir = reactRouterConfig.buildDirectory || 'build';
+      const serverDir = join(buildDir, 'server');
+      const nodeBundleId = Object.keys(buildManifest?.serverBundles || {}).find(
+        id => id.startsWith('nodejs')
+      );
+
+      if (nodeBundleId) {
+        const entryPointPath = join(serverDir, 'index.js');
+        const content = `export * from "./${nodeBundleId}/index.js";`;
+        writeFileSync(entryPointPath, content);
+      }
+    } catch (error) {
+      // Fail silently if directories don't match expectations or permissions denied
+    }
+
     const json = JSON.stringify(
       {
         buildManifest,
