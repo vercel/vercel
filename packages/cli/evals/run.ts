@@ -52,6 +52,12 @@ async function main() {
     process.exit(1);
   }
 
+  // Progress: print what will run so it's visible as the eval runs
+  process.stdout.write(`\nEvals to run: ${evals.join(', ')}\n`);
+  process.stdout.write(
+    'Progress: each eval prints "Running <name>..." when it starts and "✓/✗ <name>..." when it finishes (can take several minutes per eval).\n\n'
+  );
+
   const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
 
   const child = spawn('npx', agentEvalArgs, {

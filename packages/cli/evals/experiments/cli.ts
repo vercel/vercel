@@ -20,7 +20,7 @@ const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   runs: 1,
   earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
-  timeout: 600,
+  timeout: 900, // 15 min per eval (env can need link + env ls; build is long)
   sandbox: 'docker', // Use Docker sandbox in CI (no OIDC required; Vercel sandbox prefers OIDC)
   setup: async sandbox => {
     const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
