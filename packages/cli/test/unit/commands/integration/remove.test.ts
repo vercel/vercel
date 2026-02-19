@@ -89,7 +89,7 @@ describe('integration', () => {
           `No integration ${integration} found.`
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
     });
 

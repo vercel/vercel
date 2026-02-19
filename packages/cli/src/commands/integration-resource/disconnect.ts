@@ -89,7 +89,7 @@ export async function disconnect(client: Client) {
 
   if (!targetedResource) {
     output.error(`No resource ${chalk.bold(resourceName)} found.`);
-    return 0;
+    return 1;
   }
 
   if (parsedArguments.flags['--all']) {

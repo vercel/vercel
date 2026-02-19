@@ -104,7 +104,7 @@ describe('integration-resource', () => {
           `> Could not find project ${project} connected to resource ${resource}.`
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       it('disconnects the resource from the current project when no project specified', async () => {
