@@ -368,12 +368,11 @@ test('deploy from a nested directory', async () => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execCli(binaryPath, ['deploy', `--name=${projectName}`], {
-    cwd: root,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  const vc = execCli(
+    binaryPath,
+    ['deploy', `--name=${projectName}`, '--non-interactive=false'],
+    { cwd: root, env: { FORCE_TTY: '1' } }
+  );
 
   await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
   vc.stdin?.write('yes\n');
@@ -404,13 +403,13 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
 
   const vc = execCli(
     binaryPath,
-    ['deploy', '--archive=tgz', `--name=${projectName}`],
-    {
-      cwd: root,
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
+    [
+      'deploy',
+      '--archive=tgz',
+      `--name=${projectName}`,
+      '--non-interactive=false',
+    ],
+    { cwd: root, env: { FORCE_TTY: '1' } }
   );
 
   await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
