@@ -2,10 +2,11 @@
   "name": "koa",
   "type": "module",
   "dependencies": {
+    "@koa/router": "15.2.0",
     "koa": "3.1.1"
   },
   "devDependencies": {
-    "@types/node": "^20.11.17",
-    "typescript": "^5.8.3"
+    "@types/koa": "3.0.1",
+    "@types/node": "24"
   }
 }
