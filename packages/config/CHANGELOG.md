@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.33
+
+### Patch Changes
+
+- Fix rewrite regexp conversion when header transforms are present ([#15134](https://github.com/vercel/vercel/pull/15134))
+
 ## 0.0.32
 
 ### Patch Changes
