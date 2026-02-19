@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import type { ExperimentConfig } from '@vercel/agent-eval';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SKILLS_DIR = join(__dirname, '../../../skills/vercel-cli');
+const SKILLS_DIR = join(__dirname, '../../../../skills/vercel-cli');
 
 /**
  * CLI evals experiment. Add eval fixtures under evals/ and configure
