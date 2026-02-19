@@ -122,29 +122,29 @@ describe('integration', () => {
           ]);
         });
 
-        describe('--print-only', () => {
-          it('should print SSO link without opening browser for integration', async () => {
+        describe('--json', () => {
+          it('should output SSO link as JSON without opening browser', async () => {
             useProject({
               ...defaultProject,
               id: 'vercel-integration-open',
               name: 'vercel-integration-open',
             });
-            client.setArgv('integration', 'open', 'acme', '--print-only');
+            client.setArgv('integration', 'open', 'acme', '--json');
             const exitCode = await integrationCommand(client);
             expect(exitCode, 'exit code for "integration"').toEqual(0);
             expect(openMock).not.toHaveBeenCalled();
             await expect(client.stdout).toOutput(
-              'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1'
+              '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1"'
             );
           });
 
-          it('should track --print-only telemetry', async () => {
+          it('should track --json telemetry', async () => {
             useProject({
               ...defaultProject,
               id: 'vercel-integration-open',
               name: 'vercel-integration-open',
             });
-            client.setArgv('integration', 'open', 'acme', '--print-only');
+            client.setArgv('integration', 'open', 'acme', '--json');
             const exitCode = await integrationCommand(client);
             expect(exitCode).toEqual(0);
 
@@ -154,7 +154,7 @@ describe('integration', () => {
                 value: 'open',
               },
               {
-                key: 'flag:print-only',
+                key: 'flag:json',
                 value: 'TRUE',
               },
               {
@@ -162,6 +162,24 @@ describe('integration', () => {
                 value: 'acme',
               },
             ]);
+          });
+        });
+
+        describe('non-TTY stdout', () => {
+          it('should write raw URL to stdout when piped', async () => {
+            useProject({
+              ...defaultProject,
+              id: 'vercel-integration-open',
+              name: 'vercel-integration-open',
+            });
+            client.setArgv('integration', 'open', 'acme');
+            (client.stdout as any).isTTY = false;
+            const exitCode = await integrationCommand(client);
+            expect(exitCode, 'exit code for "integration"').toEqual(0);
+            expect(openMock).not.toHaveBeenCalled();
+            await expect(client.stdout).toOutput(
+              'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1'
+            );
           });
         });
       });
@@ -200,7 +218,7 @@ describe('integration', () => {
           );
         });
 
-        it('should print resource SSO link with --print-only', async () => {
+        it('should output resource SSO link as JSON with --json', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-open',
@@ -211,13 +229,13 @@ describe('integration', () => {
             'open',
             'acme',
             'store-acme-connected-project',
-            '--print-only'
+            '--json'
           );
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
           await expect(client.stdout).toOutput(
-            'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1'
+            '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1"'
           );
         });
 

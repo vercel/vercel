@@ -160,11 +160,11 @@ export const openSubcommand = {
   ],
   options: [
     {
-      name: 'print-only',
+      name: 'json',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Print the SSO link to stdout instead of opening it',
+      description: 'Output the SSO link as JSON',
     },
   ],
   examples: [
@@ -183,10 +183,10 @@ export const openSubcommand = {
       ],
     },
     {
-      name: 'Print the SSO link without opening',
+      name: 'Get the SSO link as JSON',
       value: [
-        `${packageName} integration open acme --print-only`,
-        `${packageName} integration open acme my-acme-store --print-only`,
+        `${packageName} integration open acme --json`,
+        `${packageName} integration open acme my-acme-store --json`,
       ],
     },
   ],

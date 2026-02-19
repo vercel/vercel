@@ -216,11 +216,9 @@ export default async function main(client: Client) {
         printError(error);
         return 1;
       }
-      const printOnly = openParsedArgs.flags['--print-only'] as
-        | boolean
-        | undefined;
+      const asJson = openParsedArgs.flags['--json'] as boolean | undefined;
 
-      return openIntegration(client, openParsedArgs.args, printOnly);
+      return openIntegration(client, openParsedArgs.args, asJson);
     }
     case 'remove': {
       if (needHelp) {

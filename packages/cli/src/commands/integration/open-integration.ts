@@ -12,7 +12,7 @@ import output from '../../output-manager';
 export async function openIntegration(
   client: Client,
   args: string[],
-  printOnly?: boolean
+  json?: boolean
 ) {
   const telemetry = new IntegrationOpenTelemetryClient({
     opts: {
@@ -20,7 +20,7 @@ export async function openIntegration(
     },
   });
 
-  telemetry.trackCliFlagPrintOnly(printOnly);
+  telemetry.trackCliFlagJson(json);
 
   if (args.length > 2) {
     output.error(
@@ -104,27 +104,33 @@ export async function openIntegration(
       resource.externalResourceId
     );
 
-    if (printOnly) {
-      client.stdout.write(`${link}\n`);
-    } else {
-      output.print(
-        `Opening the ${chalk.bold(resourceName)} resource dashboard...`
-      );
-      open(link);
-    }
-
+    outputLink(client, link, json, resourceName, true);
     return 0;
   }
 
   // No resource specified — open the integration dashboard
   const link = buildSSOLink(team, configurationId);
 
-  if (printOnly) {
-    client.stdout.write(`${link}\n`);
-  } else {
-    output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
-    open(link);
-  }
-
+  outputLink(client, link, json, integrationSlug, false);
   return 0;
+}
+
+function outputLink(
+  client: Client,
+  link: string,
+  json: boolean | undefined,
+  name: string,
+  isResource: boolean
+) {
+  if (json) {
+    client.stdout.write(`${JSON.stringify({ url: link }, null, 2)}\n`);
+  } else if (client.stdout.isTTY) {
+    const label = isResource
+      ? `Opening the ${chalk.bold(name)} resource dashboard...`
+      : `Opening the ${chalk.bold(name)} dashboard...`;
+    output.print(label);
+    open(link);
+  } else {
+    client.stdout.write(`${link}\n`);
+  }
 }

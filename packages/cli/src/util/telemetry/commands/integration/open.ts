@@ -22,9 +22,9 @@ export class IntegrationOpenTelemetryClient
     }
   }
 
-  trackCliFlagPrintOnly(v: boolean | undefined) {
+  trackCliFlagJson(v: boolean | undefined) {
     if (v) {
-      this.trackCliFlag('print-only');
+      this.trackCliFlag('json');
     }
   }
 }
