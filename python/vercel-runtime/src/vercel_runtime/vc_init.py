@@ -621,14 +621,16 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method = getattr(self, mname)
                 method()
                 self.wfile.flush()
-    elif "app" in __vc_variables:
+    elif "app" in __vc_variables or "application" in __vc_variables:
+        app = getattr(
+            __vc_module, "app", getattr(__vc_module, "application", None)
+        )
         if not inspect.iscoroutinefunction(
-            __vc_module.app
-        ) and not inspect.iscoroutinefunction(__vc_module.app.__call__):
+            app
+        ) and not inspect.iscoroutinefunction(app.__call__):
             from io import BytesIO
 
             string_types = (str,)
-            app = __vc_module.app
 
             def wsgi_encoding_dance(s, charset="utf-8", errors="replace"):
                 if isinstance(s, str):
@@ -698,14 +700,12 @@ if "VERCEL_IPC_PATH" in os.environ:
             # Prefer a callable app.asgi when available;
             # some frameworks expose a boolean here
             user_app_candidate = getattr(
-                __vc_module.app,
+                app,
                 "asgi",
                 None,
             )
             user_app = (
-                user_app_candidate
-                if callable(user_app_candidate)
-                else __vc_module.app
+                user_app_candidate if callable(user_app_candidate) else app
             )
             asgi_app = ASGIMiddleware(user_app)
 
@@ -830,10 +830,11 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif "app" in __vc_variables:
-    if not inspect.iscoroutinefunction(
-        __vc_module.app
-    ) and not inspect.iscoroutinefunction(__vc_module.app.__call__):
+elif "app" in __vc_variables or "application" in __vc_variables:
+    app = getattr(__vc_module, "app", getattr(__vc_module, "application", None))
+    if not inspect.iscoroutinefunction(app) and not inspect.iscoroutinefunction(
+        app.__call__
+    ):
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
         from urllib.parse import urlparse
@@ -907,7 +908,7 @@ elif "app" in __vc_variables:
                 if env_key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
                     environ[env_key] = value
 
-            response = Response.from_app(__vc_module.app, environ)
+            response = Response.from_app(app, environ)
 
             return_dict = {
                 "statusCode": response.status_code,
@@ -1103,11 +1104,14 @@ elif "app" in __vc_variables:
             }
 
             asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__vc_module.app, body)
+            response = asgi_cycle(app, body)
             return response
 
 else:
-    _stderr(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
+    _stderr(
+        f"Missing variable `handler`, `app`, or `application` "
+        f'in file "{_entrypoint_rel}".'
+    )
     _stderr(
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
