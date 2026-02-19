@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import worker  # noqa: F401  # Register @subscribe handlers for worker service bootstrap
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-import examples.basic.worker  # noqa: F401  # Import so @subscribe handlers are registered
 from vercel.workers import send
 
-# This queue name should match the `topic` configured for the worker
-# in examples/basic/pyproject.toml.
+# This queue name should match the worker service `topic`
+# configured in examples/basic/vercel.json.
 QUEUE_NAME = "default"
 
 app = FastAPI(

@@ -21,15 +21,3 @@ def process_message(message: Any, metadata: MessageMetadata) -> WorkerTimeoutRes
     print(json.dumps(metadata, indent=2, default=str))
 
     return None
-
-
-if __name__ == "__main__":
-    # Simple manual test: invoke the worker directly with a fake payload.
-    example_metadata: MessageMetadata = {
-        "messageId": "dev-local",
-        "deliveryCount": 1,
-        "createdAt": "now",
-        "topic": "default",
-        "consumer": "default",
-    }
-    process_message({"message": "hello from local test"}, example_metadata)

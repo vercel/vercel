@@ -2,7 +2,7 @@
 name = "dramatiq-example"
 version = "0.1.0"
 description = "Dramatiq example using vercel-workers + Vercel Queues"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn",
@@ -15,6 +15,3 @@ vercel-workers = { workspace = true }
 
 [tool.setuptools]
 py-modules = ["worker", "main", "tasks"]
-
-[project.scripts]
-worker = "worker:main"

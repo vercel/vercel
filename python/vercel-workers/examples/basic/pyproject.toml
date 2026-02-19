@@ -2,7 +2,7 @@
 name = "basic"
 version = "0.1.0"
 description = "Basic FastAPI example for vercel-workers"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn",

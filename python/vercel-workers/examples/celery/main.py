@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
-from more_tasks import multiply
 from pydantic import BaseModel
-from tasks import QUEUE_NAME, add
+from tasks import QUEUE_NAME, add, multiply
 
 app = FastAPI(
     title="Celery on Vercel Queues (example)",

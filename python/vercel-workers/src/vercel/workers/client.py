@@ -133,41 +133,6 @@ def _get_header(environ: dict[str, Any], name: str) -> str | None:
     return str(value)
 
 
-def _parse_metadata(environ: dict[str, Any]) -> MessageMetadata:
-    """
-    Derive MessageMetadata from queue-related headers when available.
-
-    This mirrors the JS client header names where possible:
-      - Vqs-Message-Id
-      - Vqs-Delivery-Count
-      - Vqs-Timestamp
-      - Vqs-Queue-Name  (used as topic)
-      - Vqs-Consumer-Group (used as consumer)
-    """
-    message_id = _get_header(environ, "Vqs-Message-Id")
-    delivery_count_raw = _get_header(environ, "Vqs-Delivery-Count") or "0"
-    timestamp = _get_header(environ, "Vqs-Timestamp")
-    topic = _get_header(environ, "Vqs-Queue-Name")
-    consumer = _get_header(environ, "Vqs-Consumer-Group")
-
-    try:
-        delivery_count = int(delivery_count_raw)
-    except ValueError:
-        delivery_count = 0
-
-    meta: MessageMetadata = {}
-    if message_id is not None:
-        meta["messageId"] = message_id
-    meta["deliveryCount"] = delivery_count
-    if timestamp is not None:
-        meta["createdAt"] = timestamp
-    if topic is not None:
-        meta["topic"] = topic
-    if consumer is not None:
-        meta["consumer"] = consumer
-    return meta
-
-
 def _select_subscriptions(
     topic: str | None,
     consumer: str | None,
@@ -175,10 +140,6 @@ def _select_subscriptions(
     ignore_consumer: bool = False,
 ) -> Iterable[_Subscription]:
     # Match by topic and consumer (unless consumer is ignored).
-    #
-    # Note: we intentionally do NOT fall back to "all subscriptions" when nothing
-    # matches. Silently invoking the wrong handler is more dangerous than failing
-    # fast and letting the queue retry.
     explicit_matches = [
         s
         for s in _subscriptions
