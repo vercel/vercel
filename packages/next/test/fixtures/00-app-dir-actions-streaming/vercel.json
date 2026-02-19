@@ -5,5 +5,8 @@
       "use": "@vercel/next"
     }
   ],
-  "probes": []
+  "probes": [],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

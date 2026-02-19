@@ -154,11 +154,16 @@ describe('integration', () => {
       });
 
       describe('missing installation', () => {
+        let installRequestBodies: unknown[];
+
         beforeEach(() => {
-          useIntegration({ withInstallation: false });
+          ({ installRequestBodies } = useIntegration({
+            withInstallation: false,
+          }));
+          usePreauthorization();
         });
 
-        it('should handle provisioning resource in project context', async () => {
+        it('should prompt for terms, install, and provision in project context', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -171,18 +176,53 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+          // 3-term prompt sequence
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          // After install, falls through to CLI provisioning
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
           );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+          expect(pullMock).toHaveBeenCalledWith(
+            client,
+            ['--yes'],
+            'vercel-cli:integration:add'
+          );
+          // Verify install request body includes accepted policies and source
+          expect(installRequestBodies).toHaveLength(1);
+          expect(installRequestBodies[0]).toMatchObject({
+            acceptedPolicies: {
+              toc: expect.any(String),
+              privacy: expect.any(String),
+              eula: expect.any(String),
+            },
+            source: 'cli',
+          });
         });
 
-        it('should not include projectId in URL with --no-connect flag', async () => {
+        it('should prompt for terms and provision with --no-connect', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -196,41 +236,82 @@ describe('integration', () => {
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
           );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+          expect(pullMock).not.toHaveBeenCalled();
         });
 
-        it('should handle provisioning resource without project context', async () => {
+        it('should prompt for terms and provision without project context', async () => {
           client.setArgv('integration', 'add', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&cmd=add'
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
           );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
         });
 
         it('should track [name] positional argument with known integration name', async () => {
           client.setArgv('integration', 'add', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Choose your region');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -244,7 +325,7 @@ describe('integration', () => {
           ]);
         });
 
-        it('should include custom --name in URL when fallback to browser without project', async () => {
+        it('should use custom --name after term acceptance', async () => {
           client.setArgv(
             'integration',
             'add',
@@ -257,17 +338,28 @@ describe('integration', () => {
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=my-custom-db&cmd=add'
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Choose your region');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: my-custom-db'
           );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
         });
 
-        it('should forward --metadata to browser fallback URL when no installation', async () => {
+        it('should use --metadata after term acceptance', async () => {
           client.setArgv(
             'integration',
             'add',
@@ -280,21 +372,75 @@ describe('integration', () => {
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          const calledUrl = openMock.mock.calls[0]?.[0] as string;
-          const parsed = new URL(calledUrl);
-          expect(parsed.searchParams.get('metadata')).toEqual(
-            JSON.stringify({ region: 'us-east-1' })
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          // --metadata skips wizard, go straight to billing
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
           );
-          expect(parsed.searchParams.get('source')).toEqual('cli');
-          expect(parsed.searchParams.get('cmd')).toEqual('add');
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
         });
 
-        it('should include custom --name and projectId in URL when project is linked', async () => {
+        it('should exit when Vercel Marketplace addendum is declined', async () => {
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Accept Vercel Marketplace End User Addendum?'
+          );
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'Vercel Marketplace End User Addendum must be accepted to continue.'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should exit when privacy policy is declined', async () => {
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Accept Vercel Marketplace End User Addendum?'
+          );
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'Privacy policy must be accepted to continue.'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should exit when terms of service is declined', async () => {
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Accept Vercel Marketplace End User Addendum?'
+          );
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'Terms of service must be accepted to continue.'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should fall back to web UI after term acceptance when wizard is unsupported', async () => {
           useProject({
             ...defaultProject,
             id: 'vercel-integration-add',
@@ -302,51 +448,99 @@ describe('integration', () => {
           });
           const cwd = setupUnitFixture('vercel-integration-add');
           client.cwd = cwd;
-          client.setArgv('integration', 'add', 'acme', '--name', 'my-proj-db');
+          client.setArgv('integration', 'add', 'acme-unsupported');
           const exitCodePromise = integrationCommand(client);
+
+          // Term acceptance prompts
           await expect(client.stderr).toOutput(
-            `Installing Acme Product by Acme Integration under ${team.slug}`
-          );
-          await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=my-proj-db&cmd=add'
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+
+          // After install, falls back to web UI because wizard is unsupported
+          await expect(client.stderr).toOutput(
+            'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(1);
+          expect(openMock).toHaveBeenCalled();
         });
 
-        it('should not include projectId in URL with --no-connect and custom --name', async () => {
-          useProject({
-            ...defaultProject,
-            id: 'vercel-integration-add',
-            name: 'vercel-integration-add',
-          });
-          const cwd = setupUnitFixture('vercel-integration-add');
-          client.cwd = cwd;
-          client.setArgv(
-            'integration',
-            'add',
-            'acme',
-            '--name',
-            'my-nolink-db',
-            '--no-connect'
+        it('should exit with code 1 in non-TTY mode when no installation exists', async () => {
+          client.stdin.isTTY = false;
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+
+          await expect(client.stderr).toOutput(
+            'Term acceptance requires an interactive terminal.'
           );
+
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should exit with code 1 when AI agent is detected (legal requirement)', async () => {
+          // Term acceptance must be performed by a human, not an AI agent.
+          // Agents running in a PTY can bypass the isTTY check, so we
+          // explicitly block detected agents from accepting terms.
+          client.isAgent = true;
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+
+          await expect(client.stderr).toOutput(
+            'Term acceptance cannot be performed by an AI agent.'
+          );
+
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should reject --yes flag to prevent automated term bypass (legal requirement)', async () => {
+          // Term acceptance MUST be explicit — --yes must not be a recognized flag
+          // on this command. This is a legal requirement: users must consciously
+          // accept each term. If this test fails, someone added --yes support
+          // without considering the legal implications.
+          client.setArgv('integration', 'add', 'acme', '--yes');
+          const exitCodePromise = integrationCommand(client);
+
+          await expect(client.stderr).toOutput(
+            'unknown or unexpected option: --yes'
+          );
+
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should exit with error when install API fails', async () => {
+          client.reset();
+          useUser();
+          const teams = useTeams('team_dummy');
+          const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = t.id;
+          useIntegration({
+            withInstallation: false,
+            installShouldFail: true,
+          });
+
+          client.setArgv('integration', 'add', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
-            `Installing Acme Product by Acme Integration under ${team.slug}`
-          );
-          await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+            'Accept Vercel Marketplace End User Addendum?'
           );
           client.stdin.write('y\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=my-nolink-db&cmd=add'
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Failed to install integration:'
           );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(1);
         });
       });
 
@@ -582,7 +776,7 @@ describe('integration', () => {
           client.stdin.write('Y\n');
           await expect(exitCodePromise).resolves.toEqual(1);
           expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme-unsupported&productId=acme-product&source=cli&projectId=vercel-integration-add&defaultResourceName=acme-gray-apple&cmd=add'
           );
         });
 
@@ -813,6 +1007,7 @@ describe('integration', () => {
       describe('product slash syntax', () => {
         beforeEach(() => {
           useIntegration({ withInstallation: false });
+          usePreauthorization();
         });
 
         it('should select product by slug with slash syntax', async () => {
@@ -822,12 +1017,28 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
           );
+          // Term prompts for missing installation
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard?'
+            'Accept Vercel Marketplace End User Addendum?'
           );
-          client.stdin.write('n\n');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          // After install, proceed with provisioning — wizard prompts
+          await expect(client.stderr).toOutput('Version');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Region');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('successfully provisioned');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(1);
+          expect(exitCode).toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
         });
 
         it('should error when product slug is not found', async () => {
@@ -863,12 +1074,26 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+          // Term prompts for missing installation
           await expect(client.stderr).toOutput(
-            'Terms have not been accepted. Open Vercel Dashboard?'
+            'Accept Vercel Marketplace End User Addendum?'
           );
-          client.stdin.write('n\n');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept privacy policy?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('Accept terms of service?');
+          client.stdin.write('y\n');
+          // After install, proceed with provisioning — wizard prompt
+          await expect(client.stderr).toOutput('Choose your region');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Choose a billing plan');
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection?');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput('successfully provisioned');
           const exitCode = await exitCodePromise;
-          expect(exitCode).toEqual(1);
+          expect(exitCode).toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
         });
       });
 
@@ -1042,40 +1267,39 @@ describe('integration', () => {
       });
 
       describe('--plan flag (legacy path)', () => {
-        describe('missing installation (web UI fallback)', () => {
+        describe('missing installation', () => {
           beforeEach(() => {
             useIntegration({ withInstallation: false });
+            usePreauthorization();
           });
 
-          it('should include planId in web UI URL when --plan is provided', async () => {
+          it('should skip billing plan prompt when --plan provided with missing installation', async () => {
             client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
             const exitCodePromise = integrationCommand(client);
             await expect(client.stderr).toOutput(
               `Installing Acme Product by Acme Integration under ${team.slug}`
             );
+            // Term prompts
             await expect(client.stderr).toOutput(
-              'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
+              'Accept Vercel Marketplace End User Addendum?'
             );
             client.stdin.write('y\n');
-            const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(1);
-            expect(openMock).toHaveBeenCalledWith(
-              'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&source=cli&defaultResourceName=acme-gray-apple&planId=pro&cmd=add'
-            );
-          });
-
-          it('should not include planId in web UI URL when --plan is not provided', async () => {
-            client.setArgv('integration', 'add', 'acme');
-            const exitCodePromise = integrationCommand(client);
-            await expect(client.stderr).toOutput(
-              'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
-            );
+            await expect(client.stderr).toOutput('Accept privacy policy?');
             client.stdin.write('y\n');
-            const exitCode = await exitCodePromise;
-            expect(exitCode).toEqual(1);
-            expect(openMock).toHaveBeenCalledWith(
-              expect.not.stringMatching(/planId=/)
+            await expect(client.stderr).toOutput('Accept terms of service?');
+            client.stdin.write('y\n');
+            // After install, proceeds to CLI provisioning with --plan=pro
+            await expect(client.stderr).toOutput('Choose your region');
+            client.stdin.write('\n');
+            // --plan=pro skips billing plan prompt
+            await expect(client.stderr).toOutput('Confirm selection?');
+            client.stdin.write('y\n');
+            await expect(client.stderr).toOutput(
+              'Acme Product successfully provisioned: acme-gray-apple'
             );
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(0);
+            expect(openMock).not.toHaveBeenCalled();
           });
         });
 

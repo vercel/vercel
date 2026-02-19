@@ -69,5 +69,8 @@
       "status": 200,
       "mustContain": "hello public"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

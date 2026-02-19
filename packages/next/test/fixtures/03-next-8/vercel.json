@@ -4,5 +4,8 @@
   "probes": [
     { "path": "/hello1", "mustContain": "Hello World 1" },
     { "path": "/nested/hello2", "mustContain": "Hello World 2" }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

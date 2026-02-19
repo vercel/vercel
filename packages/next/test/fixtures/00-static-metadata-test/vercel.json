@@ -126,5 +126,8 @@
         "content-type": "image/svg+xml"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

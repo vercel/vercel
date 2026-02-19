@@ -129,5 +129,8 @@
     {
       "logMustNotContain": "Unable to find source file for page proxy with"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

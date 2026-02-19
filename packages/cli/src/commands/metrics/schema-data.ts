@@ -33,7 +33,6 @@ const VALUE_AGGREGATIONS = [
   'unique',
 ] as const;
 
-// All 24 events from the observability query engine.
 // Measures with "cannot be used in rollups" are excluded since the CLI only supports aggregated queries.
 export const SCHEMA = {
   aiGatewayRequest: {
@@ -69,7 +68,6 @@ export const SCHEMA = {
         filterOnly: true,
       },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
     ],
     measures: [
       {
@@ -155,17 +153,14 @@ export const SCHEMA = {
         label: 'Edge Network Region',
         filterOnly: false,
       },
-      { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
       { name: 'pathType', label: 'Path Type', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
       {
         name: 'referrerHostname',
         label: 'Referrer Hostname',
         filterOnly: false,
       },
       { name: 'referrerUrl', label: 'Referrer URL', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'requestId', label: 'Request ID', filterOnly: true },
       { name: 'requestMethod', label: 'Request Method', filterOnly: false },
       { name: 'requestPath', label: 'Request Path', filterOnly: false },
@@ -186,8 +181,6 @@ export const SCHEMA = {
         filterOnly: true,
       },
       { name: 'blobOperationType', label: 'Operation', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
       { name: 'storeId', label: 'Store ID', filterOnly: true },
       { name: 'storeName', label: 'Store', filterOnly: false },
     ],
@@ -332,9 +325,6 @@ export const SCHEMA = {
         label: 'Middleware Action Target',
         filterOnly: false,
       },
-      { name: 'originHostname', label: 'Function Hostname', filterOnly: false },
-      { name: 'originPath', label: 'Function Path', filterOnly: false },
-      { name: 'originRoute', label: 'Function Route', filterOnly: false },
       { name: 'pathType', label: 'Path Type', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
       { name: 'projectName', label: 'Project', filterOnly: false },
@@ -357,11 +347,6 @@ export const SCHEMA = {
       },
     ],
     measures: [
-      {
-        name: 'coldStartDurationMs',
-        label: 'Cold Start Duration',
-        unit: 'milliseconds',
-      },
       { name: 'count', label: 'Count', unit: 'count' },
       {
         name: 'fotInBytes',
@@ -414,7 +399,6 @@ export const SCHEMA = {
       { name: 'optimizedWidthPixels', label: 'Width', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
       { name: 'projectName', label: 'Project', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'sourceImage', label: 'Source Image', filterOnly: true },
       {
         name: 'sourceImageHash',
@@ -463,7 +447,6 @@ export const SCHEMA = {
       { name: 'optimizedWidthPixels', label: 'Width', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
       { name: 'projectName', label: 'Project', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'sourceImage', label: 'Source Image', filterOnly: true },
       {
         name: 'sourceImageHostname',
@@ -771,68 +754,6 @@ export const SCHEMA = {
       },
     ],
   },
-  prReview: {
-    description: 'Pull request review operations',
-    dimensions: [
-      { name: 'commitSha', label: 'Commit SHA', filterOnly: false },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'pullRequestNumber',
-        label: 'Pull Request Number',
-        filterOnly: false,
-      },
-      { name: 'repositoryName', label: 'Repository Name', filterOnly: false },
-      { name: 'repositoryOwner', label: 'Repository Owner', filterOnly: false },
-      {
-        name: 'reviewConclusion',
-        label: 'Review Conclusion',
-        filterOnly: false,
-      },
-      { name: 'reviewStatus', label: 'Review Status', filterOnly: false },
-    ],
-    measures: [
-      { name: 'cost', label: 'Cost', unit: 'US dollars' },
-      { name: 'count', label: 'Count', unit: 'count' },
-      { name: 'filesRead', label: 'Files Read', unit: 'count' },
-      { name: 'reviewComments', label: 'Review Comments', unit: 'count' },
-      { name: 'reviewTimeSeconds', label: 'Review Time', unit: 'seconds' },
-      { name: 'timeWorkedSeconds', label: 'Time Worked', unit: 'seconds' },
-      { name: 'tokenCost', label: 'Token Cost', unit: 'count' },
-    ],
-  },
-  prReviewModelUsage: {
-    description: 'AI model usage for pull request reviews',
-    dimensions: [
-      { name: 'aiModel', label: 'AI Model', filterOnly: false },
-      { name: 'commitSha', label: 'Commit SHA', filterOnly: false },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'pullRequestNumber',
-        label: 'Pull Request Number',
-        filterOnly: false,
-      },
-      { name: 'repositoryName', label: 'Repository Name', filterOnly: false },
-      { name: 'repositoryOwner', label: 'Repository Owner', filterOnly: false },
-    ],
-    measures: [
-      {
-        name: 'cacheCreationInputTokens',
-        label: 'Cache Creation Tokens',
-        unit: 'tokens',
-      },
-      {
-        name: 'cachedInputTokens',
-        label: 'Cached Input Tokens',
-        unit: 'tokens',
-      },
-      { name: 'count', label: 'Count', unit: 'count' },
-      { name: 'inputTokens', label: 'Input Tokens', unit: 'tokens' },
-      { name: 'outputTokens', label: 'Output Tokens', unit: 'tokens' },
-      { name: 'tokenCost', label: 'Token Cost', unit: 'count' },
-    ],
-  },
   queueOperation: {
     description: 'Queue operations for message processing',
     dimensions: [
@@ -846,88 +767,6 @@ export const SCHEMA = {
       { name: 'queueName', label: 'Queue Name', filterOnly: true },
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
-  },
-  reviewedPrComplete: {
-    description: 'Completed pull request review feedback',
-    dimensions: [
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'pullRequestNumber',
-        label: 'Pull Request Number',
-        filterOnly: false,
-      },
-      {
-        name: 'pullRequestState',
-        label: 'Pull Request State',
-        filterOnly: false,
-      },
-      { name: 'repositoryName', label: 'Repository Name', filterOnly: false },
-      { name: 'repositoryOwner', label: 'Repository Owner', filterOnly: false },
-    ],
-    measures: [
-      {
-        name: 'badReviewComments',
-        label: 'Bad Review Comments',
-        unit: 'count',
-      },
-      { name: 'count', label: 'Count', unit: 'count' },
-      {
-        name: 'feedbackAcceptedCount',
-        label: 'Feedback Accepted Count',
-        unit: 'count',
-      },
-      {
-        name: 'feedbackIgnoredCount',
-        label: 'Feedback Ignored Count',
-        unit: 'count',
-      },
-      {
-        name: 'goodReviewComments',
-        label: 'Good Review Comments',
-        unit: 'count',
-      },
-      {
-        name: 'negativeReviewCommentReactions',
-        label: 'Negative Review Comment Reactions',
-        unit: 'count',
-      },
-      {
-        name: 'negativeReviewCommentReplyThreads',
-        label: 'Negative Review Comment Reply Threads',
-        unit: 'count',
-      },
-      {
-        name: 'neutralReviewComments',
-        label: 'Neutral Review Comments',
-        unit: 'count',
-      },
-      {
-        name: 'positiveReviewCommentReactions',
-        label: 'Positive Review Comment Reactions',
-        unit: 'count',
-      },
-      {
-        name: 'positiveReviewCommentReplyThreads',
-        label: 'Positive Review Comment Reply Threads',
-        unit: 'count',
-      },
-      {
-        name: 'suggestionAcceptedCount',
-        label: 'Suggestion Accepted Count',
-        unit: 'count',
-      },
-      {
-        name: 'suggestionIgnoredCount',
-        label: 'Suggestion Ignored Count',
-        unit: 'count',
-      },
-      {
-        name: 'totalReviewComments',
-        label: 'Total Review Comments',
-        unit: 'count',
-      },
-    ],
   },
   speedInsightsMetric: {
     description: 'Core Web Vitals and performance metrics',
