@@ -13,6 +13,7 @@ import {
   FailedError,
   type Resource,
 } from '../../util/integration-resource/types';
+import { packageName } from '../../util/pkg-name';
 import { IntegrationResourceRemoveTelemetryClient } from '../../util/telemetry/commands/integration-resource/remove';
 import { removeSubcommand } from './command';
 import { handleDisconnectAllProjects } from './disconnect';
@@ -132,6 +133,17 @@ async function handleDeleteResource(
     output.error(
       `A problem occurred when attempting to delete ${chalk.bold(resource.name)}: ${(error as Error).message}`
     );
+    if (options?.skipProjectCheck) {
+      output.log(
+        `The resource has been disconnected from all projects but could not be deleted.`
+      );
+      output.log(
+        `To delete it manually, visit: ${chalk.cyan(`https://vercel.com/${team.slug}/~/stores/integration/${resource.id}`)}`
+      );
+      output.log(
+        `Or retry with: ${chalk.cyan(`${packageName} integration-resource remove ${resource.name}`)}`
+      );
+    }
     return 1;
   }
 

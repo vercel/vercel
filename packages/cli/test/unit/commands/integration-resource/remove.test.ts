@@ -307,6 +307,62 @@ describe('integration-resource', () => {
           await expect(exitCodePromise).resolves.toEqual(1);
         });
 
+        it('should show recovery guidance when delete fails after --disconnect-all', async () => {
+          useResources();
+          const resource = 'store-foo-bar-both-projects';
+          mockDisconnectResourceFromAllProjects();
+          mockDeleteResource({ error: 500 });
+
+          client.setArgv(
+            'integration-resource',
+            'remove',
+            resource,
+            '--disconnect-all',
+            '--yes'
+          );
+          const exitCodePromise = integrationResourceCommand(client);
+
+          await expect(client.stderr).toOutput('Retrieving resource…');
+          await expect(client.stderr).toOutput(
+            'Disconnecting projects from resource…'
+          );
+          await expect(client.stderr).toOutput(
+            `> Success! Disconnected all projects from ${resource}`
+          );
+          await expect(client.stderr).toOutput('Deleting resource…');
+          await expect(client.stderr).toOutput(
+            `Error: A problem occurred when attempting to delete ${resource}`
+          );
+          await expect(client.stderr).toOutput(
+            '> The resource has been disconnected from all projects but could not be deleted.'
+          );
+          await expect(client.stderr).toOutput(
+            `> To delete it manually, visit: https://vercel.com/${team.slug}/~/stores/integration/store_3`
+          );
+          await expect(client.stderr).toOutput(
+            `> Or retry with: vercel integration-resource remove ${resource}`
+          );
+
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('should not show recovery guidance when delete fails without --disconnect-all', async () => {
+          useResources();
+          const resource = 'store-acme-no-projects';
+          mockDeleteResource({ error: 500 });
+
+          client.setArgv('integration-resource', 'remove', resource, '--yes');
+          const exitCodePromise = integrationResourceCommand(client);
+
+          await expect(client.stderr).toOutput('Retrieving resource…');
+          await expect(client.stderr).toOutput('Deleting resource…');
+          await expect(client.stderr).toOutput(
+            `Error: A problem occurred when attempting to delete ${resource}`
+          );
+
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
         it('should error when attempting to remove a resource with projects', async () => {
           useResources();
           const resource = 'store-acme-connected-project';
