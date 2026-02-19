@@ -21,5 +21,8 @@
         "Content-Type": "text/html; charset=utf-8"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

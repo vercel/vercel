@@ -26,5 +26,8 @@
       "status": 200,
       "mustContain": "ssp page"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

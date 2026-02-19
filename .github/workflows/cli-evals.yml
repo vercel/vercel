@@ -1,14 +1,18 @@
 name: CLI Evals
 
+# Runs on PRs only when evals change (to limit AI gateway cost). Also runnable manually via "Run workflow".
 on:
+  workflow_dispatch:
   pull_request:
     paths:
-      - 'packages/cli/**'
+      - 'packages/cli/evals/**'
 
 jobs:
   evals:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # TODO: Remove continue-on-error when evals should block PR merge.
+    continue-on-error: true
     # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team.
     # Same pattern as test.yml / test-e2e.yml: VERCEL_TOKEN + team/project IDs; add EVAL_AI_GATEWAY_API_KEY for the agent.
     steps:
