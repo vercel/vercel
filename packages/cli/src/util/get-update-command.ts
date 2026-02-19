@@ -61,6 +61,18 @@ export async function isGlobal() {
       return true;
     }
 
+    if (
+      // Homebrew-managed global npm packages
+      // on Apple Silicon macOS
+      installPath.includes(['', 'homebrew', 'bin', ''].join(sep)) ||
+      // on Intel macOS
+      installPath.includes(['', 'usr', 'local', 'bin', ''].join(sep)) ||
+      // on Linux
+      installPath.includes(['', '.linuxbrew', 'bin', ''].join(sep))
+    ) {
+      return true;
+    }
+
     const prefixPath =
       process.env.PREFIX ||
       process.env.npm_config_prefix ||
