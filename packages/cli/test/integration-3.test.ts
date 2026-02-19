@@ -544,6 +544,7 @@ test('try to deploy non-existing path', async () => {
   // Strip ANSI codes before checking — chalk colors and Node.js
   // deprecation warnings can pollute stderr in CI.
   const plain = stderr.replace(/\u001b\[[0-9;]*m/g, '');
+  expect(plain).toContain(session);
   expect(plain).toContain('is not a valid target directory or subcommand');
 });
 
