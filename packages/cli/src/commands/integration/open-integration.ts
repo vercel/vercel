@@ -73,13 +73,15 @@ export async function openIntegration(
     return 1;
   }
 
+  const configurationId = configuration.id;
+
   // If a resource name is provided, look it up and build SSO link with resource_id
   if (resourceName) {
     const resources = await getResources(client, team.id);
     const resource = resources.find(
       r =>
         r.name === resourceName &&
-        r.product?.integrationConfigurationId === configuration.id
+        r.product?.integrationConfigurationId === configurationId
     );
 
     if (!resource) {
@@ -91,7 +93,7 @@ export async function openIntegration(
 
     const link = buildSSOLink(
       team,
-      configuration.id,
+      configurationId,
       resource.externalResourceId
     );
 
@@ -108,7 +110,7 @@ export async function openIntegration(
   }
 
   // No resource specified — open the integration dashboard
-  const link = buildSSOLink(team, configuration.id);
+  const link = buildSSOLink(team, configurationId);
 
   if (printOnly) {
     output.print(`${link}\n`);
