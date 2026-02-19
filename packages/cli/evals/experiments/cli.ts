@@ -1,10 +1,25 @@
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, readFileSync, readdirSync } from 'fs';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import type { ExperimentConfig } from '@vercel/agent-eval';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, '../../../../skills/vercel-cli');
+
+/** Recursively list all files under dir, returns paths relative to dir. */
+function listSkillFiles(dir: string, baseDir: string = dir): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const e of entries) {
+    const full = join(dir, e.name);
+    if (e.isDirectory()) {
+      files.push(...listSkillFiles(full, baseDir));
+    } else if (e.isFile() && /\.md$/i.test(e.name)) {
+      files.push(relative(baseDir, full));
+    }
+  }
+  return files;
+}
 
 /**
  * CLI evals experiment. Add eval fixtures under evals/ and configure
@@ -35,20 +50,27 @@ const config: ExperimentConfig = {
       (sandbox as any).run ||
       null;
 
+    // Sandbox uses node user (home /home/node). Write auth and env so CLI and agent can authenticate.
     if (runCmd && vercelToken) {
       try {
-        // Export VERCEL_TOKEN and agent detection vars in .bashrc for agent and eval subprocesses
+        // CLI reads auth from ~/.vercel/auth.json (global path). Create it so vercel link --yes works.
+        const authJson = JSON.stringify({ token: vercelToken });
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          `printf 'export VERCEL_TOKEN="%s"\\n' '${vercelToken.replace(/'/g, "'\\''")}' >> /home/vercel-sandbox/.bashrc`,
+          `mkdir -p /home/node/.vercel && printf '%s' '${authJson.replace(/'/g, "'\\''")}' > /home/node/.vercel/auth.json`,
+        ]);
+        // Export in .bashrc for subprocesses (agent shells may source this)
+        await runCmd.call(sandbox, 'bash', [
+          '-c',
+          `printf 'export VERCEL_TOKEN="%s"\\n' '${vercelToken.replace(/'/g, "'\\''")}' >> /home/node/.bashrc`,
         ]);
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          'printf \'export AI_AGENT="claude-code"\\n\' >> /home/vercel-sandbox/.bashrc',
+          'printf \'export AI_AGENT="claude-code"\\n\' >> /home/node/.bashrc',
         ]);
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          'printf \'export CLAUDE_CODE="1"\\n\' >> /home/vercel-sandbox/.bashrc',
+          'printf \'export CLAUDE_CODE="1"\\n\' >> /home/node/.bashrc',
         ]);
       } catch (error: any) {
         // Environment variable setup failed - continue anyway
@@ -84,121 +106,30 @@ const config: ExperimentConfig = {
     }
     // Note: If runCmd is not available, CLI installation will need to happen during eval
 
-    // Read and copy all skill files
+    // Copy all skill files by iterating the skills directory (no hardcoded list)
     const skillFiles: Record<string, string> = {};
-
-    // Main skill file
     try {
-      skillFiles['docs/vercel-cli/SKILL.md'] = readFileSync(
-        join(SKILLS_DIR, 'SKILL.md'),
-        'utf-8'
-      );
-    } catch (error: any) {
-      // Skill file read failed - continue without it
-      void error;
-    }
-
-    // Command file
-    try {
-      skillFiles['docs/vercel-cli/command/vercel.md'] = readFileSync(
-        join(SKILLS_DIR, 'command/vercel.md'),
-        'utf-8'
-      );
-    } catch (error: any) {
-      // Command file read failed - continue without it
-      void error;
-    }
-
-    // Reference files
-    const referenceFiles = [
-      'global-options.md',
-      'environment-variables.md',
-      'ci-automation.md',
-      'deployment.md',
-      'getting-started.md',
-      'local-development.md',
-      'monitoring-and-debugging.md',
-      'projects-and-teams.md',
-      'domains-and-dns.md',
-      'storage.md',
-      'integrations.md',
-      'advanced.md',
-    ];
-
-    for (const file of referenceFiles) {
-      try {
-        skillFiles[`docs/vercel-cli/references/${file}`] = readFileSync(
-          join(SKILLS_DIR, 'references', file),
-          'utf-8'
-        );
-      } catch (error: any) {
-        // Reference file read failed - continue without it
-        void error;
+      if (existsSync(SKILLS_DIR)) {
+        const files = listSkillFiles(SKILLS_DIR);
+        for (const rel of files) {
+          try {
+            const full = join(SKILLS_DIR, rel);
+            skillFiles[`docs/vercel-cli/${rel}`] = readFileSync(full, 'utf-8');
+          } catch (error: any) {
+            void error;
+          }
+        }
       }
+    } catch (error: any) {
+      void error;
     }
 
-    // Create README pointing to documentation
-    skillFiles['docs/README.md'] = `# Vercel CLI Documentation
+    // Short README: point to skill docs and CLI help (rely on built-in CLI behavior)
+    skillFiles['docs/README.md'] = `# Vercel CLI
 
-This directory contains the Vercel CLI skill and reference documentation.
+Docs are in \`docs/vercel-cli/\` (skill + references). Use \`vercel <command> -h\` for help.
 
-## Quick Start
-
-1. **Verify CLI is installed**: Run \`vercel --version\`. If not installed, run \`npm install -g vercel@latest\`
-2. **Verify authentication**: Run \`vercel whoami\` to check if VERCEL_TOKEN is set correctly
-3. **Read the skill**: Check \`docs/vercel-cli/SKILL.md\` for an overview
-4. **Check references**: See \`docs/vercel-cli/references/\` for specific topics:
-   - \`global-options.md\` - Global flags like \`--yes\`, \`--debug\`, \`--non-interactive\`
-   - \`ci-automation.md\` - CI/CD patterns and non-interactive usage (IMPORTANT!)
-   - \`environment-variables.md\` - Managing env vars with \`vercel env\`
-   - \`deployment.md\` - Deployment commands
-   - \`projects-and-teams.md\` - Project linking and team management
-   - \`getting-started.md\` - First-time setup
-
-## Key Points for Non-Interactive Usage (CRITICAL!)
-
-**You are running in a non-interactive environment. Always:**
-
-1. **Use \`--yes\` or \`-y\` flag** to skip all confirmation prompts
-2. **Use \`VERCEL_TOKEN\` environment variable** for authentication (never use \`--token\` flag)
-3. **Link projects non-interactively**: Use \`vercel link --yes --scope <team> --project <project>\` or read from \`evals-setup.json\`
-4. **Run commands from the correct directory**: Commands must be run from directory with \`.vercel/\` folder
-
-## Common Commands
-
-\`\`\`bash
-# Link a project (non-interactive)
-vercel link --yes --scope <team-slug> --project <project-name>
-
-# List environment variables
-vercel env ls
-
-# Build a project
-vercel build
-
-# Deploy (preview)
-vercel --yes
-
-# Deploy (production)
-vercel --prod --yes
-\`\`\`
-
-## Authentication
-
-The \`VERCEL_TOKEN\` environment variable should be set for authentication.
-- Verify with: \`vercel whoami\`
-- If missing, check that VERCEL_TOKEN is set in the environment
-
-## Setup Information
-
-Check \`evals-setup.json\` for team and project IDs that may be needed for linking.
-
-## Getting Help
-
-- \`vercel <command> -h\` - Show help for any command
-- \`vercel --help\` - Show general help
-- \`vercel <command> --help\` - Show detailed help for a command
-`;
+Non-interactive: use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.`;
 
     // Write all files
     await sandbox.writeFiles({
