@@ -234,7 +234,7 @@ export const discoverSubcommand = {
     },
     {
       name: 'Discover marketplace integrations as JSON',
-      value: [`${packageName} integration discover --json`],
+      value: [`${packageName} integration discover --format=json`],
     },
   ],
 } as const;
