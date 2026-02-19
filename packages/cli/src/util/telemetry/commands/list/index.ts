@@ -6,6 +6,12 @@ export class ListTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof listCommand>
 {
+  trackCliFlagAll(all: boolean | undefined) {
+    if (all) {
+      this.trackCliFlag('all');
+    }
+  }
+
   trackCliOptionMeta(meta: string[] | undefined) {
     if (meta && meta.length > 0) {
       this.trackCliOption({
