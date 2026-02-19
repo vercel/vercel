@@ -45,7 +45,9 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
     );
   }
 
-  await installRustToolchain();
+  if (process.env.VERCEL_FORCE_DL_RUST_TOOLCHAIN) {
+    await installRustToolchain();
+  }
 
   debug('Creating file system');
   const downloadedFiles = await download(files, workPath, meta);
