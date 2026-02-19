@@ -34,6 +34,7 @@
     "@types/node": "20.11.0",
     "@types/which": "3.0.0",
     "@vercel/build-utils": "workspace:*",
+    "@vercel/python-runtime": "workspace:*",
     "@vercel/error-utils": "workspace:*",
     "cross-env": "7.0.3",
     "execa": "^1.0.0",
