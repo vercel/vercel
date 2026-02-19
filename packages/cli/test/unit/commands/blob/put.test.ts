@@ -39,6 +39,7 @@ describe('blob put', () => {
       pathname: 'uploaded-file.txt',
       contentType: 'text/plain',
       contentDisposition: 'attachment; filename="uploaded-file.txt"',
+      etag: 'test-etag',
     });
   });
 
@@ -61,6 +62,7 @@ describe('blob put', () => {
           contentType: undefined,
           cacheControlMaxAge: undefined,
           allowOverwrite: false,
+          ifMatch: undefined,
         }
       );
       expect(mockedOutput.debug).toHaveBeenCalledWith('Uploading blob');
@@ -124,6 +126,7 @@ describe('blob put', () => {
           contentType: 'text/plain',
           cacheControlMaxAge: 3600,
           allowOverwrite: true,
+          ifMatch: undefined,
         }
       );
 
@@ -175,6 +178,7 @@ describe('blob put', () => {
           contentType: undefined,
           cacheControlMaxAge: undefined,
           allowOverwrite: false,
+          ifMatch: undefined,
         }
       );
     });
@@ -326,6 +330,96 @@ describe('blob put', () => {
         'test-file.txt',
         expect.any(ReadStream),
         expect.objectContaining({ allowOverwrite: true })
+      );
+    });
+
+    it('should handle --access private option', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--access', 'private', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ access: 'private' })
+      );
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:pathToFile',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'private',
+        },
+      ]);
+    });
+
+    it('should handle --allow-overwrite flag', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--allow-overwrite', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ allowOverwrite: true })
+      );
+    });
+
+    it('should show deprecation warning when --force is used', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(client, ['--force', testFile], testToken);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.warn).toHaveBeenCalledWith(
+        '--force is deprecated, use --allow-overwrite instead'
+      );
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ allowOverwrite: true })
+      );
+    });
+
+    it('should prefer --allow-overwrite over --force', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--allow-overwrite', '--force', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ allowOverwrite: true })
+      );
+    });
+
+    it('should handle --if-match option', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(
+        client,
+        ['--if-match', '"some-etag"', testFile],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'test-file.txt',
+        expect.any(ReadStream),
+        expect.objectContaining({ ifMatch: '"some-etag"' })
       );
     });
 
@@ -498,6 +592,7 @@ describe('blob put', () => {
           contentType: undefined,
           cacheControlMaxAge: undefined,
           allowOverwrite: false,
+          ifMatch: undefined,
         }
       );
       expect(mockedOutput.success).toHaveBeenCalledWith(
@@ -544,6 +639,7 @@ describe('blob put', () => {
           contentType: 'text/plain',
           cacheControlMaxAge: 3600,
           allowOverwrite: true,
+          ifMatch: undefined,
         }
       );
     });

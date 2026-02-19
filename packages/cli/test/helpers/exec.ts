@@ -34,9 +34,10 @@ export function execCli(
   combinedOptions.env = combinedOptions.env ?? {};
 
   // Force color to be off. We can test color in unit tests.
+  // Explicitly set FORCE_COLOR=0 to override CI's FORCE_COLOR=1,
+  // which takes precedence over NO_COLOR in chalk.
   combinedOptions.env['NO_COLOR'] = '1';
-  delete combinedOptions.env['FORCE_COLOR'];
-  delete process.env['FORCE_COLOR']; // this is inherited by execa
+  combinedOptions.env['FORCE_COLOR'] = '0';
 
   return execa(file, args, combinedOptions);
 }
