@@ -331,7 +331,7 @@ describe('FastAPI Middleware', () => {
           fixturePath,
           '.vercel',
           'python',
-          'vc_init_dev_asgi.py'
+          'vc_init_dev.py'
         );
         const shimExists = await fs.pathExists(shimPath);
         expect(shimExists).toBe(true);
