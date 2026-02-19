@@ -121,7 +121,7 @@ def get_project_source_root() -> pathlib.Path | None:
 def find_project_root() -> pathlib.Path:
     """Find the vercel-runtime project root directory."""
     if gh_checkout := os.environ.get("GITHUB_WORKSPACE"):
-        return pathlib.Path(gh_checkout)
+        return pathlib.Path(gh_checkout) / "python" / "vercel-runtime"
     elif src_root := get_project_source_root():
         return src_root
     else:
