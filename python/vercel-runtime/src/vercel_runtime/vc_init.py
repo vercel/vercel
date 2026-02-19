@@ -392,22 +392,36 @@ if "VERCEL_IPC_PATH" in os.environ:
 
         setup_logging(send_message, storage)
 
+
 # Runtime dependency installation for large Lambda functions
 # The _uv directory is at the Lambda root, two levels up from this file
 # (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
-_lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
-_uv_dir = os.path.join(_lambda_root, "_uv")
-_runtime_reqs = os.path.join(_uv_dir, "_runtime_requirements.txt")
+lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
+_uv_dir = os.path.join(lambda_root, "_uv")
+_runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
 
-if os.path.exists(_runtime_reqs):
+if os.path.exists(_runtime_config_path):
+    # Ensure writable config dir for libraries like Matplotlib on Lambda.
+    os.environ.setdefault("MPLCONFIGDIR", "/tmp")
+
     import site
     import subprocess
 
-    _deps_dir = "/tmp/_vc_deps_overflow"
+    with open(_runtime_config_path) as runtime_config_file:
+        _config = json.load(runtime_config_file)
+    _project_dir = os.path.join(lambda_root, _config["projectDir"])
+
+    _deps_dir = "/tmp/_vc_deps"
+    _site_packages = os.path.join(
+        _deps_dir,
+        "lib",
+        f"python{sys.version_info.major}.{sys.version_info.minor}",
+        "site-packages",
+    )
     _marker = os.path.join(_deps_dir, ".installed")
 
     if not os.path.exists(_marker):
-        # Cold start: install dependencies using bundled uv
+        # Cold start: install public dependencies using bundled uv
         _uv_path = os.path.join(_uv_dir, "uv")
 
         _stderr("Installing runtime dependencies...")
@@ -415,21 +429,44 @@ if os.path.exists(_runtime_reqs):
 
         try:
             os.makedirs(_deps_dir, exist_ok=True)
-            _result = subprocess.run(
-                [
-                    _uv_path,
-                    "pip",
-                    "install",
-                    "--no-cache",
-                    "--no-config",
-                    "--only-binary=:all:",
-                    "--target",
-                    _deps_dir,
-                    "-r",
-                    _runtime_reqs,
-                ],
+
+            # Create a minimal PEP 405 venv skeleton for uv sync.
+            # Writing pyvenv.cfg directly avoids spawning a subprocess.
+            os.makedirs(_site_packages, exist_ok=True)
+            with open(os.path.join(_deps_dir, "pyvenv.cfg"), "w") as _f:
+                _f.write(f"home = {os.path.dirname(sys.executable)}\n")
+                _f.write("include-system-site-packages = false\n")
+
+            # Use uv sync --inexact --frozen to install only the
+            # missing public packages. --inexact avoids removing
+            # packages already present in _vendor (bundled deps).
+            _sync_cmd = [
+                _uv_path,
+                "sync",
+                "--inexact",
+                "--active",
+                "--frozen",
+                "--no-dev",
+                "--no-editable",
+                "--no-install-project",
+                "--no-build",
+                "--no-cache",
+                "--no-progress",
+                "--link-mode",
+                "copy",
+            ]
+            for _pkg in _config.get("bundledPackages", []):
+                _sync_cmd.extend(["--no-install-package", _pkg])
+            subprocess.run(
+                _sync_cmd,
                 check=True,
                 text=True,
+                cwd=_project_dir,
+                env={
+                    "PATH": os.environ.get("PATH", ""),
+                    "VIRTUAL_ENV": _deps_dir,
+                    "UV_PYTHON_DOWNLOADS": "never",
+                },
             )
             _install_duration = time.time() - _install_start
             _stderr(
@@ -453,15 +490,15 @@ if os.path.exists(_runtime_reqs):
         _stderr("Using cached runtime dependencies")
 
     # Add runtime-installed deps to path (must come before user code import)
-    if os.path.isdir(_deps_dir):
-        site.addsitedir(_deps_dir)
+    if os.path.isdir(_site_packages):
+        site.addsitedir(_site_packages)
         # Move to front of path so these packages take precedence
         try:
-            while _deps_dir in sys.path:
-                sys.path.remove(_deps_dir)
+            while _site_packages in sys.path:
+                sys.path.remove(_site_packages)
         except ValueError:
             pass
-        sys.path.insert(0, _deps_dir)
+        sys.path.insert(0, _site_packages)
 
 # Import relative path
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
@@ -756,6 +793,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method = getattr(self, mname)
                 method()
                 self.wfile.flush()
+
     elif "app" in __vc_variables or "application" in __vc_variables:
         app = getattr(
             __vc_module, "app", getattr(__vc_module, "application", None)
@@ -830,6 +868,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                     finally:
                         if hasattr(response, "close"):
                             response.close()
+
         else:
             # ASGI: Run with Uvicorn for proper lifespan
             # and protocol handling
@@ -1062,6 +1101,7 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 return_dict["encoding"] = "base64"
 
             return return_dict
+
     else:
         _stderr("using Asynchronous Server Gateway Interface (ASGI)")
         # Originally authored by Jordan Eremieff and included under MIT license:
