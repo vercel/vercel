@@ -34,7 +34,10 @@ export async function getWorkspaces({
   if (workspaceType === null) {
     const directoryContents = await fs.readdir('./');
     const childDirectories = directoryContents.filter(
-      stat => stat.type === 'dir'
+      stat =>
+        stat.type === 'dir' &&
+        // Skip `node_modules` directory as we don't want to detect workspaces there.
+        stat.name !== 'node_modules'
     );
 
     return (
