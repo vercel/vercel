@@ -51,7 +51,7 @@ export async function injectPlugins(
     process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
     plugins.add('@vercel/gatsby-plugin-vercel-analytics');
     console.warn(
-      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrade-to-speed-insights-package'
     );
   }
 
