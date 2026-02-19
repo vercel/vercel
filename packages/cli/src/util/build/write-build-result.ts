@@ -121,7 +121,7 @@ function isEdgeFunction(v: any): v is EdgeFunction {
   return v?.type === 'EdgeFunction';
 }
 
-function isLambda(v: any): v is Lambda {
+export function isLambda(v: any): v is Lambda {
   return v?.type === 'Lambda';
 }
 

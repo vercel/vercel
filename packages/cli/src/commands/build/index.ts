@@ -67,6 +67,7 @@ import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
+  isLambda,
   type PathOverride,
 } from '../../util/build/write-build-result';
 import type Client from '../../util/client';
@@ -1754,13 +1755,13 @@ function attachWorkerServiceTrigger(
     consumer: service.consumer || 'default',
   };
 
-  if (isLambdaLike(buildOutput)) {
+  if (isLambda(buildOutput)) {
     appendWorkerTrigger(buildOutput, trigger);
     return;
   }
 
   for (const output of Object.values(buildOutput)) {
-    if (isLambdaLike(output)) {
+    if (isLambda(output)) {
       appendWorkerTrigger(output, trigger);
     }
   }
@@ -1779,13 +1780,4 @@ function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
   if (!alreadyConfigured) {
     lambda.experimentalTriggers = [...existingTriggers, trigger];
   }
-}
-
-function isLambdaLike(value: unknown): value is Lambda {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      'type' in value &&
-      (value as { type?: unknown }).type === 'Lambda'
-  );
 }
