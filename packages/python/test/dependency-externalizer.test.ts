@@ -9,11 +9,11 @@ import {
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
-} from '../src/runtime-dep-install';
+} from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
 
-describe('runtime dependency installation support', () => {
+describe('dependency externalizer support', () => {
   describe('shouldEnableRuntimeInstall', () => {
     const originalEnv = process.env.VERCEL_PYTHON_ON_HIVE;
 

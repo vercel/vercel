@@ -29,7 +29,7 @@ export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
-interface RuntimeDependencyInstallOptions {
+interface PythonDependencyExternalizerOptions {
   venvPath: string;
   vendorDir: string;
   workPath: string;
@@ -40,7 +40,7 @@ interface RuntimeDependencyInstallOptions {
   pythonPath: string;
 }
 
-export class RuntimeDependencyInstall {
+export class PythonDependencyExternalizer {
   private venvPath: string;
   private vendorDir: string;
   private workPath: string;
@@ -55,7 +55,7 @@ export class RuntimeDependencyInstall {
   private totalBundleSize: number = 0;
   private analyzed = false;
 
-  constructor(options: RuntimeDependencyInstallOptions) {
+  constructor(options: PythonDependencyExternalizerOptions) {
     this.venvPath = options.venvPath;
     this.vendorDir = options.vendorDir;
     this.workPath = options.workPath;
@@ -229,10 +229,10 @@ export class RuntimeDependencyInstall {
       'vercel-runtime',
       'vercel_runtime',
     ];
-    const alwaysBundledFiles = await mirrorPrivatePackagesIntoVendor({
+    const alwaysBundledFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
-      privatePackages: alwaysBundled,
+      includePackages: alwaysBundled,
     });
 
     const baseFiles: Files = { ...files };
@@ -276,10 +276,10 @@ export class RuntimeDependencyInstall {
 
     // Mirror the selected packages (always-bundled + knapsack-selected public)
     const allBundledPackages = [...alwaysBundled, ...bundledPublic];
-    const selectedVendorFiles = await mirrorSelectedPackagesIntoVendor({
+    const selectedVendorFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
-      selectedPackages: allBundledPackages,
+      includePackages: allBundledPackages,
     });
 
     for (const [p, f] of Object.entries(selectedVendorFiles)) {
@@ -391,6 +391,9 @@ export function shouldEnableRuntimeInstall({
   return false;
 }
 
+/**
+ * Mirror all packages from site-packages into the _vendor directory.
+ */
 export async function mirrorSitePackagesIntoVendor({
   venvPath,
   vendorDirName,
@@ -398,40 +401,70 @@ export async function mirrorSitePackagesIntoVendor({
   venvPath: string;
   vendorDirName: string;
 }): Promise<Files> {
-  const vendorFiles: Files = {};
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
+  return mirrorPackagesIntoVendor({ venvPath, vendorDirName });
+}
 
-      const resolvedDir = resolve(dir);
-      const dirPrefix = resolvedDir + sep;
-      const distributions = await scanDistributions(dir);
-      for (const dist of distributions.values()) {
-        for (const { path: rawPath } of dist.files) {
-          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
-          const filePath = rawPath.replaceAll('/', sep);
-          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
-          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
-            continue;
-          }
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
-            continue;
-          }
-          const srcFsPath = join(dir, filePath);
-          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
-          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-        }
-      }
-    }
-  } catch (err) {
-    console.log('Failed to collect site-packages from virtual environment');
-    throw err;
+/**
+ * Mirror packages from site-packages into the _vendor directory.
+ *
+ * When `includePackages` is provided, only distributions whose normalized
+ * name is in the list are included.  When omitted, every distribution is
+ * included.
+ */
+async function mirrorPackagesIntoVendor({
+  venvPath,
+  vendorDirName,
+  includePackages,
+}: {
+  venvPath: string;
+  vendorDirName: string;
+  includePackages?: string[];
+}): Promise<Files> {
+  const vendorFiles: Files = {};
+
+  if (includePackages && includePackages.length === 0) {
+    return vendorFiles;
   }
 
+  const includeSet = includePackages
+    ? new Set(includePackages.map(normalizePackageName))
+    : null;
+
+  const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+  for (const dir of sitePackageDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    const resolvedDir = resolve(dir);
+    const dirPrefix = resolvedDir + sep;
+    const distributions = await scanDistributions(dir);
+
+    for (const [name, dist] of distributions) {
+      if (includeSet && !includeSet.has(name)) continue;
+
+      for (const { path: rawPath } of dist.files) {
+        // Normalize forward slashes from RECORD (PEP 376) to platform separators.
+        const filePath = rawPath.replaceAll('/', sep);
+        // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
+        if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
+          continue;
+        }
+        if (
+          filePath.endsWith('.pyc') ||
+          filePath.split(sep).includes('__pycache__')
+        ) {
+          continue;
+        }
+        const srcFsPath = join(dir, filePath);
+        const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
+        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+      }
+    }
+  }
+
+  debug(
+    `Mirrored ${Object.keys(vendorFiles).length} files` +
+      (includePackages ? ` from ${includePackages.length} packages` : '')
+  );
   return vendorFiles;
 }
 
@@ -464,70 +497,7 @@ export async function calculateBundleSize(files: Files): Promise<number> {
 }
 
 /**
- * Mirror only private packages from site-packages into the _vendor directory.
- */
-async function mirrorPrivatePackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-  privatePackages,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-  privatePackages: string[];
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-
-  if (privatePackages.length === 0) {
-    debug('No private packages to bundle');
-    return vendorFiles;
-  }
-
-  const privatePackageSet = new Set(privatePackages.map(normalizePackageName));
-
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const resolvedDir = resolve(dir);
-      const dirPrefix = resolvedDir + sep;
-      const distributions = await scanDistributions(dir);
-      for (const [name, dist] of distributions) {
-        if (!privatePackageSet.has(name)) continue;
-
-        for (const { path: rawPath } of dist.files) {
-          // Normalize forward slashes from RECORD (PEP 376) to platform separators.
-          const filePath = rawPath.replaceAll('/', sep);
-          // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
-          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
-            continue;
-          }
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
-            continue;
-          }
-          const srcFsPath = join(dir, filePath);
-          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
-          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-        }
-      }
-    }
-
-    debug(
-      `Bundled ${Object.keys(vendorFiles).length} files from private packages`
-    );
-  } catch (err) {
-    console.log('Failed to collect private packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
-}
-
-/**
- * Greedy largest-first knapsack packing algorithm.
+ * Largest-first knapsack packing algorithm.
  *
  * Given a map of package names to sizes (in bytes) and a capacity,
  * selects packages to bundle into the Lambda zip to fill as much of
@@ -607,65 +577,4 @@ async function calculatePerPackageSizes(
   }
 
   return sizes;
-}
-
-/**
- * Mirror a specific set of packages from site-packages into the _vendor directory.
- */
-async function mirrorSelectedPackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-  selectedPackages,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-  selectedPackages: string[];
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-
-  if (selectedPackages.length === 0) {
-    debug('No packages to bundle');
-    return vendorFiles;
-  }
-
-  const packageSet = new Set(selectedPackages.map(normalizePackageName));
-
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const resolvedDir = resolve(dir);
-      const dirPrefix = resolvedDir + sep;
-      const distributions = await scanDistributions(dir);
-      for (const [name, dist] of distributions) {
-        if (!packageSet.has(name)) continue;
-
-        for (const { path: rawPath } of dist.files) {
-          const filePath = rawPath.replaceAll('/', sep);
-          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
-            continue;
-          }
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
-            continue;
-          }
-          const srcFsPath = join(dir, filePath);
-          const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
-          vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-        }
-      }
-    }
-
-    debug(
-      `Bundled ${Object.keys(vendorFiles).length} files from ${selectedPackages.length} packages`
-    );
-  } catch (err) {
-    console.log('Failed to collect packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
 }

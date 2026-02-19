@@ -27,7 +27,7 @@ import {
   installRequirementsFile,
   installRequirement,
 } from './install';
-import { RuntimeDependencyInstall } from './runtime-dep-install';
+import { PythonDependencyExternalizer } from './dependency-externalizer';
 import { detectInstallSource } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
@@ -527,7 +527,7 @@ from vercel_runtime.vc_init import vc_handler
   const files: Files = await glob('**', globOptions);
 
   // Bundle dependencies, using runtime installation for oversized bundles
-  const runtimeDepInstall = new RuntimeDependencyInstall({
+  const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
     vendorDir,
     workPath,
@@ -539,10 +539,10 @@ from vercel_runtime.vc_init import vc_handler
   });
 
   const { overLambdaLimit, allVendorFiles } =
-    await runtimeDepInstall.analyze(files);
+    await depExternalizer.analyze(files);
 
   if (overLambdaLimit) {
-    await runtimeDepInstall.generateBundle(files);
+    await depExternalizer.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation
     for (const [p, f] of Object.entries(allVendorFiles)) {
