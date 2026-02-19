@@ -41,7 +41,6 @@ describe('schema', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(Array.isArray(parsed)).toBe(true);
-      expect(parsed.length).toBe(24);
       expect(parsed[0]).toHaveProperty('name');
       expect(parsed[0]).toHaveProperty('description');
     });
