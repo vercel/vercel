@@ -1,0 +1,41 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "nextjs",
+      "workspace": "apps/web",
+      "routePrefix": "/"
+    },
+    "dashboard": {
+      "framework": "nextjs",
+      "workspace": "apps/dashboard",
+      "routePrefix": "/dashboard"
+    },
+    "go-api": {
+      "workspace": "services/go-api",
+      "entrypoint": "index.go",
+      "routePrefix": "/api/go"
+    },
+    "py-api": {
+      "framework": "flask",
+      "workspace": "services/py-api",
+      "entrypoint": "index.py",
+      "routePrefix": "/api/py"
+    },
+    "js-api": {
+      "framework": "express",
+      "workspace": "services/js-api",
+      "entrypoint": "index.js",
+      "routePrefix": "/api/js"
+    },
+    "rb-api": {
+      "workspace": "services/rb-api",
+      "runtime": "ruby",
+      "entrypoint": "config.ru",
+      "routePrefix": "/api/rb"
+    }
+  }
+}

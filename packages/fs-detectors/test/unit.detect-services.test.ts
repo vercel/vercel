@@ -196,6 +196,163 @@ describe('detectServices', () => {
       expect(result.services[0].workspace).toBe('.');
     });
 
+    it('should infer Go workspace from nearest go.mod when workspace is omitted', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'go-api': {
+              entrypoint: 'services/go-api/main.go',
+              routePrefix: '/go-api',
+            },
+          },
+        }),
+        'services/go-api/go.mod': 'module go-api',
+        'services/go-api/main.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'go-api',
+        workspace: 'services/go-api',
+        entrypoint: 'main.go',
+      });
+      expect(result.services[0].builder.src).toBe('services/go-api/main.go');
+      expect(result.services[0].builder.config).toMatchObject({
+        workspace: 'services/go-api',
+      });
+    });
+
+    it.each([
+      ['pyproject.toml', '[project]\nname = "fastapi-api"\n'],
+      ['requirements.txt', 'fastapi\n'],
+      ['Pipfile', '[packages]\nfastapi = "*"\n'],
+      ['pylock.yml', 'lock-version: "1.0"\n'],
+      ['uv.lock', 'version = 1\n'],
+    ])(
+      'should infer Python workspace from nearest %s when workspace is omitted',
+      async (manifestFilename, manifestContents) => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              'fastapi-api': {
+                framework: 'fastapi',
+                entrypoint: 'services/fastapi-api/main.py',
+                routePrefix: '/fastapi-api',
+              },
+            },
+          }),
+          [`services/fastapi-api/${manifestFilename}`]: manifestContents,
+          'services/fastapi-api/main.py': 'from fastapi import FastAPI',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.services).toHaveLength(1);
+        expect(result.services[0]).toMatchObject({
+          name: 'fastapi-api',
+          workspace: 'services/fastapi-api',
+          entrypoint: 'main.py',
+        });
+        expect(result.services[0].builder.src).toBe(
+          'services/fastapi-api/main.py'
+        );
+        expect(result.services[0].builder.config).toMatchObject({
+          workspace: 'services/fastapi-api',
+        });
+      }
+    );
+
+    it('should infer Ruby workspace from nearest Gemfile when workspace is omitted', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'ruby-api': {
+              entrypoint: 'services/ruby-api/config.ru',
+              routePrefix: '/ruby-api',
+            },
+          },
+        }),
+        'services/ruby-api/Gemfile': 'source "https://rubygems.org"',
+        'services/ruby-api/config.ru': 'run Sinatra::Application',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'ruby-api',
+        workspace: 'services/ruby-api',
+        entrypoint: 'config.ru',
+      });
+      expect(result.services[0].builder.src).toBe(
+        'services/ruby-api/config.ru'
+      );
+      expect(result.services[0].builder.config).toMatchObject({
+        workspace: 'services/ruby-api',
+      });
+    });
+
+    it('should infer Rust workspace from nearest Cargo.toml when workspace is omitted', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'rust-api': {
+              entrypoint: 'services/rust-api/src/main.rs',
+              routePrefix: '/rust-api',
+            },
+          },
+        }),
+        'services/rust-api/Cargo.toml':
+          '[package]\nname = "rust-api"\nversion = "0.1.0"\n',
+        'services/rust-api/src/main.rs': 'fn main() {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'rust-api',
+        workspace: 'services/rust-api',
+        entrypoint: 'src/main.rs',
+      });
+      expect(result.services[0].builder.src).toBe(
+        'services/rust-api/src/main.rs'
+      );
+      expect(result.services[0].builder.config).toMatchObject({
+        workspace: 'services/rust-api',
+      });
+    });
+
+    it('should prefer explicitly configured workspace over inferred manifest workspace', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              workspace: 'apps/api',
+              entrypoint: 'src/main.py',
+              framework: 'fastapi',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        // Should be ignored because workspace is explicitly configured.
+        'services/fastapi-api/pyproject.toml':
+          '[project]\nname = "fastapi-api"\n',
+        'apps/api/src/main.py': 'from fastapi import FastAPI',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        workspace: 'apps/api',
+        entrypoint: 'src/main.py',
+      });
+      expect(result.services[0].builder.src).toBe('apps/api/src/main.py');
+    });
+
     it('should default topic and consumer to "default" for workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -285,6 +442,30 @@ describe('detectServices', () => {
       expect(result.errors[0].code).toBe('MISSING_ROUTE_PREFIX');
       expect(result.errors[0].serviceName).toBe('api');
     });
+
+    it.each(['/_svc', '/_svc/api'])(
+      'should error when web service uses reserved internal routePrefix "%s"',
+      async routePrefix => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              api: {
+                entrypoint: 'api/index.ts',
+                routePrefix,
+              },
+            },
+          }),
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.services).toEqual([]);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'RESERVED_ROUTE_PREFIX',
+          serviceName: 'api',
+        });
+      }
+    );
 
     it('should error when two web services share normalized routePrefix', async () => {
       const fs = new VirtualFilesystem({
@@ -508,9 +689,51 @@ describe('detectServices', () => {
       // Prefixed static service gets SPA fallback in rewrites
       expect(result.routes.rewrites).toHaveLength(1);
       expect(result.routes.rewrites[0]).toEqual({
-        src: '^/admin(?:/.*)?$',
+        src: '^(?=/admin(?:/|$))(?:/admin(?:/.*)?$)',
         dest: '/admin/index.html',
       });
+    });
+
+    it('should scope parent static fallback so descendant service prefixes are excluded', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            dashboard: {
+              framework: 'vite',
+              routePrefix: '/dashboard',
+            },
+            'dashboard-api': {
+              entrypoint: 'services/dashboard-api/index.go',
+              routePrefix: '/dashboard/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+      expect(result.errors).toEqual([]);
+
+      const staticRoute = result.routes.rewrites.find(
+        (route): route is Route & { src: string; dest: string } =>
+          'src' in route &&
+          typeof route.src === 'string' &&
+          'dest' in route &&
+          route.dest === '/dashboard/index.html'
+      );
+      expect(staticRoute).toBeDefined();
+
+      const staticRegex = new RegExp(staticRoute!.src);
+      expect(staticRegex.test('/dashboard')).toBe(true);
+      expect(staticRegex.test('/dashboard/settings')).toBe(true);
+      expect(staticRegex.test('/dashboard/api')).toBe(false);
+      expect(staticRegex.test('/dashboard/api/ping')).toBe(false);
+
+      const apiRoute = findMatchingRoute(
+        result.routes.rewrites,
+        '/dashboard/api/ping'
+      );
+      expect(apiRoute).toBeDefined();
+      expect(apiRoute!.dest).toBe('/_svc/dashboard-api/index');
+      expect(apiRoute).toHaveProperty('check', true);
     });
 
     it('should pass routePrefix in builder config for static services', async () => {
@@ -593,20 +816,22 @@ describe('detectServices', () => {
       // Function service and prefixed static service get rewrites
       expect(result.routes.rewrites).toHaveLength(2);
       expect(result.routes.rewrites).toContainEqual({
-        src: '^/api(?:/.*)?$',
-        dest: '/api/index',
+        src: '^(?=/api(?:/|$))(?:/api(?:/.*)?$)',
+        dest: '/_svc/gin-api/index',
         check: true,
       });
       expect(result.routes.rewrites).toContainEqual({
-        src: '^/admin(?:/.*)?$',
+        src: '^(?=/admin(?:/|$))(?:/admin(?:/.*)?$)',
         dest: '/admin/index.html',
       });
 
-      // Root static service gets filesystem + SPA fallback in defaults
+      // Root static service gets filesystem + SPA fallback in defaults.
+      // The SPA catch-all excludes prefixes owned by other services
+      // so they fall through to their own route tables (e.g. error phases).
       expect(result.routes.defaults).toHaveLength(2);
       expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
       expect(result.routes.defaults).toContainEqual({
-        src: '/(.*)',
+        src: '^(?!/admin(?:/|$))(?!/api(?:/|$))(?:/(.*))',
         dest: '/index.html',
       });
     });
@@ -757,7 +982,7 @@ describe('detectServices', () => {
       ])('should match "%s" to gin-api function rewrite', pathname => {
         const match = findMatchingRoute(rewrites, pathname);
         expect(match).toBeDefined();
-        expect(match!.dest).toBe('/services/gin-api/index');
+        expect(match!.dest).toBe('/_svc/gin-api/index');
         expect(match!).toHaveProperty('check', true);
       });
 
@@ -769,7 +994,7 @@ describe('detectServices', () => {
       ])('should match "%s" to fastapi-api function rewrite', pathname => {
         const match = findMatchingRoute(rewrites, pathname);
         expect(match).toBeDefined();
-        expect(match!.dest).toBe('/services/fastapi-api/main');
+        expect(match!.dest).toBe('/_svc/fastapi-api/index');
         expect(match!).toHaveProperty('check', true);
       });
     });

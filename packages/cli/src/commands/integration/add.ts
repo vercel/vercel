@@ -8,15 +8,19 @@ import indent from '../../util/output/indent';
 import {
   getLinkedProjectField,
   postProvisionSetup,
+  VALID_ENVIRONMENTS,
+  validateEnvironments,
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import type {
+  AcceptedPolicies,
   BillingPlan,
   Integration,
   IntegrationInstallation,
   IntegrationProduct,
   Metadata,
 } from '../../util/integration/types';
+import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
@@ -36,16 +40,23 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
-export type AddOptions = PostProvisionOptions;
+import type { IntegrationAddFlags } from './command';
+
+type AddOptions = PostProvisionOptions;
 
 export async function add(
   client: Client,
   args: string[],
-  resourceNameArg?: string,
-  metadataFlags?: string[],
-  billingPlanId?: string,
-  options: AddOptions = {}
+  flags: IntegrationAddFlags
 ) {
+  const resourceNameArg = flags['--name'];
+  const metadataFlags = flags['--metadata'];
+  const billingPlanId = flags['--plan'];
+  const options: AddOptions = {
+    noConnect: flags['--no-connect'],
+    noEnvPull: flags['--no-env-pull'],
+    environments: flags['--environment'],
+  };
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
     return 1;
@@ -75,6 +86,17 @@ export async function add(
     integrationSlug = rawArg;
   }
 
+  // Validate --environment values early (before any network requests)
+  if (options.environments?.length) {
+    const envValidation = validateEnvironments(options.environments);
+    if (!envValidation.valid) {
+      output.error(
+        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
+      );
+      return 1;
+    }
+  }
+
   // Note: Resource name validation happens after product selection
   // to apply product-specific validation rules
 
@@ -86,6 +108,7 @@ export async function add(
       billingPlanId,
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
+      environments: options.environments,
     });
   }
 
@@ -99,6 +122,7 @@ export async function add(
   telemetry.trackCliOptionPlan(billingPlanId);
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
+  telemetry.trackCliOptionEnvironment(options.environments);
 
   const { contextName, team } = await getScope(client);
 
@@ -146,7 +170,7 @@ export async function add(
 
   if (installationsResult.status === 'rejected') {
     output.error(
-      `Failed to get integration installations: ${installationsResult.reason}`
+      `Failed to get integration installations: ${(installationsResult.reason as Error).message}`
     );
     return 1;
   }
@@ -166,7 +190,7 @@ export async function add(
     return 1;
   }
 
-  const installation = teamInstallations[0] as
+  let installation = teamInstallations[0] as
     | IntegrationInstallation
     | undefined;
 
@@ -201,14 +225,35 @@ export async function add(
     parsedMetadata = parsed;
   }
 
-  // The provisioning via cli is possible when
-  // 1. The integration was installed once (terms have been accepted)
-  // 2. EITHER metadata is provided via flags OR wizard is supported
-  // 3. The selected billing plan is supported (handled at time of billing plan selection)
-  const provisionResourceViaCLIIsSupported =
-    installation && (parsedMetadata || metadataWizard.isSupported);
+  // Handle missing installation — prompt for terms and install
+  if (!installation) {
+    const acceptedPolicies = await promptForTermAcceptance(client, integration);
+    if (!acceptedPolicies) {
+      return 1;
+    }
+    let installResult;
+    try {
+      installResult = await installMarketplaceIntegration(
+        client,
+        integration.id,
+        acceptedPolicies
+      );
+    } catch (error) {
+      output.error(
+        `Failed to install integration: ${(error as Error).message}`
+      );
+      return 1;
+    }
+    installation = {
+      id: installResult.id,
+      integrationId: integration.id,
+      installationType: 'marketplace',
+      ownerId: team.id,
+    };
+  }
 
-  if (!provisionResourceViaCLIIsSupported) {
+  // Check if CLI provisioning is possible (metadata-wise)
+  if (!(parsedMetadata || metadataWizard.isSupported)) {
     const projectLink = await getLinkedProjectField(
       client,
       options.noConnect,
@@ -219,9 +264,7 @@ export async function add(
     }
 
     const openInWeb = await client.input.confirm(
-      !installation
-        ? 'Terms have not been accepted. Open Vercel Dashboard?'
-        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
+      'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
       true
     );
 
@@ -237,7 +280,7 @@ export async function add(
       );
     }
 
-    return 0;
+    return 1;
   }
 
   return await provisionResourceViaCLI(
@@ -284,7 +327,24 @@ function provisionResourceViaWebUI(
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   output.debug(`Opening URL: ${url.href}`);
-  open(url.href);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
+}
+
+async function installMarketplaceIntegration(
+  client: Client,
+  integrationId: string,
+  acceptedPolicies: AcceptedPolicies
+): Promise<{ id: string }> {
+  return await client.fetch<{ id: string }>(
+    `/v2/integrations/integration/${encodeURIComponent(integrationId)}/marketplace/install`,
+    {
+      method: 'POST',
+      json: true,
+      body: { acceptedPolicies, source: 'cli' },
+    }
+  );
 }
 
 async function provisionResourceViaCLI(
@@ -401,7 +461,7 @@ async function provisionResourceViaCLI(
       );
     }
 
-    return 0;
+    return 1;
   }
 
   const confirmed = await confirmProductSelection(
@@ -618,7 +678,9 @@ function handleManualVerificationAction(
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   output.debug(`Opening URL: ${url.href}`);
-  open(url.href);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
 }
 
 async function provisionStorageProduct(
@@ -653,7 +715,9 @@ async function provisionStorageProduct(
   } finally {
     output.stopSpinner();
   }
-  output.log(`${product.name} successfully provisioned: ${chalk.bold(name)}`);
+  output.success(
+    `${product.name} successfully provisioned: ${chalk.bold(name)}`
+  );
 
   return postProvisionSetup(client, name, storeId, contextName, options);
 }

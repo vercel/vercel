@@ -1,0 +1,8 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy and install the packed tarball
+COPY vercel-*.tgz /app/
+RUN npm install -g /app/vercel-*.tgz
+
+CMD ["sh"]

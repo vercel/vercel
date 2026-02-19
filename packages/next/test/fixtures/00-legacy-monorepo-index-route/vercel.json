@@ -38,5 +38,8 @@
       "status": 200,
       "mustContain": "blog slug page"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

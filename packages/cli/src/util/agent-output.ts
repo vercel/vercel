@@ -100,10 +100,12 @@ export function enrichActionRequiredWithInvokingCommand(
     return payload;
   }
   const next: Array<{ command: string; when?: string }> = [];
+  // Build argv for "link" so the link command preserves flags like --project, --yes
+  const linkArgv = [...argv.slice(0, 2), 'link', ...argv.slice(3)];
   for (const choice of payload.choices) {
     const slug = choice.name;
     next.push({
-      command: `${packageName} link --scope ${slug}`,
+      command: buildCommandWithScope(linkArgv, slug),
       when: 'Link first (then run any command without --scope)',
     });
     next.push({

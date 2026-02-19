@@ -12,6 +12,7 @@ import { getCommandName } from '../../util/pkg-name';
 import chalk from 'chalk';
 import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
 import { printError } from '../../util/error';
+import { parseAccessFlag } from '../../util/blob/access';
 
 export default async function put(
   client: Client,
@@ -38,24 +39,37 @@ export default async function put(
     args: [filePath],
   } = parsedArgs;
   const {
+    '--access': accessFlag,
     '--add-random-suffix': addRandomSuffix,
     '--pathname': pathnameFlag,
     '--multipart': multipart,
     '--content-type': contentType,
     '--cache-control-max-age': cacheControlMaxAge,
+    '--allow-overwrite': allowOverwrite,
     '--force': force,
+    '--if-match': ifMatch,
   } = flags;
+
+  if (force) {
+    output.warn('--force is deprecated, use --allow-overwrite instead');
+  }
+
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
 
   // Only track file path if one was provided
   if (filePath) {
     telemetryClient.trackCliArgumentPathToFile(filePath);
   }
+  telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionPathname(pathnameFlag);
   telemetryClient.trackCliFlagMultipart(multipart);
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliFlagAllowOverwrite(allowOverwrite);
   telemetryClient.trackCliFlagForce(force);
+  telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   // ReadableStream works for both stdin and ReadStream
   let putBody: ReadableStream;
@@ -132,12 +146,13 @@ export default async function put(
 
     result = await blob.put(pathname, putBody, {
       token: rwToken,
-      access: 'public',
+      access,
       addRandomSuffix: addRandomSuffix ?? false,
       multipart: multipart ?? true,
       contentType,
       cacheControlMaxAge,
-      allowOverwrite: force ?? false,
+      allowOverwrite: allowOverwrite ?? force ?? false,
+      ifMatch,
     });
   } catch (err) {
     printError(err);

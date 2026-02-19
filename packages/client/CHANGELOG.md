@@ -1,5 +1,33 @@
 # @vercel/client
 
+## 17.2.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.4.2
+
+## 17.2.43
+
+### Patch Changes
+
+- Updated dependencies [[`e7685ebeba19b30ae6549860aa8fcd07ba49a6d0`](https://github.com/vercel/vercel/commit/e7685ebeba19b30ae6549860aa8fcd07ba49a6d0)]:
+  - @vercel/build-utils@13.4.1
+
+## 17.2.42
+
+### Patch Changes
+
+- Add experimental manual deployment support ([#14857](https://github.com/vercel/vercel/pull/14857))
+
+## 17.2.41
+
+### Patch Changes
+
+- Updated dependencies [[`3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68`](https://github.com/vercel/vercel/commit/3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68)]:
+  - @vercel/routing-utils@5.3.3
+  - @vercel/build-utils@13.4.0
+
 ## 17.2.40
 
 ### Patch Changes

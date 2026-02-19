@@ -42,6 +42,7 @@ export async function balance(client: Client, args: string[]) {
   const installation = await getBalanceInstallationId(
     client,
     integrationSlug,
+    team.id,
     telemetry
   );
   if (installation === undefined) {
@@ -75,12 +76,17 @@ export async function balance(client: Client, args: string[]) {
 async function getBalanceInstallationId(
   client: Client,
   integrationSlug: string,
+  teamId: string,
   telemetry: IntegrationBalanceTelemetryClient
 ) {
   let knownIntegrationSlug = false;
   output.spinner('Retrieving installation…', 500);
   try {
-    const installation = await getFirstConfiguration(client, integrationSlug);
+    const installation = await getFirstConfiguration(
+      client,
+      integrationSlug,
+      teamId
+    );
 
     if (!installation) {
       output.stopSpinner();

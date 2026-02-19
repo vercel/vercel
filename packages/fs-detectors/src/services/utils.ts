@@ -16,6 +16,26 @@ import {
   ROUTE_OWNING_BUILDERS,
 } from './types';
 
+export async function hasFile(
+  fs: DetectorFilesystem,
+  filePath: string
+): Promise<boolean> {
+  try {
+    return await fs.isFile(filePath);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reserved internal namespace used by services routing/runtime plumbing.
+ */
+export const INTERNAL_SERVICE_PREFIX = '/_svc';
+
+export function getInternalServiceFunctionPath(serviceName: string): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
+}
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {

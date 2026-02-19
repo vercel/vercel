@@ -72,8 +72,6 @@ export interface ClientOptions extends Stdio {
   nonInteractive?: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
-  /** Never prompt; output structured JSON and exit on action required (--non-interactive or agent) */
-  nonInteractive?: boolean;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -119,8 +117,8 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
-  /** Never prompt; output structured JSON and exit on action required */
-  nonInteractive: boolean;
+  /** Track if we've already logged the token source debug message */
+  private _loggedTokenSource: boolean = false;
 
   constructor(opts: ClientOptions) {
     super();
@@ -140,7 +138,6 @@ export default class Client extends EventEmitter implements Stdio {
     this.agentName = opts.agentName;
     this.nonInteractive = opts.nonInteractive ?? this.isAgent;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
-    this.nonInteractive = opts.nonInteractive ?? this.isAgent;
 
     const theme = {
       prefix: gray('?'),
@@ -198,7 +195,20 @@ export default class Client extends EventEmitter implements Stdio {
 
     // If we have a valid access token, do nothing
     if (isValidAccessToken(authConfig)) {
-      output.debug('Valid access token, skipping token refresh.');
+      if (!this._loggedTokenSource) {
+        if (authConfig.tokenSource === 'flag') {
+          output.debug(
+            'Using token from `--token` argument, skipping token refresh.'
+          );
+        } else if (authConfig.tokenSource === 'env') {
+          output.debug(
+            'Using token from VERCEL_TOKEN environment variable, skipping token refresh.'
+          );
+        } else {
+          output.debug('Valid access token, skipping token refresh.');
+        }
+        this._loggedTokenSource = true;
+      }
       return;
     }
 

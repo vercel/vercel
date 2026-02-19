@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.4.1
+
+### Patch Changes
+
+- Forward Go and Ruby dev server output through `startDevServer` stdout/stderr callbacks so service logs are correctly prefixed in multi-service `vercel dev`. ([#14989](https://github.com/vercel/vercel/pull/14989))
+
 ## 3.4.0
 
 ### Minor Changes
