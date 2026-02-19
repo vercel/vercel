@@ -560,6 +560,7 @@ export interface Service {
   installCommand?: string;
   /* web service config */
   routePrefix?: string;
+  routePrefixSource?: 'configured' | 'generated';
   /* cron service config */
   schedule?: string;
   /* worker service config */
