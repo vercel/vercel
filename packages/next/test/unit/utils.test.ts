@@ -9,6 +9,7 @@ import {
   getServerlessPages,
   normalizePrefetches,
   getMaxUncompressedLambdaSize,
+  getStaticFiles,
 } from '../../src/utils';
 import { FileFsRef, FileRef } from '@vercel/build-utils';
 import { genDir } from '../utils';
@@ -467,4 +468,92 @@ describe('getMaxUncompressedLambdaSize', () => {
       delete process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE;
     }
   );
+});
+
+describe('getStaticFiles', () => {
+  it('should return immutableFiles when immutable.json manifest exists', async () => {
+    const dir = await genDir({
+      '.next/static/chunks/main.js': 'main content',
+      '.next/static/chunks/immutable.js': 'immutable content',
+      '.next/immutable.json': '["chunks/immutable.js"]',
+    });
+
+    const result = await getStaticFiles(dir, '', '.next');
+
+    expect(Object.keys(result.staticFiles)).toContain(
+      '_next/static/chunks/main.js'
+    );
+    expect(Object.keys(result.staticFiles)).not.toContain(
+      '_next/static/chunks/immutable.js'
+    );
+    expect(Object.keys(result.immutableFiles)).toContain(
+      '_next/static/chunks/immutable.js'
+    );
+    // Verify immutable flag is set
+    expect(
+      result.immutableFiles['_next/static/chunks/immutable.js'].immutable
+    ).toBe(true);
+    expect(result.staticFiles['_next/static/chunks/main.js'].immutable).toBe(
+      false
+    );
+  });
+
+  it('should handle missing immutable.json manifest gracefully', async () => {
+    const dir = await genDir({
+      '.next/static/chunks/main.js': 'main content',
+    });
+
+    const result = await getStaticFiles(dir, '', '.next');
+
+    expect(Object.keys(result.staticFiles)).toContain(
+      '_next/static/chunks/main.js'
+    );
+    expect(Object.keys(result.immutableFiles)).toHaveLength(0);
+  });
+
+  it('should warn about non-existent files in immutable.json manifest', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    const dir = await genDir({
+      '.next/static/chunks/main.js': 'main content',
+      '.next/immutable.json': '["chunks/nonexistent.js"]',
+    });
+
+    const result = await getStaticFiles(dir, '', '.next');
+
+    expect(Object.keys(result.staticFiles)).toContain(
+      '_next/static/chunks/main.js'
+    );
+    expect(Object.keys(result.immutableFiles)).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('chunks/nonexistent.js')
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('should handle multiple entries in immutable.json manifest', async () => {
+    const dir = await genDir({
+      '.next/static/chunks/a.js': 'a content',
+      '.next/static/chunks/b.js': 'b content',
+      '.next/static/chunks/c.js': 'c content',
+      '.next/immutable.json': '["chunks/a.js", "chunks/b.js"]',
+    });
+
+    const result = await getStaticFiles(dir, '', '.next');
+
+    expect(Object.keys(result.staticFiles)).toContain(
+      '_next/static/chunks/c.js'
+    );
+    expect(Object.keys(result.staticFiles)).not.toContain(
+      '_next/static/chunks/a.js'
+    );
+    expect(Object.keys(result.staticFiles)).not.toContain(
+      '_next/static/chunks/b.js'
+    );
+    expect(Object.keys(result.immutableFiles)).toContain(
+      '_next/static/chunks/a.js'
+    );
+    expect(Object.keys(result.immutableFiles)).toContain(
+      '_next/static/chunks/b.js'
+    );
+  });
 });

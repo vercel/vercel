@@ -433,7 +433,7 @@ async function writeBuildResultV3(args: {
  * @param path The URL path where the `File` can be accessed from
  * @param overrides Record of override configuration when a File is renamed or has other metadata
  */
-async function writeStaticFile(
+export async function writeStaticFile(
   outputDir: string,
   file: File,
   path: string,
@@ -472,7 +472,9 @@ async function writeStaticFile(
     overrides[fsPath] = override;
   }
 
-  const dest = join(outputDir, 'static', fsPath);
+  // Determine output directory based on immutable flag
+  const outputSubdir = file.immutable ? 'immutable' : 'static';
+  const dest = join(outputDir, outputSubdir, fsPath);
   await fs.mkdirp(dirname(dest));
 
   // if already on disk hard link instead of copying
