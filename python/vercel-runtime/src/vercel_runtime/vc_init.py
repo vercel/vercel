@@ -66,13 +66,8 @@ def _normalize_service_route_prefix(raw_prefix: str | None) -> str:
     if not prefix.startswith('/'):
         prefix = f'/{prefix}'
 
-    if prefix != '/':
-        prefix = prefix.rstrip('/')
-        if not prefix:
-            prefix = '/'
-
     # Treat "/" as an unset mount prefix.
-    return '' if prefix == '/' else prefix
+    return '' if prefix == '/' else prefix.rstrip('/')
 
 
 def _is_service_route_prefix_strip_enabled() -> bool:

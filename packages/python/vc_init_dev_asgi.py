@@ -57,12 +57,7 @@ def _normalize_service_route_prefix(raw_prefix):
     if not prefix.startswith('/'):
         prefix = f'/{prefix}'
 
-    if prefix != '/':
-        prefix = prefix.rstrip('/')
-        if not prefix:
-            prefix = '/'
-
-    return '' if prefix == '/' else prefix
+    return '' if prefix == '/' else prefix.rstrip('/')
 
 
 def _is_service_route_prefix_strip_enabled():
@@ -110,9 +105,11 @@ def _apply_service_route_prefix_to_scope(scope):
     raw_path = scope.get('raw_path')
     if isinstance(raw_path, (bytes, bytearray)):
         try:
-            decoded = bytes(raw_path).decode('latin-1')
+            decoded = bytes(raw_path).decode('utf-8', 'surrogateescape')
             stripped_raw, _ = _strip_service_route_prefix(decoded)
-            updated_scope['raw_path'] = stripped_raw.encode('latin-1')
+            updated_scope['raw_path'] = stripped_raw.encode(
+                'utf-8', 'surrogateescape'
+            )
         except Exception:
             pass
 
