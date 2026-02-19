@@ -14,5 +14,8 @@
       "path": "/",
       "mustContain": "nextExport\":true"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
