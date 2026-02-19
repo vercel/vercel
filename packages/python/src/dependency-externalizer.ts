@@ -498,7 +498,7 @@ export function lambdaKnapsack(
   capacity: number
 ): string[] {
   if (capacity <= 0) {
-    return [...packages.keys()];
+    return [];
   }
 
   // Sort by size descending so we pack the largest packages first.

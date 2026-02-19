@@ -264,22 +264,22 @@ version = "2.31.0"
       expect(result).toContain('c');
     });
 
-    it('returns all package names when capacity is zero', () => {
+    it('returns empty array when capacity is zero', () => {
       const packages = new Map([
         ['a', 10],
         ['b', 20],
       ]);
       const result = lambdaKnapsack(packages, 0);
-      expect(result).toEqual(['a', 'b']);
+      expect(result).toEqual([]);
     });
 
-    it('returns all package names when capacity is negative', () => {
+    it('returns empty array when capacity is negative', () => {
       const packages = new Map([
         ['a', 10],
         ['b', 20],
       ]);
       const result = lambdaKnapsack(packages, -5);
-      expect(result).toEqual(['a', 'b']);
+      expect(result).toEqual([]);
     });
 
     it('returns empty array for empty package map', () => {
