@@ -55,6 +55,7 @@ interface FunctionConfiguration {
   memory?: number;
   maxDuration?: number;
   regions?: Lambda['regions'];
+  functionFailoverRegions?: Lambda['functionFailoverRegions'];
   experimentalTriggers?: TriggerEvent[];
   supportsCancellation?: boolean;
 }
@@ -134,6 +135,12 @@ export interface PathOverride {
   path?: string;
 }
 
+function injectServiceEnvVars(lambda: Lambda, service?: Service): void {
+  if (service?.routePrefix && service.routePrefix !== '/') {
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+  }
+}
+
 /**
  * Remove duplicate slashes as well as leading/trailing slashes.
  */
@@ -163,6 +170,7 @@ async function writeBuildResultV2(args: {
     vercelConfig,
     standalone,
     workPath,
+    service,
   } = args;
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult, workPath);
@@ -187,6 +195,7 @@ async function writeBuildResultV2(args: {
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
+      injectServiceEnvVars(output, service);
       await writeLambda(
         repoRootPath,
         outputDir,
@@ -342,6 +351,7 @@ async function writeBuildResultV3(args: {
           vercelConfig,
           standalone,
           workPath,
+          service,
         });
       } catch (error) {
         outputManager.error(`Failed to read routes.json: ${error}`);
@@ -362,6 +372,7 @@ async function writeBuildResultV3(args: {
         vercelConfig,
         standalone,
         workPath,
+        service,
       });
     }
   }
@@ -387,6 +398,7 @@ async function writeBuildResultV3(args: {
             : src
         );
   if (isLambda(output)) {
+    injectServiceEnvVars(output, service);
     await writeLambda(
       repoRootPath,
       outputDir,
@@ -624,6 +636,9 @@ async function writeLambda(
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
   const regions = functionConfiguration?.regions ?? lambda.regions;
+  const functionFailoverRegions =
+    functionConfiguration?.functionFailoverRegions ??
+    lambda.functionFailoverRegions;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
   const supportsCancellation =
@@ -636,6 +651,7 @@ async function writeLambda(
     memory,
     maxDuration,
     regions,
+    functionFailoverRegions,
     experimentalTriggers,
     supportsCancellation,
     filePathMap,

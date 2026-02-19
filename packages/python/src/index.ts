@@ -30,6 +30,7 @@ import {
   installRequirement,
   calculateBundleSize,
   LAMBDA_SIZE_THRESHOLD_BYTES,
+  LAMBDA_EPHEMERAL_STORAGE_BYTES,
 } from './install';
 import {
   classifyPackages,
@@ -66,6 +67,27 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
+
+export function shouldEnableRuntimeInstall({
+  totalBundleSize,
+  uvLockPath,
+}: {
+  totalBundleSize: number;
+  uvLockPath: string | null;
+}): boolean {
+  const pythonOnHiveEnabled =
+    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+  if (pythonOnHiveEnabled) {
+    return false;
+  } else if (
+    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+    uvLockPath !== null
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export const version = 3;
 
@@ -372,11 +394,6 @@ export const build: BuildV3 = async ({
     );
   }
 
-  // Check if the experimental runtime install feature is enabled
-  const runtimeInstallFeatureEnabled =
-    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === '1' ||
-    process.env.VERCEL_EXPERIMENTAL_PYTHON_UV_INSTALL_ON_STARTUP === 'true';
-
   // Track the lock file path and project info for package classification (used when runtime install is enabled)
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
@@ -395,8 +412,8 @@ export const build: BuildV3 = async ({
         repoRootPath,
         pythonVersion: pythonVersion.version,
         uv,
-        generateLockFile: runtimeInstallFeatureEnabled,
-        requireBinaryWheels: runtimeInstallFeatureEnabled,
+        generateLockFile: true,
+        requireBinaryWheels: false,
       });
 
     uvLockPath = lockPath;
@@ -414,7 +431,7 @@ export const build: BuildV3 = async ({
     // available BEFORE running the actual sync. We track this result so we can
     // error later if runtime dependency installation is needed (which requires
     // all public packages to have pre-built wheels).
-    if (lockFileProvidedByUser && runtimeInstallFeatureEnabled) {
+    if (lockFileProvidedByUser) {
       try {
         await uv.sync({
           venvPath,
@@ -561,16 +578,33 @@ from vercel_runtime.vc_init import vc_handler
   debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
   // Determine if runtime dependency installation is needed
-  const runtimeInstallEnabled =
-    runtimeInstallFeatureEnabled &&
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-    uvLockPath !== null;
+  const runtimeInstallEnabled = shouldEnableRuntimeInstall({
+    totalBundleSize,
+    uvLockPath,
+  });
 
   if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
     console.log(
       `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
         `Enabling runtime dependency installation.`
     );
+
+    // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
+    if (totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
+      const ephemeralLimitMB = (
+        LAMBDA_EPHEMERAL_STORAGE_BYTES /
+        (1024 * 1024)
+      ).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
+          `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
+          `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
+          `to Lambda functions. Consider removing unused dependencies or splitting your ` +
+          `application into smaller functions.`,
+      });
+    }
 
     // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
     if (noBuildCheckFailed) {

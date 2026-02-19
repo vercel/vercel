@@ -1,5 +1,20 @@
 # @vercel/build-utils
 
+## 13.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`88353afe588b95709af20ba2b82ba83d8a60f90c`](https://github.com/vercel/vercel/commit/88353afe588b95709af20ba2b82ba83d8a60f90c)]:
+  - @vercel/python-analysis@0.5.0
+
+## 13.4.1
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
 ## 13.4.0
 
 ### Minor Changes

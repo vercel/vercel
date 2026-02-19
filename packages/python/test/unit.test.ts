@@ -34,7 +34,7 @@ import {
   DEFAULT_PYTHON_VERSION,
   resetInstalledPythonsCache,
 } from '../src/version';
-import { build } from '../src/index';
+import { build, shouldEnableRuntimeInstall } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { createPyprojectToml } from '../src/install';
@@ -1978,7 +1978,11 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 // installation to runtime.
 // --------------------------------------------------------------------------
 
-import { calculateBundleSize } from '../src/install';
+import {
+  calculateBundleSize,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+  LAMBDA_EPHEMERAL_STORAGE_BYTES,
+} from '../src/install';
 import {
   classifyPackages,
   generateRuntimeRequirements,
@@ -2026,6 +2030,98 @@ describe('runtime dependency installation support', () => {
       expect(size).toBe(0);
     });
   });
+
+  describe('Lambda size constants', () => {
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 249 MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
+    });
+
+    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
+    });
+
+    it('ephemeral storage limit is greater than the bundle size threshold', () => {
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
+        LAMBDA_SIZE_THRESHOLD_BYTES
+      );
+    });
+  });
+
+  describe('shouldEnableRuntimeInstall', () => {
+    const originalEnv = process.env.VERCEL_PYTHON_ON_HIVE;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_ON_HIVE;
+      } else {
+        process.env.VERCEL_PYTHON_ON_HIVE = originalEnv;
+      }
+    });
+
+    const oversized = LAMBDA_SIZE_THRESHOLD_BYTES + 1;
+    const undersized = LAMBDA_SIZE_THRESHOLD_BYTES - 1;
+
+    it('returns true when bundle exceeds threshold and uvLockPath is present', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(true);
+    });
+
+    it('returns false when VERCEL_PYTHON_ON_HIVE is "1"', () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = '1';
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(false);
+    });
+
+    it('returns false when VERCEL_PYTHON_ON_HIVE is "true"', () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = 'true';
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(false);
+    });
+
+    it('returns true when VERCEL_PYTHON_ON_HIVE is an unrecognised value', () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = 'yes';
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(true);
+    });
+
+    it('returns false when bundle is under threshold', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: undersized,
+          uvLockPath: '/path/to/uv.lock',
+        })
+      ).toBe(false);
+    });
+
+    it('returns false when uvLockPath is null', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      expect(
+        shouldEnableRuntimeInstall({
+          totalBundleSize: oversized,
+          uvLockPath: null,
+        })
+      ).toBe(false);
+    });
+  });
+
   describe('classifyPackages', () => {
     it('classifies PyPI packages as public', () => {
       const lockContent = `

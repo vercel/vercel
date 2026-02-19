@@ -109,5 +109,8 @@
     {
       "logMustNotContain": "Compressed shared serverless function files"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
