@@ -290,6 +290,50 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const guideSubcommand = {
+  name: 'guide',
+  aliases: [],
+  description:
+    'Show getting started guides and code snippets for a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'framework',
+      shorthand: 'f',
+      type: String,
+      deprecated: false,
+      argument: 'FRAMEWORK',
+      description:
+        'Select a framework guide without interactive prompt (e.g., nextjs, remix, astro, nuxtjs, sveltekit)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show guides for a single-product integration',
+      value: [
+        `${packageName} integration guide <integration-name>`,
+        `${packageName} integration guide neon`,
+      ],
+    },
+    {
+      name: 'Show guides for a specific product of a multi-product integration',
+      value: [
+        `${packageName} integration guide <integration>/<product>`,
+        `${packageName} integration guide aws/aws-dynamodb`,
+      ],
+    },
+    {
+      name: 'Show the Next.js guide without prompts (useful for CI/agents)',
+      value: `${packageName} integration guide neon --framework nextjs`,
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
@@ -299,8 +343,9 @@ export const integrationCommand = {
   subcommands: [
     addSubcommand,
     balanceSubcommand,
-    listSubcommand,
     discoverSubcommand,
+    guideSubcommand,
+    listSubcommand,
     openSubcommand,
     removeSubcommand,
   ],
