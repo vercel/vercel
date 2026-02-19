@@ -619,6 +619,53 @@ describe('env pull', () => {
       exitSpy.mockRestore();
       logSpy.mockRestore();
     });
+
+    it('outputs JSON with next options when not linked', async () => {
+      const linkModule = await import('../../../../src/util/projects/link');
+      vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const { setupTmpDir } = await import(
+        '../../../helpers/setup-unit-fixture'
+      );
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('env', 'pull', '--non-interactive');
+
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'not_linked',
+        message: expect.stringContaining("isn't linked"),
+        next: [
+          { command: expect.any(String) },
+          { command: expect.any(String) },
+        ],
+      });
+      // First next: link with same original args (e.g. --non-interactive, --cwd)
+      expect(payload.next[0].command).toMatch(/link/);
+      // Second next: retry same command (env pull) with original args
+      expect(payload.next[1].command).toMatch(/env pull/);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      vi.restoreAllMocks();
+    });
   });
 
   describe('[filename]', () => {

@@ -6,7 +6,7 @@ import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -28,7 +28,11 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
-import { outputActionRequired } from '../../util/agent-output';
+import {
+  buildCommandWithYes,
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -103,6 +107,29 @@ export default async function pull(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      // Preserve original args (e.g. --cwd, --non-interactive) like other non-interactive flows
+      const linkArgv = [
+        ...client.argv.slice(0, 2),
+        'link',
+        ...client.argv.slice(4),
+      ];
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+            'link'
+          )} to begin. Use --yes for non-interactive; use --project and --scope to specify project and team.`,
+          next: [
+            { command: buildCommandWithYes(linkArgv) },
+            { command: buildCommandWithYes(client.argv) },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
         'link'
