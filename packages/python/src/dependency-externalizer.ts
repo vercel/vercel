@@ -107,7 +107,7 @@ export class PythonDependencyExternalizer {
   async generateBundle(files: Files): Promise<void> {
     if (!this.analyzed) {
       throw new Error(
-        'RuntimeDepInstall.analyze() must be called before generateBundle()'
+        'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
       );
     }
     if (!this.uvLockPath || !this.uvProjectDir) {
