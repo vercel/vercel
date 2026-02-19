@@ -457,7 +457,7 @@ async function provisionResourceViaCLI(
         projectLink.value,
         name,
         metadata,
-        billingPlanId
+        billingPlan.id
       );
     }
 
