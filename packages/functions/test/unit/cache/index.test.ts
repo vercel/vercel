@@ -8,8 +8,8 @@ import {
   vitest,
 } from 'vitest';
 
-import { getCache } from '../../../src/cache/index';
 import { InMemoryCache } from '../../../src/cache/in-memory-cache';
+import { getCache } from '../../../src/cache/index';
 import { getContext } from '../../../src/get-context';
 
 vitest.mock('../../../src/get-context', () => ({
@@ -139,5 +139,23 @@ describe('getCache', () => {
       'tag%20one',
       'tag%26two',
     ]);
+  });
+
+  test('should not get entry with zero ttl', async () => {
+    const cache = getCache();
+    await cache.set('key', 'value', { ttl: 0 });
+    const result = await cache.get('key');
+    expect(result).toBe(null);
+  });
+
+  test('should overwrite existing entry with zero ttl entry', async () => {
+    const cache = getCache();
+    await cache.set('key', 'initial-value');
+    let result = await cache.get('key');
+    expect(result).toBe('initial-value');
+
+    await cache.set('key', 'new-value', { ttl: 0 });
+    result = await cache.get('key');
+    expect(result).toBe(null);
   });
 });
