@@ -26,4 +26,11 @@ export class BlobStoreTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'list',
+      value: actual,
+    });
+  }
 }
