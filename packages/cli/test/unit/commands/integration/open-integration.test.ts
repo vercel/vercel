@@ -362,6 +362,28 @@ describe('integration', () => {
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(1);
         });
+
+        it('should error when the resources API responds erroneously', async () => {
+          const teams = useTeams('team_dummy');
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
+          useConfiguration();
+          useResources(500);
+
+          client.setArgv(
+            'integration',
+            'open',
+            'acme',
+            'store-acme-connected-project'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Error: Failed to fetch resources:',
+            20000
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+        });
       });
     });
   });

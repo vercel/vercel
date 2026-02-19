@@ -77,7 +77,14 @@ export async function openIntegration(
 
   // If a resource name is provided, look it up and build SSO link with resource_id
   if (resourceName) {
-    const resources = await getResources(client, team.id);
+    let resources;
+    try {
+      resources = await getResources(client, team.id);
+    } catch (error) {
+      output.error(`Failed to fetch resources: ${(error as Error).message}`);
+      return 1;
+    }
+
     const resource = resources.find(
       r =>
         r.name === resourceName &&
