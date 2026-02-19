@@ -433,8 +433,8 @@ importers:
         specifier: workspace:*
         version: link:../backends
       '@vercel/blob':
-        specifier: 1.0.2
-        version: 1.0.2
+        specifier: 2.3.0
+        version: 2.3.0
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
@@ -1026,6 +1026,9 @@ importers:
 
   packages/config:
     dependencies:
+      '@vercel/routing-utils':
+        specifier: workspace:*
+        version: link:../routing-utils
       pretty-cache-header:
         specifier: ^1.0.0
         version: 1.0.0
@@ -1707,8 +1710,8 @@ importers:
         version: 1.1.1
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.7
-        version: 0.0.1-beta.7(next@16.1.6)
+        specifier: 0.0.1-beta.9
+        version: 0.0.1-beta.9(next@16.1.6)
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -6400,8 +6403,8 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.7(next@16.1.6):
-    resolution: {integrity: sha512-IDzM2kL+OBRP7vzSppt88DqTblZhfyib7Z63dQlxP6WBRlwKMuTy5OGHPTTuC5O/Ios+0w23IQrujVFJiFztgQ==}
+  /@next-community/adapter-vercel@0.0.1-beta.9(next@16.1.6):
+    resolution: {integrity: sha512-9PSiC/PztojB49ZssbQ1NGkPJeYRyMSFWR7XTzCpgdVfLNnVOPgZ7UFLvMbMhmxMx16878v9BWNp/gzQa1YU3A==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
@@ -10125,15 +10128,15 @@ packages:
       - supports-color
     dev: true
 
-  /@vercel/blob@1.0.2:
-    resolution: {integrity: sha512-Im/KeFH4oPx7UsM+QiteimnE07bIUD7JK6CBafI9Z0jRFogaialTBMiZj8EKk/30ctUYsrpIIyP9iIY1YxWnUQ==}
-    engines: {node: '>=16.14'}
+  /@vercel/blob@2.3.0:
+    resolution: {integrity: sha512-oYWiJbWRQ7gz9Mj0X/NHFJ3OcLMOBzq/2b3j6zeNrQmtFo6dHwU8FAwNpxVIYddVMd+g8eqEi7iRueYx8FtM0Q==}
+    engines: {node: '>=20.0.0'}
     dependencies:
       async-retry: 1.3.3
       is-buffer: 2.0.5
       is-node-process: 1.2.0
       throttleit: 2.1.0
-      undici: 5.28.4
+      undici: 6.23.0
     dev: false
 
   /@vercel/fun@1.3.0:
@@ -20592,6 +20595,11 @@ packages:
     resolution: {integrity: sha512-uROZWze0R0itiAKVPsYhFov9LxrPMHLMEQFszeI2gCN6bnIIZ8twzBCJcN2LJrBBLfrP0t1FW0g+JmKVl8Vk1g==}
     engines: {node: '>=18.17'}
     dev: true
+
+  /undici@6.23.0:
+    resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
+    engines: {node: '>=18.17'}
+    dev: false
 
   /undici@7.22.0:
     resolution: {integrity: sha512-RqslV2Us5BrllB+JeiZnK4peryVTndy9Dnqq62S3yYRRTj0tFQCwEniUy2167skdGOy3vqRzEvl1Dm4sV2ReDg==}

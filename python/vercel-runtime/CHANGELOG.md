@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.4.2
+
+### Patch Changes
+
+- Add tests ([#15133](https://github.com/vercel/vercel/pull/15133))
+
 ## 0.4.1
 
 ### Patch Changes

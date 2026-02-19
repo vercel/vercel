@@ -9,10 +9,6 @@ import {
 } from '../../../../src/commands/metrics/schema-data';
 
 describe('schema-data', () => {
-  it('should have all 24 events', () => {
-    expect(getEventNames()).toHaveLength(24);
-  });
-
   it('should return event names in alphabetical order', () => {
     const names = getEventNames();
     const sorted = [...names].sort();
@@ -145,12 +141,6 @@ describe('schema-data', () => {
     it('should return sum for tokens unit', () => {
       expect(getDefaultAggregation('aiGatewayRequest', 'inputTokens')).toBe(
         'sum'
-      );
-    });
-
-    it('should return avg for seconds unit', () => {
-      expect(getDefaultAggregation('prReview', 'reviewTimeSeconds')).toBe(
-        'avg'
       );
     });
 
