@@ -37,6 +37,7 @@ describe('blob list', () => {
           pathname: 'file1.txt',
           size: 1024,
           uploadedAt: new Date('2023-01-01T12:00:00Z'),
+          etag: 'test-etag-1',
         },
         {
           url: 'https://example.com/file2.jpg',
@@ -44,6 +45,7 @@ describe('blob list', () => {
           pathname: 'folder/file2.jpg',
           size: 2048,
           uploadedAt: new Date('2023-01-02T12:00:00Z'),
+          etag: 'test-etag-2',
         },
       ],
       cursor: undefined,
@@ -219,6 +221,7 @@ describe('blob list', () => {
             pathname: 'file1.txt',
             size: 1024,
             uploadedAt: new Date('2023-01-01T12:00:00Z'),
+            etag: 'test-etag',
           },
         ],
         cursor: 'next_cursor_123',
@@ -242,6 +245,7 @@ describe('blob list', () => {
             pathname: 'file1.txt',
             size: 1024,
             uploadedAt: new Date('2023-01-01T12:00:00Z'),
+            etag: 'test-etag',
           },
         ],
         cursor: undefined,
@@ -489,6 +493,7 @@ describe('blob list', () => {
         uploadedAt: new Date(
           `2023-01-${String((i % 30) + 1).padStart(2, '0')}T12:00:00Z`
         ),
+        etag: `test-etag-${i}`,
       }));
 
       mockedBlob.list.mockResolvedValue({
