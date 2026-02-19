@@ -3,7 +3,7 @@ import { join } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
 import { exec } from 'child_process';
-import type { GitMetadata, Project } from '@vercel-internals/types';
+import type { CiMetadata, GitMetadata, Project } from '@vercel-internals/types';
 import { errorToString, normalizeError } from '@vercel/error-utils';
 import output from '../output-manager';
 
@@ -54,6 +54,44 @@ export async function createGitMeta(
   const dirty = dirtyResult.value;
   const commit = commitResult.value;
 
+  let ciMetadata: CiMetadata = {};
+  if (process.env.GITHUB_ACTIONS && process.env.GITHUB_ACTOR) {
+    // https://docs.github.com/en/actions/reference/variables-reference
+    ciMetadata = {
+      ci: true,
+      ciType: 'github-actions' as const,
+      // The username of the person or app that initiated the workflow.
+      ciGitProviderUsername: process.env.GITHUB_ACTOR,
+    };
+  } else if (process.env.GITLAB_CI && process.env.GITLAB_USER_LOGIN) {
+    // https://docs.gitlab.com/ci/variables/predefined_variables/
+    ciMetadata = {
+      ci: true,
+      ciType: 'gitlab-ci-cd' as const,
+      // The unique username of the user who started the pipeline, unless the job is a manual job.
+      // In manual jobs, the value is the username of the user who started the job.
+      ciGitProviderUsername: process.env.GITLAB_USER_LOGIN,
+      // Only GitLab CI/CD provides the visibility of the repository
+      ciGitRepoVisibility: process.env.CI_PROJECT_VISIBILITY as
+        | 'public'
+        | 'private'
+        | 'internal'
+        | undefined,
+    };
+  } else if (process.env.BITBUCKET_PIPELINE_UUID) {
+    // https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/
+    ciMetadata = {
+      ci: true,
+      // Bitbucket Pipelines does not provide usernames in the environment variables
+      ciType: 'bitbucket-pipelines' as const,
+    };
+  } else if (process.env.CI) {
+    // Unknown CI environment
+    ciMetadata = {
+      ci: true,
+    };
+  }
+
   return {
     remoteUrl: remoteUrl || undefined,
     commitAuthorName: commit.author.name,
@@ -62,6 +100,7 @@ export async function createGitMeta(
     commitRef: commit.branch,
     commitSha: commit.hash,
     dirty,
+    ...ciMetadata,
   };
 }
 
