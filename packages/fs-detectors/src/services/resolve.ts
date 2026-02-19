@@ -25,6 +25,15 @@ import { normalizeRoutePrefix } from '@vercel/routing-utils';
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+type RoutePrefixSource = 'configured' | 'generated';
+
+interface ResolveConfiguredServiceOptions {
+  name: string;
+  config: ExperimentalServiceConfig;
+  fs: DetectorFilesystem;
+  group?: string;
+  routePrefixSource?: RoutePrefixSource;
+}
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -210,11 +219,9 @@ export function validateServiceConfig(
  * Resolve a single service from user configuration.
  */
 export async function resolveConfiguredService(
-  name: string,
-  config: ExperimentalServiceConfig,
-  fs: DetectorFilesystem,
-  group?: string
+  options: ResolveConfiguredServiceOptions
 ): Promise<Service> {
+  const { name, config, fs, group, routePrefixSource = 'configured' } = options;
   const type = config.type || 'web';
   const inferredRuntime = inferServiceRuntime(config);
   let workspace = config.workspace || '.';
@@ -312,6 +319,10 @@ export async function resolveConfiguredService(
     workspace,
     entrypoint: resolvedEntrypoint,
     routePrefix,
+    routePrefixSource:
+      type === 'web' && typeof routePrefix === 'string'
+        ? routePrefixSource
+        : undefined,
     framework: config.framework,
     builder: {
       src: builderSrc,
@@ -333,7 +344,8 @@ export async function resolveConfiguredService(
  */
 export async function resolveAllConfiguredServices(
   services: ExperimentalServices,
-  fs: DetectorFilesystem
+  fs: DetectorFilesystem,
+  routePrefixSource: RoutePrefixSource = 'configured'
 ): Promise<{
   services: Service[];
   errors: ServiceDetectionError[];
@@ -351,7 +363,12 @@ export async function resolveAllConfiguredServices(
       continue;
     }
 
-    const service = await resolveConfiguredService(name, serviceConfig, fs);
+    const service = await resolveConfiguredService({
+      name,
+      config: serviceConfig,
+      fs,
+      routePrefixSource,
+    });
 
     if (service.type === 'web' && typeof service.routePrefix === 'string') {
       const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);

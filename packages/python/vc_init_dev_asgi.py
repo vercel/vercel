@@ -45,6 +45,82 @@ USER_ASGI_APP = _CAND if callable(_CAND) else _app
 
 PUBLIC_DIR = 'public'
 
+
+def _normalize_service_route_prefix(raw_prefix):
+    if not raw_prefix:
+        return ''
+
+    prefix = raw_prefix.strip()
+    if not prefix:
+        return ''
+
+    if not prefix.startswith('/'):
+        prefix = f'/{prefix}'
+
+    return '' if prefix == '/' else prefix.rstrip('/')
+
+
+def _is_service_route_prefix_strip_enabled():
+    raw = os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX_STRIP')
+    if not raw:
+        return False
+    return raw.lower() in ('1', 'true')
+
+
+_SERVICE_ROUTE_PREFIX = (
+    _normalize_service_route_prefix(os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX'))
+    if _is_service_route_prefix_strip_enabled()
+    else ''
+)
+
+
+def _strip_service_route_prefix(path_value):
+    if not path_value:
+        path_value = '/'
+    elif not path_value.startswith('/'):
+        path_value = f'/{path_value}'
+
+    prefix = _SERVICE_ROUTE_PREFIX
+    if not prefix:
+        return path_value, ''
+
+    if path_value == prefix:
+        return '/', prefix
+
+    if path_value.startswith(f'{prefix}/'):
+        stripped = path_value[len(prefix):]
+        return stripped if stripped else '/', prefix
+
+    return path_value, ''
+
+
+def _apply_service_route_prefix_to_scope(scope):
+    path_value, matched_prefix = _strip_service_route_prefix(scope.get('path', '/'))
+    if not matched_prefix:
+        return scope
+
+    updated_scope = dict(scope)
+    updated_scope['path'] = path_value
+
+    raw_path = scope.get('raw_path')
+    if isinstance(raw_path, (bytes, bytearray)):
+        try:
+            decoded = bytes(raw_path).decode('utf-8', 'surrogateescape')
+            stripped_raw, _ = _strip_service_route_prefix(decoded)
+            updated_scope['raw_path'] = stripped_raw.encode(
+                'utf-8', 'surrogateescape'
+            )
+        except Exception:
+            pass
+
+    existing_root = scope.get('root_path', '') or ''
+    if existing_root and existing_root != '/':
+        existing_root = existing_root.rstrip('/')
+    else:
+        existing_root = ''
+    updated_scope['root_path'] = f'{existing_root}{matched_prefix}'
+    return updated_scope
+
 # Prepare static files app (if starlette/fastapi installed)
 static_app = None
 if StaticFiles is not None:
@@ -59,19 +135,21 @@ if StaticFiles is not None:
 
 
 async def app(scope, receive, send):
-    if static_app is not None and scope.get('type') == 'http':
-        req_path = scope.get('path', '/') or '/'
+    effective_scope = _apply_service_route_prefix_to_scope(scope)
+
+    if static_app is not None and effective_scope.get('type') == 'http':
+        req_path = effective_scope.get('path', '/') or '/'
         safe = _p.normpath(req_path).lstrip('/')
         full = _p.join(PUBLIC_DIR, safe)
         try:
             base = _p.realpath(PUBLIC_DIR)
             target = _p.realpath(full)
             if (target == base or target.startswith(base + _p.sep)) and _p.isfile(target):
-                await static_app(scope, receive, send)
+                await static_app(effective_scope, receive, send)
                 return
         except Exception:
             pass
-    await USER_ASGI_APP(scope, receive, send)
+    await USER_ASGI_APP(effective_scope, receive, send)
 
 
 if __name__ == '__main__':
