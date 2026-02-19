@@ -166,7 +166,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       }
     } else {
       errors.push(
-        `Route at index ${i} must define either \`handle\`, \`src\`, or \`source\` property.`
+        `Route at index ${i} must define either \`src\` or \`source\` property.`
       );
     }
   });

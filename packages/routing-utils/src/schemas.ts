@@ -400,6 +400,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           important: {
+            deprecated: true,
             type: 'boolean',
           },
           user: {
@@ -409,6 +410,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           override: {
+            deprecated: true,
             type: 'boolean',
           },
           check: {
@@ -494,6 +496,7 @@ export const routesSchema = {
       },
       {
         type: 'object',
+        deprecated: true,
         required: ['handle'],
         additionalProperties: false,
         properties: {
