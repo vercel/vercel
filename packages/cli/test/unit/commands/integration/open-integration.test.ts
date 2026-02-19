@@ -9,7 +9,7 @@ import { useUser } from '../../../mocks/user';
 
 vi.mock('open', () => {
   return {
-    default: vi.fn(),
+    default: vi.fn().mockResolvedValue(undefined),
   };
 });
 
