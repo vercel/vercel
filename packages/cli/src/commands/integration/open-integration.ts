@@ -98,7 +98,7 @@ export async function openIntegration(
     );
 
     if (printOnly) {
-      output.print(`${link}\n`);
+      client.stdout.write(`${link}\n`);
     } else {
       output.print(
         `Opening the ${chalk.bold(resourceName)} resource dashboard...`
@@ -113,7 +113,7 @@ export async function openIntegration(
   const link = buildSSOLink(team, configurationId);
 
   if (printOnly) {
-    output.print(`${link}\n`);
+    client.stdout.write(`${link}\n`);
   } else {
     output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
     open(link);

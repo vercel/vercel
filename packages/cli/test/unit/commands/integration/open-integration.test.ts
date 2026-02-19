@@ -133,7 +133,7 @@ describe('integration', () => {
             const exitCode = await integrationCommand(client);
             expect(exitCode, 'exit code for "integration"').toEqual(0);
             expect(openMock).not.toHaveBeenCalled();
-            await expect(client.stderr).toOutput(
+            await expect(client.stdout).toOutput(
               'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1'
             );
           });
@@ -216,7 +216,7 @@ describe('integration', () => {
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
-          await expect(client.stderr).toOutput(
+          await expect(client.stdout).toOutput(
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1'
           );
         });
