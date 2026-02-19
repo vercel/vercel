@@ -23,7 +23,7 @@ import {
 import formatOutput from './helpers/format-output';
 import type { DeploymentLike } from './helpers/types';
 import { teamPromise, userPromise } from './helpers/get-account';
-import { apiFetch } from './helpers/api-fetch';
+import { apiFetch, deleteProject } from './helpers/api-fetch';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -94,20 +94,24 @@ test('[vc projects] should create a project successfully', async () => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execCli(binaryPath, ['project', 'add', projectName]);
+  try {
+    const vc = execCli(binaryPath, ['project', 'add', projectName]);
 
-  await waitForPrompt(vc, `Success! Project ${projectName} added`);
+    await waitForPrompt(vc, `Success! Project ${projectName} added`);
 
-  const { exitCode, stdout, stderr } = await vc;
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    const { exitCode, stdout, stderr } = await vc;
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  // creating the same project again should succeed
-  const vc2 = execCli(binaryPath, ['project', 'add', projectName]);
+    // creating the same project again should succeed
+    const vc2 = execCli(binaryPath, ['project', 'add', projectName]);
 
-  await waitForPrompt(vc2, `Success! Project ${projectName} added`);
+    await waitForPrompt(vc2, `Success! Project ${projectName} added`);
 
-  const { exitCode: exitCode2 } = await vc;
-  expect(exitCode2).toBe(0);
+    const { exitCode: exitCode2 } = await vc;
+    expect(exitCode2).toBe(0);
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('deploy with metadata containing "=" in the value', async () => {
