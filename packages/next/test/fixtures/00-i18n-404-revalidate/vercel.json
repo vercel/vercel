@@ -1,6 +1,11 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
   "probes": [
     {
       "path": "/non-existent",
@@ -22,7 +27,6 @@
       "status": 404,
       "mustContain": "lang=\"fr\""
     },
-
     {
       "path": "/",
       "status": 200,
@@ -33,7 +37,6 @@
       "status": 200,
       "mustContain": "index page"
     },
-
     {
       "path": "/another",
       "status": 200,
@@ -44,5 +47,8 @@
       "status": 200,
       "mustContain": "another page"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

@@ -35,5 +35,8 @@
       "status": 200,
       "mustContain": "data!!"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
