@@ -450,9 +450,10 @@ if os.path.exists(_runtime_config_path):
                 "--no-editable",
                 "--no-install-project",
                 "--no-build",
+                "--no-cache",
                 "--no-progress",
                 "--link-mode",
-                "hardlink",
+                "copy",
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
@@ -465,7 +466,6 @@ if os.path.exists(_runtime_config_path):
                     "PATH": os.environ.get("PATH", ""),
                     "VIRTUAL_ENV": _deps_dir,
                     "UV_PYTHON_DOWNLOADS": "never",
-                    "UV_CACHE_DIR": "/tmp/uv-cache",
                 },
             )
             _install_duration = time.time() - _install_start
