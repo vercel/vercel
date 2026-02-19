@@ -301,7 +301,41 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('Uninstalling integration…');
 
           await expect(client.stderr).toOutput(
-            `Error: Failed to remove ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'Resources that must be removed first:'
+          );
+          await expect(client.stderr).toOutput('store-acme-other-project');
+          await expect(client.stderr).toOutput('store-acme-no-projects');
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
+          );
+
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('should show agent approval warning when removing integration with resources as agent', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.isAgent = true;
+          client.setArgv('integration', 'remove', integration, '--yes');
+          const exitCodePromise = integrationCommand(client);
+
+          await expect(client.stderr).toOutput(
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'AGENT: You must get user approval before running any resource removal commands.'
+          );
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
           );
 
           await expect(exitCodePromise).resolves.toEqual(1);
