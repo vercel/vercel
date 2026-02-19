@@ -2875,7 +2875,7 @@ exports[`help command > integration help output snapshots > integration balance 
 "
   ▲ vercel integration balance integration
 
-  Shows the balances and thresholds of a specified marketplace integration                                              
+  Shows the balances and thresholds of a marketplace integration that uses prepayment billing                           
 
   Global Options:
 
@@ -2893,7 +2893,7 @@ exports[`help command > integration help output snapshots > integration balance 
 
   Examples:
 
-  - Show the balance(s) & threshold(s) of a marketplace integration
+  - Show the balance(s) & threshold(s) of a prepayment marketplace integration
 
     $ vercel integration balance <integration-name>
     $ vercel integration balance acme
@@ -2919,9 +2919,12 @@ exports[`help command > integration help output snapshots > integration help col
                          and     
                          thresho…
                          of a    
-                         specifi…
                          marketp…
                          integra…
+                         that    
+                         uses    
+                         prepaym…
+                         billing 
   list      [project]    List    
                          resourc…
                          from    
@@ -3010,8 +3013,9 @@ exports[`help command > integration help output snapshots > integration help col
   Commands:
 
   add       integration  Installs a marketplace integration              
-  balance   integration  Shows the balances and thresholds of a specified
-                         marketplace integration                         
+  balance   integration  Shows the balances and thresholds of a          
+                         marketplace integration that uses prepayment    
+                         billing                                         
   list      [project]    List resources from marketplace integrations for
                          the current project                             
   discover               Discover available marketplace integrations     
@@ -3053,7 +3057,8 @@ exports[`help command > integration help output snapshots > integration help col
   Commands:
 
   add       integration  Installs a marketplace integration                                                      
-  balance   integration  Shows the balances and thresholds of a specified marketplace integration                
+  balance   integration  Shows the balances and thresholds of a marketplace integration that uses prepayment     
+                         billing                                                                                 
   list      [project]    List resources from marketplace integrations for the current project                    
   discover               Discover available marketplace integrations                                             
   open      name         Opens a marketplace integration's dashboard                                             
