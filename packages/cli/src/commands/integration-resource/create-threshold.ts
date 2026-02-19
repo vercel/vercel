@@ -289,6 +289,13 @@ async function handleUpdateThreshold(props: {
     return 0;
   }
 
+  if (!props.skipConfirmWithYes && !props.client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
+
   const entityTextReference = props.isInstallationLevel
     ? `installation ${chalk.bold(props.resource.product?.name)}`
     : `resource ${chalk.bold(props.resource.name)}`;

@@ -77,9 +77,16 @@ export async function remove(client: Client) {
   if (!integrationConfiguration) {
     output.error(`No integration ${chalk.bold(integrationName)} found.`);
     telemetry.trackCliArgumentIntegration(integrationName, false);
-    return 0;
+    return 1;
   }
   telemetry.trackCliArgumentIntegration(integrationName, true);
+
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
 
   const userDidNotConfirm =
     !skipConfirmation &&
