@@ -1872,6 +1872,18 @@ export function addLocaleOrDefault(
     : pathname;
 }
 
+function regionsArrayEqual(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, i) => val === sortedB[i]);
+}
+
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
@@ -2030,9 +2042,11 @@ export async function getPageLambdaGroups({
           const matches =
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
-            JSON.stringify(group.regions) === JSON.stringify(opts.regions) &&
-            JSON.stringify(group.functionFailoverRegions) ===
-              JSON.stringify(opts.functionFailoverRegions) &&
+            regionsArrayEqual(group.regions, opts.regions) &&
+            regionsArrayEqual(
+              group.functionFailoverRegions,
+              opts.functionFailoverRegions
+            ) &&
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
