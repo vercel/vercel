@@ -1,9 +1,11 @@
 name: CLI Evals
 
+# Runs on PRs only when evals change (to limit AI gateway cost). Also runnable manually via "Run workflow".
 on:
+  workflow_dispatch:
   pull_request:
     paths:
-      - 'packages/cli/**'
+      - 'packages/cli/evals/**'
 
 jobs:
   evals:
