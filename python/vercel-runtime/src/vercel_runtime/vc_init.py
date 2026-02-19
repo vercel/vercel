@@ -530,10 +530,10 @@ except Exception:
     exit(1)
 
 if is_worker_service():
-    if 'handler' not in __vc_variables and 'Handler' not in __vc_variables:
+    if "handler" not in __vc_variables and "Handler" not in __vc_variables:
         should_bootstrap_worker_app = (
-            'app' not in __vc_variables
-            or is_celery_app(getattr(__vc_module, 'app', None))
+            "app" not in __vc_variables
+            or is_celery_app(getattr(__vc_module, "app", None))
         )
     else:
         should_bootstrap_worker_app = False
@@ -543,7 +543,7 @@ if is_worker_service():
             __vc_module.app = bootstrap_worker_service_app(__vc_module)
             __vc_variables = dir(__vc_module)
         except Exception:
-            _stderr('Error bootstrapping worker service app:')
+            _stderr("Error bootstrapping worker service app:")
             _stderr(traceback.format_exc())
             exit(1)
 

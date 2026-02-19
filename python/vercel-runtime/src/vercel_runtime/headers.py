@@ -5,7 +5,10 @@ import contextlib
 
 def set_vercel_headers(headers: dict[str, str] | None) -> None:
     with contextlib.suppress(Exception):
-        from vercel.headers import set_headers  # type: ignore[import-not-found]
+        from vercel.headers import (  # type: ignore[import-not-found]  # noqa: PLC0415
+            set_headers,
+        )
+
         set_headers(headers)
 
 
@@ -13,10 +16,12 @@ def decode_header_bytes(value: bytes) -> str:
     try:
         return value.decode()
     except Exception:
-        return ''
+        return ""
 
 
-def set_vercel_headers_from_asgi_pairs(headers_list: list[tuple[bytes, bytes]]) -> None:
+def set_vercel_headers_from_asgi_pairs(
+    headers_list: list[tuple[bytes, bytes]],
+) -> None:
     normalized: dict[str, str] = {}
     for key_bytes, value_bytes in headers_list:
         key = decode_header_bytes(key_bytes).lower()
@@ -28,7 +33,9 @@ def set_vercel_headers_from_asgi_pairs(headers_list: list[tuple[bytes, bytes]]) 
     set_vercel_headers(normalized if normalized else None)
 
 
-def set_vercel_headers_from_http_headers(headers: object) -> None:
+def set_vercel_headers_from_http_headers(
+    headers: object,
+) -> None:
     normalized: dict[str, str] = {}
     with contextlib.suppress(Exception):
         for key, value in headers.items():  # type: ignore[attr-defined]
@@ -43,7 +50,9 @@ def clear_vercel_headers_context() -> None:
     set_vercel_headers(None)
 
 
-def normalize_event_headers(raw_headers: object) -> dict[str, str]:
+def normalize_event_headers(
+    raw_headers: object,
+) -> dict[str, str]:
     normalized: dict[str, str] = {}
     if isinstance(raw_headers, dict):
         for key, value in raw_headers.items():
@@ -56,15 +65,19 @@ def normalize_event_headers(raw_headers: object) -> dict[str, str]:
             else:
                 normalized[str(key)] = str(value)
 
-    has_public_oidc = any(k.lower() == 'x-vercel-oidc-token' for k in normalized.keys())
+    has_public_oidc = any(
+        k.lower() == "x-vercel-oidc-token" for k in normalized
+    )
     internal_oidc_key = next(
-        (k for k in normalized.keys() if k.lower() == 'x-vercel-internal-oidc-token'),
+        (k for k in normalized if k.lower() == "x-vercel-internal-oidc-token"),
         None,
     )
     if not has_public_oidc and internal_oidc_key:
-        normalized['x-vercel-oidc-token'] = normalized[internal_oidc_key]
+        normalized["x-vercel-oidc-token"] = normalized[internal_oidc_key]
 
-    for key in [k for k in normalized.keys() if k.lower() == 'x-vercel-internal-oidc-token']:
+    for key in [
+        k for k in normalized if k.lower() == "x-vercel-internal-oidc-token"
+    ]:
         del normalized[key]
 
     return normalized
