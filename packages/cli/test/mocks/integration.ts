@@ -824,7 +824,11 @@ const resources: { stores: Resource[] } = {
       type: 'integration',
       name: 'store-acme-other-project',
       status: 'available',
-      product: { name: 'Acme', slug: 'acme' },
+      product: {
+        name: 'Acme',
+        slug: 'acme',
+        integrationConfigurationId: 'acme-first',
+      },
       projectsMetadata: [
         {
           id: 'spc_2',
@@ -862,7 +866,11 @@ const resources: { stores: Resource[] } = {
       type: 'integration',
       name: 'store-acme-no-projects',
       status: 'available',
-      product: { name: 'Acme', slug: 'acme' },
+      product: {
+        name: 'Acme',
+        slug: 'acme',
+        integrationConfigurationId: 'acme-first',
+      },
       projectsMetadata: [],
       externalResourceId: 'ext_store_4',
     },
@@ -1085,11 +1093,21 @@ export function useResources(returnError?: number) {
       return;
     }
 
-    const { teamId } = req.query;
+    const { teamId, integrationConfigurationId } = req.query;
 
     if (!teamId) {
       res.status(500);
       res.end();
+      return;
+    }
+
+    if (integrationConfigurationId) {
+      res.json({
+        stores: resources.stores.filter(
+          s =>
+            s.product?.integrationConfigurationId === integrationConfigurationId
+        ),
+      });
       return;
     }
 
