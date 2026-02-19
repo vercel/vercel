@@ -293,7 +293,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 0 has invalid `src` regular expression "^/(broken]$".'
+      'Route at index 0 has invalid `src`/`source` regular expression "^/(broken]$".'
     );
   });
 
@@ -748,7 +748,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 1 cannot define `dest` after `handle: hit`.'
+      'Route at index 1 cannot define `dest`/`destination` after `handle: hit`.'
     );
   });
 
@@ -787,7 +787,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 1 cannot define `status` after `handle: hit`.'
+      'Route at index 1 cannot define `status`/`statusCode` after `handle: hit`.'
     );
   });
 
