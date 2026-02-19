@@ -351,6 +351,21 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  'acme-subscription': {
+    id: 'acme-subscription',
+    name: 'Acme Subscription',
+    slug: 'acme-subscription',
+    products: [
+      {
+        id: 'acme-sub-product',
+        name: 'Acme Subscription Product',
+        slug: 'acme-subscription',
+        type: 'storage',
+        shortDescription: 'The Acme subscription product',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-unsupported': {
     id: 'acme-unsupported',
     name: 'Acme Integration',
@@ -577,6 +592,20 @@ const integrationPlans: Record<string, unknown> = {
         scope: 'installation',
         description: 'Pro Plan',
         paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
+      },
+    ],
+  },
+  'acme-subscription': {
+    plans: [
+      {
+        id: 'free',
+        type: 'subscription',
+        name: 'Free Plan',
+        scope: 'installation',
+        description: 'Subscription plan',
+        paymentMethodRequired: false,
         details: [],
         highlightedDetails: [],
       },
@@ -1154,6 +1183,42 @@ export function useIntegrationDiscover(opts?: {
     }
     res.json(discoverCategories);
   });
+}
+
+export function useIntegrationDetail() {
+  client.scenario.get(
+    '/:version/integrations/integration/:slug',
+    (req, res) => {
+      const { slug } = req.params;
+      const integration = integrations[slug];
+
+      if (!integration) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(integration);
+    }
+  );
+}
+
+export function useIntegrationPlans() {
+  client.scenario.get(
+    '/:version/integrations/integration/:integrationIdOrSlug/products/:productIdOrSlug/plans',
+    (req, res) => {
+      const { integrationIdOrSlug } = req.params;
+      const plans = integrationPlans[integrationIdOrSlug];
+
+      if (!plans) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(plans);
+    }
+  );
 }
 
 export function useConfiguration() {

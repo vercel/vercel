@@ -2,7 +2,9 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
+import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { getBalanceInformation } from '../../util/integration/fetch-installation-prepayment-info';
+import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import type {
   CreditWithAmount,
@@ -59,10 +61,11 @@ export async function balance(client: Client, args: string[]) {
     return 1;
   }
 
-  if (
-    resources.length > 0 &&
-    !resources.some(resource => resource.billingPlan?.type === 'prepayment')
-  ) {
+  const hasPrepaymentPlan = await checkIntegrationHasPrepaymentPlan(
+    client,
+    integrationSlug
+  );
+  if (!hasPrepaymentPlan) {
     output.error(
       `The integration ${chalk.bold(integrationSlug)} does not use prepayment billing. This command is only for integrations with prepayment billing plans.`
     );
@@ -81,6 +84,40 @@ export async function balance(client: Client, args: string[]) {
   outputBalanceInformation(prepaymentInfo, resources, integrationSlug);
 
   return 0;
+}
+
+async function checkIntegrationHasPrepaymentPlan(
+  client: Client,
+  integrationSlug: string
+): Promise<boolean> {
+  try {
+    const integration = await fetchIntegration(client, integrationSlug);
+    const products = integration.products ?? [];
+
+    for (const product of products) {
+      try {
+        const { plans } = await fetchBillingPlans(
+          client,
+          integration,
+          product,
+          {}
+        );
+        if (plans.some(plan => plan.type === 'prepayment')) {
+          return true;
+        }
+      } catch {
+        // If we can't fetch plans for a product (e.g. metadata required),
+        // we can't rule out prepayment — assume it might be prepayment
+        return true;
+      }
+    }
+
+    return false;
+  } catch {
+    // If we can't fetch the integration, we can't determine billing type —
+    // let it proceed and the balance API will handle it
+    return true;
+  }
 }
 
 async function getBalanceInstallationId(

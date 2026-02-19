@@ -3,6 +3,8 @@ import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import {
   useConfiguration,
+  useIntegrationDetail,
+  useIntegrationPlans,
   usePrepayment,
   useResources,
 } from '../../../mocks/integration';
@@ -42,6 +44,8 @@ describe('integration', () => {
         client.config.currentTeam = team.id;
         useConfiguration();
         useResources();
+        useIntegrationDetail();
+        useIntegrationPlans();
       });
 
       describe('[integration]', () => {
@@ -265,6 +269,8 @@ describe('integration', () => {
         client.config.currentTeam = team.id;
         useConfiguration();
         useResources();
+        useIntegrationDetail();
+        useIntegrationPlans();
 
         client.setArgv('integration', 'balance', 'acme-subscription');
         const exitCode = await integrationCommand(client);
