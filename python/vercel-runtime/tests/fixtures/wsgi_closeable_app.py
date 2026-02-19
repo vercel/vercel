@@ -6,7 +6,7 @@ class ClosingIterator:
         self._data = [data]
         self.closed = False
 
-    def __iter__(self):  # noqa: D105
+    def __iter__(self):
         return iter(self._data)
 
     def close(self):
