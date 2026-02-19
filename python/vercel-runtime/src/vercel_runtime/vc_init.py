@@ -60,17 +60,17 @@ def _normalize_service_route_prefix(raw_prefix: str | None) -> str:
       - has no trailing slash
     """
     if not raw_prefix:
-        return ''
+        return ""
 
     prefix = raw_prefix.strip()
     if not prefix:
-        return ''
+        return ""
 
-    if not prefix.startswith('/'):
-        prefix = f'/{prefix}'
+    if not prefix.startswith("/"):
+        prefix = f"/{prefix}"
 
     # Treat "/" as an unset mount prefix.
-    return '' if prefix == '/' else prefix.rstrip('/')
+    return "" if prefix == "/" else prefix.rstrip("/")
 
 
 def _is_service_route_prefix_strip_enabled() -> bool:
@@ -80,16 +80,18 @@ def _is_service_route_prefix_strip_enabled() -> bool:
     Stripping is gated behind a dedicated env var so manually configured
     route prefixes can be preserved by default.
     """
-    raw = os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX_STRIP')
+    raw = os.environ.get("VERCEL_SERVICE_ROUTE_PREFIX_STRIP")
     if not raw:
         return False
-    return raw.lower() in ('1', 'true')
+    return raw.lower() in ("1", "true")
 
 
 _service_route_prefix = (
-    _normalize_service_route_prefix(os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX'))
+    _normalize_service_route_prefix(
+        os.environ.get("VERCEL_SERVICE_ROUTE_PREFIX")
+    )
     if _is_service_route_prefix_strip_enabled()
-    else ''
+    else ""
 )
 
 
@@ -103,26 +105,24 @@ def _split_request_target(target: str) -> tuple[str, str]:
       - asterisk-form: "*"
     """
     if not target:
-        return '/', ''
+        return "/", ""
 
     parsed = urlsplit(target)
     path = parsed.path
     query = parsed.query
 
-    # Absolute-form request-target (RFC 7230 section 5.3.2), e.g.:
-    # "http://example.com/api/ping?x=1"
-    if parsed.scheme in ('http', 'https') and parsed.netloc:
-        return path or '/', query
+    # Absolute-form request-target (RFC 7230 section 5.3.2).
+    if parsed.scheme in ("http", "https") and parsed.netloc:
+        return path or "/", query
 
-    # Asterisk-form request-target (RFC 7230 section 5.3.4), e.g.:
-    # "OPTIONS * HTTP/1.1"
-    if path == '*':
-        return '*', query
+    # Asterisk-form request-target (RFC 7230 section 5.3.4).
+    if path == "*":
+        return "*", query
 
     if not path:
-        path = '/'
-    elif not path.startswith('/'):
-        path = f'/{path}'
+        path = "/"
+    elif not path.startswith("/"):
+        path = f"/{path}"
 
     return path, query
 
@@ -139,25 +139,25 @@ def _strip_service_route_prefix(path: str) -> tuple[str, str]:
       "/_/backend/ping" -> ("/ping", "/_/backend")
       "/foo"            -> ("/foo", "")
     """
-    if path == '*':
-        return path, ''
+    if path == "*":
+        return path, ""
     if not path:
-        path = '/'
-    elif not path.startswith('/'):
-        path = f'/{path}'
+        path = "/"
+    elif not path.startswith("/"):
+        path = f"/{path}"
 
     prefix = _service_route_prefix
     if not prefix:
-        return path, ''
+        return path, ""
 
     if path == prefix:
-        return '/', prefix
+        return "/", prefix
 
-    if path.startswith(f'{prefix}/'):
-        stripped = path[len(prefix):]
-        return stripped if stripped else '/', prefix
+    if path.startswith(f"{prefix}/"):
+        stripped = path[len(prefix) :]
+        return stripped if stripped else "/", prefix
 
-    return path, ''
+    return path, ""
 
 
 def _apply_service_route_prefix_to_target(target: str) -> tuple[str, str]:
@@ -171,7 +171,7 @@ def _apply_service_route_prefix_to_target(target: str) -> tuple[str, str]:
     path, query = _split_request_target(target)
     path, root_path = _strip_service_route_prefix(path)
     if query:
-        return f'{path}?{query}', root_path
+        return f"{path}?{query}", root_path
     return path, root_path
 
 
@@ -684,9 +684,10 @@ if "VERCEL_IPC_PATH" in os.environ:
                 self.end_headers()
                 return
 
-            self.path, self._vc_service_root_path = _apply_service_route_prefix_to_target(
-                self.path
-            )
+            (
+                self.path,
+                self._vc_service_root_path,
+            ) = _apply_service_route_prefix_to_target(self.path)
             invocation_id = self.headers.get("x-vercel-internal-invocation-id")
             request_id = int(self.headers.get("x-vercel-internal-request-id"))
             del self.headers["x-vercel-internal-invocation-id"]
@@ -773,7 +774,11 @@ if "VERCEL_IPC_PATH" in os.environ:
                 def handle_request(self):
                     # Prepare WSGI environment
                     path, query = _split_request_target(self.path)
-                    service_root_path = getattr(self, "_vc_service_root_path", "")
+                    service_root_path = getattr(
+                        self,
+                        "_vc_service_root_path",
+                        "",
+                    )
                     content_length = int(self.headers.get("Content-Length", 0))
                     env = {
                         "CONTENT_LENGTH": str(content_length),
@@ -969,6 +974,7 @@ elif "app" in __vc_variables:
     ) and not inspect.iscoroutinefunction(__vc_module.app.__call__):
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
+
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
         from vercel_runtime._vendor.werkzeug.wrappers import Response
 
@@ -1001,9 +1007,10 @@ elif "app" in __vc_variables:
             if isinstance(body, string_types):
                 body = to_bytes(body, charset="utf-8")
 
-            request_target, service_root_path = _apply_service_route_prefix_to_target(
-                payload["path"]
-            )
+            (
+                request_target,
+                service_root_path,
+            ) = _apply_service_route_prefix_to_target(payload["path"])
             path, query = _split_request_target(request_target)
 
             environ = {
@@ -1192,9 +1199,10 @@ elif "app" in __vc_variables:
             elif not isinstance(body, bytes):
                 body = body.encode()
 
-            request_target, service_root_path = _apply_service_route_prefix_to_target(
-                payload["path"]
-            )
+            (
+                request_target,
+                service_root_path,
+            ) = _apply_service_route_prefix_to_target(payload["path"])
             path, query = _split_request_target(request_target)
             query = query.encode()
 
