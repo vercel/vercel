@@ -79,14 +79,6 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
-  {
-    name: 'non-interactive',
-    shorthand: null,
-    type: Boolean,
-    description:
-      'Never prompt for input; use structured JSON for action required',
-    deprecated: false,
-  },
 ] as const;
 
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);
