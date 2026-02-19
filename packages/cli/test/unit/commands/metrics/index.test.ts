@@ -41,8 +41,8 @@ describe('metrics', () => {
 
       // schema lists events, exit 0
       expect(exitCode).toBe(0);
-      const output = client.stdout.getFullOutput();
-      expect(output).toContain('event,description');
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Events found');
     });
 
     it('should route to query as default subcommand', async () => {
