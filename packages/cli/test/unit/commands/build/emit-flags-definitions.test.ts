@@ -7,13 +7,7 @@ vi.mock('node:fs/promises', async () => {
   return memfs.fs.promises;
 });
 
-import _fetch, { type Response } from 'node-fetch';
-
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
 import { emitFlagsDatafiles } from '../../../../src/commands/build/emit-flags-datafiles';
 
@@ -21,13 +15,13 @@ function sha256(input: string): string {
   return createHash('sha256').update(input).digest('hex');
 }
 
-function mockFetchResponse(data: unknown, ok = true): Response {
+function mockFetchResponse(data: unknown, ok = true): globalThis.Response {
   return {
     ok,
     status: ok ? 200 : 500,
     statusText: ok ? 'OK' : 'Internal Server Error',
     json: async () => data,
-  } as unknown as Response;
+  } as unknown as globalThis.Response;
 }
 
 beforeEach(() => {
@@ -41,7 +35,7 @@ describe('emitFlagsDatafiles', () => {
       SOME_VAR: 'hello',
     });
 
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
 
     const files = vol.toJSON();
     const storageDir = '/app/node_modules/@vercel/flags-definitions';
@@ -61,14 +55,14 @@ describe('emitFlagsDatafiles', () => {
     const sdkKey = 'vf_test_abc123def456';
     const definitions = { flag1: { variants: ['on', 'off'] } };
 
-    fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse(definitions));
 
     await emitFlagsDatafiles('/app', {
       FLAGS_SECRET: sdkKey,
     });
 
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith(
       'https://flags.vercel.com/v1/datafile',
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -102,14 +96,14 @@ describe('emitFlagsDatafiles', () => {
     const sdkKey = 'vf_flags_format_key';
     const definitions = { flag1: {} };
 
-    fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse(definitions));
 
     await emitFlagsDatafiles('/app', {
       MY_FLAG_VAR: `flags:sdkKey=${sdkKey}&other=value`,
     });
 
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith(
       'https://flags.vercel.com/v1/datafile',
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -123,7 +117,7 @@ describe('emitFlagsDatafiles', () => {
     const sdkKey = 'vf_duplicate_key';
     const definitions = { flag1: {} };
 
-    fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse(definitions));
 
     await emitFlagsDatafiles('/app', {
       VAR1: sdkKey,
@@ -131,7 +125,7 @@ describe('emitFlagsDatafiles', () => {
       VAR3: `flags:sdkKey=${sdkKey}`,
     });
 
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it('should handle multiple distinct SDK keys', async () => {
@@ -140,7 +134,7 @@ describe('emitFlagsDatafiles', () => {
     const defs1 = { flagA: { enabled: true } };
     const defs2 = { flagB: { enabled: false } };
 
-    fetch
+    fetchSpy
       .mockResolvedValueOnce(mockFetchResponse(defs1))
       .mockResolvedValueOnce(mockFetchResponse(defs2));
 
@@ -149,7 +143,7 @@ describe('emitFlagsDatafiles', () => {
       VAR2: key2,
     });
 
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
 
     const files = vol.toJSON();
     const indexJs = files[
@@ -168,7 +162,7 @@ describe('emitFlagsDatafiles', () => {
     const key2 = 'vf_key_two_ghijkl';
     const sameDefs = { flagA: { enabled: true } };
 
-    fetch
+    fetchSpy
       .mockResolvedValueOnce(mockFetchResponse(sameDefs))
       .mockResolvedValueOnce(mockFetchResponse(sameDefs));
 
@@ -195,7 +189,7 @@ describe('emitFlagsDatafiles', () => {
     const sdkKey = 'vf_structure_test_key_123';
     const definitions = { myFlag: { variants: ['a', 'b'] } };
 
-    fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse(definitions));
 
     await emitFlagsDatafiles('/app', {
       SDK_KEY: sdkKey,
@@ -231,7 +225,7 @@ describe('emitFlagsDatafiles', () => {
   it('should include Vercel metadata headers when env vars are set', async () => {
     const sdkKey = 'vf_meta_key_test';
 
-    fetch.mockResolvedValueOnce(mockFetchResponse({}));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse({}));
 
     await emitFlagsDatafiles('/app', {
       MY_KEY: sdkKey,
@@ -241,7 +235,7 @@ describe('emitFlagsDatafiles', () => {
       VERCEL_REGION: 'iad1',
     });
 
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetchSpy).toHaveBeenCalledWith(
       'https://flags.vercel.com/v1/datafile',
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -257,7 +251,7 @@ describe('emitFlagsDatafiles', () => {
   it('should throw NowBuildError when fetch fails', async () => {
     const sdkKey = 'vf_fail_key_abcdef123';
 
-    fetch.mockResolvedValueOnce(mockFetchResponse(null, false));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse(null, false));
 
     await expect(emitFlagsDatafiles('/app', { KEY: sdkKey })).rejects.toThrow(
       'Failed to fetch flag definitions'
@@ -273,11 +267,11 @@ describe('emitFlagsDatafiles', () => {
       PARTIAL: 'flags:sdkKey=not_vf_prefix',
     });
 
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('should write version field in the generated module', async () => {
-    fetch.mockResolvedValueOnce(mockFetchResponse({}));
+    fetchSpy.mockResolvedValueOnce(mockFetchResponse({}));
 
     await emitFlagsDatafiles('/app', {
       KEY: 'vf_version_test',
