@@ -1026,6 +1026,9 @@ importers:
 
   packages/config:
     dependencies:
+      '@vercel/routing-utils':
+        specifier: workspace:*
+        version: link:../routing-utils
       pretty-cache-header:
         specifier: ^1.0.0
         version: 1.0.0
