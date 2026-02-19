@@ -958,5 +958,8 @@
       "status": 200,
       "mustContain": "no\":\"revalidate"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

@@ -12,5 +12,8 @@
       "status": 500,
       "mustContain": "500 page"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

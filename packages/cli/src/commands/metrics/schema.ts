@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import plural from 'pluralize';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -6,14 +8,20 @@ import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { validateEvent } from './validation';
-import { getEventNames, getEvent, getAggregations } from './schema-data';
 import {
-  formatSchemaListCsv,
+  getEventNames,
+  getEvent,
+  getAggregations,
+  type DimensionSchema,
+  type MeasureSchema,
+} from './schema-data';
+import {
   formatSchemaListJson,
-  formatSchemaDetailCsv,
   formatSchemaDetailJson,
   formatErrorJson,
 } from './output';
+import formatTable from '../../util/format-table';
+import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 
 export default async function schema(
@@ -83,7 +91,18 @@ export default async function schema(
       client.stdout.write(formatSchemaDetailJson(eventWithName, aggregations));
     } else {
       output.log(`Event: ${event} - ${eventData.description}`);
-      client.stdout.write(formatSchemaDetailCsv(eventWithName));
+
+      const dimTable = formatDimensionsTable(eventWithName.dimensions);
+      if (dimTable) {
+        output.print(dimTable);
+        output.print('\n');
+      }
+
+      const measTable = formatMeasuresTable(eventWithName.measures);
+      if (measTable) {
+        output.print(measTable);
+        output.print('\n');
+      }
     }
   } else {
     // Event list
@@ -95,9 +114,58 @@ export default async function schema(
     if (jsonOutput) {
       client.stdout.write(formatSchemaListJson(events));
     } else {
-      client.stdout.write(formatSchemaListCsv(events));
+      output.log(`${plural('Event', events.length, true)} found`);
+      output.print(formatEventsTable(events));
+      output.print('\n');
     }
   }
 
   return 0;
+}
+
+function formatEventsTable(events: { name: string; description: string }[]) {
+  return indent(
+    formatTable(
+      ['Event', 'Description'],
+      ['l', 'l'],
+      [{ rows: events.map(e => [e.name, e.description]) }]
+    ),
+    1
+  );
+}
+
+function formatDimensionsTable(dimensions: DimensionSchema[]) {
+  if (dimensions.length === 0) {
+    return null;
+  }
+  return indent(
+    formatTable(
+      ['Dimension', 'Label', 'Groupable'],
+      ['l', 'l', 'l'],
+      [
+        {
+          rows: dimensions.map(d => [
+            d.name,
+            d.label,
+            d.filterOnly ? chalk.dim('no') : 'yes',
+          ]),
+        },
+      ]
+    ),
+    1
+  );
+}
+
+function formatMeasuresTable(measures: MeasureSchema[]) {
+  if (measures.length === 0) {
+    return null;
+  }
+  return indent(
+    formatTable(
+      ['Measure', 'Label', 'Unit'],
+      ['l', 'l', 'l'],
+      [{ rows: measures.map(m => [m.name, m.label, m.unit]) }]
+    ),
+    1
+  );
 }

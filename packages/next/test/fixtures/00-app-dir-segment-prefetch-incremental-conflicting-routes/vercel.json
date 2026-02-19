@@ -18,5 +18,8 @@
         "x-matched-path": "/dynamic.prefetch.rsc"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
