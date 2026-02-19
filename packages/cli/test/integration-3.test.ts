@@ -535,11 +535,11 @@ test('create a production deployment', async () => {
 });
 
 test('try to deploy non-existing path', async () => {
-  const goal = `Could not find`;
-  const expectedPath = humanizePath(path.join(process.cwd(), session));
-
+  // Use a deterministic path that won't trigger the Jaro-Winkler typo
+  // handler (random `session` strings sometimes match CLI commands).
+  const nonExistingPath = 'non-existing-directory-test-path';
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-    session,
+    nonExistingPath,
     '--yes',
   ]);
 
@@ -547,8 +547,10 @@ test('try to deploy non-existing path', async () => {
   // Strip ANSI codes before checking — chalk colors and Node.js
   // deprecation warnings can pollute stderr in CI.
   const plain = stderr.replace(/\u001b\[[0-9;]*m/g, '');
-  expect(plain).toContain(goal);
-  expect(plain).toContain(expectedPath);
+  expect(plain).toContain('Could not find');
+  expect(plain).toContain(
+    humanizePath(path.join(process.cwd(), nonExistingPath))
+  );
 });
 
 test('try to deploy with non-existing team', async () => {
