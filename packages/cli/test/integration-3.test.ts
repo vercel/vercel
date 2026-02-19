@@ -535,8 +535,9 @@ test('create a production deployment', async () => {
 });
 
 test('try to deploy non-existing path', async () => {
-  const goal = `Could not find`;
-  const expectedPath = humanizePath(path.join(process.cwd(), session));
+  const goal = `Error: Could not find “${humanizePath(
+    path.join(process.cwd(), session)
+  )}”`;
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     session,
@@ -544,11 +545,7 @@ test('try to deploy non-existing path', async () => {
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  // Strip ANSI codes before checking — chalk colors and Node.js
-  // deprecation warnings can pollute stderr in CI.
-  const plain = stderr.replace(/\u001b\[[0-9;]*m/g, '');
-  expect(plain).toContain(goal);
-  expect(plain).toContain(expectedPath);
+  expect(stderr.trim().endsWith(goal), `should end with "${goal}"`).toBe(true);
 });
 
 test('try to deploy with non-existing team', async () => {

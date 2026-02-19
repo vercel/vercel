@@ -11,3 +11,8 @@ Add private Blob storage support:
 - Display access type (Public/Private) in `vercel blob store get` output
 
 The `--access` flag defaults to `public` for backward compatibility.
+
+Flatten blob store commands: `blob create-store`, `blob delete-store`, `blob get-store`.
+Rename `--force` to `--allow-overwrite`.
+Add conditional headers: `--if-match` for put/del/copy, `--if-none-match` for get.
+Old commands and options are deprecated but still work.
