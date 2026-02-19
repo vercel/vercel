@@ -89,11 +89,12 @@ test('[vc link] should not create .env.local when linking new project', async ()
   await fs.remove(path.join(dir, '.vercel'));
   await fs.remove(path.join(dir, '.env.local'));
 
-  const vc = execCli(
-    binaryPath,
-    ['link', `--project=${projectName}`, '--non-interactive=false'],
-    { cwd: dir, env: { FORCE_TTY: '1' } }
-  );
+  const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(vc, /Set up[^?]+\?/);
   vc.stdin?.write('yes\n');
