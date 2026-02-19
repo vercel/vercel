@@ -297,7 +297,7 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('fails if route does not define `handle` or `src` property', () => {
+  test('fails if route does not define `handle`, `src`, or `source` property', () => {
     // @ts-expect-error - intentionally passing invalid property
     const input: Route[] = [{ fake: 'foo' }];
     const { error } = normalizeRoutes(input);
@@ -305,7 +305,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 0 must define either `handle` or `src` property.'
+      'Route at index 0 must define either `handle`, `src`, or `source` property.'
     );
   });
 
