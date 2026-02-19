@@ -124,9 +124,18 @@ export async function addAutoProvision(
   );
 
   // 3b. Check if integration is installed on this team
-  const teamInstallation = installations.find(
+  const teamInstallations = installations.filter(
     i => i.ownerId === team.id && i.installationType === 'marketplace'
   );
+
+  if (teamInstallations.length > 1) {
+    output.error(
+      `Found more than one existing installation of ${integration.name}. Please contact Vercel Support at https://vercel.com/help`
+    );
+    return 1;
+  }
+
+  const teamInstallation = teamInstallations[0];
 
   let acceptedPolicies: AcceptedPolicies = {};
   if (!teamInstallation) {
