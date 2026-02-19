@@ -70,6 +70,15 @@ export const addSubcommand = {
       type: Boolean,
       deprecated: false,
     },
+    {
+      name: 'git-branch',
+      description:
+        'Git branch for Preview environment (leave empty for all Preview branches)',
+      shorthand: null,
+      type: String,
+      argument: 'BRANCH',
+      deprecated: false,
+    },
   ],
   examples: [
     {

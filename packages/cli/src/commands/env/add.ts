@@ -16,7 +16,7 @@ import {
   removePublicPrefix,
   validateEnvValue,
 } from '../../util/env/validate-env';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import output from '../../output-manager';
@@ -45,6 +45,9 @@ export default async function add(client: Client, argv: string[]) {
   const stdInput = await readStandardInput(client.stdin);
   // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
+  if (envGitBranch === undefined && typeof opts['--git-branch'] === 'string') {
+    envGitBranch = opts['--git-branch'];
+  }
 
   const telemetryClient = new EnvAddTelemetryClient({
     opts: {
@@ -319,12 +322,34 @@ export default async function add(client: Client, argv: string[]) {
 
   if (
     !stdInput &&
-    !envGitBranch &&
+    envGitBranch === undefined &&
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
     if (client.nonInteractive) {
-      envGitBranch = '';
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'git_branch_required',
+          message: `Add ${envName} to which Git branch for Preview? Pass --git-branch <branch> or use an empty value for all Preview branches.`,
+          next: [
+            {
+              command: getCommandNamePlain(
+                `env add ${envName} preview --git-branch <branch> --yes`
+              ),
+              when: 'Add to a specific Git branch',
+            },
+            {
+              command: getCommandNamePlain(
+                `env add ${envName} preview --git-branch "" --yes`
+              ),
+              when: 'Add to all Preview branches',
+            },
+          ],
+        },
+        1
+      );
     } else {
       envGitBranch = await client.input.text({
         message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
