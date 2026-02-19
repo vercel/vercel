@@ -173,30 +173,3 @@ export function classifyPackages(
 
   return { privatePackages, publicPackages, packageVersions };
 }
-
-/**
- * Generate requirements.txt content for runtime installation.
- *
- * Only includes public packages that will be installed at runtime from PyPI.
- * Private packages should be bundled separately.
- */
-export function generateRuntimeRequirements(
-  classification: PackageClassification
-): string {
-  const lines: string[] = [
-    '# Auto-generated requirements for runtime installation',
-    '# Private packages are bundled separately and not listed here.',
-    '',
-  ];
-
-  for (const pkgName of classification.publicPackages) {
-    const version = classification.packageVersions[pkgName];
-    if (version) {
-      lines.push(`${pkgName}==${version}`);
-    } else {
-      lines.push(pkgName);
-    }
-  }
-
-  return lines.join('\n');
-}

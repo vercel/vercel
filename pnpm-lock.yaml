@@ -2048,6 +2048,9 @@ importers:
       '@vercel/error-utils':
         specifier: workspace:*
         version: link:../error-utils
+      '@vercel/python-runtime':
+        specifier: workspace:*
+        version: link:../../python/vercel-runtime
       cross-env:
         specifier: 7.0.3
         version: 7.0.3
