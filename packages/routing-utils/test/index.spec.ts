@@ -1032,20 +1032,67 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
-  test('should error when routes is defined and cleanUrls is true', () => {
+  test('should allow routes alongside cleanUrls', () => {
     const vercelConfig = {
       cleanUrls: true,
       routes: [{ src: '/page', dest: '/file.html' }],
     };
-    const { error } = getTransformedRoutes(vercelConfig);
-    assert.notEqual(error, null);
-    assert.equal(error?.code, 'invalid_mixed_routes');
-    assert.equal(
-      error?.message,
-      'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.'
-    );
-    assert.ok(error?.link);
-    assert.ok(error?.action);
+    const { error, routes } = getTransformedRoutes(vercelConfig);
+    assert.equal(error, null);
+    assert.notEqual(routes, null);
+    if (routes) {
+      const userRouteIndex = routes.findIndex(
+        r => !isHandler(r) && (r as any).dest === '/file.html'
+      );
+      assert.ok(
+        userRouteIndex > 0,
+        'user routes should come after cleanUrls routes'
+      );
+    }
+  });
+
+  test('should allow routes alongside redirects and headers', () => {
+    const vercelConfig = {
+      routes: [{ src: '/api/(.*)', dest: '/api/$1' }],
+      redirects: [{ source: '/old', destination: '/new' }],
+      headers: [
+        {
+          source: '/(.*)',
+          headers: [{ key: 'x-custom', value: 'true' }],
+        },
+      ],
+    };
+    const { error, routes } = getTransformedRoutes(vercelConfig);
+    assert.equal(error, null);
+    assert.notEqual(routes, null);
+  });
+
+  test('should insert routes after cleanUrls/trailingSlash but before redirects', () => {
+    const vercelConfig = {
+      trailingSlash: false,
+      routes: [{ src: '/api/(.*)', dest: '/api/$1' }],
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+    };
+    const { error, routes } = getTransformedRoutes(vercelConfig);
+    assert.equal(error, null);
+    assert.notEqual(routes, null);
+    if (routes) {
+      const userRouteIndex = routes.findIndex(
+        r => !isHandler(r) && (r as any).dest === '/api/$1'
+      );
+      const redirectRouteIndex = routes.findIndex(
+        r =>
+          !isHandler(r) &&
+          (r as any).headers &&
+          (r as any).headers.Location === '/new'
+      );
+      assert.ok(userRouteIndex >= 0, 'user route should exist');
+      assert.ok(redirectRouteIndex >= 0, 'redirect route should exist');
+      assert.ok(
+        userRouteIndex < redirectRouteIndex,
+        'user routes should come before redirects'
+      );
+    }
   });
 
   test('should error when redirects is invalid regex', () => {
