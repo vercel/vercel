@@ -20,16 +20,17 @@ describe('schema', () => {
   });
 
   describe('event list', () => {
-    it('should output CSV list of events', async () => {
+    it('should output table list of events', async () => {
       client.setArgv('metrics', 'schema');
 
       const exitCode = await schema(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      const output = client.stdout.getFullOutput();
-      expect(output).toContain('event,description');
-      expect(output).toContain('incomingRequest');
-      expect(output).toContain('functionExecution');
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Events found');
+      expect(stderrOutput).toContain('Event');
+      expect(stderrOutput).toContain('Description');
+      expect(stderrOutput).toContain('incomingRequest');
     });
 
     it('should output JSON list with --format=json', async () => {
@@ -47,16 +48,19 @@ describe('schema', () => {
   });
 
   describe('event detail', () => {
-    it('should output CSV detail for a known event', async () => {
+    it('should output table detail for a known event', async () => {
       client.setArgv('metrics', 'schema', '--event', 'incomingRequest');
 
       const exitCode = await schema(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      const stdoutOutput = client.stdout.getFullOutput();
-      // Should have two blocks separated by blank line
-      expect(stdoutOutput).toContain('dimension,label,filterOnly');
-      expect(stdoutOutput).toContain('measure,label,unit');
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Event: incomingRequest');
+      expect(stderrOutput).toContain('Dimension');
+      expect(stderrOutput).toContain('Label');
+      expect(stderrOutput).toContain('Groupable');
+      expect(stderrOutput).toContain('Measure');
+      expect(stderrOutput).toContain('Unit');
     });
 
     it('should output JSON detail with --format=json', async () => {
