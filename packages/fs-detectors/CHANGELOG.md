@@ -1,5 +1,13 @@
 # @vercel/fs-detectors
 
+## 5.8.9
+
+### Patch Changes
+
+- [services] ([#15093](https://github.com/vercel/vercel/pull/15093))
+  - consolidate `workspace` and `entrypoint` from `experimentalServices` `vercel.json` schema
+  - make `framework` config in service optional -- infer framework from service workspace when not explicitly provided
+
 ## 5.8.8
 
 ### Patch Changes
