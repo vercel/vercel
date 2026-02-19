@@ -144,6 +144,9 @@ function injectServiceEnvVars(
   service?: Service,
   stripServiceRoutePrefix: boolean = false
 ): void {
+  if (service?.type) {
+    lambda.environment.VERCEL_SERVICE_TYPE = service.type;
+  }
   if (service?.routePrefix && service.routePrefix !== '/') {
     lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
   }
@@ -407,7 +410,7 @@ async function writeBuildResultV3(args: {
 
   const ext = extname(src);
   const path =
-    service?.type === 'web' && typeof service.runtime === 'string'
+    service && typeof service.runtime === 'string'
       ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
       : stripDuplicateSlashes(
           build.config?.zeroConfig

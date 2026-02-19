@@ -108,7 +108,15 @@ export async function getServicesBuilders(
       result.routes.defaults.length > 0 ? result.routes.defaults : null,
     redirectRoutes: [],
     rewriteRoutes:
-      result.routes.rewrites.length > 0 ? result.routes.rewrites : null,
+      result.routes.rewrites.length > 0 ||
+      result.routes.workers.length > 0 ||
+      result.routes.crons.length > 0
+        ? [
+            ...result.routes.rewrites,
+            ...result.routes.workers,
+            ...result.routes.crons,
+          ]
+        : null,
     errorRoutes: [],
     services: result.services,
   };

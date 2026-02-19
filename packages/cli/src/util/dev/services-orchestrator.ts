@@ -4,7 +4,11 @@ import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
-import type { Service } from '@vercel/fs-detectors';
+import {
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPathPrefix,
+  type Service,
+} from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
   cloneEnv,
@@ -122,9 +126,19 @@ interface ServiceDevProcess {
   pid: number;
   process?: ChildProcess;
   shutdown?: () => Promise<void>;
-  routePrefix: string;
+  routePrefixes: string[];
   workspace: string;
   logger: ServiceLogger;
+}
+
+function getServiceRoutePrefixes(service: Service): string[] {
+  if (service.type === 'worker') {
+    return [getInternalServiceWorkerPathPrefix(service.name)];
+  }
+  if (service.type === 'cron') {
+    return [getInternalServiceCronPathPrefix(service.name)];
+  }
+  return [service.routePrefix || '/'];
 }
 
 interface ServicesOrchestratorOptions {
@@ -240,27 +254,27 @@ export class ServicesOrchestrator {
     let bestMatchLength = -1;
 
     for (const service of this.managedServices.values()) {
-      const { routePrefix } = service;
-
-      if (routePrefix === '/') {
-        if (bestMatchLength === -1) {
-          bestMatch = service;
-          bestMatchLength = 0;
+      for (const routePrefix of service.routePrefixes) {
+        if (routePrefix === '/') {
+          if (bestMatchLength === -1) {
+            bestMatch = service;
+            bestMatchLength = 0;
+          }
+          continue;
         }
-        continue;
-      }
 
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix
-        : `/${routePrefix}`;
+        const normalizedPrefix = routePrefix.startsWith('/')
+          ? routePrefix
+          : `/${routePrefix}`;
 
-      if (
-        pathname === normalizedPrefix ||
-        pathname.startsWith(`${normalizedPrefix}/`)
-      ) {
-        if (normalizedPrefix.length > bestMatchLength) {
-          bestMatch = service;
-          bestMatchLength = normalizedPrefix.length;
+        if (
+          pathname === normalizedPrefix ||
+          pathname.startsWith(`${normalizedPrefix}/`)
+        ) {
+          if (normalizedPrefix.length > bestMatchLength) {
+            bestMatch = service;
+            bestMatchLength = normalizedPrefix.length;
+          }
         }
       }
     }
@@ -309,6 +323,7 @@ export class ServicesOrchestrator {
       this.env,
       serviceUrlEnvVars
     );
+    env.VERCEL_SERVICE_TYPE = service.type;
 
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
@@ -413,7 +428,7 @@ export class ServicesOrchestrator {
         port: result.port,
         pid: result.pid,
         shutdown: result.shutdown,
-        routePrefix: service.routePrefix || '/',
+        routePrefixes: getServiceRoutePrefixes(service),
         workspace: service.workspace || '.',
         logger,
       };
@@ -501,7 +516,7 @@ export class ServicesOrchestrator {
       port,
       pid: child.pid,
       process: child,
-      routePrefix: service.routePrefix || '/',
+      routePrefixes: getServiceRoutePrefixes(service),
       workspace: service.workspace || '.',
       logger,
     };

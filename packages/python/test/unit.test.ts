@@ -1934,6 +1934,76 @@ describe('custom install hooks', () => {
   });
 });
 
+describe('worker services dependency installation', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.12');
+  });
+
+  afterEach(() => {
+    vi.doUnmock('../src/install');
+    vi.doUnmock('../src/index');
+    vi.doUnmock('../src/uv');
+  });
+
+  it('installs vercel-workers for services projects with worker services', async () => {
+    const pipCalls: string[][] = [];
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: class {
+        constructor() {}
+        getPath() {
+          return '/mock/uv';
+        }
+        async sync() {}
+        async lock() {}
+        async pip(options: { args: string[] }) {
+          pipCalls.push(options.args);
+        }
+      },
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-worker-services-install-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: { framework: 'fastapi', hasWorkerServices: true },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(pipCalls.some(args => args.includes('vercel-workers==0.0.10'))).toBe(
+      true
+    );
+  });
+});
+
 describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
   const originalEnv = process.env;
 

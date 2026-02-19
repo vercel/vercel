@@ -20,6 +20,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import util
 from typing import TYPE_CHECKING, Literal, Never, TextIO
 from urllib.parse import urlsplit
+from vercel_runtime.headers import (
+    clear_vercel_headers_context as _clear_vercel_headers_context,
+    decode_header_bytes as _decode_header_bytes,
+    normalize_event_headers as _normalize_event_headers,
+    set_vercel_headers_from_asgi_pairs as _set_vercel_headers_from_asgi_pairs,
+    set_vercel_headers_from_http_headers as _set_vercel_headers_from_http_headers,
+)
+from vercel_runtime.workers import (
+    bootstrap_worker_service_app,
+    is_celery_app,
+    is_worker_service,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -516,6 +528,24 @@ except Exception:
     _stderr(traceback.format_exc())
     exit(1)
 
+if is_worker_service():
+    if 'handler' not in __vc_variables and 'Handler' not in __vc_variables:
+        should_bootstrap_worker_app = (
+            'app' not in __vc_variables
+            or is_celery_app(getattr(__vc_module, 'app', None))
+        )
+    else:
+        should_bootstrap_worker_app = False
+
+    if should_bootstrap_worker_app:
+        try:
+            __vc_module.app = bootstrap_worker_service_app(__vc_module)
+            __vc_variables = dir(__vc_module)
+        except Exception:
+            _stderr('Error bootstrapping worker service app:')
+            _stderr(traceback.format_exc())
+            exit(1)
+
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
 
@@ -571,16 +601,11 @@ class ASGIMiddleware:
         new_headers = []
         invocation_id = "0"
         request_id = 0
-
-        def _b2s(b: bytes) -> str:
-            try:
-                return b.decode()
-            except Exception:
-                return ""
+        internal_oidc_token = ""
 
         for k, v in headers_list:
-            key = _b2s(k).lower()
-            val = _b2s(v)
+            key = _decode_header_bytes(k).lower()
+            val = _decode_header_bytes(v)
             if key == "x-vercel-internal-invocation-id":
                 invocation_id = val
                 continue
@@ -592,7 +617,18 @@ class ASGIMiddleware:
                 "x-vercel-internal-trace-id",
             ):
                 continue
+            if key == "x-vercel-internal-oidc-token":
+                internal_oidc_token = val
+                continue
             new_headers.append((k, v))
+
+        if internal_oidc_token:
+            has_oidc_header = any(
+                _decode_header_bytes(k).lower() == "x-vercel-oidc-token"
+                for k, _ in new_headers
+            )
+            if not has_oidc_header:
+                new_headers.append((b"x-vercel-oidc-token", internal_oidc_token.encode()))
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
@@ -623,10 +659,12 @@ class ASGIMiddleware:
                 "requestId": request_id,
             }
         )
+        _set_vercel_headers_from_asgi_pairs(new_headers)
 
         try:
             await self.app(new_scope, receive, send)
         finally:
+            _clear_vercel_headers_context()
             storage.reset(token)
             send_message(
                 {
@@ -731,6 +769,15 @@ if "VERCEL_IPC_PATH" in os.environ:
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
             del self.headers["x-vercel-internal-trace-id"]
+            internal_oidc_token = self.headers.get("x-vercel-internal-oidc-token")
+            if (
+                isinstance(internal_oidc_token, str)
+                and internal_oidc_token
+                and not self.headers.get("x-vercel-oidc-token")
+            ):
+                self.headers["x-vercel-oidc-token"] = internal_oidc_token
+            with contextlib.suppress(Exception):
+                del self.headers["x-vercel-internal-oidc-token"]
 
             send_message(
                 {
@@ -751,10 +798,12 @@ if "VERCEL_IPC_PATH" in os.environ:
                     "requestId": request_id,
                 }
             )
+            _set_vercel_headers_from_http_headers(self.headers)
 
             try:
                 self.handle_request()
             finally:
+                _clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(
                     {
@@ -974,7 +1023,7 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         payload = json.loads(event["body"])
         path, _ = _apply_service_route_prefix_to_target(payload["path"])
-        headers = payload["headers"]
+        headers = _normalize_event_headers(payload.get("headers", {}))
         method = payload["method"]
         encoding = payload.get("encoding")
         body = payload.get("body")
@@ -1039,7 +1088,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         def vc_handler(event, context):
             payload = json.loads(event["body"])
 
-            headers = Headers(payload.get("headers", {}))
+            raw_headers = _normalize_event_headers(payload.get("headers", {}))
+            headers = Headers(raw_headers)
 
             body = payload.get("body", "")
             if body and payload.get("encoding") == "base64":
@@ -1087,7 +1137,11 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 if env_key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
                     environ[env_key] = value
 
-            response = Response.from_app(app, environ)
+            _set_vercel_headers_from_http_headers(raw_headers)
+            try:
+                response = Response.from_app(app, environ)
+            finally:
+                _clear_vercel_headers_context()
 
             return_dict = {
                 "statusCode": response.status_code,
@@ -1232,7 +1286,7 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         def vc_handler(event, context):
             payload = json.loads(event["body"])
 
-            headers = payload.get("headers", {})
+            headers = _normalize_event_headers(payload.get("headers", {}))
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":
@@ -1285,9 +1339,13 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 "raw_path": path.encode(),
             }
 
-            asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(app, body)
-            return response
+            _set_vercel_headers_from_http_headers(headers)
+            try:
+                asgi_cycle = ASGICycle(scope)
+                response = asgi_cycle(app, body)
+                return response
+            finally:
+                _clear_vercel_headers_context()
 
 else:
     _stderr(
