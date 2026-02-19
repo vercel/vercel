@@ -421,7 +421,23 @@ export function getTransformedRoutes(
         ),
       };
     }
-    const normalized = normalizeRoutes(convertRewrites(rewrites));
+
+    let convertedRewrites: Route[] = [];
+    try {
+      convertedRewrites = convertRewrites(rewrites);
+    } catch (err) {
+      return {
+        routes,
+        error: createError(
+          code,
+          (err as Error).message, // Error: Failed to parse rewrite: <which rewrite>
+          'https://vercel.link/invalid-route-source-pattern',
+          'Learn More'
+        ),
+      };
+    }
+
+    const normalized = normalizeRoutes(convertedRewrites);
     if (normalized.error) {
       normalized.error.code = code;
       return { routes, error: normalized.error };
