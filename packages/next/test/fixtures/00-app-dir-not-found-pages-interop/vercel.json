@@ -24,5 +24,8 @@
       "status": 200,
       "mustContain": "pages router page"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
