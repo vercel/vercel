@@ -1,7 +1,7 @@
 //go:build vcdev
 // +build vcdev
 
-// vc_init_dev.go - Dev wrapper for standalone Go servers on Vercel
+// vc-init-dev.go - Dev wrapper for standalone Go servers on Vercel
 //
 // This wrapper is used by `vercel dev` for standalone Go mode. It:
 // 1. Starts the user's server (`go run <target>`) on an internal port

@@ -177,7 +177,7 @@ export async function buildStandaloneServer({
 
 /**
  * Start a dev server for standalone Go server mode.
- * This runs a small Go dev wrapper (`vc_init_dev.go`) that:
+ * This runs a small Go dev wrapper (`vc-init-dev.go`) that:
  * - starts the user server on an internal port
  * - strips generated service route prefixes when configured
  * - proxies traffic on the externally assigned dev port
@@ -201,7 +201,7 @@ export async function startStandaloneDevServer(
   const runTarget =
     resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
 
-  const devWrapper = join(__dirname, '../vc_init_dev.go');
+  const devWrapper = join(__dirname, '../vc-init-dev.go');
 
   debug(
     `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`
