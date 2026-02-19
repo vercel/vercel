@@ -1,0 +1,7 @@
+{
+  "name": "api",
+  "private": true,
+  "dependencies": {
+    "hono": "latest"
+  }
+}

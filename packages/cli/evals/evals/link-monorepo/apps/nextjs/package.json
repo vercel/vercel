@@ -1,0 +1,12 @@
+{
+  "name": "web",
+  "private": true,
+  "dependencies": {
+    "next": "14.0.0",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "scripts": {
+    "vercel-build": "next build"
+  }
+}

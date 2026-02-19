@@ -1,0 +1,14 @@
+{
+  "name": "link-monorepo",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "echo ok"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

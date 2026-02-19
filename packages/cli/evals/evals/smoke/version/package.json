@@ -1,0 +1,8 @@
+{
+  "name": "eval-cli-version",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}
