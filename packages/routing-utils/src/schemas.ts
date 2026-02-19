@@ -407,7 +407,6 @@ export const routesSchema = {
             type: 'boolean',
           },
           continue: {
-            deprecated: true,
             type: 'boolean',
           },
           override: {
@@ -415,7 +414,6 @@ export const routesSchema = {
             type: 'boolean',
           },
           check: {
-            deprecated: true,
             type: 'boolean',
           },
           isInternal: {
