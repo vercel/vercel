@@ -19,6 +19,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@vercel/frameworks": "workspace:*",
     "@vercel/python-analysis": "workspace:*"
   },
   "devDependencies": {
