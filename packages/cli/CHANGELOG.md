@@ -1,5 +1,25 @@
 # vercel
 
+## 50.21.0
+
+### Minor Changes
+
+- Add `--all` flag to `vercel ls` command and improve behavior when not linked to a project ([#15143](https://github.com/vercel/vercel/pull/15143))
+
+  - `vercel ls` no longer requires a linked project. When not linked, it now lists all deployments across all projects in the current scope
+  - Added `--all` flag to explicitly list deployments across all projects, even when linked to a specific project
+  - Added "Project" column to the deployment table output to show which project each deployment belongs to
+  - JSON output (`--format json`) is unchanged and continues to include the `name` field for project name
+
+### Patch Changes
+
+- fix(cli): Handle SIGINT during upgrade prompt without showing a stacktrace ([#15105](https://github.com/vercel/vercel/pull/15105))
+
+- Use formatted tables for `metrics schema` output, matching the convention used by other list commands ([#15138](https://github.com/vercel/vercel/pull/15138))
+
+- Updated dependencies [[`5d1f55af04d0fdba7e7ac86f9eeda44316f54f5b`](https://github.com/vercel/vercel/commit/5d1f55af04d0fdba7e7ac86f9eeda44316f54f5b)]:
+  - @vercel/next@4.15.31
+
 ## 50.20.0
 
 ### Minor Changes
