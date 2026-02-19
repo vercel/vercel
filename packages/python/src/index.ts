@@ -84,8 +84,7 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
-  // In services projects, worker services are built with framework "services".
-  const shouldInstallVercelWorkers = framework === 'services';
+
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -450,19 +449,18 @@ export const build: BuildV3 = async ({
   });
 
   // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
-  const workersDep =
-    baseEnv.VERCEL_WORKERS_PYTHON ||
-    (shouldInstallVercelWorkers
-      ? `vercel-workers==${VERCEL_WORKERS_VERSION}`
-      : undefined);
-  if (workersDep) {
-    debug(`Installing ${workersDep}`);
-    await uv.pip({
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      args: ['install', workersDep],
-    });
-  }
+  // TODO: uncomment when we introduce the 'workers' service implementation
+  // const workersDep =
+  //   baseEnv.VERCEL_WORKERS_PYTHON ||
+  //   `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+  // if (workersDep) {
+  //   debug(`Installing ${workersDep}`);
+  //   await uv.pip({
+  //     venvPath,
+  //     projectDir: join(workPath, entryDirectory),
+  //     args: ['install', workersDep],
+  //   });
+  // }
 
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
