@@ -75,7 +75,7 @@ export class PythonDependencyExternalizer {
     overLambdaLimit: boolean;
     allVendorFiles: Files;
   }> {
-    this.allVendorFiles = await mirrorSitePackagesIntoVendor({
+    this.allVendorFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
     });
@@ -392,26 +392,13 @@ export function shouldEnableRuntimeInstall({
 }
 
 /**
- * Mirror all packages from site-packages into the _vendor directory.
- */
-export async function mirrorSitePackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-}): Promise<Files> {
-  return mirrorPackagesIntoVendor({ venvPath, vendorDirName });
-}
-
-/**
  * Mirror packages from site-packages into the _vendor directory.
  *
  * When `includePackages` is provided, only distributions whose normalized
  * name is in the list are included.  When omitted, every distribution is
  * included.
  */
-async function mirrorPackagesIntoVendor({
+export async function mirrorPackagesIntoVendor({
   venvPath,
   vendorDirName,
   includePackages,

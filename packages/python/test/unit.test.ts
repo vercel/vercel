@@ -19,12 +19,13 @@ const tmpPythonDir = path.join(
 // For tests that exercise the build pipeline, we don't care about the actual
 // vendored dependencies, only that the build completes and the handler exists.
 // Mock out mirroring of site-packages so tests don't depend on a real venv.
-vi.mock('../src/install', async () => {
-  const real =
-    await vi.importActual<typeof import('../src/install')>('../src/install');
+vi.mock('../src/dependency-externalizer', async () => {
+  const real = await vi.importActual<
+    typeof import('../src/dependency-externalizer')
+  >('../src/dependency-externalizer');
   return {
     ...real,
-    mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    mirrorPackagesIntoVendor: vi.fn(async () => ({})),
   };
 });
 
@@ -1716,7 +1717,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
+
+    const realExternalizer = await vi.importActual<
+      typeof import('../src/dependency-externalizer')
+    >('../src/dependency-externalizer');
+    vi.doMock('../src/dependency-externalizer', () => ({
+      ...realExternalizer,
+      mirrorPackagesIntoVendor: vi.fn(async () => ({})),
     }));
 
     // Import after mocks are configured
@@ -1779,7 +1787,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
+
+    const realExternalizer = await vi.importActual<
+      typeof import('../src/dependency-externalizer')
+    >('../src/dependency-externalizer');
+    vi.doMock('../src/dependency-externalizer', () => ({
+      ...realExternalizer,
+      mirrorPackagesIntoVendor: vi.fn(async () => ({})),
     }));
 
     // Import after mocks are configured
@@ -1854,7 +1869,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    }));
+
+    const realExternalizer = await vi.importActual<
+      typeof import('../src/dependency-externalizer')
+    >('../src/dependency-externalizer');
+    vi.doMock('../src/dependency-externalizer', () => ({
+      ...realExternalizer,
+      mirrorPackagesIntoVendor: vi.fn(async () => ({})),
     }));
 
     // Mock UvRunner to prevent actual uv sync commands
