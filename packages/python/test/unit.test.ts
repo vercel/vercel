@@ -19,12 +19,21 @@ const tmpPythonDir = path.join(
 // For tests that exercise the build pipeline, we don't care about the actual
 // vendored dependencies, only that the build completes and the handler exists.
 // Mock out mirroring of site-packages so tests don't depend on a real venv.
+vi.mock('../src/utils', async () => {
+  const real =
+    await vi.importActual<typeof import('../src/utils')>('../src/utils');
+  return {
+    ...real,
+    ensureVenv: vi.fn(async () => {}),
+  };
+});
+
 vi.mock('../src/install', async () => {
   const real =
     await vi.importActual<typeof import('../src/install')>('../src/install');
   return {
     ...real,
-    mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    getVenvSitePackagesDirs: vi.fn(async () => []),
   };
 });
 
@@ -1691,6 +1700,8 @@ describe('custom install hooks', () => {
     vi.doUnmock('execa');
     vi.doUnmock('@vercel/build-utils');
     vi.doUnmock('../src/install');
+    vi.doUnmock('../src/utils');
+    vi.doUnmock('../src/dependency-externalizer');
     vi.doUnmock('../src/index');
     vi.doUnmock('../src/uv');
   });
@@ -1716,7 +1727,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Import after mocks are configured
@@ -1779,7 +1797,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Import after mocks are configured
@@ -1854,7 +1879,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Mock UvRunner to prevent actual uv sync commands
@@ -1966,199 +1998,6 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
-    });
-  });
-});
-
-// --------------------------------------------------------------------------
-// Runtime Dependency Installation Tests
-// --------------------------------------------------------------------------
-// These tests cover the new functionality for handling Python Lambda functions
-// that exceed the 250MB uncompressed size limit by deferring public dependency
-// installation to runtime.
-// --------------------------------------------------------------------------
-
-import { calculateBundleSize } from '../src/install';
-import {
-  classifyPackages,
-  generateRuntimeRequirements,
-  parseUvLock,
-} from '@vercel/python-analysis';
-import { FileFsRef } from '@vercel/build-utils';
-
-describe('runtime dependency installation support', () => {
-  describe('calculateBundleSize', () => {
-    it('calculates size from FileFsRef objects', async () => {
-      const tempDir = path.join(tmpdir(), `size-test-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-
-      // Create test files with known sizes
-      const file1Path = path.join(tempDir, 'file1.txt');
-      const file2Path = path.join(tempDir, 'file2.txt');
-      fs.writeFileSync(file1Path, 'a'.repeat(100)); // 100 bytes
-      fs.writeFileSync(file2Path, 'b'.repeat(200)); // 200 bytes
-
-      const files = {
-        'file1.txt': new FileFsRef({ fsPath: file1Path }),
-        'file2.txt': new FileFsRef({ fsPath: file2Path }),
-      };
-
-      try {
-        const size = await calculateBundleSize(files);
-        expect(size).toBe(300);
-      } finally {
-        fs.removeSync(tempDir);
-      }
-    });
-
-    it('calculates size from FileBlob objects', async () => {
-      const files = {
-        'file1.txt': new FileBlob({ data: 'a'.repeat(100) }),
-        'file2.txt': new FileBlob({ data: Buffer.from('b'.repeat(200)) }),
-      };
-
-      const size = await calculateBundleSize(files);
-      expect(size).toBe(300);
-    });
-
-    it('returns 0 for empty files object', async () => {
-      const size = await calculateBundleSize({});
-      expect(size).toBe(0);
-    });
-  });
-  describe('classifyPackages', () => {
-    it('classifies PyPI packages as public', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "requests"
-version = "2.31.0"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.publicPackages).toContain('requests');
-      expect(result.privatePackages).not.toContain('requests');
-      expect(result.packageVersions['requests']).toBe('2.31.0');
-    });
-
-    it('classifies git source packages as private', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "my-private-pkg"
-version = "1.0.0"
-
-[package.source]
-git = "https://github.com/myorg/private-pkg.git"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toContain('my-private-pkg');
-      expect(result.publicPackages).not.toContain('my-private-pkg');
-    });
-
-    it('classifies path source packages as private', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "local-pkg"
-version = "0.1.0"
-
-[package.source]
-path = "./packages/local-pkg"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toContain('local-pkg');
-      expect(result.publicPackages).not.toContain('local-pkg');
-    });
-
-    it('classifies non-PyPI registry packages as private', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "internal-pkg"
-version = "1.0.0"
-
-[package.source]
-registry = "https://private.pypi.mycompany.com/simple"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toContain('internal-pkg');
-      expect(result.publicPackages).not.toContain('internal-pkg');
-    });
-
-    it('returns empty classification for empty lock file', () => {
-      const lockFile = { packages: [] };
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toHaveLength(0);
-      expect(result.publicPackages).toHaveLength(0);
-    });
-
-    it('excludes specified packages from classification', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "my-app"
-version = "0.1.0"
-
-[[package]]
-name = "requests"
-version = "2.31.0"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({
-        lockFile,
-        excludePackages: ['my-app'],
-      });
-      // my-app should be excluded entirely
-      expect(result.publicPackages).not.toContain('my-app');
-      expect(result.privatePackages).not.toContain('my-app');
-      expect(result.packageVersions['my-app']).toBeUndefined();
-      // requests should still be classified
-      expect(result.publicPackages).toContain('requests');
-    });
-  });
-
-  describe('generateRuntimeRequirements', () => {
-    it('generates requirements file content with versions', () => {
-      const classification = {
-        privatePackages: ['private-pkg'],
-        publicPackages: ['requests', 'flask'],
-        packageVersions: {
-          'private-pkg': '1.0.0',
-          requests: '2.31.0',
-          flask: '3.0.0',
-        },
-      };
-
-      const content = generateRuntimeRequirements(classification);
-      expect(content).toContain('requests==2.31.0');
-      expect(content).toContain('flask==3.0.0');
-      expect(content).not.toContain('private-pkg');
-    });
-
-    it('generates empty requirements for no public packages', () => {
-      const classification = {
-        privatePackages: ['private-pkg'],
-        publicPackages: [],
-        packageVersions: { 'private-pkg': '1.0.0' },
-      };
-
-      const content = generateRuntimeRequirements(classification);
-      expect(content).toContain('# Auto-generated');
-      expect(content).not.toContain('==');
     });
   });
 });

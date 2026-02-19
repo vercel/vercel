@@ -58,5 +58,8 @@
         "x-matched-path": "/about.segments/_tree.segment.rsc"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

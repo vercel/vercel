@@ -53,6 +53,15 @@ export const addSubcommand = {
       deprecated: false,
       description: 'Skip running env pull after provisioning',
     },
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: [String],
+      deprecated: false,
+      argument: 'ENV',
+      description:
+        'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
+    },
   ],
   examples: [
     {
@@ -93,6 +102,21 @@ export const addSubcommand = {
       ],
     },
     {
+      name: 'Install and connect to specific environments only',
+      value: [
+        `${packageName} integration add acme --environment production`,
+        `${packageName} integration add acme -e production -e preview`,
+      ],
+    },
+    {
+      name: 'Install without connecting to the current project',
+      value: `${packageName} integration add acme --no-connect`,
+    },
+    {
+      name: 'Install without pulling environment variables',
+      value: `${packageName} integration add acme --no-env-pull`,
+    },
+    {
       name: 'Show available products for an integration',
       value: `${packageName} integration add acme --help`,
     },
@@ -102,6 +126,22 @@ export const addSubcommand = {
     },
   ],
 } as const;
+
+type FlagValue<T> = T extends readonly [StringConstructor]
+  ? string[]
+  : T extends StringConstructor
+    ? string
+    : T extends BooleanConstructor
+      ? boolean
+      : T extends NumberConstructor
+        ? number
+        : never;
+
+export type IntegrationAddFlags = {
+  [K in (typeof addSubcommand.options)[number] as `--${K['name']}`]?: FlagValue<
+    K['type']
+  >;
+};
 
 export const openSubcommand = {
   name: 'open',
@@ -259,6 +299,50 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const guideSubcommand = {
+  name: 'guide',
+  aliases: [],
+  description:
+    'Show getting started guides and code snippets for a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'framework',
+      shorthand: 'f',
+      type: String,
+      deprecated: false,
+      argument: 'FRAMEWORK',
+      description:
+        'Select a framework guide without interactive prompt (e.g., nextjs, remix, astro, nuxtjs, sveltekit)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show guides for a single-product integration',
+      value: [
+        `${packageName} integration guide <integration-name>`,
+        `${packageName} integration guide neon`,
+      ],
+    },
+    {
+      name: 'Show guides for a specific product of a multi-product integration',
+      value: [
+        `${packageName} integration guide <integration>/<product>`,
+        `${packageName} integration guide aws/aws-dynamodb`,
+      ],
+    },
+    {
+      name: 'Show the Next.js guide without prompts (useful for CI/agents)',
+      value: `${packageName} integration guide neon --framework nextjs`,
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
@@ -268,8 +352,9 @@ export const integrationCommand = {
   subcommands: [
     addSubcommand,
     balanceSubcommand,
-    listSubcommand,
     discoverSubcommand,
+    guideSubcommand,
+    listSubcommand,
     openSubcommand,
     removeSubcommand,
   ],

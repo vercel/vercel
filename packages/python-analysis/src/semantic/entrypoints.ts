@@ -3,11 +3,12 @@
  * source code.
  */
 
-import { importWasmModule } from './load';
+import { importWasmModule } from '../wasm/load';
 
 /**
  * Check if Python source code contains or exports:
  * - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
+ * - A top-level 'application' callable (e.g., Django )
  * - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
  *
  * This function uses a WASM-based Python parser (ruff_python_ast) for
@@ -29,9 +30,10 @@ import { importWasmModule } from './load';
  * ```
  */
 export async function containsAppOrHandler(source: string): Promise<boolean> {
-  // Skip parsing if file doesn't contain {app|[Hh]andler}
+  // Skip parsing if file doesn't contain {app|application|[Hh]andler}
   if (
     !source.includes('app') &&
+    !source.includes('application') &&
     !source.includes('handler') &&
     !source.includes('Handler')
   ) {

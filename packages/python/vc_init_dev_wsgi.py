@@ -24,6 +24,54 @@ def _color(text: str, code: str) -> str:
 USER_MODULE = "__VC_DEV_MODULE_PATH__"
 PUBLIC_DIR = "public"
 
+
+def _normalize_service_route_prefix(raw_prefix):
+    if not raw_prefix:
+        return ''
+
+    prefix = raw_prefix.strip()
+    if not prefix:
+        return ''
+
+    if not prefix.startswith('/'):
+        prefix = f'/{prefix}'
+
+    return '' if prefix == '/' else prefix.rstrip('/')
+
+
+def _is_service_route_prefix_strip_enabled():
+    raw = os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX_STRIP')
+    if not raw:
+        return False
+    return raw.lower() in ('1', 'true')
+
+
+_SERVICE_ROUTE_PREFIX = (
+    _normalize_service_route_prefix(os.environ.get('VERCEL_SERVICE_ROUTE_PREFIX'))
+    if _is_service_route_prefix_strip_enabled()
+    else ''
+)
+
+
+def _strip_service_route_prefix(path_info):
+    if not path_info:
+        path_info = '/'
+    elif not path_info.startswith('/'):
+        path_info = f'/{path_info}'
+
+    prefix = _SERVICE_ROUTE_PREFIX
+    if not prefix:
+        return path_info, ''
+
+    if path_info == prefix:
+        return '/', prefix
+
+    if path_info.startswith(f'{prefix}/'):
+        stripped = path_info[len(prefix):]
+        return stripped if stripped else '/', prefix
+
+    return path_info, ''
+
 _mod = import_module(USER_MODULE)
 _app = getattr(_mod, "app", None)
 if _app is None:
@@ -74,6 +122,18 @@ def _not_found(start_response):
 
 
 def _combined_app(environ, start_response):
+    path_info, matched_prefix = _strip_service_route_prefix(
+        environ.get("PATH_INFO", "/") or "/"
+    )
+    environ["PATH_INFO"] = path_info
+    if matched_prefix:
+        script_name = environ.get("SCRIPT_NAME", "") or ""
+        if script_name and script_name != "/":
+            script_name = script_name.rstrip("/")
+        else:
+            script_name = ""
+        environ["SCRIPT_NAME"] = f"{script_name}{matched_prefix}"
+
     # Try static first; if 404 then delegate to user app
     captured_status = ""
     captured_headers = tuple()

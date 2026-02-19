@@ -64,6 +64,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'src/index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -80,26 +81,22 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toHaveLength(1);
     });
 
-    it('should not confuse entrypoint with workspace when paths share a prefix', async () => {
-      // Edge case: workspace is "api" and entrypoint is "api/handler.go"
-      // (meaning the file lives at api/api/handler.go in the repo).
-      // The entrypoint must always be treated as workspace-relative.
+    it('should resolve file entrypoint paths without explicit workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             'my-api': {
-              workspace: 'api',
-              entrypoint: 'api/handler.go',
+              entrypoint: 'api/api/handler.go',
               routePrefix: '/api',
             },
           },
         }),
+        'api/api/handler.go': 'package main',
       });
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
       expect(result.errors).toEqual([]);
-      // builder.src should be "api/api/handler.go" (workspace + entrypoint)
       expect(result.services[0].builder.src).toBe('api/api/handler.go');
     });
 
@@ -108,22 +105,25 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             frontend: {
-              workspace: 'apps/web',
+              entrypoint: 'apps/web',
               framework: 'nextjs',
               routePrefix: '/',
             },
             api: {
-              workspace: 'apps/api',
-              entrypoint: 'src/server.ts',
+              entrypoint: 'apps/api/src/server.ts',
               routePrefix: '/api',
             },
             admin: {
-              workspace: 'apps/admin',
-              entrypoint: 'src/index.ts',
+              entrypoint: 'apps/admin/src/index.ts',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/web/package.json': JSON.stringify({ name: 'web' }),
+        'apps/api/package.json': JSON.stringify({ name: 'api' }),
+        'apps/api/src/server.ts': 'export default {}',
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
+        'apps/admin/src/index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -174,6 +174,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -190,6 +191,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -325,22 +327,21 @@ describe('detectServices', () => {
       });
     });
 
-    it('should prefer explicitly configured workspace over inferred manifest workspace', async () => {
+    it('should use directory entrypoint as service workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             api: {
-              workspace: 'apps/api',
-              entrypoint: 'src/main.py',
+              entrypoint: 'apps/api',
               framework: 'fastapi',
               routePrefix: '/api',
             },
           },
         }),
-        // Should be ignored because workspace is explicitly configured.
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+        // Should be ignored because directory entrypoint sets workspace directly.
         'services/fastapi-api/pyproject.toml':
           '[project]\nname = "fastapi-api"\n',
-        'apps/api/src/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
 
@@ -348,9 +349,184 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         workspace: 'apps/api',
-        entrypoint: 'src/main.py',
+        entrypoint: undefined,
       });
-      expect(result.services[0].builder.src).toBe('apps/api/src/main.py');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+    });
+
+    it('should auto-detect framework for directory entrypoint when omitted', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+        workspace: 'apps/api',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+    });
+
+    it('should treat existing dotted directory entrypoint as a directory', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              entrypoint: 'apps/web.v2',
+              routePrefix: '/',
+            },
+          },
+        }),
+        'apps/web.v2/package.json': JSON.stringify({
+          dependencies: {
+            next: '14.0.0',
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        framework: 'nextjs',
+        workspace: 'apps/web.v2',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.src).toBe('apps/web.v2/package.json');
+    });
+
+    it('should treat existing extensionless entrypoint as a file', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/server',
+              runtime: 'node',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'api/server': 'export default function handler() {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        runtime: 'node',
+        workspace: '.',
+        entrypoint: 'api/server',
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/node');
+      expect(result.services[0].builder.src).toBe('api/server');
+    });
+
+    it('should error when directory entrypoint has multiple detected frameworks', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              entrypoint: 'apps/web',
+              routePrefix: '/',
+            },
+          },
+        }),
+        'apps/web/package.json': JSON.stringify({
+          dependencies: {
+            next: '14.0.0',
+            gatsby: '5.0.0',
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
+      expect(result.errors[0].serviceName).toBe('web');
+      expect(result.errors[0].message).toContain('apps/web/');
+    });
+
+    it('should error when directory entrypoint has no detectable framework', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              entrypoint: 'apps/web',
+              routePrefix: '/',
+            },
+          },
+        }),
+        'apps/web/README.md': '# app',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MISSING_SERVICE_FRAMEWORK');
+      expect(result.errors[0].serviceName).toBe('web');
+      expect(result.errors[0].message).toContain('apps/web');
+    });
+
+    it('should error when directory entrypoint with runtime has no detectable framework', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              runtime: 'python',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/main.py': 'print("ok")',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MISSING_SERVICE_FRAMEWORK');
+      expect(result.errors[0].serviceName).toBe('api');
+    });
+
+    it('should auto-detect framework for directory entrypoint with explicit runtime', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              runtime: 'python',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+        workspace: 'apps/api',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
     });
 
     it('should default topic and consumer to "default" for workers', async () => {
@@ -363,6 +539,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'worker.py': 'def main(): pass',
       });
       const result = await detectServices({ fs });
 
@@ -384,6 +561,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -417,6 +595,7 @@ describe('detectServices', () => {
               [name]: { entrypoint: 'index.ts', routePrefix: '/' },
             },
           }),
+          'index.ts': 'export default {}',
         });
         const result = await detectServices({ fs });
 
@@ -481,6 +660,8 @@ describe('detectServices', () => {
             },
           },
         }),
+        'api/index.ts': 'export default {}',
+        'api/alt.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -507,6 +688,8 @@ describe('detectServices', () => {
             },
           },
         }),
+        'api/index.ts': 'export default {}',
+        'api/fastapi/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
 
@@ -527,6 +710,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'cron/cleanup.ts': 'export default async () => {}',
       });
       const result = await detectServices({ fs });
 
@@ -620,6 +804,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'apps/web/src/index.ts': 'export default {}',
       });
       const result = await detectServices({ fs, workPath: 'apps/web' });
 
@@ -673,12 +858,13 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             admin: {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
       });
       const result = await detectServices({ fs });
 
@@ -708,6 +894,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'services/dashboard-api/index.go': 'package main',
       });
       const result = await detectServices({ fs });
       expect(result.errors).toEqual([]);
@@ -741,12 +928,13 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             admin: {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
       });
       const result = await detectServices({ fs });
 
@@ -762,12 +950,13 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             frontend: {
-              workspace: 'packages/web',
+              entrypoint: 'packages/web',
               framework: 'vite',
               routePrefix: '/',
             },
           },
         }),
+        'packages/web/package.json': JSON.stringify({ name: 'web' }),
       });
       const result = await detectServices({ fs });
 
@@ -787,7 +976,7 @@ describe('detectServices', () => {
               routePrefix: '/',
             },
             'admin-panel': {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
@@ -797,6 +986,8 @@ describe('detectServices', () => {
             },
           },
         }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
+        'api/index.go': 'package main',
       });
       const result = await detectServices({ fs });
 
@@ -846,22 +1037,22 @@ describe('detectServices', () => {
     //   fastapi-api  → @vercel/python     at /api/fastapi    (runtime)
     const SERVICES_CONFIG = {
       web: {
-        workspace: 'apps/web',
+        entrypoint: 'apps/web',
         framework: 'nextjs',
         routePrefix: '/',
       },
       admin: {
-        workspace: 'apps/admin',
+        entrypoint: 'apps/admin',
         framework: 'vite',
         routePrefix: '/admin',
       },
       dashboard: {
-        workspace: 'apps/dashboard',
+        entrypoint: 'apps/dashboard',
         framework: 'nextjs',
         routePrefix: '/dashboard',
       },
       docs: {
-        workspace: 'apps/docs',
+        entrypoint: 'apps/docs',
         framework: 'docusaurus-2',
         routePrefix: '/docs',
       },
@@ -885,6 +1076,12 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: SERVICES_CONFIG,
         }),
+        'apps/web/package.json': JSON.stringify({ name: 'web' }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
+        'apps/dashboard/package.json': JSON.stringify({ name: 'dashboard' }),
+        'apps/docs/package.json': JSON.stringify({ name: 'docs' }),
+        'services/gin-api/index.go': 'package main',
+        'services/fastapi-api/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
       expect(result.errors).toEqual([]);
