@@ -446,6 +446,17 @@ export const build: BuildV3 = async ({
     args: ['install', runtimeDep],
   });
 
+  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+  const workersDep = baseEnv.VERCEL_WORKERS_PYTHON;
+  if (workersDep) {
+    debug(`Installing ${workersDep}`);
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: ['install', workersDep],
+    });
+  }
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();

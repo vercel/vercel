@@ -2,6 +2,7 @@
  * Publish non-npm runtime packages before pnpm publish.
  *
  * Currently delegates to:
+ *   - python/vercel-workers/publish.mjs  (PyPI)
  *   - python/vercel-runtime/publish.mjs  (PyPI)
  *
  * Called by ci:publish so that if any runtime publish fails,
@@ -20,4 +21,5 @@ function run(script) {
   execFileSync('node', [resolve(root, script)], { stdio: 'inherit' });
 }
 
+run('python/vercel-workers/publish.mjs');
 run('python/vercel-runtime/publish.mjs');

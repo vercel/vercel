@@ -28,7 +28,7 @@ jobs:
       - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           version: '0.9.22'
-      - run: uv run --group=test --locked --project=python/vercel-runtime pytest -v --tb=short
+      - run: uv run --group=test --locked --project=python/vercel-runtime pytest -v --tb=short python/vercel-runtime/tests
 
   summary:
     name: Summary (python-runtime)

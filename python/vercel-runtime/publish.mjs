@@ -115,6 +115,7 @@ run('uv', [
   wheelPath,
   'pytest',
   '-k not test_cqa_',
+  'python/vercel-runtime/tests',
 ]);
 
 // Publish to PyPI (relies on OIDC trusted publishing env set up by the release.yml workflow)

@@ -1,2 +1,2 @@
 [tool.uv.workspace]
-members = ["python/vercel-runtime"]
+members = ["python/vercel-runtime", "python/vercel-workers"]

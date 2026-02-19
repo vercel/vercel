@@ -20,6 +20,11 @@ const PYTHON_PACKAGES = [
     // Also sync to the runtime-version.ts file in @vercel/python
     runtimeVersionTsPath: 'packages/python/src/runtime-version.ts',
   },
+  {
+    name: '@vercel/python-workers',
+    packageJsonPath: 'python/vercel-workers/package.json',
+    pyprojectPath: 'python/vercel-workers/pyproject.toml',
+  },
 ];
 
 function syncVersion(packageConfig) {

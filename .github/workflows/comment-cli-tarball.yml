@@ -75,6 +75,23 @@ jobs:
               // No wheel available, skip
             }
 
+            // Check if a Python workers wheel was built
+            try {
+              const resp = await fetch(`${deploymentUrl}/tarballs/vercel-workers-wheel.json`);
+              if (resp.ok) {
+                const { filename } = await resp.json();
+                const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
+                message += '\n### Python Workers Wheel\n\n';
+                message += 'A Python workers wheel was also built for this PR.\n';
+                message += 'To use in your Python project builds, also set this environment variable:\n\n';
+                message += '```\n';
+                message += `VERCEL_WORKERS_PYTHON="vercel-workers @ ${wheelUrl}"\n`;
+                message += '```\n';
+              }
+            } catch {
+              // No wheel available, skip
+            }
+
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
