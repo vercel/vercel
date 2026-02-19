@@ -1,5 +1,41 @@
 # vercel
 
+## 50.20.0
+
+### Minor Changes
+
+- Add private Blob storage support: ([#15075](https://github.com/vercel/vercel/pull/15075))
+
+  - Create private stores: `vercel blob create-store my-store --access private`
+  - Upload to private stores: `vercel blob put file.txt --access private`
+  - Download blobs with the new `blob get` command: `vercel blob get file.txt --access private` (works with both public and private stores)
+  - Copy blobs: `vercel blob copy source.txt dest.txt --access private`
+  - Display access type (Public/Private) in `vercel blob store get` output
+
+  The `--access` flag defaults to `public` for backward compatibility.
+
+  Flatten blob store commands: `blob create-store`, `blob delete-store`, `blob get-store`.
+  Rename `--force` to `--allow-overwrite`.
+  Add conditional headers: `--if-match` for put/del/copy, `--if-none-match` for get.
+  Old commands and options are deprecated but still work.
+
+### Patch Changes
+
+- Remove metrics schema entries not supported by the query engine ([#15110](https://github.com/vercel/vercel/pull/15110))
+
+  Removes events (`prReview`, `prReviewModelUsage`, `reviewedPrComplete`), a measure (`coldStartDurationMs` from `functionExecution`), and several dimensions (`originHostname`, `originPath`, `originRoute` from `functionExecution`; `requestHostname` from `aiGatewayRequest`, `blobDataTransfer`, `imageTransformation`, `imageTransformationFailure`; `environment` and `projectId` from `blobDataTransfer` and `blobOperation`) that the observability query engine rejects.
+
+- Patches the experimental embedding of flag definitions. ([#15027](https://github.com/vercel/vercel/pull/15027))
+
+  The changed functionality is only enabled when the `VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS` environment variable is set. The existing `@vercel/flags-core` library is already forwards-compatible with the new format.
+
+  Adds a new `vercel flags prepare` command to prepare flag definitions for embedding. It is not necessary to run this command manually, as it is automatically invoked during the build process on Vercel. Only call this if you are building outside of Vercel.
+
+  See [https://vercel.com/docs/flags/vercel-flags/sdks/core#embedded-definitions](https://vercel.com/docs/flags/vercel-flags/sdks/core#embedded-definitions).
+
+- Updated dependencies [[`2cfc724e76a54a1b5e090266c412e7c8e353fc4a`](https://github.com/vercel/vercel/commit/2cfc724e76a54a1b5e090266c412e7c8e353fc4a), [`2cfc724e76a54a1b5e090266c412e7c8e353fc4a`](https://github.com/vercel/vercel/commit/2cfc724e76a54a1b5e090266c412e7c8e353fc4a)]:
+  - @vercel/next@4.15.30
+
 ## 50.19.1
 
 ### Patch Changes
