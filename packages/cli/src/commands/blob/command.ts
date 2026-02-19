@@ -23,10 +23,12 @@ const accessOption = {
   shorthand: 'a',
   type: String,
   deprecated: false,
-  description: 'Access level for the blob: public or private (default: public)',
+  description: 'Access level for the blob: public or private (required)',
   argument: 'String',
   choices: ['public', 'private'],
 } as const;
+
+import { yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -134,15 +136,6 @@ export const putSubcommand = {
       type: Boolean,
       deprecated: false,
       description: 'Overwrite the file if it already exists (default: false)',
-      argument: 'Boolean',
-    },
-    {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: true,
-      description:
-        'Overwrite the file if it already exists (deprecated, use --allow-overwrite)',
       argument: 'Boolean',
     },
     ifMatchOption,
@@ -354,6 +347,15 @@ export const deleteStoreSubcommand = {
   examples: [],
 } as const;
 
+export const emptyStoreSubcommand = {
+  name: 'empty-store',
+  aliases: [],
+  description: 'Delete all blobs in a Blob store',
+  arguments: [],
+  options: [yesOption],
+  examples: [],
+} as const;
+
 export const getStoreInfoSubcommand = {
   name: 'get-store',
   aliases: [],
@@ -368,12 +370,11 @@ export const getStoreInfoSubcommand = {
   examples: [],
 } as const;
 
-export const storeSubcommand = {
-  name: 'store',
-  aliases: [],
-  description: 'Manage or create a Blob store',
+export const listStoresSubcommand = {
+  name: 'list-stores',
+  aliases: ['ls-stores'],
+  description: 'List all Blob stores',
   arguments: [],
-  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
   options: [],
   examples: [],
 } as const;
@@ -392,7 +393,8 @@ export const blobCommand = {
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
-    storeSubcommand,
+    listStoresSubcommand,
+    emptyStoreSubcommand,
   ],
   options: [
     {

@@ -72,9 +72,13 @@ describe('blob get', () => {
 
   describe('successful download', () => {
     it('should stream blob content to stdout by default', async () => {
-      client.setArgv('blob', 'get', 'test-file.txt');
+      client.setArgv('blob', 'get', '--access', 'public', 'test-file.txt');
 
-      const exitCode = await get(client, ['test-file.txt'], testToken);
+      const exitCode = await get(
+        client,
+        ['--access', 'public', 'test-file.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.get).toHaveBeenCalledWith('test-file.txt', {
@@ -93,6 +97,10 @@ describe('blob get', () => {
           key: 'argument:urlOrPathname',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -100,11 +108,19 @@ describe('blob get', () => {
       const mockWriteStream = {} as fs.WriteStream;
       mockedCreateWriteStream.mockReturnValue(mockWriteStream);
 
-      client.setArgv('blob', 'get', 'test-file.txt', '--output', './local.txt');
+      client.setArgv(
+        'blob',
+        'get',
+        '--access',
+        'public',
+        'test-file.txt',
+        '--output',
+        './local.txt'
+      );
 
       const exitCode = await get(
         client,
-        ['test-file.txt', '--output', './local.txt'],
+        ['--access', 'public', 'test-file.txt', '--output', './local.txt'],
         testToken
       );
 
@@ -128,6 +144,10 @@ describe('blob get', () => {
         {
           key: 'argument:urlOrPathname',
           value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'public',
         },
         {
           key: 'option:output',
@@ -166,9 +186,13 @@ describe('blob get', () => {
 
     it('should handle URL as argument', async () => {
       const blobUrl = 'https://example.com/my-blob.txt';
-      client.setArgv('blob', 'get', blobUrl);
+      client.setArgv('blob', 'get', '--access', 'public', blobUrl);
 
-      const exitCode = await get(client, [blobUrl], testToken);
+      const exitCode = await get(
+        client,
+        ['--access', 'public', blobUrl],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.get).toHaveBeenCalledWith(blobUrl, {
@@ -180,8 +204,8 @@ describe('blob get', () => {
 
     it('should show spinner only when --output is used', async () => {
       // Without --output: no spinner
-      client.setArgv('blob', 'get', 'test-file.txt');
-      await get(client, ['test-file.txt'], testToken);
+      client.setArgv('blob', 'get', '--access', 'public', 'test-file.txt');
+      await get(client, ['--access', 'public', 'test-file.txt'], testToken);
       expect(mockedOutput.spinner).not.toHaveBeenCalled();
 
       vi.clearAllMocks();
@@ -191,8 +215,20 @@ describe('blob get', () => {
       mockedCreateWriteStream.mockReturnValue(mockWriteStream);
 
       // With --output: show spinner
-      client.setArgv('blob', 'get', 'test-file.txt', '--output', 'out.txt');
-      await get(client, ['test-file.txt', '--output', 'out.txt'], testToken);
+      client.setArgv(
+        'blob',
+        'get',
+        '--access',
+        'public',
+        'test-file.txt',
+        '--output',
+        'out.txt'
+      );
+      await get(
+        client,
+        ['--access', 'public', 'test-file.txt', '--output', 'out.txt'],
+        testToken
+      );
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Downloading blob');
     });
   });
@@ -202,6 +238,8 @@ describe('blob get', () => {
       client.setArgv(
         'blob',
         'get',
+        '--access',
+        'public',
         'test-file.txt',
         '--if-none-match',
         '"some-etag"'
@@ -209,7 +247,13 @@ describe('blob get', () => {
 
       const exitCode = await get(
         client,
-        ['test-file.txt', '--if-none-match', '"some-etag"'],
+        [
+          '--access',
+          'public',
+          'test-file.txt',
+          '--if-none-match',
+          '"some-etag"',
+        ],
         testToken
       );
 
@@ -232,6 +276,8 @@ describe('blob get', () => {
       client.setArgv(
         'blob',
         'get',
+        '--access',
+        'public',
         'test-file.txt',
         '--if-none-match',
         '"some-etag"'
@@ -239,7 +285,13 @@ describe('blob get', () => {
 
       const exitCode = await get(
         client,
-        ['test-file.txt', '--if-none-match', '"some-etag"'],
+        [
+          '--access',
+          'public',
+          'test-file.txt',
+          '--if-none-match',
+          '"some-etag"',
+        ],
         testToken
       );
 
@@ -251,7 +303,13 @@ describe('blob get', () => {
     it('should track --if-none-match telemetry', async () => {
       const exitCode = await get(
         client,
-        ['test-file.txt', '--if-none-match', '"etag-value"'],
+        [
+          '--access',
+          'public',
+          'test-file.txt',
+          '--if-none-match',
+          '"etag-value"',
+        ],
         testToken
       );
 
@@ -262,6 +320,10 @@ describe('blob get', () => {
           value: '[REDACTED]',
         },
         {
+          key: 'option:access',
+          value: 'public',
+        },
+        {
           key: 'option:if-none-match',
           value: '[REDACTED]',
         },
@@ -270,8 +332,18 @@ describe('blob get', () => {
   });
 
   describe('error cases', () => {
+    it('should return 1 when --access flag is missing', async () => {
+      const exitCode = await get(client, ['test-file.txt'], testToken);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Missing required --access flag. Must be 'public' or 'private'."
+      );
+      expect(mockedBlob.get).not.toHaveBeenCalled();
+    });
+
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await get(client, [], testToken);
+      const exitCode = await get(client, ['--access', 'public'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -283,7 +355,11 @@ describe('blob get', () => {
     it('should return 1 when blob is not found', async () => {
       mockedBlob.get.mockResolvedValue(null);
 
-      const exitCode = await get(client, ['nonexistent.txt'], testToken);
+      const exitCode = await get(
+        client,
+        ['--access', 'public', 'nonexistent.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -294,7 +370,11 @@ describe('blob get', () => {
     it('should return 1 when blob.get fails', async () => {
       mockedBlob.get.mockRejectedValue(new Error('Download failed'));
 
-      const exitCode = await get(client, ['test-file.txt'], testToken);
+      const exitCode = await get(
+        client,
+        ['--access', 'public', 'test-file.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
     });
@@ -326,7 +406,7 @@ describe('blob get', () => {
 
       const exitCode = await get(
         client,
-        ['test-file.txt', '--access', 'private', '--output', 'out.txt'],
+        ['--access', 'private', 'test-file.txt', '--output', 'out.txt'],
         testToken
       );
 
@@ -348,7 +428,11 @@ describe('blob get', () => {
     });
 
     it('should not track optional flags when not provided', async () => {
-      const exitCode = await get(client, ['test-file.txt'], testToken);
+      const exitCode = await get(
+        client,
+        ['--access', 'public', 'test-file.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
