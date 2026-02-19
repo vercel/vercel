@@ -55,11 +55,14 @@ jobs:
             LATEST=$(ls -t "$RESULTS_DIR/cli" 2>/dev/null | head -1)
             if [ -n "$LATEST" ]; then
               echo "  $RESULTS_DIR/cli/$LATEST"
-              find "$RESULTS_DIR/cli/$LATEST" -type f -name "*.json" -o -name "*.jsonl" -o -name "*.txt" 2>/dev/null | while read f; do
-                echo ""
-                echo "--- $f ---"
-                head -c 8000 "$f" | cat
-                [ $(wc -c < "$f") -gt 8000 ] && echo "... (truncated)"
+              # Only print summary and test output to avoid leaking secrets from transcripts/result.json
+              for f in "$RESULTS_DIR/cli/$LATEST"/*/summary.json "$RESULTS_DIR/cli/$LATEST"/*/run-*/outputs/eval.txt; do
+                if [ -f "$f" ]; then
+                  echo ""
+                  echo "--- $f ---"
+                  head -c 8000 "$f" | cat
+                  [ $(wc -c < "$f") -gt 8000 ] && echo "... (truncated)"
+                fi
               done
             fi
           else

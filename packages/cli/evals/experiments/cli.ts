@@ -129,7 +129,7 @@ const config: ExperimentConfig = {
 
 Docs are in \`docs/vercel-cli/\` (skill + references). Use \`vercel <command> -h\` for help.
 
-Non-interactive: use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.`;
+Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.`;
 
     // Write all files
     await sandbox.writeFiles({
