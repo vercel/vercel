@@ -373,16 +373,56 @@ export interface PreparedFile {
   file: string;
   sha?: string;
   size?: number;
-  mode: number;
+  /** File mode/permissions (not used for inlined files) */
+  mode?: number;
+  /** Inlined file content (utf-8 or base64 encoded) */
+  data?: string;
+  /** Encoding of the inlined data */
+  encoding?: 'utf-8' | 'base64';
 }
 
 const isWin = process.platform.includes('win');
+
+const MAX_INLINE_FILE_COUNT = 10;
+
+/**
+ * Determines if the deployment should use inlined files.
+ * Files are inlined when:
+ * - All files are HTML files
+ * - There are fewer than 10 files
+ */
+export function shouldUseInlineFiles(files: FilesMap): boolean {
+  // Count total files (a single hash can have multiple names due to deduplication)
+  let totalFileCount = 0;
+  for (const file of files.values()) {
+    totalFileCount += file.names.length;
+  }
+
+  // Check file count limit
+  if (totalFileCount >= MAX_INLINE_FILE_COUNT) {
+    return false;
+  }
+
+  // Check that all files are HTML
+  for (const file of files.values()) {
+    for (const name of file.names) {
+      const lowerName = name.toLowerCase();
+      if (!lowerName.endsWith('.html') && !lowerName.endsWith('.htm')) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
 
 export const prepareFiles = (
   files: FilesMap,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
+  const useInline = shouldUseInlineFiles(files);
+
   for (const [sha, file] of files) {
     for (const name of file.names) {
       let fileName: string;
@@ -399,12 +439,29 @@ export const prepareFiles = (
         fileName = segments[segments.length - 1];
       }
 
-      preparedFiles.push({
-        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data?.byteLength || file.data?.length,
-        mode: file.mode,
-        sha: sha || undefined,
-      });
+      const normalizedFileName = isWin ? fileName.replace(/\\/g, '/') : fileName;
+
+      let preparedFile: PreparedFile;
+
+      if (useInline && file.data) {
+        // Inline the file content - HTML files use utf-8 encoding
+        // Inlined files only accept: file, data, encoding (no size, mode, or sha)
+        preparedFile = {
+          file: normalizedFileName,
+          data: file.data.toString('utf-8'),
+          encoding: 'utf-8',
+        };
+      } else {
+        // Use SHA reference for separate upload
+        preparedFile = {
+          file: normalizedFileName,
+          size: file.data?.byteLength || file.data?.length,
+          mode: file.mode,
+          sha: sha || undefined,
+        };
+      }
+
+      preparedFiles.push(preparedFile);
     }
   }
 

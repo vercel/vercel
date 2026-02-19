@@ -5,6 +5,7 @@ import { checkDeploymentStatus } from './check-deployment-status';
 import {
   fetch,
   prepareFiles,
+  shouldUseInlineFiles,
   createDebug,
   getApiDeploymentsUrl,
 } from './utils';
@@ -26,8 +27,15 @@ async function* postDeployment(
   link?: string;
 }> {
   const debug = createDebug(clientOptions.debug);
+  const useInline = shouldUseInlineFiles(files);
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl();
+
+  if (useInline) {
+    debug(
+      `Using inlined file deployment (${preparedFiles.length} HTML files)`
+    );
+  }
 
   if (deploymentOptions?.builds && !deploymentOptions.functions) {
     clientOptions.skipAutoDetectionConfirmation = true;
