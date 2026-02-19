@@ -68,6 +68,16 @@ async function resolveEntrypointPath({
   };
 }
 
+type RoutePrefixSource = 'configured' | 'generated';
+
+interface ResolveConfiguredServiceOptions {
+  name: string;
+  config: ExperimentalServiceConfig;
+  fs: DetectorFilesystem;
+  group?: string;
+  resolvedEntrypoint?: ResolvedEntrypointPath;
+  routePrefixSource?: RoutePrefixSource;
+}
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -301,19 +311,17 @@ export function validateServiceEntrypoint(
 /**
  * Resolve a single service from user configuration.
  */
-export async function resolveConfiguredService({
-  name,
-  config,
-  fs,
-  group,
-  resolvedEntrypoint,
-}: {
-  name: string;
-  config: ExperimentalServiceConfig;
-  fs: DetectorFilesystem;
-  group?: string;
-  resolvedEntrypoint?: ResolvedEntrypointPath;
-}): Promise<Service> {
+export async function resolveConfiguredService(
+  options: ResolveConfiguredServiceOptions
+): Promise<Service> {
+  const {
+    name,
+    config,
+    fs,
+    group,
+    resolvedEntrypoint,
+    routePrefixSource = 'configured',
+  } = options;
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
   let resolvedEntrypointPath = resolvedEntrypoint;
@@ -436,6 +444,10 @@ export async function resolveConfiguredService({
     workspace,
     entrypoint: resolvedEntrypointFile,
     routePrefix,
+    routePrefixSource:
+      type === 'web' && typeof routePrefix === 'string'
+        ? routePrefixSource
+        : undefined,
     framework: config.framework,
     builder: {
       src: builderSrc,
@@ -457,7 +469,8 @@ export async function resolveConfiguredService({
  */
 export async function resolveAllConfiguredServices(
   services: ExperimentalServices,
-  fs: DetectorFilesystem
+  fs: DetectorFilesystem,
+  routePrefixSource: RoutePrefixSource = 'configured'
 ): Promise<{
   services: Service[];
   errors: ServiceDetectionError[];
@@ -536,6 +549,7 @@ export async function resolveAllConfiguredServices(
       config: resolvedConfig,
       fs,
       resolvedEntrypoint,
+      routePrefixSource,
     });
 
     if (service.type === 'web' && typeof service.routePrefix === 'string') {

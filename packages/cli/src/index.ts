@@ -804,6 +804,15 @@ const main = async () => {
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).logs;
           break;
+        case 'metrics':
+          if (process.env.FF_METRICS) {
+            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).metrics;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
@@ -1003,15 +1012,26 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          const shouldUpgrade = await client.input.confirm(
-            'Would you like to upgrade now?',
-            true
-          );
+          try {
+            const shouldUpgrade = await client.input.confirm(
+              'Would you like to upgrade now?',
+              true
+            );
 
-          if (shouldUpgrade) {
-            const upgradeExitCode = await executeUpgrade();
-            process.exitCode = upgradeExitCode;
-            return;
+            if (shouldUpgrade) {
+              const upgradeExitCode = await executeUpgrade();
+              process.exitCode = upgradeExitCode;
+              return;
+            }
+          } catch (err: unknown) {
+            if (
+              err instanceof Error &&
+              err.message.includes('User force closed the prompt')
+            ) {
+              // User pressed Ctrl+C to dismiss the prompt
+            } else {
+              throw err;
+            }
           }
         } else {
           const errorMsg =

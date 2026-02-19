@@ -10,5 +10,8 @@
       "path": "/something",
       "mustContain": "something"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
