@@ -282,12 +282,14 @@ if os.path.exists(_runtime_config_path):
     import site
     import subprocess
 
-    _config = json.loads(open(_runtime_config_path).read())
+    with open(_runtime_config_path) as runtime_config_file:
+        _config = json.load(runtime_config_file)
     _project_dir = os.path.join(lambda_root, _config["projectDir"])
 
     _deps_dir = "/tmp/_vc_deps"
     _site_packages = os.path.join(
-        _deps_dir, "lib",
+        _deps_dir,
+        "lib",
         f"python{sys.version_info.major}.{sys.version_info.minor}",
         "site-packages",
     )
@@ -324,7 +326,8 @@ if os.path.exists(_runtime_config_path):
                 "--no-install-project",
                 "--no-build",
                 "--no-progress",
-                "--link-mode", "hardlink",
+                "--link-mode",
+                "hardlink",
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
@@ -655,6 +658,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method = getattr(self, mname)
                 method()
                 self.wfile.flush()
+
     elif "app" in __vc_variables:
         if not inspect.iscoroutinefunction(
             __vc_module.app
@@ -724,6 +728,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                     finally:
                         if hasattr(response, "close"):
                             response.close()
+
         else:
             # ASGI: Run with Uvicorn for proper lifespan
             # and protocol handling
@@ -955,6 +960,7 @@ elif "app" in __vc_variables:
                 return_dict["encoding"] = "base64"
 
             return return_dict
+
     else:
         _stderr("using Asynchronous Server Gateway Interface (ASGI)")
         # Originally authored by Jordan Eremieff and included under MIT license:
