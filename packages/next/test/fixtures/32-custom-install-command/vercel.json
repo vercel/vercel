@@ -16,5 +16,8 @@
       "status": 200,
       "mustContain": "installCommand"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

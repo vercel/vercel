@@ -36,5 +36,8 @@
       "path": "/_next/data/build-TfctsWXpff2fKS/one-more.json",
       "mustNotContain": "<html>"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

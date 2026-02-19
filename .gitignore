@@ -35,6 +35,7 @@ __pycache__
 turbo-cache-key.json
 junit.xml
 **/target/
+.env*.local
 # CLI "target" subcommand (e.g. vercel target list) is source, not build output
 !packages/cli/src/commands/target/
 !packages/cli/src/commands/target/**
