@@ -1128,6 +1128,18 @@ export function usePrepayment(responseKey: string) {
         return;
       }
 
+      if (responseKey === 'not-prepayment') {
+        res.status(400);
+        res.json({
+          error: {
+            code: 'not_prepayment',
+            message:
+              'Balance information is only available for integrations that support prepayment billing.',
+          },
+        });
+        return;
+      }
+
       const prepaymentInfo = configurationPrepaymentInformation[responseKey];
 
       if (!prepaymentInfo) {

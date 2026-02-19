@@ -1,6 +1,7 @@
 import output from '../../output-manager';
 import type Client from '../client';
 import type { InstallationBalancesAndThresholds } from './types';
+import { isAPIError } from '../errors-ts';
 
 export async function fetchInstallationPrepaymentInfo(
   client: Client,
@@ -41,6 +42,10 @@ export async function getBalanceInformation(
     return prepaymentInfo;
   } catch (error) {
     output.stopSpinner();
+    if (isAPIError(error) && error.code === 'not_prepayment') {
+      output.error(error.serverMessage);
+      return;
+    }
     output.error(`Failed to fetch balance info: ${(error as Error).message}`);
     return;
   }

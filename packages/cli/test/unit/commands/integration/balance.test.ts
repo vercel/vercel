@@ -226,6 +226,22 @@ describe('integration', () => {
     });
 
     describe('errors', () => {
+      it('should error when integration does not support prepayment billing', async () => {
+        const teams = useTeams('team_dummy');
+        const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useConfiguration();
+        useResources();
+        usePrepayment('not-prepayment');
+
+        client.setArgv('integration', 'balance', 'acme-prepayment');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Balance information is only available for integrations that support prepayment billing.'
+        );
+      });
+
       it('should error when there is no team', async () => {
         client.setArgv('integration', 'balance', 'acme');
         const exitCode = await integrationCommand(client);
