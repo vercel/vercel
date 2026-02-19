@@ -1,0 +1,50 @@
+name: Python Runtime Tests
+
+on:
+  pull_request:
+    paths:
+      - 'python/vercel-runtime/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.9.22'
+      - run: uv run --group=test --locked --project=python/vercel-runtime pytest -v --tb=short
+
+  summary:
+    name: Summary (python-runtime)
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: always()
+    needs:
+      - test
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
