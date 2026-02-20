@@ -2,6 +2,7 @@
 //!
 //! Currently detects:
 //! - Top-level 'app' callables (Flask, FastAPI, Sanic, etc.)
+//! - Top-level 'application' callables (Django)
 //! - Top-level 'handler' classes (BaseHTTPRequestHandler subclasses)
 
 use ruff_python_ast::{Expr, Stmt};

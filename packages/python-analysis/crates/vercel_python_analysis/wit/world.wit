@@ -4,6 +4,7 @@ package vercel:python-analysis;
 world python-analysis {
     /// Check if Python source code contains or exports:
     /// - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
+    /// - A top-level 'application' callable (e.g., Django)
     /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
     ///
     /// Returns true if found, false otherwise.
