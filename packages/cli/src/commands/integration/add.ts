@@ -149,7 +149,7 @@ export async function add(
 
   const [productResult, installationsResult] = await Promise.allSettled([
     selectProduct(client, integration.products, productSlug),
-    fetchInstallations(client, integration),
+    fetchInstallations(client, integration, team.id),
   ]);
 
   if (productResult.status === 'rejected') {

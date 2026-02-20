@@ -91,7 +91,7 @@ export async function addAutoProvision(
   // Select product and check installations in parallel
   const [productResult, installationsResult] = await Promise.allSettled([
     selectProduct(client, integration.products, options.productSlug),
-    fetchInstallations(client, integration),
+    fetchInstallations(client, integration, team.id),
   ]);
 
   if (productResult.status === 'rejected') {
