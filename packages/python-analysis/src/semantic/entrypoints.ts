@@ -42,3 +42,25 @@ export async function containsAppOrHandler(source: string): Promise<boolean> {
   const mod = await importWasmModule();
   return mod.containsAppOrHandler(source);
 }
+
+/** Regex to detect os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...') so we can skip WASM when absent */
+const DJANGO_SETTINGS_MODULE_PATTERN_RE =
+  /os\.environ\.setdefault\s*\(\s*['"]DJANGO_SETTINGS_MODULE['"]\s*,\s*['"][^'"]*['"]\s*\)/;
+
+/**
+ * Parse manage.py content for DJANGO_SETTINGS_MODULE (e.g. from
+ * os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')).
+ * Uses the WASM Python parser to extract the value from the AST.
+ *
+ * @param content - Raw content of manage.py
+ * @returns The settings module string (e.g. 'app.settings') or null if not found
+ */
+export async function parseDjangoSettingsModule(
+  content: string
+): Promise<string | null> {
+  if (!DJANGO_SETTINGS_MODULE_PATTERN_RE.test(content)) {
+    return null;
+  }
+  const mod = await importWasmModule();
+  return mod.parseDjangoSettingsModule(content) ?? null;
+}
