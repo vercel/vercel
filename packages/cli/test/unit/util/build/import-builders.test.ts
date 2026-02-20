@@ -33,8 +33,14 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
     const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
-    expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
-    expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
+    expect(builders.get('@vercel/node')?.pkg.name).toEqual(vercelNodePkg.name);
+    expect(builders.get('@vercel/node')?.pkg.version).toEqual(
+      vercelNodePkg.version
+    );
+    expect(builders.get('@vercel/next')?.pkg.name).toEqual(vercelNextPkg.name);
+    expect(builders.get('@vercel/next')?.pkg.version).toEqual(
+      vercelNextPkg.version
+    );
     expect(builders.get('@vercel/node')?.pkgPath).toEqual(
       join(repoRoot, 'packages/node/package.json')
     );
@@ -53,11 +59,17 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
     const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
-    expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
-      vercelNodePkg
+    expect(builders.get('@vercel/node@latest')?.pkg.name).toEqual(
+      vercelNodePkg.name
     );
-    expect(builders.get('@vercel/next@latest')?.pkg).toMatchObject(
-      vercelNextPkg
+    expect(builders.get('@vercel/node@latest')?.pkg.version).toEqual(
+      vercelNodePkg.version
+    );
+    expect(builders.get('@vercel/next@latest')?.pkg.name).toEqual(
+      vercelNextPkg.name
+    );
+    expect(builders.get('@vercel/next@latest')?.pkg.version).toEqual(
+      vercelNextPkg.version
     );
     expect(builders.get('@vercel/node@latest')?.pkgPath).toEqual(
       join(repoRoot, 'packages/node/package.json')
@@ -77,11 +89,17 @@ describe('importBuilders()', () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
     const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
-    expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
-      vercelNodePkg
+    expect(builders.get('@vercel/node@canary')?.pkg.name).toEqual(
+      vercelNodePkg.name
     );
-    expect(builders.get('@vercel/next@canary')?.pkg).toMatchObject(
-      vercelNextPkg
+    expect(builders.get('@vercel/node@canary')?.pkg.version).toEqual(
+      vercelNodePkg.version
+    );
+    expect(builders.get('@vercel/next@canary')?.pkg.name).toEqual(
+      vercelNextPkg.name
+    );
+    expect(builders.get('@vercel/next@canary')?.pkg.version).toEqual(
+      vercelNextPkg.version
     );
     expect(builders.get('@vercel/node@canary')?.pkgPath).toEqual(
       join(repoRoot, 'packages/node/package.json')
