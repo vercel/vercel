@@ -13,6 +13,16 @@ const getBillingUrl = (teamSlug: string) =>
  */
 export function handlePurchaseError(err: unknown, teamSlug?: string): number {
   if (isAPIError(err)) {
+    if (err.code === 'invalid_plan_iteration') {
+      output.error('Your team must be on the Flex plan to purchase add-ons.');
+      return 1;
+    }
+    if (err.code === 'missing_subscription') {
+      output.error(
+        'Your team does not have an active subscription. Please contact support.'
+      );
+      return 1;
+    }
     if (err.code === 'missing_stripe_customer') {
       const dashboardHint = teamSlug
         ? ` Please add one: ${output.link(getBillingUrl(teamSlug), getBillingUrl(teamSlug))}`
