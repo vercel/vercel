@@ -1,5 +1,14 @@
 # @vercel/python-analysis
 
+## 0.6.0
+
+### Minor Changes
+
+- Optimize cold starts for lambdas >250MB ([#15080](https://github.com/vercel/vercel/pull/15080))
+
+  1. Remove `uv pip install` and replace it with `uv sync --inexact --frozen`
+  2. Pack the lambda zip with dependencies up to 245MB then only install the remaining ones at runtime
+
 ## 0.5.0
 
 ### Minor Changes

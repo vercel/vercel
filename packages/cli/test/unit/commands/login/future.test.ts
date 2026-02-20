@@ -6,6 +6,12 @@ import { randomUUID } from 'node:crypto';
 
 const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
+vi.mock('open', () => {
+  return {
+    default: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 function mockResponse(data: unknown, ok = true): Response {
   return {
     ok,
