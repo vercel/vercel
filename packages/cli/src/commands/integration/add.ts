@@ -52,10 +52,12 @@ export async function add(
   const resourceNameArg = flags['--name'];
   const metadataFlags = flags['--metadata'];
   const billingPlanId = flags['--plan'];
+  const prefix = flags['--prefix'];
   const options: AddOptions = {
     noConnect: flags['--no-connect'],
     noEnvPull: flags['--no-env-pull'],
     environments: flags['--environment'],
+    prefix,
   };
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
@@ -109,6 +111,7 @@ export async function add(
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
       environments: options.environments,
+      prefix,
     });
   }
 
@@ -123,6 +126,7 @@ export async function add(
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
   telemetry.trackCliOptionEnvironment(options.environments);
+  telemetry.trackCliOptionPrefix(prefix);
 
   const { contextName, team } = await getScope(client);
 

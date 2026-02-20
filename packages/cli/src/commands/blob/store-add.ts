@@ -125,7 +125,7 @@ export default async function addStore(
         link.project.id,
         storeId,
         environments,
-        link.org.id
+        { accountId: link.org.id }
       );
 
       output.success(

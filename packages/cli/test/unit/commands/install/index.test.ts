@@ -245,6 +245,48 @@ describe('install', () => {
       expect(exitCode).toEqual(1);
     });
 
+    it('forwards --prefix flag', async () => {
+      const { connectionRequestBodies } = useIntegration({
+        withInstallation: true,
+        ownerId: team.id,
+      });
+      usePreauthorization();
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('install', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = install(client);
+      await expect(client.stderr).toOutput(
+        `Installing Acme Product by Acme Integration under ${team.slug}`
+      );
+      await expect(client.stderr).toOutput(
+        'Choose your region (Use arrow keys)'
+      );
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput(
+        'Choose a billing plan (Use arrow keys)'
+      );
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+      await expect(client.stderr).toOutput(
+        'acme-gray-apple successfully connected to vercel-integration-add'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectionRequestBodies).toHaveLength(1);
+      expect(connectionRequestBodies[0]).toMatchObject({
+        envVarPrefix: 'NEON2_',
+      });
+    });
+
     it('forwards --environment flag', async () => {
       client.setArgv('install', 'acme', '--environment', 'staging');
       const exitCode = await install(client);
