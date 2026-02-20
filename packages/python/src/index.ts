@@ -570,6 +570,10 @@ from vercel_runtime.vc_init import vc_handler
     runtime: pythonVersion.runtime,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
+    // Request increased ephemeral storage when using runtime dependency installation
+    ephemeralStorageSize: depExternalizer.needsExtraEphemeralStorage
+      ? 1024
+      : undefined,
   });
 
   return { output };

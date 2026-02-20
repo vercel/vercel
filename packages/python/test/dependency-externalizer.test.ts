@@ -9,6 +9,7 @@ import {
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  EPHEMERAL_STORAGE_SIZE_MB,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
@@ -134,8 +135,16 @@ describe('dependency externalizer support', () => {
       expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
     });
 
-    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
+    it('EPHEMERAL_STORAGE_SIZE_MB is 1024 (1 GB)', () => {
+      expect(EPHEMERAL_STORAGE_SIZE_MB).toBe(1024);
+    });
+
+    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is derived from EPHEMERAL_STORAGE_SIZE_MB with 2% buffer', () => {
+      // Without VERCEL_MAXIMISE_TMP_SPACE, max is EPHEMERAL_STORAGE_SIZE_MB (1024)
+      // LAMBDA_EPHEMERAL_STORAGE_BYTES = floor(1024 * 1024 * 1024 * 0.98)
+      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(
+        Math.floor(EPHEMERAL_STORAGE_SIZE_MB * 1024 * 1024 * 0.98)
+      );
     });
 
     it('ephemeral storage limit is greater than the bundle size threshold', () => {
