@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import os
 import traceback
 from typing import TYPE_CHECKING, Any
@@ -59,7 +60,9 @@ def bootstrap_cron_service_app(module: object) -> ASGI:
         if cron_secret:
             authorization = get_header(scope, "authorization")
             expected = f"Bearer {cron_secret}"
-            if authorization != expected:
+            if not authorization or not hmac.compare_digest(
+                authorization, expected
+            ):
                 await drain_body(receive)
                 await send_json_response(send, 401, {"error": "unauthorized"})
                 return
