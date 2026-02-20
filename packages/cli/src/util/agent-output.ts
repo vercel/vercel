@@ -107,6 +107,18 @@ export function buildEnvAddCommandWithPreservedArgs(
 }
 
 /**
+ * Returns args after "env pull" and its 0–1 positionals (filename).
+ */
+export function getPreservedArgsForEnvPull(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const pullIdx = args.indexOf('pull');
+  if (pullIdx === -1 || args[pullIdx - 1] !== 'env') return args;
+  let i = pullIdx + 1;
+  if (i < args.length && !args[i].startsWith('-')) i++;
+  return args.slice(i);
+}
+
+/**
  * Returns args after "env rm" and its 0–3 positionals (name, target, branch).
  */
 export function getPreservedArgsForEnvRm(argv: string[]): string[] {

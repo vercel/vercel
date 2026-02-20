@@ -47,7 +47,9 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
 
   const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
     cwd: dir,
-    env: { FORCE_TTY: '1' },
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await waitForPrompt(vc, /Set up[^?]+\?/);

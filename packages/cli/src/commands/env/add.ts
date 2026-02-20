@@ -125,7 +125,7 @@ export default async function add(client: Client, argv: string[]) {
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> <gitbranch> <file>`
+        `env add <name> <target> <gitbranch> < <file>`
       )}`
     );
     return 1;

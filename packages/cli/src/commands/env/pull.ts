@@ -30,6 +30,7 @@ import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
 import {
   buildCommandWithYes,
+  getPreservedArgsForEnvPull,
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
@@ -108,8 +109,7 @@ export default async function pull(
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     if (client.nonInteractive) {
-      // Preserve original args (e.g. --cwd, --non-interactive) and add scope/project placeholders (consistent with env add)
-      const preserved = client.argv.slice(4);
+      const preserved = getPreservedArgsForEnvPull(client.argv);
       const linkArgv = [
         ...client.argv.slice(0, 2),
         'link',
