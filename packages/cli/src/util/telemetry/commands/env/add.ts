@@ -39,6 +39,15 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliOptionValue(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'value',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagSensitive(sensitive: boolean | undefined) {
     if (sensitive) {
       this.trackCliFlag('sensitive');

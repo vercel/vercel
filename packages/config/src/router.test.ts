@@ -388,7 +388,7 @@ describe('Router', () => {
       );
 
       expect(route).toMatchObject({
-        src: '/users/:userId',
+        src: '^\\/users(?:\\/([^\\/]+?))$',
         dest: 'https://api.example.com/users/$1',
         transforms: [
           {
@@ -437,7 +437,7 @@ describe('Router', () => {
       );
 
       expect(route).toMatchObject({
-        src: '/api/(.*)',
+        src: '^\\/api(?:\\/(.*))$',
         dest: 'https://backend.example.com/$1',
         respectOriginCacheControl: false,
       });
@@ -472,7 +472,7 @@ describe('Router', () => {
       }));
 
       expect(route).toMatchObject({
-        src: '/old',
+        src: '^\\/old$',
         dest: '/new',
         status: 308,
         transforms: [

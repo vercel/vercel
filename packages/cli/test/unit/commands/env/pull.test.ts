@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
@@ -576,6 +576,140 @@ describe('env pull', () => {
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
+  });
+
+  describe('non-interactive mode', () => {
+    it('outputs action_required when file exists and is not Vercel-created', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      await fs.writeFile(
+        path.join(cwd, '.env.local'),
+        'LOCAL_ONLY=value\n',
+        'utf8'
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv('env', 'pull');
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'env_file_exists',
+        message: expect.stringContaining('.env.local'),
+        next: expect.any(Array),
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('outputs JSON with next options when not linked', async () => {
+      const linkModule = await import('../../../../src/util/projects/link');
+      vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const { setupTmpDir } = await import(
+        '../../../helpers/setup-unit-fixture'
+      );
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('env', 'pull', '--non-interactive');
+
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'not_linked',
+        message: expect.stringContaining("isn't linked"),
+        next: [
+          { command: expect.any(String) },
+          { command: expect.any(String) },
+        ],
+      });
+      // First next: link with --scope <scope> (only one of scope or project needed) and preserved args
+      expect(payload.next[0].command).toMatch(/link/);
+      expect(payload.next[0].command).toContain('--scope');
+      expect(payload.next[0].command).toContain('<scope>');
+      // Second next: retry same command (env pull) with original args
+      expect(payload.next[1].command).toMatch(/env pull/);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe('non-interactive env_file_exists', () => {
+    it('outputs next commands without ANSI (getCommandNamePlain)', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const { setupUnitFixture } = await import(
+        '../../../helpers/setup-unit-fixture'
+      );
+      const cwd = setupUnitFixture('vercel-env-pull');
+      const otherFile = path.join(cwd, 'other.env');
+      await fs.writeFile(otherFile, 'EXISTING=1');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('env', 'pull', 'other.env', '--non-interactive');
+
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload.reason).toBe('env_file_exists');
+      expect(payload.next).toHaveLength(2);
+      payload.next.forEach((n: { command: string }) => {
+        expect(n.command).not.toMatch(/\u001b|\[\d+m/);
+        expect(n.command).toMatch(/vercel env pull/);
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
   });
 
   describe('[filename]', () => {
