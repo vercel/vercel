@@ -113,10 +113,19 @@ def _detect_app_type(app_obj):
     if asgi_attr is not None and callable(asgi_attr):
         return "asgi", asgi_attr
 
-    call_method = getattr(app_obj, "__call__", None)
-    target = call_method if call_method is not None else app_obj
-    is_async = inspect.iscoroutinefunction(target)
-    param_count = _get_positional_param_count(target)
+    # For async detection, check the object itself first (works for plain
+    # functions/methods).
+    # For class instances iscoroutinefunction(obj) is False,
+    # so fall back to __call__.
+    is_async = inspect.iscoroutinefunction(app_obj)
+    if not is_async:
+        call_method = getattr(app_obj, "__call__", None)
+        if call_method is not None:
+            is_async = inspect.iscoroutinefunction(call_method)
+
+    # inspect.signature() already delegates to __call__ for class instances,
+    # and works directly on plain functions, so always inspect app_obj.
+    param_count = _get_positional_param_count(app_obj)
 
     # ASGI (scope, receive, send)
     if is_async and param_count == 3:
@@ -350,7 +359,7 @@ if __name__ == "__main__":
             httpd.serve_forever()
     else:
         try:
-            from fastapi_cli.cli import fastapi_dev  # type: ignore
+            from fastapi_cli.cli import dev as fastapi_dev  # type: ignore
         except ImportError:
             fastapi_dev = None
 
