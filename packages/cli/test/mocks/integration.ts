@@ -1293,6 +1293,8 @@ export function useIntegration({
     });
   });
 
+  const connectionRequestBodies: unknown[] = [];
+
   client.scenario.post(
     '/v1/storage/stores/:storeId/connections',
     (req, res) => {
@@ -1302,6 +1304,7 @@ export function useIntegration({
         return;
       }
 
+      connectionRequestBodies.push(req.body);
       res.status(200);
       res.end();
     }
@@ -1324,7 +1327,7 @@ export function useIntegration({
     }
   );
 
-  return { installRequestBodies };
+  return { installRequestBodies, connectionRequestBodies };
 }
 
 export function useAutoProvision(opts?: {
