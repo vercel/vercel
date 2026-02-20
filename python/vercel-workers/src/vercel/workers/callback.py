@@ -331,9 +331,10 @@ def receive_message_by_id(
         delivery_count = 0
 
     content_type = part_headers.get("Content-Type", "")
+    payload: Any = payload_bytes
     if "application/json" in content_type.lower():
         try:
-            payload: Any = json.loads(payload_bytes.decode("utf-8"))
+            payload = json.loads(payload_bytes.decode("utf-8"))
         except Exception as exc:  # noqa: BLE001
             raise MessageCorruptedError(
                 message_id,

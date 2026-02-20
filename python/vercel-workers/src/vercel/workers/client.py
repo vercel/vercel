@@ -420,7 +420,7 @@ def get_queue_token(explicit_token: str | None = None) -> str:
     msg = (
         "Failed to resolve queue token. Provide 'token' explicitly when calling send(), "
         "set the VERCEL_QUEUE_TOKEN environment variable, "
-        "or ensure a Vercel OIDC token is available in this environment.",
+        "or ensure a Vercel OIDC token is available in this environment."
     )
     raise TokenResolutionError(msg)
 
@@ -451,7 +451,7 @@ async def get_queue_token_async(explicit_token: str | None = None) -> str:
     msg = (
         "Failed to resolve queue token. Provide 'token' explicitly when calling send_async(), "
         "set the VERCEL_QUEUE_TOKEN environment variable, "
-        "or ensure a Vercel OIDC token is available in this environment.",
+        "or ensure a Vercel OIDC token is available in this environment."
     )
     raise TokenResolutionError(msg)
 
