@@ -594,7 +594,7 @@ describe('env add', () => {
         expect(payload.next[0].command).toContain('<scope>');
         expect(payload.next[0].command).not.toMatch(/--value/);
         expect(payload.next[1].command).toMatch(/env add/);
-        expect(payload.next[1].command).toContain('<branch>');
+        expect(payload.next[1].command).toContain('<gitbranch>');
         expect(payload.next[1].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
         );
@@ -794,7 +794,7 @@ describe('env add', () => {
         expect(
           payload.next.some(
             (n: { command: string }) =>
-              n.command.includes('preview') && n.command.includes('<branch>')
+              n.command.includes('preview') && n.command.includes('<gitbranch>')
           )
         ).toBe(true);
 
@@ -830,7 +830,8 @@ describe('env add', () => {
           payload.next.some(
             (n: { command: string }) =>
               n.command.includes('preview') &&
-              (n.command.includes('<branch>') || n.command.includes('--value'))
+              (n.command.includes('<gitbranch>') ||
+                n.command.includes('--value'))
           )
         ).toBe(true);
 

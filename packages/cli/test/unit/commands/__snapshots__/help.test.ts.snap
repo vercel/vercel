@@ -1942,7 +1942,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   - Add a new Environment Variable for a specific Environment and Git Branch
 
-    $ vercel env add <name> <production | preview | development> <branch>
+    $ vercel env add <name> <production | preview | development> <gitbranch>
     $ vercel env add DB_PASS preview feat1
 
   - Add a new Environment Variable from stdin
@@ -2261,7 +2261,7 @@ exports[`help command > env help output snapshots > env remove help output snaps
 
   - Remove a variable from a specific Environment and Git Branch
 
-    $ vercel env rm <name> <production | preview | development> <branch>
+    $ vercel env rm <name> <production | preview | development> <gitbranch>
     $ vercel env rm NPM_RC preview feat1
 
 "

@@ -134,7 +134,7 @@ describe('env update', () => {
       expect(payload.next[0].command).toMatch(
         /env update name production --value/
       );
-      expect(payload.next[0].command).not.toMatch(/<branch>/);
+      expect(payload.next[0].command).not.toMatch(/<gitbranch>/);
 
       exitSpy.mockRestore();
       logSpy.mockRestore();

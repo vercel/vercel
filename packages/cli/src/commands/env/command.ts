@@ -110,7 +110,7 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <branch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -168,7 +168,7 @@ export const removeSubcommand = {
     {
       name: 'Remove a variable from a specific Environment and Git Branch',
       value: [
-        `${packageName} env rm <name> ${targetPlaceholder} <branch>`,
+        `${packageName} env rm <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env rm NPM_RC preview feat1`,
       ],
     },
@@ -321,7 +321,7 @@ export const updateSubcommand = {
     {
       name: 'Update a variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env update <name> ${targetPlaceholder} <branch>`,
+        `${packageName} env update <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env update NPM_RC preview feat1`,
       ],
     },
