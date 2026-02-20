@@ -769,6 +769,31 @@ describe('detectServices', () => {
   });
 
   describe('worker services', () => {
+    it('should generate internal worker callback routes', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            processor: {
+              type: 'worker',
+              entrypoint: 'worker/processor.py',
+              topic: 'jobs',
+            },
+          },
+        }),
+        'worker/processor.py': 'def handler(event): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.routes.workers).toHaveLength(1);
+      expect(result.routes.workers[0]).toEqual({
+        src: '^/_svc/processor/workers/worker/processor/worker$',
+        dest: '/_svc/processor/index',
+        check: true,
+      });
+    });
+
     it('should error if worker service has routePrefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

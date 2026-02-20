@@ -38,6 +38,7 @@ interface PythonDependencyExternalizerOptions {
   projectName: string | undefined;
   noBuildCheckFailed: boolean;
   pythonPath: string;
+  additionalPrivatePackages?: string[];
 }
 
 export class PythonDependencyExternalizer {
@@ -49,6 +50,7 @@ export class PythonDependencyExternalizer {
   private projectName: string | undefined;
   private noBuildCheckFailed: boolean;
   private pythonPath: string;
+  private additionalPrivatePackages: string[];
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -64,6 +66,7 @@ export class PythonDependencyExternalizer {
     this.projectName = options.projectName;
     this.noBuildCheckFailed = options.noBuildCheckFailed;
     this.pythonPath = options.pythonPath;
+    this.additionalPrivatePackages = options.additionalPrivatePackages ?? [];
   }
 
   /**
@@ -228,6 +231,7 @@ export class PythonDependencyExternalizer {
       ...classification.privatePackages,
       'vercel-runtime',
       'vercel_runtime',
+      ...this.additionalPrivatePackages,
     ];
     const alwaysBundledFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,

@@ -36,6 +36,33 @@ export function getInternalServiceFunctionPath(serviceName: string): string {
   return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
 }
 
+function normalizeInternalServiceEntrypoint(entrypoint: string): string {
+  const normalized = entrypoint
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\.[^/.]+$/, '');
+  return normalized || 'index';
+}
+
+export function getInternalServiceWorkerPathPrefix(
+  serviceName: string
+): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
+}
+
+export function getInternalServiceCronPathPrefix(serviceName: string): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/crons`;
+}
+
+export function getInternalServiceWorkerPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'worker'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
+}
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {

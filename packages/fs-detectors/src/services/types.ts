@@ -48,7 +48,6 @@ export interface ServicesRoutes {
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }

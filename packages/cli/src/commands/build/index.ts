@@ -36,6 +36,7 @@ import {
   type Service,
   isBackendBuilder,
   type Lambda,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -66,6 +67,7 @@ import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
+  isLambda,
   type PathOverride,
 } from '../../util/build/write-build-result';
 import type Client from '../../util/client';
@@ -682,6 +684,8 @@ async function doBuild(
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
+  const hasWorkerServices =
+    hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
   const servicesByBuilderSrc = new Map<string, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -798,6 +802,7 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
+            ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.
@@ -1006,6 +1011,10 @@ async function doBuild(
           owner: service,
           allServices: detectedServices,
         });
+      }
+
+      if (service?.type === 'worker' && 'output' in buildResult) {
+        attachWorkerServiceTrigger(buildResult.output, service);
       }
 
       // Store the build result to generate the final `config.json` after
@@ -1734,4 +1743,41 @@ function getServicesMergeEntrypoint(
   const normalized = normalizeServiceRoutePrefix(routePrefix);
   const sortKey = String(10000 - normalized.length).padStart(5, '0');
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
+}
+
+function attachWorkerServiceTrigger(
+  buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
+  service: Service
+): void {
+  const trigger: TriggerEvent = {
+    type: 'queue/v1beta',
+    topic: service.topic || 'default',
+    consumer: service.consumer || 'default',
+  };
+
+  if (isLambda(buildOutput)) {
+    appendWorkerTrigger(buildOutput, trigger);
+    return;
+  }
+
+  for (const output of Object.values(buildOutput)) {
+    if (isLambda(output)) {
+      appendWorkerTrigger(output, trigger);
+    }
+  }
+}
+
+function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
+  const existingTriggers = Array.isArray(lambda.experimentalTriggers)
+    ? lambda.experimentalTriggers
+    : [];
+  const alreadyConfigured = existingTriggers.some(
+    existing =>
+      existing.type === trigger.type &&
+      existing.topic === trigger.topic &&
+      existing.consumer === trigger.consumer
+  );
+  if (!alreadyConfigured) {
+    lambda.experimentalTriggers = [...existingTriggers, trigger];
+  }
 }

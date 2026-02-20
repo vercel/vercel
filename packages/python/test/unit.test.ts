@@ -46,6 +46,7 @@ import {
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { FileBlob } from '@vercel/build-utils';
 let warningMessages: string[];
@@ -1931,6 +1932,120 @@ describe('custom install hooks', () => {
     expect(mockUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('worker services dependency installation', () => {
+  async function buildWithPipSpy(
+    options: {
+      hasWorkerServices?: boolean;
+    } = {}
+  ) {
+    const pipCalls: string[][] = [];
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: class {
+        constructor() {}
+        getPath() {
+          return '/mock/uv';
+        }
+        listInstalledPythons() {
+          return new Set(mockInstalledVersions);
+        }
+        async sync() {}
+        async lock() {}
+        async pip(options: { args: string[] }) {
+          pipCalls.push(options.args);
+        }
+      },
+    }));
+
+    // Worker dependency installation happens before dependency externalization.
+    // Mock externalization to keep this test focused on install behavior.
+    vi.doMock('../src/dependency-externalizer', () => ({
+      PythonDependencyExternalizer: class {
+        constructor() {}
+        async analyze() {
+          return { overLambdaLimit: false, allVendorFiles: {} };
+        }
+        async generateBundle() {}
+      },
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-worker-services-install-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'services',
+          ...(options.hasWorkerServices === true
+            ? { hasWorkerServices: true }
+            : {}),
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    return pipCalls;
+  }
+
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.12');
+    delete process.env.VERCEL_WORKERS_PYTHON;
+  });
+
+  afterEach(() => {
+    delete process.env.VERCEL_WORKERS_PYTHON;
+    vi.doUnmock('../src/dependency-externalizer');
+    vi.doUnmock('../src/install');
+    vi.doUnmock('../src/index');
+    vi.doUnmock('../src/uv');
+  });
+
+  it('installs vercel-workers when worker services are enabled', async () => {
+    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    const workersDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+    expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
+  });
+
+  it('does not install vercel-workers when worker services are not enabled', async () => {
+    const pipCalls = await buildWithPipSpy();
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.startsWith('vercel-workers=='))
+      )
+    ).toBe(false);
+  });
+
+  it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
+    process.env.VERCEL_WORKERS_PYTHON =
+      'vercel-workers @ file:///tmp/vercel-workers.whl';
+    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
+      )
+    ).toBe(true);
   });
 });
 
