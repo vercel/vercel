@@ -16,7 +16,7 @@ export default typeof build === 'function'
       // RouterContextProvider is only available in 7.9.0+
       // wrap the handler to provide a RouterContextProvider
       // if we're using the v8 middleware
-      return (request) =>
+      return request =>
         build.future.v8_middleware
           ? handler(request, new RR.RouterContextProvider())
           : handler(request);
