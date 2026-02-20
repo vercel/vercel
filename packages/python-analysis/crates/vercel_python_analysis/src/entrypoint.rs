@@ -79,6 +79,39 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
     false
 }
 
+/// Extract the string value of a top-level constant with the given name.
+/// Only considers simple assignments (`NAME = "string"`) and annotated assignments
+/// (`NAME: str = "string"`) at module level. Returns the first matching string
+/// value, or None if not found or the value is not a string literal.
+pub(crate) fn get_string_constant_impl(source: &str, name: &str) -> Option<String> {
+    let parsed = match parse_module(source) {
+        Ok(parsed) => parsed,
+        Err(_) => return None,
+    };
+    for stmt in parsed.suite() {
+        match stmt {
+            Stmt::Assign(assign) => {
+                if assign.targets.len() == 1 && is_name_expr(&assign.targets[0], name) {
+                    if let Some(s) = expr_to_string_literal(&assign.value) {
+                        return Some(s);
+                    }
+                }
+            }
+            Stmt::AnnAssign(ann_assign) => {
+                if is_name_expr(&ann_assign.target, name) {
+                    if let Some(value) = &ann_assign.value {
+                        if let Some(s) = expr_to_string_literal(value) {
+                            return Some(s);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 fn is_name_expr(expr: &Expr, name: &str) -> bool {
     match expr {
         Expr::Name(name_expr) => name_expr.id.as_str() == name,
@@ -273,6 +306,40 @@ def create():
     return app
 "#;
         assert!(!contains_app_or_handler_impl(source));
+    }
+
+    // -------------------------------------------------------------------------
+    // get_string_constant_impl
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_get_string_constant_simple() {
+        let source = r#"VERSION = "1.0.0""#;
+        assert_eq!(
+            get_string_constant_impl(source, "VERSION"),
+            Some("1.0.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_string_constant_annotated() {
+        let source = r#"APP_NAME: str = "myapp""#;
+        assert_eq!(
+            get_string_constant_impl(source, "APP_NAME"),
+            Some("myapp".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_string_constant_not_found() {
+        let source = r#"VERSION = "1.0.0""#;
+        assert_eq!(get_string_constant_impl(source, "OTHER"), None);
+    }
+
+    #[test]
+    fn test_get_string_constant_non_string_value() {
+        let source = r#"COUNT = 42"#;
+        assert_eq!(get_string_constant_impl(source, "COUNT"), None);
     }
 
     // -------------------------------------------------------------------------

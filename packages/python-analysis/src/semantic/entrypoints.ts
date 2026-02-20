@@ -43,6 +43,24 @@ export async function containsAppOrHandler(source: string): Promise<boolean> {
   return mod.containsAppOrHandler(source);
 }
 
+/**
+ * Extract the string value of a top-level constant with the given name.
+ * Only considers simple assignments (NAME = "string") and annotated assignments
+ * (NAME: str = "string") at module level. Returns the first matching string
+ * value, or null if not found or the value is not a string literal.
+ *
+ * @param source - Python source code
+ * @param name - Constant name (e.g. "VERSION", "APP_NAME")
+ * @returns The string value or null
+ */
+export async function getStringConstant(
+  source: string,
+  name: string
+): Promise<string | null> {
+  const mod = await importWasmModule();
+  return mod.getStringConstant(source, name) ?? null;
+}
+
 /** Regex to detect os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...') so we can skip WASM when absent */
 const DJANGO_SETTINGS_MODULE_PATTERN_RE =
   /os\.environ\.setdefault\s*\(\s*['"]DJANGO_SETTINGS_MODULE['"]\s*,\s*['"][^'"]*['"]\s*\)/;
