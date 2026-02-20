@@ -237,6 +237,15 @@ export async function addAutoProvision(
   );
   output.debug(`Installation: ${JSON.stringify(result.installation, null, 2)}`);
   output.debug(`Billing plan: ${JSON.stringify(result.billingPlan, null, 2)}`);
+
+  // Installation-only integrations (e.g. Sentry) return resource: null
+  if (!result.resource) {
+    output.success(
+      `${product.name} by ${chalk.bold(integration.name)} is already installed`
+    );
+    return 0;
+  }
+
   output.success(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );

@@ -787,6 +787,22 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('installation-only integrations', () => {
+    it('should succeed with "already installed" message when resource is null', async () => {
+      useAutoProvision({ responseKey: 'installed' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product by Acme Integration is already installed'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+  });
+
   describe('--name flag', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });
