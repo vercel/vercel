@@ -1,4 +1,4 @@
-import { Readable } from 'stream';
+import { Readable, Transform } from 'stream';
 import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
@@ -170,24 +170,22 @@ export async function* uploadFiles(options: {
 
         uploadProgress.bytesUploaded = 0;
 
-        // Split out into chunks
-        const body = new Readable();
-        const originalRead = body.read.bind(body);
-        body.read = function (...args) {
-          const chunk = originalRead(...args);
-          if (chunk) {
-            uploadProgress.bytesUploaded += chunk.length;
-            uploadProgress.emit('progress');
-          }
-          return chunk;
-        };
-
+        const source = new Readable();
         const chunkSize = 16384; /* 16kb - default Node.js `highWaterMark` */
         for (let i = 0; i < data.length; i += chunkSize) {
-          const chunk = data.slice(i, i + chunkSize);
-          body.push(chunk);
+          source.push(data.slice(i, i + chunkSize));
         }
-        body.push(null);
+        source.push(null);
+
+        const body = source.pipe(
+          new Transform({
+            transform(chunk, _encoding, callback) {
+              uploadProgress.bytesUploaded += chunk.length;
+              uploadProgress.emit('progress');
+              callback(null, chunk);
+            },
+          })
+        );
 
         let err;
         let result;
