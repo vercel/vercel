@@ -10,12 +10,14 @@ require 'rack'
 require 'rack/handler/webrick'
 require 'webrick'
 require 'socket'
+require_relative 'vc__utils__ruby'
 
 $stdout.sync = true
 $stderr.sync = true
 
 USER_ENTRYPOINT = "__VC_DEV_ENTRYPOINT__"
 PUBLIC_DIR = 'public'
+SERVICE_ROUTE_PREFIX = resolve_service_route_prefix
 
 def build_user_app
   if USER_ENTRYPOINT.end_with?('.ru')
@@ -36,17 +38,33 @@ class StaticThenApp
   end
 
   def call(env)
-    req_path = env['PATH_INFO'] || '/'
+    effective_env = env.dup
+    req_path, matched_prefix = strip_service_route_prefix(
+      effective_env['PATH_INFO'] || '/',
+      SERVICE_ROUTE_PREFIX
+    )
+    effective_env['PATH_INFO'] = req_path
+
+    unless matched_prefix.empty?
+      script_name = effective_env['SCRIPT_NAME'] || ''
+      if !script_name.empty? && script_name != '/'
+        script_name = script_name.sub(%r{/+\z}, '')
+      else
+        script_name = ''
+      end
+      effective_env['SCRIPT_NAME'] = "#{script_name}#{matched_prefix}"
+    end
+
     # Normalize path and guard against traversal
     safe = req_path.sub(/^\//, '')
     full = File.expand_path(safe, @base)
 
     if full.start_with?(@base + File::SEPARATOR) && File.file?(full)
       # Delegate to Rack::File which handles HEAD/GET correctly
-      return @file_server.call(env)
+      return @file_server.call(effective_env)
     end
 
-    @app.call(env)
+    @app.call(effective_env)
   end
 end
 

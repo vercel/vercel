@@ -8,7 +8,8 @@
   "files": [
     "dist",
     "vc_init.rb",
-    "vc_init_dev.rb"
+    "vc_init_dev.rb",
+    "vc_utils.rb"
   ],
   "repository": {
     "type": "git",
