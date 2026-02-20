@@ -53,6 +53,35 @@ describe('install', () => {
         },
       ]);
     });
+
+    it('shows dynamic help with integration slug', async () => {
+      useUser();
+      const teams = useTeams('team_dummy');
+      const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = team.id;
+      useIntegration({ withInstallation: true, ownerId: team.id });
+
+      client.setArgv('install', 'acme', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.getFullOutput();
+      // Dynamic examples should use "install" not "integration add"
+      expect(output).toContain('$ vercel install acme');
+      expect(output).not.toContain('$ vercel integration add');
+      // Should show metadata and billing plan info
+      expect(output).toContain('Metadata options for "acme"');
+      expect(output).toContain('Available billing plans for');
+    });
+
+    it('falls back to static help without a slug', async () => {
+      client.setArgv('install', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.getFullOutput();
+      expect(output).toContain('vercel install');
+    });
   });
 
   describe('[integration]', () => {

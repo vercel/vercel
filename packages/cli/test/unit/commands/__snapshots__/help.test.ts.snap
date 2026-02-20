@@ -2879,9 +2879,14 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
 "
-  ▲ vercel integration balance integration
+  ▲ vercel integration balance integration [options]
 
   Shows the balances and thresholds of a specified marketplace integration                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
 
   Global Options:
 
@@ -2903,6 +2908,10 @@ exports[`help command > integration help output snapshots > integration balance 
 
     $ vercel integration balance <integration-name>
     $ vercel integration balance acme
+
+  - Output as JSON
+
+    $ vercel integration balance acme --format=json
 
 "
 `;
@@ -2960,48 +2969,52 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration  Installs
-                         a       
-                         marketp…
-                         integra…
-  balance   integration  Shows   
-                         the     
-                         balances
-                         and     
-                         thresho…
-                         of a    
-                         specifi…
-                         marketp…
-                         integra…
-  discover               Discover
-                         availab…
-                         marketp…
-                         integra…
-  guide     integration  Show    
-                         getting 
-                         started 
-                         guides  
-                         and code
-                         snippets
-                         for a   
-                         marketp…
-                         integra…
-  list      [project]    List    
-                         resourc…
-                         from    
-                         marketp…
-                         integra…
-                         for the 
-                         current 
-                         project 
-  open      name         Opens a 
-                         marketp…
-                         integra…
-                         dashboa…
-  remove    integration  Uninsta…
-                         a       
-                         marketp…
-                         integra…
+  add       integration      Instal…
+                             a      
+                             market…
+                             integr…
+  balance   integration      Shows  
+                             the    
+                             balanc…
+                             and    
+                             thresh…
+                             of a   
+                             specif…
+                             market…
+                             integr…
+  discover                   Discov…
+                             availa…
+                             market…
+                             integr…
+  guide     integration      Show   
+                             getting
+                             started
+                             guides 
+                             and    
+                             code   
+                             snippe…
+                             for a  
+                             market…
+                             integr…
+  list      [project]        List   
+                             resour…
+                             from   
+                             market…
+                             integr…
+                             for the
+                             current
+                             project
+  open      name [resource]  Opens a
+                             market…
+                             integr…
+                             or     
+                             resour…
+                             dashbo…
+                             via SSO
+  remove    integration      Uninst…
+                             a      
+                             market…
+                             integr…
 
 
   Global Options:
@@ -3069,16 +3082,17 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration  Installs a marketplace integration              
-  balance   integration  Shows the balances and thresholds of a specified
-                         marketplace integration                         
-  discover               Discover available marketplace integrations     
-  guide     integration  Show getting started guides and code snippets   
-                         for a marketplace integration                   
-  list      [project]    List resources from marketplace integrations for
-                         the current project                             
-  open      name         Opens a marketplace integration's dashboard     
-  remove    integration  Uninstalls a marketplace integration            
+  add       integration      Installs a marketplace integration             
+  balance   integration      Shows the balances and thresholds of a         
+                             specified marketplace integration              
+  discover                   Discover available marketplace integrations    
+  guide     integration      Show getting started guides and code snippets  
+                             for a marketplace integration                  
+  list      [project]        List resources from marketplace integrations   
+                             for the current project                        
+  open      name [resource]  Opens a marketplace integration's or resource's
+                             dashboard via SSO                              
+  remove    integration      Uninstalls a marketplace integration           
 
 
   Global Options:
@@ -3114,13 +3128,13 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration  Installs a marketplace integration                                                      
-  balance   integration  Shows the balances and thresholds of a specified marketplace integration                
-  discover               Discover available marketplace integrations                                             
-  guide     integration  Show getting started guides and code snippets for a marketplace integration             
-  list      [project]    List resources from marketplace integrations for the current project                    
-  open      name         Opens a marketplace integration's dashboard                                             
-  remove    integration  Uninstalls a marketplace integration                                                    
+  add       integration      Installs a marketplace integration                                                     
+  balance   integration      Shows the balances and thresholds of a specified marketplace integration               
+  discover                   Discover available marketplace integrations                                            
+  guide     integration      Show getting started guides and code snippets for a marketplace integration            
+  list      [project]        List resources from marketplace integrations for the current project                   
+  open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
+  remove    integration      Uninstalls a marketplace integration                                                   
 
 
   Global Options:
@@ -3241,8 +3255,9 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --all  Disconnects all projects from the specified resource                                                      
-  -y,  --yes  Skip the confirmation prompt when disconnecting a resource                                                
+  -a,  --all              Disconnects all projects from the specified resource                                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when disconnecting a resource                                    
 
 
   Global Options:
@@ -3276,6 +3291,10 @@ exports[`help command > integration-resource help output snapshots > integration
 
     $ vercel integration-resource disconnect <resource> <project>
     $ vercel integration-resource disconnect my-acme-resource my-project
+
+  - Output as JSON
+
+    $ vercel integration-resource disconnect my-acme-resource --format=json --yes
 
 "
 `;
@@ -3449,8 +3468,9 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --disconnect-all  Disconnects all projects from the specified resource before deletion                           
-  -y,  --yes             Skip the confirmation prompt when deleting a resource                                          
+  -a,  --disconnect-all   Disconnects all projects from the specified resource before deletion                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when deleting a resource                                         
 
 
   Global Options:
@@ -3479,6 +3499,10 @@ exports[`help command > integration-resource help output snapshots > integration
     $ vercel integration-resource remove <resource> --disconnect-all
     $ vercel integration-resource remove my-acme-resource --disconnect-all
     $ vercel integration-resource remove my-acme-resource -a
+
+  - Output as JSON
+
+    $ vercel integration-resource remove my-acme-resource --format=json --yes
 
 "
 `;
