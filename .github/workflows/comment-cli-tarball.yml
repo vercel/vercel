@@ -39,6 +39,96 @@ jobs:
               return;
             }
 
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const headOwner = context.payload.pull_request.head.repo.owner.login;
+            const headRepo = context.payload.pull_request.head.repo.name;
+
+            function toTitleCase(value) {
+              return value
+                .split(/[-_]/)
+                .filter(Boolean)
+                .map(part => part[0].toUpperCase() + part.slice(1))
+                .join(' ');
+            }
+
+            function toPythonEnvVar(packageName) {
+              return `${packageName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_PYTHON`;
+            }
+
+            function parsePyprojectName(pyproject) {
+              const match = pyproject.match(/^name\s*=\s*"([^"]+)"/m);
+              return match?.[1] ?? null;
+            }
+
+            async function listPythonPackagesFromRepo() {
+              const sources = [
+                { owner: headOwner, repo: headRepo, ref: prSha },
+                { owner, repo, ref: 'main' },
+              ];
+
+              for (const source of sources) {
+                try {
+                  const { data: pythonEntries } =
+                    await github.rest.repos.getContent({
+                      owner: source.owner,
+                      repo: source.repo,
+                      path: 'python',
+                      ref: source.ref,
+                    });
+
+                  if (!Array.isArray(pythonEntries)) {
+                    continue;
+                  }
+
+                  const packageDirs = pythonEntries
+                    .filter(entry => entry.type === 'dir')
+                    .map(entry => entry.name)
+                    .sort();
+
+                  const packages = [];
+                  for (const packageDir of packageDirs) {
+                    try {
+                      const { data: pyprojectFile } =
+                        await github.rest.repos.getContent({
+                          owner: source.owner,
+                          repo: source.repo,
+                          path: `python/${packageDir}/pyproject.toml`,
+                          ref: source.ref,
+                        });
+
+                      if (Array.isArray(pyprojectFile) || !pyprojectFile.content) {
+                        continue;
+                      }
+
+                      const pyproject = Buffer.from(
+                        pyprojectFile.content,
+                        pyprojectFile.encoding || 'base64'
+                      ).toString('utf8');
+                      const packageName = parsePyprojectName(pyproject) || packageDir;
+
+                      packages.push({
+                        packageDir,
+                        packageName,
+                      });
+                    } catch {
+                      // Not a Python package directory, skip.
+                    }
+                  }
+
+                  if (packages.length > 0) {
+                    return packages;
+                  }
+                } catch (error) {
+                  console.log(
+                    `Failed to list Python package directories from ${source.owner}/${source.repo}@${source.ref}: ${error}`
+                  );
+                }
+              }
+
+              return [];
+            }
+
             let message = '## 📦 CLI Tarball Ready\n\n';
             message += 'The Vercel CLI tarball for this PR is now available!\n\n';
             message += '### Quick Test\n\n';
@@ -58,44 +148,42 @@ jobs:
             message += '}\n';
             message += '```\n';
 
-            // Check if a Python runtime wheel was built
-            try {
-              const resp = await fetch(`${deploymentUrl}/tarballs/vercel-runtime-wheel.json`);
-              if (resp.ok) {
-                const { filename } = await resp.json();
-                const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
-                message += '\n### Python Runtime Wheel\n\n';
-                message += 'A Python runtime wheel was also built for this PR.\n';
-                message += 'To use in your Python project builds, also set this environment variable:\n\n';
-                message += '```\n';
-                message += `VERCEL_RUNTIME_PYTHON="vercel-runtime @ ${wheelUrl}"\n`;
-                message += '```\n';
-              }
-            } catch {
-              // No wheel available, skip
-            }
+            const pythonPackages = await listPythonPackagesFromRepo();
+            for (const { packageDir, packageName } of pythonPackages) {
+              try {
+                const resp = await fetch(
+                  `${deploymentUrl}/tarballs/${packageDir}-wheel.json`
+                );
+                if (!resp.ok) {
+                  continue;
+                }
 
-            // Check if a Python workers wheel was built
-            try {
-              const resp = await fetch(`${deploymentUrl}/tarballs/vercel-workers-wheel.json`);
-              if (resp.ok) {
                 const { filename } = await resp.json();
+                if (!filename) {
+                  continue;
+                }
+
                 const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
-                message += '\n### Python Workers Wheel\n\n';
-                message += 'A Python workers wheel was also built for this PR.\n';
+                const envVar = toPythonEnvVar(packageName);
+                const packageLabel = toTitleCase(
+                  packageName.replace(/^vercel-/, '')
+                );
+
+                message += `\n### Python ${packageLabel} Wheel\n\n`;
+                message += `A \`${packageName}\` wheel was also built for this PR.\n`;
                 message += 'To use in your Python project builds, also set this environment variable:\n\n';
                 message += '```\n';
-                message += `VERCEL_WORKERS_PYTHON="vercel-workers @ ${wheelUrl}"\n`;
+                message += `${envVar}="${packageName} @ ${wheelUrl}"\n`;
                 message += '```\n';
+              } catch {
+                // No wheel available for this package, skip.
               }
-            } catch {
-              // No wheel available, skip
             }
 
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               issue_number: prNumber,
             });
 
@@ -106,15 +194,15 @@ jobs:
 
             if (existingComment) {
               await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 comment_id: existingComment.id,
                 body: message
               });
             } else {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 issue_number: prNumber,
                 body: message
               });
