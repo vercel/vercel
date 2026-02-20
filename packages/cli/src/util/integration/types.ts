@@ -227,7 +227,9 @@ export interface AutoProvisionedResponse {
 }
 
 export interface AutoProvisionFallback {
-  kind: 'metadata' | 'unknown';
+  kind: string;
+  reason?: string;
+  error_message?: string;
   url: string;
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;

@@ -1001,12 +1001,22 @@ const autoProvisionResponses: Record<
   },
   metadata: {
     kind: 'metadata',
+    reason: 'invalid_metadata_schema',
+    error_message: 'Metadata field "region" is required',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
   unknown: {
     kind: 'unknown',
+    reason: 'unexpected_error',
+    error_message: 'An unexpected error occurred during provisioning',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  install: {
+    kind: 'install',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
@@ -1351,7 +1361,7 @@ export function useAutoProvision(opts?: {
       const response =
         autoProvisionResponses[opts?.responseKey ?? 'provisioned'];
 
-      if (response.kind === 'metadata' || response.kind === 'unknown') {
+      if (response.kind !== 'provisioned') {
         // 422 responses for fallback cases
         res.status(422);
         res.json(response);
