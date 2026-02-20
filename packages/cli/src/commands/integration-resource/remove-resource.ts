@@ -85,7 +85,7 @@ export async function remove(client: Client) {
 
   if (!targetedResource) {
     output.error(`No resource ${chalk.bold(resourceName)} found.`);
-    return 0;
+    return 1;
   }
 
   if (disconnectAll) {
@@ -131,6 +131,13 @@ async function handleDeleteResource(
   if (!options?.skipProjectCheck && hasProjects) {
     output.error(
       `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
+    );
+    return 1;
+  }
+
+  if (!options?.skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
     );
     return 1;
   }

@@ -105,7 +105,7 @@ export async function disconnect(client: Client) {
 
   if (!targetedResource) {
     output.error(`No resource ${chalk.bold(resourceName)} found.`);
-    return 0;
+    return 1;
   }
 
   if (parsedArguments.flags['--all']) {
@@ -179,6 +179,13 @@ async function handleDisconnectProject(
     return 0;
   }
 
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
+
   if (
     !skipConfirmation &&
     !(await confirmDisconnectProject(client, resource, project))
@@ -220,6 +227,12 @@ export async function handleDisconnectAllProjects(
   if (resource.projectsMetadata?.length === 0) {
     output.log(`${chalk.bold(resource.name)} has no projects to disconnect.`);
     return;
+  }
+
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    throw new FailedError(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
   }
 
   if (
