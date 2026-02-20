@@ -61,7 +61,7 @@ function fillEnvAddTemplate(
     .replace(/<name>/g, opts.envName ?? '<name>')
     .split(targetPlaceholder)
     .join(opts.envTargetArg ?? targetPlaceholder)
-    .replace(/<branch>/g, opts.envGitBranch ?? '<branch>');
+    .replace(/<gitbranch>/g, opts.envGitBranch ?? '<gitbranch>');
   if (opts.valueFromFlag !== undefined) {
     out = out.replace(/<value>/g, valueForNextCommand(opts.valueFromFlag));
   } else {
@@ -116,7 +116,7 @@ export default async function add(client: Client, argv: string[]) {
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()} <branch>`
+        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
@@ -125,7 +125,7 @@ export default async function add(client: Client, argv: string[]) {
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> <branch> <file>`
+        `env add <name> <target> <gitbranch> <file>`
       )}`
     );
     return 1;
@@ -175,7 +175,7 @@ export default async function add(client: Client, argv: string[]) {
           const insertAt = 2 + pos;
           envAddRetryArgv = [
             ...client.argv.slice(0, insertAt),
-            '<branch>',
+            '<gitbranch>',
             ...client.argv.slice(insertAt),
           ];
         }
@@ -250,10 +250,10 @@ export default async function add(client: Client, argv: string[]) {
         if (m === 'missing_environment')
           return 'environment (production, preview, or development)';
         if (m === 'git_branch_required')
-          return 'third argument <branch> for Preview, or omit for all Preview branches';
+          return 'third argument <gitbranch> for Preview, or omit for all Preview branches';
         return m;
       });
-      const fullTemplate = `env add <name> ${getEnvTargetPlaceholder()} <branch> --value <value> --yes`;
+      const fullTemplate = `env add <name> ${getEnvTargetPlaceholder()} <gitbranch> --value <value> --yes`;
       const filledTemplate = fillEnvAddTemplate(fullTemplate, {
         envName,
         envTargetArg,
@@ -278,7 +278,7 @@ export default async function add(client: Client, argv: string[]) {
         (valueFromFlag !== undefined || stdInput)
       ) {
         const branchSpecific = fillEnvAddTemplate(
-          'env add <name> preview <branch> --value <value> --yes',
+          'env add <name> preview <gitbranch> --value <value> --yes',
           { envName, envTargetArg: 'preview', valueFromFlag }
         );
         const branchAll = fillEnvAddTemplate(
@@ -445,7 +445,7 @@ export default async function add(client: Client, argv: string[]) {
           const insertAt = 2 + pos;
           envAddRetryArgv = [
             ...client.argv.slice(0, insertAt),
-            '<branch>',
+            '<gitbranch>',
             ...client.argv.slice(insertAt),
           ];
         }
@@ -622,7 +622,7 @@ export default async function add(client: Client, argv: string[]) {
             {
               command: buildEnvAddCommandWithPreservedArgs(
                 client.argv,
-                `env add ${envName} preview <branch> --value <value> --yes`
+                `env add ${envName} preview <gitbranch> --value <value> --yes`
               ),
               when: 'Add to a specific Git branch',
             },

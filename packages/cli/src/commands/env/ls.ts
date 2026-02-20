@@ -49,7 +49,9 @@ export default async function ls(client: Client, argv: string[]) {
     args: args,
     maxArgs: 2,
     exitCode: 1,
-    usageString: getCommandName(`env ls ${getEnvTargetPlaceholder()} <branch>`),
+    usageString: getCommandName(
+      `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
+    ),
   });
   if (validationResult !== 0) {
     return validationResult;

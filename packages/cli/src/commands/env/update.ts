@@ -77,7 +77,7 @@ export default async function update(client: Client, argv: string[]) {
           status: 'error',
           reason: 'invalid_arguments',
           message: `Invalid number of arguments. Usage: ${getCommandNamePlain(
-            `env update <name> ${getEnvTargetPlaceholder()} <branch>`
+            `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
           )}`,
         },
         1
@@ -85,7 +85,7 @@ export default async function update(client: Client, argv: string[]) {
     }
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> ${getEnvTargetPlaceholder()} <branch>`
+        `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
@@ -94,7 +94,7 @@ export default async function update(client: Client, argv: string[]) {
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> <target> <branch> < <file>`
+        `env update <name> <target> <gitbranch> < <file>`
       )}`
     );
     return 1;
@@ -109,11 +109,11 @@ export default async function update(client: Client, argv: string[]) {
       const parts = missing.map(m =>
         m === 'missing_name' ? 'name' : '--value or stdin'
       );
-      // Production does not use branch; only preview/development use optional <branch>
+      // Production does not use branch; only preview/development use optional <gitbranch>
       const targetPart = envTargetArg || getEnvTargetPlaceholder();
       const branchPart =
         envTargetArg === 'preview' || envTargetArg === 'development'
-          ? ' <branch>'
+          ? ' <gitbranch>'
           : '';
       const template = `env update ${envName || '<name>'} ${targetPart}${branchPart} --value <value> --yes`;
       outputActionRequired(
@@ -288,7 +288,7 @@ export default async function update(client: Client, argv: string[]) {
               {
                 command: buildEnvUpdateCommandWithPreservedArgs(
                   client.argv,
-                  `env update ${envName} ${getEnvTargetPlaceholder()} <branch>`
+                  `env update ${envName} ${getEnvTargetPlaceholder()} <gitbranch>`
                 ),
               },
             ],
@@ -326,7 +326,7 @@ export default async function update(client: Client, argv: string[]) {
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
                 client.argv,
-                `env update ${envName} ${getEnvTargetPlaceholder()} <branch>`
+                `env update ${envName} ${getEnvTargetPlaceholder()} <gitbranch>`
               ),
             },
           ],
@@ -361,7 +361,7 @@ export default async function update(client: Client, argv: string[]) {
     if (client.nonInteractive) {
       const branchPart =
         envTargetArg === 'preview' || envTargetArg === 'development'
-          ? ' <branch>'
+          ? ' <gitbranch>'
           : '';
       const targetPart = envTargetArg || getEnvTargetPlaceholder();
       outputActionRequired(

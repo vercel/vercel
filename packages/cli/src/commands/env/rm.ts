@@ -62,7 +62,7 @@ export default async function rm(client: Client, argv: string[]) {
           status: 'error',
           reason: 'invalid_arguments',
           message: `Invalid number of arguments. Usage: ${getCommandNamePlain(
-            `env rm <name> ${getEnvTargetPlaceholder()} <branch>`
+            `env rm <name> ${getEnvTargetPlaceholder()} <gitbranch>`
           )}`,
         },
         1
@@ -70,7 +70,7 @@ export default async function rm(client: Client, argv: string[]) {
     }
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env rm <name> ${getEnvTargetPlaceholder()} <branch>`
+        `env rm <name> ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
