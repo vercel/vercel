@@ -1,5 +1,22 @@
 # vercel
 
+## 50.22.1
+
+### Patch Changes
+
+- fix(cli): use --format=json instead of deprecated --json in discover example ([#15159](https://github.com/vercel/vercel/pull/15159))
+
+- fix(cli): make `install --help` show same dynamic help as `integration add --help` ([#15130](https://github.com/vercel/vercel/pull/15130))
+
+- fix(cli): add missing open mock in login/future test ([#15156](https://github.com/vercel/vercel/pull/15156))
+
+- Add `--format=json` support to `integration balance`, `integration remove`, `integration-resource remove`, and `integration-resource disconnect` commands ([#15056](https://github.com/vercel/vercel/pull/15056))
+
+- feat(cli): `integration open` now supports opening resource dashboards and JSON output via `--format=json` ([#15128](https://github.com/vercel/vercel/pull/15128))
+
+- Updated dependencies [[`5825a06900224835c4beb010b01977354cad0dc3`](https://github.com/vercel/vercel/commit/5825a06900224835c4beb010b01977354cad0dc3)]:
+  - @vercel/python@6.15.1
+
 ## 50.22.0
 
 ### Minor Changes
