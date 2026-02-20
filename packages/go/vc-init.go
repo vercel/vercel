@@ -94,34 +94,9 @@ func connectIPC() error {
 	return nil
 }
 
-func findFreePort() (int, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
-	return port, nil
-}
-
-func waitForServer(port int, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	url := fmt.Sprintf("http://127.0.0.1:%d/", port)
-
-	for time.Now().Before(deadline) {
-		resp, err := http.Get(url)
-		if err == nil {
-			resp.Body.Close()
-			return nil
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	return fmt.Errorf("server did not start within %v", timeout)
-}
-
 func main() {
 	startTime = time.Now()
+	serviceRoutePrefix := resolveServiceRoutePrefix()
 
 	// Connect to IPC socket
 	if err := connectIPC(); err != nil {
@@ -202,6 +177,15 @@ func main() {
 				}
 			}
 
+			if r.URL != nil {
+				originalPath := r.URL.Path
+				r.URL.Path = stripServiceRoutePrefix(r.URL.Path, serviceRoutePrefix)
+				if r.URL.Path != originalPath {
+					// Keep URL path encoding fields consistent after rewrite.
+					r.URL.RawPath = ""
+				}
+			}
+
 			// Forward request to user's server
 			proxy.ServeHTTP(w, r)
 
@@ -250,10 +234,4 @@ func main() {
 
 	// Clean up
 	cmd.Process.Kill()
-}
-
-// Ensure we close IPC connection on exit
-func init() {
-	// Note: Using a deferred cleanup in main() is preferred,
-	// but this provides a fallback
 }
