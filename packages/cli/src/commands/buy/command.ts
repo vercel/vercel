@@ -48,6 +48,15 @@ export const creditsSubcommand = {
   ],
 } as const;
 
+// TODO(mingchungx): Add other addons
+export const SUPPORTED_ADDON_ALIASES = ['siem'] as const;
+export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
+
+// TODO(mingchungx): Add other labels
+export const ADDON_LABELS: Record<AddonAlias, string> = {
+  siem: 'SIEM',
+};
+
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons'],
@@ -55,18 +64,25 @@ export const addonSubcommand = {
   arguments: [
     {
       name: 'addon-name',
-      required: false,
+      required: true,
+    },
+    {
+      name: 'quantity',
+      required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
-      name: 'Browse and purchase available addons',
-      value: `${packageName} buy addon`,
-    },
-    {
-      name: 'Purchase a specific addon',
-      value: `${packageName} buy addon <addon-name>`,
+      name: 'Purchase 1 unit of the SIEM addon',
+      value: `${packageName} buy addon siem 1`,
     },
   ],
 } as const;
@@ -137,8 +153,8 @@ export const buyCommand = {
       value: `${packageName} buy credits v0 100`,
     },
     {
-      name: 'Purchase an addon',
-      value: `${packageName} buy addon`,
+      name: 'Purchase the SIEM addon',
+      value: `${packageName} buy addon siem 1`,
     },
     {
       name: 'Upgrade to Pro',
