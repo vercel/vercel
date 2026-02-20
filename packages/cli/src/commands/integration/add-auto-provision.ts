@@ -224,6 +224,7 @@ export async function addAutoProvision(
     if (options.billingPlanId) {
       url.searchParams.set('planId', options.billingPlanId);
     }
+    output.log(url.href);
     output.debug(`Opening URL: ${url.href}`);
     open(url.href).catch((err: unknown) =>
       output.debug(`Failed to open browser: ${err}`)

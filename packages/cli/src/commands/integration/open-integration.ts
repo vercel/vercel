@@ -62,7 +62,11 @@ export async function openIntegration(client: Client, args: string[]) {
 
   output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
 
-  open(buildSSOLink(team, configuration.id));
+  const url = buildSSOLink(team, configuration.id);
+  output.log(url);
+  open(url).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
 
   return 0;
 }
