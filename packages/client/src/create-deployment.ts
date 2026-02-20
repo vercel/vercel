@@ -1,6 +1,6 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute, join, relative, sep } from 'path';
-import { hash, hashes, mapToObject } from './utils/hashes';
+import { isAbsolute, relative, sep } from 'path';
+import { hashes, mapToObject, type FilesMap } from './utils/hashes';
 import { deploy } from './deploy';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
@@ -11,9 +11,7 @@ import {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { streamToBufferChunks } from '@vercel/build-utils';
-import tar from 'tar-fs';
-import { createGzip } from 'zlib';
+import { createTgzFiles } from './utils/archive';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -115,28 +113,11 @@ export default function buildCreateDeployment() {
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
 
-    let files;
+    let files: FilesMap;
 
     try {
       if (clientOptions.archive === 'tgz') {
-        debug('Packing tarball');
-        const tarStream = tar
-          .pack(workPath, {
-            entries: fileList.map(file => relative(workPath, file)),
-          })
-          .pipe(createGzip());
-        const chunkedTarBuffers = await streamToBufferChunks(tarStream);
-        debug(`Packed tarball into ${chunkedTarBuffers.length} chunks`);
-        files = new Map(
-          chunkedTarBuffers.map((chunk, index) => [
-            hash(chunk),
-            {
-              names: [join(workPath, `.vercel/source.tgz.part${index + 1}`)],
-              data: chunk,
-              mode: 0o666,
-            },
-          ])
-        );
+        files = await createTgzFiles(workPath, fileList, debug);
       } else {
         files = await hashes(fileList);
       }

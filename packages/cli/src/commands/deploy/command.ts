@@ -128,6 +128,15 @@ export const continueSubcommand = {
       deprecated: false,
       description: 'The deployment ID to continue (e.g. dpl_xxx)',
     },
+    {
+      name: 'archive',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+      description:
+        'Compress the deployment code into an archive before uploading it',
+    },
   ],
   examples: [
     {
