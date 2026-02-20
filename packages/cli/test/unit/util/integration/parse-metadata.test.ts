@@ -398,4 +398,66 @@ describe('validateRequiredMetadata', () => {
     const errors = validateRequiredMetadata({}, schemaNoRequired);
     expect(errors).toEqual([]);
   });
+
+  describe('skipAutoRegion', () => {
+    const regionSchema: MetadataSchema = {
+      type: 'object',
+      properties: {
+        region: {
+          type: 'string',
+          'ui:control': 'vercel-region',
+          'ui:options': ['iad1', 'sfo1', 'cdg1'],
+        },
+        readRegions: {
+          type: 'array',
+          'ui:control': 'multi-vercel-region',
+          items: { type: 'string' },
+          'ui:options': ['iad1', 'sfo1'],
+        },
+        name: {
+          type: 'string',
+          'ui:control': 'input',
+        },
+      },
+      required: ['region', 'readRegions', 'name'],
+    };
+
+    it('errors on missing vercel-region fields without skipAutoRegion', () => {
+      const errors = validateRequiredMetadata({ name: 'my-db' }, regionSchema);
+      expect(errors).toContain('Required metadata missing: "region"');
+      expect(errors).toContain('Required metadata missing: "readRegions"');
+    });
+
+    it('skips vercel-region fields with skipAutoRegion', () => {
+      const errors = validateRequiredMetadata({ name: 'my-db' }, regionSchema, {
+        skipAutoRegion: true,
+      });
+      expect(errors).toEqual([]);
+    });
+
+    it('still errors on non-region required fields with skipAutoRegion', () => {
+      const errors = validateRequiredMetadata({}, regionSchema, {
+        skipAutoRegion: true,
+      });
+      expect(errors).toEqual(['Required metadata missing: "name"']);
+    });
+
+    it('does not skip non-region select fields with skipAutoRegion', () => {
+      const schema: MetadataSchema = {
+        type: 'object',
+        properties: {
+          plan: {
+            type: 'string',
+            'ui:control': 'select',
+            'ui:options': ['free', 'pro'],
+          },
+        },
+        required: ['plan'],
+      };
+      const errors = validateRequiredMetadata({}, schema, {
+        skipAutoRegion: true,
+      });
+      expect(errors).toEqual(['Required metadata missing: "plan"']);
+    });
+  });
 });

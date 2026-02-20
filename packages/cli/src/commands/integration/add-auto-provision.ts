@@ -155,8 +155,12 @@ export async function addAutoProvision(
       }
       return 1;
     }
-    // Validate all required fields are present
-    if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
+    // Validate all required fields are present (skip region — auto-detected by server)
+    if (
+      !validateAndPrintRequiredMetadata(parsed, product.metadataSchema, {
+        skipAutoRegion: true,
+      })
+    ) {
       return 1;
     }
     metadata = parsed;
