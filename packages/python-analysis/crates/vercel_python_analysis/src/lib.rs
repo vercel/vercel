@@ -11,7 +11,7 @@ bindings::export!(PythonAnalyzer with_types_in bindings);
 struct PythonAnalyzer;
 
 use crate::bindings::{DistMetadata, DirectUrlInfo, RecordEntry};
-use crate::entrypoint::contains_app_or_handler_impl;
+use crate::entrypoint::{contains_app_or_handler_impl, parse_django_settings_module_impl};
 
 impl crate::bindings::Guest for PythonAnalyzer {
     /// Check if Python source code contains or exports:
@@ -23,6 +23,13 @@ impl crate::bindings::Guest for PythonAnalyzer {
     /// Returns false for invalid Python syntax.
     fn contains_app_or_handler(source: String) -> bool {
         contains_app_or_handler_impl(&source)
+    }
+
+    /// Extract the default value from `os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...')`
+    /// in Python source (e.g. manage.py). Returns the second argument (e.g. `'app.settings'`)
+    /// only if exactly one such call exists; returns None if there are zero or more than one.
+    fn parse_django_settings_module(source: String) -> Option<String> {
+        parse_django_settings_module_impl(&source)
     }
 
     fn parse_dist_metadata(content: Vec<u8>) -> Result<DistMetadata, String> {
