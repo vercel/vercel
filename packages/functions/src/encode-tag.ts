@@ -1,5 +1,5 @@
 function encodeComma(tag: string): string {
-  return tag.replaceAll(',', '%2C');
+  return tag.replace(/,/g, '!');
 }
 
 export function encodeTags(tags: string[]): string[] {

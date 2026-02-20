@@ -116,7 +116,7 @@ describe('getCache', () => {
       tags: ['tag with spaces', 'tag&special=chars', 'tag,with,commas'],
     });
     expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
-      tags: ['tag with spaces', 'tag&special=chars', 'tag%2Cwith%2Ccommas'],
+      tags: ['tag with spaces', 'tag&special=chars', 'tag!with!commas'],
     });
   });
 
@@ -124,7 +124,7 @@ describe('getCache', () => {
     vitest.spyOn(mockCache, 'expireTag');
     const cache = getCache();
     await cache.expireTag('tag,special');
-    expect(mockCache.expireTag).toHaveBeenCalledWith('tag%2Cspecial');
+    expect(mockCache.expireTag).toHaveBeenCalledWith('tag!special');
   });
 
   test('should not encode non-comma characters in expireTag', async () => {
@@ -138,6 +138,6 @@ describe('getCache', () => {
     vitest.spyOn(mockCache, 'expireTag');
     const cache = getCache();
     await cache.expireTag(['tag,one', 'tag&two']);
-    expect(mockCache.expireTag).toHaveBeenCalledWith(['tag%2Cone', 'tag&two']);
+    expect(mockCache.expireTag).toHaveBeenCalledWith(['tag!one', 'tag&two']);
   });
 });
