@@ -38,7 +38,6 @@ export async function openIntegration(client: Client, subArgs: string[]) {
   }
   const asJson = formatResult.jsonOutput;
 
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
 
   if (args.length > 2) {

@@ -158,7 +158,7 @@ export const openSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [formatOption],
   examples: [
     {
       name: "Open a marketplace integration's dashboard",

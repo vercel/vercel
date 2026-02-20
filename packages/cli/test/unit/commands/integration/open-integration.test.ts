@@ -122,49 +122,6 @@ describe('integration', () => {
           ]);
         });
 
-        describe('--json', () => {
-          it('should output SSO link as JSON without opening browser', async () => {
-            useProject({
-              ...defaultProject,
-              id: 'vercel-integration-open',
-              name: 'vercel-integration-open',
-            });
-            client.setArgv('integration', 'open', 'acme', '--json');
-            const exitCode = await integrationCommand(client);
-            expect(exitCode, 'exit code for "integration"').toEqual(0);
-            expect(openMock).not.toHaveBeenCalled();
-            await expect(client.stdout).toOutput(
-              '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1"'
-            );
-          });
-
-          it('should track --json telemetry', async () => {
-            useProject({
-              ...defaultProject,
-              id: 'vercel-integration-open',
-              name: 'vercel-integration-open',
-            });
-            client.setArgv('integration', 'open', 'acme', '--json');
-            const exitCode = await integrationCommand(client);
-            expect(exitCode).toEqual(0);
-
-            expect(client.telemetryEventStore).toHaveTelemetryEvents([
-              {
-                key: 'subcommand:open',
-                value: 'open',
-              },
-              {
-                key: 'flag:json',
-                value: 'TRUE',
-              },
-              {
-                key: 'argument:name',
-                value: 'acme',
-              },
-            ]);
-          });
-        });
-
         describe('--format=json', () => {
           it('should output SSO link as JSON without opening browser', async () => {
             useProject({
@@ -272,27 +229,6 @@ describe('integration', () => {
           );
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1'
-          );
-        });
-
-        it('should output resource SSO link as JSON with --json', async () => {
-          useProject({
-            ...defaultProject,
-            id: 'vercel-integration-open',
-            name: 'vercel-integration-open',
-          });
-          client.setArgv(
-            'integration',
-            'open',
-            'acme',
-            'store-acme-connected-project',
-            '--json'
-          );
-          const exitCode = await integrationCommand(client);
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).not.toHaveBeenCalled();
-          await expect(client.stdout).toOutput(
-            '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1"'
           );
         });
 
