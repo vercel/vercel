@@ -140,7 +140,7 @@ function assertVersionPin(pkg, currentVersion) {
   const versionPinPath = resolve(root, pkg.versionPin.path);
   const pinnedContent = readFileSync(versionPinPath, 'utf8');
   const versionRegex = new RegExp(
-    `${pkg.versionPin.exportName}\\s*=\\s*'([^']+)'`
+    `${pkg.versionPin.exportName}\\s*=\\s*['"]([^'"]+)['"]`
   );
   const pinnedMatch = pinnedContent.match(versionRegex);
 

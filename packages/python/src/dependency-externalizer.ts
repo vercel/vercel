@@ -446,6 +446,10 @@ export async function mirrorPackagesIntoVendor({
           continue;
         }
         const srcFsPath = join(dir, filePath);
+        // Skip files listed in RECORD but missing on disk (e.g. deleted by a custom install command)
+        if (!fs.existsSync(srcFsPath)) {
+          continue;
+        }
         const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
         vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
       }

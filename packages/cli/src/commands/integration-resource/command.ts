@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
@@ -24,6 +24,7 @@ export const removeSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a resource',
     },
+    formatOption,
   ],
   examples: [
     {
@@ -40,6 +41,10 @@ export const removeSubcommand = {
         `${packageName} integration-resource remove my-acme-resource --disconnect-all`,
         `${packageName} integration-resource remove my-acme-resource -a`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration-resource remove my-acme-resource --format=json --yes`,
     },
   ],
 } as const;
@@ -70,6 +75,7 @@ export const disconnectSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when disconnecting a resource',
     },
+    formatOption,
   ],
   examples: [
     {
@@ -93,6 +99,10 @@ export const disconnectSubcommand = {
         `${packageName} integration-resource disconnect <resource> <project>`,
         `${packageName} integration-resource disconnect my-acme-resource my-project`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration-resource disconnect my-acme-resource --format=json --yes`,
     },
   ],
 } as const;
