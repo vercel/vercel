@@ -92,9 +92,10 @@ export default async function listStores(
 
     // Filter by linked project if applicable
     if (linkedProject) {
+      const projectId = linkedProject.id;
       stores = stores.filter(store =>
         store.projectsMetadata?.some(
-          metadata => metadata.projectId === linkedProject.id
+          metadata => metadata.projectId === projectId
         )
       );
     }
