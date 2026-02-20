@@ -16,6 +16,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release # Must be kept for trusted publishing on PyPI
     permissions:
       contents: write
       id-token: write
