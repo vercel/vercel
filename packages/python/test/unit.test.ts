@@ -1952,6 +1952,9 @@ describe('worker services dependency installation', () => {
         getPath() {
           return '/mock/uv';
         }
+        listInstalledPythons() {
+          return new Set(mockInstalledVersions);
+        }
         async sync() {}
         async lock() {}
         async pip(options: { args: string[] }) {
