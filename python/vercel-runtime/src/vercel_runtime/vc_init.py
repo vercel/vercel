@@ -558,7 +558,9 @@ if is_worker_service():
 
     if should_bootstrap_worker_app:
         try:
-            __vc_module.app = bootstrap_worker_service_app(__vc_module)
+            __vc_module.__dict__["app"] = bootstrap_worker_service_app(
+                __vc_module
+            )
             __vc_variables = dir(__vc_module)
         except Exception:
             _stderr("Error bootstrapping worker service app:")
@@ -628,14 +630,16 @@ class ASGIMiddleware:
         headers_list: list[tuple[bytes | str, bytes | str]] = (
             scope.get("headers", []) or []
         )
-        new_headers: list[tuple[bytes | str, bytes | str]] = []
+        new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
         internal_oidc_token = ""
 
-        for k, v in headers_list:
-            key = decode_header_bytes(k).lower()
-            val = decode_header_bytes(v)
+        for raw_k, raw_v in headers_list:
+            key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
+            val_bytes = raw_v if isinstance(raw_v, bytes) else raw_v.encode()
+            key = decode_header_bytes(key_bytes).lower()
+            val = decode_header_bytes(val_bytes)
             if key == "x-vercel-internal-invocation-id":
                 invocation_id = val
                 continue
@@ -650,7 +654,7 @@ class ASGIMiddleware:
             if key == "x-vercel-internal-oidc-token":
                 internal_oidc_token = val
                 continue
-            new_headers.append((k, v))
+            new_headers.append((key_bytes, val_bytes))
 
         if internal_oidc_token:
             has_oidc_header = any(
@@ -1373,18 +1377,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             query = query_str.encode()
 
             headers_encoded: list[list[bytes | list[bytes]]] = []
-            headers_typed: dict[str, str | list[str]] = headers
-            for k, v in headers_typed.items():
-                # Cope with repeated headers in the encoding.
-                if isinstance(v, list):
-                    headers_encoded.append(
-                        [
-                            k.lower().encode(),
-                            [i.encode() for i in v],
-                        ]
-                    )
-                else:
-                    headers_encoded.append([k.lower().encode(), v.encode()])
+            for k, v in headers.items():
+                headers_encoded.append([k.lower().encode(), v.encode()])
 
             scope: _ASGIScope = {
                 "server": (
