@@ -118,56 +118,6 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    if (projectBuildCommand) {
-      console.log(`Running "${projectBuildCommand}"`);
-      await execCommand(projectBuildCommand, {
-        env: spawnEnv,
-        cwd: workPath,
-      });
-      hasCustomCommand = true;
-    } else {
-      const ranBuildScript = await runPyprojectScript(
-        workPath,
-        ['vercel-build', 'now-build', 'build'],
-        spawnEnv
-      );
-      if (ranBuildScript) {
-        hasCustomCommand = true;
-      }
-    }
-  }
-
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
@@ -326,6 +276,34 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
+
   const baseEnv = spawnEnv || process.env;
   const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
@@ -437,6 +415,27 @@ export const build: BuildV3 = async ({
       frozen: lockFileProvidedByUser,
       locked: !lockFileProvidedByUser,
     });
+  }
+
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: pythonEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        pythonEnv
+      );
+    }
   }
 
   // Ensure correct version of vercel-runtime is installed.
