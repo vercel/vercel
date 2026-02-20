@@ -197,22 +197,40 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
-      - name: Resolve Python runtime wheel URL
-        id: python-wheel
+      - name: Resolve Python wheel URLs
         run: |
-          WHEEL_NAME=$(curl -sf "${{ needs.setup.outputs.dplUrl }}/tarballs/vercel-runtime-wheel.json" | jq -r '.filename' || echo "")
-          if [ -n "$WHEEL_NAME" ]; then
-            echo "spec=vercel-runtime @ ${{ needs.setup.outputs.dplUrl }}/tarballs/$WHEEL_NAME" >> $GITHUB_OUTPUT
-          else
-            echo "spec=" >> $GITHUB_OUTPUT
-          fi
+          DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
+
+          for package_dir in python/*; do
+            if [ ! -d "$package_dir" ]; then
+              continue
+            fi
+
+            pyproject="$package_dir/pyproject.toml"
+            if [ ! -f "$pyproject" ]; then
+              continue
+            fi
+
+            package_slug="$(basename "$package_dir")"
+            package_name="$(sed -nE 's/^name\s*=\s*"([^"]+)".*/\1/p' "$pyproject" | head -n1)"
+            if [ -z "$package_name" ]; then
+              continue
+            fi
+
+            wheel_name="$(curl -sf "$DEPLOYMENT_URL/tarballs/$package_slug-wheel.json" | jq -r '.filename' || echo "")"
+            if [ -z "$wheel_name" ]; then
+              continue
+            fi
+
+            env_var="$(printf '%s' "$package_name" | tr -c '[:alnum:]' '_' | tr '[:lower:]' '[:upper:]')_PYTHON"
+            echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
+          done
       - name: Test ${{matrix.packageName}}
         run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
-          VERCEL_RUNTIME_PYTHON: ${{ steps.python-wheel.outputs.spec }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}

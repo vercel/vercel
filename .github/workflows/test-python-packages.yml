@@ -1,9 +1,10 @@
-name: Python Runtime Tests
+name: Python Packages Tests
 
 on:
   pull_request:
     paths:
       - 'python/vercel-runtime/**'
+      - 'python/vercel-workers/**'
       - 'pyproject.toml'
       - 'uv.lock'
 
@@ -13,13 +14,18 @@ concurrency:
 
 jobs:
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    name: Test (${{ matrix.package.label }}, Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         python-version: ['3.12', '3.13', '3.14']
+        package:
+          - label: runtime
+            project: python/vercel-runtime
+          - label: workers
+            project: python/vercel-workers
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v6
@@ -28,10 +34,10 @@ jobs:
       - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           version: '0.9.22'
-      - run: uv run --group=test --locked --project=python/vercel-runtime pytest -v --tb=short
+      - run: uv run --group=test --locked --project=${{ matrix.package.project }} pytest -v --tb=short ${{ matrix.package.project }}/tests
 
   summary:
-    name: Summary (python-runtime)
+    name: Summary (python-packages)
     runs-on: ubuntu-latest
     timeout-minutes: 1
     if: always()
