@@ -110,34 +110,34 @@ describe('getCache', () => {
     expect(mockCache.get).toHaveBeenCalledWith(`${namespace}$b876d32`);
   });
 
-  test('should URL encode tags in set', async () => {
+  test('should encode commas in tags in set', async () => {
     const cache = getCache();
     await cache.set('key', 'value', {
       tags: ['tag with spaces', 'tag&special=chars', 'tag,with,commas'],
     });
     expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
-      tags: [
-        'tag%20with%20spaces',
-        'tag%26special%3Dchars',
-        'tag%2Cwith%2Ccommas',
-      ],
+      tags: ['tag with spaces', 'tag&special=chars', 'tag!with!commas'],
     });
   });
 
-  test('should URL encode tags in expireTag with string', async () => {
+  test('should encode commas in expireTag with string', async () => {
     vitest.spyOn(mockCache, 'expireTag');
     const cache = getCache();
-    await cache.expireTag('tag&special');
-    expect(mockCache.expireTag).toHaveBeenCalledWith('tag%26special');
+    await cache.expireTag('tag,special');
+    expect(mockCache.expireTag).toHaveBeenCalledWith('tag!special');
   });
 
-  test('should URL encode tags in expireTag with array', async () => {
+  test('should not encode non-comma characters in expireTag', async () => {
     vitest.spyOn(mockCache, 'expireTag');
     const cache = getCache();
-    await cache.expireTag(['tag one', 'tag&two']);
-    expect(mockCache.expireTag).toHaveBeenCalledWith([
-      'tag%20one',
-      'tag%26two',
-    ]);
+    await cache.expireTag('key:id');
+    expect(mockCache.expireTag).toHaveBeenCalledWith('key:id');
+  });
+
+  test('should encode commas in expireTag with array', async () => {
+    vitest.spyOn(mockCache, 'expireTag');
+    const cache = getCache();
+    await cache.expireTag(['tag,one', 'tag&two']);
+    expect(mockCache.expireTag).toHaveBeenCalledWith(['tag!one', 'tag&two']);
   });
 });

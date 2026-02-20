@@ -1,4 +1,5 @@
 import { getContext } from '../get-context';
+import { encodeTag, encodeTags } from '../encode-tag';
 import { CacheOptions, RuntimeCache } from './types';
 import { InMemoryCache } from './in-memory-cache';
 import { BuildCache } from './build-client';
@@ -12,14 +13,6 @@ const defaultKeyHashFunction = (key: string) => {
 };
 
 const defaultNamespaceSeparator = '$';
-
-function encodeTags(tags: string[]): string[] {
-  return tags.map(encodeURIComponent);
-}
-
-function encodeTag(tag: string | string[]): string | string[] {
-  return Array.isArray(tag) ? encodeTags(tag) : encodeURIComponent(tag);
-}
 
 function encodeOptions(options?: {
   name?: string;

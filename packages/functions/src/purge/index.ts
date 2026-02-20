@@ -1,10 +1,11 @@
 import { getContext } from '../get-context';
+import { encodeTag } from '../encode-tag';
 import { DangerouslyDeleteOptions } from './types';
 
 export const invalidateByTag = (tag: string | string[]) => {
   const api = getContext().purge;
   if (api) {
-    return api.invalidateByTag(tag);
+    return api.invalidateByTag(encodeTag(tag));
   }
   return Promise.resolve();
 };
@@ -15,7 +16,7 @@ export const dangerouslyDeleteByTag = (
 ) => {
   const api = getContext().purge;
   if (api) {
-    return api.dangerouslyDeleteByTag(tag, options);
+    return api.dangerouslyDeleteByTag(encodeTag(tag), options);
   }
   return Promise.resolve();
 };
