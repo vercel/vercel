@@ -38,32 +38,30 @@ const config: ExperimentConfig = {
 
     vercelClient = new Vercel({ bearerToken: token });
 
-    // Register cleanup on process exit (covers success, failure, and SIGINT)
-    const cleanup = () => void cleanupProjects();
-    process.on('exit', cleanup);
-    process.on('SIGINT', () => {
-      cleanup();
-      process.exit(130);
-    });
-    process.on('SIGTERM', () => {
-      cleanup();
-      process.exit(143);
-    });
+    const handleSignal = async (code: number) => {
+      await cleanupProjects();
+      process.exit(code);
+    };
+    process.on('SIGINT', () => void handleSignal(130));
+    process.on('SIGTERM', () => void handleSignal(143));
 
     // Install Vercel CLI globally
     await sandbox.runCommand('npm', ['install', '-g', 'vercel']);
+
+    // Escape single quotes for safe interpolation into shell single-quoted strings
+    const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
 
     // Write Vercel CLI auth config
     const authJson = JSON.stringify({ token });
     await sandbox.runCommand('bash', [
       '-c',
-      `mkdir -p /home/vercel-sandbox/.vercel && printf '%s' '${authJson}' > /home/vercel-sandbox/.vercel/auth.json`,
+      `mkdir -p /home/vercel-sandbox/.vercel && printf '%s' '${shellEscape(authJson)}' > /home/vercel-sandbox/.vercel/auth.json`,
     ]);
 
     // Export VERCEL_TOKEN in .bashrc for agent and eval subprocesses
     await sandbox.runCommand('bash', [
       '-c',
-      `printf 'export VERCEL_TOKEN="%s"\\n' '${token}' >> /home/vercel-sandbox/.bashrc`,
+      `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> /home/vercel-sandbox/.bashrc`,
     ]);
 
     // Detect team ID
