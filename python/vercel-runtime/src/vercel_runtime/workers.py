@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import os
+from collections.abc import Mapping
+from importlib import import_module
 from importlib.util import find_spec
+from typing import Callable, cast
 
 
 def _has_module(module_name: str) -> bool:
@@ -10,6 +13,12 @@ def _has_module(module_name: str) -> bool:
         return find_spec(module_name) is not None
     except ModuleNotFoundError:
         return False
+
+
+def _import_optional_module(module_name: str) -> object | None:
+    with contextlib.suppress(Exception):
+        return import_module(module_name)
+    return None
 
 
 CELERY_AVAILABLE = _has_module("celery")
@@ -35,7 +44,7 @@ def is_celery_app(candidate: object) -> bool:
     )
 
 
-def _find_celery_app(module: object):
+def _find_celery_app(module: object) -> object | None:
     candidates = [
         getattr(module, "app", None),
         getattr(module, "celery_app", None),
@@ -49,16 +58,13 @@ def _find_celery_app(module: object):
     return None
 
 
-def _bootstrap_dramatiq_worker_app(module: object):
+def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
     if not DRAMATIQ_AVAILABLE:
         return None
 
-    try:
-        import dramatiq as dramatiq_mod  # type: ignore[import-untyped]  # noqa: PLC0415
-        from vercel.workers import (  # type: ignore[import-not-found]  # noqa: PLC0415
-            dramatiq as vercel_dramatiq,
-        )
-    except Exception as exc:
+    dramatiq_mod = _import_optional_module("dramatiq")
+    vercel_dramatiq = _import_optional_module("vercel.workers.dramatiq")
+    if dramatiq_mod is None or vercel_dramatiq is None:
         if not VERCEL_WORKERS_AVAILABLE:
             raise RuntimeError(
                 "Dramatiq worker service detected, but "
@@ -67,40 +73,54 @@ def _bootstrap_dramatiq_worker_app(module: object):
                 "configure "
                 '"from vercel.workers.dramatiq import '
                 'VercelQueuesBroker".'
-            ) from exc
+            )
         raise RuntimeError(
             "Failed to import Dramatiq worker adapter from vercel-workers."
-        ) from exc
+        )
 
-    broker_candidates = []
+    broker_candidates: list[object] = []
     module_broker = getattr(module, "broker", None)
     if module_broker is not None:
         broker_candidates.append(module_broker)
-    with contextlib.suppress(Exception):
-        broker_candidates.append(dramatiq_mod.get_broker())
+    get_broker = getattr(dramatiq_mod, "get_broker", None)
+    if callable(get_broker):
+        with contextlib.suppress(Exception):
+            get_broker_fn = cast(Callable[[], object], get_broker)
+            broker_candidates.append(get_broker_fn())
 
-    resolved_broker = None
-    for broker in broker_candidates:
-        if isinstance(broker, vercel_dramatiq.VercelQueuesBroker):
-            resolved_broker = broker
-            break
+    resolved_broker: object | None = None
+    broker_type = getattr(vercel_dramatiq, "VercelQueuesBroker", None)
+    if isinstance(broker_type, type):
+        for broker in broker_candidates:
+            if isinstance(broker, broker_type):
+                resolved_broker = broker
+                break
 
     if resolved_broker is None:
         return None
 
     # Users must import task modules from the entrypoint.
     actors = getattr(resolved_broker, "actors", None)
-    if not isinstance(actors, dict) or len(actors) == 0:
+    actors_mapping: Mapping[object, object] | None = None
+    if isinstance(actors, dict):
+        actors_mapping = cast(Mapping[object, object], actors)
+    if actors_mapping is None or len(actors_mapping) == 0:
         raise RuntimeError(
             "Worker service did not register any Dramatiq "
             "actors. Ensure your worker entrypoint imports "
             "task modules before startup."
         )
 
-    return vercel_dramatiq.get_asgi_app(resolved_broker)
+    get_asgi_app = getattr(vercel_dramatiq, "get_asgi_app", None)
+    if not callable(get_asgi_app):
+        raise RuntimeError(
+            "Failed to resolve Dramatiq ASGI adapter from vercel-workers."
+        )
+    get_asgi_app_fn = cast(Callable[[object], object], get_asgi_app)
+    return get_asgi_app_fn(resolved_broker)
 
 
-def _bootstrap_celery_worker_app(module: object):
+def _bootstrap_celery_worker_app(module: object) -> object | None:
     if not CELERY_AVAILABLE:
         return None
 
@@ -111,15 +131,13 @@ def _bootstrap_celery_worker_app(module: object):
     get_asgi_app = getattr(celery_app, "get_asgi_app", None)
     if callable(get_asgi_app):
         with contextlib.suppress(Exception):
-            wrapped_app = get_asgi_app()
+            get_asgi_app_fn = cast(Callable[[], object], get_asgi_app)
+            wrapped_app = get_asgi_app_fn()
             if wrapped_app is not None:
                 return wrapped_app
 
-    try:
-        from vercel.workers import (  # type: ignore[import-not-found]  # noqa: PLC0415
-            celery as vercel_celery,
-        )
-    except Exception as exc:
+    vercel_celery = _import_optional_module("vercel.workers.celery")
+    if vercel_celery is None:
         if not VERCEL_WORKERS_AVAILABLE:
             raise RuntimeError(
                 "Celery worker service detected, but "
@@ -129,33 +147,45 @@ def _bootstrap_celery_worker_app(module: object):
                 ", or expose "
                 '"app = vercel.workers.celery'
                 '.get_asgi_app(celery_app)".'
-            ) from exc
+            )
         raise RuntimeError(
             "Failed to import Celery worker adapter from vercel-workers."
-        ) from exc
+        )
 
-    return vercel_celery.get_asgi_app(celery_app)
+    get_adapter_app = getattr(vercel_celery, "get_asgi_app", None)
+    if not callable(get_adapter_app):
+        raise RuntimeError(
+            "Failed to resolve Celery ASGI adapter from vercel-workers."
+        )
+    get_adapter_app_fn = cast(Callable[[object], object], get_adapter_app)
+    return get_adapter_app_fn(celery_app)
 
 
-def _bootstrap_generic_worker_app():
+def _bootstrap_generic_worker_app() -> object | None:
     if not VERCEL_WORKERS_AVAILABLE:
         return None
 
-    try:
-        import vercel.workers as vercel_workers  # type: ignore[import-not-found]  # noqa: PLC0415
-    except Exception:
+    vercel_workers = _import_optional_module("vercel.workers")
+    if vercel_workers is None:
+        return None
+
+    has_subscriptions = getattr(vercel_workers, "has_subscriptions", None)
+    get_asgi_app = getattr(vercel_workers, "get_asgi_app", None)
+    if not callable(has_subscriptions) or not callable(get_asgi_app):
         return None
 
     with contextlib.suppress(Exception):
-        if not vercel_workers.has_subscriptions():
+        has_subscriptions_fn = cast(Callable[[], bool], has_subscriptions)
+        if not has_subscriptions_fn():
             return None
 
-        return vercel_workers.get_asgi_app()
+        get_asgi_app_fn = cast(Callable[[], object], get_asgi_app)
+        return get_asgi_app_fn()
 
     return None
 
 
-def bootstrap_worker_service_app(module: object):
+def bootstrap_worker_service_app(module: object) -> object:
     if _find_celery_app(module) is not None:
         try:
             app = _bootstrap_celery_worker_app(module)
