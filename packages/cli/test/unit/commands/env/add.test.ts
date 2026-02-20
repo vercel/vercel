@@ -85,7 +85,7 @@ describe('env add', () => {
             value: 'preview',
           },
           {
-            key: `option:git-branch`,
+            key: `argument:git-branch`,
             value: '[REDACTED]',
           },
           {
@@ -126,7 +126,7 @@ describe('env add', () => {
             value: 'preview',
           },
           {
-            key: `option:git-branch`,
+            key: `argument:git-branch`,
             value: '[REDACTED]',
           },
           {
@@ -169,7 +169,7 @@ describe('env add', () => {
             value: 'preview',
           },
           {
-            key: `option:git-branch`,
+            key: `argument:git-branch`,
             value: '[REDACTED]',
           },
           {
@@ -217,7 +217,7 @@ describe('env add', () => {
             value: 'preview',
           },
           {
-            key: `option:git-branch`,
+            key: `argument:git-branch`,
             value: '[REDACTED]',
           },
           {
@@ -508,7 +508,7 @@ describe('env add', () => {
               value: 'preview',
             },
             {
-              key: `option:git-branch`,
+              key: `argument:git-branch`,
               value: '[REDACTED]',
             },
           ]);
@@ -534,8 +534,9 @@ describe('env add', () => {
         );
         expect(payload).toMatchObject({
           status: 'action_required',
-          reason: 'missing_name',
-          message: expect.stringContaining('Provide the variable name'),
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_name']),
+          message: expect.stringMatching(/required|name|Example/),
           next: expect.any(Array),
         });
         expect(payload.next.length).toBeGreaterThanOrEqual(1);
@@ -591,11 +592,8 @@ describe('env add', () => {
         expect(payload.next[0].command).toMatch(/link/);
         expect(payload.next[0].command).toContain('--scope');
         expect(payload.next[0].command).toContain('<scope>');
-        expect(payload.next[0].command).toContain('--project');
-        expect(payload.next[0].command).toContain('<project>');
         expect(payload.next[0].command).not.toMatch(/--value/);
         expect(payload.next[1].command).toMatch(/env add/);
-        expect(payload.next[1].command).toContain('--git-branch');
         expect(payload.next[1].command).toContain('<branch>');
         expect(payload.next[1].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
@@ -676,7 +674,7 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('outputs action_required for sensitive public key without --yes', async () => {
+      it('outputs action_required for sensitive public key without --yes (missing value reported first)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
@@ -697,11 +695,12 @@ describe('env add', () => {
         const payload = JSON.parse(
           logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
         );
+        // All missing args reported in one shot; value is missing so we get missing_requirements first
         expect(payload).toMatchObject({
           status: 'action_required',
-          reason: 'env_key_sensitive',
-          message: expect.stringContaining('NEXT_PUBLIC_API_KEY'),
-          choices: expect.any(Array),
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_value']),
+          message: expect.stringMatching(/required|--value|Example/),
           next: expect.any(Array),
         });
 
@@ -726,8 +725,9 @@ describe('env add', () => {
         );
         expect(payload).toMatchObject({
           status: 'action_required',
-          reason: 'missing_value',
-          message: expect.stringMatching(/--value|stdin/),
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_value']),
+          message: expect.stringMatching(/--value|stdin|required|Example/),
           next: expect.any(Array),
         });
 
@@ -757,7 +757,8 @@ describe('env add', () => {
         const payload = JSON.parse(
           logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
         );
-        expect(payload.reason).toBe('missing_value');
+        expect(payload.reason).toBe('missing_requirements');
+        expect(payload.missing).toContain('missing_value');
         const cmd = payload.next[0].command;
         expect(cmd).not.toMatch(/--yes\s+--yes/);
         expect(cmd).toContain('--yes');
@@ -790,13 +791,18 @@ describe('env add', () => {
           logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
         );
         expect(payload.reason).toBe('git_branch_required');
-        expect(payload.reason).not.toBe('missing_value');
+        expect(
+          payload.next.some(
+            (n: { command: string }) =>
+              n.command.includes('preview') && n.command.includes('<branch>')
+          )
+        ).toBe(true);
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
       });
 
-      it('outputs action_required when preview target and git branch not passed (no --git-branch)', async () => {
+      it('outputs action_required when preview target and git branch not passed (no third argument)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
@@ -816,16 +822,23 @@ describe('env add', () => {
         expect(payload).toMatchObject({
           status: 'action_required',
           reason: 'git_branch_required',
-          message: expect.stringContaining('Git branch'),
+          message: expect.stringMatching(/Git branch|third argument|Preview/),
           next: expect.any(Array),
         });
         expect(payload.next.length).toBeGreaterThanOrEqual(1);
+        expect(
+          payload.next.some(
+            (n: { command: string }) =>
+              n.command.includes('preview') &&
+              (n.command.includes('<branch>') || n.command.includes('--value'))
+          )
+        ).toBe(true);
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
       });
 
-      it('does not output git_branch_required when --git-branch is passed for preview', async () => {
+      it('does not output git_branch_required when branch is passed as third argument for preview', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
@@ -837,7 +850,6 @@ describe('env add', () => {
           'add',
           'PREVIEW_WITH_FLAG',
           'preview',
-          '--git-branch',
           'feat/test',
           '--yes'
         );
@@ -848,9 +860,63 @@ describe('env add', () => {
         const payload = JSON.parse(
           logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
         );
-        expect(payload.reason).not.toBe('git_branch_required');
-        expect(payload.reason).toBe('missing_value');
+        expect(payload.reason).toBe('missing_requirements');
+        expect(payload.missing).toContain('missing_value');
+        expect(payload.missing).not.toContain('git_branch_required');
 
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs API errors (e.g. branch not found) as JSON in non-interactive mode', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        vi.spyOn(addEnvRecordModule, 'default').mockRejectedValue(
+          Object.assign(
+            new Error(
+              'Branch "branch" not found in the connected Git repository (400)'
+            ),
+            {
+              status: 400,
+              serverMessage:
+                'Branch "branch" not found in the connected Git repository',
+            }
+          )
+        );
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'MY_VAR',
+          'preview',
+          'branch',
+          '--value',
+          'secret',
+          '--yes',
+          '--non-interactive'
+        );
+        client.cwd = setupUnitFixture('vercel-env-pull');
+
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'branch_not_found',
+          message: expect.stringMatching(/Branch.*not found/),
+        });
+
+        vi.restoreAllMocks();
         exitSpy.mockRestore();
         logSpy.mockRestore();
       });

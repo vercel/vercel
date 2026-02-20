@@ -657,12 +657,10 @@ describe('env pull', () => {
           { command: expect.any(String) },
         ],
       });
-      // First next: link with scope/project placeholders and preserved args
+      // First next: link with --scope <scope> (only one of scope or project needed) and preserved args
       expect(payload.next[0].command).toMatch(/link/);
       expect(payload.next[0].command).toContain('--scope');
       expect(payload.next[0].command).toContain('<scope>');
-      expect(payload.next[0].command).toContain('--project');
-      expect(payload.next[0].command).toContain('<project>');
       // Second next: retry same command (env pull) with original args
       expect(payload.next[1].command).toMatch(/env pull/);
 

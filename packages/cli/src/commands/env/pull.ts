@@ -115,8 +115,6 @@ export default async function pull(
         'link',
         '--scope',
         '<scope>',
-        '--project',
-        '<project>',
         ...preserved,
       ];
       outputAgentError(
@@ -126,7 +124,7 @@ export default async function pull(
           reason: 'not_linked',
           message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
             'link'
-          )} to begin. Use --yes for non-interactive; use --project and --scope to specify project and team.`,
+          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
           next: [
             { command: buildCommandWithYes(linkArgv) },
             { command: buildCommandWithYes(client.argv) },

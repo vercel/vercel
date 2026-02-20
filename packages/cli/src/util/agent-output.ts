@@ -14,6 +14,8 @@ export interface ActionRequiredPayload {
   verification_uri?: string;
   choices?: Array<{ id: string; name: string }>;
   next?: Array<{ command: string; when?: string }>;
+  /** When reason is 'missing_requirements', list of required items (e.g. 'missing_name', 'missing_value', 'git_branch_required') */
+  missing?: string[];
 }
 
 /**
@@ -96,6 +98,84 @@ export function buildEnvAddCommandWithPreservedArgs(
       }
       if (preserved[j].startsWith('--value=')) continue;
       out.push(preserved[j]);
+    }
+    preserved = out;
+  }
+  const base = `${pkgName} ${commandTemplate}`;
+  if (preserved.length === 0) return base;
+  return `${base} ${preserved.join(' ')}`;
+}
+
+/**
+ * Returns args after "env rm" and its 0–3 positionals (name, target, branch).
+ */
+export function getPreservedArgsForEnvRm(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const rmIdx = args.indexOf('rm');
+  if (rmIdx === -1 || args[rmIdx - 1] !== 'env') return args;
+  let i = rmIdx + 1;
+  let positionals = 0;
+  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
+    positionals++;
+    i++;
+  }
+  return args.slice(i);
+}
+
+/**
+ * Builds a suggested "env rm" command with the given template and preserved flags from argv.
+ */
+export function buildEnvRmCommandWithPreservedArgs(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName
+): string {
+  let preserved = getPreservedArgsForEnvRm(argv);
+  if (commandTemplate.includes('--yes')) {
+    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
+  }
+  const base = `${pkgName} ${commandTemplate}`;
+  if (preserved.length === 0) return base;
+  return `${base} ${preserved.join(' ')}`;
+}
+
+/**
+ * Returns args after "env update" and its 0–3 positionals (name, target, branch).
+ */
+export function getPreservedArgsForEnvUpdate(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const updateIdx = args.indexOf('update');
+  if (updateIdx === -1 || args[updateIdx - 1] !== 'env') return args;
+  let i = updateIdx + 1;
+  let positionals = 0;
+  while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
+    positionals++;
+    i++;
+  }
+  return args.slice(i);
+}
+
+/**
+ * Builds a suggested "env update" command with the given template and preserved flags from argv.
+ */
+export function buildEnvUpdateCommandWithPreservedArgs(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName
+): string {
+  let preserved = getPreservedArgsForEnvUpdate(argv);
+  if (commandTemplate.includes('--yes')) {
+    preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
+  }
+  if (commandTemplate.includes('--value')) {
+    const out: string[] = [];
+    for (let i = 0; i < preserved.length; i++) {
+      if (preserved[i] === '--value' && i + 1 < preserved.length) {
+        i++;
+        continue;
+      }
+      if (preserved[i].startsWith('--value=')) continue;
+      out.push(preserved[i]);
     }
     preserved = out;
   }
