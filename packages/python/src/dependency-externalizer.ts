@@ -20,23 +20,30 @@ import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
 
 const readFile = promisify(fs.readFile);
 
-let ephemeralStorageSizeMiB = 500;
-const maximiseTmpSpace =
-  process.env.VERCEL_MAXIMISE_TMP_SPACE === '1' ||
-  process.env.VERCEL_MAXIMISE_TMP_SPACE === 'true';
-
-if (maximiseTmpSpace) {
-  ephemeralStorageSizeMiB = 10000; // Leave a small buffer
-}
-
+// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 
 // Pack Lambda up to 245MB to leave a buffer
 export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
-// AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
+// Fixed ephemeral storage size (1 GB) requested when runtime install is needed.
+// This balances cold-start performance with available space for dependencies.
+export const EPHEMERAL_STORAGE_SIZE_MB = 1024;
+
+// When VERCEL_MAXIMISE_TMP_SPACE is set, use the full AWS maximum instead.
+const maximiseTmpSpace =
+  process.env.VERCEL_MAXIMISE_TMP_SPACE === '1' ||
+  process.env.VERCEL_MAXIMISE_TMP_SPACE === 'true';
+
+const maxEphemeralStorageMB = maximiseTmpSpace
+  ? 10240
+  : EPHEMERAL_STORAGE_SIZE_MB;
+
+// The maximum total dependency size in bytes we can support, with a ~2% buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
-export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 10000 * 1024 * 1024;
+export const LAMBDA_EPHEMERAL_STORAGE_BYTES = Math.floor(
+  maxEphemeralStorageMB * 1024 * 1024 * 0.98
+);
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
@@ -63,6 +70,13 @@ export class PythonDependencyExternalizer {
   private allVendorFiles: Files = {};
   private totalBundleSize: number = 0;
   private analyzed = false;
+
+  /**
+   * Whether this bundle requires extra ephemeral storage for runtime installation.
+   * Set to true by generateBundle(). When true, the Lambda should be configured
+   * with EPHEMERAL_STORAGE_SIZE_MB of /tmp space.
+   */
+  public needsExtraEphemeralStorage = false;
 
   constructor(options: PythonDependencyExternalizerOptions) {
     this.venvPath = options.venvPath;
@@ -134,12 +148,9 @@ export class PythonDependencyExternalizer {
         `Enabling runtime dependency installation.`
     );
 
-    // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
+    // Verify total deps won't exceed the ephemeral storage limit
     if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
-        (1024 * 1024)
-      ).toFixed(0);
+      const ephemeralLimitMB = maxEphemeralStorageMB;
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
@@ -150,6 +161,9 @@ export class PythonDependencyExternalizer {
           `application into smaller functions.`,
       });
     }
+
+    // Mark that this bundle needs extra ephemeral storage for runtime install
+    this.needsExtraEphemeralStorage = true;
 
     // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
     if (this.noBuildCheckFailed) {
