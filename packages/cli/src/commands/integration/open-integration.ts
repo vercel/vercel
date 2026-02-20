@@ -61,16 +61,13 @@ export async function openIntegration(client: Client, subArgs: string[]) {
     output.error('Team not found');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   let configuration: Configuration | undefined;
   let knownIntegrationSlug = false;
 
   try {
-    configuration = await getFirstConfiguration(
-      client,
-      integrationSlug,
-      team.id
-    );
+    configuration = await getFirstConfiguration(client, integrationSlug);
     knownIntegrationSlug = !!configuration;
   } catch (error) {
     output.error(
@@ -97,7 +94,7 @@ export async function openIntegration(client: Client, subArgs: string[]) {
   if (resourceName) {
     let resources;
     try {
-      resources = await getResources(client, team.id);
+      resources = await getResources(client);
     } catch (error) {
       output.error(`Failed to fetch resources: ${(error as Error).message}`);
       return 1;

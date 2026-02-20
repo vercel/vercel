@@ -1,4 +1,3 @@
-import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
@@ -56,6 +55,7 @@ export async function remove(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
@@ -77,7 +77,7 @@ export async function remove(client: Client) {
   telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving resource…', 500);
-  const resources = await getResources(client, team.id);
+  const resources = await getResources(client);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
@@ -109,7 +109,7 @@ export async function remove(client: Client) {
     }
   }
 
-  return await handleDeleteResource(client, team, targetedResource, {
+  return await handleDeleteResource(client, targetedResource, {
     skipConfirmation,
     skipProjectCheck: disconnectAll,
     asJson,
@@ -118,7 +118,6 @@ export async function remove(client: Client) {
 
 async function handleDeleteResource(
   client: Client,
-  team: Team,
   resource: Resource,
   options?: {
     skipConfirmation: boolean;
@@ -145,7 +144,7 @@ async function handleDeleteResource(
 
   try {
     output.spinner('Deleting resource…', 500);
-    await _deleteResource(client, resource, team);
+    await _deleteResource(client, resource);
   } catch (error) {
     output.error(
       `A problem occurred when attempting to delete ${chalk.bold(resource.name)}: ${(error as Error).message}`

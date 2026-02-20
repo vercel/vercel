@@ -51,6 +51,7 @@ export async function remove(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
@@ -69,8 +70,7 @@ export async function remove(client: Client) {
   output.spinner('Retrieving integration…', 500);
   const integrationConfiguration = await getFirstConfiguration(
     client,
-    integrationName,
-    team.id
+    integrationName
   );
   output.stopSpinner();
 
@@ -96,7 +96,7 @@ export async function remove(client: Client) {
 
   try {
     output.spinner('Uninstalling integration…', 1000);
-    await removeIntegration(client, integrationConfiguration, team);
+    await removeIntegration(client, integrationConfiguration);
   } catch (error) {
     output.error(
       chalk.red(

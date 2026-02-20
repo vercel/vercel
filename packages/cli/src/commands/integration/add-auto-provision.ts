@@ -55,6 +55,7 @@ export async function addAutoProvision(
     output.error('Team not found');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   // 2. Fetch integration
   const integration = await fetchIntegrationWithTelemetry(

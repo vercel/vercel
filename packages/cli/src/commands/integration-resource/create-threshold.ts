@@ -58,10 +58,11 @@ export async function createThreshold(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   // Fetch Resource
   output.spinner('Retrieving resource…', 500);
-  const resources = await getResources(client, team.id);
+  const resources = await getResources(client);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
@@ -112,8 +113,7 @@ export async function createThreshold(client: Client) {
   // Fetch prepayment info
   const prepaymentInfo = await getBalanceInformation(
     client,
-    targetedResource.product.integrationConfigurationId,
-    team
+    targetedResource.product.integrationConfigurationId
   );
   if (prepaymentInfo === undefined) {
     return 1;
