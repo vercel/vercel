@@ -14,8 +14,12 @@ export function withRelatedProject({
     if (!project) {
       return defaultHost;
     }
-    if (vercelEnv === 'preview' && project.preview.branch) {
-      return `https://${project.preview.branch}`;
+    if (vercelEnv === 'preview') {
+      const previewHost =
+        project.preview.customEnvironment ?? project.preview.branch;
+      if (previewHost) {
+        return `https://${previewHost}`;
+      }
     }
     if (vercelEnv === 'production') {
       if (project.production.alias) {

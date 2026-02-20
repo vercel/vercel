@@ -1,5 +1,25 @@
 # @vercel/python
 
+## 6.15.1
+
+### Patch Changes
+
+- Check if file exists before mirroring into vendor ([#15181](https://github.com/vercel/vercel/pull/15181))
+
+## 6.15.0
+
+### Minor Changes
+
+- Optimize cold starts for lambdas >250MB ([#15080](https://github.com/vercel/vercel/pull/15080))
+
+  1. Remove `uv pip install` and replace it with `uv sync --inexact --frozen`
+  2. Pack the lambda zip with dependencies up to 245MB then only install the remaining ones at runtime
+
+### Patch Changes
+
+- Updated dependencies [[`fc56fb91b4dafabe0f68f86efeabbaf98b2642bc`](https://github.com/vercel/vercel/commit/fc56fb91b4dafabe0f68f86efeabbaf98b2642bc)]:
+  - @vercel/python-analysis@0.6.0
+
 ## 6.14.1
 
 ### Patch Changes

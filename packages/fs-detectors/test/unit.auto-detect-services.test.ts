@@ -22,10 +22,10 @@ describe('autoDetectServices', () => {
         framework: 'nextjs',
         routePrefix: '/',
       });
-      expect(result.services!.frontend!.workspace).toBeUndefined();
+      expect(result.services!.frontend!.entrypoint).toBeUndefined();
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        workspace: 'backend',
+        entrypoint: 'backend',
         routePrefix: '/_/backend',
       });
     });
@@ -90,12 +90,12 @@ describe('autoDetectServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'nextjs',
-        workspace: 'frontend',
+        entrypoint: 'frontend',
         routePrefix: '/',
       });
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        workspace: 'backend',
+        entrypoint: 'backend',
         routePrefix: '/_/backend',
       });
     });
@@ -159,17 +159,17 @@ describe('autoDetectServices', () => {
 
       expect(result.services!.frontend).toMatchObject({
         framework: 'nextjs',
-        workspace: 'frontend',
+        entrypoint: 'frontend',
         routePrefix: '/',
       });
       expect(result.services!['service-a']).toMatchObject({
         framework: 'fastapi',
-        workspace: 'services/service-a',
+        entrypoint: 'services/service-a',
         routePrefix: '/_/service-a',
       });
       expect(result.services!['service-b']).toMatchObject({
         framework: 'flask',
-        workspace: 'services/service-b',
+        entrypoint: 'services/service-b',
         routePrefix: '/_/service-b',
       });
     });
@@ -195,10 +195,10 @@ describe('autoDetectServices', () => {
         framework: 'nextjs',
         routePrefix: '/',
       });
-      expect(result.services!.frontend!.workspace).toBeUndefined();
+      expect(result.services!.frontend!.entrypoint).toBeUndefined();
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
-        workspace: 'services/api',
+        entrypoint: 'services/api',
         routePrefix: '/_/api',
       });
     });
@@ -267,22 +267,22 @@ describe('autoDetectServices', () => {
 
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        workspace: 'apps/web',
+        entrypoint: 'apps/web',
         routePrefix: '/',
       });
       expect(result.services!.auth).toMatchObject({
         framework: 'fastapi',
-        workspace: 'services/auth',
+        entrypoint: 'services/auth',
         routePrefix: '/_/auth',
       });
       expect(result.services!.payments).toMatchObject({
         framework: 'fastapi',
-        workspace: 'services/payments',
+        entrypoint: 'services/payments',
         routePrefix: '/_/payments',
       });
       expect(result.services!.notifications).toMatchObject({
         framework: 'flask',
-        workspace: 'services/notifications',
+        entrypoint: 'services/notifications',
         routePrefix: '/_/notifications',
       });
     });
@@ -379,6 +379,7 @@ describe('detectServices with auto-detection', () => {
             },
           },
         }),
+        'src/index.ts': 'export default {}',
         'package.json': JSON.stringify({
           dependencies: {
             next: '14.0.0',
@@ -393,6 +394,7 @@ describe('detectServices with auto-detection', () => {
       expect(result.services).toHaveLength(1);
       expect(result.services[0].name).toBe('api');
       expect(result.services[0].routePrefix).toBe('/api');
+      expect(result.services[0].routePrefixSource).toBe('configured');
     });
   });
 
@@ -404,7 +406,6 @@ describe('detectServices with auto-detection', () => {
             '@sveltejs/adapter-auto': '^6.0.0',
             '@sveltejs/kit': '^2.0.0',
             svelte: '^5.0.0',
-            vite: '^6.1.0',
           },
         }),
         'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
@@ -417,12 +418,12 @@ describe('detectServices with auto-detection', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'sveltekit-1',
-        workspace: 'frontend',
+        entrypoint: 'frontend',
         routePrefix: '/',
       });
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        workspace: 'backend',
+        entrypoint: 'backend',
         routePrefix: '/_/backend',
       });
     });
@@ -436,7 +437,6 @@ describe('detectServices with auto-detection', () => {
             '@sveltejs/adapter-auto': '^6.0.0',
             '@sveltejs/kit': '^2.0.0',
             svelte: '^5.0.0',
-            vite: '^6.1.0',
           },
         }),
         'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
@@ -453,7 +453,7 @@ describe('detectServices with auto-detection', () => {
       });
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        workspace: 'backend',
+        entrypoint: 'backend',
         routePrefix: '/_/backend',
       });
     });
@@ -482,6 +482,7 @@ describe('detectServices with auto-detection', () => {
         framework: 'nextjs',
         routePrefix: '/',
       });
+      expect(result.services[0].routePrefixSource).toBe('generated');
     });
 
     it('should auto-detect services when vercel.json does not exist', async () => {
@@ -503,6 +504,31 @@ describe('detectServices with auto-detection', () => {
         framework: 'nextjs',
         routePrefix: '/',
       });
+      expect(result.services[0].routePrefixSource).toBe('generated');
+    });
+
+    it('should mark prefixed auto-detected services as generated', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            next: '14.0.0',
+          },
+        }),
+        'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+        'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+      });
+
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.warnings).toHaveLength(0);
+      expect(result.services).toHaveLength(2);
+      const backend = result.services.find(
+        service => service.name === 'backend'
+      );
+      expect(backend).toBeDefined();
+      expect(backend?.routePrefix).toBe('/_/backend');
+      expect(backend?.routePrefixSource).toBe('generated');
     });
   });
 });
