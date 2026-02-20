@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "6.14.1",
+  "version": "6.15.0",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
@@ -34,6 +34,7 @@
     "@types/node": "20.11.0",
     "@types/which": "3.0.0",
     "@vercel/build-utils": "workspace:*",
+    "@vercel/python-runtime": "workspace:*",
     "@vercel/error-utils": "workspace:*",
     "cross-env": "7.0.3",
     "execa": "^1.0.0",
