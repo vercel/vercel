@@ -24,6 +24,15 @@ export const usageCommand = {
       description: 'End date (YYYY-MM-DD, interpreted as end of day LA time)',
       deprecated: false,
     },
+    {
+      name: 'breakdown',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      description:
+        'Show usage breakdown by time period instead of aggregated totals (daily, weekly, monthly)',
+      deprecated: false,
+    },
     formatOption,
     jsonOption,
   ],
@@ -35,6 +44,14 @@ export const usageCommand = {
     {
       name: 'Show usage for a custom date range',
       value: `${packageName} usage --from 2025-01-01 --to 2025-01-31`,
+    },
+    {
+      name: 'Show daily usage breakdown',
+      value: `${packageName} usage --breakdown daily`,
+    },
+    {
+      name: 'Show weekly usage breakdown',
+      value: `${packageName} usage --breakdown weekly`,
     },
     {
       name: 'Output usage data as JSON',

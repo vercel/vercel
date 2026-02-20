@@ -86,6 +86,11 @@ export interface FunctionConfig {
    */
   regions?: string[];
   /**
+   * An array of passive regions where this Serverless Function can fail over during outages.
+   * This setting overrides top-level `functionFailoverRegions` for matching functions.
+   */
+  functionFailoverRegions?: string[];
+  /**
    * The npm package name of a Runtime, including its version
    */
   runtime?: string;

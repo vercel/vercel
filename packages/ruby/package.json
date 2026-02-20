@@ -1,7 +1,7 @@
 {
   "name": "@vercel/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",

@@ -1,5 +1,59 @@
 # @vercel/python
 
+## 6.15.0
+
+### Minor Changes
+
+- Optimize cold starts for lambdas >250MB ([#15080](https://github.com/vercel/vercel/pull/15080))
+
+  1. Remove `uv pip install` and replace it with `uv sync --inexact --frozen`
+  2. Pack the lambda zip with dependencies up to 245MB then only install the remaining ones at runtime
+
+### Patch Changes
+
+- Updated dependencies [[`fc56fb91b4dafabe0f68f86efeabbaf98b2642bc`](https://github.com/vercel/vercel/commit/fc56fb91b4dafabe0f68f86efeabbaf98b2642bc)]:
+  - @vercel/python-analysis@0.6.0
+
+## 6.14.1
+
+### Patch Changes
+
+- Skip runtime dependency install logic when VERCEL_PYTHON_ON_HIVE is set ([#15111](https://github.com/vercel/vercel/pull/15111))
+
+- Use dist-info RECORD to properly manage installed Python dependencies ([#15083](https://github.com/vercel/vercel/pull/15083))
+
+- Updated dependencies [[`88353afe588b95709af20ba2b82ba83d8a60f90c`](https://github.com/vercel/vercel/commit/88353afe588b95709af20ba2b82ba83d8a60f90c)]:
+  - @vercel/python-analysis@0.5.0
+
+## 6.14.0
+
+### Minor Changes
+
+- Enable runtime dependency installs for lambdas >250MB in size ([#15082](https://github.com/vercel/vercel/pull/15082))
+
+## 6.13.0
+
+### Minor Changes
+
+- Add runtime dependency install to support larger Python functions ([#14976](https://github.com/vercel/vercel/pull/14976))
+
+  This adds logic to calculate the total size of a lambda at build time and offload dependencies
+  to a \_runtime_requirements.txt file so they can be installed at runtime by uv. This allows us to
+  deploy functions up to the total size of the /tmp folder.
+
+## 6.12.0
+
+### Minor Changes
+
+- [services] synchronize dependencies in dev mode for JS/TS and Python services ([#14987](https://github.com/vercel/vercel/pull/14987))
+
+### Patch Changes
+
+- log contents of malformed manifests ([#15019](https://github.com/vercel/vercel/pull/15019))
+
+- Updated dependencies [[`a960cf23a42ff1a570c808ee9567670c24422f98`](https://github.com/vercel/vercel/commit/a960cf23a42ff1a570c808ee9567670c24422f98)]:
+  - @vercel/python-analysis@0.4.1
+
 ## 6.11.1
 
 ### Patch Changes

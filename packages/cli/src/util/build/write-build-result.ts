@@ -30,7 +30,9 @@ import {
   type TriggerEvent,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
+  type Service,
 } from '@vercel/build-utils';
+import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
@@ -53,6 +55,7 @@ interface FunctionConfiguration {
   memory?: number;
   maxDuration?: number;
   regions?: Lambda['regions'];
+  functionFailoverRegions?: Lambda['functionFailoverRegions'];
   experimentalTriggers?: TriggerEvent[];
   supportsCancellation?: boolean;
 }
@@ -67,6 +70,8 @@ export async function writeBuildResult(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
+  service?: Service;
+  stripServiceRoutePrefix?: boolean;
 }) {
   const {
     repoRootPath,
@@ -78,6 +83,8 @@ export async function writeBuildResult(args: {
     vercelConfig,
     standalone,
     workPath,
+    service,
+    stripServiceRoutePrefix = false,
   } = args;
   const version = builder.version;
   if (typeof version !== 'number' || version === 2) {
@@ -89,6 +96,8 @@ export async function writeBuildResult(args: {
       vercelConfig,
       standalone,
       workPath,
+      service,
+      stripServiceRoutePrefix,
     });
   } else if (version === 3) {
     return writeBuildResultV3({
@@ -99,6 +108,8 @@ export async function writeBuildResult(args: {
       vercelConfig,
       standalone,
       workPath,
+      service,
+      stripServiceRoutePrefix,
     });
   }
   throw new Error(
@@ -128,6 +139,19 @@ export interface PathOverride {
   path?: string;
 }
 
+function injectServiceEnvVars(
+  lambda: Lambda,
+  service?: Service,
+  stripServiceRoutePrefix: boolean = false
+): void {
+  if (service?.routePrefix && service.routePrefix !== '/') {
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+  }
+  if (stripServiceRoutePrefix) {
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+  }
+}
+
 /**
  * Remove duplicate slashes as well as leading/trailing slashes.
  */
@@ -147,6 +171,8 @@ async function writeBuildResultV2(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
+  service?: Service;
+  stripServiceRoutePrefix: boolean;
 }) {
   const {
     repoRootPath,
@@ -156,6 +182,8 @@ async function writeBuildResultV2(args: {
     vercelConfig,
     standalone,
     workPath,
+    service,
+    stripServiceRoutePrefix,
   } = args;
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult, workPath);
@@ -180,6 +208,7 @@ async function writeBuildResultV2(args: {
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
+      injectServiceEnvVars(output, service, stripServiceRoutePrefix);
       await writeLambda(
         repoRootPath,
         outputDir,
@@ -289,6 +318,8 @@ async function writeBuildResultV3(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
+  service?: Service;
+  stripServiceRoutePrefix: boolean;
 }) {
   const {
     repoRootPath,
@@ -298,6 +329,8 @@ async function writeBuildResultV3(args: {
     vercelConfig,
     standalone,
     workPath,
+    service,
+    stripServiceRoutePrefix,
   } = args;
   const { output } = buildResult;
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
@@ -333,6 +366,8 @@ async function writeBuildResultV3(args: {
           vercelConfig,
           standalone,
           workPath,
+          service,
+          stripServiceRoutePrefix,
         });
       } catch (error) {
         outputManager.error(`Failed to read routes.json: ${error}`);
@@ -353,6 +388,8 @@ async function writeBuildResultV3(args: {
         vercelConfig,
         standalone,
         workPath,
+        service,
+        stripServiceRoutePrefix,
       });
     }
   }
@@ -369,10 +406,16 @@ async function writeBuildResultV3(args: {
     : {};
 
   const ext = extname(src);
-  const path = stripDuplicateSlashes(
-    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
-  );
+  const path =
+    service?.type === 'web' && typeof service.runtime === 'string'
+      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+      : stripDuplicateSlashes(
+          build.config?.zeroConfig
+            ? src.substring(0, src.length - ext.length)
+            : src
+        );
   if (isLambda(output)) {
+    injectServiceEnvVars(output, service, stripServiceRoutePrefix);
     await writeLambda(
       repoRootPath,
       outputDir,
@@ -610,6 +653,9 @@ async function writeLambda(
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
   const regions = functionConfiguration?.regions ?? lambda.regions;
+  const functionFailoverRegions =
+    functionConfiguration?.functionFailoverRegions ??
+    lambda.functionFailoverRegions;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
   const supportsCancellation =
@@ -622,6 +668,7 @@ async function writeLambda(
     memory,
     maxDuration,
     regions,
+    functionFailoverRegions,
     experimentalTriggers,
     supportsCancellation,
     filePathMap,

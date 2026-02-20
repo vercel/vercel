@@ -1,6 +1,7 @@
 import { lstatSync } from 'fs-extra';
 import { isAbsolute, join, relative, sep } from 'path';
 import { hash, hashes, mapToObject } from './utils/hashes';
+import { deploy } from './deploy';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
@@ -45,6 +46,31 @@ export default function buildCreateDeployment() {
         code: 'token_not_provided',
         message: 'Options object must include a `token`',
       });
+    }
+
+    /**
+     * Manual deployment is an experimental feature that supports only prebuilt
+     * deployments. We could implicitly pass prebuilt=true when hitting the
+     * API but it is more intentional to require the user to set it.
+     */
+    if (clientOptions.manual) {
+      debug('Manual provisioning mode enabled');
+      if (!clientOptions.prebuilt) {
+        throw new DeploymentError({
+          code: 'invalid_options',
+          message: 'The `manual` option requires `prebuilt` to be true',
+        });
+      }
+
+      // Once the feature becomes stable we will use a new body parameter
+      deploymentOptions.build = deploymentOptions.build || {};
+      deploymentOptions.build.env = deploymentOptions.build.env || {};
+      deploymentOptions.build.env.VERCEL_MANUAL_PROVISIONING = '1';
+      deploymentOptions.version = 2;
+
+      debug('Creating deployment with manual provisioning...');
+      yield* deploy(new Map(), clientOptions, deploymentOptions);
+      return;
     }
 
     clientOptions.isDirectory =

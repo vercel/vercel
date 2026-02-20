@@ -205,7 +205,23 @@ export async function startStandaloneDevServer(
   const child = spawn('go', ['run', runTarget], {
     cwd: workPath,
     env,
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  child.stdout?.on('data', data => {
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (opts.onStdout) {
+      opts.onStdout(chunk);
+    } else {
+      process.stdout.write(chunk.toString());
+    }
+  });
+  child.stderr?.on('data', data => {
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (opts.onStderr) {
+      opts.onStderr(chunk);
+    } else {
+      process.stderr.write(chunk.toString());
+    }
   });
 
   // Give the server time to start

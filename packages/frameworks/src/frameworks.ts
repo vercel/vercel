@@ -1098,6 +1098,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    supersedes: ['vite'],
     sort: 99,
     envPrefix: 'VITE_',
     detectors: {
@@ -1139,6 +1140,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    supersedes: ['vite'],
     detectors: {
       every: [
         {
@@ -2209,6 +2211,61 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/main',
+      },
+    ],
+  },
+  {
+    name: 'Django',
+    slug: 'django',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
+    tagline:
+      'Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ',
+    description: 'A Django project served via the Python Runtime.',
+    website: 'https://www.djangoproject.com',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Dd]jango',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Dd]jango',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Dd]jango',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
       },
     ],
   },
